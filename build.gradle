@@ -1,0 +1,27 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.4.21'
+}
+
+group 'com.loadingbyte'
+version '0.1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Parsing
+    implementation 'org.apache.commons:commons-csv:1.8'
+    //implementation 'com.github.jezza:toml:1.2'
+
+    // Delivery
+    implementation 'org.jfree:org.jfree.svg:4.1'
+    implementation 'org.jfree:org.jfree.pdf:2.0'
+    implementation 'io.humble:humble-video-all:0.3.0'
+
+    // UI
+    implementation 'com.miglayout:miglayout-swing:5.2'
+}
+
+compileKotlin.kotlinOptions.jvmTarget = '11'
+compileTestKotlin.kotlinOptions.jvmTarget = '11'

@@ -1,0 +1,73 @@
+
+[global]
+fps = "24/1"
+widthPx = 1920
+heightPx = 1080
+background = "#000000"
+unitHGapPx = 1.0
+unitVGapPx = 30.0
+
+[[pageStyle]]
+name = "Card"
+behavior = "CARD"
+afterwardFrames = 24
+cardStayFrames = 96
+cardFadeFrames = 12
+
+[[pageStyle]]
+name = "Scroll"
+behavior = "SCROLL"
+afterwardFrames = 24
+scrollPxPerFrame = 3.0
+
+[[contentStyle]]
+name = "Card"
+spineDir = "VERTICAL"
+colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColGapPx = 30.0
+bodyFontSpec = "SansSerif.bold 100 #ffffff"
+headHJustify = "CENTER"
+headGapPx = 30.0
+headFontSpec = "SansSerif.plain 50 #ffffff"
+tailHJustify = "CENTER"
+tailGapPx = 30.0
+tailFontSpec = "SansSerif.plain 50 #ffffff"
+
+[[contentStyle]]
+name = "Collection"
+spineDir = "VERTICAL"
+flowBodyLayoutBodyWidthPx = 1000.0
+flowBodyLayoutJustify = "CENTER"
+flowBodyLayoutSeparator = "•"
+flowBodyLayoutSeparatorSpacingPx = 16.0
+bodyFontSpec = "SansSerif.bold 32 #ffffff"
+headHJustify = "CENTER"
+headGapPx = 12.0
+headFontSpec = "SansSerif.plain 24 #ffffff"
+
+[[contentStyle]]
+name = "Gutter"
+spineDir = "HORIZONTAL"
+centerOn = "HEAD_GAP"
+colsBodyLayoutColTypes = "LEFT"
+colsBodyLayoutColGapPx = 30.0
+bodyFontSpec = "SansSerif.bold 32 #ffffff"
+headHJustify = "RIGHT"
+headVJustify = "TOP_MIDDLE"
+headGapPx = 32.0
+headFontSpec = "SansSerif.plain 24 #ffffff"
+
+[[contentStyle]]
+name = "Heading"
+spineDir = "VERTICAL"
+colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColGapPx = 30.0
+bodyFontSpec = "SansSerif.plain 32 #ffffff"
+
+[[contentStyle]]
+name = "Subheading"
+spineDir = "VERTICAL"
+colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColGapPx = 30.0
+bodyFontSpec = "SansSerif.plain 24 #ffffff"
+

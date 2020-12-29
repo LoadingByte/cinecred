@@ -26,7 +26,6 @@ class Global(
     val widthPx: Int,
     val heightPx: Int,
     val background: Color,
-    val unitHGapPx: Float,
     val unitVGapPx: Float
 )
 
@@ -124,8 +123,8 @@ class Section(
 
 
 class Column(
-    blocks: List<Block>,
-    val hGapAfterPx: Float
+    val posOffsetPx: Float,
+    blocks: List<Block>
 ) {
     val blocks: List<Block> = blocks.toMutableList()
 }

@@ -10,9 +10,6 @@ import java.nio.file.Path
 import java.util.*
 
 
-private const val DEFAULT_HGAP = "800"
-
-
 class ParserMsg(val lineNo: Int, val severity: Severity, val msg: String)
 
 
@@ -42,9 +39,8 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
 
     val table = Table(
         log, lines,
-        defaultedColNames = mapOf("@hgap" to DEFAULT_HGAP),
         nullableColNames = listOf(
-            "@page style", "@break align", "@column", "@content style", "@vgap", "@head", "@body", "@tail"
+            "@Page Style", "@Break Align", "@Column Pos", "@Content Style", "@VGap", "@Head", "@Body", "@Tail"
         ),
         removeInterspersedEmptyLines = false
     )
@@ -77,9 +73,9 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     var alignBodyColsGroupsGroup = mutableListOf<Block>()
     var alignHeadTailGroupsGroup = mutableListOf<Block>()
     // Current section
-    val sectionColumns = TreeMap<Int, Column>()  // sorted by keys
+    val sectionColumns = mutableListOf<Column>()
     // Current column
-    var columnId = 1
+    var columnPosOffsetPx = 0f
     val columnBlocks = mutableListOf<Block>()
     // Current block
     var blockHead: String? = null
@@ -102,18 +98,16 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         didConcludeBlock = true
     }
 
-    fun concludeColumn(hGapAfter: Float, newColumnId: Int) {
+    fun concludeColumn() {
         if (columnBlocks.isNotEmpty())
-            sectionColumns[columnId] = Column(columnBlocks, hGapAfter)
-        columnId = newColumnId
+            sectionColumns.add(Column(columnPosOffsetPx, columnBlocks))
+        columnPosOffsetPx = 0f
         columnBlocks.clear()
     }
 
     fun concludeSection(vGapAfter: Float) {
-        if (sectionColumns.isNotEmpty()) {
-            val section = Section(sectionColumns.values.toList(), vGapAfter)
-            pageSections.add(section)
-        }
+        if (sectionColumns.isNotEmpty())
+            pageSections.add(Section(sectionColumns, vGapAfter))
         sectionColumns.clear()
     }
 
@@ -148,14 +142,14 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         if (table.isEmpty(row))
             vGapAccumulator += styling.global.unitVGapPx
         // Also add explicit vertical gaps to the accumulator.
-        table.getFiniteFloat(row, "@vgap", nonNegative = true)?.let {
+        table.getFiniteFloat(row, "@VGap", nonNegative = true)?.let {
             vGapAccumulator += it * styling.global.unitVGapPx
         }
 
         // If the page style cell is non-empty, conclude the previous page (if there was any) and start a new one.
-        table.getLookup(row, "@page style", pageStyleMap)?.let { newPageStyle ->
+        table.getLookup(row, "@Page Style", pageStyleMap)?.let { newPageStyle ->
             concludeBlock(0f)
-            concludeColumn(0f, 1)
+            concludeColumn()
             concludeSection(0f)
             concludeAlignBodyColsGroupsGroup()
             concludeAlignHeadTailGroupsGroup()
@@ -179,35 +173,38 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
-        table.getInt(row, "@column", nonNegative = true, nonZero = true)?.let { newColumnId ->
-            // If the new column ID matches that of a column already present in the current section, we will not
-            // only conclude a column here, but also the previous section (if there was any) and start a new one.
-            val willConcludeSection = newColumnId in sectionColumns || newColumnId == columnId
-
-            // If the previous column is followed by another column, the user must supply a horizontal gap
-            // between the two columns.
-            val hGapAfter =
-                if (willConcludeSection) 0f
-                else table.getFiniteFloat(row, "@hgap", nonNegative = true)!!
-
+        // If the column cell contains "wrap", also conclude the previous section and start a new one.
+        val getColumnTypeDesc = "a column position offset from the screen center in pixels, optionally preceded by " +
+                "\"wrap\" to put the new column beneath all previous columns (so, e.g., \"-400\" or \"wrap -400\")"
+        table.get(row, "@Column Pos", { getColumnTypeDesc }) { str ->
+            when {
+                str.equals("wrap", ignoreCase = true) ->
+                    Pair(true, 0f)
+                str.contains("wrap", ignoreCase = true) ->
+                    Pair(true, str.replace("wrap", "", ignoreCase = true).trim().toFiniteFloat())
+                else ->
+                    Pair(false, str.toFiniteFloat())
+            }
+        }?.let { (wrap, posOffsetPx) ->
             concludeBlock(0f)
-            concludeColumn(hGapAfter * styling.global.unitHGapPx, newColumnId)
-            if (willConcludeSection)
+            concludeColumn()
+            if (wrap)
                 concludeSection(vGapAccumulator)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
+            columnPosOffsetPx = posOffsetPx
         }
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
         // We will actually apply the new content style later. This is because the previous block has not actually
         // been concluded yet.
-        val newContentStyle = table.getLookup(row, "@content style", contentStyleMap)
+        val newContentStyle = table.getLookup(row, "@Content Style", contentStyleMap)
         if (newContentStyle != null)
             isBlockConclusionMarked = true
 
-        val newHead = table.getString(row, "@head")
-        val newTail = table.getString(row, "@tail")
-        val bodyLine = table.getString(row, "@body")
+        val newHead = table.getString(row, "@Head")
+        val newTail = table.getString(row, "@Tail")
+        val bodyLine = table.getString(row, "@Body")
 
         // If either of the head or tail cells is non-empty, or if the body line is non empty and the conclusion of the
         // previous block has been marked, conclude the previous block (if there was any) and start a new one.
@@ -268,19 +265,19 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
             log(WARN, "Changing content style in a row where no new head-body-tail block starts.")
 
         // If the break alignment cell is non-empty, conclude the specified previous alignment group.
-        table.getString(row, "@break align")?.also { string ->
-            when (string.toLowerCase()) {
-                "body columns" -> {
-                    concludeAlignBodyColsGroupsGroup()
-                    if (!didConcludeBlock)
-                        log(WARN, "Breaking body column alignment in a row where no new head-body-tail block starts.")
-                }
-                "head and tail" -> {
-                    concludeAlignHeadTailGroupsGroup()
-                    if (!didConcludeBlock)
-                        log(WARN, "Breaking head and tail alignment in a row where no new head-body-tail block starts.")
-                }
-                else -> log(WARN, "'$string' in column '@reset layout' is not 'body columns'/'head and tail'.")
+        table.get(row, "@Break Align", { "one of 'Body Columns'/'Head and Tail'" }) { str ->
+            val lc = str.toLowerCase()
+            if (lc != "body columns" && lc != "head and tail") throw IllegalArgumentException()
+            lc
+        }?.let { str ->
+            if (str == "body columns") {
+                concludeAlignBodyColsGroupsGroup()
+                if (!didConcludeBlock)
+                    log(WARN, "Breaking body column alignment in a row where no new head-body-tail block starts.")
+            } else {
+                concludeAlignHeadTailGroupsGroup()
+                if (!didConcludeBlock)
+                    log(WARN, "Breaking head and tail alignment in a row where no new head-body-tail block starts.")
             }
         }
 
@@ -289,7 +286,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
 
     // Conclude all open credits elements that haven't been concluded yet.
     concludeBlock(0f)
-    concludeColumn(0f, 1)
+    concludeColumn()
     concludeSection(0f)
     concludeAlignBodyColsGroupsGroup()
     concludeAlignHeadTailGroupsGroup()

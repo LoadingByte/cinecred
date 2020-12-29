@@ -236,7 +236,6 @@ object EditStylingPanel : JPanel() {
         private val widthPxSpinner = addSpinner("Picture Width (Pixels)", SpinnerNumberModel(1, 1, null, 10))
         private val heightPxSpinner = addSpinner("Picture Height (Pixels)", SpinnerNumberModel(1, 1, null, 10))
         private val backgroundColorChooserButton = addColorChooserButton("Background Color")
-        private val unitHGapPxSpinner = addSpinner("Unit \"hgap\" (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 1f))
         private val unitVGapPxSpinner = addSpinner("Unit \"vgap\" (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 1f))
 
         fun openGlobal(global: Global, changeCallback: (Global) -> Unit) {
@@ -248,7 +247,6 @@ object EditStylingPanel : JPanel() {
             widthPxSpinner.value = global.widthPx
             heightPxSpinner.value = global.heightPx
             backgroundColorChooserButton.selectedColor = global.background
-            unitHGapPxSpinner.value = global.unitHGapPx
             unitVGapPxSpinner.value = global.unitVGapPx
 
             addChangeListener {
@@ -258,7 +256,6 @@ object EditStylingPanel : JPanel() {
                         widthPxSpinner.value as Int,
                         heightPxSpinner.value as Int,
                         backgroundColorChooserButton.selectedColor,
-                        unitHGapPxSpinner.value as Float,
                         unitVGapPxSpinner.value as Float
                     )
                     changeCallback(newGlobal)

@@ -15,6 +15,7 @@ import net.miginfocom.swing.MigLayout
 import java.awt.*
 import javax.swing.*
 import javax.swing.JOptionPane.*
+import javax.swing.JScrollPane.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 import kotlin.math.ceil
@@ -138,6 +139,7 @@ object EditPanel : JPanel() {
         pageDefImages: List<DeferredImage>,
         log: List<ParserMsg>
     ) {
+        // Adjust the total duration label.
         if (pages == null)
             durationLabel.apply {
                 text = null
@@ -156,28 +158,28 @@ object EditPanel : JPanel() {
             }
         }
 
-        // Remember that tab which is currently selected so that we can reselect that one later.
-        val selectedTabIdx = pageTabs.selectedIndex
-
-        while (pageTabs.tabCount != 0)
-            pageTabs.removeTabAt(0)
-
-        for ((idx, pageDefImage) in pageDefImages.withIndex())
-            pageTabs.addTab(
-                (if (idx == 0) "Page " else "") + (idx + 1).toString(),
-                PAGE_ICON,
-                JScrollPane(
-                    DeferredImagePanel(
-                        pageDefImage, styling.global.widthPx.toFloat(),
-                        styling.global.background, showGuidesCheckBox.isSelected
-                    ),
-                    JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        // First adjust the number of tabs to the number of pages.
+        while (pageTabs.tabCount > pages?.size ?: 0)
+            pageTabs.removeTabAt(pageTabs.tabCount - 1)
+        while (pageTabs.tabCount < pages?.size ?: 0) {
+            val tabTitle = (if (pageTabs.tabCount == 0) "Page " else "") + pageTabs.tabCount.toString()
+            pageTabs.addTab(tabTitle, PAGE_ICON, JScrollPane(VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_NEVER))
+        }
+        // Then fill each tab with its corresponding page.
+        // Make sure that each scroll pane remembers its previous scroll height.
+        for ((tabComponent, pageDefImage) in pageTabs.components.zip(pageDefImages)) {
+            val tabScrollPane = tabComponent as JScrollPane
+            val scrollHeight = tabScrollPane.verticalScrollBar.value
+            tabScrollPane.setViewportView(
+                DeferredImagePanel(
+                    pageDefImage, styling.global.widthPx.toFloat(),
+                    styling.global.background, showGuidesCheckBox.isSelected
                 )
             )
+            tabScrollPane.verticalScrollBar.value = scrollHeight
+        }
 
-        if (pageTabs.tabCount != 0)
-            pageTabs.selectedIndex = selectedTabIdx.coerceIn(0, pageTabs.tabCount)
-
+        // Put the new parser log messages into the log table.
         LogTableModel.log = log.sortedWith { a, b ->
             b.severity.compareTo(a.severity).let { if (it != 0) it else a.lineNo.compareTo(b.lineNo) }
         }

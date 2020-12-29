@@ -21,7 +21,6 @@ private fun Global.toToml() = mapOf(
     "widthPx" to widthPx,
     "heightPx" to heightPx,
     "background" to background.toString2(),
-    "unitHGapPx" to unitHGapPx,
     "unitVGapPx" to unitVGapPx
 )
 

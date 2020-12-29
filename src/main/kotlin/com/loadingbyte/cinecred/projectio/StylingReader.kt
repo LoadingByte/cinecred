@@ -36,7 +36,6 @@ private fun Map<*, *>.toGlobal() = Global(
     get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNegative = true, nonZero = true) },
     get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNegative = true, nonZero = true) },
     get("background", STANDARD_GLOBAL.background) { toColor() },
-    get("unitHGapPx", STANDARD_GLOBAL.unitHGapPx) { toFiniteFloat(nonNegative = true, nonZero = true) },
     get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNegative = true, nonZero = true) }
 )
 

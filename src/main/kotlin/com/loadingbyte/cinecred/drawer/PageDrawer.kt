@@ -24,21 +24,12 @@ fun drawPage(
         .map { column -> column to drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
         .toMap()
 
-    // For each column, find the x coordinate of the center line of that column inside the page image.
-    val columnCenterLineXsInPageImage = page.sections.flatMap { section ->
-        // First element in the hGapAfterSums list is 0, second to last is totalCenterLineSpan.
-        val hGapAfterSums = section.columns.scan(0f) { sum, column -> sum + column.hGapAfterPx }
-        val totalCenterLineSpan = hGapAfterSums.last()
-        // Now convert the above sums (without the last one) to x coordinates centered on the page.
-        section.columns.zip(hGapAfterSums.map { sum -> (global.widthPx - totalCenterLineSpan) / 2 + sum })
-    }.toMap()
-
     // Combine the column images to the page image.
     val pageImage = DeferredImage()
     var y = 0f
     for (section in page.sections) {
         for (column in section.columns) {
-            val centerLineXInPageImage = columnCenterLineXsInPageImage[column]!!
+            val centerLineXInPageImage = global.widthPx / 2f + column.posOffsetPx
             val (columnImage, centerLineXInColumnImage) = columnImages[column]!!
             val x = centerLineXInPageImage - centerLineXInColumnImage
             pageImage.drawDeferredImage(columnImage, x, y, 1f)

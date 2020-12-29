@@ -8,7 +8,6 @@ val STANDARD_GLOBAL = Global(
     widthPx = 1920,
     heightPx = 1080,
     background = Color.BLACK,
-    unitHGapPx = 1f,
     unitVGapPx = 30f
 )
 

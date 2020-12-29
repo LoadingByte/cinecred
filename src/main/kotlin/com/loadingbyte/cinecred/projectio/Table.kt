@@ -6,16 +6,23 @@ import com.loadingbyte.cinecred.Severity.WARN
 import com.loadingbyte.cinecred.project.FontSpec
 import org.apache.commons.csv.CSVRecord
 import java.awt.Color
+import java.util.*
 
 
+// TODO: Remove old and now unused functionality from the table class.
 class Table(
     private val log: MutableList<ParserMsg>,
     rawLines: List<CSVRecord>,
-    private val requiredColNames: List<String> = emptyList(),
-    private val defaultedColNames: Map<String, String> = emptyMap(),
+    requiredColNames: List<String> = emptyList(),
+    defaultedColNames: Map<String, String> = emptyMap(),
     nullableColNames: List<String> = emptyList(),
     removeInterspersedEmptyLines: Boolean = true
 ) {
+
+    private val requiredColNames = TreeSet(String.CASE_INSENSITIVE_ORDER)
+        .apply { addAll(requiredColNames) }
+    private val defaultedColNames = TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER)
+        .apply { putAll(defaultedColNames) }
 
     val numRows: Int
 
@@ -38,26 +45,29 @@ class Table(
             )
         numRows = bodyLines.size
 
-        val expectedColNames = requiredColNames + defaultedColNames.keys + nullableColNames
-
         // 1. Find the index of each expected column name. Emit errors resp. warnings for missing columns.
-        colMap = mutableMapOf()
+        colMap = TreeMap(String.CASE_INSENSITIVE_ORDER)
+        val expectedColNames = requiredColNames + defaultedColNames.keys + nullableColNames
         for (colName in expectedColNames) {
-            val col = header.indexOf(colName)
+            val col = header.indexOfFirst { it.equals(colName, ignoreCase = true) }
             when {
                 col != -1 ->
                     colMap[colName] = col
-                colName in requiredColNames ->
+                colName in this.requiredColNames ->
                     log(headerLineNo, ERROR, "Missing required column '$colName'.")
-                colName in defaultedColNames ->
-                    log(headerLineNo, WARN, "Missing column '$colName'. Will default to ${defaultedColNames[colName]}.")
+                colName in this.defaultedColNames ->
+                    log(
+                        headerLineNo, WARN,
+                        "Missing column '$colName'. Will default to ${this.defaultedColNames[colName]}."
+                    )
                 else -> log(headerLineNo, WARN, "Missing column '$colName'.")
             }
         }
 
         // 2. Emit a warning for each unexpected column name.
+        val expectedColNamesSet = TreeSet(String.CASE_INSENSITIVE_ORDER).apply { addAll(expectedColNames) }
         for (colName in header)
-            if (colName.isNotEmpty() && colName !in expectedColNames)
+            if (colName.isNotEmpty() && colName !in expectedColNamesSet)
                 log(headerLineNo, WARN, "Unexpected column '$colName'.")
     }
 
@@ -93,7 +103,7 @@ class Table(
         return default
     }
 
-    fun <T> getConverted(row: Int, colName: String, lazyTypeDesc: () -> String, convert: (String) -> T): T? {
+    fun <T> get(row: Int, colName: String, lazyTypeDesc: () -> String, convert: (String) -> T): T? {
         val default = defaultedColNames[colName]
         // If the column is not present in the table, do not log a warning/error
         // since that has already been done when the header was parsed.
@@ -134,38 +144,38 @@ class Table(
     }
 
     fun getInt(row: Int, colName: String, nonNegative: Boolean = false, nonZero: Boolean = false): Int? =
-        getConverted(row, colName, { "an integer" + restrictionStr(nonNegative, nonZero) }) { str ->
+        get(row, colName, { "an integer" + restrictionStr(nonNegative, nonZero) }) { str ->
             str.toInt(nonNegative, nonZero)
         }
 
     fun getFiniteFloat(row: Int, colName: String, nonNegative: Boolean = false, nonZero: Boolean = false): Float? =
-        getConverted(row, colName, { "a finite decimal number" + restrictionStr(nonNegative, nonZero) }) { str ->
+        get(row, colName, { "a finite decimal number" + restrictionStr(nonNegative, nonZero) }) { str ->
             str.toFiniteFloat(nonNegative, nonZero)
         }
 
     inline fun <reified T : Enum<T>> getEnum(row: Int, colName: String): T? =
-        getConverted(row, colName, { "one of ${optionStr<T>()}" }) { str ->
+        get(row, colName, { "one of ${optionStr<T>()}" }) { str ->
             str.toEnum<T>()
         }
 
     inline fun <reified T : Enum<T>, reified U : Enum<U>> getEnumPair(row: Int, colName: String): Pair<T, U>? =
-        getConverted(
+        get(
             row, colName,
             { "one of ${optionStr<T>()} and one of ${optionStr<U>()}, separated by a space, or the other way around" },
             String::toEnumPair
         )
 
     inline fun <reified T : Enum<T>> getEnumList(row: Int, colName: String): List<T>? =
-        getConverted(row, colName, { "a space-separated list of ${optionStr<T>()}" }, String::toEnumList)
+        get(row, colName, { "a space-separated list of ${optionStr<T>()}" }, String::toEnumList)
 
     fun getColor(row: Int, colName: String): Color? =
-        getConverted(row, colName, { "a valid color" }, String::toColor)
+        get(row, colName, { "a valid color" }, String::toColor)
 
     fun getFontSpec(row: Int, colName: String): FontSpec? =
-        getConverted(row, colName, { FONT_SPEC_TYPE_DESC }, String::toFontSpec)
+        get(row, colName, { FONT_SPEC_TYPE_DESC }, String::toFontSpec)
 
     fun <T> getLookup(row: Int, colName: String, map: Map<String, T>): T? =
-        getConverted(row, colName, { "one of " + map.keys.joinToString("/") + ", ignoring case" }) { str ->
+        get(row, colName, { "one of " + map.keys.joinToString("/") + ", ignoring case" }) { str ->
             map[str] ?: throw IllegalArgumentException()
         }
 

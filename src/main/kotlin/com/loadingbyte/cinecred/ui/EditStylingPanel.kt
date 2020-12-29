@@ -187,7 +187,7 @@ object EditStylingPanel : JPanel() {
         tree.selectionPath = leafPath
     }
 
-    fun onOpenProjectDir(initialStyling: Styling) {
+    fun onLoadStyling(initialStyling: Styling) {
         global = initialStyling.global
 
         for (node in pageStylesNode.children().toList() + contentStylesNode.children().toList())
@@ -201,7 +201,9 @@ object EditStylingPanel : JPanel() {
         tree.expandPath(TreePath(pageStylesNode.path))
         tree.expandPath(TreePath(contentStylesNode.path))
 
-        // Initially select the global settings.
+        // First clear the current selection, which leads to the blank card showing in the right panel. This way, we
+        // make sure that no stale data is shown in the right panel. Then initially select the global settings.
+        tree.selectionRows = intArrayOf()
         tree.setSelectionRow(0)
     }
 
@@ -335,19 +337,15 @@ object EditStylingPanel : JPanel() {
         private val bodyLayoutComboBox = addComboBox(
             "Body Layout", BodyLayout.values(), toString = ::toDisplayString
         )
-        private val colsLayoutColTypes = addComboBoxList(
-            "Body Columns", ColType.values(), toString = ::toDisplayString,
+        private val colsLayoutColJustifies = addComboBoxList(
+            "Body Columns", HJustify.values(), toString = ::toDisplayString,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.COLUMNS },
-            verify = {
-                if (it.all { colType -> colType == null || colType == ColType.VACANT })
-                    throw VerifyResult(Severity.ERROR, "There must be at least one non-vacant body column.")
-            }
         )
         private val colsLayoutColGapPxSpinner = addSpinner(
             "Body Col. Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = {
                 bodyLayoutComboBox.selectedItem == BodyLayout.COLUMNS &&
-                        colsLayoutColTypes.selectedItems.size >= 2
+                        colsLayoutColJustifies.selectedItems.size >= 2
             }
         )
         private val flowLayoutBodyWidthPxSpinner = addSpinner(
@@ -410,7 +408,7 @@ object EditStylingPanel : JPanel() {
             spineDirComboBox.selectedItem = contentStyle.spineDir
             centerOnComboBox.selectedItem = contentStyle.centerOn
             bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
-            colsLayoutColTypes.selectedItems = contentStyle.colsBodyLayoutColTypes
+            colsLayoutColJustifies.selectedItems = contentStyle.colsBodyLayoutColJustifies
             colsLayoutColGapPxSpinner.value = contentStyle.colsBodyLayoutColGapPx
             flowLayoutBodyWidthPxSpinner.value = contentStyle.flowBodyLayoutBodyWidthPx
             flowLayoutJustifyComboBox.selectedItem = contentStyle.flowBodyLayoutJustify
@@ -435,7 +433,7 @@ object EditStylingPanel : JPanel() {
                         spineDirComboBox.selectedItem as SpineDir,
                         centerOnComboBox.selectedItem as CenterOn,
                         bodyLayoutComboBox.selectedItem as BodyLayout,
-                        colsLayoutColTypes.selectedItems.filterNotNull(),
+                        colsLayoutColJustifies.selectedItems.filterNotNull(),
                         colsLayoutColGapPxSpinner.value as Float,
                         flowLayoutBodyWidthPxSpinner.value as Float,
                         flowLayoutJustifyComboBox.selectedItem as FlowJustify,

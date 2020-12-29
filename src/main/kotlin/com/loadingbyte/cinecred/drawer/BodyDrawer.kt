@@ -8,83 +8,65 @@ import java.util.*
 fun drawBodyImagesWithColBodyLayout(
     fonts: Map<FontSpec, RichFont>,
     blocks: List<Block>
-): Pair<Map<Block, DeferredImage>, Float> {
+): Map<Block, DeferredImage> {
+    // We assume that only blocks which share the same style are laid out together.
+    if (blocks.any { block -> block.style != blocks[0].style })
+        throw IllegalArgumentException()
+    val style = blocks[0].style
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "column body layout".
-    if (blocks.any { block -> block.style.bodyLayout != BodyLayout.COLUMNS })
+    if (style.bodyLayout != BodyLayout.COLUMNS)
         throw IllegalArgumentException()
 
     // Step 1:
-    // First of all, we want all body columns inside some block to having the same width as that makes the
+    // First of all, we want all body columns inside some block to have the same width as that makes the
     // head line (in the following example 'Extras') in designs like the following nice and centered:
     //                 Extras
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
     //
-    // We also want to make sure that all body columns in the block layout group are aligned in the following way,
-    // especially when blocks with different numbers of body calls are present in the "blocks" list:
-    //     Block 1:  |              Body Col 1              |
-    //     Block 2:  |              Body Col 1              |
-    //     Block 3:  |   Body Col 1    |  |    Body Col 2   |
-    //     Block 4:  |   Body Col 1    |  |    Body Col 2   |
-    //     Block 5:  |Body Col 1|  |Body Col 2|  |Body Col 3|
-    //     Block 6:  |Body Col 1|  |Body Col 2|  |Body Col 3|
-    //
-    // For this, we first group the blocks which are laid out using the "column body layout" by their number of body
-    // columns. For each such group, we then determine the gap between columns as the maximum gap over all blocks
-    // from the respective block group.
-    val bodyColGaps = blocks
-        .groupBy { block -> block.style.colsBodyLayoutColTypes.size }
-        .mapValues { (_, blockGrp) -> blockGrp.maxOf { block -> block.style.colsBodyLayoutColGapPx } }
-    // We next determine the width shared by all body images by taking the maximum width of all body lines of all
-    // blocks times the number of body columns of the respective block (plus the appropriate body column gaps).
-    val bodyImageWidth = blocks.maxOf { block ->
-        val numBodyCols = block.style.colsBodyLayoutColTypes.size
-        val bodyFontMetrics = fonts[block.style.bodyFontSpec]!!.metrics
-        numBodyCols * block.body.maxOf { bodyLine -> bodyFontMetrics.stringWidth(bodyLine) } +
-                (numBodyCols - 1) * bodyColGaps[numBodyCols]!!
-    }
+    // For this, we first determine the width shared by all body columns inside all body images images by taking the
+    // maximum width of all body lines of all blocks. We then obtain the width shared by all body images by
+    // multiplying with the number of body columns (plus the appropriate body column gaps).
+    val numBodyCols = style.colsBodyLayoutColJustifies.size
+    val bodyFont = fonts[style.bodyFontSpec]!!
+    val bodyColWidth = blocks.maxOf { block -> block.body.maxOf { bodyLine -> bodyFont.metrics.stringWidth(bodyLine) } }
+    val bodyImageWidth = (numBodyCols - 1) * style.colsBodyLayoutColGapPx + numBodyCols * bodyColWidth
 
     // Step 2:
     // Draw a deferred image for the body of each block.
-    val bodyImages = blocks.map { block ->
-        val bodyFont = fonts[block.style.bodyFontSpec]!!
-        val numBodyCols = block.style.colsBodyLayoutColTypes.size
-        val numNonVacantBodyCols = block.style.colsBodyLayoutColTypes.count { it != ColType.VACANT }
-
-        // If there are no non-vacant body columns, there is no place to put the body.
+    return blocks.map { block ->
+        // If there are no body columns, there is no place to put the body.
         // So we can just return an empty image.
-        if (numNonVacantBodyCols == 0)
+        if (numBodyCols == 0)
             return@map block to DeferredImage()
-
-        val bodyColGap = bodyColGaps[numBodyCols]!!
-        val bodyColWidth = (bodyImageWidth - (numBodyCols - 1) * bodyColGap) / numBodyCols
-        val bodyPartitions = partitionBodyIntoCols(block.body, numNonVacantBodyCols)
+        val bodyPartitions = partitionBodyIntoCols(block.body, numBodyCols)
 
         val bodyImage = DeferredImage()
+        bodyImage.setMinWidth(bodyImageWidth)
 
         var x = 0f
         val bodyPartitionsIter = bodyPartitions.iterator()
-        for (colType in block.style.colsBodyLayoutColTypes) {
-            if (colType != ColType.VACANT) {
-                var y = 0f
-                for (bodyLine in bodyPartitionsIter.next()) {
-                    val justifiedX = when (colType) {
-                        ColType.LEFT -> x
-                        ColType.CENTER -> x + (bodyColWidth - bodyFont.metrics.stringWidth(bodyLine)) / 2f
-                        ColType.RIGHT -> x + bodyColWidth - bodyFont.metrics.stringWidth(bodyLine)
-                        ColType.VACANT -> throw IllegalStateException()  // will never happen
-                    }
-                    bodyImage.drawString(bodyFont, bodyLine, justifiedX, y, 1f)
-                    y += bodyFont.spec.heightPx + bodyFont.spec.extraLineSpacingPx
+        for (colJustify in style.colsBodyLayoutColJustifies) {
+            var y = 0f
+            for (bodyLine in bodyPartitionsIter.next()) {
+                val justifiedX = when (colJustify) {
+                    HJustify.LEFT -> x
+                    HJustify.CENTER -> x + (bodyColWidth - bodyFont.metrics.stringWidth(bodyLine)) / 2f
+                    HJustify.RIGHT -> x + bodyColWidth - bodyFont.metrics.stringWidth(bodyLine)
                 }
+                bodyImage.drawString(bodyFont, bodyLine, justifiedX, y)
+                // Advance to the next line in the current column.
+                y += bodyFont.spec.heightPx + bodyFont.spec.extraLineSpacingPx
             }
-            x += bodyColWidth + bodyColGap
+            // Draw guides that show the edges of the body column.
+            bodyImage.drawLine(BODY_GUIDE_COLOR, x, 0f, x, y, isGuide = true)
+            bodyImage.drawLine(BODY_GUIDE_COLOR, x + bodyColWidth, 0f, x + bodyColWidth, y, isGuide = true)
+            // Advance to the next column.
+            x += bodyColWidth + style.colsBodyLayoutColGapPx
         }
 
         block to bodyImage
     }.toMap()
-
-    return Pair(bodyImages, bodyImageWidth)
 }
 
 
@@ -103,7 +85,7 @@ private fun partitionBodyIntoCols(body: List<String>, numBodyCols: Int): List<Li
 fun drawBodyImageWithFlowBodyLayout(
     fonts: Map<FontSpec, RichFont>,
     block: Block
-): Pair<DeferredImage, Float> {
+): DeferredImage {
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow body layout".
     if (block.style.bodyLayout != BodyLayout.FLOW)
         throw IllegalArgumentException()
@@ -126,6 +108,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // Draw the actual image.
     val bodyImage = DeferredImage()
+    bodyImage.setMinWidth(bodyImageWidth)
     var y = 0f
     for (bodyLine in bodyLines) {
         // Determine the width of all rigid elements in the body line, that is, the total width of all body elements
@@ -153,12 +136,12 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Actually draw the body line using the measurements made above.
         for ((idx, bodyElem) in bodyLine.withIndex()) {
-            bodyImage.drawString(bodyFont, bodyElem, x, y, 1f)
+            bodyImage.drawString(bodyFont, bodyElem, x, y)
             x += bodyFont.metrics.stringWidth(bodyElem)
             if (idx != bodyLine.size - 1) {
                 x += sepSpacing
                 if (sepStr.isNotEmpty()) {
-                    bodyImage.drawString(bodyFont, sepStr, x, y, 1f)
+                    bodyImage.drawString(bodyFont, sepStr, x, y)
                     x += sepStrWidth
                 }
                 x += sepSpacing
@@ -169,7 +152,11 @@ fun drawBodyImageWithFlowBodyLayout(
         y += bodyFont.spec.heightPx + bodyFont.spec.extraLineSpacingPx
     }
 
-    return Pair(bodyImage, bodyImageWidth)
+    // Draw guides that show the body's edges.
+    bodyImage.drawLine(BODY_GUIDE_COLOR, 0f, 0f, 0f, y, isGuide = true)
+    bodyImage.drawLine(BODY_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, y, isGuide = true)
+
+    return bodyImage
 }
 
 

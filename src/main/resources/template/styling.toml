@@ -23,7 +23,7 @@ scrollPxPerFrame = 3.0
 [[contentStyle]]
 name = "Card"
 spineDir = "VERTICAL"
-colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
 bodyFontSpec = "SansSerif.bold 100 #ffffff"
 headHJustify = "CENTER"
@@ -49,7 +49,7 @@ headFontSpec = "SansSerif.plain 24 #ffffff"
 name = "Gutter"
 spineDir = "HORIZONTAL"
 centerOn = "HEAD_GAP"
-colsBodyLayoutColTypes = "LEFT"
+colsBodyLayoutColJustifies = "LEFT"
 colsBodyLayoutColGapPx = 30.0
 bodyFontSpec = "SansSerif.bold 32 #ffffff"
 headHJustify = "RIGHT"
@@ -60,14 +60,14 @@ headFontSpec = "SansSerif.plain 24 #ffffff"
 [[contentStyle]]
 name = "Heading"
 spineDir = "VERTICAL"
-colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
 bodyFontSpec = "SansSerif.plain 32 #ffffff"
 
 [[contentStyle]]
 name = "Subheading"
 spineDir = "VERTICAL"
-colsBodyLayoutColTypes = "CENTER"
+colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
 bodyFontSpec = "SansSerif.plain 24 #ffffff"
 

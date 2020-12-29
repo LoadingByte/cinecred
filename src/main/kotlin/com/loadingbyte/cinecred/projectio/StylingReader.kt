@@ -69,7 +69,7 @@ private fun Map<*, *>.toContentStyle(): ContentStyle {
         spineDir,
         centerOn,
         bodyLayout,
-        get("colsBodyLayoutColTypes", STANDARD_CONTENT_STYLE.colsBodyLayoutColTypes) { toEnumList() },
+        get("colsBodyLayoutColJustifies", STANDARD_CONTENT_STYLE.colsBodyLayoutColJustifies) { toEnumList() },
         get("colsBodyLayoutColGapPx", STANDARD_CONTENT_STYLE.colsBodyLayoutColGapPx) {
             toFiniteFloat(nonNegative = true)
         },

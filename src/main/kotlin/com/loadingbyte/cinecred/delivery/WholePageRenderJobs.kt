@@ -39,14 +39,14 @@ class PageSequenceRenderJob(
                     g2.setHighQuality()
                     g2.color = background
                     g2.fillRect(0, 0, pageWidth, pageHeight)
-                    pageDefImage.materialize(g2, DeferredImage.TextMode.PATH)
+                    pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
                     ImageIO.write(pageImage, "png", pageFile.toFile())
                 }
                 Format.SVG -> {
                     val g2 = SVGGraphics2D(pageWidth, pageHeight)
                     g2.color = background
                     g2.fillRect(0, 0, pageWidth, pageHeight)
-                    pageDefImage.materialize(g2, DeferredImage.TextMode.PATH)
+                    pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
                     Files.writeString(pageFile, g2.svgDocument)
                 }
             }
@@ -78,7 +78,7 @@ class PDFRenderJob(
             val g2 = pdfPage.graphics2D
             g2.color = background
             g2.fillRect(0, 0, page.intWidth, page.intHeight)
-            page.materialize(g2, DeferredImage.TextMode.PATH_WITH_INVISIBLE_TEXT)
+            page.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH_WITH_INVISIBLE_TEXT)
 
             progressCallback((idx + 1).toFloat() / pageDefImages.size)
         }

@@ -15,7 +15,7 @@ object MainFrame : JFrame("Cinecred") {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
-                Controller.tryClose()
+                Controller.tryExit()
             }
         })
 

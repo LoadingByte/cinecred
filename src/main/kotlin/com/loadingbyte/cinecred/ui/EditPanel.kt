@@ -18,26 +18,51 @@ import kotlin.math.ceil
 
 object EditPanel : JPanel() {
 
-    private val unsavedStylingLabel = JLabel("(Unsaved Changes)").apply { isVisible = false }
+    private val unsavedStylingLabel = JLabel("(Unsaved Changes)").apply {
+        isVisible = false
+        font = font.deriveFont(font.size * 0.85f)
+    }
+    private val showGuidesCheckBox = JCheckBox("Show Guides", true)
     private val durationLabel = JLabel()
     private val pageTabs = JTabbedPane()
 
     init {
-        val reloadCreditsButton = JButton("Reload credits.csv", UP_FOLDER_ICON).apply {
+        val reloadCreditsButton = JButton("credits.csv", UP_FOLDER_ICON).apply {
+            toolTipText = "Manually reload credits.csv from disk"
             addActionListener { Controller.reloadCreditsFile() }
         }
-        val saveStylingButton = JButton("Save Styling", FLOPPY_ICON).apply {
+        val reloadStylingButton = JButton("Styling", UP_FOLDER_ICON).apply {
+            toolTipText = "Reload styling from disk and discard changes"
+            addActionListener {
+                if (unsavedStylingLabel.isVisible) {
+                    val msg = "There are unsaved changes to the styling. Discard changes and reload styling from disk?"
+                    if (showConfirmDialog(MainFrame, msg, "Unsaved Changes", YES_NO_OPTION) == NO_OPTION)
+                        return@addActionListener
+                }
+                Controller.reloadStylingFile()
+                unsavedStylingLabel.isVisible = false
+            }
+        }
+        val saveStylingButton = JButton("Styling", FLOPPY_ICON).apply {
+            toolTipText = "Save styling to disk"
             addActionListener {
                 Controller.saveStyling()
                 unsavedStylingLabel.isVisible = false
             }
         }
+        showGuidesCheckBox.addActionListener {
+            val showGuides = showGuidesCheckBox.isSelected
+            for (scrollPane in pageTabs.components)
+                ((scrollPane as JScrollPane).viewport.view as DeferredImagePanel).showGuides = showGuides
+        }
 
-        val topPanel = JPanel(MigLayout("", "[][]push[][]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[][]push[][][]push[]push[]")).apply {
             add(reloadCreditsButton)
-            add(JLabel("(Auto-Reload Enabled)"))
+            add(JLabel("(Auto-Reload Active)").apply { font = font.deriveFont(font.size * 0.85f) })
+            add(reloadStylingButton)
             add(saveStylingButton)
             add(unsavedStylingLabel)
+            add(showGuidesCheckBox)
             add(durationLabel)
             add(pageTabs, "newline, span, grow, push")
         }
@@ -77,7 +102,7 @@ object EditPanel : JPanel() {
         add(splitPane, BorderLayout.CENTER)
     }
 
-    fun onOpenProjectDir() {
+    fun onLoadStyling() {
         unsavedStylingLabel.isVisible = false
     }
 
@@ -85,7 +110,7 @@ object EditPanel : JPanel() {
         unsavedStylingLabel.isVisible = true
     }
 
-    fun onTryOpenProjectDirOrClose(): Boolean =
+    fun onTryOpenProjectDirOrExit(): Boolean =
         if (unsavedStylingLabel.isVisible) {
             val msg = "There are unsaved changes to the styling. Save changes now before closing the project?"
             when (showConfirmDialog(MainFrame, msg, "Unsaved Changes", YES_NO_CANCEL_OPTION)) {
@@ -96,7 +121,8 @@ object EditPanel : JPanel() {
                 NO_OPTION -> true
                 else /* Cancel option */ -> false
             }
-        } else true
+        } else
+            true
 
     fun updateProjectAndLog(
         styling: Styling,
@@ -117,7 +143,7 @@ object EditPanel : JPanel() {
             durFrames -= (durSeconds * fps).toInt()
             durSeconds -= durMinutes * 60
             durationLabel.apply {
-                text = "Total Duration: %02d:%02d+%02d".format(durMinutes, durSeconds, durFrames)
+                text = "Duration: %02d:%02d+%02d".format(durMinutes, durSeconds, durFrames)
                 toolTipText = "Total duration is $durMinutes minutes, $durSeconds seconds, and $durFrames frames."
             }
         }
@@ -133,7 +159,10 @@ object EditPanel : JPanel() {
                 (if (idx == 0) "Page " else "") + (idx + 1).toString(),
                 PAGE_ICON,
                 JScrollPane(
-                    DeferredImagePanel(pageDefImage, styling.global.widthPx.toFloat(), styling.global.background),
+                    DeferredImagePanel(
+                        pageDefImage, styling.global.widthPx.toFloat(),
+                        styling.global.background, showGuidesCheckBox.isSelected
+                    ),
                     JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
                 )
             )
@@ -150,8 +179,15 @@ object EditPanel : JPanel() {
     private class DeferredImagePanel(
         val defImage: DeferredImage,
         val imageWidth: Float,
-        val backgroundColor: Color
+        val backgroundColor: Color,
+        showGuides: Boolean
     ) : JPanel() {
+
+        var showGuides = showGuides
+            set(value) {
+                field = value
+                repaint()
+            }
 
         // The scroll pane uses this information to decide on the length of the scrollbar.
         override fun getPreferredSize() =
@@ -169,7 +205,7 @@ object EditPanel : JPanel() {
             val scaledDefImage = DeferredImage()
             scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width / imageWidth)
             // Don't used "pathified" text because that's slower and we don't need the best accuracy for the preview.
-            scaledDefImage.materialize(g2, DeferredImage.TextMode.TEXT)
+            scaledDefImage.materialize(g2, showGuides, DeferredImage.TextMode.TEXT)
         }
 
     }

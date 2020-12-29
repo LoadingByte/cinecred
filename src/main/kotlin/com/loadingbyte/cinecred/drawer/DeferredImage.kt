@@ -6,6 +6,8 @@ import java.awt.Font
 import java.awt.FontMetrics
 import java.awt.Graphics2D
 import java.awt.font.TextLayout
+import java.awt.geom.Line2D
+import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import kotlin.math.ceil
 import kotlin.math.max
@@ -44,32 +46,80 @@ class DeferredImage {
 
         for (insn in image.instructions)
             when (insn) {
+                is Instruction.DrawLine ->
+                    drawLine(
+                        insn.color, x + scaling * insn.x1, y + scaling * insn.y1, x + scaling * insn.x2,
+                        y + scaling * insn.y2, insn.isGuide
+                    )
+                is Instruction.DrawRect ->
+                    drawRect(
+                        insn.color, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.width,
+                        scaling * insn.height, insn.isGuide
+                    )
                 is Instruction.DrawString ->
-                    drawString(insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling)
+                    drawString(
+                        insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
+                        insn.isGuide
+                    )
             }
+    }
+
+    fun drawLine(color: Color, x1: Float, y1: Float, x2: Float, y2: Float, isGuide: Boolean = false) {
+        width = max(width, max(x1, x2))
+        height = max(height, max(y1, y2))
+        instructions.add(Instruction.DrawLine(color, x1, y1, x2, y2, isGuide))
+    }
+
+    fun drawRect(color: Color, x: Float, y: Float, width: Float, height: Float, isGuide: Boolean = false) {
+        this.width = max(this.width, x + width)
+        this.height = max(this.height, y + height)
+        instructions.add(Instruction.DrawRect(color, x, y, width, height, isGuide))
     }
 
     /**
      * The y coordinate used by this method differs from the one used by Graphics2D.
      * Here, the coordinate doesn't point to the baseline, but to the topmost part of the font.
      */
-    fun drawString(font: RichFont, str: String, x: Float, y: Float, scaling: Float) {
+    fun drawString(font: RichFont, str: String, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
         width = max(width, x + scaling * font.metrics.stringWidth(str))
         height = max(height, y + scaling * font.spec.run { heightPx + extraLineSpacingPx })
-        instructions.add(Instruction.DrawString(font, str, x, y, scaling))
+        instructions.add(Instruction.DrawString(font, str, x, y, scaling, isGuide))
     }
 
-    private sealed class Instruction {
-        class DrawString(val font: RichFont, val str: String, val x: Float, val y: Float, val scaling: Float) :
-            Instruction()
+
+    private sealed class Instruction(val isGuide: Boolean) {
+
+        class DrawLine(
+            val color: Color, val x1: Float, val y1: Float, val x2: Float, val y2: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
+        class DrawRect(
+            val color: Color, val x: Float, val y: Float, val width: Float, val height: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
+        class DrawString(
+            val font: RichFont, val str: String, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
     }
 
 
     enum class TextMode { TEXT, PATH, PATH_WITH_INVISIBLE_TEXT }
 
-    fun materialize(g2: Graphics2D, textMode: TextMode) {
-        for (insn in instructions)
+    fun materialize(g2: Graphics2D, drawGuides: Boolean, textMode: TextMode) {
+        for (insn in instructions) {
+            if (!drawGuides && insn.isGuide)
+                continue
+
             when (insn) {
+                is Instruction.DrawLine -> {
+                    g2.color = insn.color
+                    g2.draw(Line2D.Float(insn.x1, insn.y1, insn.x2, insn.y2))
+                }
+                is Instruction.DrawRect -> {
+                    g2.color = insn.color
+                    g2.draw(Rectangle2D.Float(insn.x, insn.y, insn.width, insn.height))
+                }
                 is Instruction.DrawString -> {
                     g2.color = insn.font.spec.color
 
@@ -107,6 +157,6 @@ class DeferredImage {
                     }
                 }
             }
+        }
     }
-
 }

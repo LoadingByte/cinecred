@@ -53,7 +53,7 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         "name" to name,
         "spineDir" to spineDir.name,
         "centerOn" to centerOn.name,
-        "colsBodyLayoutColTypes" to colsBodyLayoutColTypes.toString2(),
+        "colsBodyLayoutColJustifies" to colsBodyLayoutColJustifies.toString2(),
         "colsBodyLayoutColGapPx" to colsBodyLayoutColGapPx,
         "flowBodyLayoutBodyWidthPx" to flowBodyLayoutBodyWidthPx,
         "flowBodyLayoutJustify" to flowBodyLayoutJustify.name,

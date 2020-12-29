@@ -71,18 +71,12 @@ object DeliverRenderQueuePanel : JPanel() {
         )
     }
 
-    fun onTryOpenProjectDirOrClose(): Boolean =
+    fun onTryOpenProjectDirOrExit(): Boolean =
         if (!RenderQueue.isPaused && JobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
             val msg = "There are render jobs running. Stop them and close the project anyways?"
-            when (showConfirmDialog(MainFrame, msg, "Render Jobs Running", YES_NO_CANCEL_OPTION)) {
-                YES_OPTION -> {
-                    Controller.saveStyling()
-                    true
-                }
-                NO_OPTION -> true
-                else /* Cancel option */ -> false
-            }
-        } else true
+            showConfirmDialog(MainFrame, msg, "Render Jobs Running", YES_NO_OPTION) == NO_OPTION
+        } else
+            true
 
 
     private object JobTableModel : AbstractTableModel() {

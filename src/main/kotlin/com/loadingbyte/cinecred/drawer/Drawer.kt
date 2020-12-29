@@ -2,10 +2,16 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.project.FontSpec
 import com.loadingbyte.cinecred.project.Project
+import java.awt.Color
 import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.awt.font.TextAttribute
 import java.util.*
+
+
+val CTRLINE_GUIDE_COLOR: Color = Color(0, 255, 255)
+val BODY_GUIDE_COLOR = Color(255, 0, 0, 100)
+val HEAD_TAIL_GUIDE_COLOR = Color(0, 255, 0, 100)
 
 
 fun draw(project: Project): List<DeferredImage> {

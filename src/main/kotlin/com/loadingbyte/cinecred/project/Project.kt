@@ -56,7 +56,7 @@ data class ContentStyle(
     val spineDir: SpineDir,
     val centerOn: CenterOn,
     val bodyLayout: BodyLayout,
-    val colsBodyLayoutColTypes: List<ColType>,
+    val colsBodyLayoutColJustifies: List<HJustify>,
     val colsBodyLayoutColGapPx: Float,
     val flowBodyLayoutBodyWidthPx: Float,
     val flowBodyLayoutJustify: FlowJustify,
@@ -77,9 +77,17 @@ data class ContentStyle(
 
 
 enum class SpineDir { HORIZONTAL, VERTICAL }
-enum class CenterOn { EVERYTHING, HEAD, HEAD_GAP, BODY, TAIL_GAP, TAIL }
+
+enum class CenterOn {
+    EVERYTHING,
+    HEAD_START, HEAD, HEAD_END,
+    HEAD_GAP,
+    BODY_START, BODY, BODY_END,
+    TAIL_GAP,
+    TAIL_START, TAIL, TAIL_END
+}
+
 enum class BodyLayout { COLUMNS, FLOW }
-enum class ColType { LEFT, CENTER, RIGHT, VACANT }
 enum class FlowJustify { LEFT, CENTER, RIGHT, FULL }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP_TOP, TOP_MIDDLE, TOP_BOTTOM, MIDDLE, BOTTOM_TOP, BOTTOM_MIDDLE, BOTTOM_BOTTOM }
@@ -97,12 +105,12 @@ data class FontSpec(
 class Page(
     val style: PageStyle,
     sections: List<Section>,
-    sectionGroups: List<List<Section>>,
-    blockGroups: List<List<Block>>
+    alignBodyColsGroups: List<List<Block>>,
+    alignHeadTailGroups: List<List<Block>>
 ) {
     val sections: List<Section> = sections.toMutableList()
-    val sectionGroups: List<List<Section>> = sectionGroups.toMutableList()
-    val blockGroups: List<List<Block>> = blockGroups.toMutableList()
+    val alignBodyColsGroups: List<List<Block>> = alignBodyColsGroups.toMutableList()
+    val alignHeadTailGroups: List<List<Block>> = alignHeadTailGroups.toMutableList()
 }
 
 

@@ -44,7 +44,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         log, lines,
         defaultedColNames = mapOf("@hgap" to DEFAULT_HGAP),
         nullableColNames = listOf(
-            "@page style", "@reset layout", "@column", "@content style", "@vgap", "@head", "@body", "@tail"
+            "@page style", "@break align", "@column", "@content style", "@vgap", "@head", "@body", "@tail"
         ),
         removeInterspersedEmptyLines = false
     )
@@ -71,11 +71,11 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     // Current page
     var pageStyle: PageStyle? = null
     val pageSections = mutableListOf<Section>()
-    val pageSectionGroups = mutableListOf<List<Section>>()
-    val pageBlockGroups = mutableListOf<List<Block>>()
+    val pageAlignBodyColsGroupsGroups = mutableListOf<List<Block>>()
+    val pageAlignHeadTailGroupsGroups = mutableListOf<List<Block>>()
     // Section and block groups
-    var sectionGroup = mutableListOf<Section>()
-    var blockGroup = mutableListOf<Block>()
+    var alignBodyColsGroupsGroup = mutableListOf<Block>()
+    var alignHeadTailGroupsGroup = mutableListOf<Block>()
     // Current section
     val sectionColumns = TreeMap<Int, Column>()  // sorted by keys
     // Current column
@@ -86,15 +86,15 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     val blockBody = mutableListOf<String>()
     var blockTail: String? = null
 
-    // Keep track of the conclusion of sections and blocks.
-    var didConcludeSection = false
+    // Keep track of the conclusion of blocks.
     var didConcludeBlock = false
 
     fun concludeBlock(vGapAfter: Float) {
         if (blockBody.isNotEmpty()) {
             val block = Block(contentStyle!!, blockHead, blockBody, blockTail, vGapAfter)
             columnBlocks.add(block)
-            blockGroup.add(block)
+            alignBodyColsGroupsGroup.add(block)
+            alignHeadTailGroupsGroup.add(block)
         }
         blockHead = null
         blockBody.clear()
@@ -113,33 +113,31 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         if (sectionColumns.isNotEmpty()) {
             val section = Section(sectionColumns.values.toList(), vGapAfter)
             pageSections.add(section)
-            sectionGroup.add(section)
         }
         sectionColumns.clear()
-        didConcludeSection = true
     }
 
-    fun concludeBlockGroup() {
-        if (blockGroup.isNotEmpty())
-            pageBlockGroups.add(blockGroup)
-        blockGroup = mutableListOf()
+    fun concludeAlignBodyColsGroupsGroup() {
+        if (alignBodyColsGroupsGroup.isNotEmpty())
+            pageAlignBodyColsGroupsGroups.add(alignBodyColsGroupsGroup)
+        alignBodyColsGroupsGroup = mutableListOf()
     }
 
-    fun concludeSectionGroup() {
-        if (sectionGroup.isNotEmpty())
-            pageSectionGroups.add(sectionGroup)
-        sectionGroup = mutableListOf()
+    fun concludeAlignHeadTailGroupsGroup() {
+        if (alignHeadTailGroupsGroup.isNotEmpty())
+            pageAlignHeadTailGroupsGroups.add(alignHeadTailGroupsGroup)
+        alignHeadTailGroupsGroup = mutableListOf()
     }
 
     fun concludePage(newPageStyle: PageStyle) {
         if (pageSections.isNotEmpty()) {
-            val page = Page(pageStyle!!, pageSections, pageSectionGroups, pageBlockGroups)
+            val page = Page(pageStyle!!, pageSections, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups)
             pages.add(page)
         }
         pageStyle = newPageStyle
         pageSections.clear()
-        pageSectionGroups.clear()
-        pageBlockGroups.clear()
+        pageAlignBodyColsGroupsGroups.clear()
+        pageAlignHeadTailGroupsGroups.clear()
     }
 
     for (row in 0 until table.numRows) {
@@ -159,8 +157,8 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
             concludeBlock(0f)
             concludeColumn(0f, 1)
             concludeSection(0f)
-            concludeBlockGroup()
-            concludeSectionGroup()
+            concludeAlignBodyColsGroupsGroup()
+            concludeAlignHeadTailGroupsGroup()
             concludePage(newPageStyle)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
@@ -258,36 +256,34 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         }
 
         // If the body cell is non-empty, add its content to the current block.
-        // Otherwise, mark the previous block for conclusion (if there was any).
         if (bodyLine != null)
             blockBody.add(bodyLine)
-        else
+        // Otherwise, if the row didn't just start a new block,
+        // mark the previous block for conclusion (if there was any).
+        else if (newHead == null && newTail != null)
             isBlockConclusionMarked = true
 
         // If the content style is changed at a non-standard position, issue a warning.
         if (newContentStyle != null && !didConcludeBlock)
             log(WARN, "Changing content style in a row where no new head-body-tail block starts.")
 
-        // If the reset cell is non-empty, conclude the previous shared body layout region
-        // resp. shared column layout region.
-        table.getString(row, "@reset layout")?.also { reset ->
-            when (reset) {
-                "body" -> {
-                    concludeBlockGroup()
+        // If the break alignment cell is non-empty, conclude the specified previous alignment group.
+        table.getString(row, "@break align")?.also { string ->
+            when (string.toLowerCase()) {
+                "body columns" -> {
+                    concludeAlignBodyColsGroupsGroup()
                     if (!didConcludeBlock)
-                        log(WARN, "Resetting body layout in a row where no new head-body-tail block starts.")
+                        log(WARN, "Breaking body column alignment in a row where no new head-body-tail block starts.")
                 }
-                "column" -> {
-                    concludeBlockGroup()
-                    concludeSectionGroup()
-                    if (!didConcludeSection)
-                        log(WARN, "Resetting column layout in a row where no new section starts.")
+                "head and tail" -> {
+                    concludeAlignHeadTailGroupsGroup()
+                    if (!didConcludeBlock)
+                        log(WARN, "Breaking head and tail alignment in a row where no new head-body-tail block starts.")
                 }
-                else -> log(WARN, "'$reset' in column '@reset layout' is not body/column.")
+                else -> log(WARN, "'$string' in column '@reset layout' is not 'body columns'/'head and tail'.")
             }
         }
 
-        didConcludeSection = false
         didConcludeBlock = false
     }
 
@@ -295,8 +291,8 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     concludeBlock(0f)
     concludeColumn(0f, 1)
     concludeSection(0f)
-    concludeBlockGroup()
-    concludeSectionGroup()
+    concludeAlignBodyColsGroupsGroup()
+    concludeAlignHeadTailGroupsGroup()
     concludePage(pageStyle!! /* we just need to put anything in here */)
 
     return Pair(log, pages)

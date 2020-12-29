@@ -1,6 +1,9 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.FontSpec
+import com.loadingbyte.cinecred.project.Global
+import com.loadingbyte.cinecred.project.Page
+import com.loadingbyte.cinecred.project.PageBehavior
 
 
 fun drawPage(
@@ -8,11 +11,20 @@ fun drawPage(
     fonts: Map<FontSpec, RichFont>,
     page: Page
 ): DeferredImage {
-    // Create a map from each block to the index of the user-defined block group that contains it.
-    val blockGroupIds = page.blockGroups
-        .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }
+    // Convert the aligning group lists to maps that map from block to group id.
+    val alignBodyColsGroupIds = page.alignBodyColsGroups
+        .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
+    val alignHeadTailGroupIds = page.alignHeadTailGroups
+        .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
+
+    // Generate an image for each column.
+    // Also remember the x coordinate of the center line inside each generated image.
+    val columnImages = page.sections
+        .flatMap { section -> section.columns }
+        .map { column -> column to drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
         .toMap()
 
+    // For each column, find the x coordinate of the center line of that column inside the page image.
     val columnCenterLineXsInPageImage = page.sections.flatMap { section ->
         // First element in the hGapAfterSums list is 0, second to last is totalCenterLineSpan.
         val hGapAfterSums = section.columns.scan(0f) { sum, column -> sum + column.hGapAfterPx }
@@ -21,20 +33,7 @@ fun drawPage(
         section.columns.zip(hGapAfterSums.map { sum -> (global.widthPx - totalCenterLineSpan) / 2 + sum })
     }.toMap()
 
-    val columnImages = mutableMapOf<Column, Pair<DeferredImage, Float>>()
-    for (sectionGroup in page.sectionGroups) {
-        // Get columns in the user-defined section group that share the same centerLineX.
-        // Inside such groups, some things are aligned, and so we need to columns for each group together.
-        val columnGroups = sectionGroup
-            .flatMap(Section::columns)
-            .groupBy { column -> columnCenterLineXsInPageImage[column] }
-            .values
-        // For each column group, generate an image for each column in the group.
-        // Also remember the x coordinate of the center line inside each generated image.
-        for (columnGroup in columnGroups)
-            columnImages.putAll(drawColumnImages(fonts, blockGroupIds, columnGroup))
-    }
-
+    // Combine the column images to the page image.
     val pageImage = DeferredImage()
     var y = 0f
     for (section in page.sections) {
@@ -49,6 +48,8 @@ fun drawPage(
         y += sectionHeight + section.vGapAfterPx
     }
 
+    // Convert the page image to a centered one that either fits the movie pixel width an height (if it's a card page)
+    // or the movie pixel width (if it's a scroll page).
     val centeredPageImage = DeferredImage()
     centeredPageImage.setMinWidth(global.widthPx.toFloat())
     when (page.style.behavior) {

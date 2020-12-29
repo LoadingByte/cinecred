@@ -17,7 +17,8 @@ object Controller {
     private val previewGenerationJob = LinkedBlockingQueue<Runnable>()
     private val watcher = FileSystems.getDefault().newWatchService()
 
-    private var projectDir: Path? = null
+    private var creditsFile: Path? = null
+    private var stylingFile: Path? = null
     private var projectDirWatchKey: WatchKey? = null
 
     private var styling: Styling? = null
@@ -44,32 +45,28 @@ object Controller {
     }
 
     fun openProjectDir(projectDir: Path) {
-        if (!EditPanel.onTryOpenProjectDirOrClose() || !DeliverRenderQueuePanel.onTryOpenProjectDirOrClose())
+        if (!EditPanel.onTryOpenProjectDirOrExit() || !DeliverRenderQueuePanel.onTryOpenProjectDirOrExit())
             return
 
         // Cancel the previous project dir change watching instruction.
         projectDirWatchKey?.cancel()
 
-        this.projectDir = projectDir
-        val stylingFile = projectDir.resolve(Path.of("styling.toml"))
         val creditsFile = projectDir.resolve(Path.of("credits.csv"))
+        val stylingFile = projectDir.resolve(Path.of("styling.toml"))
+        this.creditsFile = creditsFile
+        this.stylingFile = stylingFile
 
         // If the two required project files don't exist yet, create them.
-        if (!Files.exists(stylingFile))
-            Files.copy(javaClass.getResourceAsStream("/template/styling.toml"), stylingFile)
         if (!Files.exists(creditsFile))
             Files.copy(javaClass.getResourceAsStream("/template/credits.csv"), creditsFile)
+        if (!Files.exists(stylingFile))
+            Files.copy(javaClass.getResourceAsStream("/template/styling.toml"), stylingFile)
 
         MainFrame.onOpenProjectDir()
-        EditPanel.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
 
-        // Load the styling.
-        val initialStyling = readStyling(stylingFile)
-        styling = initialStyling
-        EditStylingPanel.onOpenProjectDir(initialStyling)
-
-        // Load the initial state of the credits file.
+        // Load the initial state of the styling and credits files.
+        reloadStylingFile()
         reloadCreditsFile()
 
         // Watch for future changes in the new project dir.
@@ -77,13 +74,12 @@ object Controller {
     }
 
     fun reloadCreditsFile() {
-        val creditsFile = this.projectDir!!.resolve(Path.of("credits.csv"))
         val styling = this.styling!!
 
         // Execute the actual reading and drawing in another thread to not block the UI thread.
         previewGenerationJob.clear()
         previewGenerationJob.add {
-            val (log, pages) = readCredits(creditsFile, styling)
+            val (log, pages) = readCredits(creditsFile!!, styling)
 
             var project: Project? = null
             var pageDefImages = emptyList<DeferredImage>()
@@ -101,6 +97,14 @@ object Controller {
         }
     }
 
+    fun reloadStylingFile() {
+        val styling = readStyling(stylingFile!!)
+        this.styling = styling
+        reloadCreditsFile()
+        EditPanel.onLoadStyling()
+        EditStylingPanel.onLoadStyling(styling)
+    }
+
     fun editStyling(styling: Styling) {
         this.styling = styling
         reloadCreditsFile()
@@ -108,12 +112,11 @@ object Controller {
     }
 
     fun saveStyling() {
-        val stylingFile = projectDir!!.resolve(Path.of("styling.toml"))
-        writeStyling(stylingFile, styling!!)
+        writeStyling(stylingFile!!, styling!!)
     }
 
-    fun tryClose() {
-        if (EditPanel.onTryOpenProjectDirOrClose() && DeliverRenderQueuePanel.onTryOpenProjectDirOrClose())
+    fun tryExit() {
+        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryOpenProjectDirOrExit())
             MainFrame.dispose()
     }
 

@@ -34,7 +34,7 @@ class VideoRenderJob(
         // Convert the deferred page images to raster images.
         val pageImages = pageDefImages.map { pageDefImage ->
             drawImage(pageDefImage.intWidth, pageDefImage.intHeight) { g2 ->
-                pageDefImage.materialize(g2, DeferredImage.TextMode.PATH)
+                pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
             }
         }
 

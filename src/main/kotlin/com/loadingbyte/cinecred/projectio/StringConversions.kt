@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.project.BodyLayout
 import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.FontSpec
 import java.awt.Color

@@ -27,6 +27,7 @@ val STANDARD_PAGE_STYLE = PageStyle(
 // TODO: Better standard font specs as soon as we start shipping fonts with the program.
 val STANDARD_CONTENT_STYLE = ContentStyle(
     name = "gutter",
+    vMarginPx = 0f,
     spineDir = SpineDir.HORIZONTAL,
     centerOn = CenterOn.HEAD_GAP,
     bodyLayout = BodyLayout.COLUMNS,

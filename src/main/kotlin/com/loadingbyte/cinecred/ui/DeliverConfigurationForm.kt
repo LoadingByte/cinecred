@@ -71,8 +71,8 @@ object DeliverConfigurationForm : Form() {
         if (fractionalScrollSpeeds.isNotEmpty())
             throw VerifyResult(
                 Severity.WARN,
-                "$info However, the following page scroll speeds become fractional when multiplying them with " +
-                        "the resolution multiplier, which may lead to jitter: " +
+                "$info However, the following page scroll speeds are fractional or become fractional when " +
+                        "multiplying them with the resolution multiplier, which may lead to jitter: " +
                         fractionalScrollSpeeds.joinToString() + "."
             )
 

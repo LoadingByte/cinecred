@@ -51,8 +51,9 @@ private fun PageStyle.toToml(): Map<String, Any> {
 private fun ContentStyle.toToml(): Map<String, Any> {
     val toml = mutableMapOf(
         "name" to name,
-        "spineDir" to spineDir.name,
+        "vMarginPx" to vMarginPx,
         "centerOn" to centerOn.name,
+        "spineDir" to spineDir.name,
         "colsBodyLayoutColJustifies" to colsBodyLayoutColJustifies.toString2(),
         "colsBodyLayoutColGapPx" to colsBodyLayoutColGapPx,
         "flowBodyLayoutBodyWidthPx" to flowBodyLayoutBodyWidthPx,
@@ -70,7 +71,6 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         "tailFontSpec" to tailFontSpec.toString2()
     )
     if (spineDir == SpineDir.VERTICAL) {
-        toml.remove("centerOn")
         toml.remove("headVJustify")
         toml.remove("tailVJustify")
     }

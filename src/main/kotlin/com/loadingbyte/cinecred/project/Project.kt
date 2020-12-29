@@ -53,8 +53,9 @@ enum class PageBehavior { CARD, SCROLL }
 
 data class ContentStyle(
     val name: String,
-    val spineDir: SpineDir,
+    val vMarginPx: Float,
     val centerOn: CenterOn,
+    val spineDir: SpineDir,
     val bodyLayout: BodyLayout,
     val colsBodyLayoutColJustifies: List<HJustify>,
     val colsBodyLayoutColGapPx: Float,

@@ -11,6 +11,7 @@ import javax.swing.*
 import javax.swing.event.TreeExpansionEvent
 import javax.swing.event.TreeWillExpandListener
 import javax.swing.tree.*
+import kotlin.math.floor
 
 
 object EditStylingPanel : JPanel() {
@@ -290,7 +291,12 @@ object EditStylingPanel : JPanel() {
         )
         private val scrollPxPerFrame = addSpinner(
             "Scroll Pixels per Frame", SpinnerNumberModel(1f, 0.01f, null, 1f),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL }
+            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL },
+            verify = {
+                val value = it as Float
+                if (floor(value) != value)
+                    throw VerifyResult(Severity.WARN, "Fractional scroll speeds may lead to jitter")
+            }
         )
 
         fun openPageStyle(pageStyle: PageStyle, changeCallback: (PageStyle) -> Unit) {
@@ -328,11 +334,9 @@ object EditStylingPanel : JPanel() {
         private val nameField = addTextField("Content Style Name",
             verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, "Name is blank.") }
         )
+        private val vMarginPxSpinner = addSpinner("Vertical Margin (Px)", SpinnerNumberModel(0f, 0f, null, 1f))
+        private val centerOnComboBox = addComboBox("Center On", CenterOn.values(), toString = ::toDisplayString)
         private val spineDirComboBox = addComboBox("Spine Direction", SpineDir.values(), toString = ::toDisplayString)
-        private val centerOnComboBox = addComboBox(
-            "Center On", CenterOn.values(), toString = ::toDisplayString,
-            isVisible = { spineDirComboBox.selectedItem == SpineDir.HORIZONTAL }
-        )
 
         private val bodyLayoutComboBox = addComboBox(
             "Body Layout", BodyLayout.values(), toString = ::toDisplayString
@@ -353,7 +357,7 @@ object EditStylingPanel : JPanel() {
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
         private val flowLayoutJustifyComboBox = addComboBox(
-            "Justify Body", FlowJustify.values(), toString = ::toDisplayString,
+            "Justify Body Lines", FlowJustify.values(), toString = ::toDisplayString,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
         private val flowLayoutSeparatorField = addTextField(
@@ -405,6 +409,7 @@ object EditStylingPanel : JPanel() {
             clearChangeListeners()
 
             nameField.text = contentStyle.name
+            vMarginPxSpinner.value = contentStyle.vMarginPx
             spineDirComboBox.selectedItem = contentStyle.spineDir
             centerOnComboBox.selectedItem = contentStyle.centerOn
             bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
@@ -430,8 +435,9 @@ object EditStylingPanel : JPanel() {
                 if (isErrorFree) {
                     val newContentStyle = ContentStyle(
                         nameField.text.trim(),
-                        spineDirComboBox.selectedItem as SpineDir,
+                        vMarginPxSpinner.value as Float,
                         centerOnComboBox.selectedItem as CenterOn,
+                        spineDirComboBox.selectedItem as SpineDir,
                         bodyLayoutComboBox.selectedItem as BodyLayout,
                         colsLayoutColJustifies.selectedItems.filterNotNull(),
                         colsLayoutColGapPxSpinner.value as Float,

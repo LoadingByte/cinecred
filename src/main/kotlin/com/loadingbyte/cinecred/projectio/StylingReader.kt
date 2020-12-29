@@ -53,22 +53,12 @@ private fun Map<*, *>.toPageStyle() = PageStyle(
 
 
 private fun Map<*, *>.toContentStyle(): ContentStyle {
-    val spineDir = get("spineDir", STANDARD_CONTENT_STYLE.spineDir) { toEnum() }
-    val bodyLayout = if (keys.any { "flow" in (it as String) }) BodyLayout.FLOW else BodyLayout.COLUMNS
-    val hasHead = keys.any { "head" in (it as String) }
-    val hasTail = keys.any { "tail" in (it as String) }
-    val rawCenterOn = get("centerOn", STANDARD_CONTENT_STYLE.centerOn) { toEnum() }
-    val centerOn = when {
-        spineDir == SpineDir.VERTICAL -> CenterOn.EVERYTHING
-        !hasHead && rawCenterOn == CenterOn.HEAD -> CenterOn.HEAD_GAP
-        !hasTail && rawCenterOn == CenterOn.TAIL -> CenterOn.TAIL_GAP
-        else -> rawCenterOn
-    }
     return ContentStyle(
         get("name", STANDARD_CONTENT_STYLE.name) { this },
-        spineDir,
-        centerOn,
-        bodyLayout,
+        get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNegative = true) },
+        get("centerOn", STANDARD_CONTENT_STYLE.centerOn) { toEnum() },
+        get("spineDir", STANDARD_CONTENT_STYLE.spineDir) { toEnum() },
+        if (keys.any { "flow" in (it as String) }) BodyLayout.FLOW else BodyLayout.COLUMNS,
         get("colsBodyLayoutColJustifies", STANDARD_CONTENT_STYLE.colsBodyLayoutColJustifies) { toEnumList() },
         get("colsBodyLayoutColGapPx", STANDARD_CONTENT_STYLE.colsBodyLayoutColGapPx) {
             toFiniteFloat(nonNegative = true)
@@ -82,12 +72,12 @@ private fun Map<*, *>.toContentStyle(): ContentStyle {
             toFiniteFloat(nonNegative = true)
         },
         get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },
-        hasHead,
+        keys.any { "head" in (it as String) },
         get("headHJustify", STANDARD_CONTENT_STYLE.headHJustify) { toEnum() },
         get("headVJustify", STANDARD_CONTENT_STYLE.headVJustify) { toEnum() },
         get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNegative = true) },
         get("headFontSpec", STANDARD_CONTENT_STYLE.headFontSpec) { toFontSpec() },
-        hasTail,
+        keys.any { "tail" in (it as String) },
         get("tailHJustify", STANDARD_CONTENT_STYLE.tailHJustify) { toEnum() },
         get("tailVJustify", STANDARD_CONTENT_STYLE.tailVJustify) { toEnum() },
         get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNegative = true) },

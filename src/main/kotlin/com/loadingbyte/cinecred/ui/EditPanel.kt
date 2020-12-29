@@ -2,11 +2,15 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.delivery.getDurationFrames
 import com.loadingbyte.cinecred.delivery.setHighQuality
+import com.loadingbyte.cinecred.drawer.BODY_GUIDE_COLOR
+import com.loadingbyte.cinecred.drawer.CTRLINE_GUIDE_COLOR
 import com.loadingbyte.cinecred.drawer.DeferredImage
+import com.loadingbyte.cinecred.drawer.HEAD_TAIL_GUIDE_COLOR
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.ParserMsg
+import com.loadingbyte.cinecred.projectio.toString2
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import javax.swing.*
@@ -22,7 +26,16 @@ object EditPanel : JPanel() {
         isVisible = false
         font = font.deriveFont(font.size * 0.85f)
     }
-    private val showGuidesCheckBox = JCheckBox("Show Guides", true)
+    private val showGuidesCheckBox = JCheckBox("Show Guides", true).apply {
+        toolTipText = "<html>Legend:<br>" +
+                "<font color=\"${CTRLINE_GUIDE_COLOR.darker().toString2()}\">Center lines</font><br>" +
+                "<font color=\"${BODY_GUIDE_COLOR.darker().toString2()}\">Body column and body flow bounds</font><br>" +
+                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.darker().toString2()}\">Head and tail bounds</font></html>"
+        addActionListener {
+            for (scrollPane in pageTabs.components)
+                ((scrollPane as JScrollPane).viewport.view as DeferredImagePanel).showGuides = isSelected
+        }
+    }
     private val durationLabel = JLabel()
     private val pageTabs = JTabbedPane()
 
@@ -49,11 +62,6 @@ object EditPanel : JPanel() {
                 Controller.saveStyling()
                 unsavedStylingLabel.isVisible = false
             }
-        }
-        showGuidesCheckBox.addActionListener {
-            val showGuides = showGuidesCheckBox.isSelected
-            for (scrollPane in pageTabs.components)
-                ((scrollPane as JScrollPane).viewport.view as DeferredImagePanel).showGuides = showGuides
         }
 
         val topPanel = JPanel(MigLayout("", "[][]push[][][]push[]push[]")).apply {

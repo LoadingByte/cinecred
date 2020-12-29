@@ -99,10 +99,11 @@ fun drawColumnImage(
     val centerLineXInColumnImage = column.blocks.minOf { block -> blockImagesWithCenterLineXs[block]!!.second }
     var y = 0f
     for (block in column.blocks) {
+        y += block.style.vMarginPx
         val (blockImage, centerLineXInBlockImage) = blockImagesWithCenterLineXs[block]!!
         val x = centerLineXInColumnImage - centerLineXInBlockImage
         columnImage.drawDeferredImage(blockImage, x, y, 1f)
-        y += blockImage.height + block.vGapAfterPx
+        y += blockImage.height + block.style.vMarginPx + block.vGapAfterPx
     }
     // Draw a guide that shows the column's center line.
     columnImage.drawLine(CTRLINE_GUIDE_COLOR, centerLineXInColumnImage, 0f, centerLineXInColumnImage, y, isGuide = true)

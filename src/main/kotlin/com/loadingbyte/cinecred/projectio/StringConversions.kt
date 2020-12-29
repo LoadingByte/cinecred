@@ -59,7 +59,7 @@ private val STR_TO_COLOR = mapOf(
 )
 
 
-fun Color.toString2() = "#%06x".format(rgb and 0x00FFFFFF)
+fun Color.toString2() = "#%06x".format(rgb and 0xFFFFFF)
 
 
 fun String.toFPS(): FPS {

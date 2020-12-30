@@ -21,14 +21,14 @@ fun draw(project: Project): List<DeferredImage> {
         .toSet() // Ensure that each font spec is only contained once.
 
     // Generate AWT fonts that realize those font specs.
-    val fonts = fontSpecs.associateWith { spec -> RichFont(spec, createAWTFont(spec)) }
+    val fonts = fontSpecs.associateWith { spec -> RichFont(spec, createAWTFont(project.fonts, spec)) }
 
     return project.pages.map { page -> drawPage(project.styling.global, fonts, page) }
 }
 
 
-private fun createAWTFont(spec: FontSpec): Font {
-    val baseFont = Fonts.getFont(spec.name)
+private fun createAWTFont(projectFonts: Map<String, Font>, spec: FontSpec): Font {
+    val baseFont = (projectFonts[spec.name] ?: getBundledFont(spec.name) ?: getSystemFont(spec.name))
         .deriveFont(100f)
         .deriveFont(mapOf(TextAttribute.KERNING to TextAttribute.KERNING_ON))
 

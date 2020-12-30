@@ -1,12 +1,18 @@
 package com.loadingbyte.cinecred.project
 
 import java.awt.Color
+import java.awt.Font
+import java.awt.image.BufferedImage
 
 
 class Project(
     val styling: Styling,
+    fonts: Map<String, Font>,
+    pictures: Map<String, Picture>,
     pages: List<Page>
 ) {
+    val fonts: Map<String, Font> = fonts.toMutableMap()
+    val pictures: Map<String, Picture> = pictures.toMutableMap()
     val pages: List<Page> = pages.toMutableList()
 }
 
@@ -100,6 +106,13 @@ data class FontSpec(
     val extraLineSpacingPx: Float,
     val color: Color
 )
+
+
+sealed class Picture {
+    class Raster(lazyImg: () -> BufferedImage) : Picture() {
+        val img: BufferedImage by lazy(lazyImg)
+    }
+}
 
 
 class Page(

@@ -158,20 +158,23 @@ object EditStylingPanel : JPanel() {
         // Note: We temporarily disable the tree selection listener because the node removal and subsequent insertion
         // at another place should not close and re-open (and thus reset) the right-hand editing panel.
         disableTreeSelectionListener = true
-        // We also remember the current selection path so that we can restore it later.
-        val selectionPath = tree.selectionPath
+        try {
+            // We also remember the current selection path so that we can restore it later.
+            val selectionPath = tree.selectionPath
 
-        val parent = node.parent as DefaultMutableTreeNode
-        treeModel.removeNodeFromParent(node)
-        var idx = parent.children().asSequence().indexOfFirst {
-            (it as DefaultMutableTreeNode).userObject.toString() > node.userObject.toString()
+            val parent = node.parent as DefaultMutableTreeNode
+            treeModel.removeNodeFromParent(node)
+            var idx = parent.children().asSequence().indexOfFirst {
+                (it as DefaultMutableTreeNode).userObject.toString() > node.userObject.toString()
+            }
+            if (idx == -1)
+                idx = parent.childCount
+            treeModel.insertNodeInto(node, parent, idx)
+
+            tree.selectionPath = selectionPath
+        } finally {
+            disableTreeSelectionListener = false
         }
-        if (idx == -1)
-            idx = parent.childCount
-        treeModel.insertNodeInto(node, parent, idx)
-
-        tree.selectionPath = selectionPath
-        disableTreeSelectionListener = false
     }
 
     private fun insertSortedLeaf(parent: MutableTreeNode, userObject: Any): DefaultMutableTreeNode {
@@ -208,8 +211,12 @@ object EditStylingPanel : JPanel() {
         tree.setSelectionRow(0)
     }
 
+    fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
+        ContentStyleForm.updateProjectFontFamilies(projectFamilies)
+    }
+
     private fun onChange() {
-        Controller.editStyling(Styling(
+        Controller.editStylingAndRedraw(Styling(
             global!!,
             pageStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as PageStyle },
             contentStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as ContentStyle }
@@ -401,6 +408,12 @@ object EditStylingPanel : JPanel() {
         private val tailFontSpecChooser = addFontSpecChooser("Tail Font",
             isVisible = { hasTailCheckBox.isSelected }
         )
+
+        fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
+            bodyFontSpecChooser.projectFamilies = projectFamilies
+            headFontSpecChooser.projectFamilies = projectFamilies
+            tailFontSpecChooser.projectFamilies = projectFamilies
+        }
 
         fun openContentStyle(contentStyle: ContentStyle, changeCallback: (ContentStyle) -> Unit) {
             clearChangeListeners()

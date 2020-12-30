@@ -1,47 +1,56 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.draw
+import com.loadingbyte.cinecred.project.Picture
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
-import com.loadingbyte.cinecred.projectio.readCredits
-import com.loadingbyte.cinecred.projectio.readStyling
-import com.loadingbyte.cinecred.projectio.writeStyling
-import java.nio.file.*
+import com.loadingbyte.cinecred.projectio.*
+import java.awt.Font
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
+import java.nio.file.WatchEvent
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.SwingUtilities
 
 
 object Controller {
 
-    private val previewGenerationJob = LinkedBlockingQueue<Runnable>()
-    private val watcher = FileSystems.getDefault().newWatchService()
-
-    private var creditsFile: Path? = null
+    private var projectDir: Path? = null
     private var stylingFile: Path? = null
-    private var projectDirWatchKey: WatchKey? = null
+    private var creditsFile: Path? = null
 
     private var styling: Styling? = null
+    private val fonts = mutableMapOf<Path, Font>()
+    private val pictures = mutableMapOf<Path, Picture>()
+
+    private val projectDirWatcher = object : RecursiveFileWatcher() {
+        override fun onEvent(file: Path, kind: WatchEvent.Kind<*>) {
+            val isCreditsFile = try {
+                Files.isSameFile(file, creditsFile!!)
+            } catch (_: IOException) {
+                false
+            }
+            when {
+                isCreditsFile ->
+                    SwingUtilities.invokeLater(::reloadCreditsFileAndRedraw)
+                kind == ENTRY_DELETE ->
+                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) reloadCreditsFileAndRedraw() }
+                else ->
+                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) reloadCreditsFileAndRedraw() }
+            }
+        }
+    }
+
+    private val previewGenerationJob = LinkedBlockingQueue<Runnable>()
 
     init {
         Thread({
             while (true)
                 previewGenerationJob.take().run()
         }, "PreviewGenerationThread").apply { isDaemon = true }.start()
-
-        Thread({
-            while (true) {
-                val key = watcher.take()
-                for (event in key.pollEvents())
-                    if (event.kind() != StandardWatchEventKinds.OVERFLOW &&
-                        // The context path is relative to the watched directory. As such, this condition checks
-                        // whether the context path is equal to the name of the watched file.
-                        event.context() as Path == Path.of("credits.csv")
-                    )
-                        SwingUtilities.invokeLater(::reloadCreditsFile)
-                key.reset()
-            }
-        }, "FileWatcherThread").apply { isDaemon = true }.start()
     }
 
     fun openProjectDir(projectDir: Path) {
@@ -49,70 +58,98 @@ object Controller {
             return
 
         // Cancel the previous project dir change watching instruction.
-        projectDirWatchKey?.cancel()
+        projectDirWatcher.clear()
 
-        val creditsFile = projectDir.resolve(Path.of("credits.csv"))
         val stylingFile = projectDir.resolve(Path.of("styling.toml"))
-        this.creditsFile = creditsFile
+        val creditsFile = projectDir.resolve(Path.of("credits.csv"))
+        this.projectDir = projectDir
         this.stylingFile = stylingFile
+        this.creditsFile = creditsFile
 
         // If the two required project files don't exist yet, create them.
-        if (!Files.exists(creditsFile))
-            javaClass.getResourceAsStream("/template/credits.csv").use { Files.copy(it, creditsFile) }
         if (!Files.exists(stylingFile))
             javaClass.getResourceAsStream("/template/styling.toml").use { Files.copy(it, stylingFile) }
+        if (!Files.exists(creditsFile))
+            javaClass.getResourceAsStream("/template/credits.csv").use { Files.copy(it, creditsFile) }
 
         MainFrame.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
 
-        // Load the initial state of the styling and credits files.
-        reloadStylingFile()
-        reloadCreditsFile()
+        // Load the initially present auxiliary files (project fonts and pictures).
+        for (projectFile in Files.walk(projectDir))
+            tryReloadAuxFile(projectFile)
+
+        // Load the initial state of the styling and credits files (the latter is invoked by the former).
+        reloadStylingFileAndRedraw()
 
         // Watch for future changes in the new project dir.
-        projectDirWatchKey = projectDir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY)
+        projectDirWatcher.watch(projectDir)
     }
 
-    fun reloadCreditsFile() {
-        val styling = this.styling!!
-
-        // Execute the actual reading and drawing in another thread to not block the UI thread.
-        previewGenerationJob.clear()
-        previewGenerationJob.add {
-            val (log, pages) = readCredits(creditsFile!!, styling)
-
-            var project: Project? = null
-            var pageDefImages = emptyList<DeferredImage>()
-            if (pages != null) {
-                project = Project(styling, pages)
-                pageDefImages = draw(project)
-            }
-
-            // Make sure to update the UI from the UI thread because Swing is not thread-safe.
-            SwingUtilities.invokeLater {
-                if (project != null)
-                    DeliverConfigurationForm.updateProject(project, pageDefImages)
-                EditPanel.updateProjectAndLog(styling, pages, pageDefImages, log)
-            }
+    private fun tryReloadAuxFile(file: Path): Boolean {
+        tryReadFont(file)?.let { font ->
+            fonts[file] = font
+            EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
+            return true
         }
+        tryReadPicture(file)?.let { picture ->
+            pictures[file] = picture
+            return true
+        }
+        return false
     }
 
-    fun reloadStylingFile() {
+    private fun tryRemoveAuxFile(file: Path): Boolean {
+        if (fonts.remove(file) != null) {
+            EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
+            return true
+        }
+        if (pictures.remove(file) != null)
+            return true
+        return false
+    }
+
+    fun reloadStylingFileAndRedraw() {
         val styling = readStyling(stylingFile!!)
         this.styling = styling
-        reloadCreditsFile()
         EditPanel.onLoadStyling()
         EditStylingPanel.onLoadStyling(styling)
+        reloadCreditsFileAndRedraw()
     }
 
-    fun editStyling(styling: Styling) {
+    fun editStylingAndRedraw(styling: Styling) {
         this.styling = styling
-        reloadCreditsFile()
         EditPanel.onEditStyling()
+        reloadCreditsFileAndRedraw()
     }
 
     fun saveStyling() {
         writeStyling(stylingFile!!, styling!!)
+    }
+
+    fun reloadCreditsFileAndRedraw() {
+        val styling = this.styling!!
+        val fontsByName = fonts.values.associateBy { font -> font.getFontName(Locale.US) }
+        val picturesByName = pictures.mapKeys { (file, _) -> file.fileName.toString() }
+
+        // Execute the reading and drawing in another thread to not block the UI thread.
+        previewGenerationJob.clear()
+        previewGenerationJob.add {
+            val (log, pages) = readCredits(creditsFile!!, styling)
+
+            val project = Project(styling, fontsByName, picturesByName, pages ?: emptyList())
+            val pageDefImages = when (pages) {
+                null -> emptyList()
+                else -> draw(project)
+            }
+
+            // Make sure to update the UI from the UI thread because Swing is not thread-safe.
+            SwingUtilities.invokeLater {
+                if (pages != null)
+                    DeliverConfigurationForm.updateProject(project, pageDefImages)
+                EditPanel.updateProjectAndLog(project, pageDefImages, log)
+            }
+        }
     }
 
     fun tryExit() {

@@ -6,9 +6,7 @@ import com.loadingbyte.cinecred.drawer.BODY_GUIDE_COLOR
 import com.loadingbyte.cinecred.drawer.CTRLINE_GUIDE_COLOR
 import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.HEAD_TAIL_GUIDE_COLOR
-import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
-import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
 import net.miginfocom.swing.MigLayout
@@ -43,7 +41,7 @@ object EditPanel : JPanel() {
     init {
         val reloadCreditsButton = JButton("credits.csv", UP_FOLDER_ICON).apply {
             toolTipText = "Manually reload credits.csv from disk"
-            addActionListener { Controller.reloadCreditsFile() }
+            addActionListener { Controller.reloadCreditsFileAndRedraw() }
         }
         val reloadStylingButton = JButton("Styling", UP_FOLDER_ICON).apply {
             toolTipText = "Reload styling from disk and discard changes"
@@ -53,7 +51,7 @@ object EditPanel : JPanel() {
                     if (showConfirmDialog(MainFrame, msg, "Unsaved Changes", YES_NO_OPTION) == NO_OPTION)
                         return@addActionListener
                 }
-                Controller.reloadStylingFile()
+                Controller.reloadStylingFileAndRedraw()
                 unsavedStylingLabel.isVisible = false
             }
         }
@@ -134,20 +132,19 @@ object EditPanel : JPanel() {
             true
 
     fun updateProjectAndLog(
-        styling: Styling,
-        pages: List<Page>?,
+        project: Project,
         pageDefImages: List<DeferredImage>,
         log: List<ParserMsg>
     ) {
         // Adjust the total duration label.
-        if (pages == null)
+        if (project.pages.isEmpty())
             durationLabel.apply {
                 text = null
                 toolTipText = null
             }
         else {
-            val fps = styling.global.fps.frac
-            var durFrames = getDurationFrames(Project(styling, pages), pageDefImages)
+            val fps = project.styling.global.fps.frac
+            var durFrames = getDurationFrames(project, pageDefImages)
             var durSeconds = (durFrames / fps).toInt()
             val durMinutes = durSeconds / 60
             durFrames -= (durSeconds * fps).toInt()
@@ -159,9 +156,9 @@ object EditPanel : JPanel() {
         }
 
         // First adjust the number of tabs to the number of pages.
-        while (pageTabs.tabCount > pages?.size ?: 0)
+        while (pageTabs.tabCount > project.pages.size)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
-        while (pageTabs.tabCount < pages?.size ?: 0) {
+        while (pageTabs.tabCount < project.pages.size) {
             val tabTitle = (if (pageTabs.tabCount == 0) "Page " else "") + pageTabs.tabCount.toString()
             pageTabs.addTab(tabTitle, PAGE_ICON, JScrollPane(VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_NEVER))
         }
@@ -172,8 +169,8 @@ object EditPanel : JPanel() {
             val scrollHeight = tabScrollPane.verticalScrollBar.value
             tabScrollPane.setViewportView(
                 DeferredImagePanel(
-                    pageDefImage, styling.global.widthPx.toFloat(),
-                    styling.global.background, showGuidesCheckBox.isSelected
+                    pageDefImage, project.styling.global.widthPx.toFloat(),
+                    project.styling.global.background, showGuidesCheckBox.isSelected
                 )
             )
             tabScrollPane.verticalScrollBar.value = scrollHeight

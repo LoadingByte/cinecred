@@ -1,8 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.Severity
-import com.loadingbyte.cinecred.drawer.FontFamily
-import com.loadingbyte.cinecred.drawer.Fonts
+import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.FontSpec
 import net.miginfocom.swing.MigLayout
 import java.awt.*
@@ -153,11 +152,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private class CustomToStringListCellRenderer<E>(val toString: (E) -> String) : DefaultListCellRenderer() {
+    private class CustomToStringListCellRenderer<E>(val toString: (E?) -> String) : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
-            list: JList<*>, value: Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
         ): Component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus).apply {
-            text = toString(value as E)
+            text = toString(value as E?)
         }
     }
 
@@ -171,7 +170,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     ): JComboBox<E> {
         val field = JComboBox(DefaultComboBoxModel(items)).apply {
             setMinWidth()
-            renderer = CustomToStringListCellRenderer(toString)
+            renderer = CustomToStringListCellRenderer<E> { it?.let(toString) ?: "" }
         }
         addFormRow(label, listOf(field), listOf(""), isVisible, verify?.let { { it(field.selectedItem as E?) } })
         field.addActionListener { onChange(field) }
@@ -216,52 +215,16 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         label: String,
         isVisible: (() -> Boolean)? = null,
         verify: ((FontSpec?) -> Unit)? = null
-    ): FontSpecChooserComps {
-        val familyItems = (Fonts.bundledFamilies + Fonts.systemFamilies).toTypedArray()
-        val familyComboBox = JComboBox(DefaultComboBoxModel(familyItems)).apply { maximumRowCount = 20 }
-
-        // Equip the family combo box with a custom renderer that shows headings.
-        familyComboBox.renderer = object : DefaultListCellRenderer() {
-            private val headingLabel = JLabel().apply {
-                horizontalAlignment = CENTER
-                foreground = Color.GRAY
-                font = font
-                    .deriveFont(font.size * 1.25f)
-                    .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
-            }
-            private val panel = JPanel(BorderLayout())
-            override fun getListCellRendererComponent(
-                list: JList<*>, value: Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-            ): Component {
-                val familyName = (value as FontFamily).familyName
-                val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
-                return if (index == 0 || index == Fonts.bundledFamilies.size) {
-                    headingLabel.text = if (index == 0) "\u2605 Bundled Families \u2605" else "System Families"
-                    panel.apply {
-                        removeAll()
-                        add(cell, BorderLayout.CENTER)
-                        add(headingLabel, BorderLayout.NORTH)
-                    }
-                } else
-                    cell
-            }
-        }
-
-        val nameComboBox = JComboBox<String>(emptyArray()).apply { maximumRowCount = 20 }
-        val colorChooserButton = ColorChooserButton(changeListener = ::onChange)
-        val heightPxSpinner = JSpinner(SpinnerNumberModel(1, 1, null, 1))
-            .apply { minimumSize = Dimension(50, minimumSize.height) }
-        val extraLineSpacingPxSpinner = JSpinner(SpinnerNumberModel(0f, 0f, null, 1f))
-            .apply { minimumSize = Dimension(50, minimumSize.height) }
-
-        val field = FontSpecChooserComps(
-            familyComboBox, nameComboBox, colorChooserButton, heightPxSpinner, extraLineSpacingPxSpinner
-        )
+    ): FontSpecChooserComponents {
+        val field = FontSpecChooserComponents(changeListener = ::onChange)
 
         val extendedVerify = {
             val fontSpec = field.selectedFontSpec
-            if (fontSpec.name !in Fonts.fontNames) {
-                val substituteFontName = Font(fontSpec.name, 0, 1).getFontName(Locale.US)
+            if (field.projectFamilies.getFamily(fontSpec.name) == null &&
+                BUNDLED_FAMILIES.getFamily(fontSpec.name) == null &&
+                SYSTEM_FAMILIES.getFamily(fontSpec.name) == null
+            ) {
+                val substituteFontName = getSystemFont(fontSpec.name).getFontName(Locale.US)
                 val msg = "The font \"${fontSpec.name}\" is not available and will be substituted " +
                         "by \"$substituteFontName\"."
                 throw VerifyResult(Severity.WARN, msg)
@@ -273,22 +236,12 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         addFormRow(
             label,
             listOf(
-                familyComboBox, nameComboBox, colorChooserButton, JLabel("Height (Px)"), heightPxSpinner,
-                JLabel("+ Line Spacing (Px)"), extraLineSpacingPxSpinner
+                field.familyComboBox, field.fontComboBox, field.colorChooserButton, JLabel("Height (Px)"),
+                field.heightPxSpinner, JLabel("+ Line Spacing (Px)"), field.extraLineSpacingPxSpinner
             ),
             listOf("", "newline, split", "", "newline, split", "", "", ""),
             isVisible, extendedVerify
         )
-
-        familyComboBox.addActionListener {
-            val fontNames = (familyComboBox.selectedItem as FontFamily?)?.fontNames ?: emptyList()
-            nameComboBox.model = DefaultComboBoxModel(fontNames.toTypedArray())
-            nameComboBox.isEditable = false
-            onChange(familyComboBox)
-        }
-        nameComboBox.addActionListener { onChange(nameComboBox) }
-        heightPxSpinner.addChangeListener { onChange(heightPxSpinner) }
-        extraLineSpacingPxSpinner.addChangeListener { onChange(extraLineSpacingPxSpinner) }
 
         return field
     }
@@ -382,7 +335,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     fun onChange(component: Component) {
-        componentToFormRow[component]!!.doVerify?.invoke()
+        componentToFormRow[component]?.doVerify?.invoke()
 
         for (formRow in formRows)
             formRow.isVisible = formRow.isVisibleFunc?.invoke() ?: true
@@ -443,7 +396,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             set(sel) {
                 while (comboBoxes.size < sel.size) {
                     val comboBox = JComboBox(DefaultComboBoxModel(items)).apply {
-                        renderer = CustomToStringListCellRenderer(toString)
+                        renderer = CustomToStringListCellRenderer<E> { it?.let(toString) ?: "" }
                         addActionListener { changeListener(this@ComboBoxList) }
                     }
                     comboBoxes.add(comboBox)
@@ -486,35 +439,123 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
 
-    class FontSpecChooserComps(
-        private val familyComboBox: JComboBox<FontFamily>,
-        private val nameComboBox: JComboBox<String>,
-        private val colorChooserButton: ColorChooserButton,
-        private val heightPxSpinner: JSpinner,
-        private val extraLineSpacingPxSpinner: JSpinner
-    ) {
+    class FontSpecChooserComponents(changeListener: (Component) -> Unit) {
 
         var selectedFontSpec: FontSpec
-            get() = FontSpec(
-                nameComboBox.selectedItem as String? ?: "",
-                heightPxSpinner.value as Int,
-                extraLineSpacingPxSpinner.value as Float,
-                colorChooserButton.selectedColor
-            )
+            get() {
+                val selectedFont = fontComboBox.selectedItem
+                return FontSpec(
+                    if (selectedFont is Font) selectedFont.getFontName(Locale.US) else selectedFont as String? ?: "",
+                    heightPxSpinner.value as Int,
+                    extraLineSpacingPxSpinner.value as Float,
+                    colorChooserButton.selectedColor
+                )
+            }
             set(value) {
-                val family = Fonts.getFamily(value.name)
+                val family = projectFamilies.getFamily(value.name)
+                    ?: BUNDLED_FAMILIES.getFamily(value.name)
+                    ?: SYSTEM_FAMILIES.getFamily(value.name)
                 if (family != null) {
                     familyComboBox.selectedItem = family
-                    nameComboBox.selectedItem = value.name
+                    fontComboBox.isEditable = false
+                    fontComboBox.selectedItem = family.getFont(value.name)
                 } else {
                     familyComboBox.selectedItem = null
-                    nameComboBox.isEditable = true
-                    nameComboBox.selectedItem = value.name
+                    fontComboBox.isEditable = true
+                    fontComboBox.selectedItem = value.name
                 }
                 heightPxSpinner.value = value.heightPx
                 extraLineSpacingPxSpinner.value = value.extraLineSpacingPx
                 colorChooserButton.selectedColor = value.color
             }
+
+        var projectFamilies: FontFamilies = FontFamilies(emptyList())
+            set(value) {
+                field = value
+                populateFamilyComboBox()
+            }
+
+        val familyComboBox = JComboBox<FontFamily>().apply { maximumRowCount = 20 }
+        val fontComboBox = JComboBox<Any>(emptyArray()).apply {
+            maximumRowCount = 20
+            renderer = CustomToStringListCellRenderer<Any> { elem ->
+                if (elem is Font) elem.getFontName(Locale.US) else elem as String? ?: ""
+            }
+        }
+        val colorChooserButton = ColorChooserButton(changeListener)
+        val heightPxSpinner = JSpinner(SpinnerNumberModel(1, 1, null, 1))
+            .apply { minimumSize = Dimension(50, minimumSize.height) }
+        val extraLineSpacingPxSpinner = JSpinner(SpinnerNumberModel(0f, 0f, null, 1f))
+            .apply { minimumSize = Dimension(50, minimumSize.height) }
+
+        private var disableFamilyListener = false
+
+        init {
+            // Equip the family combo box with a custom renderer that shows headings.
+            familyComboBox.renderer = object : DefaultListCellRenderer() {
+                private val headingLabel = JLabel().apply {
+                    horizontalAlignment = CENTER
+                    foreground = Color.GRAY
+                    font = font
+                        .deriveFont(font.size * 1.25f)
+                        .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
+                }
+                private val panel = JPanel(BorderLayout())
+                override fun getListCellRendererComponent(
+                    list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+                ): Component {
+                    val projectLabelIdx = 0
+                    val bundledLabelIdx = projectLabelIdx + projectFamilies.list.size
+                    val systemLabelIdx = bundledLabelIdx + BUNDLED_FAMILIES.list.size
+                    val familyName = (value as FontFamily?)?.familyName ?: ""
+                    val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
+                    return if (index == projectLabelIdx || index == bundledLabelIdx || index == systemLabelIdx) {
+                        // The condition order inside the following when statement assures that when one of the
+                        // family categories is empty, its label disappears from the list.
+                        headingLabel.text = when (index) {
+                            systemLabelIdx -> "System Families"
+                            bundledLabelIdx -> "\u2605 Bundled Families \u2605"
+                            projectLabelIdx -> "\u2605 Project Families \u2605"
+                            else -> throw IllegalStateException()
+                        }
+                        panel.apply {
+                            removeAll()
+                            add(cell, BorderLayout.CENTER)
+                            add(headingLabel, BorderLayout.NORTH)
+                        }
+                    } else
+                        cell
+                }
+            }
+
+            familyComboBox.addActionListener {
+                if (!disableFamilyListener) {
+                    val fonts = (familyComboBox.selectedItem as FontFamily?)?.fonts ?: emptyList()
+                    fontComboBox.model = DefaultComboBoxModel(fonts.toTypedArray())
+                    fontComboBox.isEditable = false
+                    changeListener(familyComboBox)
+                }
+            }
+            fontComboBox.addActionListener { changeListener(fontComboBox) }
+            heightPxSpinner.addChangeListener { changeListener(heightPxSpinner) }
+            extraLineSpacingPxSpinner.addChangeListener { changeListener(extraLineSpacingPxSpinner) }
+
+            populateFamilyComboBox()
+        }
+
+        private fun populateFamilyComboBox() {
+            // Note: We temporarily disable the family change listener because otherwise,
+            // it would trigger multiple times and, even worse, with intermediate states.
+            disableFamilyListener = true
+            try {
+                val selected = selectedFontSpec
+                val families = projectFamilies.list + BUNDLED_FAMILIES.list + SYSTEM_FAMILIES.list
+                familyComboBox.model = DefaultComboBoxModel(families.toTypedArray())
+                selectedFontSpec = selected
+            } finally {
+                disableFamilyListener = false
+            }
+        }
 
     }
 

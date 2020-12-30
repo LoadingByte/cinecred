@@ -37,7 +37,7 @@ private fun ImageIcon.rescaled(width: Int, height: Int) =
     ImageIcon(image.getScaledInstance(width, height, Image.SCALE_SMOOTH))
 
 
-fun newLabelTextArea(text: String) = JTextArea(text).apply {
+fun newLabelTextArea() = JTextArea().apply {
     background = null
     isEditable = false
     lineWrap = true
@@ -49,11 +49,14 @@ fun newLabelTextArea(text: String) = JTextArea(text).apply {
 }
 
 
-object WordWrapCellRenderer : TableCellRenderer {
+class WordWrapCellRenderer : TableCellRenderer {
+
+    private val textArea = newLabelTextArea()
 
     override fun getTableCellRendererComponent(
         table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-    ) = newLabelTextArea(value.toString()).apply {
+    ) = textArea.apply {
+        text = value as String
         setSize(table.columnModel.getColumn(colIdx).width, preferredSize.height)
         if (table.getRowHeight(rowIdx) != preferredSize.height)
             table.setRowHeight(rowIdx, preferredSize.height)

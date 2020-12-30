@@ -21,8 +21,7 @@ fun drawPage(
     // Also remember the x coordinate of the center line inside each generated image.
     val columnImages = page.sections
         .flatMap { section -> section.columns }
-        .map { column -> column to drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
-        .toMap()
+        .associateWith { column -> drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
     // Combine the column images to the page image.
     val pageImage = DeferredImage()

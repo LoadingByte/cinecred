@@ -29,8 +29,8 @@ object DeliverRenderQueuePanel : JPanel() {
             tableHeader.reorderingAllowed = false
             columnModel.apply {
                 // These cells will be rendered using special components.
-                getColumn(0).cellRenderer = WordWrapCellRenderer
-                getColumn(1).cellRenderer = WordWrapCellRenderer
+                getColumn(0).cellRenderer = WordWrapCellRenderer()
+                getColumn(1).cellRenderer = WordWrapCellRenderer()
                 getColumn(2).cellRenderer = ProgressCellRenderer
                 getColumn(3).apply { cellRenderer = CancelButtonCellRenderer; cellEditor = CancelButtonCellEditor }
                 // Set some sensible default column widths for all but the progress columns.
@@ -114,17 +114,23 @@ object DeliverRenderQueuePanel : JPanel() {
 
     private object ProgressCellRenderer : TableCellRenderer {
 
+        private val progressBar = JProgressBar()
+        private val defaultProgressBarForeground = progressBar.foreground
+        private val textArea = newLabelTextArea()
+
         override fun getTableCellRendererComponent(
             table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
         ): JComponent = when (value) {
-            is Float -> JProgressBar().apply {
+            is Float -> progressBar.apply {
                 model.value = (value * 100).toInt().coerceIn(0, 100)
+                foreground = defaultProgressBarForeground
             }
-            "finished" -> JProgressBar().apply {
+            "finished" -> progressBar.apply {
                 model.value = 100
                 foreground = Color.GREEN
             }
-            is Exception -> newLabelTextArea("${value.javaClass.simpleName}: ${value.message ?: ""}").apply {
+            is Exception -> textArea.apply {
+                text = "${value.javaClass.simpleName}: ${value.message ?: ""}"
                 foreground = Color.RED
             }
             else -> throw IllegalArgumentException()
@@ -135,11 +141,13 @@ object DeliverRenderQueuePanel : JPanel() {
 
     private object CancelButtonCellRenderer : TableCellRenderer {
 
+        private val button = JButton(SEVERITY_ICON[Severity.ERROR]).apply {
+            toolTipText = "Cancel/delete render job"
+        }
+
         override fun getTableCellRendererComponent(
             table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-        ) = JButton(SEVERITY_ICON[Severity.ERROR]).apply {
-            toolTipText = "Cancel/Delete Render Job"
-        }
+        ) = button
 
     }
 

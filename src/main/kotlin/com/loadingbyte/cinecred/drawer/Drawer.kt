@@ -4,9 +4,7 @@ import com.loadingbyte.cinecred.project.FontSpec
 import com.loadingbyte.cinecred.project.Project
 import java.awt.Color
 import java.awt.Font
-import java.awt.GraphicsEnvironment
 import java.awt.font.TextAttribute
-import java.util.*
 
 
 val CTRLINE_GUIDE_COLOR: Color = Color(0, 255, 255)
@@ -23,19 +21,15 @@ fun draw(project: Project): List<DeferredImage> {
         .toSet() // Ensure that each font spec is only contained once.
 
     // Generate AWT fonts that realize those font specs.
-    val fonts = fontSpecs.map { spec -> spec to RichFont(spec, createAWTFont(spec)) }.toMap()
+    val fonts = fontSpecs.associateWith { spec -> RichFont(spec, createAWTFont(spec)) }
 
     return project.pages.map { page -> drawPage(project.styling.global, fonts, page) }
 }
 
 
-private val FONT_BY_NAME = GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts
-    .map { it.getFontName(Locale.US) to it }.toMap()
-
 private fun createAWTFont(spec: FontSpec): Font {
-    // Note: If the font map doesn't contain a font with the specified name, we create a font object to find a font
-    // that (hopefully) best matches the specified font.
-    val baseFont = (FONT_BY_NAME[spec.name]?.deriveFont(100f) ?: Font(spec.name, 0, 100))
+    val baseFont = Fonts.getFont(spec.name)
+        .deriveFont(100f)
         .deriveFont(mapOf(TextAttribute.KERNING to TextAttribute.KERNING_ON))
 
     // Now, we need to find a font size such that produces the requested font height in pixels.

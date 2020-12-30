@@ -1,11 +1,14 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.Severity
+import com.loadingbyte.cinecred.drawer.FontFamily
+import com.loadingbyte.cinecred.drawer.Fonts
 import com.loadingbyte.cinecred.project.FontSpec
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.font.TextAttribute
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -214,10 +217,37 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         isVisible: (() -> Boolean)? = null,
         verify: ((FontSpec?) -> Unit)? = null
     ): FontSpecChooserComps {
-        val fontFamilies = FontSpecChooserComps.FONT_NAMES_BY_FAMILY.keys.toTypedArray()
+        val familyItems = (Fonts.bundledFamilies + Fonts.systemFamilies).toTypedArray()
+        val familyComboBox = JComboBox(DefaultComboBoxModel(familyItems)).apply { maximumRowCount = 20 }
 
-        val familyComboBox = JComboBox(DefaultComboBoxModel(fontFamilies))
-        val nameComboBox = JComboBox<String>(emptyArray())
+        // Equip the family combo box with a custom renderer that shows headings.
+        familyComboBox.renderer = object : DefaultListCellRenderer() {
+            private val headingLabel = JLabel().apply {
+                horizontalAlignment = CENTER
+                foreground = Color.GRAY
+                font = font
+                    .deriveFont(font.size * 1.25f)
+                    .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
+            }
+            private val panel = JPanel(BorderLayout())
+            override fun getListCellRendererComponent(
+                list: JList<*>, value: Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            ): Component {
+                val familyName = (value as FontFamily).familyName
+                val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
+                return if (index == 0 || index == Fonts.bundledFamilies.size) {
+                    headingLabel.text = if (index == 0) "\u2605 Bundled Families \u2605" else "System Families"
+                    panel.apply {
+                        removeAll()
+                        add(cell, BorderLayout.CENTER)
+                        add(headingLabel, BorderLayout.NORTH)
+                    }
+                } else
+                    cell
+            }
+        }
+
+        val nameComboBox = JComboBox<String>(emptyArray()).apply { maximumRowCount = 20 }
         val colorChooserButton = ColorChooserButton(changeListener = ::onChange)
         val heightPxSpinner = JSpinner(SpinnerNumberModel(1, 1, null, 1))
             .apply { minimumSize = Dimension(50, minimumSize.height) }
@@ -230,7 +260,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
         val extendedVerify = {
             val fontSpec = field.selectedFontSpec
-            if (fontSpec.name !in FontSpecChooserComps.FONT_FAMILY_BY_NAME) {
+            if (fontSpec.name !in Fonts.fontNames) {
                 val substituteFontName = Font(fontSpec.name, 0, 1).getFontName(Locale.US)
                 val msg = "The font \"${fontSpec.name}\" is not available and will be substituted " +
                         "by \"$substituteFontName\"."
@@ -251,8 +281,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         )
 
         familyComboBox.addActionListener {
-            val family = familyComboBox.selectedItem as String?
-            val fontNames = family?.let { FontSpecChooserComps.FONT_NAMES_BY_FAMILY[it] } ?: emptyList()
+            val fontNames = (familyComboBox.selectedItem as FontFamily?)?.fontNames ?: emptyList()
             nameComboBox.model = DefaultComboBoxModel(fontNames.toTypedArray())
             nameComboBox.isEditable = false
             onChange(familyComboBox)
@@ -300,7 +329,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
         if (verify != null) {
             val verifyIconLabel = JLabel()
-            val verifyMsgArea = newLabelTextArea("")
+            val verifyMsgArea = newLabelTextArea()
             formRow.components.addAll(arrayOf(verifyIconLabel, verifyMsgArea))
 
             // Position the verification components using coordinates relative to the fields that are at the line ends.
@@ -458,7 +487,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
 
     class FontSpecChooserComps(
-        private val familyComboBox: JComboBox<String>,
+        private val familyComboBox: JComboBox<FontFamily>,
         private val nameComboBox: JComboBox<String>,
         private val colorChooserButton: ColorChooserButton,
         private val heightPxSpinner: JSpinner,
@@ -473,7 +502,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 colorChooserButton.selectedColor
             )
             set(value) {
-                val family = FONT_FAMILY_BY_NAME[value.name]
+                val family = Fonts.getFamily(value.name)
                 if (family != null) {
                     familyComboBox.selectedItem = family
                     nameComboBox.selectedItem = value.name
@@ -486,44 +515,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 extraLineSpacingPxSpinner.value = value.extraLineSpacingPx
                 colorChooserButton.selectedColor = value.color
             }
-
-
-        companion object {
-
-            val FONT_NAMES_BY_FAMILY: Map<String, Set<String>>
-            val FONT_FAMILY_BY_NAME: Map<String, String>
-
-            init {
-                val familyEndingsForRemoval = listOf(
-                    "Bd", "BdIta", "Bk", "Black", "Blk", "Bold", "BoldItalic", "Extra", "ExtraBold", "ExtraLight",
-                    "Hairline", "Italic", "Light", "Lt", "Md", "Med", "Medium", "Normal", "Oblique", "Regular", "Semi",
-                    "SemiBold", "Th", "Thin", "Ultra", "UltraBold", "UltraLight"
-                ).flatMap { listOf(" $it", "-$it", ".$it") }
-
-                fun cleanFamily(name: String): String {
-                    var family = name.trim()
-                    while (true) {
-                        for (ending in familyEndingsForRemoval)
-                            if (family.endsWith(ending, ignoreCase = true)) {
-                                family = family.dropLast(ending.length)
-                                break
-                            }
-                        return family
-                    }
-                }
-
-                val fontNamesByFamily = TreeMap<String, TreeSet<String>>()
-                val fontFamilyByName = mutableMapOf<String, String>()
-                for (font in GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts) {
-                    val family = cleanFamily(font.family)
-                    fontNamesByFamily.getOrPut(family) { TreeSet() }.add(font.getFontName(Locale.US))
-                    fontFamilyByName[font.getFontName(Locale.US)] = family
-                }
-                FONT_NAMES_BY_FAMILY = fontNamesByFamily
-                FONT_FAMILY_BY_NAME = fontFamilyByName
-            }
-
-        }
 
     }
 

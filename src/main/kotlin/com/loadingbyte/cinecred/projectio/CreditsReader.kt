@@ -15,8 +15,8 @@ class ParserMsg(val lineNo: Int, val severity: Severity, val msg: String)
 
 fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Page>?> {
     // Note: We use maps whose keys are case insensitive here because style references should be case insensitive.
-    val pageStyleMap = styling.pageStyles.map { it.name to it }.toMap(TreeMap(String.CASE_INSENSITIVE_ORDER))
-    val contentStyleMap = styling.contentStyles.map { it.name to it }.toMap(TreeMap(String.CASE_INSENSITIVE_ORDER))
+    val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
+    val contentStyleMap = styling.contentStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
 
     // We trim the unicode character "ZERO WIDTH NO-BREAK SPACE" which is added by Excel for some reason.
     val csvStr = Files.readString(csvFile).trim(0xFEFF.toChar())

@@ -34,11 +34,11 @@ fun drawBodyImagesWithColBodyLayout(
 
     // Step 2:
     // Draw a deferred image for the body of each block.
-    return blocks.map { block ->
+    return blocks.associateWith { block ->
         // If there are no body columns, there is no place to put the body.
         // So we can just return an empty image.
         if (numBodyCols == 0)
-            return@map block to DeferredImage()
+            return@associateWith DeferredImage()
         val bodyPartitions = partitionBodyIntoCols(block.body, numBodyCols)
 
         val bodyImage = DeferredImage()
@@ -65,8 +65,8 @@ fun drawBodyImagesWithColBodyLayout(
             x += bodyColWidth + style.colsBodyLayoutColGapPx
         }
 
-        block to bodyImage
-    }.toMap()
+        bodyImage
+    }
 }
 
 

@@ -58,9 +58,9 @@ object Controller {
 
         // If the two required project files don't exist yet, create them.
         if (!Files.exists(creditsFile))
-            Files.copy(javaClass.getResourceAsStream("/template/credits.csv"), creditsFile)
+            javaClass.getResourceAsStream("/template/credits.csv").use { Files.copy(it, creditsFile) }
         if (!Files.exists(stylingFile))
-            Files.copy(javaClass.getResourceAsStream("/template/styling.toml"), stylingFile)
+            javaClass.getResourceAsStream("/template/styling.toml").use { Files.copy(it, stylingFile) }
 
         MainFrame.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)

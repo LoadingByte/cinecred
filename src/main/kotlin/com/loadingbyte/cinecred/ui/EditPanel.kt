@@ -92,7 +92,7 @@ object EditPanel : JPanel() {
             columnModel.getColumn(1).cellRenderer =
                 DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping in the message column.
-            columnModel.getColumn(2).cellRenderer = WordWrapCellRenderer
+            columnModel.getColumn(2).cellRenderer = WordWrapCellRenderer()
         }
         val logTablePanel = JPanel(MigLayout()).apply {
             add(JScrollPane(logTable), "grow, push")

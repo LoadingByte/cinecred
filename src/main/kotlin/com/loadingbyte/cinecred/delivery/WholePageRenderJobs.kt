@@ -28,6 +28,8 @@ class PageSequenceRenderJob(
         Files.createDirectories(dir)
 
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
+            if (Thread.interrupted()) return
+
             val pageWidth = pageDefImage.intWidth
             val pageHeight = pageDefImage.intHeight
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
@@ -73,6 +75,8 @@ class PDFRenderJob(
         val pdfDoc = PDFDocument()
 
         for ((idx, page) in pageDefImages.withIndex()) {
+            if (Thread.interrupted()) return
+
             val pdfPage = pdfDoc.createPage(Rectangle(page.intWidth, page.intHeight))
 
             val g2 = pdfPage.graphics2D

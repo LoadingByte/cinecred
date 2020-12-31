@@ -385,7 +385,7 @@ object EditStylingPanel : JPanel() {
             isVisible = { hasHeadCheckBox.isSelected && spineDirComboBox.selectedItem == SpineDir.HORIZONTAL }
         )
         private val headGapPxSpinner = addSpinner(
-            "Head-Body Gap", SpinnerNumberModel(0f, 0f, null, 1f),
+            "Head-Body Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = { hasHeadCheckBox.isSelected }
         )
         private val headFontSpecChooser = addFontSpecChooser("Head Font",
@@ -402,7 +402,7 @@ object EditStylingPanel : JPanel() {
             isVisible = { hasTailCheckBox.isSelected && spineDirComboBox.selectedItem == SpineDir.HORIZONTAL }
         )
         private val tailGapPxSpinner = addSpinner(
-            "Body-Tail Gap", SpinnerNumberModel(0f, 0f, null, 1f),
+            "Body-Tail Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = { hasTailCheckBox.isSelected }
         )
         private val tailFontSpecChooser = addFontSpecChooser("Tail Font",

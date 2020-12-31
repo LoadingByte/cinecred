@@ -8,7 +8,7 @@ val STANDARD_GLOBAL = Global(
     widthPx = 1920,
     heightPx = 1080,
     background = Color.BLACK,
-    unitVGapPx = 30f
+    unitVGapPx = 32f
 )
 
 
@@ -23,28 +23,27 @@ val STANDARD_PAGE_STYLE = PageStyle(
 )
 
 
-// TODO: Better standard font specs as soon as we start shipping fonts with the program.
 val STANDARD_CONTENT_STYLE = ContentStyle(
     name = "gutter",
     vMarginPx = 0f,
-    spineDir = SpineDir.HORIZONTAL,
     centerOn = CenterOn.HEAD_GAP,
+    spineDir = SpineDir.HORIZONTAL,
     bodyLayout = BodyLayout.COLUMNS,
     colsBodyLayoutColJustifies = listOf(HJustify.LEFT),
-    colsBodyLayoutColGapPx = 30f,
-    flowBodyLayoutBodyWidthPx = 800f,
+    colsBodyLayoutColGapPx = 32f,
+    flowBodyLayoutBodyWidthPx = 1000f,
     flowBodyLayoutJustify = FlowJustify.CENTER,
     flowBodyLayoutSeparator = "\u2022",
-    flowBodyLayoutSeparatorSpacingPx = 15f,
-    bodyFontSpec = FontSpec("SansSerif.bold", 30, 0f, Color.WHITE),
+    flowBodyLayoutSeparatorSpacingPx = 14f,
+    bodyFontSpec = FontSpec("Archivo Narrow Bold", 32, 0f, Color.WHITE),
     hasHead = false,
     headHJustify = HJustify.RIGHT,
     headVJustify = VJustify.TOP_MIDDLE,
-    headFontSpec = FontSpec("SansSerif.plain", 30, 0f, Color.WHITE),
-    headGapPx = 30f,
+    headFontSpec = FontSpec("Archivo Narrow Regular", 24, 0f, Color.WHITE),
+    headGapPx = 24f,
     hasTail = false,
     tailHJustify = HJustify.LEFT,
     tailVJustify = VJustify.TOP_MIDDLE,
-    tailFontSpec = FontSpec("SansSerif.plain", 30, 0f, Color.WHITE),
-    tailGapPx = 30f
+    tailFontSpec = FontSpec("Archivo Narrow Regular", 24, 0f, Color.WHITE),
+    tailGapPx = 24f
 )

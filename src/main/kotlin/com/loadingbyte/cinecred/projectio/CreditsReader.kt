@@ -257,7 +257,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
             blockBody.add(bodyLine)
         // Otherwise, if the row didn't just start a new block,
         // mark the previous block for conclusion (if there was any).
-        else if (newHead == null && newTail != null)
+        else if (newHead == null && newTail == null)
             isBlockConclusionMarked = true
 
         // If the content style is changed at a non-standard position, issue a warning.
@@ -267,7 +267,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         // If the break alignment cell is non-empty, conclude the specified previous alignment group.
         table.get(row, "@Break Align", { "one of 'Body Columns'/'Head and Tail'" }) { str ->
             val lc = str.toLowerCase()
-            if (lc != "body columns" && lc != "head and tail") throw IllegalArgumentException()
+            require(lc == "body columns" || lc == "head and tail")
             lc
         }?.let { str ->
             if (str == "body columns") {

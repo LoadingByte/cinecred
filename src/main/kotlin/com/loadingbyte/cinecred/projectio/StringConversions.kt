@@ -75,8 +75,7 @@ fun String.toFPS(): FPS {
         }
         else -> {
             val f = toFiniteFloat(nonNegative = true, nonZero = true)
-            if (floor(f) != f)
-                throw IllegalArgumentException()
+            require(floor(f) == f)
             FPS(f.toInt(), 1)
         }
     }
@@ -128,9 +127,8 @@ fun String.toFontSpec(): FontSpec {
         wasLastPartParsable = parsable
     }
 
-    if (nameParts.isEmpty() || height == null || color == null)
-        throw IllegalArgumentException()
-    return FontSpec(nameParts.joinToString(" "), height!!, extraLineSpacing, color!!)
+    require(nameParts.isNotEmpty() && height != null && color != null)
+    return FontSpec(nameParts.asReversed().joinToString(" "), height!!, extraLineSpacing, color!!)
 }
 
 

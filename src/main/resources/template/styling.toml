@@ -4,70 +4,80 @@ fps = "24/1"
 widthPx = 1920
 heightPx = 1080
 background = "#000000"
-unitHGapPx = 1.0
-unitVGapPx = 30.0
+unitVGapPx = 32.0
 
 [[pageStyle]]
 name = "Card"
 behavior = "CARD"
-afterwardFrames = 24
-cardStayFrames = 96
-cardFadeFrames = 12
+afterwardSlugFrames = 24
+cardDurationFrames = 96
+cardFadeInFrames = 12
+cardFadeOutFrames = 12
 
 [[pageStyle]]
 name = "Scroll"
 behavior = "SCROLL"
-afterwardFrames = 24
+afterwardSlugFrames = 24
 scrollPxPerFrame = 3.0
 
 [[contentStyle]]
 name = "Card"
+vMarginPx = 0.0
+centerOn = "EVERYTHING"
 spineDir = "VERTICAL"
 colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "SansSerif.bold 100 #ffffff"
+bodyFontSpec = "Archivo Narrow Bold 100 #ffffff"
 headHJustify = "CENTER"
 headGapPx = 30.0
-headFontSpec = "SansSerif.plain 50 #ffffff"
+headFontSpec = "Archivo Narrow Regular 50 #ffffff"
 tailHJustify = "CENTER"
 tailGapPx = 30.0
-tailFontSpec = "SansSerif.plain 50 #ffffff"
+tailFontSpec = "Archivo Narrow Regular 50 #ffffff"
 
 [[contentStyle]]
 name = "Collection"
+vMarginPx = 0.0
+centerOn = "EVERYTHING"
 spineDir = "VERTICAL"
+colsBodyLayoutColJustifies = "LEFT"
 flowBodyLayoutBodyWidthPx = 1000.0
 flowBodyLayoutJustify = "CENTER"
 flowBodyLayoutSeparator = "•"
-flowBodyLayoutSeparatorSpacingPx = 16.0
-bodyFontSpec = "SansSerif.bold 32 #ffffff"
+flowBodyLayoutSeparatorSpacingPx = 14.0
+bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 headHJustify = "CENTER"
-headGapPx = 12.0
-headFontSpec = "SansSerif.plain 24 #ffffff"
+headGapPx = 8.0
+headFontSpec = "Archivo Narrow Regular 24 #ffffff"
 
 [[contentStyle]]
 name = "Gutter"
-spineDir = "HORIZONTAL"
+vMarginPx = 0.0
 centerOn = "HEAD_GAP"
+spineDir = "HORIZONTAL"
 colsBodyLayoutColJustifies = "LEFT"
 colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "SansSerif.bold 32 #ffffff"
+bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 headHJustify = "RIGHT"
 headVJustify = "TOP_MIDDLE"
-headGapPx = 32.0
-headFontSpec = "SansSerif.plain 24 #ffffff"
+headGapPx = 24.0
+headFontSpec = "Archivo Narrow Regular 24 #ffffff"
 
 [[contentStyle]]
 name = "Heading"
+vMarginPx = 0.0
+centerOn = "EVERYTHING"
 spineDir = "VERTICAL"
 colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "SansSerif.plain 32 #ffffff"
+bodyFontSpec = "Archivo Narrow Regular 32 #ffffff"
 
 [[contentStyle]]
 name = "Subheading"
+vMarginPx = 0.0
+centerOn = "EVERYTHING"
 spineDir = "VERTICAL"
 colsBodyLayoutColJustifies = "CENTER"
 colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "SansSerif.plain 24 #ffffff"
+bodyFontSpec = "Archivo Narrow Regular 24 #ffffff"
 

@@ -2,16 +2,27 @@ package com.loadingbyte.cinecred.drawer
 
 import java.awt.Font
 import java.awt.GraphicsEnvironment
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import kotlin.streams.toList
 
 
 // Load the fonts that are bundled with this program.
 val BUNDLED_FONTS: List<Font> = run {
-    val dummyClass = object {}.javaClass
-    dummyClass.getResourceAsStream("/fonts").use { it.bufferedReader().lines() }
-        .map { filename -> dummyClass.getResourceAsStream("/fonts/$filename").use { Font.createFonts(it)[0] } }
+    fun loadFonts(fontDir: Path) = Files
+        .list(fontDir)
+        .map { file -> Files.newInputStream(file).use { Font.createFonts(it)[0] } }
         .toList()
+
+    val uri = (object {}.javaClass).getResource("/fonts").toURI()
+    if (uri.scheme == "jar")
+        FileSystems
+            .newFileSystem(uri, emptyMap<String, Any>())
+            .use { fs -> loadFonts(fs.getPath("/fonts")) }
+    else
+        loadFonts(Path.of(uri))
 }
 
 // Load the fonts that are present on the system.

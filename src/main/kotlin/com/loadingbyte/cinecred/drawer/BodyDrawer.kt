@@ -10,12 +10,10 @@ fun drawBodyImagesWithColBodyLayout(
     blocks: List<Block>
 ): Map<Block, DeferredImage> {
     // We assume that only blocks which share the same style are laid out together.
-    if (blocks.any { block -> block.style != blocks[0].style })
-        throw IllegalArgumentException()
+    require(blocks.all { block -> block.style == blocks[0].style })
     val style = blocks[0].style
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "column body layout".
-    if (style.bodyLayout != BodyLayout.COLUMNS)
-        throw IllegalArgumentException()
+    require(style.bodyLayout == BodyLayout.COLUMNS)
 
     // Step 1:
     // First of all, we want all body columns inside some block to have the same width as that makes the
@@ -87,8 +85,7 @@ fun drawBodyImageWithFlowBodyLayout(
     block: Block
 ): DeferredImage {
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow body layout".
-    if (block.style.bodyLayout != BodyLayout.FLOW)
-        throw IllegalArgumentException()
+    require(block.style.bodyLayout == BodyLayout.FLOW)
 
     val bodyFont = fonts[block.style.bodyFontSpec]!!
 

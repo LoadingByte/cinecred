@@ -3,18 +3,12 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
-import io.humble.video.*
-import io.humble.video.Codec.ID.CODEC_ID_H264
-import io.humble.video.Codec.ID.CODEC_ID_PRORES
-import io.humble.video.PixelFormat.Type.PIX_FMT_YUV420P
-import io.humble.video.PixelFormat.Type.PIX_FMT_YUV422P10LE
-import io.humble.video.awt.MediaPictureConverter
-import io.humble.video.awt.MediaPictureConverterFactory
+import org.bytedeco.ffmpeg.global.avcodec.*
+import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.AlphaComposite
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
-import java.io.Closeable
 import java.nio.file.Path
 import kotlin.math.ceil
 
@@ -38,14 +32,16 @@ class VideoRenderJob(
             }
         }
 
-        // Invert the FPS to obtain the framerate.
-        val fps = project.styling.global.fps
         val totalNumFrames = getDurationFrames(project, pageDefImages)
-        val framerate = Rational.make(fps.denominator, fps.numerator)
-        val videoWidth = ceil(project.styling.global.widthPx * scaling).toInt()
-        val videoHeight = ceil(project.styling.global.heightPx * scaling).toInt()
 
-        VideoWriter(videoWidth, videoHeight, framerate, file, format).use { videoWriter ->
+        fun ensureMultipleOf2(i: Int) = if (i % 2 == 1) i + 1 else i
+        val videoWidth = ensureMultipleOf2(ceil(project.styling.global.widthPx * scaling).toInt())
+        val videoHeight = ensureMultipleOf2(ceil(project.styling.global.heightPx * scaling).toInt())
+
+        VideoWriter(
+            file, videoWidth, videoHeight, project.styling.global.fps, format.codecId, format.pixelFormat,
+            muxerOptions = emptyMap(), codecOptions = format.codecOptions
+        ).use { videoWriter ->
             var prevProgress = 0f
             fun updateProgress() {
                 val progress = videoWriter.frameCounter.toFloat() / totalNumFrames
@@ -53,6 +49,8 @@ class VideoRenderJob(
                     prevProgress = progress
                     progressCallback(progress)
                 }
+                if (Thread.interrupted())
+                    throw InterruptedException()
             }
 
             fun writeStatic(image: BufferedImage, numFrames: Int) {
@@ -130,100 +128,30 @@ class VideoRenderJob(
     class Format private constructor(
         val label: String,
         defaultFileExt: String,
-        val codecId: Codec.ID,
-        val pixelFormat: PixelFormat.Type,
-        val properties: Map<String, String> = emptyMap()
+        val codecId: Int,
+        val pixelFormat: Int,
+        val codecOptions: Map<String, String> = emptyMap()
     ) {
 
         val fileExts = listOf(defaultFileExt) +
-                MuxerFormat.getFormats()
-                    .filter { codecId in it.supportedCodecs }
-                    .flatMap { it.extensions?.split(",") ?: emptyList() }
+                MuxerFormat.ALL
+                    .filter { codecId in it.supportedCodecIds }
+                    .flatMap { it.extensions }
                     .filter { it != defaultFileExt }
                     .toSortedSet()
 
         companion object {
             val ALL = listOf(
-                Format("H.264", "mp4", CODEC_ID_H264, PIX_FMT_YUV420P),
-                Format("ProRes 422 Proxy", "mov", CODEC_ID_PRORES, PIX_FMT_YUV422P10LE, mapOf("profile" to "0")),
-                Format("ProRes 422 LT", "mov", CODEC_ID_PRORES, PIX_FMT_YUV422P10LE, mapOf("profile" to "1")),
-                Format("ProRes 422", "mov", CODEC_ID_PRORES, PIX_FMT_YUV422P10LE, mapOf("profile" to "2")),
-                Format("ProRes 422 HQ", "mov", CODEC_ID_PRORES, PIX_FMT_YUV422P10LE, mapOf("profile" to "3")),
-                // TODO: Currently, humble-video is based on ffmpeg 2.8.15, which does not support DNxHR.
-                // Until humble-video is updated, we sadly also can't support DNxHR.
-                // Refer to this issue: https://github.com/artclarke/humble-video/issues/124
-                // Also note that we could use this fork of the original xuggler, but it doesn't come with pre-built
-                // binaries for all OSes and the effort to build all of them by ourselves would be tremendous:
-                // https://github.com/olivierayache/xuggle-xuggler/
-                /*Format("DNxHR LB", "mxf", CODEC_ID_DNXHD, PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_lb")),
-                Format("DNxHR SQ", "mxf", CODEC_ID_DNXHD, PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
-                Format("DNxHR HQ", "mxf", CODEC_ID_DNXHD, PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
-                Format("DNxHR HQX", "mxf", CODEC_ID_DNXHD, PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx"))*/
+                Format("H.264", "mp4", AV_CODEC_ID_H264, AV_PIX_FMT_YUV420P),
+                Format("ProRes 422 Proxy", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "0")),
+                Format("ProRes 422 LT", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "1")),
+                Format("ProRes 422", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "2")),
+                Format("ProRes 422 HQ", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "3")),
+                Format("DNxHR LB", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_lb")),
+                Format("DNxHR SQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
+                Format("DNxHR HQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
+                Format("DNxHR HQX", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx"))
             )
-        }
-
-    }
-
-
-    /**
-     * This class provides a nice interface to ffmpeg and hides all its nastiness.
-     */
-    private class VideoWriter(width: Int, height: Int, framerate: Rational, file: Path, format: Format) : Closeable {
-
-        private val muxer: Muxer
-        private val encoder: Encoder
-        private val picture: MediaPicture
-        private val packet = MediaPacket.make()
-
-        private var converter: MediaPictureConverter? = null
-        var frameCounter = 0L
-            private set
-
-        init {
-            muxer = Muxer.make(file.toString(), null, null)
-            encoder = Encoder.make(Codec.findEncodingCodec(format.codecId)).apply {
-                this.width = width
-                this.height = height
-                pixelFormat = format.pixelFormat
-                timeBase = framerate
-                for ((key, value) in format.properties)
-                    setProperty(key, value)
-            }
-
-            // An annoyance of some formats is that they need global (rather than per-stream) headers,
-            // and in that case you have to tell the encoder.
-            if (muxer.format.getFlag(ContainerFormat.Flag.GLOBAL_HEADER))
-                encoder.setFlag(Coder.Flag.FLAG_GLOBAL_HEADER, true)
-
-            encoder.open(null, null)
-            muxer.addNewStream(encoder)
-            muxer.open(null, null)
-
-            picture = MediaPicture.make(width, height, format.pixelFormat)
-            picture.timeBase = framerate
-        }
-
-        fun writeFrame(frame: BufferedImage) {
-            if (muxer.state != Muxer.State.STATE_OPENED)
-                throw IllegalStateException("Cannot write to VideoWriter because it has been closed.")
-
-            if (converter == null)
-                converter = MediaPictureConverterFactory.createConverter(frame, picture)
-
-            converter!!.toPicture(picture, frame, frameCounter++)
-            flushPicture(picture)
-        }
-
-        override fun close() {
-            flushPicture(null)
-            muxer.close()
-        }
-
-        private fun flushPicture(picture: MediaPicture?) {
-            do {
-                encoder.encode(packet, picture)
-                if (packet.isComplete) muxer.write(packet, false)
-            } while (packet.isComplete)
         }
 
     }

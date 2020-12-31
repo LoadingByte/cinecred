@@ -253,8 +253,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         isVisible: (() -> Boolean)? = null,
         verify: (() -> Unit)? = null
     ) {
-        if (fields.size != constraints.size)
-            throw IllegalArgumentException()
+        require(fields.size == constraints.size)
 
         val formRow = FormRow(isVisible)
 

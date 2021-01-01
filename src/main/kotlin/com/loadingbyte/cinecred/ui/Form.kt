@@ -474,7 +474,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 populateFamilyComboBox()
             }
 
-        val familyComboBox = JComboBox<FontFamily>().apply { maximumRowCount = 20 }
+        val familyComboBox = JComboBox<FontFamily>().apply {
+            maximumRowCount = 20
+            // Equip the family combo box with a custom renderer that shows headings.
+            renderer = FamilyListCellRenderer()
+        }
         val fontComboBox = JComboBox<Any>(emptyArray()).apply {
             maximumRowCount = 20
             renderer = CustomToStringListCellRenderer<Any> { elem ->
@@ -490,43 +494,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         private var disableFamilyListener = false
 
         init {
-            // Equip the family combo box with a custom renderer that shows headings.
-            familyComboBox.renderer = object : DefaultListCellRenderer() {
-                private val headingLabel = JLabel().apply {
-                    horizontalAlignment = CENTER
-                    foreground = Color.GRAY
-                    font = font
-                        .deriveFont(font.size * 1.25f)
-                        .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
-                }
-                private val panel = JPanel(BorderLayout())
-                override fun getListCellRendererComponent(
-                    list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-                ): Component {
-                    val projectLabelIdx = 0
-                    val bundledLabelIdx = projectLabelIdx + projectFamilies.list.size
-                    val systemLabelIdx = bundledLabelIdx + BUNDLED_FAMILIES.list.size
-                    val familyName = (value as FontFamily?)?.familyName ?: ""
-                    val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
-                    return if (index == projectLabelIdx || index == bundledLabelIdx || index == systemLabelIdx) {
-                        // The condition order inside the following when statement assures that when one of the
-                        // family categories is empty, its label disappears from the list.
-                        headingLabel.text = when (index) {
-                            systemLabelIdx -> "System Families"
-                            bundledLabelIdx -> "\u2605 Bundled Families \u2605"
-                            projectLabelIdx -> "\u2605 Project Families \u2605"
-                            else -> throw IllegalStateException()
-                        }
-                        panel.apply {
-                            removeAll()
-                            add(cell, BorderLayout.CENTER)
-                            add(headingLabel, BorderLayout.NORTH)
-                        }
-                    } else
-                        cell
-                }
-            }
-
             familyComboBox.addActionListener {
                 if (!disableFamilyListener) {
                     val fonts = (familyComboBox.selectedItem as FontFamily?)?.fonts ?: emptyList()
@@ -554,6 +521,50 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             } finally {
                 disableFamilyListener = false
             }
+        }
+
+        private inner class FamilyListCellRenderer : DefaultListCellRenderer() {
+
+            private val panel = JPanel(MigLayout("insets 0"))
+            private val projectHeaderLabel = createHeaderLabel("\u2605 Project Families \u2605")
+            private val bundledHeaderLabel = createHeaderLabel("\u2605 Bundled Families \u2605")
+            private val systemHeaderLabel = createHeaderLabel("System Families")
+            private val noProjectFamiliesLabel = JLabel("(No font files in project dir)").apply {
+                foreground = Color.GRAY
+            }
+
+            private fun createHeaderLabel(text: String) = JLabel(text).apply {
+                foreground = Color.GRAY
+                font = font
+                    .deriveFont(font.size * 1.25f)
+                    .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
+            }
+
+            override fun getListCellRendererComponent(
+                list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            ): Component {
+                val projectHeaderIdx = 0
+                val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
+                val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
+                val familyName = (value as FontFamily?)?.familyName ?: ""
+                val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
+                return if (index == projectHeaderIdx || index == bundledHeaderIdx || index == systemHeaderIdx) {
+                    panel.removeAll()
+                    if (index == projectHeaderIdx) {
+                        panel.add(projectHeaderLabel, "newline 8")
+                        if (projectHeaderIdx == bundledHeaderIdx)
+                            panel.add(noProjectFamiliesLabel, "newline 2")
+                    }
+                    if (index == bundledHeaderIdx)
+                        panel.add(bundledHeaderLabel, "newline 8")
+                    if (index == systemHeaderIdx)
+                        panel.add(systemHeaderLabel, "newline 8")
+                    panel.add(cell, "newline 2, growx, pushx")
+                    panel
+                } else
+                    cell
+            }
+
         }
 
     }

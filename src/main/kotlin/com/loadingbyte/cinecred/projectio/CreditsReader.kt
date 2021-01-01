@@ -173,9 +173,9 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
-        // If the column cell contains "wrap", also conclude the previous section and start a new one.
+        // If the column cell contains "Wrap", also conclude the previous section and start a new one.
         val getColumnTypeDesc = "a column position offset from the screen center in pixels, optionally preceded by " +
-                "\"wrap\" to put the new column beneath all previous columns (so, e.g., \"-400\" or \"wrap -400\")"
+                "\"Wrap\" to put the new column beneath all previous columns (so, e.g., \"-400\" or \"Wrap -400\")"
         table.get(row, "@Column Pos", { getColumnTypeDesc }) { str ->
             when {
                 str.equals("wrap", ignoreCase = true) ->

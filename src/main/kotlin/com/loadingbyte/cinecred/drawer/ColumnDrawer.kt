@@ -16,19 +16,19 @@ fun drawColumnImage(
     val bodyImages = mutableMapOf<Block, DeferredImage>()
 
     // Step 1:
-    // Take the blocks whose bodies are laid out using the "column body layout". Group blocks that share the same
+    // Take the blocks whose bodies are laid out using the "grid body layout". Group blocks that share the same
     // content style and user-defined "body columns alignment group". The "body columns" will be aligned between
     // blocks from the same group.
-    val blockGroupsWithColBodyLayout = column.blocks
-        .filter { block -> block.style.bodyLayout == BodyLayout.COLUMNS }
+    val blockGroupsWithGridBodyLayout = column.blocks
+        .filter { block -> block.style.bodyLayout == BodyLayout.GRID }
         .groupBy { block -> Pair(block.style, alignBodyColsGroupIds[block]) }
         .values
-    // Generate images for blocks whose bodies are laid out using the "column body layout".
-    for (blockGroup in blockGroupsWithColBodyLayout) {
+    // Generate images for blocks whose bodies are laid out using the "grid body layout".
+    for (blockGroup in blockGroupsWithGridBodyLayout) {
         // Generate an image for the body of each block in the group. The bodies are laid out together such that,
         // for example, a "left" justification means "left" w.r.t. to the column spanned up by the widest body from
         // the block group. As a consequence, all these images also share the same width.
-        bodyImages.putAll(drawBodyImagesWithColBodyLayout(fonts, blockGroup))
+        bodyImages.putAll(drawBodyImagesWithGridBodyLayout(fonts, blockGroup))
     }
 
     // Step 2:
@@ -204,7 +204,7 @@ private fun drawHorizontalSpineBlockImages(
         // Draw the block's head.
         if (block.head != null) {
             blockImage.drawJustifiedString(
-                headFont, block.style.bodyFontSpec, block.style.headHJustify, block.style.headVJustify, block.head,
+                headFont, block.style.bodyFontSpec, block.head, block.style.headHJustify, block.style.headVJustify,
                 0f, y, headWidth, bodyImage.height
             )
             // Draw a guide that shows the edges of the head space.
@@ -217,7 +217,7 @@ private fun drawHorizontalSpineBlockImages(
         // Draw the block's tail.
         if (block.tail != null) {
             blockImage.drawJustifiedString(
-                tailFont, block.style.bodyFontSpec, block.style.tailHJustify, block.style.tailVJustify, block.tail,
+                tailFont, block.style.bodyFontSpec, block.tail, block.style.tailHJustify, block.style.tailVJustify,
                 tailStartX, y, tailWidth, bodyImage.height
             )
             // Draw a guide that shows the edges of the tail space.
@@ -264,13 +264,13 @@ private fun drawVerticalSpineBlockImage(
     var y = 0f
     // Draw the block's head.
     if (block.head != null) {
-        headXs = blockImage.drawJustifiedString(headFont, block.style.headHJustify, block.head, 0f, y, bodyImage.width)
+        headXs = blockImage.drawJustifiedString(headFont, block.head, block.style.headHJustify, 0f, y, bodyImage.width)
         // Draw guides that show the edges of the head space.
         val y2 = blockImage.height
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, 0f, 0f, y2, isGuide = true)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, 0f, bodyImage.width, y2, isGuide = true)
         // Advance to the body.
-        y += headFont.spec.run { heightPx + extraLineSpacingPx } + block.style.headGapPx
+        y += headFont.spec.heightPx + block.style.headGapPx
     }
     // Draw the block's body.
     blockImage.drawDeferredImage(bodyImage, 0f, y, 1f)
@@ -278,7 +278,7 @@ private fun drawVerticalSpineBlockImage(
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx
-        tailXs = blockImage.drawJustifiedString(tailFont, block.style.tailHJustify, block.tail, 0f, y, bodyImage.width)
+        tailXs = blockImage.drawJustifiedString(tailFont, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width)
         // Draw guides that show the edges of the tail space.
         val y2 = blockImage.height
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y2, isGuide = true)
@@ -299,38 +299,4 @@ private fun drawVerticalSpineBlockImage(
     }
 
     return Pair(blockImage, centerLineXInImage)
-}
-
-
-// Returns the start and end x coordinates of the drawn string.
-private fun DeferredImage.drawJustifiedString(
-    font: RichFont, hJustify: HJustify, string: String,
-    x: Float, y: Float, width: Float
-): Pair<Float, Float> {
-    val stringWidth = font.metrics.stringWidth(string)
-    val justifiedX = when (hJustify) {
-        HJustify.LEFT -> x
-        HJustify.CENTER -> x + (width - stringWidth) / 2f
-        HJustify.RIGHT -> x + width - stringWidth
-    }
-    drawString(font, string, justifiedX, y)
-    return Pair(justifiedX, justifiedX + stringWidth)
-}
-
-
-private fun DeferredImage.drawJustifiedString(
-    font: RichFont, bodyFontSpec: FontSpec, hJustify: HJustify, vJustify: VJustify, string: String,
-    x: Float, y: Float, width: Float, height: Float
-) {
-    val diff = bodyFontSpec.run { heightPx + extraLineSpacingPx } - font.spec.run { heightPx + extraLineSpacingPx }
-    val justifiedY = when (vJustify) {
-        VJustify.TOP_TOP -> y
-        VJustify.TOP_MIDDLE -> y + diff / 2f
-        VJustify.TOP_BOTTOM -> y + diff
-        VJustify.MIDDLE -> y + (height - font.spec.heightPx) / 2f
-        VJustify.BOTTOM_TOP -> y + height - font.spec.heightPx - diff
-        VJustify.BOTTOM_MIDDLE -> y + height - font.spec.heightPx - diff / 2f
-        VJustify.BOTTOM_BOTTOM -> y + height - font.spec.heightPx
-    }
-    drawJustifiedString(font, hJustify, string, x, justifiedY, width)
 }

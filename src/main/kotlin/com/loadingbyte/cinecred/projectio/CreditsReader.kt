@@ -79,7 +79,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     val columnBlocks = mutableListOf<Block>()
     // Current block
     var blockHead: String? = null
-    val blockBody = mutableListOf<String>()
+    val blockBody = mutableListOf<BodyElement>()
     var blockTail: String? = null
 
     // Keep track of the conclusion of blocks.
@@ -254,7 +254,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
 
         // If the body cell is non-empty, add its content to the current block.
         if (bodyLine != null)
-            blockBody.add(bodyLine)
+            blockBody.add(BodyElement.Str(bodyLine))
         // Otherwise, if the row didn't just start a new block,
         // mark the previous block for conclusion (if there was any).
         else if (newHead == null && newTail == null)

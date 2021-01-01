@@ -236,10 +236,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         addFormRow(
             label,
             listOf(
-                field.familyComboBox, field.fontComboBox, field.colorChooserButton, JLabel("Height (Px)"),
-                field.heightPxSpinner, JLabel("+ Line Spacing (Px)"), field.extraLineSpacingPxSpinner
+                field.familyComboBox, field.fontComboBox,
+                JLabel("Color"), field.colorChooserButton,
+                JLabel("Height (Px)"), field.heightPxSpinner
             ),
-            listOf("", "newline, split", "", "newline, split", "", "", ""),
+            listOf("", "newline, split", "newline, split", "", "", ""),
             isVisible, extendedVerify
         )
 
@@ -268,7 +269,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             val fieldConstraints = mutableListOf(constraints[fieldIdx])
             // If the field ends a line, assign it a unique ID. For this, we just use its location in memory. Also add
             // it to the "endlineGroup". These IDs will be used later when positioning the verification components.
-            if (fieldIdx == fields.size - 1 || "newline" in constraints.getOrElse(fieldIdx + 1) { "" }) {
+            if (fieldIdx == fields.lastIndex || "newline" in constraints.getOrElse(fieldIdx + 1) { "" }) {
                 val id = "f" + System.identityHashCode(field).toString()
                 fieldConstraints.add("id $endlineGroupId.$id")
                 endlineFieldIds.add(id)
@@ -445,9 +446,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 val selectedFont = fontComboBox.selectedItem
                 return FontSpec(
                     if (selectedFont is Font) selectedFont.getFontName(Locale.US) else selectedFont as String? ?: "",
-                    heightPxSpinner.value as Int,
-                    extraLineSpacingPxSpinner.value as Float,
-                    colorChooserButton.selectedColor
+                    heightPxSpinner.value as Int, colorChooserButton.selectedColor
                 )
             }
             set(value) {
@@ -464,7 +463,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                     fontComboBox.selectedItem = value.name
                 }
                 heightPxSpinner.value = value.heightPx
-                extraLineSpacingPxSpinner.value = value.extraLineSpacingPx
                 colorChooserButton.selectedColor = value.color
             }
 
@@ -488,8 +486,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         val colorChooserButton = ColorChooserButton(changeListener)
         val heightPxSpinner = JSpinner(SpinnerNumberModel(1, 1, null, 1))
             .apply { minimumSize = Dimension(50, minimumSize.height) }
-        val extraLineSpacingPxSpinner = JSpinner(SpinnerNumberModel(0f, 0f, null, 1f))
-            .apply { minimumSize = Dimension(50, minimumSize.height) }
 
         private var disableFamilyListener = false
 
@@ -504,7 +500,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             }
             fontComboBox.addActionListener { changeListener(fontComboBox) }
             heightPxSpinner.addChangeListener { changeListener(heightPxSpinner) }
-            extraLineSpacingPxSpinner.addChangeListener { changeListener(extraLineSpacingPxSpinner) }
 
             populateFamilyComboBox()
         }

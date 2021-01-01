@@ -24,7 +24,7 @@ object Controller {
 
     private var styling: Styling? = null
     private val fonts = mutableMapOf<Path, Font>()
-    private val pictures = mutableMapOf<Path, Picture>()
+    private val pictureLoaders = mutableMapOf<Path, () -> Picture>()
 
     private val projectDirWatcher = object : RecursiveFileWatcher() {
         override fun onEvent(file: Path, kind: WatchEvent.Kind<*>) {
@@ -92,8 +92,8 @@ object Controller {
             EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
             return true
         }
-        tryReadPicture(file)?.let { picture ->
-            pictures[file] = picture
+        tryReadPictureLoader(file)?.let { pictureLoader ->
+            pictureLoaders[file] = pictureLoader
             return true
         }
         return false
@@ -104,7 +104,7 @@ object Controller {
             EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
             return true
         }
-        if (pictures.remove(file) != null)
+        if (pictureLoaders.remove(file) != null)
             return true
         return false
     }
@@ -130,14 +130,14 @@ object Controller {
     fun reloadCreditsFileAndRedraw() {
         val styling = this.styling!!
         val fontsByName = fonts.values.associateBy { font -> font.getFontName(Locale.US) }
-        val picturesByName = pictures.mapKeys { (file, _) -> file.fileName.toString() }
+        val pictureLoadersByName = pictureLoaders.mapKeys { (file, _) -> file.fileName.toString() }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         previewGenerationJob.clear()
         previewGenerationJob.add {
             val (log, pages) = readCredits(creditsFile!!, styling)
 
-            val project = Project(styling, fontsByName, picturesByName, pages ?: emptyList())
+            val project = Project(styling, fontsByName, pictureLoadersByName, pages ?: emptyList())
             val pageDefImages = when (pages) {
                 null -> emptyList()
                 else -> draw(project)

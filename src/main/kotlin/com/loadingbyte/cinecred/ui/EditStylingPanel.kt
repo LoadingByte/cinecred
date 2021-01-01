@@ -335,6 +335,9 @@ object EditStylingPanel : JPanel() {
 
     private object ContentStyleForm : Form() {
 
+        private fun isGridOrFlow(layout: Any?) = layout == BodyLayout.GRID || layout == BodyLayout.FLOW
+        private fun isFlowOrParagraphs(layout: Any?) = layout == BodyLayout.FLOW || layout == BodyLayout.PARAGRAPHS
+
         private val nameField = addTextField("Content Style Name",
             verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, "Name is blank.") }
         )
@@ -345,32 +348,48 @@ object EditStylingPanel : JPanel() {
         private val bodyLayoutComboBox = addComboBox(
             "Body Layout", BodyLayout.values(), toString = ::toDisplayString
         )
-        private val colsLayoutColJustifies = addComboBoxList(
+        private val bodyLayoutLineHJustifyComboBox = addComboBox(
+            "Justify Body Lines", LineHJustify.values(), toString = ::toDisplayString,
+            isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
+        )
+        private val bodyLayoutColsHJustifyComboBox = addComboBoxList(
             "Body Columns", HJustify.values(), toString = ::toDisplayString,
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.COLUMNS },
+            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.GRID },
         )
-        private val colsLayoutColGapPxSpinner = addSpinner(
-            "Body Col. Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
-            isVisible = {
-                bodyLayoutComboBox.selectedItem == BodyLayout.COLUMNS &&
-                        colsLayoutColJustifies.selectedItems.size >= 2
-            }
-        )
-        private val flowLayoutBodyWidthPxSpinner = addSpinner(
-            "Body With (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 10f),
+        private val bodyLayoutElemHJustifyComboBox = addComboBox(
+            "Justify Body Elements", HJustify.values(), toString = ::toDisplayString,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
-        private val flowLayoutJustifyComboBox = addComboBox(
-            "Justify Body Lines", FlowJustify.values(), toString = ::toDisplayString,
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
+        private val bodyLayoutElemVJustifyComboBox = addComboBox(
+            "Align Body Elements", VJustify.values(), toString = ::toDisplayString,
+            isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
         )
-        private val flowLayoutSeparatorField = addTextField(
+        private val bodyLayoutElemConformComboBox = addComboBox(
+            "Conform Body Elements", BodyElementConform.values(), toString = ::toDisplayString,
+            isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
+        )
+        private val bodyLayoutSeparatorField = addTextField(
             "Body Elem. Separator", grow = false,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
-        private val flowLayoutSeparatorSpacingPxSpinner = addSpinner(
-            "Sep. Spacing (Pixels)", SpinnerNumberModel(0f, 0f, null, 1f),
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
+        private val bodyLayoutBodyWidthPxSpinner = addSpinner(
+            "Body Width (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 10f),
+            isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
+        )
+        private val bodyLayoutParagraphGapPxSpinner = addSpinner(
+            "Body Paragraph Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.PARAGRAPHS }
+        )
+        private val bodyLayoutLineGapPxSpinner = addSpinner(
+            "Body Line Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f)
+        )
+        private val bodyLayoutHorizontalGapPxSpinner = addSpinner(
+            "Body Horizontal Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            isVisible = {
+                bodyLayoutComboBox.selectedItem == BodyLayout.GRID &&
+                        bodyLayoutColsHJustifyComboBox.selectedItems.size >= 2 ||
+                        bodyLayoutComboBox.selectedItem == BodyLayout.FLOW
+            }
         )
 
         private val bodyFontSpecChooser = addFontSpecChooser("Body Font")
@@ -423,12 +442,16 @@ object EditStylingPanel : JPanel() {
             spineDirComboBox.selectedItem = contentStyle.spineDir
             centerOnComboBox.selectedItem = contentStyle.centerOn
             bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
-            colsLayoutColJustifies.selectedItems = contentStyle.colsBodyLayoutColJustifies
-            colsLayoutColGapPxSpinner.value = contentStyle.colsBodyLayoutColGapPx
-            flowLayoutBodyWidthPxSpinner.value = contentStyle.flowBodyLayoutBodyWidthPx
-            flowLayoutJustifyComboBox.selectedItem = contentStyle.flowBodyLayoutJustify
-            flowLayoutSeparatorField.text = contentStyle.flowBodyLayoutSeparator
-            flowLayoutSeparatorSpacingPxSpinner.value = contentStyle.flowBodyLayoutSeparatorSpacingPx
+            bodyLayoutLineGapPxSpinner.value = contentStyle.bodyLayoutLineGapPx
+            bodyLayoutElemConformComboBox.selectedItem = contentStyle.bodyLayoutElemConform
+            bodyLayoutElemVJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemVJustify
+            bodyLayoutHorizontalGapPxSpinner.value = contentStyle.bodyLayoutHorizontalGapPx
+            bodyLayoutColsHJustifyComboBox.selectedItems = contentStyle.bodyLayoutColsHJustify
+            bodyLayoutLineHJustifyComboBox.selectedItem = contentStyle.bodyLayoutLineHJustify
+            bodyLayoutBodyWidthPxSpinner.value = contentStyle.bodyLayoutBodyWidthPx
+            bodyLayoutElemHJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemHJustify
+            bodyLayoutSeparatorField.text = contentStyle.bodyLayoutSeparator
+            bodyLayoutParagraphGapPxSpinner.value = contentStyle.bodyLayoutParagraphGapPx
             bodyFontSpecChooser.selectedFontSpec = contentStyle.bodyFontSpec
             hasHeadCheckBox.isSelected = contentStyle.hasHead
             headHJustifyComboBox.selectedItem = contentStyle.headHJustify
@@ -449,12 +472,16 @@ object EditStylingPanel : JPanel() {
                         centerOnComboBox.selectedItem as CenterOn,
                         spineDirComboBox.selectedItem as SpineDir,
                         bodyLayoutComboBox.selectedItem as BodyLayout,
-                        colsLayoutColJustifies.selectedItems.filterNotNull(),
-                        colsLayoutColGapPxSpinner.value as Float,
-                        flowLayoutBodyWidthPxSpinner.value as Float,
-                        flowLayoutJustifyComboBox.selectedItem as FlowJustify,
-                        flowLayoutSeparatorField.text,
-                        flowLayoutSeparatorSpacingPxSpinner.value as Float,
+                        bodyLayoutLineGapPxSpinner.value as Float,
+                        bodyLayoutElemConformComboBox.selectedItem as BodyElementConform,
+                        bodyLayoutElemVJustifyComboBox.selectedItem as VJustify,
+                        bodyLayoutHorizontalGapPxSpinner.value as Float,
+                        bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull(),
+                        bodyLayoutLineHJustifyComboBox.selectedItem as LineHJustify,
+                        bodyLayoutBodyWidthPxSpinner.value as Float,
+                        bodyLayoutElemHJustifyComboBox.selectedItem as HJustify,
+                        bodyLayoutSeparatorField.text,
+                        bodyLayoutParagraphGapPxSpinner.value as Float,
                         bodyFontSpecChooser.selectedFontSpec,
                         hasHeadCheckBox.isSelected,
                         headHJustifyComboBox.selectedItem as HJustify,

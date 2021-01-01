@@ -87,21 +87,12 @@ fun FPS.toString2() = "$numerator/$denominator"
 
 fun String.toFontSpec(): FontSpec {
     var height: Int? = null
-    var extraLineSpacing = 0f
     var color: Color? = null
 
     fun parsePart(part: String): Boolean {
         if (height == null)
             try {
                 height = part.toInt(nonNegative = true, nonZero = true)
-                return true
-            } catch (_: NumberFormatException) {
-            }
-        if (height == null && extraLineSpacing == 0f && "+" in part)
-            try {
-                val (heightStr, extraLineSpacingStr) = part.split("+")
-                extraLineSpacing = extraLineSpacingStr.toFiniteFloat(nonNegative = true)
-                height = heightStr.toInt(nonNegative = true, nonZero = true)
                 return true
             } catch (_: NumberFormatException) {
             }
@@ -128,14 +119,8 @@ fun String.toFontSpec(): FontSpec {
     }
 
     require(nameParts.isNotEmpty() && height != null && color != null)
-    return FontSpec(nameParts.asReversed().joinToString(" "), height!!, extraLineSpacing, color!!)
+    return FontSpec(nameParts.asReversed().joinToString(" "), height!!, color!!)
 }
 
 
-fun FontSpec.toString2(): String {
-    var str = "$name $heightPx"
-    if (extraLineSpacingPx != 0f)
-        str += "+$extraLineSpacingPx"
-    str += " ${color.toString2()}"
-    return str
-}
+fun FontSpec.toString2() = "$name $heightPx ${color.toString2()}"

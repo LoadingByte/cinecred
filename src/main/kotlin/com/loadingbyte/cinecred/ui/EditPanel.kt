@@ -2,10 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.delivery.getDurationFrames
 import com.loadingbyte.cinecred.delivery.setHighQuality
-import com.loadingbyte.cinecred.drawer.BODY_GUIDE_COLOR
-import com.loadingbyte.cinecred.drawer.CTRLINE_GUIDE_COLOR
-import com.loadingbyte.cinecred.drawer.DeferredImage
-import com.loadingbyte.cinecred.drawer.HEAD_TAIL_GUIDE_COLOR
+import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
@@ -28,8 +25,9 @@ object EditPanel : JPanel() {
     private val showGuidesCheckBox = JCheckBox("Show Guides", true).apply {
         toolTipText = "<html>Legend:<br>" +
                 "<font color=\"${CTRLINE_GUIDE_COLOR.darker().toString2()}\">Center lines</font><br>" +
-                "<font color=\"${BODY_GUIDE_COLOR.darker().toString2()}\">Body column and body flow bounds</font><br>" +
-                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.darker().toString2()}\">Head and tail bounds</font></html>"
+                "<font color=\"${BODY_ELEM_GUIDE_COLOR.toString2()}\">Body element bounds</font><br>" +
+                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.toString2()}\">Whole body width bounds</font><br>" +
+                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.toString2()}\">Head and tail bounds</font></html>"
         addActionListener {
             for (scrollPane in pageTabs.components)
                 ((scrollPane as JScrollPane).viewport.view as DeferredImagePanel).showGuides = isSelected

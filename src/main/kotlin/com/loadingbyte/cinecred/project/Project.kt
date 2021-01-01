@@ -8,11 +8,11 @@ import java.awt.image.BufferedImage
 class Project(
     val styling: Styling,
     fonts: Map<String, Font>,
-    pictures: Map<String, Picture>,
+    pictureLoaders: Map<String, () -> Picture>,
     pages: List<Page>
 ) {
     val fonts: Map<String, Font> = fonts.toMutableMap()
-    val pictures: Map<String, Picture> = pictures.toMutableMap()
+    val pictureLoaders: Map<String, () -> Picture> = pictureLoaders.toMutableMap()
     val pages: List<Page> = pages.toMutableList()
 }
 
@@ -62,12 +62,23 @@ data class ContentStyle(
     val centerOn: CenterOn,
     val spineDir: SpineDir,
     val bodyLayout: BodyLayout,
-    val colsBodyLayoutColJustifies: List<HJustify>,
-    val colsBodyLayoutColGapPx: Float,
-    val flowBodyLayoutBodyWidthPx: Float,
-    val flowBodyLayoutJustify: FlowJustify,
-    val flowBodyLayoutSeparator: String,
-    val flowBodyLayoutSeparatorSpacingPx: Float,
+    // Body layouts: Grid, Flow, Paragraphs
+    val bodyLayoutLineGapPx: Float,
+    // Body layouts: Grid, Flow
+    val bodyLayoutElemConform: BodyElementConform,
+    val bodyLayoutElemVJustify: VJustify,
+    val bodyLayoutHorizontalGapPx: Float,
+    // Body layout: Grid
+    val bodyLayoutColsHJustify: List<HJustify>,
+    // Body layouts: Flow, Paragraph
+    val bodyLayoutLineHJustify: LineHJustify,
+    val bodyLayoutBodyWidthPx: Float,
+    // Body layout: Flow
+    val bodyLayoutElemHJustify: HJustify,
+    val bodyLayoutSeparator: String,
+    // Body layout: Paragraphs
+    val bodyLayoutParagraphGapPx: Float,
+    // End of body layout settings.
     val bodyFontSpec: FontSpec,
     val hasHead: Boolean,
     val headHJustify: HJustify,
@@ -93,25 +104,23 @@ enum class CenterOn {
     TAIL_START, TAIL, TAIL_END
 }
 
-enum class BodyLayout { COLUMNS, FLOW }
-enum class FlowJustify { LEFT, CENTER, RIGHT, FULL }
+enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
-enum class VJustify { TOP_TOP, TOP_MIDDLE, TOP_BOTTOM, MIDDLE, BOTTOM_TOP, BOTTOM_MIDDLE, BOTTOM_BOTTOM }
+enum class VJustify { TOP, MIDDLE, BOTTOM }
+enum class LineHJustify { LEFT, CENTER, RIGHT, FULL }
+enum class BodyElementConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
 
 
 // This must be a data class because its objects will be used as hash map keys.
 data class FontSpec(
     val name: String,
     val heightPx: Int,
-    val extraLineSpacingPx: Float,
     val color: Color
 )
 
 
-sealed class Picture {
-    class Raster(lazyImg: () -> BufferedImage) : Picture() {
-        val img: BufferedImage by lazy(lazyImg)
-    }
+sealed class Picture(val scaling: Float) {
+    class Raster(val img: BufferedImage, scaling: Float) : Picture(scaling)
 }
 
 
@@ -146,9 +155,15 @@ class Column(
 class Block(
     val style: ContentStyle,
     val head: String?,
-    body: List<String>,
+    body: List<BodyElement>,
     val tail: String?,
     val vGapAfterPx: Float
 ) {
-    val body: List<String> = body.toMutableList()
+    val body: List<BodyElement> = body.toMutableList()
+}
+
+
+sealed class BodyElement {
+    class Str(val str: String) : BodyElement()
+    class Pic(val pic: Picture) : BodyElement()
 }

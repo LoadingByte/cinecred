@@ -6,15 +6,12 @@ import java.awt.Font
 import java.awt.FontMetrics
 import java.awt.Graphics2D
 import java.awt.font.TextLayout
+import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import kotlin.math.ceil
 import kotlin.math.max
-
-
-// This is a reference graphics context used to measure the size of fonts.
-val REF_G2: Graphics2D = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB).createGraphics()
 
 
 class RichFont(val spec: FontSpec, val awt: Font) {
@@ -61,6 +58,10 @@ class DeferredImage {
                         insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
                         insn.isGuide
                     )
+                is Instruction.DrawBufferedImage ->
+                    drawBufferedImage(
+                        insn.img, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
+                    )
             }
     }
 
@@ -82,8 +83,14 @@ class DeferredImage {
      */
     fun drawString(font: RichFont, str: String, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
         width = max(width, x + scaling * font.metrics.stringWidth(str))
-        height = max(height, y + scaling * font.spec.run { heightPx + extraLineSpacingPx })
+        height = max(height, y + scaling * font.spec.heightPx)
         instructions.add(Instruction.DrawString(font, str, x, y, scaling, isGuide))
+    }
+
+    fun drawBufferedImage(img: BufferedImage, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
+        width = max(width, x + scaling * img.width)
+        height = max(height, y + scaling * img.height)
+        instructions.add(Instruction.DrawBufferedImage(img, x, y, scaling, isGuide))
     }
 
 
@@ -99,6 +106,10 @@ class DeferredImage {
 
         class DrawString(
             val font: RichFont, val str: String, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
+        class DrawBufferedImage(
+            val img: BufferedImage, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
     }
@@ -124,7 +135,7 @@ class DeferredImage {
                     g2.color = insn.font.spec.color
 
                     val scaledFont = insn.font.awt.deriveFont(insn.font.awt.size2D * insn.scaling)
-                    val y = insn.y + insn.scaling * (insn.font.spec.extraLineSpacingPx / 2f + insn.font.metrics.ascent)
+                    val y = insn.y + insn.scaling * insn.font.metrics.ascent
 
                     if (textMode == TextMode.TEXT) {
                         g2.font = scaledFont
@@ -155,6 +166,13 @@ class DeferredImage {
                             }
                         }
                     }
+                }
+                is Instruction.DrawBufferedImage -> {
+                    val tx = AffineTransform().apply {
+                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                        translate(insn.x.toDouble(), insn.y.toDouble())
+                    }
+                    g2.drawImage(insn.img, tx, null)
                 }
             }
         }

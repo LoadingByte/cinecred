@@ -57,17 +57,21 @@ private fun Map<*, *>.toContentStyle(): ContentStyle {
         get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNegative = true) },
         get("centerOn", STANDARD_CONTENT_STYLE.centerOn) { toEnum() },
         get("spineDir", STANDARD_CONTENT_STYLE.spineDir) { toEnum() },
-        if (keys.any { "flow" in (it as String) }) BodyLayout.FLOW else BodyLayout.COLUMNS,
-        get("colsBodyLayoutColJustifies", STANDARD_CONTENT_STYLE.colsBodyLayoutColJustifies) { toEnumList() },
-        get("colsBodyLayoutColGapPx", STANDARD_CONTENT_STYLE.colsBodyLayoutColGapPx) {
+        get("bodyLayout", STANDARD_CONTENT_STYLE.bodyLayout) { toEnum() },
+        get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNegative = true) },
+        get("bodyLayoutElemConform", STANDARD_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },
+        get("bodyLayoutElemVJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemVJustify) { toEnum() },
+        get("bodyLayoutHorizontalGapPx", STANDARD_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
             toFiniteFloat(nonNegative = true)
         },
-        get("flowBodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.flowBodyLayoutBodyWidthPx) {
+        get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) { toEnumList() },
+        get("bodyLayoutLineHJustify", STANDARD_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
+        get("bodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
             toFiniteFloat(nonNegative = true, nonZero = true)
         },
-        get("flowBodyLayoutJustify", STANDARD_CONTENT_STYLE.flowBodyLayoutJustify) { toEnum() },
-        get("flowBodyLayoutSeparator", STANDARD_CONTENT_STYLE.flowBodyLayoutSeparator) { this },
-        get("flowBodyLayoutSeparatorSpacingPx", STANDARD_CONTENT_STYLE.flowBodyLayoutSeparatorSpacingPx) {
+        get("bodyLayoutElemHJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemHJustify) { toEnum() },
+        get("bodyLayoutSeparator", STANDARD_CONTENT_STYLE.bodyLayoutSeparator) { this },
+        get("bodyLayoutParagraphGapPx", STANDARD_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
             toFiniteFloat(nonNegative = true)
         },
         get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },

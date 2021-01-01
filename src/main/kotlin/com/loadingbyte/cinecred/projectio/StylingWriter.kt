@@ -53,12 +53,17 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         "vMarginPx" to vMarginPx,
         "centerOn" to centerOn.name,
         "spineDir" to spineDir.name,
-        "colsBodyLayoutColJustifies" to colsBodyLayoutColJustifies.toString2(),
-        "colsBodyLayoutColGapPx" to colsBodyLayoutColGapPx,
-        "flowBodyLayoutBodyWidthPx" to flowBodyLayoutBodyWidthPx,
-        "flowBodyLayoutJustify" to flowBodyLayoutJustify.name,
-        "flowBodyLayoutSeparator" to flowBodyLayoutSeparator,
-        "flowBodyLayoutSeparatorSpacingPx" to flowBodyLayoutSeparatorSpacingPx,
+        "bodyLayout" to bodyLayout,
+        "bodyLayoutLineGapPx" to bodyLayoutLineGapPx,
+        "bodyLayoutElemConform" to bodyLayoutElemConform.name,
+        "bodyLayoutElemVJustify" to bodyLayoutElemVJustify.name,
+        "bodyLayoutHorizontalGapPx" to bodyLayoutHorizontalGapPx,
+        "bodyLayoutColsHJustify" to bodyLayoutColsHJustify.toString2(),
+        "bodyLayoutLineHJustify" to bodyLayoutLineHJustify.name,
+        "bodyLayoutBodyWidthPx" to bodyLayoutBodyWidthPx,
+        "bodyLayoutElemHJustify" to bodyLayoutElemHJustify.name,
+        "bodyLayoutSeparator" to bodyLayoutSeparator,
+        "bodyLayoutParagraphGapPx" to bodyLayoutParagraphGapPx,
         "bodyFontSpec" to bodyFontSpec.toString2(),
         "headHJustify" to headHJustify.name,
         "headVJustify" to headVJustify.name,
@@ -73,15 +78,24 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         toml.remove("headVJustify")
         toml.remove("tailVJustify")
     }
-    if (bodyLayout != BodyLayout.COLUMNS) {
-        toml.remove("colsBodyLayoutColTypes")
-        toml.remove("colsBodyLayoutColGapPx")
+    if (bodyLayout == BodyLayout.GRID) {
+        toml.remove("bodyLayoutLineHJustify")
+        toml.remove("bodyLayoutBodyWidthPx")
+        toml.remove("bodyLayoutElemHJustify")
+        toml.remove("bodyLayoutSeparator")
+        toml.remove("bodyLayoutParagraphGapPx")
     }
-    if (bodyLayout != BodyLayout.FLOW) {
-        toml.remove("flowBodyLayoutBodyWidthPx")
-        toml.remove("flowBodyLayoutJustify")
-        toml.remove("flowBodyLayoutSeparator")
-        toml.remove("flowBodyLayoutSeparatorSpacingPx")
+    if (bodyLayout == BodyLayout.FLOW) {
+        toml.remove("bodyLayoutColsHJustify")
+        toml.remove("bodyLayoutParagraphGapPx")
+    }
+    if (bodyLayout == BodyLayout.PARAGRAPHS) {
+        toml.remove("bodyLayoutElemConform")
+        toml.remove("bodyLayoutElemVJustify")
+        toml.remove("bodyLayoutHorizontalGapPx")
+        toml.remove("bodyLayoutColsHJustify")
+        toml.remove("bodyLayoutElemHJustify")
+        toml.remove("bodyLayoutSeparator")
     }
     if (!hasHead) {
         toml.remove("headHJustify")

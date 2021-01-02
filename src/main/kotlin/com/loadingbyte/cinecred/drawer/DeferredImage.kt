@@ -154,12 +154,13 @@ class DeferredImage {
                 }
                 is Instruction.DrawBufferedImage -> {
                     val tx = AffineTransform().apply {
-                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
                         translate(insn.x.toDouble(), insn.y.toDouble())
+                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
                     }
                     g2.drawImage(insn.img, tx, null)
                 }
             }
         }
     }
+
 }

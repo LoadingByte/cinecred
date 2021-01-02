@@ -349,13 +349,12 @@ fun drawBodyImageWithParagraphsBodyLayout(
                 // Advance to the next line.
                 y += bodyFont.spec.heightPx
             }
-
-            // We've stepped ahead one too many times, so we have to step back this one "line" that we never drew.
-            y -= bodyFont.spec.heightPx
         }
         // Case 2: The body element is not a string. Just draw it regularly.
-        else
+        else {
             bodyImage.drawJustifiedBodyElem(bodyElem, bodyFont, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f)
+            y += bodyElem.getHeight(bodyFont)
+        }
 
         // Advance to the next paragraph.
         y += block.style.bodyLayoutParagraphGapPx
@@ -371,16 +370,12 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
 private fun BodyElement.getWidth(bodyFont: RichFont): Float = when (this) {
     is BodyElement.Str -> bodyFont.awt.getStringWidth(str)
-    is BodyElement.Pic -> when (pic) {
-        is Picture.Raster -> pic.img.width.toFloat()
-    }
+    is BodyElement.Pic -> pic.width
 }
 
 private fun BodyElement.getHeight(bodyFont: RichFont): Float = when (this) {
     is BodyElement.Str -> bodyFont.spec.heightPx.toFloat()
-    is BodyElement.Pic -> when (pic) {
-        is Picture.Raster -> pic.img.height.toFloat()
-    }
+    is BodyElement.Pic -> pic.height
 }
 
 
@@ -393,8 +388,7 @@ private fun DeferredImage.drawJustifiedBodyElem(
     is BodyElement.Pic -> when (elem.pic) {
         is Picture.Raster ->
             drawJustified(
-                hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.img.width.toFloat(),
-                elem.pic.img.height.toFloat()
+                hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
             ) { objX, objY -> drawBufferedImage(elem.pic.img, objX, objY, elem.pic.scaling) }
     }
 }

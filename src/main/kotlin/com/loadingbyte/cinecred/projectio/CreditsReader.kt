@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.Severity.WARN
 import com.loadingbyte.cinecred.project.*
 import org.apache.commons.csv.CSVFormat
+import java.io.File
 import java.io.StringReader
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,10 +14,30 @@ import java.util.*
 class ParserMsg(val lineNo: Int, val severity: Severity, val msg: String)
 
 
-fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Page>?> {
+fun readCredits(
+    csvFile: Path,
+    styling: Styling,
+    pictureLoaders: Map<Path, Lazy<Picture?>>
+): Pair<List<ParserMsg>, List<Page>?> {
     // Note: We use maps whose keys are case insensitive here because style references should be case insensitive.
     val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
     val contentStyleMap = styling.contentStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
+
+    // Put the picture loaders into a map whose keys are all possible variations of referencing the picture loaders.
+    // Once again use a map with case-insensitive keys.
+    val pictureLoaderMap = pictureLoaders.asSequence().flatMap { (path, pictureLoader) ->
+        // Allow the user to use an arbitrary number of parent components.
+        // For example, the path "a/b/c.png" could be expressed as "c.png", "", "b/c.png", or "a/b/c.png".
+        (0 until path.nameCount).asSequence()
+            .map { idx -> path.subpath(idx, path.nameCount).toString() }
+            // Allow both Windows an Unix file separators.
+            .flatMap { key ->
+                listOf(
+                    key.replace(File.separatorChar, '/') to pictureLoader,
+                    key.replace(File.separatorChar, '\\') to pictureLoader
+                )
+            }
+    }.toMap(TreeMap(String.CASE_INSENSITIVE_ORDER))
 
     // We trim the unicode character "ZERO WIDTH NO-BREAK SPACE" which is added by Excel for some reason.
     val csvStr = Files.readString(csvFile).trim(0xFEFF.toChar())
@@ -55,7 +76,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
     var vGapAccumulator = 0f
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
-    // body line arrives. It is used in cases where the previous block is known to be complete (e.g., because the
+    // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
     // content style changed or there was an empty row), but it cannot be concluded yet because it is unknown whether
     // only the block or the block and more higher-order elements like a section will be concluded at the same time.
     // In the latter case, the vertical gap accumulator would go towards the section and not the block. So we have
@@ -175,7 +196,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
         // If the column cell contains "Wrap", also conclude the previous section and start a new one.
         val getColumnTypeDesc = "a column position offset from the screen center in pixels, optionally preceded by " +
-                "\"Wrap\" to put the new column beneath all previous columns (so, e.g., \"-400\" or \"Wrap -400\")"
+                "'Wrap' to put the new column beneath all previous columns (so, e.g., '-400' or 'Wrap -400')"
         table.get(row, "@Column Pos", { getColumnTypeDesc }) { str ->
             when {
                 str.equals("wrap", ignoreCase = true) ->
@@ -204,11 +225,34 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
 
         val newHead = table.getString(row, "@Head")
         val newTail = table.getString(row, "@Tail")
-        val bodyLine = table.getString(row, "@Body")
 
-        // If either of the head or tail cells is non-empty, or if the body line is non empty and the conclusion of the
+        // Get the body element, which may either be a string or a (optionally scaled) picture.
+        val getBodyElemTypeDesc = "a valid body element, which would either be (a) a string of text or (b) a name " +
+                "or partial path to a picture file in the project folder, optionally followed by a scaling hint of " +
+                "the form '[width]x' or 'x[height]' (examples: 'John Doe', 'cinecred.png', 'logos/cinecred.png', " +
+                "'cinecred.png x200')"
+        val bodyElem = table.get(row, "@Body", { getBodyElemTypeDesc }) { str ->
+            // Case 1: Unscaled picture
+            pictureLoaderMap[str]?.value?.let { pic -> return@get BodyElement.Pic(pic) }
+            // Case 2: Scaled picture
+            pictureLoaderMap[str.substringBeforeLast(' ').trim()]?.value?.let { pic ->
+                val scaleHint = str.substringAfterLast(' ').trim()
+                val scaledPic = when {
+                    scaleHint.startsWith('x') ->
+                        pic.scaled(scaleHint.drop(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.width)
+                    scaleHint.endsWith('x') ->
+                        pic.scaled(scaleHint.dropLast(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.height)
+                    else -> throw IllegalArgumentException()
+                }
+                return@get BodyElement.Pic(scaledPic)
+            }
+            // Case 3: String
+            BodyElement.Str(str)
+        }
+
+        // If either of the head or tail cells is non-empty, or if the body cell is non empty and the conclusion of the
         // previous block has been marked, conclude the previous block (if there was any) and start a new one.
-        if (newHead != null || newTail != null || (isBlockConclusionMarked && bodyLine != null)) {
+        if (newHead != null || newTail != null || (isBlockConclusionMarked && bodyElem != null)) {
             concludeBlock(vGapAccumulator)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
@@ -224,7 +268,7 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         // If no content style has been declared at the point where the first block starts, issue a warning and
         // fall back to the content style defined first in the content style table, or, if that table is empty,
         // to the standard content style.
-        if (contentStyle == null && (newHead != null || newTail != null || bodyLine != null)) {
+        if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
             val msg = if (styling.contentStyles.isEmpty()) {
                 contentStyle = STANDARD_CONTENT_STYLE
                 "No content styles are available. Will default to the fallback content style '${contentStyle.name}'."
@@ -253,8 +297,8 @@ fun readCredits(csvFile: Path, styling: Styling): Pair<List<ParserMsg>, List<Pag
         }
 
         // If the body cell is non-empty, add its content to the current block.
-        if (bodyLine != null)
-            blockBody.add(BodyElement.Str(bodyLine))
+        if (bodyElem != null)
+            blockBody.add(bodyElem)
         // Otherwise, if the row didn't just start a new block,
         // mark the previous block for conclusion (if there was any).
         else if (newHead == null && newTail == null)

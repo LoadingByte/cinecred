@@ -24,7 +24,7 @@ object Controller {
 
     private var styling: Styling? = null
     private val fonts = mutableMapOf<Path, Font>()
-    private val pictureLoaders = mutableMapOf<Path, () -> Picture>()
+    private val pictureLoaders = mutableMapOf<Path, Lazy<Picture?>>()
 
     private val projectDirWatcher = object : RecursiveFileWatcher() {
         override fun onEvent(file: Path, kind: WatchEvent.Kind<*>) {
@@ -130,14 +130,14 @@ object Controller {
     fun reloadCreditsFileAndRedraw() {
         val styling = this.styling!!
         val fontsByName = fonts.values.associateBy { font -> font.getFontName(Locale.US) }
-        val pictureLoadersByName = pictureLoaders.mapKeys { (file, _) -> file.fileName.toString() }
+        val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir!!.relativize(path) }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         previewGenerationJob.clear()
         previewGenerationJob.add {
-            val (log, pages) = readCredits(creditsFile!!, styling)
+            val (log, pages) = readCredits(creditsFile!!, styling, pictureLoadersByRelPath)
 
-            val project = Project(styling, fontsByName, pictureLoadersByName, pages ?: emptyList())
+            val project = Project(styling, fontsByName, pages ?: emptyList())
             val pageDefImages = when (pages) {
                 null -> emptyList()
                 else -> draw(project)

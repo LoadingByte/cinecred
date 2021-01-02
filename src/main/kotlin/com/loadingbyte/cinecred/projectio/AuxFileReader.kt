@@ -26,12 +26,15 @@ fun tryReadFont(fontFile: Path): Font? {
 
 private val RASTER_PICTURE_EXTS = ImageIO.getReaderFileSuffixes().toSet()
 
-fun tryReadPictureLoader(pictureFile: Path): (() -> Picture)? {
+fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
     val ext = pictureFile.extension
     if (Files.isRegularFile(pictureFile) && ext in RASTER_PICTURE_EXTS)
-        try {
-            return { Picture.Raster(ImageIO.read(pictureFile.toFile()), 1f) }
-        } catch (_: IOException) {
+        return lazy {
+            try {
+                Picture.Raster(ImageIO.read(pictureFile.toFile()))
+            } catch (_: IOException) {
+                null
+            }
         }
     return null
 }

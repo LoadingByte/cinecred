@@ -8,11 +8,9 @@ import java.awt.image.BufferedImage
 class Project(
     val styling: Styling,
     fonts: Map<String, Font>,
-    pictureLoaders: Map<String, () -> Picture>,
     pages: List<Page>
 ) {
     val fonts: Map<String, Font> = fonts.toMutableMap()
-    val pictureLoaders: Map<String, () -> Picture> = pictureLoaders.toMutableMap()
     val pages: List<Page> = pages.toMutableList()
 }
 
@@ -120,7 +118,17 @@ data class FontSpec(
 
 
 sealed class Picture(val scaling: Float) {
-    class Raster(val img: BufferedImage, scaling: Float) : Picture(scaling)
+
+    abstract val width: Float
+    abstract val height: Float
+    abstract fun scaled(scaling: Float): Picture
+
+    class Raster(val img: BufferedImage, scaling: Float = 1f) : Picture(scaling) {
+        override val width get() = img.width * scaling
+        override val height get() = img.height * scaling
+        override fun scaled(scaling: Float) = Raster(img, this.scaling * scaling)
+    }
+
 }
 
 

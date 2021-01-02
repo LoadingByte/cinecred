@@ -32,10 +32,12 @@ fun drawColumnImage(
     }
 
     // Step 2:
-    // Generate images for blocks whose bodies are laid out using the "flow body layout".
+    // Generate images for blocks whose bodies are laid out using the "flow body layout" or "paragraphs body layout".
     for (block in column.blocks)
-        if (block.style.bodyLayout == BodyLayout.FLOW)
-            bodyImages[block] = drawBodyImageWithFlowBodyLayout(fonts, block)
+        when (block.style.bodyLayout) {
+            BodyLayout.FLOW -> bodyImages[block] = drawBodyImageWithFlowBodyLayout(fonts, block)
+            BodyLayout.PARAGRAPHS -> bodyImages[block] = drawBodyImageWithParagraphsBodyLayout(fonts, block)
+        }
 
     // We now add heads and tails to the body images and thereby generate an image for each block.
     // We also remember the x coordinate of the center line inside each generated image.

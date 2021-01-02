@@ -2,6 +2,9 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementConform.*
+import java.awt.font.LineBreakMeasurer
+import java.awt.font.TextAttribute
+import java.text.*
 import java.util.*
 import kotlin.math.max
 
@@ -270,6 +273,99 @@ private inline fun <E> Iterable<E>.sumByFloat(selector: (E) -> Float): Float {
         sum += selector(elem)
     }
     return sum
+}
+
+
+fun drawBodyImageWithParagraphsBodyLayout(
+    fonts: Map<FontSpec, RichFont>,
+    block: Block
+): DeferredImage {
+    // In this function, we only concern ourselves with blocks whose bodies are laid out using the
+    // "paragraphs body layout".
+    require(block.style.bodyLayout == BodyLayout.PARAGRAPHS)
+
+    val bodyFont = fonts[block.style.bodyFontSpec]!!
+    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx
+
+    // Convert lineHJustify to an appropriate HJustify which may be used in some cases down below.
+    val hJustify = when (block.style.bodyLayoutLineHJustify) {
+        LineHJustify.LEFT -> HJustify.LEFT
+        LineHJustify.CENTER, LineHJustify.FULL -> HJustify.CENTER
+        LineHJustify.RIGHT -> HJustify.RIGHT
+    }
+
+    val bodyImage = DeferredImage()
+    bodyImage.setMinWidth(bodyImageWidth)
+
+    var y = 0f
+    for (bodyElem in block.body) {
+        // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
+        if (bodyElem is BodyElement.Str) {
+            // Employ a LineBreakMeasurer to find the best spots to insert a newline.
+            val paragraph = bodyElem.str
+            val charIter = AttributedString(bodyElem.str, mapOf(TextAttribute.FONT to bodyFont.awt)).iterator
+            val lineMeasurer = LineBreakMeasurer(charIter, REF_FRC)
+            while (lineMeasurer.position < charIter.endIndex) {
+                val lineStartPos = lineMeasurer.position
+                val lineEndPos = lineMeasurer.nextOffset(bodyImageWidth)
+                lineMeasurer.position = lineEndPos
+                val line = paragraph.substring(lineStartPos, lineEndPos).trim()
+
+                // Case 1a: Full justification, which requires more manual processing.
+                if (block.style.bodyLayoutLineHJustify == LineHJustify.FULL) {
+                    // Split the line into words.
+                    val words = mutableListOf<String>()
+                    val wordIter = BreakIterator.getWordInstance()
+                    wordIter.text = StringCharacterIterator(line)
+                    var wordStartPos = wordIter.first()
+                    while (true) {
+                        val wordEndPos = wordIter.next()
+                        if (wordEndPos == BreakIterator.DONE) break
+                        words.add(line.substring(wordStartPos, wordEndPos))
+                        wordStartPos = wordEndPos
+                    }
+
+                    // Determine the width of each non-space word and the width of each to-be-stretched space.
+                    val wordIsSpace = words.map { word -> word.all { char -> char.isWhitespace() } }
+                    val wordWidths = words.mapIndexed { i, word ->
+                        if (wordIsSpace[i]) 0f else bodyFont.awt.getStringWidth(word)
+                    }
+                    val spaceWidth = (bodyImageWidth - wordWidths.sum()) / wordIsSpace.count { it }
+
+                    // Finally draw the line fully justified.
+                    var x = 0f
+                    for ((wordIdx, word) in words.withIndex())
+                        x += if (wordIsSpace[wordIdx])
+                            spaceWidth
+                        else {
+                            bodyImage.drawString(bodyFont, word, x, y)
+                            wordWidths[wordIdx]
+                        }
+                }
+                // Case 1b: Left, center, or right justification, which can be drawn right away.
+                else
+                    bodyImage.drawJustifiedString(bodyFont, line, hJustify, 0f, y, bodyImageWidth)
+
+                // Advance to the next line.
+                y += bodyFont.spec.heightPx
+            }
+
+            // We've stepped ahead one too many times, so we have to step back this one "line" that we never drew.
+            y -= bodyFont.spec.heightPx
+        }
+        // Case 2: The body element is not a string. Just draw it regularly.
+        else
+            bodyImage.drawJustifiedBodyElem(bodyElem, bodyFont, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f)
+
+        // Advance to the next paragraph.
+        y += block.style.bodyLayoutParagraphGapPx
+    }
+
+    // Draw guides that show the body's left an right edges.
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, isGuide = true)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, isGuide = true)
+
+    return bodyImage
 }
 
 

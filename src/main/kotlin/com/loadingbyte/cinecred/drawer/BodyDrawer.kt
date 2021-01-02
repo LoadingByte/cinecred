@@ -44,7 +44,7 @@ fun drawBodyImagesWithGridBodyLayout(
     fun independentBodyRowHeights() = blocks.associateWith { block ->
         List(numBodyRows[block]!!) { row ->
             bodyPartitions[block]!!.maxOf { partCol ->
-                partCol.getOrNull(row)?.getHeight(bodyFont) ?: 0
+                partCol.getOrNull(row)?.getHeight(bodyFont) ?: 0f
             }
         }
     }
@@ -54,11 +54,11 @@ fun drawBodyImagesWithGridBodyLayout(
             block.body.maxOf { bodyElem -> bodyElem.getHeight(bodyFont) }
         }
 
-    fun forEachBodyCol(width: Int) = List(numBodyCols) { width }
-    fun forEachBodyRow(height: Int) = blocks.associateWith { block -> List(numBodyRows[block]!!) { height } }
+    fun forEachBodyCol(width: Float) = List(numBodyCols) { width }
+    fun forEachBodyRow(height: Float) = blocks.associateWith { block -> List(numBodyRows[block]!!) { height } }
 
-    val bodyColWidths: List<Int>
-    val bodyRowHeights: Map<Block, List<Int>>
+    val bodyColWidths: List<Float>
+    val bodyRowHeights: Map<Block, List<Float>>
     when (style.bodyLayoutElemConform) {
         NOTHING -> {
             bodyColWidths = independentBodyColWidths()
@@ -102,11 +102,10 @@ fun drawBodyImagesWithGridBodyLayout(
             var y = 0f
             for ((bodyElem, rowHeight) in bodyPartitionsIter.next().zip(bodyRowHeights[block]!!)) {
                 bodyImage.drawJustifiedBodyElem(
-                    bodyElem, bodyFont, justifyCol, style.bodyLayoutElemVJustify,
-                    x, y, colWidth.toFloat(), rowHeight.toFloat()
+                    bodyElem, bodyFont, justifyCol, style.bodyLayoutElemVJustify, x, y, colWidth, rowHeight
                 )
                 // Draw a guide that shows the edges of the body element space.
-                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth.toFloat(), rowHeight.toFloat(), isGuide = true)
+                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, isGuide = true)
                 // Advance to the next line in the current column.
                 y += rowHeight + style.bodyLayoutLineGapPx
             }
@@ -148,15 +147,15 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
-    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx.coerceAtLeast(maxElemWidth.toFloat())
+    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx.coerceAtLeast(maxElemWidth)
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
     val bodyLines = partitionIntoLines(block.body, bodyImageWidth, horGap) { bodyElem ->
         when (block.style.bodyLayoutElemConform) {
-            NOTHING, HEIGHT -> bodyElem.getWidth(bodyFont).toFloat()
-            WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth.toFloat()
-            SQUARE -> max(maxElemWidth, maxElemHeight).toFloat()
+            NOTHING, HEIGHT -> bodyElem.getWidth(bodyFont)
+            WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
+            SQUARE -> max(maxElemWidth, maxElemHeight)
         }
     }
 
@@ -168,7 +167,7 @@ fun drawBodyImageWithFlowBodyLayout(
         // Determine the width of all rigid elements in the body line, that is, the total width of all body elements
         // and separator strings.
         val totalRigidWidth = when (block.style.bodyLayoutElemConform) {
-            NOTHING, HEIGHT -> bodyLine.sumOf { bodyElem -> bodyElem.getWidth(bodyFont) }
+            NOTHING, HEIGHT -> bodyLine.sumByFloat { bodyElem -> bodyElem.getWidth(bodyFont) }
             WIDTH, WIDTH_AND_HEIGHT -> bodyLine.size * maxElemWidth
             SQUARE -> bodyLine.size * max(maxElemWidth, maxElemHeight)
         }
@@ -205,11 +204,11 @@ fun drawBodyImageWithFlowBodyLayout(
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
                 bodyElem, bodyFont, block.style.bodyLayoutElemHJustify, block.style.bodyLayoutElemVJustify, x, y,
-                areaWidth, bodyLineHeight.toFloat(),
+                areaWidth, bodyLineHeight,
             )
 
             // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight.toFloat(), isGuide = true)
+            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, isGuide = true)
 
             if (idx != bodyLine.lastIndex) {
                 // Advance to the separator.
@@ -218,7 +217,7 @@ fun drawBodyImageWithFlowBodyLayout(
                 if (sepStr.isNotEmpty())
                     bodyImage.drawJustifiedString(
                         bodyFont, null, sepStr, HJustify.CENTER, block.style.bodyLayoutElemVJustify, x, y,
-                        horGap, bodyLineHeight.toFloat()
+                        horGap, bodyLineHeight
                     )
                 // Advance to the next element on the line.
                 x += horGap
@@ -265,17 +264,26 @@ private inline fun <E> partitionIntoLines(
 }
 
 
-private fun BodyElement.getWidth(bodyFont: RichFont): Int = when (this) {
-    is BodyElement.Str -> bodyFont.metrics.stringWidth(str)
+private inline fun <E> Iterable<E>.sumByFloat(selector: (E) -> Float): Float {
+    var sum = 0f
+    for (elem in this) {
+        sum += selector(elem)
+    }
+    return sum
+}
+
+
+private fun BodyElement.getWidth(bodyFont: RichFont): Float = when (this) {
+    is BodyElement.Str -> bodyFont.awt.getStringWidth(str)
     is BodyElement.Pic -> when (pic) {
-        is Picture.Raster -> pic.img.width
+        is Picture.Raster -> pic.img.width.toFloat()
     }
 }
 
-private fun BodyElement.getHeight(bodyFont: RichFont): Int = when (this) {
-    is BodyElement.Str -> bodyFont.spec.heightPx
+private fun BodyElement.getHeight(bodyFont: RichFont): Float = when (this) {
+    is BodyElement.Str -> bodyFont.spec.heightPx.toFloat()
     is BodyElement.Pic -> when (pic) {
-        is Picture.Raster -> pic.img.height
+        is Picture.Raster -> pic.img.height.toFloat()
     }
 }
 

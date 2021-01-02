@@ -168,7 +168,7 @@ private fun drawHorizontalSpineBlockImages(
         HEAD_START, HEAD, HEAD_END, HEAD_GAP, BODY_START ->
             blocks.maxOf { block ->
                 if (block.style.spineDir == SpineDir.VERTICAL || block.head == null) 0f
-                else fonts[block.style.headFontSpec]!!.metrics.stringWidth(block.head).toFloat()
+                else fonts[block.style.headFontSpec]!!.awt.getStringWidth(block.head)
             }
         else -> null
     }
@@ -176,7 +176,7 @@ private fun drawHorizontalSpineBlockImages(
         BODY_END, TAIL_GAP, TAIL_START, TAIL, TAIL_END ->
             blocks.maxOf { block ->
                 if (block.style.spineDir == SpineDir.VERTICAL || block.tail == null) 0f
-                else fonts[block.style.tailFontSpec]!!.metrics.stringWidth(block.tail).toFloat()
+                else fonts[block.style.tailFontSpec]!!.awt.getStringWidth(block.tail)
             }
         else -> null
     }
@@ -188,8 +188,8 @@ private fun drawHorizontalSpineBlockImages(
         val headFont = fonts[block.style.headFontSpec]!!
         val tailFont = fonts[block.style.tailFontSpec]!!
 
-        val headWidth = headSharedWidth ?: block.head?.let { headFont.metrics.stringWidth(it).toFloat() } ?: 0f
-        val tailWidth = tailSharedWidth ?: block.tail?.let { tailFont.metrics.stringWidth(it).toFloat() } ?: 0f
+        val headWidth = headSharedWidth ?: block.head?.let { headFont.awt.getStringWidth(it) } ?: 0f
+        val tailWidth = tailSharedWidth ?: block.tail?.let { tailFont.awt.getStringWidth(it) } ?: 0f
 
         val headStartX = 0f
         val headEndX = headStartX + headWidth

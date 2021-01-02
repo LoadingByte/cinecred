@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.delivery.getDurationFrames
-import com.loadingbyte.cinecred.delivery.setHighQuality
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
@@ -157,7 +156,7 @@ object EditPanel : JPanel() {
         while (pageTabs.tabCount > project.pages.size)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
         while (pageTabs.tabCount < project.pages.size) {
-            val tabTitle = (if (pageTabs.tabCount == 0) "Page " else "") + pageTabs.tabCount.toString()
+            val tabTitle = (if (pageTabs.tabCount == 0) "Page " else "") + (pageTabs.tabCount + 1).toString()
             pageTabs.addTab(tabTitle, PAGE_ICON, JScrollPane(VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_NEVER))
         }
         // Then fill each tab with its corresponding page.
@@ -202,15 +201,18 @@ object EditPanel : JPanel() {
             super.paintComponent(g)
             // Copy the Graphics2D so that we can change rendering hints without affecting stuff outside this method.
             val g2 = g.create() as Graphics2D
-            g2.setHighQuality()
-            // Fill the background.
-            g2.color = backgroundColor
-            g2.fillRect(0, 0, width, preferredSize.height)
-            // Draw a scaled-down version of the image to the panel.
-            val scaledDefImage = DeferredImage()
-            scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width / imageWidth)
-            // Don't used "pathified" text because that's slower and we don't need the best accuracy for the preview.
-            scaledDefImage.materialize(g2, showGuides, DeferredImage.TextMode.TEXT)
+            try {
+                g2.setHighQuality()
+                // Fill the background.
+                g2.color = backgroundColor
+                g2.fillRect(0, 0, width, preferredSize.height)
+                // Draw a scaled-down version of the image to the panel.
+                val scaledDefImage = DeferredImage()
+                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width / imageWidth)
+                scaledDefImage.materialize(g2, showGuides)
+            } finally {
+                g2.dispose()
+            }
         }
 
     }

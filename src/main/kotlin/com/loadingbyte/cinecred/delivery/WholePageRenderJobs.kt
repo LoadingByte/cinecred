@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.drawer.DeferredImage
+import com.loadingbyte.cinecred.drawer.setHighQuality
 import org.jfree.pdf.PDFDocument
 import org.jfree.svg.SVGGraphics2D
 import java.awt.Color
@@ -38,17 +39,21 @@ class PageSequenceRenderJob(
                 Format.PNG -> {
                     val pageImage = BufferedImage(pageWidth, pageHeight, BufferedImage.TYPE_INT_RGB)
                     val g2 = pageImage.createGraphics()
-                    g2.setHighQuality()
-                    g2.color = background
-                    g2.fillRect(0, 0, pageWidth, pageHeight)
-                    pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
+                    try {
+                        g2.setHighQuality()
+                        g2.color = background
+                        g2.fillRect(0, 0, pageWidth, pageHeight)
+                        pageDefImage.materialize(g2, drawGuides = false)
+                    } finally {
+                        g2.dispose()
+                    }
                     ImageIO.write(pageImage, "png", pageFile.toFile())
                 }
                 Format.SVG -> {
                     val g2 = SVGGraphics2D(pageWidth, pageHeight)
                     g2.color = background
                     g2.fillRect(0, 0, pageWidth, pageHeight)
-                    pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
+                    pageDefImage.materialize(g2, drawGuides = false)
                     Files.writeString(pageFile, g2.svgDocument)
                 }
             }
@@ -82,7 +87,7 @@ class PDFRenderJob(
             val g2 = pdfPage.graphics2D
             g2.color = background
             g2.fillRect(0, 0, page.intWidth, page.intHeight)
-            page.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH_WITH_INVISIBLE_TEXT)
+            page.materialize(g2, drawGuides = false, addInvisibleText = true)
 
             progressCallback((idx + 1).toFloat() / pageDefImages.size)
         }

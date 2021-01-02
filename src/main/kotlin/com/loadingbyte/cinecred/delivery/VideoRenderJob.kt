@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.drawer.DeferredImage
+import com.loadingbyte.cinecred.drawer.setHighQuality
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import org.bytedeco.ffmpeg.global.avcodec.*
@@ -28,7 +29,7 @@ class VideoRenderJob(
         // Convert the deferred page images to raster images.
         val pageImages = pageDefImages.map { pageDefImage ->
             drawImage(pageDefImage.intWidth, pageDefImage.intHeight) { g2 ->
-                pageDefImage.materialize(g2, drawGuides = false, DeferredImage.TextMode.PATH)
+                pageDefImage.materialize(g2, drawGuides = false)
             }
         }
 
@@ -104,7 +105,7 @@ class VideoRenderJob(
                         writeScroll(pageImage, scaling * page.style.scrollPxPerFrame)
                 }
 
-                if (pageIdx != project.pages.size - 1)
+                if (pageIdx != project.pages.lastIndex)
                     writeStatic(emptyImage, page.style.afterwardSlugFrames)
             }
 
@@ -117,10 +118,14 @@ class VideoRenderJob(
     private inline fun drawImage(width: Int, height: Int, draw: (Graphics2D) -> Unit): BufferedImage {
         val image = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
         val g2 = image.createGraphics()
-        g2.setHighQuality()
-        g2.color = project.styling.global.background
-        g2.fillRect(0, 0, width, height)
-        draw(g2)
+        try {
+            g2.setHighQuality()
+            g2.color = project.styling.global.background
+            g2.fillRect(0, 0, width, height)
+            draw(g2)
+        } finally {
+            g2.dispose()
+        }
         return image
     }
 

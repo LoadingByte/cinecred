@@ -15,11 +15,12 @@ object OpenPanel : JPanel() {
     init {
         border = BorderFactory.createCompoundBorder(
             BorderFactory.createEmptyBorder(10, 10, 10, 10),
-            BorderFactory.createDashedBorder(Color.LIGHT_GRAY, 10f, 4f, 4f, false)
+            BorderFactory.createDashedBorder(Color(100, 100, 100), 10f, 4f, 4f, false)
         )
 
-        val selectButton = JButton("Select Project Folder", DIR_ICON).apply {
+        val selectButton = JButton("Select Project Folder", FOLDER_ICON).apply {
             alignmentX = CENTER_ALIGNMENT
+            font = font.deriveFont(font.size * 1.25f)
         }
         selectButton.addActionListener {
             val fc = JFileChooser()
@@ -32,14 +33,14 @@ object OpenPanel : JPanel() {
         val dropLabel = JLabel("Drop Project Folder Here").apply {
             alignmentX = CENTER_ALIGNMENT
             foreground = Color.LIGHT_GRAY
-            font = font.deriveFont(30f)
+            font = font.deriveFont(font.size * 2.5f)
         }
 
         // Add the select button and the drag'n'drop hint text.
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         add(Box.createVerticalGlue())
         add(selectButton)
-        add(Box.createVerticalStrut(30))
+        add(Box.createVerticalStrut(50))
         add(dropLabel)
         add(Box.createVerticalGlue())
 

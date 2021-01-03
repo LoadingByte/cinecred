@@ -30,7 +30,7 @@ object DeliverConfigurationForm : Form() {
         .apply { /* Avoid the scrollbar */ maximumRowCount = model.size }
 
     private val seqDirField = addFileField(
-        "Output Directory", FileType.DIRECTORY,
+        "Output Folder", FileType.DIRECTORY,
         isVisible = { formatComboBox.selectedItem in Format.PAGE_SEQ }
     )
     private val seqFilenamePatternField = addFilenameField(

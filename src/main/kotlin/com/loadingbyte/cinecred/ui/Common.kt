@@ -1,10 +1,22 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.Severity
+import org.apache.batik.anim.dom.SAXSVGDocumentFactory
+import org.apache.batik.anim.dom.SVGOMDocument
+import org.apache.batik.bridge.BridgeContext
+import org.apache.batik.bridge.GVTBuilder
+import org.apache.batik.bridge.UserAgentAdapter
+import org.apache.batik.gvt.GraphicsNode
+import org.apache.batik.util.XMLResourceDescriptor
+import java.awt.Component
 import java.awt.Dimension
-import java.awt.Image
-import javax.swing.*
+import java.awt.Graphics2D
+import javax.swing.JTable
+import javax.swing.JTextArea
 import javax.swing.table.TableCellRenderer
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 
 fun String.ensureEndsWith(suffixes: List<String>, ignoreCase: Boolean = true) =
@@ -18,23 +30,59 @@ fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = tru
 }
 
 
-val DIR_ICON: Icon = UIManager.getIcon("FileView.directoryIcon")
-val COMPUTER_ICON: Icon = UIManager.getIcon("FileView.computerIcon")
-val FLOPPY_ICON: Icon = UIManager.getIcon("FileView.floppyDriveIcon")
-val UP_FOLDER_ICON: Icon = UIManager.getIcon("FileChooser.upFolderIcon")
+val ADD_ICON = SVGIcon.load("/icons/add.svg")
+val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
+val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
+val EYE_ICON = SVGIcon.load("/icons/eye.svg")
+val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
+val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")
+val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
+val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
+val PAGE_ICON = SVGIcon.load("/icons/page.svg")
+val PLAY_ICON = SVGIcon.load("/icons/play.svg")
+val REFRESH_ICON = SVGIcon.load("/icons/refresh.svg")
+val REMOVE_ICON = SVGIcon.load("/icons/remove.svg")
+val RESET_ICON = SVGIcon.load("/icons/reset.svg")
+val SAVE_ICON = SVGIcon.load("/icons/save.svg")
 
-val GLOBAL_ICON: Icon = UIManager.getIcon("FileView.hardDriveIcon")
-val PAGE_ICON: Icon = UIManager.getIcon("InternalFrame.icon")
-val CONTENT_ICON: Icon = UIManager.getIcon("Slider.verticalThumbIcon")
 
 val SEVERITY_ICON = mapOf(
-    Severity.INFO to (UIManager.getIcon("OptionPane.informationIcon") as ImageIcon).rescaled(16, 16),
-    Severity.WARN to (UIManager.getIcon("OptionPane.warningIcon") as ImageIcon).rescaled(16, 16),
-    Severity.ERROR to (UIManager.getIcon("OptionPane.errorIcon") as ImageIcon).rescaled(16, 16)
+    Severity.INFO to SVGIcon.load("/icons/info.svg"),
+    Severity.WARN to SVGIcon.load("/icons/warn.svg"),
+    Severity.ERROR to SVGIcon.load("/icons/error.svg")
 )
 
-private fun ImageIcon.rescaled(width: Int, height: Int) =
-    ImageIcon(image.getScaledInstance(width, height, Image.SCALE_SMOOTH))
+
+class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val height: Int) :
+    FlatAbstractIcon(width, height, null) {
+
+    override fun paintIcon(c: Component, g2: Graphics2D) {
+        svg.paint(g2)
+    }
+
+    companion object {
+        fun load(name: String): SVGIcon {
+            val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
+                .createDocument(null, SVGIcon::class.java.getResourceAsStream(name)) as SVGOMDocument
+            val ctx = BridgeContext(UserAgentAdapter())
+            val svg = GVTBuilder().build(ctx, doc)
+            return SVGIcon(svg, ctx.documentSize.width.roundToInt(), ctx.documentSize.height.roundToInt())
+        }
+    }
+
+}
+
+
+class DualSVGIcon constructor(val left: SVGIcon, val right: SVGIcon) :
+    FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null) {
+    override fun paintIcon(c: Component, g2: Graphics2D) {
+        left.svg.paint(g2)
+        val prevTransform = g2.transform
+        g2.translate(left.width + 4, 0)
+        right.svg.paint(g2)
+        g2.transform = prevTransform
+    }
+}
 
 
 fun newLabelTextArea() = JTextArea().apply {

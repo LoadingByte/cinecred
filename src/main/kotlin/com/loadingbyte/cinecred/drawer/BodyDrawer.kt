@@ -385,10 +385,13 @@ private fun DeferredImage.drawJustifiedBodyElem(
 ) = when (elem) {
     is BodyElement.Str ->
         drawJustifiedString(bodyFont, null, elem.str, hJustify, vJustify, areaX, areaY, areaWidth, areaHeight)
-    is BodyElement.Pic -> when (elem.pic) {
-        is Picture.Raster ->
-            drawJustified(
-                hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
-            ) { objX, objY -> drawBufferedImage(elem.pic.img, objX, objY, elem.pic.scaling) }
-    }
+    is BodyElement.Pic ->
+        drawJustified(
+            hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
+        ) { objX, objY ->
+            when (elem.pic) {
+                is Picture.Raster -> drawBufferedImage(elem.pic.img, objX, objY, elem.pic.scaling)
+                is Picture.SVG -> drawSVGNode(elem.pic.node, objX, objY, elem.pic.scaling)
+            }
+        }
 }

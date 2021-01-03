@@ -24,7 +24,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     class VerifyResult(val severity: Severity, msg: String) : Exception(msg)
 
     private class FormRow(val isVisibleFunc: (() -> Boolean)?) {
-        val components = mutableListOf<Component>()
+        val components = mutableListOf<JComponent>()
         var doVerify: (() -> Unit)? = null
 
         // We keep track of the form rows which are visible and have a verification error (not a warning).
@@ -83,7 +83,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     ): TextFieldWithFileExts {
         val field = TextFieldWithFileExts()
 
-        val browse = JButton("Browse")
+        val browse = JButton("Browse", FOLDER_ICON)
         browse.addActionListener {
             val fc = JFileChooser()
             fc.fileSelectionMode = when (fileType) {
@@ -184,8 +184,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         isVisible: (() -> Boolean)? = null,
         verify: ((List<E?>) -> Unit)? = null
     ): ComboBoxList<E> {
-        val addButton = JButton("+")
-        val removeButton = JButton("\u2212").apply { isEnabled = false }
+        val addButton = JButton(ADD_ICON)
+        val removeButton = JButton(REMOVE_ICON).apply { isEnabled = false }
         val field = ComboBoxList(items, toString, changeListener = { field ->
             removeButton.isEnabled = field.selectedItems.size != 1
             onChange(field)
@@ -249,7 +249,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     private fun addFormRow(
         label: String,
-        fields: List<Component>,
+        fields: List<JComponent>,
         constraints: List<String>,
         isVisible: (() -> Boolean)? = null,
         verify: (() -> Unit)? = null
@@ -288,7 +288,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             // Position the verification components using coordinates relative to the fields that are at the line ends.
             val iconLabelId = "c${System.identityHashCode(verifyIconLabel)}"
             val startYExpr = "${endlineFieldIds[0]}.y"
-            add(verifyIconLabel, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) $startYExpr")
+            add(verifyIconLabel, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) ($startYExpr + 3)")
             add(verifyMsgArea, "pos ($iconLabelId.x2 + rel) $startYExpr visual.x2 null")
 
             formRow.doVerify = {
@@ -297,9 +297,16 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                     verify()
                     verifyIconLabel.icon = null
                     verifyMsgArea.text = null
+                    for (comp in formRow.components)
+                        comp.putClientProperty("JComponent.outline", null)
                 } catch (e: VerifyResult) {
                     verifyIconLabel.icon = SEVERITY_ICON[e.severity]
                     verifyMsgArea.text = e.message
+                    if (e.severity == Severity.WARN || e.severity == Severity.ERROR) {
+                        val outline = if (e.severity == Severity.WARN) "warning" else "error"
+                        for (comp in formRow.components)
+                            comp.putClientProperty("JComponent.outline", outline)
+                    }
                     if (e.severity == Severity.ERROR)
                         formRow.isErroneous = true
                 }
@@ -319,7 +326,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     fun addSubmitButton(label: String) = JButton(label).also { button ->
         submitButton = button
-        add(button, "newline, span, align left")
+        add(button, "newline, skip 1, span, align left")
     }
 
     private fun <C : Component> C.setMinWidth() {

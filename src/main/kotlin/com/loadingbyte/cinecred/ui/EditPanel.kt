@@ -36,11 +36,11 @@ object EditPanel : JPanel() {
     private val pageTabs = JTabbedPane()
 
     init {
-        val reloadCreditsButton = JButton("CSV/Fonts/Pics", UP_FOLDER_ICON).apply {
+        val reloadCreditsButton = JButton("CSV/Fonts/Pics", REFRESH_ICON).apply {
             toolTipText = "Manually reload credits.csv, fonts, and pictures from disk"
             addActionListener { Controller.reloadCreditsFileAndRedraw() }
         }
-        val reloadStylingButton = JButton("Styling", UP_FOLDER_ICON).apply {
+        val reloadStylingButton = JButton("Styling", RESET_ICON).apply {
             toolTipText = "Reload styling from disk and discard unsaved changes"
             addActionListener {
                 if (unsavedStylingLabel.isVisible) {
@@ -52,7 +52,7 @@ object EditPanel : JPanel() {
                 unsavedStylingLabel.isVisible = false
             }
         }
-        val saveStylingButton = JButton("Styling", FLOPPY_ICON).apply {
+        val saveStylingButton = JButton("Styling", SAVE_ICON).apply {
             toolTipText = "Save styling to disk"
             addActionListener {
                 Controller.saveStyling()

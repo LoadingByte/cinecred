@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.setHighQuality
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
+import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.AlphaComposite
@@ -117,7 +118,8 @@ class VideoRenderJob(
 
     private inline fun drawImage(width: Int, height: Int, draw: (Graphics2D) -> Unit): BufferedImage {
         val image = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
-        val g2 = image.createGraphics()
+        // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
+        val g2 = GraphicsUtil.createGraphics(image)
         try {
             g2.setHighQuality()
             g2.color = project.styling.global.background

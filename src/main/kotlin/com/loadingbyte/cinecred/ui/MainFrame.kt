@@ -25,9 +25,9 @@ object MainFrame : JFrame("Cinecred") {
         setLocation(maxWinBounds.x + maxWinBounds.width / 2, 0)
 
         tabs.apply {
-            addTab("1. Create/Open", DIR_ICON, OpenPanel)
-            addTab("2. Style/Review", COMPUTER_ICON, EditPanel)
-            addTab("3. Deliver", FLOPPY_ICON, DeliverPanel)
+            addTab("1. Create/Open", FOLDER_ICON, OpenPanel)
+            addTab("2. Style/Review", EYE_ICON, EditPanel)
+            addTab("3. Deliver", DELIVER_ICON, DeliverPanel)
             setEnabledAt(1, false)
             setEnabledAt(2, false)
         }

@@ -71,9 +71,9 @@ object EditStylingPanel : JPanel() {
                 super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
                 val node = value as DefaultMutableTreeNode
                 when {
-                    node == globalNode -> icon = GLOBAL_ICON
-                    node.userObject is PageStyle -> icon = PAGE_ICON
-                    node.userObject is ContentStyle -> icon = CONTENT_ICON
+                    node == globalNode -> icon = GLOBE_ICON
+                    node.userObject is PageStyle -> icon = FILMSTRIP_ICON
+                    node.userObject is ContentStyle -> icon = LAYOUT_ICON
                 }
                 return this
             }
@@ -117,9 +117,12 @@ object EditStylingPanel : JPanel() {
         }
 
         // Add buttons for adding and removing page and content style nodes.
-        val addPageStyleButton = JButton("+", PAGE_ICON).apply { toolTipText = "Add new page style" }
-        val addContentStyleButton = JButton("+", CONTENT_ICON).apply { toolTipText = "Add new content style" }
-        val removeButton = JButton("\u2212").apply { toolTipText = "Remove selected style" }
+        val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))
+            .apply { toolTipText = "Add new page style" }
+        val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
+            .apply { toolTipText = "Add new content style" }
+        val removeButton = JButton(REMOVE_ICON)
+            .apply { toolTipText = "Remove selected style" }
         addPageStyleButton.addActionListener {
             insertAndSelectSortedLeaf(pageStylesNode, STANDARD_PAGE_STYLE.copy(name = "New Page Style"))
             onChange()

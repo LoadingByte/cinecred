@@ -11,17 +11,15 @@ import org.bytedeco.ffmpeg.avformat.AVStream
 import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVRational
-import org.bytedeco.ffmpeg.global.avcodec
 import org.bytedeco.ffmpeg.global.avcodec.*
-import org.bytedeco.ffmpeg.global.avformat
 import org.bytedeco.ffmpeg.global.avformat.*
-import org.bytedeco.ffmpeg.global.avutil
 import org.bytedeco.ffmpeg.global.avutil.*
-import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.ffmpeg.global.swscale.*
 import org.bytedeco.ffmpeg.swscale.SwsContext
-import org.bytedeco.javacpp.*
-import org.slf4j.LoggerFactory
+import org.bytedeco.javacpp.BytePointer
+import org.bytedeco.javacpp.DoublePointer
+import org.bytedeco.javacpp.Pointer
+import org.bytedeco.javacpp.PointerPointer
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
@@ -71,24 +69,6 @@ class VideoWriter(
     muxerOptions: Map<String, String>,
     codecOptions: Map<String, String>
 ) : Closeable {
-
-    companion object {
-
-        init {
-            try {
-                Loader.load(avutil::class.java)
-                Loader.load(avcodec::class.java)
-                Loader.load(avformat::class.java)
-                Loader.load(swscale::class.java)
-
-                av_jni_set_java_vm(Loader.getJavaVM(), null)
-            } catch (t: Throwable) {
-                LoggerFactory.getLogger("FFmpeg Loader").error("Failed to load FFmpeg", t)
-            }
-        }
-
-    }
-
 
     private var oc: AVFormatContext? = null
     private var st: AVStream? = null

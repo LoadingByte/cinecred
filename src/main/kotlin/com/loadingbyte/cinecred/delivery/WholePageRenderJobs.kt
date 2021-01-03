@@ -2,9 +2,13 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.setHighQuality
+import org.apache.batik.dom.GenericDOMImplementation
+import org.apache.batik.ext.awt.image.GraphicsUtil
+import org.apache.batik.svggen.SVGGeneratorContext
+import org.apache.batik.svggen.SVGGraphics2D
 import org.jfree.pdf.PDFDocument
-import org.jfree.svg.SVGGraphics2D
 import java.awt.Color
+import java.awt.Dimension
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.nio.file.Files
@@ -38,7 +42,8 @@ class PageSequenceRenderJob(
             when (format) {
                 Format.PNG -> {
                     val pageImage = BufferedImage(pageWidth, pageHeight, BufferedImage.TYPE_INT_RGB)
-                    val g2 = pageImage.createGraphics()
+                    // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
+                    val g2 = GraphicsUtil.createGraphics(pageImage)
                     try {
                         g2.setHighQuality()
                         g2.color = background
@@ -50,11 +55,16 @@ class PageSequenceRenderJob(
                     ImageIO.write(pageImage, "png", pageFile.toFile())
                 }
                 Format.SVG -> {
-                    val g2 = SVGGraphics2D(pageWidth, pageHeight)
+                    val doc = GenericDOMImplementation.getDOMImplementation()
+                        .createDocument("http://www.w3.org/2000/svg", "svg", null)
+                    val ctx = SVGGeneratorContext.createDefault(doc)
+                    ctx.comment = null
+                    val g2 = SVGGraphics2D(ctx, false)
+                    g2.svgCanvasSize = Dimension(pageWidth, pageHeight)
                     g2.color = background
                     g2.fillRect(0, 0, pageWidth, pageHeight)
                     pageDefImage.materialize(g2, drawGuides = false)
-                    Files.writeString(pageFile, g2.svgDocument)
+                    Files.newBufferedWriter(pageFile).use { writer -> g2.stream(writer, true) }
                 }
             }
 

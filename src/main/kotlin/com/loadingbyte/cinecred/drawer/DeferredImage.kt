@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
+import org.apache.batik.gvt.GraphicsNode
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.font.TextLayout
@@ -54,6 +55,10 @@ class DeferredImage {
                     drawBufferedImage(
                         insn.img, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
                     )
+                is Instruction.DrawSVGNode ->
+                    drawSVGNode(
+                        insn.node, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
+                    )
             }
     }
 
@@ -85,6 +90,12 @@ class DeferredImage {
         instructions.add(Instruction.DrawBufferedImage(img, x, y, scaling, isGuide))
     }
 
+    fun drawSVGNode(node: GraphicsNode, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
+        width = max(width, x + scaling * node.bounds.width.toFloat())
+        height = max(height, y + scaling * node.bounds.height.toFloat())
+        instructions.add(Instruction.DrawSVGNode(node, x, y, scaling, isGuide))
+    }
+
 
     private sealed class Instruction(val isGuide: Boolean) {
 
@@ -102,6 +113,10 @@ class DeferredImage {
 
         class DrawBufferedImage(
             val img: BufferedImage, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
+        class DrawSVGNode(
+            val node: GraphicsNode, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
     }
@@ -158,6 +173,16 @@ class DeferredImage {
                         scale(insn.scaling.toDouble(), insn.scaling.toDouble())
                     }
                     g2.drawImage(insn.img, tx, null)
+                }
+                is Instruction.DrawSVGNode -> {
+                    val tx = AffineTransform().apply {
+                        translate(insn.x.toDouble(), insn.y.toDouble())
+                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                    }
+                    val prevTransform = g2.transform
+                    g2.transform(tx)
+                    insn.node.paint(g2)
+                    g2.transform = prevTransform
                 }
             }
         }

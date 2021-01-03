@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.project
 
+import org.apache.batik.gvt.GraphicsNode
 import java.awt.Color
 import java.awt.Font
 import java.awt.image.BufferedImage
@@ -124,9 +125,17 @@ sealed class Picture(val scaling: Float) {
     abstract fun scaled(scaling: Float): Picture
 
     class Raster(val img: BufferedImage, scaling: Float = 1f) : Picture(scaling) {
-        override val width get() = img.width * scaling
-        override val height get() = img.height * scaling
+        override val width get() = scaling * img.width
+        override val height get() = scaling * img.height
         override fun scaled(scaling: Float) = Raster(img, this.scaling * scaling)
+    }
+
+    class SVG(
+        val node: GraphicsNode, private val rawWidth: Float, private val rawHeight: Float, scaling: Float = 1f
+    ) : Picture(scaling) {
+        override val width get() = scaling * rawWidth
+        override val height get() = scaling * rawHeight
+        override fun scaled(scaling: Float) = SVG(node, rawWidth, rawHeight, this.scaling * scaling)
     }
 
 }

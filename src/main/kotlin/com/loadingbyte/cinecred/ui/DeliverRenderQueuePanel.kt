@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import net.miginfocom.swing.MigLayout
@@ -16,7 +15,7 @@ import javax.swing.table.TableCellRenderer
 object DeliverRenderQueuePanel : JPanel() {
 
     init {
-        val startPauseButton = JToggleButton("Start Render Queue")
+        val startPauseButton = JToggleButton("Start Render Queue", PLAY_ICON)
         startPauseButton.addActionListener {
             RenderQueue.isPaused = !startPauseButton.isSelected
             startPauseButton.text = (if (startPauseButton.isSelected) "Pause" else "Start") + " Render Queue"
@@ -127,11 +126,11 @@ object DeliverRenderQueuePanel : JPanel() {
             }
             "finished" -> progressBar.apply {
                 model.value = 100
-                foreground = Color.GREEN
+                foreground = Color.decode("#499C54")
             }
             is Exception -> textArea.apply {
                 text = "${value.javaClass.simpleName}: ${value.message ?: ""}"
-                foreground = Color.RED
+                foreground = Color.decode("#C75450")
             }
             else -> throw IllegalArgumentException()
         }
@@ -141,7 +140,7 @@ object DeliverRenderQueuePanel : JPanel() {
 
     private object CancelButtonCellRenderer : TableCellRenderer {
 
-        private val button = JButton(SEVERITY_ICON[Severity.ERROR]).apply {
+        private val button = JButton(CANCEL_ICON).apply {
             toolTipText = "Cancel/delete render job"
         }
 
@@ -159,7 +158,8 @@ object DeliverRenderQueuePanel : JPanel() {
 
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
-        ) = JButton(SEVERITY_ICON[Severity.ERROR]).apply {
+        ) = JButton(CANCEL_ICON).apply {
+            toolTipText = "Cancel/delete render job"
             addActionListener {
                 val modelRow = JobTableModel.rows[rowIdx]
                 RenderQueue.cancelJob(modelRow.job)

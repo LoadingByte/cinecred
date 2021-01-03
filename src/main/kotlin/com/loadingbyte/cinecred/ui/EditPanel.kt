@@ -12,7 +12,7 @@ import javax.swing.JOptionPane.*
 import javax.swing.JScrollPane.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
-import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 
 object EditPanel : JPanel() {
@@ -166,7 +166,7 @@ object EditPanel : JPanel() {
             val scrollHeight = tabScrollPane.verticalScrollBar.value
             tabScrollPane.setViewportView(
                 DeferredImagePanel(
-                    pageDefImage, project.styling.global.widthPx.toFloat(),
+                    pageDefImage, project.styling.global.widthPx,
                     project.styling.global.background, showGuidesCheckBox.isSelected
                 )
             )
@@ -182,7 +182,7 @@ object EditPanel : JPanel() {
 
     private class DeferredImagePanel(
         val defImage: DeferredImage,
-        val imageWidth: Float,
+        val imageWidth: Int,
         val backgroundColor: Color,
         showGuides: Boolean
     ) : JPanel() {
@@ -195,7 +195,7 @@ object EditPanel : JPanel() {
 
         // The scroll pane uses this information to decide on the length of the scrollbar.
         override fun getPreferredSize() =
-            Dimension(parent.width, ceil(parent.width * defImage.height / imageWidth).toInt())
+            Dimension(parent.width, (parent.width * defImage.height / imageWidth).roundToInt())
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
@@ -208,7 +208,7 @@ object EditPanel : JPanel() {
                 g2.fillRect(0, 0, width, preferredSize.height)
                 // Draw a scaled-down version of the image to the panel.
                 val scaledDefImage = DeferredImage()
-                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width / imageWidth)
+                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width.toFloat() / imageWidth)
                 scaledDefImage.materialize(g2, showGuides)
             } finally {
                 g2.dispose()

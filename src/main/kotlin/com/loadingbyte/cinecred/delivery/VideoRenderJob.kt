@@ -12,7 +12,7 @@ import java.awt.Graphics2D
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.nio.file.Path
-import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 
 class VideoRenderJob(
@@ -27,18 +27,18 @@ class VideoRenderJob(
         get() = file.toString()
 
     override fun render(progressCallback: (Float) -> Unit) {
+        fun ensureMultipleOf2(i: Int) = if (i % 2 == 1) i + 1 else i
+        val videoWidth = ensureMultipleOf2((project.styling.global.widthPx * scaling).roundToInt())
+        val videoHeight = ensureMultipleOf2((project.styling.global.heightPx * scaling).roundToInt())
+
         // Convert the deferred page images to raster images.
         val pageImages = pageDefImages.map { pageDefImage ->
-            drawImage(pageDefImage.intWidth, pageDefImage.intHeight) { g2 ->
+            drawImage(videoWidth, pageDefImage.height.roundToInt()) { g2 ->
                 pageDefImage.materialize(g2, drawGuides = false)
             }
         }
 
         val totalNumFrames = getDurationFrames(project, pageDefImages)
-
-        fun ensureMultipleOf2(i: Int) = if (i % 2 == 1) i + 1 else i
-        val videoWidth = ensureMultipleOf2(ceil(project.styling.global.widthPx * scaling).toInt())
-        val videoHeight = ensureMultipleOf2(ceil(project.styling.global.heightPx * scaling).toInt())
 
         VideoWriter(
             file, videoWidth, videoHeight, project.styling.global.fps, format.codecId, format.pixelFormat,

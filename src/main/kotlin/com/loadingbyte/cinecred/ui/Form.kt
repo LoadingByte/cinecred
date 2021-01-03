@@ -293,16 +293,18 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
             formRow.doVerify = {
                 formRow.isErroneous = false
+                // Remove FlatLaf outlines.
+                for (comp in formRow.components)
+                    comp.putClientProperty("JComponent.outline", null)
                 try {
                     verify()
                     verifyIconLabel.icon = null
                     verifyMsgArea.text = null
-                    for (comp in formRow.components)
-                        comp.putClientProperty("JComponent.outline", null)
                 } catch (e: VerifyResult) {
                     verifyIconLabel.icon = SEVERITY_ICON[e.severity]
                     verifyMsgArea.text = e.message
                     if (e.severity == Severity.WARN || e.severity == Severity.ERROR) {
+                        // Add FlatLaf outlines.
                         val outline = if (e.severity == Severity.WARN) "warning" else "error"
                         for (comp in formRow.components)
                             comp.putClientProperty("JComponent.outline", outline)

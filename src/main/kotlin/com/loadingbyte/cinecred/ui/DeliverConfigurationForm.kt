@@ -13,8 +13,8 @@ import java.nio.file.Path
 import javax.swing.JOptionPane.ERROR_MESSAGE
 import javax.swing.JOptionPane.showMessageDialog
 import javax.swing.SpinnerNumberModel
-import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 
 object DeliverConfigurationForm : Form() {
@@ -58,8 +58,8 @@ object DeliverConfigurationForm : Form() {
     private fun verifyResolutionMult(resolutionMult: Float) {
         val project = project ?: return
 
-        val scaledWidth = ceil(project.styling.global.widthPx * resolutionMult).toInt()
-        val scaledHeight = ceil(project.styling.global.heightPx * resolutionMult).toInt()
+        val scaledWidth = (project.styling.global.widthPx * resolutionMult).roundToInt()
+        val scaledHeight = (project.styling.global.heightPx * resolutionMult).roundToInt()
         val info = "Yields resolution ${scaledWidth}x${scaledHeight}."
 
         val scrollSpeeds = project.pages
@@ -122,16 +122,18 @@ object DeliverConfigurationForm : Form() {
             val PAGE_SEQ: List<Format> = PageSequenceRenderJob.Format.values().map { pageSeqFormat ->
                 val fileExt = pageSeqFormat.name.toLowerCase()
                 Format("Whole Pages as ${pageSeqFormat.name}s", listOf(fileExt)) {
-                    val background = project!!.styling.global.background
-                    val dir = Path.of(seqDirField.text)
-                    val filenamePattern = seqFilenamePatternField.text
-                    PageSequenceRenderJob(background, scaledPageDefImages, pageSeqFormat, dir, filenamePattern)
+                    PageSequenceRenderJob(
+                        scaledGlobalWidth, project!!.styling.global.background, scaledPageDefImages,
+                        pageSeqFormat, Path.of(seqDirField.text), seqFilenamePatternField.text
+                    )
                 }
             }
 
             val PDF = Format("Whole Pages in PDF", listOf("pdf")) {
-                val file = Path.of(singlefileFileField.text)
-                PDFRenderJob(project!!.styling.global.background, scaledPageDefImages, file)
+                PDFRenderJob(
+                    scaledGlobalWidth, project!!.styling.global.background,
+                    scaledPageDefImages, Path.of(singlefileFileField.text)
+                )
             }
 
             val VIDEO: List<Format> = VideoRenderJob.Format.ALL.map { videoFormat ->
@@ -146,6 +148,8 @@ object DeliverConfigurationForm : Form() {
             // Utilities
             private val scaling
                 get() = resolutionMultSpinner.value as Float
+            private val scaledGlobalWidth
+                get() = (scaling * project!!.styling.global.widthPx).roundToInt()
             private val scaledPageDefImages
                 get() = pageDefImages.map {
                     DeferredImage().apply { drawDeferredImage(it, 0f, 0f, scaling) }

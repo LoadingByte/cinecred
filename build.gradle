@@ -9,7 +9,7 @@ ext.slf4jVersion = '1.7.30'
 ext.batikVersion = '1.13'
 ext.javacppVersion = '1.5.4'
 ext.ffmpegVersion = '4.3.1-1.5.4'
-ext.architectures = ['linux-x86', 'linux-x86_64', 'macosx-x86_64', 'windows-x86', 'windows-x86_64']
+ext.architectures = ['linux-x86_64', 'macosx-x86_64', 'windows-x86_64']
 
 repositories {
     mavenCentral()
@@ -36,7 +36,7 @@ dependencies {
     // Video Encoding
     implementation "org.bytedeco:javacpp:$javacppVersion"
     implementation "org.bytedeco:ffmpeg:$ffmpegVersion"
-    for (arch in architectures) {
+    architectures.forEach { arch ->
         implementation "org.bytedeco:javacpp:$javacppVersion:$arch"
         implementation "org.bytedeco:ffmpeg:$ffmpegVersion:$arch"
     }
@@ -56,10 +56,23 @@ compileTestKotlin.kotlinOptions.jvmTarget = '11'
 
 // Build fat JAR.
 jar {
-    manifest.attributes('Main-Class': 'com.loadingbyte.cinecred.MainKt')
-    from {
-        configurations.runtimeClasspath.collect {
-            it.isDirectory() ? it : zipTree(it)
+    manifest.attributes(
+            'Main-Class': 'com.loadingbyte.cinecred.MainKt',
+            'SplashScreen-Image': 'splash.png'
+    )
+    from 'LICENSE'
+    configurations.runtimeClasspath.forEach { dep ->
+        from { dep.isDirectory() ? dep : zipTree(dep) } {
+            // Put all licenses and related files into a central 'licenses/' directory and rename
+            // them such that each file also carries the name of the JAR it originates from.
+            eachFile { details ->
+                def filename = details.file.name
+                if (filename.contains('LICENSE')) details.path = "licenses/libs/${dep.name}-${filename}"
+                else if (filename.contains('NOTICE')) details.path = "licenses/libs/${dep.name}-${filename}"
+                else if (filename.contains('README')) details.path = "licenses/libs/${dep.name}-${filename}"
+            }
+            // Note: The 'license' directory is excluded only if the eachFile instruction has completely emptied it.
+            exclude '**/module-info.class', 'checkstyle/**', 'findbugs/**', 'license', 'META-INF/maven/**', 'pmd/**'
         }
     }
 }

@@ -8,7 +8,6 @@ import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
-import kotlin.math.ceil
 import kotlin.math.max
 
 
@@ -18,9 +17,6 @@ class DeferredImage {
     var height = 0f; private set
 
     private val instructions = mutableListOf<Instruction>()
-
-    val intWidth get() = ceil(width).toInt()
-    val intHeight get() = ceil(height).toInt()
 
     fun setMinWidth(minWidth: Float) {
         width = max(width, minWidth)

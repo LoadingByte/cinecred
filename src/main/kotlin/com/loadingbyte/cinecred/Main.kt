@@ -20,15 +20,17 @@ fun main() {
     // By default, only log warning messages.
     System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn")
 
+    // Redirect JavaCPP's logging output to slf4j.
+    System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
     // Load FFmpeg.
     try {
+        // Load the FFmpeg libs that we require.
         Loader.load(avutil::class.java)
         Loader.load(avcodec::class.java)
         Loader.load(avformat::class.java)
         Loader.load(swscale::class.java)
         avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
         // Redirect FFmpeg's logging output to slf4j.
-        System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
         setLogCallback(FFmpegLogCallback)
     } catch (t: Throwable) {
         LoggerFactory.getLogger("FFmpeg Loader").error("Failed to load FFmpeg", t)

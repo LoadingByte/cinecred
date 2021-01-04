@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.ui.FlatUIUtils
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.FontSpec
@@ -7,12 +9,14 @@ import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import java.awt.font.TextAttribute
+import java.awt.geom.Rectangle2D
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
+import javax.swing.border.Border
+import javax.swing.border.CompoundBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -529,21 +533,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
         private inner class FamilyListCellRenderer : DefaultListCellRenderer() {
 
-            private val panel = JPanel(MigLayout("insets 0"))
-            private val projectHeaderLabel = createHeaderLabel("\u2605 Project Families \u2605")
-            private val bundledHeaderLabel = createHeaderLabel("\u2605 Bundled Families \u2605")
-            private val systemHeaderLabel = createHeaderLabel("System Families")
-            private val noProjectFamiliesLabel = JLabel("(No font files in project dir)").apply {
-                foreground = Color.GRAY
-            }
-
-            private fun createHeaderLabel(text: String) = JLabel(text).apply {
-                foreground = Color.GRAY
-                font = font
-                    .deriveFont(font.size * 1.25f)
-                    .deriveFont(mapOf(TextAttribute.UNDERLINE to TextAttribute.UNDERLINE_ON))
-            }
-
             override fun getListCellRendererComponent(
                 list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
             ): Component {
@@ -552,21 +541,60 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
                 val familyName = (value as FontFamily?)?.familyName ?: ""
                 val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
-                return if (index == projectHeaderIdx || index == bundledHeaderIdx || index == systemHeaderIdx) {
-                    panel.removeAll()
+                if (index == projectHeaderIdx || index == bundledHeaderIdx || index == systemHeaderIdx) {
+                    val above = mutableListOf<String>()
                     if (index == projectHeaderIdx) {
-                        panel.add(projectHeaderLabel, "newline 8")
-                        if (projectHeaderIdx == bundledHeaderIdx)
-                            panel.add(noProjectFamiliesLabel, "newline 2")
+                        above.add("\u2605 Project Font Families \u2605")
+                        if (projectHeaderIdx == bundledHeaderIdx) above.add("(No font files found in project dir)")
                     }
-                    if (index == bundledHeaderIdx)
-                        panel.add(bundledHeaderLabel, "newline 8")
-                    if (index == systemHeaderIdx)
-                        panel.add(systemHeaderLabel, "newline 8")
-                    panel.add(cell, "newline 2, growx, pushx")
-                    panel
-                } else
-                    cell
+                    if (index == bundledHeaderIdx) above.add("\u2605 Bundled Font Families \u2605")
+                    if (index == systemHeaderIdx) above.add("System Font Families")
+                    (cell as JComponent).border = CompoundBorder(FamilyListCellBorder(list, above), cell.border)
+                }
+                return cell
+            }
+
+        }
+
+        // Inspired from here:
+        // https://github.com/JFormDesigner/FlatLaf/blob/master/flatlaf-demo/src/main/java/com/formdev/flatlaf/demo/intellijthemes/ListCellTitledBorder.java
+        private class FamilyListCellBorder(private val list: JList<*>, val above: List<String>) : Border {
+
+            override fun isBorderOpaque() = true
+            override fun getBorderInsets(c: Component) =
+                Insets(above.size * c.getFontMetrics(list.font).height, 0, 0, 0)
+
+            override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
+                val fontMetrics = c.getFontMetrics(list.font)
+                val g2 = g.create() as Graphics2D
+                try {
+                    // Draw the list background.
+                    g2.color = list.background
+                    g2.fillRect(x, y, width, above.size * fontMetrics.height)
+
+                    FlatUIUtils.setRenderingHints(g2)
+                    g2.color = UIManager.getColor("Label.disabledForeground")
+
+                    for ((line, text) in above.withIndex()) {
+                        val lineY = y + line * fontMetrics.height
+                        val textWidth = fontMetrics.stringWidth(text)
+                        // Draw the centered string.
+                        FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
+                        // On even lines, draw additional separator lines.
+                        if (line % 2 == 0) {
+                            val sepGap = UIScale.scale(4f)
+                            val sepWidth = (width - textWidth) / 2 - 2 * sepGap
+                            if (sepWidth > 0) {
+                                val sepY = lineY + fontMetrics.height / 2f
+                                val sepHeight = UIScale.scale(1f)
+                                g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
+                                g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
+                            }
+                        }
+                    }
+                } finally {
+                    g2.dispose()
+                }
             }
 
         }

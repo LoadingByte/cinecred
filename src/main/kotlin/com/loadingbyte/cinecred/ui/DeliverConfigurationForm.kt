@@ -87,7 +87,7 @@ object DeliverConfigurationForm : Form() {
 
     private fun addRenderJobToQueue() {
         if (project == null)
-            showMessageDialog(null, "No error-free project has been opened yet.", "No open project", ERROR_MESSAGE)
+            showMessageDialog(null, "No error-free project has been opened yet.", "No Open Project", ERROR_MESSAGE)
         else {
             val format = formatComboBox.selectedItem as Format
             DeliverRenderQueuePanel.addRenderJobToQueue(format.toRenderJob(), format.label)

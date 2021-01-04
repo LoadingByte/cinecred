@@ -239,9 +239,9 @@ fun readCredits(
                 val scaleHint = str.substringAfterLast(' ').trim()
                 val scaledPic = when {
                     scaleHint.startsWith('x') ->
-                        pic.scaled(scaleHint.drop(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.width)
+                        pic.scaled(scaleHint.drop(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.height)
                     scaleHint.endsWith('x') ->
-                        pic.scaled(scaleHint.dropLast(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.height)
+                        pic.scaled(scaleHint.dropLast(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.width)
                     else -> throw IllegalArgumentException()
                 }
                 return@get BodyElement.Pic(scaledPic)

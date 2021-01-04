@@ -2,18 +2,22 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.setHighQuality
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
-import org.jfree.pdf.PDFDocument
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDPage
+import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.common.PDRectangle
 import java.awt.Color
 import java.awt.Dimension
-import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 
@@ -89,23 +93,29 @@ class PDFRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(file.parent)
 
-        val pdfDoc = PDFDocument()
+        val pdfDoc = PDDocument()
 
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pageHeight = page.height.roundToInt()
-            val pdfPage = pdfDoc.createPage(Rectangle(width, pageHeight))
+            val pdfPage = PDPage(PDRectangle(width.toFloat(), page.height))
+            pdfDoc.addPage(pdfPage)
 
-            val g2 = pdfPage.graphics2D
+            val g2 = PdfBoxGraphics2D(pdfDoc, width.toFloat(), page.height)
             g2.color = background
-            g2.fillRect(0, 0, width, pageHeight)
-            page.materialize(g2, drawGuides = false, addInvisibleText = true)
+            g2.fillRect(0, 0, width, ceil(page.height).toInt())
+            page.materialize(g2, drawGuides = false)
+            g2.dispose()
+
+            PDPageContentStream(pdfDoc, pdfPage).use { stream ->
+                stream.drawForm(g2.xFormObject)
+            }
 
             progressCallback((idx + 1).toFloat() / pageDefImages.size)
         }
 
-        pdfDoc.writeToFile(file.toFile())
+        pdfDoc.save(file.toFile())
+        pdfDoc.close()
     }
 
 }

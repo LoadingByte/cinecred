@@ -392,6 +392,7 @@ private fun DeferredImage.drawJustifiedBodyElem(
             when (elem.pic) {
                 is Picture.Raster -> drawBufferedImage(elem.pic.img, objX, objY, elem.pic.scaling)
                 is Picture.SVG -> drawSVGNode(elem.pic.node, objX, objY, elem.pic.scaling)
+                is Picture.PDF -> drawPDFPage(elem.pic.doc, objX, objY, elem.pic.scaling)
             }
         }
 }

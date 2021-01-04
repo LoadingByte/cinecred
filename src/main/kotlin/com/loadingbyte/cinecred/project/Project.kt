@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import org.apache.batik.gvt.GraphicsNode
+import org.apache.pdfbox.pdmodel.PDDocument
 import java.awt.Color
 import java.awt.Font
 import java.awt.image.BufferedImage
@@ -136,6 +137,12 @@ sealed class Picture(val scaling: Float) {
         override val width get() = scaling * rawWidth
         override val height get() = scaling * rawHeight
         override fun scaled(scaling: Float) = SVG(node, rawWidth, rawHeight, this.scaling * scaling)
+    }
+
+    class PDF(val doc: PDDocument, scaling: Float = 1f) : Picture(scaling) {
+        override val width get() = scaling * doc.pages[0].cropBox.width
+        override val height get() = scaling * doc.pages[0].cropBox.height
+        override fun scaled(scaling: Float) = PDF(doc, this.scaling * scaling)
     }
 
 }

@@ -18,7 +18,7 @@ repositories {
 dependencies {
     // Logging
     implementation "org.slf4j:slf4j-simple:$slf4jVersion"
-    // Batik uses JCL; this bridge redirects JCL to slf4j:
+    // Batik & PDFBox use JCL; this bridge redirects JCL to slf4j:
     implementation "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
     // CSV Parsing
@@ -30,8 +30,9 @@ dependencies {
     // For pictures embedded in the SVG:
     implementation "org.apache.xmlgraphics:batik-codec:$batikVersion"
 
-    // PDF Writing
-    implementation 'org.jfree:org.jfree.pdf:2.0'
+    // PDF Reading and Writing
+    implementation 'org.apache.pdfbox:pdfbox:2.0.22'
+    implementation 'de.rototor.pdfbox:graphics2d:0.30'
 
     // Video Encoding
     implementation "org.bytedeco:javacpp:$javacppVersion"
@@ -47,7 +48,7 @@ dependencies {
 }
 
 configurations.all {
-    // Do not let Batik add the commons-logging dependency; instead, we use the slf4j bridge.
+    // Do not let Batik & PDFBox add the commons-logging dependency; instead, we use the slf4j bridge.
     exclude group: 'commons-logging', module: 'commons-logging'
 }
 

@@ -1,7 +1,14 @@
 package com.loadingbyte.cinecred.drawer
 
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
 import org.apache.batik.gvt.GraphicsNode
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.rendering.ImageType
+import org.apache.pdfbox.rendering.PDFRenderer
 import java.awt.Color
+import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
@@ -55,6 +62,10 @@ class DeferredImage {
                     drawSVGNode(
                         insn.node, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
                     )
+                is Instruction.DrawPDFPage ->
+                    drawPDFPage(
+                        insn.doc, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
+                    )
             }
     }
 
@@ -92,6 +103,13 @@ class DeferredImage {
         instructions.add(Instruction.DrawSVGNode(node, x, y, scaling, isGuide))
     }
 
+    fun drawPDFPage(doc: PDDocument, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
+        val cropBox = doc.pages[0].cropBox
+        width = max(width, x + scaling * cropBox.width)
+        height = max(height, y + scaling * cropBox.width)
+        instructions.add(Instruction.DrawPDFPage(doc, x, y, scaling, isGuide))
+    }
+
 
     private sealed class Instruction(val isGuide: Boolean) {
 
@@ -115,10 +133,14 @@ class DeferredImage {
             val node: GraphicsNode, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
+        class DrawPDFPage(
+            val doc: PDDocument, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+        ) : Instruction(isGuide)
+
     }
 
 
-    fun materialize(g2: Graphics2D, drawGuides: Boolean = false, addInvisibleText: Boolean = false) {
+    fun materialize(g2: Graphics2D, drawGuides: Boolean = false) {
         for (insn in instructions) {
             if (!drawGuides && insn.isGuide)
                 continue
@@ -144,23 +166,30 @@ class DeferredImage {
                     val textLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
                     textLayout.draw(g2, insn.x, y)
 
-                    // If requested, additionally draw some invisible strings where the visible, "pathified" strings
-                    // already lie. Even though this is nowhere near accurate, it's especially useful to enable
-                    // text copying in PDFs.
-                    if (addInvisibleText) {
-                        g2.font = scaledFont
+                    // When drawing to a PDF, additionally draw some invisible strings where the visible, vectorized
+                    // strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
+                    if (g2 is PdfBoxGraphics2D) {
+                        // Force the following text to be drawn using any font it can find.
+                        g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
+                        // We use a placeholder default PDF font. We make it slightly smaller than the visible font
+                        // to make sure that the invisible text completely fits into the bounding box of the visible
+                        // text, even when the visible font is a narrow one. This way, spaces between words are
+                        // correctly recognized by the PDF reader.
+                        g2.font = Font("SansSerif", 0, (scaledFont.size2D * 0.75f).toInt())
+                        // The invisible text should of course be invisible.
                         g2.color = Color(0, 0, 0, 0)
+                        // Draw each word separately at the position of the vectorized version of the word.
+                        // This way, inaccuracies concerning font family, weight, kerning, etc. don't hurt too much.
                         var charIdx = 0
                         for (word in insn.str.split(' ')) {
-                            // The PDF library is buggy and may directly interpret the inputted string as a control
-                            // sequence. To circumvent this, we need to escape parentheses. We might actually need
-                            // to escape even more characters, but we aren't aware of this yet.
-                            val escapedWord = word.replace("(", "\\(").replace(")", "\\)")
                             // Estimate the x coordinate where the word starts from the word's first glyph's bounds.
                             val xOffset = textLayout.getBlackBoxBounds(charIdx, charIdx + 1).bounds2D.x.toFloat()
-                            g2.drawString(escapedWord, insn.x + xOffset, y)
+                            g2.drawString(word, insn.x + xOffset, y)
                             charIdx += word.length + 1
                         }
+                        // We are done. Future text should again be vectorized, as indicated by
+                        // the presence of the default, unconfigured FontTextDrawer.
+                        g2.setFontTextDrawer(PdfBoxGraphics2DFontTextDrawer())
                     }
                 }
                 is Instruction.DrawBufferedImage -> {
@@ -179,6 +208,13 @@ class DeferredImage {
                     g2.transform(tx)
                     insn.node.paint(g2)
                     g2.transform = prevTransform
+                }
+                is Instruction.DrawPDFPage -> {
+                    // We first render to an image and then render that image to the target graphics because direct
+                    // rendering with PDFBox is known to sometimes have issues.
+                    val img = PDFRenderer(insn.doc).renderImage(0, insn.scaling, ImageType.ARGB)
+                    val tx = AffineTransform.getTranslateInstance(insn.x.toDouble(), insn.y.toDouble())
+                    g2.drawImage(img, tx, null)
                 }
             }
         }

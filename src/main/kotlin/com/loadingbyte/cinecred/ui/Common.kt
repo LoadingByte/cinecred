@@ -33,6 +33,7 @@ fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = tru
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
+val EDIT_ICON = SVGIcon.load("/icons/edit.svg")
 val EYE_ICON = SVGIcon.load("/icons/eye.svg")
 val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
 val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")

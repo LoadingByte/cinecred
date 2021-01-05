@@ -22,7 +22,7 @@ object MainFrame : JFrame("Cinecred") {
         // Make the window fill the right half of the screen.
         val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
         setSize(maxWinBounds.width / 2, maxWinBounds.height)
-        setLocation(maxWinBounds.x + maxWinBounds.width / 2, 0)
+        setLocation(maxWinBounds.x, maxWinBounds.y)
 
         tabs.apply {
             addTab("1. Create/Open", FOLDER_ICON, OpenPanel)
@@ -30,6 +30,9 @@ object MainFrame : JFrame("Cinecred") {
             addTab("3. Deliver", DELIVER_ICON, DeliverPanel)
             setEnabledAt(1, false)
             setEnabledAt(2, false)
+            addChangeListener {
+                Controller.onChangeTab(changedToEdit = selectedComponent == EditPanel)
+            }
         }
         contentPane.add(tabs)
     }

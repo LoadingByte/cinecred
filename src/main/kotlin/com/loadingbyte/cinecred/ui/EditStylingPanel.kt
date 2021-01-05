@@ -7,11 +7,35 @@ import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
+import java.awt.GraphicsEnvironment
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import javax.swing.*
 import javax.swing.event.TreeExpansionEvent
 import javax.swing.event.TreeWillExpandListener
 import javax.swing.tree.*
 import kotlin.math.floor
+
+
+object EditStylingDialog : JDialog(MainFrame, "Cinecred \u2013 Styling") {
+
+    init {
+        defaultCloseOperation = DO_NOTHING_ON_CLOSE
+        addWindowListener(object : WindowAdapter() {
+            override fun windowClosing(e: WindowEvent) {
+                Controller.setEditStylingDialogVisible(false)
+            }
+        })
+
+        // Make the window fill the left half of the screen.
+        val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+        setSize(maxWinBounds.width / 2, maxWinBounds.height)
+        setLocation(maxWinBounds.x + maxWinBounds.width / 2, maxWinBounds.y)
+
+        contentPane.add(EditStylingPanel)
+    }
+
+}
 
 
 object EditStylingPanel : JPanel() {
@@ -141,10 +165,10 @@ object EditStylingPanel : JPanel() {
 
         // Layout the tree and the buttons.
         val leftPanel = JPanel(MigLayout()).apply {
-            add(JScrollPane(tree), "grow, push")
-            add(addPageStyleButton, "newline, split, grow")
+            add(addPageStyleButton, "split, grow")
             add(addContentStyleButton, "grow")
             add(removeButton, "grow")
+            add(JScrollPane(tree), "newline, grow, push")
         }
 
         // Put everything together in a split pane.

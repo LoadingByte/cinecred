@@ -17,6 +17,13 @@ import kotlin.math.roundToInt
 
 object EditPanel : JPanel() {
 
+    private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
+        isSelected = true
+        toolTipText = "Show/hide styling window"
+        addActionListener {
+            Controller.setEditStylingDialogVisible(isSelected)
+        }
+    }
     private val unsavedStylingLabel = JLabel("(Unsaved Changes)").apply {
         isVisible = false
         font = font.deriveFont(font.size * 0.85f)
@@ -40,7 +47,14 @@ object EditPanel : JPanel() {
             toolTipText = "Manually reload credits.csv, fonts, and pictures from disk"
             addActionListener { Controller.reloadCreditsFileAndRedraw() }
         }
-        val reloadStylingButton = JButton("Styling", RESET_ICON).apply {
+        val saveStylingButton = JButton(SAVE_ICON).apply {
+            toolTipText = "Save styling to disk"
+            addActionListener {
+                Controller.saveStyling()
+                unsavedStylingLabel.isVisible = false
+            }
+        }
+        val reloadStylingButton = JButton(RESET_ICON).apply {
             toolTipText = "Reload styling from disk and discard unsaved changes"
             addActionListener {
                 if (unsavedStylingLabel.isVisible) {
@@ -52,19 +66,14 @@ object EditPanel : JPanel() {
                 unsavedStylingLabel.isVisible = false
             }
         }
-        val saveStylingButton = JButton("Styling", SAVE_ICON).apply {
-            toolTipText = "Save styling to disk"
-            addActionListener {
-                Controller.saveStyling()
-                unsavedStylingLabel.isVisible = false
-            }
-        }
 
-        val topPanel = JPanel(MigLayout("", "[][]push[][][]push[]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[][]push[][][][][]push[]push[]")).apply {
             add(reloadCreditsButton)
             add(JLabel("(Auto-Reload Active)").apply { font = font.deriveFont(font.size * 0.85f) })
+            add(JLabel("Styling:"))
+            add(toggleEditStylingDialogButton, "width 4%::")
+            add(saveStylingButton, "width 4%::")
             add(reloadStylingButton)
-            add(saveStylingButton)
             add(unsavedStylingLabel)
             add(showGuidesCheckBox)
             add(durationLabel)
@@ -93,17 +102,19 @@ object EditPanel : JPanel() {
             add(JScrollPane(logTable), "grow, push")
         }
 
-        val bottomSplitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, true, logTablePanel, EditStylingPanel)
-        val splitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, true, topPanel, bottomSplitPane)
+        val splitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, true, topPanel, logTablePanel)
         // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
         SwingUtilities.invokeLater {
-            splitPane.setDividerLocation(0.6)
-            bottomSplitPane.setDividerLocation(0.1)
+            splitPane.setDividerLocation(0.85)
         }
 
         // Use BorderLayout to maximize the size of the split pane.
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
+    }
+
+    fun onSetEditStylingDialogVisible(isVisible: Boolean) {
+        toggleEditStylingDialogButton.isSelected = isVisible
     }
 
     fun onLoadStyling() {

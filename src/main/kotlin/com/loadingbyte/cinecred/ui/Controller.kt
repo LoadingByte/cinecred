@@ -18,6 +18,9 @@ import javax.swing.SwingUtilities
 
 object Controller {
 
+    private var isEditTabActive = false
+    private var isEditStylingDialogVisible = true
+
     private var projectDir: Path? = null
     private var stylingFile: Path? = null
     private var creditsFile: Path? = null
@@ -51,6 +54,24 @@ object Controller {
             while (true)
                 previewGenerationJob.take().run()
         }, "PreviewGenerationThread").apply { isDaemon = true }.start()
+    }
+
+    fun onChangeTab(changedToEdit: Boolean) {
+        isEditTabActive = changedToEdit
+        EditStylingDialog.isVisible = changedToEdit && isEditStylingDialogVisible
+    }
+
+    fun setEditStylingDialogVisible(isVisible: Boolean) {
+        isEditStylingDialogVisible = isVisible
+        EditStylingDialog.isVisible = isEditTabActive && isVisible
+        EditPanel.onSetEditStylingDialogVisible(isVisible)
+    }
+
+    fun tryExit() {
+        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryOpenProjectDirOrExit()) {
+            MainFrame.dispose()
+            EditStylingDialog.dispose()
+        }
     }
 
     fun openProjectDir(projectDir: Path) {
@@ -150,11 +171,6 @@ object Controller {
                 EditPanel.updateProjectAndLog(project, pageDefImages, log)
             }
         }
-    }
-
-    fun tryExit() {
-        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryOpenProjectDirOrExit())
-            MainFrame.dispose()
     }
 
 }

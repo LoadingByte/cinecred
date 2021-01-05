@@ -71,6 +71,7 @@ jar {
                 if (filename.contains('LICENSE')) details.path = "licenses/libs/${dep.name}-${filename}"
                 else if (filename.contains('NOTICE')) details.path = "licenses/libs/${dep.name}-${filename}"
                 else if (filename.contains('README')) details.path = "licenses/libs/${dep.name}-${filename}"
+                else if (filename.contains('COPYRIGHT')) details.path = "licenses/libs/${dep.name}-${filename}"
             }
             // Note: The 'license' directory is excluded only if the eachFile instruction has completely emptied it.
             exclude '**/module-info.class', 'checkstyle/**', 'findbugs/**', 'license', 'META-INF/maven/**', 'pmd/**'

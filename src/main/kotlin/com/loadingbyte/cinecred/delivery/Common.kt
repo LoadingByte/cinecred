@@ -7,6 +7,9 @@ import kotlin.math.floor
 import kotlin.math.round
 
 
+open class RenderFormat(val label: String, val fileExts: List<String>)
+
+
 fun getDurationFrames(project: Project, pageDefImages: List<DeferredImage>) =
     project.pages.zip(pageDefImages).sumBy { (page, pageDefImage) ->
         when (page.style.behavior) {

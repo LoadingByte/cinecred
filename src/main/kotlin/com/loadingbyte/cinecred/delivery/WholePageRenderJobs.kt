@@ -21,19 +21,14 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 
-class PageSequenceRenderJob(
-    private val width: Int,
-    private val background: Color,
+class WholePageSequenceRenderJob(
     private val pageDefImages: List<DeferredImage>,
+    private val width: Int,
+    private val background: Color?,
     private val format: Format,
-    private val dir: Path,
-    private val filenamePattern: String
+    val dir: Path,
+    val filenamePattern: String
 ) : RenderJob {
-
-    enum class Format { PNG, SVG }
-
-    override val destination: String
-        get() = dir.resolve(filenamePattern).toString()
 
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(dir)
@@ -45,30 +40,39 @@ class PageSequenceRenderJob(
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
-                Format.PNG -> {
-                    val pageImage = BufferedImage(width, pageHeight, BufferedImage.TYPE_INT_RGB)
+                Format.PNG, Format.TIFF -> {
+                    val imageType = if (background != null) BufferedImage.TYPE_INT_RGB else BufferedImage.TYPE_INT_ARGB
+                    val pageImage = BufferedImage(width, pageHeight, imageType)
+
                     // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
                     val g2 = GraphicsUtil.createGraphics(pageImage)
                     try {
                         g2.setHighQuality()
-                        g2.color = background
-                        g2.fillRect(0, 0, width, pageHeight)
+                        if (background != null) {
+                            g2.color = background
+                            g2.fillRect(0, 0, width, pageHeight)
+                        }
                         pageDefImage.materialize(g2, drawGuides = false)
                     } finally {
                         g2.dispose()
                     }
-                    ImageIO.write(pageImage, "png", pageFile.toFile())
+
+                    ImageIO.write(pageImage, if (format == Format.PNG) "png" else "tiff", pageFile.toFile())
                 }
                 Format.SVG -> {
                     val doc = GenericDOMImplementation.getDOMImplementation()
                         .createDocument("http://www.w3.org/2000/svg", "svg", null)
                     val ctx = SVGGeneratorContext.createDefault(doc)
                     ctx.comment = null
-                    val g2 = SVGGraphics2D(ctx, false)
+
+                    val g2 = SVGGraphics2D(ctx, true)
                     g2.svgCanvasSize = Dimension(width, pageHeight)
-                    g2.color = background
-                    g2.fillRect(0, 0, width, pageHeight)
+                    if (background != null) {
+                        g2.color = background
+                        g2.fillRect(0, 0, width, pageHeight)
+                    }
                     pageDefImage.materialize(g2, drawGuides = false)
+
                     Files.newBufferedWriter(pageFile).use { writer -> g2.stream(writer, true) }
                 }
             }
@@ -77,18 +81,25 @@ class PageSequenceRenderJob(
         }
     }
 
+
+    class Format private constructor(label: String, fileExt: String) : RenderFormat(label, listOf(fileExt)) {
+        companion object {
+            val PNG = Format("PNG", "png")
+            val TIFF = Format("TIFF", "tiff")
+            val SVG = Format("SVG", "svg")
+            val ALL = listOf(PNG, TIFF, SVG)
+        }
+    }
+
 }
 
 
-class PDFRenderJob(
-    private val width: Int,
-    private val background: Color,
+class WholePagePDFRenderJob(
     private val pageDefImages: List<DeferredImage>,
-    private val file: Path,
+    private val width: Int,
+    private val background: Color?,
+    val file: Path,
 ) : RenderJob {
-
-    override val destination: String
-        get() = file.toString()
 
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(file.parent)
@@ -102,8 +113,10 @@ class PDFRenderJob(
             pdfDoc.addPage(pdfPage)
 
             val g2 = PdfBoxGraphics2D(pdfDoc, width.toFloat(), page.height)
-            g2.color = background
-            g2.fillRect(0, 0, width, ceil(page.height).toInt())
+            if (background != null) {
+                g2.color = background
+                g2.fillRect(0, 0, width, ceil(page.height).toInt())
+            }
             page.materialize(g2, drawGuides = false)
             g2.dispose()
 
@@ -116,6 +129,11 @@ class PDFRenderJob(
 
         pdfDoc.save(file.toFile())
         pdfDoc.close()
+    }
+
+
+    companion object {
+        val FORMAT = RenderFormat("PDF", listOf("pdf"))
     }
 
 }

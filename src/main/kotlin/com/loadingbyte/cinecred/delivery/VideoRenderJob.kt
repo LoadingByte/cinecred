@@ -5,12 +5,14 @@ import com.loadingbyte.cinecred.drawer.setHighQuality
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import org.apache.batik.ext.awt.image.GraphicsUtil
+import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.AlphaComposite
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.math.roundToInt
 
@@ -19,14 +21,23 @@ class VideoRenderJob(
     private val project: Project,
     private val pageDefImages: List<DeferredImage>,
     private val scaling: Float,
+    private val alpha: Boolean,
     private val format: Format,
-    private val file: Path
+    fileOrDir: Path
 ) : RenderJob {
 
-    override val destination: String
-        get() = file.toString()
+    val fileOrPattern: Path = when {
+        format.isImageSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts[0]}")
+        else -> fileOrDir
+    }
 
     override fun render(progressCallback: (Float) -> Unit) {
+        // If we have an image sequence, delete the sequence directory if it already exists.
+        if (format.isImageSeq && Files.exists(fileOrPattern.parent))
+            FileUtils.cleanDirectory(fileOrPattern.parent.toFile())
+        // Make sure that the parent directory exists.
+        Files.createDirectories(fileOrPattern.parent)
+
         fun ensureMultipleOf2(i: Int) = if (i % 2 == 1) i + 1 else i
         val videoWidth = ensureMultipleOf2((project.styling.global.widthPx * scaling).roundToInt())
         val videoHeight = ensureMultipleOf2((project.styling.global.heightPx * scaling).roundToInt())
@@ -41,8 +52,10 @@ class VideoRenderJob(
         val totalNumFrames = getDurationFrames(project, pageDefImages)
 
         VideoWriter(
-            file, videoWidth, videoHeight, project.styling.global.fps, format.codecId, format.pixelFormat,
-            muxerOptions = emptyMap(), codecOptions = format.codecOptions
+            fileOrPattern, videoWidth, videoHeight, project.styling.global.fps, format.codecId,
+            if (alpha) format.alphaPixelFormat!! else format.pixelFormat,
+            muxerOptions = emptyMap(),
+            format.codecOptions
         ).use { videoWriter ->
             var prevProgress = 0f
             fun updateProgress() {
@@ -117,13 +130,16 @@ class VideoRenderJob(
     }
 
     private inline fun drawImage(width: Int, height: Int, draw: (Graphics2D) -> Unit): BufferedImage {
-        val image = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
+        val imageType = if (alpha) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
+        val image = BufferedImage(width, height, imageType)
         // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
         val g2 = GraphicsUtil.createGraphics(image)
         try {
             g2.setHighQuality()
-            g2.color = project.styling.global.background
-            g2.fillRect(0, 0, width, height)
+            if (!alpha) {
+                g2.color = project.styling.global.background
+                g2.fillRect(0, 0, width, height)
+            }
             draw(g2)
         } finally {
             g2.dispose()
@@ -133,32 +149,50 @@ class VideoRenderJob(
 
 
     class Format private constructor(
-        val label: String,
-        defaultFileExt: String,
+        label: String,
+        val isImageSeq: Boolean,
+        fileExts: List<String>,
         val codecId: Int,
         val pixelFormat: Int,
-        val codecOptions: Map<String, String> = emptyMap()
-    ) {
+        val alphaPixelFormat: Int?,
+        val codecOptions: Map<String, String>
+    ) : RenderFormat(label, fileExts) {
 
-        val fileExts = listOf(defaultFileExt) +
-                MuxerFormat.ALL
-                    .filter { codecId in it.supportedCodecIds }
-                    .flatMap { it.extensions }
-                    .filter { it != defaultFileExt }
-                    .toSortedSet()
+        val supportsAlpha = alphaPixelFormat != null
 
         companion object {
+
+            private fun muxed(
+                label: String, defaultFileExt: String, codecId: Int, pixelFormat: Int,
+                codecOptions: Map<String, String> = emptyMap()
+            ) = Format(label, isImageSeq = false,
+                listOf(defaultFileExt) +
+                        MuxerFormat.ALL
+                            .filter { codecId in it.supportedCodecIds }
+                            .flatMap { it.extensions }
+                            .filter { it != defaultFileExt }
+                            .toSortedSet(),
+                codecId, pixelFormat, alphaPixelFormat = null, codecOptions)
+
+            private fun seqSupportsAlpha(
+                label: String, fileExt: String, codecId: Int, pixelFormat: Int, alphaPixelFormat: Int
+            ) = Format(label, isImageSeq = true, listOf(fileExt), codecId, pixelFormat, alphaPixelFormat, emptyMap())
+
             val ALL = listOf(
-                Format("H.264", "mp4", AV_CODEC_ID_H264, AV_PIX_FMT_YUV420P),
-                Format("ProRes 422 Proxy", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "0")),
-                Format("ProRes 422 LT", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "1")),
-                Format("ProRes 422", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "2")),
-                Format("ProRes 422 HQ", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "3")),
-                Format("DNxHR LB", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_lb")),
-                Format("DNxHR SQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
-                Format("DNxHR HQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
-                Format("DNxHR HQX", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx"))
+                muxed("H.264", "mp4", AV_CODEC_ID_H264, AV_PIX_FMT_YUV420P),
+                muxed("ProRes 422 Proxy", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "0")),
+                muxed("ProRes 422 LT", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "1")),
+                muxed("ProRes 422", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "2")),
+                muxed("ProRes 422 HQ", "mov", AV_CODEC_ID_PRORES, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "3")),
+                muxed("DNxHR LB", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_lb")),
+                muxed("DNxHR SQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
+                muxed("DNxHR HQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
+                muxed("DNxHR HQX", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx")),
+                seqSupportsAlpha("DPX Image Sequence", "dpx", AV_CODEC_ID_DPX, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                seqSupportsAlpha("TIFF Image Sequence", "tiff", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                seqSupportsAlpha("PNG Image Sequence", "png", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
             )
+
         }
 
     }

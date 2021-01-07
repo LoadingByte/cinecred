@@ -46,8 +46,8 @@ object DeliverRenderQueuePanel : JPanel() {
         add(JScrollPane(jobTable), "newline, grow, push")
     }
 
-    fun addRenderJobToQueue(job: RenderJob, format: String) {
-        val row = JobTableModel.Row(job, format)
+    fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
+        val row = JobTableModel.Row(job, formatLabel, destination)
         JobTableModel.rows.add(row)
         JobTableModel.fireTableRowsInserted(JobTableModel.rowCount - 1, JobTableModel.rowCount - 1)
 
@@ -80,7 +80,7 @@ object DeliverRenderQueuePanel : JPanel() {
 
     private object JobTableModel : AbstractTableModel() {
 
-        class Row(val job: RenderJob, val format: String) {
+        class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
             var progress: Any = 0f
         }
 
@@ -98,8 +98,8 @@ object DeliverRenderQueuePanel : JPanel() {
         }
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
-            0 -> rows[rowIdx].format
-            1 -> rows[rowIdx].job.destination
+            0 -> rows[rowIdx].formatLabel
+            1 -> rows[rowIdx].destination
             2 -> rows[rowIdx].progress
             3 -> ""
             else -> throw IllegalArgumentException()
@@ -115,7 +115,7 @@ object DeliverRenderQueuePanel : JPanel() {
 
         private val progressBar = JProgressBar()
         private val defaultProgressBarForeground = progressBar.foreground
-        private val textArea = newLabelTextArea()
+        private val wordWrapCellRenderer = WordWrapCellRenderer()
 
         override fun getTableCellRendererComponent(
             table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
@@ -128,10 +128,10 @@ object DeliverRenderQueuePanel : JPanel() {
                 model.value = 100
                 foreground = Color.decode("#499C54")
             }
-            is Exception -> textArea.apply {
-                text = "${value.javaClass.simpleName}: ${value.message ?: ""}"
-                foreground = Color.decode("#C75450")
-            }
+            is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
+                table, "${value.javaClass.simpleName}: ${value.message ?: ""}",
+                isSelected, hasFocus, rowIdx, colIdx
+            ).apply { foreground = Color.decode("#C75450") }
             else -> throw IllegalArgumentException()
         }
 

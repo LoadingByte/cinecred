@@ -7,7 +7,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 interface RenderJob {
-    val destination: String
     fun render(progressCallback: (Float) -> Unit)
 }
 

@@ -1,7 +1,5 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.ui.FlatUIUtils
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.FontSpec
@@ -9,14 +7,11 @@ import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import java.awt.geom.Rectangle2D
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
-import javax.swing.border.Border
-import javax.swing.border.CompoundBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -62,7 +57,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         verify: ((String) -> Unit)? = null
     ): JTextField {
         val field = JTextField().apply { setMinWidth() }
-        val constraints = listOf(if (grow) "width 50%" else "")
+        val constraints = listOf(if (grow) "width 40%" else "")
         addFormRow(label, listOf(field), constraints, isVisible, verify?.let { { it(field.text) } })
         field.addChangeListener { onChange(field) }
         return field
@@ -74,7 +69,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         verify: ((String) -> Unit)? = null
     ): TextFieldWithFileExts {
         val field = TextFieldWithFileExts()
-        addFormRow(label, listOf(field), listOf("width 50%"), isVisible, verify?.let { { it(field.text) } })
+        addFormRow(label, listOf(field), listOf("width 40%"), isVisible, verify?.let { { it(field.text) } })
         field.addChangeListener { onChange(field) }
         return field
     }
@@ -117,16 +112,14 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 throw VerifyResult(Severity.ERROR, "Path is empty.")
             val file = Path.of(fileStr)
             if (fileType == FileType.FILE && Files.isDirectory(file))
-                throw VerifyResult(Severity.ERROR, "Path points to a directory.")
+                throw VerifyResult(Severity.ERROR, "Path points to a folder.")
             if (fileType == FileType.DIRECTORY && Files.isRegularFile(file))
-                throw VerifyResult(Severity.ERROR, "Path points to a non-directory file.")
+                throw VerifyResult(Severity.ERROR, "Path points to a file, not a folder.")
             if (verify != null)
                 verify(file)
-            if (fileType == FileType.FILE && Files.exists(file))
-                throw VerifyResult(Severity.WARN, "File already exists and will be overwritten.")
         }
 
-        addFormRow(label, listOf(field, browse), listOf("split, width 50%", ""), isVisible, extendedVerify)
+        addFormRow(label, listOf(field, browse), listOf("split, width 40%", ""), isVisible, extendedVerify)
         field.addChangeListener { onChange(field) }
 
         return field
@@ -293,7 +286,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             val iconLabelId = "c${System.identityHashCode(verifyIconLabel)}"
             val startYExpr = "${endlineFieldIds[0]}.y"
             add(verifyIconLabel, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) ($startYExpr + 3)")
-            add(verifyMsgArea, "pos ($iconLabelId.x2 + rel) $startYExpr visual.x2 null")
+            add(verifyMsgArea, "pos $iconLabelId.x2 $startYExpr visual.x2 null")
 
             formRow.doVerify = {
                 formRow.isErroneous = false
@@ -487,8 +480,21 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
         val familyComboBox = JComboBox<FontFamily>().apply {
             maximumRowCount = 20
-            // Equip the family combo box with a custom renderer that shows headings.
-            renderer = FamilyListCellRenderer()
+            // Equip the family combo box with a custom renderer that shows category headers.
+            renderer = object : LabeledListCellRenderer() {
+                override fun toString(value: Any) = (value as FontFamily).familyName
+                override fun getLabelLines(index: Int) = mutableListOf<String>().apply {
+                    val projectHeaderIdx = 0
+                    val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
+                    val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
+                    if (index == projectHeaderIdx) {
+                        add("\u2605 Project Font Families \u2605")
+                        if (projectHeaderIdx == bundledHeaderIdx) add("(No font files found in project dir)")
+                    }
+                    if (index == bundledHeaderIdx) add("\u2605 Bundled Font Families \u2605")
+                    if (index == systemHeaderIdx) add("System Font Families")
+                }
+            }
         }
         val fontComboBox = JComboBox<Any>(emptyArray()).apply {
             maximumRowCount = 20
@@ -529,74 +535,6 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             } finally {
                 disableFamilyListener = false
             }
-        }
-
-        private inner class FamilyListCellRenderer : DefaultListCellRenderer() {
-
-            override fun getListCellRendererComponent(
-                list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-            ): Component {
-                val projectHeaderIdx = 0
-                val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
-                val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
-                val familyName = (value as FontFamily?)?.familyName ?: ""
-                val cell = super.getListCellRendererComponent(list, familyName, index, isSelected, cellHasFocus)
-                if (index == projectHeaderIdx || index == bundledHeaderIdx || index == systemHeaderIdx) {
-                    val above = mutableListOf<String>()
-                    if (index == projectHeaderIdx) {
-                        above.add("\u2605 Project Font Families \u2605")
-                        if (projectHeaderIdx == bundledHeaderIdx) above.add("(No font files found in project dir)")
-                    }
-                    if (index == bundledHeaderIdx) above.add("\u2605 Bundled Font Families \u2605")
-                    if (index == systemHeaderIdx) above.add("System Font Families")
-                    (cell as JComponent).border = CompoundBorder(FamilyListCellBorder(list, above), cell.border)
-                }
-                return cell
-            }
-
-        }
-
-        // Inspired from here:
-        // https://github.com/JFormDesigner/FlatLaf/blob/master/flatlaf-demo/src/main/java/com/formdev/flatlaf/demo/intellijthemes/ListCellTitledBorder.java
-        private class FamilyListCellBorder(private val list: JList<*>, val above: List<String>) : Border {
-
-            override fun isBorderOpaque() = true
-            override fun getBorderInsets(c: Component) =
-                Insets(above.size * c.getFontMetrics(list.font).height, 0, 0, 0)
-
-            override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
-                val fontMetrics = c.getFontMetrics(list.font)
-                val g2 = g.create() as Graphics2D
-                try {
-                    // Draw the list background.
-                    g2.color = list.background
-                    g2.fillRect(x, y, width, above.size * fontMetrics.height)
-
-                    FlatUIUtils.setRenderingHints(g2)
-                    g2.color = UIManager.getColor("Label.disabledForeground")
-
-                    for ((line, text) in above.withIndex()) {
-                        val lineY = y + line * fontMetrics.height
-                        val textWidth = fontMetrics.stringWidth(text)
-                        // Draw the centered string.
-                        FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
-                        // On even lines, draw additional separator lines.
-                        if (line % 2 == 0) {
-                            val sepGap = UIScale.scale(4f)
-                            val sepWidth = (width - textWidth) / 2 - 2 * sepGap
-                            if (sepWidth > 0) {
-                                val sepY = lineY + fontMetrics.height / 2f
-                                val sepHeight = UIScale.scale(1f)
-                                g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
-                                g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
-                            }
-                        }
-                    }
-                } finally {
-                    g2.dispose()
-                }
-            }
-
         }
 
     }

@@ -27,7 +27,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Path
 
 
-class MuxerFormat(val supportedCodecIds: Set<Int>, val extensions: List<String>) {
+class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensions: List<String>) {
     companion object {
         val ALL: List<MuxerFormat>
 
@@ -37,6 +37,7 @@ class MuxerFormat(val supportedCodecIds: Set<Int>, val extensions: List<String>)
 
             ALL = avMuxerFormats.map { avMuxerFormat ->
                 MuxerFormat(
+                    name = avMuxerFormat.name().string,
                     supportedCodecIds = codecIds.filter { codecId ->
                         avformat_query_codec(avMuxerFormat, codecId, FF_COMPLIANCE_STRICT) == 1
                     }.toSet(),
@@ -60,22 +61,24 @@ class MuxerFormat(val supportedCodecIds: Set<Int>, val extensions: List<String>)
  * The code inside this class is adapted from here: https://ffmpeg.org/doxygen/trunk/muxing_8c-example.html
  */
 class VideoWriter(
-    file: Path,
+    fileOrDir: Path,
     private val width: Int,
     private val height: Int,
     fps: FPS,
     codecId: Int,
-    private val pixelFormat: Int,
+    private val outPixelFormat: Int,
     muxerOptions: Map<String, String>,
     codecOptions: Map<String, String>
 ) : Closeable {
+
+    private var inPixelFormat: Int? = null
 
     private var oc: AVFormatContext? = null
     private var st: AVStream? = null
     private var enc: AVCodecContext? = null
     private var swsCtx: SwsContext? = null
-    private var frame: AVFrame? = null
-    private var tmpFrame: AVFrame? = null
+    private var inFrame: AVFrame? = null
+    private var outFrame: AVFrame? = null
 
     // Pts of the next frame that will be generated.
     var frameCounter = 0L
@@ -83,7 +86,7 @@ class VideoWriter(
 
     init {
         try {
-            setup(file, fps, codecId, muxerOptions, codecOptions)
+            setup(fileOrDir, fps, codecId, muxerOptions, codecOptions)
         } catch (e: AVException) {
             try {
                 release()
@@ -95,7 +98,7 @@ class VideoWriter(
     }
 
     private fun setup(
-        file: Path,
+        fileOrDir: Path,
         fps: FPS,
         codecId: Int,
         muxerOptions: Map<String, String>,
@@ -104,16 +107,16 @@ class VideoWriter(
         // Allocate the output media context.
         val oc = AVFormatContext(null)
         this.oc = oc
-        avformat_alloc_output_context2(oc, null, null, file.toString())
+        avformat_alloc_output_context2(oc, null, null, fileOrDir.toString())
             .throwIfErrnum("Could not deduce output format from file extension")
 
         // Find the encoder.
         val codec = avcodec_find_encoder(codecId)
-            .throwIfNull("Could not find encoder for '${avcodec_get_name(codecId).string}'.")
+            .throwIfNull("Could not find encoder for '${avcodec_get_name(codecId).string}'")
 
         // Add the video stream.
         val st = avformat_new_stream(oc, null)
-            .throwIfNull("Could not allocate stream.")
+            .throwIfNull("Could not allocate stream")
         this.st = st
         // Assigning the stream ID dynamically is technically unnecessary because we only have one stream.
         st.id(oc.nb_streams() - 1)
@@ -129,12 +132,25 @@ class VideoWriter(
             avcodec_open2(enc, codec, codecOptionsDict).throwIfErrnum("Could not open video codec")
         }
 
+        // Determine whether the output pixel format has an alpha component.
+        // From that, determine the input pixel format.
+        val alpha = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("Could not retrieve pixel format info")
+            .flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
+        val inPixelFormat = if (alpha) AV_PIX_FMT_ABGR else AV_PIX_FMT_BGR24
+        this.inPixelFormat = inPixelFormat
+
         // Allocate and initialize a reusable frame.
-        frame = allocFrame(pixelFormat)
-        // If the output format is not BGR24, then a temporary BGR24 picture is needed too.
-        // That picture will then be converted to the required output format.
-        if (pixelFormat != AV_PIX_FMT_BGR24)
-            tmpFrame = allocFrame(AV_PIX_FMT_BGR24)
+        outFrame = allocFrame(outPixelFormat)
+        // If the output format is not equal to the input format, then a temporary picture which uses the input format
+        // is needed too. That picture will then be converted to the required output format by an SWS context, which
+        // we need to create as well.
+        if (outPixelFormat != inPixelFormat) {
+            inFrame = allocFrame(inPixelFormat)
+            swsCtx = sws_getContext(
+                width, height, inPixelFormat, width, height, outPixelFormat, SWS_BICUBIC,
+                null, null, null as DoublePointer?
+            ).throwIfNull("Could not initialize the conversion context")
+        }
 
         // Copy the stream parameters to the muxer.
         avcodec_parameters_from_context(st.codecpar(), enc).throwIfErrnum("Could not copy the stream parameters")
@@ -143,8 +159,8 @@ class VideoWriter(
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
-                avio_open2(pb, file.toString(), AVIO_FLAG_WRITE, null, muxerOptionsDict)
-                    .throwIfErrnum("Could not open '$file'")
+                avio_open2(pb, fileOrDir.toString(), AVIO_FLAG_WRITE, null, muxerOptionsDict)
+                    .throwIfErrnum("Could not open '$fileOrDir'")
                 oc.pb(pb)
             }
 
@@ -161,7 +177,7 @@ class VideoWriter(
         enc.codec_id(codecId)
         enc.width(width)
         enc.height(height)
-        enc.pix_fmt(pixelFormat)
+        enc.pix_fmt(outPixelFormat)
 
         // Timebase: This is the fundamental unit of time (in seconds) in terms
         // of which frame timestamps are represented. For fixed-fps content,
@@ -187,13 +203,13 @@ class VideoWriter(
     }
 
     private fun allocFrame(pixelFormat: Int): AVFrame {
-        val frame = av_frame_alloc().throwIfNull("Could not allocate video frame.").apply {
+        val frame = av_frame_alloc().throwIfNull("Could not allocate video frame").apply {
             format(pixelFormat)
             width(width)
             height(height)
         }
         // Allocate the buffers for the frame data.
-        av_frame_get_buffer(frame, 0).throwIfErrnum("Could not allocate video frame data.")
+        av_frame_get_buffer(frame, 0).throwIfErrnum("Could not allocate video frame data")
         return frame
     }
 
@@ -210,41 +226,45 @@ class VideoWriter(
 
     /**
      * Encodes one video frame and sends it to the muxer.
-     * Images must be encoded as [BufferedImage.TYPE_3BYTE_BGR].
+     * Images must be encoded as [BufferedImage.TYPE_3BYTE_BGR] or [BufferedImage.TYPE_4BYTE_ABGR],
+     * depending on whether the [outPixelFormat] has an alpha channel.
      */
     fun writeFrame(image: BufferedImage) {
-        val frame = this.frame!!
+        val inPixelFormat = this.inPixelFormat!!
+        val outFrame = this.outFrame!!
 
-        // We only accept TYPE_3BYTE_BGR.
-        require(image.type == BufferedImage.TYPE_3BYTE_BGR)
+        // We only accept BufferedImages whose format is equivalent to the input pixel format.
+        val inImageType = when (inPixelFormat) {
+            AV_PIX_FMT_BGR24 -> BufferedImage.TYPE_3BYTE_BGR
+            AV_PIX_FMT_ABGR -> BufferedImage.TYPE_4BYTE_ABGR
+            else -> throw AVException("Illegal state")
+        }
+        require(image.type == inImageType)
 
         // When we pass a frame to the encoder, it may keep a reference to it internally;
         // make sure we do not overwrite it here.
-        av_frame_make_writable(frame).throwIfErrnum("Could not make frame writable")
+        av_frame_make_writable(outFrame).throwIfErrnum("Could not make frame writable")
 
-        // As we only generate BGR24 pictures, we must convert it to the codec pixel format if needed.
-        if (pixelFormat == AV_PIX_FMT_BGR24)
-            fillFrame(frame, image)
+        // Transfer the BufferedImage's data to the output frame. When the input and output pixel formats differ,
+        // instead transfer the data to the input frame and then use the SWS context which converts it to the
+        // output format and writes it to the output frame.
+        if (outPixelFormat == inPixelFormat)
+            fillFrame(outFrame, image)
         else {
-            val tmpFrame = this.tmpFrame!!
-            fillFrame(tmpFrame, image)
-            if (swsCtx == null)
-                swsCtx = sws_getContext(
-                    width, height, AV_PIX_FMT_BGR24, width, height, pixelFormat, SWS_BICUBIC,
-                    null, null, null as DoublePointer?
-                ).throwIfNull("Could not initialize the conversion context")
-            sws_scale(swsCtx, tmpFrame.data(), tmpFrame.linesize(), 0, height, frame.data(), frame.linesize())
+            val inFrame = this.inFrame!!
+            fillFrame(inFrame, image)
+            sws_scale(swsCtx!!, inFrame.data(), inFrame.linesize(), 0, height, outFrame.data(), outFrame.linesize())
         }
 
-        frame.pts(frameCounter++)
+        outFrame.pts(frameCounter++)
 
-        writeFrame(frame)
+        writeFrame(outFrame)
     }
 
     private fun fillFrame(frame: AVFrame, image: BufferedImage) {
         val destination = PointerPointer<AVFrame>(frame)
         val source = BytePointer(ByteBuffer.wrap(((image.raster.dataBuffer) as DataBufferByte).data))
-        av_image_fill_arrays(destination, frame.linesize(), source, AV_PIX_FMT_BGR24, width, height, 1)
+        av_image_fill_arrays(destination, frame.linesize(), source, inPixelFormat!!, width, height, 1)
     }
 
     private fun writeFrame(frame: AVFrame?): Boolean {
@@ -289,22 +309,28 @@ class VideoWriter(
     }
 
     private fun release() {
-        av_frame_free(frame)
-        av_frame_free(tmpFrame)
-        avcodec_free_context(enc)
-        sws_freeContext(swsCtx)
+        inFrame.letIfNonNull(::av_frame_free)
+        outFrame.letIfNonNull(::av_frame_free)
+        enc.letIfNonNull(::avcodec_free_context)
+        swsCtx.letIfNonNull(::sws_freeContext)
 
-        // Close the output file, if needed.
-        val oc = this.oc!!
-        if (oc.oformat().flags() and AVFMT_NOFILE == 0)
-            avio_closep(oc.pb())
+        oc.letIfNonNull { oc ->
+            // Close the output file, if needed.
+            if (oc.oformat().flags() and AVFMT_NOFILE == 0)
+                avio_closep(oc.pb())
 
-        avformat_free_context(oc)
+            avformat_free_context(oc)
+        }
+    }
+
+    private inline fun <P : Pointer> P?.letIfNonNull(block: (P) -> Unit) {
+        if (this != null && !this.isNull)
+            block(this)
     }
 
     private fun <P : Pointer> P?.throwIfNull(message: String): P =
         if (this == null || this.isNull)
-            throw AVException(message)
+            throw AVException("$message.")
         else this
 
     private fun Int.throwIfErrnum(message: String): Int =

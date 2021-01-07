@@ -32,6 +32,8 @@ object EditStylingDialog : JDialog(MainFrame, "Cinecred \u2013 Styling") {
         setSize(maxWinBounds.width / 2, maxWinBounds.height)
         setLocation(maxWinBounds.x + maxWinBounds.width / 2, maxWinBounds.y)
 
+        iconImages = WINDOW_ICON_IMAGES
+
         contentPane.add(EditStylingPanel)
     }
 

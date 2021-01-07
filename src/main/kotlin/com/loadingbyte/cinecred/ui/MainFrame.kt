@@ -24,6 +24,8 @@ object MainFrame : JFrame("Cinecred") {
         setSize(maxWinBounds.width / 2, maxWinBounds.height)
         setLocation(maxWinBounds.x, maxWinBounds.y)
 
+        iconImages = WINDOW_ICON_IMAGES
+
         tabs.apply {
             addTab("1. Create/Open", FOLDER_ICON, OpenPanel)
             addTab("2. Style/Review", EYE_ICON, EditPanel)

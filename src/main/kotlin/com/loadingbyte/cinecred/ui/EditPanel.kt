@@ -2,11 +2,17 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.delivery.getDurationFrames
 import com.loadingbyte.cinecred.drawer.*
+import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
 import net.miginfocom.swing.MigLayout
+import org.apache.batik.ext.awt.image.GraphicsUtil
 import java.awt.*
+import java.awt.geom.AffineTransform
+import java.awt.geom.Line2D
+import java.awt.geom.Rectangle2D
+import java.awt.image.BufferedImage
 import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.JScrollPane.*
@@ -26,17 +32,25 @@ object EditPanel : JPanel() {
     }
     private val unsavedStylingLabel = JLabel("(Unsaved Changes)").apply {
         isVisible = false
-        font = font.deriveFont(font.size * 0.85f)
+        font = font.deriveFont(font.size * 0.8f)
     }
-    private val showGuidesCheckBox = JCheckBox("Show Guides", true).apply {
+    private val layoutGuidesToggleButton = JToggleButton("Layout Guides", true).apply {
         toolTipText = "<html>Legend:<br>" +
                 "<font color=\"${CTRLINE_GUIDE_COLOR.darker().toString2()}\">Center lines</font><br>" +
                 "<font color=\"${BODY_ELEM_GUIDE_COLOR.toString2()}\">Body element bounds</font><br>" +
-                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.toString2()}\">Whole body width bounds</font><br>" +
+                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.brighter().toString2()}\">Whole body width bounds</font><br>" +
                 "<font color=\"${HEAD_TAIL_GUIDE_COLOR.toString2()}\">Head and tail bounds</font></html>"
         addActionListener {
             for (scrollPane in pageTabs.components)
-                ((scrollPane as JScrollPane).viewport.view as DeferredImagePanel).showGuides = isSelected
+                ((scrollPane as JScrollPane).viewport.view as PagePreviewPanel).showGuides = isSelected
+        }
+    }
+    private val safeMarginsToggleButton = JToggleButton("Safe Margins", false).apply {
+        toolTipText = "<html>Show modern action safe and title safe margins.<br>" +
+                "(SMPTE ST 2046-1 standard from 2008: 93% crop action safe, 90% crop title safe)</html>"
+        addActionListener {
+            for (scrollPane in pageTabs.components)
+                ((scrollPane as JScrollPane).viewport.view as PagePreviewPanel).showSafeMargins = isSelected
         }
     }
     private val durationLabel = JLabel()
@@ -67,15 +81,16 @@ object EditPanel : JPanel() {
             }
         }
 
-        val topPanel = JPanel(MigLayout("", "[][]push[][][][][]push[]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[][]push[][][][][]push[][]push[]")).apply {
             add(reloadCreditsButton)
-            add(JLabel("(Auto-Reload Active)").apply { font = font.deriveFont(font.size * 0.85f) })
+            add(JLabel("(Auto-Reload Active)").apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel("Styling:"))
             add(toggleEditStylingDialogButton, "width 4%::")
             add(saveStylingButton, "width 4%::")
             add(reloadStylingButton)
             add(unsavedStylingLabel)
-            add(showGuidesCheckBox)
+            add(layoutGuidesToggleButton)
+            add(safeMarginsToggleButton)
             add(durationLabel)
             add(pageTabs, "newline, span, grow, push")
         }
@@ -172,13 +187,13 @@ object EditPanel : JPanel() {
         }
         // Then fill each tab with its corresponding page.
         // Make sure that each scroll pane remembers its previous scroll height.
-        for ((tabComponent, pageDefImage) in pageTabs.components.zip(pageDefImages)) {
-            val tabScrollPane = tabComponent as JScrollPane
+        for ((pageIdx, page) in project.pages.withIndex()) {
+            val tabScrollPane = pageTabs.components[pageIdx] as JScrollPane
             val scrollHeight = tabScrollPane.verticalScrollBar.value
             tabScrollPane.setViewportView(
-                DeferredImagePanel(
-                    pageDefImage, project.styling.global.widthPx,
-                    project.styling.global.background, showGuidesCheckBox.isSelected
+                PagePreviewPanel(
+                    project.styling.global.widthPx, project.styling.global.background, page.style.behavior,
+                    pageDefImages[pageIdx], layoutGuidesToggleButton.isSelected, safeMarginsToggleButton.isSelected
                 )
             )
             tabScrollPane.verticalScrollBar.value = scrollHeight
@@ -191,11 +206,13 @@ object EditPanel : JPanel() {
     }
 
 
-    private class DeferredImagePanel(
-        val defImage: DeferredImage,
-        val imageWidth: Int,
-        val backgroundColor: Color,
-        showGuides: Boolean
+    private class PagePreviewPanel(
+        private val globalWidth: Int,
+        private val backgroundColor: Color,
+        private val behavior: PageBehavior,
+        private val defImage: DeferredImage,
+        showGuides: Boolean,
+        showSafeMargins: Boolean
     ) : JPanel() {
 
         var showGuides = showGuides
@@ -203,26 +220,88 @@ object EditPanel : JPanel() {
                 field = value
                 repaint()
             }
+        var showSafeMargins = showSafeMargins
+            set(value) {
+                field = value
+                repaint()
+            }
 
         // The scroll pane uses this information to decide on the length of the scrollbar.
         override fun getPreferredSize() =
-            Dimension(parent.width, (parent.width * defImage.height / imageWidth).roundToInt())
+            Dimension(parent.width, (parent.width * defImage.height / globalWidth).roundToInt())
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            // Copy the Graphics2D so that we can change rendering hints without affecting stuff outside this method.
-            val g2 = g.create() as Graphics2D
+
+            val viewWidth = width
+            val viewHeight = preferredSize.height
+
+            // Create a temporary raster image two times the size of the panel. We will first draw the deferred image
+            // on the raster image and then draw a scaled-down version of the raster image to the panel.
+            // This way, we avoid directly drawing a very scaled-down version of the deferred image, which could
+            // lead to text kerning issues etc.
+            val rasterImage = BufferedImage(viewWidth * 2, viewHeight * 2, BufferedImage.TYPE_INT_RGB)
+            // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
+            val g2r = GraphicsUtil.createGraphics(rasterImage)
             try {
-                g2.setHighQuality()
+                g2r.setHighQuality()
                 // Fill the background.
-                g2.color = backgroundColor
-                g2.fillRect(0, 0, width, preferredSize.height)
-                // Draw a scaled-down version of the image to the panel.
+                g2r.color = backgroundColor
+                g2r.fillRect(0, 0, viewWidth, viewHeight)
+                // Draw a scaled version of the deferred image to the raster image.
                 val scaledDefImage = DeferredImage()
-                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, width.toFloat() / imageWidth)
-                scaledDefImage.materialize(g2, showGuides)
+                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, 2 * viewWidth / globalWidth.toFloat())
+                scaledDefImage.materialize(g2r, showGuides)
             } finally {
-                g2.dispose()
+                g2r.dispose()
+            }
+
+            // Copy the Graphics2D so that we can change rendering hints without affecting stuff outside this method.
+            val g2c = g.create() as Graphics2D
+            try {
+                g2c.setHighQuality()
+                // Draw the a scaled-down version of the raster image to the panel.
+                g2c.drawImage(rasterImage, AffineTransform.getScaleInstance(0.5, 0.5), null)
+                // If requested, draw the action safe and title safe margins.
+                if (showSafeMargins)
+                    drawSafeMargins(g2c)
+            } finally {
+                g2c.dispose()
+            }
+        }
+
+        private fun drawSafeMargins(g2: Graphics2D) {
+            g2.color = Color.GRAY
+
+            val viewWidth = width.toFloat()
+            val viewHeight = preferredSize.height.toFloat()
+            val actionSafeWidth = viewWidth * 0.93f
+            val titleSafeWidth = viewWidth * 0.9f
+            val actionSafeX1 = (viewWidth - actionSafeWidth) / 2f
+            val titleSafeX1 = (viewWidth - titleSafeWidth) / 2f
+            val actionSafeX2 = actionSafeX1 + actionSafeWidth
+            val titleSafeX2 = titleSafeX1 + titleSafeWidth
+            when (behavior) {
+                PageBehavior.CARD -> {
+                    val actionSafeHeight = viewHeight * 0.93f
+                    val titleSafeHeight = viewHeight * 0.9f
+                    val actionSafeY1 = (viewHeight - actionSafeHeight) / 2f
+                    val titleSafeY1 = (viewHeight - titleSafeHeight) / 2f
+                    g2.draw(Rectangle2D.Float(actionSafeX1, actionSafeY1, actionSafeWidth, actionSafeHeight))
+                    g2.draw(Rectangle2D.Float(titleSafeX1, titleSafeY1, titleSafeWidth, titleSafeHeight))
+                    val titleSafeY2 = titleSafeY1 + titleSafeHeight
+                    val d = viewWidth / 200f
+                    g2.draw(Line2D.Float(titleSafeX1 - d, viewHeight / 2f, titleSafeX1 + d, viewHeight / 2f))
+                    g2.draw(Line2D.Float(titleSafeX2 - d, viewHeight / 2f, titleSafeX2 + d, viewHeight / 2f))
+                    g2.draw(Line2D.Float(viewWidth / 2f, titleSafeY1 - d, viewWidth / 2f, titleSafeY1 + d))
+                    g2.draw(Line2D.Float(viewWidth / 2f, titleSafeY2 - d, viewWidth / 2f, titleSafeY2 + d))
+                }
+                PageBehavior.SCROLL -> {
+                    g2.draw(Line2D.Float(actionSafeX1, 0f, actionSafeX1, viewHeight))
+                    g2.draw(Line2D.Float(actionSafeX2, 0f, actionSafeX2, viewHeight))
+                    g2.draw(Line2D.Float(titleSafeX1, 0f, titleSafeX1, viewHeight))
+                    g2.draw(Line2D.Float(titleSafeX2, 0f, titleSafeX2, viewHeight))
+                }
             }
         }
 

@@ -133,7 +133,7 @@ object DeliverRenderQueuePanel : JPanel() {
                 foreground = Color.decode("#499C54")
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
-                table, "${value.javaClass.simpleName}: ${value.message ?: ""}",
+                table, "${value.javaClass.simpleName}: ${value.localizedMessage ?: ""}",
                 isSelected, hasFocus, rowIdx, colIdx
             ).apply { foreground = Color.decode("#C75450") }
             else -> throw IllegalArgumentException()

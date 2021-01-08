@@ -25,21 +25,6 @@ fun String.toFiniteFloat(nonNegative: Boolean = false, nonZero: Boolean = false)
 inline fun <reified T : Enum<T>> String.toEnum(): T = enumValueOf(toUpperCase())
 
 
-inline fun <reified T : Enum<T>, reified U : Enum<U>> String.toEnumPair(): Pair<T, U> =
-    try {
-        split(" ").let { (fst, snd) ->
-            // Allow either ordering.
-            try {
-                Pair(fst.toEnum(), snd.toEnum())
-            } catch (_: IllegalArgumentException) {
-                Pair(snd.toEnum(), fst.toEnum())
-            }
-        }
-    } catch (_: IndexOutOfBoundsException) {
-        throw IllegalArgumentException()
-    }
-
-
 inline fun <reified T : Enum<T>> String.toEnumList(): List<T> =
     split(" ").map { part -> part.toEnum() }
 

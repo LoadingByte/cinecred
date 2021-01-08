@@ -54,9 +54,9 @@ private fun Map<*, *>.toPageStyle() = PageStyle(
 private fun Map<*, *>.toContentStyle(): ContentStyle {
     return ContentStyle(
         get("name", STANDARD_CONTENT_STYLE.name) { this },
+        get("spineOrientation", STANDARD_CONTENT_STYLE.spineOrientation) { toEnum() },
+        get("alignWithAxis", STANDARD_CONTENT_STYLE.alignWithAxis) { toEnum() },
         get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNegative = true) },
-        get("centerOn", STANDARD_CONTENT_STYLE.centerOn) { toEnum() },
-        get("spineDir", STANDARD_CONTENT_STYLE.spineDir) { toEnum() },
         get("bodyLayout", STANDARD_CONTENT_STYLE.bodyLayout) { toEnum() },
         get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNegative = true) },
         get("bodyLayoutElemConform", STANDARD_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },

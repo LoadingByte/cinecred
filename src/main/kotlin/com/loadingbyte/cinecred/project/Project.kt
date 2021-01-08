@@ -58,9 +58,9 @@ enum class PageBehavior { CARD, SCROLL }
 
 data class ContentStyle(
     val name: String,
+    val spineOrientation: SpineOrientation,
+    val alignWithAxis: AlignWithAxis,
     val vMarginPx: Float,
-    val centerOn: CenterOn,
-    val spineDir: SpineDir,
     val bodyLayout: BodyLayout,
     // Body layouts: Grid, Flow, Paragraphs
     val bodyLayoutLineGapPx: Float,
@@ -93,15 +93,15 @@ data class ContentStyle(
 )
 
 
-enum class SpineDir { HORIZONTAL, VERTICAL }
+enum class SpineOrientation { HORIZONTAL, VERTICAL }
 
-enum class CenterOn {
-    EVERYTHING,
-    HEAD_START, HEAD, HEAD_END,
-    HEAD_GAP,
-    BODY_START, BODY, BODY_END,
-    TAIL_GAP,
-    TAIL_START, TAIL, TAIL_END
+enum class AlignWithAxis {
+    OVERALL_CENTER,
+    HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT,
+    HEAD_GAP_CENTER,
+    BODY_LEFT, BODY_CENTER, BODY_RIGHT,
+    TAIL_GAP_CENTER,
+    TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
 }
 
 enum class BodyLayout { GRID, FLOW, PARAGRAPHS }

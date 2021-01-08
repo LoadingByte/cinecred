@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.SUPPORTED_LOCALES
 import com.loadingbyte.cinecred.drawer.draw
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.Picture
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
@@ -13,6 +15,7 @@ import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.WatchEvent
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 
@@ -78,20 +81,25 @@ object Controller {
         if (!EditPanel.onTryOpenProjectDirOrExit())
             return
 
+        val stylingFile = projectDir.resolve(Path.of("Styling.toml"))
+        val creditsFile = projectDir.resolve(Path.of("Credits.csv"))
+
+        // If the two required project files don't exist yet, create them.
+        if (!Files.exists(stylingFile) || !Files.exists(creditsFile))
+            if (!tryCopyTemplate(projectDir, stylingFile, creditsFile)) {
+                // The user cancelled the project creation.
+                return
+            }
+
         // Cancel the previous project dir change watching instruction.
         projectDirWatcher.clear()
 
-        val stylingFile = projectDir.resolve(Path.of("styling.toml"))
-        val creditsFile = projectDir.resolve(Path.of("credits.csv"))
         this.projectDir = projectDir
         this.stylingFile = stylingFile
         this.creditsFile = creditsFile
 
-        // If the two required project files don't exist yet, create them.
-        if (!Files.exists(stylingFile))
-            javaClass.getResourceAsStream("/template/styling.toml").use { Files.copy(it, stylingFile) }
-        if (!Files.exists(creditsFile))
-            javaClass.getResourceAsStream("/template/credits.csv").use { Files.copy(it, creditsFile) }
+        fonts.clear()
+        pictureLoaders.clear()
 
         MainFrame.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
@@ -101,10 +109,37 @@ object Controller {
             tryReloadAuxFile(projectFile)
 
         // Load the initial state of the styling and credits files (the latter is invoked by the former).
-        reloadStylingFileAndRedraw()
+        tryReloadStylingFileAndRedraw()
 
         // Watch for future changes in the new project dir.
         projectDirWatcher.watch(projectDir)
+    }
+
+    private fun tryCopyTemplate(projectDir: Path, stylingFile: Path, creditsFile: Path): Boolean {
+        // Find the supported locale which is closest to the user's default locale.
+        val defaultSupportedLocale = Locale.lookup(
+            listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), SUPPORTED_LOCALES.keys
+        )
+
+        // Wrapping locales in these objects allows us to provide custom a toString() method.
+        class WrappedLocale(val locale: Locale, val label: String) {
+            override fun toString() = label
+        }
+
+        val localeChoices = SUPPORTED_LOCALES.map { (locale, label) -> WrappedLocale(locale, label) }.toTypedArray()
+        val defaultLocaleChoice = localeChoices[SUPPORTED_LOCALES.keys.indexOf(defaultSupportedLocale)]
+        val choice = JOptionPane.showInputDialog(
+            MainFrame, l10n("ui.open.chooseLocale.msg"), l10n("ui.open.chooseLocale.title"),
+            JOptionPane.QUESTION_MESSAGE, null, localeChoices, defaultLocaleChoice
+        ) ?: return false  // If the user cancelled the dialog, cancel opening the project directory.
+        val locale = (choice as WrappedLocale).locale
+
+        if (!Files.exists(stylingFile))
+            copyStylingTemplate(projectDir, locale)
+        if (!Files.exists(creditsFile))
+            copyCreditsTemplate(projectDir, locale)
+
+        return true
     }
 
     private fun tryReloadAuxFile(file: Path): Boolean {
@@ -130,12 +165,25 @@ object Controller {
         return false
     }
 
-    fun reloadStylingFileAndRedraw() {
+    /**
+     * Returns whether the styling file has successfully been reloaded.
+     * The return value doesn't tell anything about whether the redrawing was successful.
+     */
+    fun tryReloadStylingFileAndRedraw(): Boolean {
+        if (!Files.exists(stylingFile!!)) {
+            JOptionPane.showMessageDialog(
+                MainFrame, l10n("ui.edit.missingStylingFile.msg", stylingFile),
+                l10n("ui.edit.missingStylingFile.title"), JOptionPane.ERROR_MESSAGE
+            )
+            return false
+        }
+
         val styling = readStyling(stylingFile!!)
         this.styling = styling
         EditPanel.onLoadStyling()
         EditStylingPanel.onLoadStyling(styling)
         reloadCreditsFileAndRedraw()
+        return true
     }
 
     fun editStylingAndRedraw(styling: Styling) {
@@ -149,6 +197,15 @@ object Controller {
     }
 
     private fun reloadCreditsFileAndRedraw() {
+        if (!Files.exists(creditsFile!!)) {
+            JOptionPane.showMessageDialog(
+                MainFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
+                l10n("ui.edit.missingCreditsFile.title"), JOptionPane.ERROR_MESSAGE
+            )
+            tryExit()
+            return
+        }
+
         val styling = this.styling!!
         val fontsByName = fonts.values.associateBy { font -> font.getFontName(Locale.US) }
         val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir!!.relativize(path) }

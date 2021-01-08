@@ -38,7 +38,7 @@ object EditPanel : JPanel() {
     private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
-            CTRLINE_GUIDE_COLOR.darker().toString2(), BODY_ELEM_GUIDE_COLOR.toString2(),
+            AXIS_GUIDE_COLOR.darker().toString2(), BODY_ELEM_GUIDE_COLOR.toString2(),
             BODY_WIDTH_GUIDE_COLOR.brighter().toString2(), HEAD_TAIL_GUIDE_COLOR.toString2()
         )
         addActionListener {
@@ -75,15 +75,15 @@ object EditPanel : JPanel() {
                     if (option == NO_OPTION)
                         return@addActionListener
                 }
-                Controller.reloadStylingFileAndRedraw()
-                unsavedStylingLabel.isVisible = false
+                if (Controller.tryReloadStylingFileAndRedraw())
+                    unsavedStylingLabel.isVisible = false
             }
         }
 
         val topPanel = JPanel(MigLayout("", "[]push[][][][][]push[][]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")))
             add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton, "width 4%::")
+            add(toggleEditStylingDialogButton, "width 5%::")
             add(saveStylingButton, "width 4%::")
             add(reloadStylingButton)
             add(unsavedStylingLabel)
@@ -147,9 +147,13 @@ object EditPanel : JPanel() {
             when (option) {
                 YES_OPTION -> {
                     Controller.saveStyling()
+                    unsavedStylingLabel.isVisible = false
                     true
                 }
-                NO_OPTION -> true
+                NO_OPTION -> {
+                    unsavedStylingLabel.isVisible = false
+                    true
+                }
                 else /* Cancel option */ -> false
             }
         } else
@@ -242,14 +246,14 @@ object EditPanel : JPanel() {
             // on the raster image and then draw a scaled-down version of the raster image to the panel.
             // This way, we avoid directly drawing a very scaled-down version of the deferred image, which could
             // lead to text kerning issues etc.
-            val rasterImage = BufferedImage(viewWidth * 2, viewHeight * 2, BufferedImage.TYPE_INT_RGB)
+            val rasterImage = BufferedImage(2 * viewWidth, 2 * viewHeight, BufferedImage.TYPE_INT_RGB)
             // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
             val g2r = GraphicsUtil.createGraphics(rasterImage)
             try {
                 g2r.setHighQuality()
                 // Fill the background.
                 g2r.color = backgroundColor
-                g2r.fillRect(0, 0, viewWidth, viewHeight)
+                g2r.fillRect(0, 0, 2 * viewWidth, 2 * viewHeight)
                 // Draw a scaled version of the deferred image to the raster image.
                 val scaledDefImage = DeferredImage()
                 scaledDefImage.drawDeferredImage(defImage, 0f, 0f, 2 * viewWidth / globalWidth.toFloat())

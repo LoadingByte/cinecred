@@ -59,11 +59,13 @@ object OpenPanel : JPanel() {
                 if (transferData.isEmpty())
                     return false
 
+                // Note: As the drag-and-drop thread is not the EDT thread, we use SwingUtilities.invokeLater()
+                // to make sure all action happens in the EDT thread.
                 val file = (transferData[0] as File).toPath()
                 if (Files.isDirectory(file))
-                    openProjectDir(file)
+                    SwingUtilities.invokeLater { openProjectDir(file) }
                 else if (file.parent != null)
-                    openProjectDir(file.parent)
+                    SwingUtilities.invokeLater { openProjectDir(file.parent) }
 
                 return true
             }

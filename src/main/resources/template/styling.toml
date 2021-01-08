@@ -1,4 +1,3 @@
-
 [global]
 fps = "24/1"
 widthPx = 1920
@@ -7,7 +6,7 @@ background = "#000000"
 unitVGapPx = 32.0
 
 [[pageStyle]]
-name = "Card"
+name = "{project.defaults.pageStyleCard}"
 behavior = "CARD"
 afterwardSlugFrames = 24
 cardDurationFrames = 96
@@ -15,69 +14,116 @@ cardFadeInFrames = 12
 cardFadeOutFrames = 12
 
 [[pageStyle]]
-name = "Scroll"
+name = "{project.defaults.pageStyleScroll}"
 behavior = "SCROLL"
 afterwardSlugFrames = 24
 scrollPxPerFrame = 3.0
 
 [[contentStyle]]
-name = "Card"
+name = "{project.defaults.contentStyleBlurb}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
 vMarginPx = 0.0
-centerOn = "EVERYTHING"
-spineDir = "VERTICAL"
-colsBodyLayoutColJustifies = "CENTER"
-colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "Archivo Narrow Bold 100 #ffffff"
-headHJustify = "CENTER"
-headGapPx = 30.0
-headFontSpec = "Archivo Narrow Regular 50 #ffffff"
-tailHJustify = "CENTER"
-tailGapPx = 30.0
-tailFontSpec = "Archivo Narrow Regular 50 #ffffff"
+bodyLayout = "PARAGRAPHS"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutLineHJustify = "CENTER"
+bodyLayoutBodyWidthPx = 400.0
+bodyLayoutParagraphGapPx = 8.0
+bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 
 [[contentStyle]]
-name = "Collection"
+name = "{project.defaults.contentStyleBullets}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
 vMarginPx = 0.0
-centerOn = "EVERYTHING"
-spineDir = "VERTICAL"
-colsBodyLayoutColJustifies = "LEFT"
-flowBodyLayoutBodyWidthPx = 1000.0
-flowBodyLayoutJustify = "CENTER"
-flowBodyLayoutSeparator = "•"
-flowBodyLayoutSeparatorSpacingPx = 14.0
+bodyLayout = "FLOW"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutElemConform = "NOTHING"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutLineHJustify = "CENTER"
+bodyLayoutBodyWidthPx = 1000.0
+bodyLayoutElemHJustify = "CENTER"
+bodyLayoutSeparator = "•"
 bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 headHJustify = "CENTER"
-headGapPx = 8.0
+headGapPx = 4.0
 headFontSpec = "Archivo Narrow Regular 24 #ffffff"
 
 [[contentStyle]]
-name = "Gutter"
+name = "{project.defaults.contentStyleCard}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
 vMarginPx = 0.0
-centerOn = "HEAD_GAP"
-spineDir = "HORIZONTAL"
-colsBodyLayoutColJustifies = "LEFT"
-colsBodyLayoutColGapPx = 30.0
+bodyLayout = "GRID"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutElemConform = "WIDTH"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutColsHJustify = "CENTER"
+bodyFontSpec = "Archivo Narrow Bold 100 #ffffff"
+headHJustify = "CENTER"
+headGapPx = 32.0
+headFontSpec = "Archivo Narrow Regular 50 #ffffff"
+tailHJustify = "CENTER"
+tailGapPx = 32.0
+tailFontSpec = "Archivo Narrow Regular 50 #ffffff"
+
+[[contentStyle]]
+name = "{project.defaults.contentStyleGutter}"
+spineOrientation = "HORIZONTAL"
+alignWithAxis = "HEAD_GAP_CENTER"
+vMarginPx = 0.0
+bodyLayout = "GRID"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutElemConform = "WIDTH"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutColsHJustify = "LEFT"
 bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 headHJustify = "RIGHT"
-headVJustify = "TOP_MIDDLE"
+headVJustify = "TOP"
 headGapPx = 24.0
 headFontSpec = "Archivo Narrow Regular 24 #ffffff"
 
 [[contentStyle]]
-name = "Heading"
+name = "{project.defaults.contentStyleHeading}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
 vMarginPx = 0.0
-centerOn = "EVERYTHING"
-spineDir = "VERTICAL"
-colsBodyLayoutColJustifies = "CENTER"
-colsBodyLayoutColGapPx = 30.0
+bodyLayout = "GRID"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutElemConform = "NOTHING"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutColsHJustify = "CENTER"
 bodyFontSpec = "Archivo Narrow Regular 32 #ffffff"
 
 [[contentStyle]]
-name = "Subheading"
+name = "{project.defaults.contentStyleLogos}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
 vMarginPx = 0.0
-centerOn = "EVERYTHING"
-spineDir = "VERTICAL"
-colsBodyLayoutColJustifies = "CENTER"
-colsBodyLayoutColGapPx = 30.0
-bodyFontSpec = "Archivo Narrow Regular 24 #ffffff"
+bodyLayout = "FLOW"
+bodyLayoutLineGapPx = 32.0
+bodyLayoutElemConform = "SQUARE"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutLineHJustify = "CENTER"
+bodyLayoutBodyWidthPx = 1200.0
+bodyLayoutElemHJustify = "CENTER"
+bodyLayoutSeparator = ""
+bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
 
+[[contentStyle]]
+name = "{project.defaults.contentStyleSubheading}"
+spineOrientation = "VERTICAL"
+alignWithAxis = "OVERALL_CENTER"
+vMarginPx = 0.0
+bodyLayout = "GRID"
+bodyLayoutLineGapPx = 0.0
+bodyLayoutElemConform = "NOTHING"
+bodyLayoutElemVJustify = "MIDDLE"
+bodyLayoutHorizontalGapPx = 32.0
+bodyLayoutColsHJustify = "CENTER"
+bodyFontSpec = "Archivo Narrow Regular 24 #ffffff"

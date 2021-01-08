@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.project.CenterOn.*
+import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import kotlin.math.max
 import kotlin.math.min
 
@@ -40,8 +40,8 @@ fun drawColumnImage(
             bodyImages[block] = drawBodyImageWithParagraphsBodyLayout(fonts, block)
 
     // We now add heads and tails to the body images and thereby generate an image for each block.
-    // We also remember the x coordinate of the center line inside each generated image.
-    val blockImagesWithCenterLineXs = mutableMapOf<Block, Pair<DeferredImage, Float>>()
+    // We also remember the x coordinate of the axis inside each generated image.
+    val blockImagesWithAxisXs = mutableMapOf<Block, Pair<DeferredImage, Float>>()
 
     // Step 3:
     // We start with the blocks that have a horizontal spine. Here, heads/tails that either share a common edge
@@ -50,20 +50,20 @@ fun drawColumnImage(
     // all heads "left" in a meaningful way.
     // First, partition the horizontal spine blocks into two partitions that will be processed separately.
     val (horSpineBlocks1, horSpineBlocks2) = column.blocks
-        .filter { block -> block.style.spineDir == SpineDir.HORIZONTAL }
+        .filter { block -> block.style.spineOrientation == SpineOrientation.HORIZONTAL }
         .partition { block ->
-            val c = block.style.centerOn
-            !(c == HEAD_GAP || c == BODY_START || c == BODY_END || c == TAIL_GAP)
+            val c = block.style.alignWithAxis
+            !(c == HEAD_GAP_CENTER || c == BODY_LEFT || c == BODY_RIGHT || c == TAIL_GAP_CENTER)
         }
     // Divide the first partition such that only blocks whose heads or tails should be aligned are in the same group.
     val headOrTailAlignBlockGroups1 = horSpineBlocks1
         .groupBy { block ->
-            when (block.style.centerOn) {
-                HEAD_START, HEAD, HEAD_END, TAIL_START, TAIL, TAIL_END ->
-                    Pair(block.style.centerOn, alignHeadTailGroupIds[block])
+            when (block.style.alignWithAxis) {
+                HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
+                    Pair(block.style.alignWithAxis, alignHeadTailGroupIds[block])
                 // The heads or tails of these blocks are never aligned. As such, we use the memory address of these
                 // blocks as their group keys to make sure that each of them is always sorted into a singleton group.
-                EVERYTHING, BODY -> System.identityHashCode(block)
+                OVERALL_CENTER, BODY_CENTER -> System.identityHashCode(block)
                 else -> throw IllegalStateException()  // Will never happen because we partitioned beforehand.
             }
         }.values
@@ -71,46 +71,46 @@ fun drawColumnImage(
     val headOrTailAlignBlockGroups2 = horSpineBlocks2
         // Divide into "left"-centered and "right"-centered blocks. Also divide by head/tail aligning group.
         .groupBy { block ->
-            val c = block.style.centerOn
-            Pair(c == HEAD_GAP || c == BODY_START, alignHeadTailGroupIds[block])
+            val c = block.style.alignWithAxis
+            Pair(c == HEAD_GAP_CENTER || c == BODY_LEFT, alignHeadTailGroupIds[block])
         }.values
         // Further subdivide such that only blocks whose heads or tails share an edge are in the same group.
         .flatMap { blockGroup ->
             blockGroup.fuzzyGroupBy { block ->
-                when (block.style.centerOn) {
-                    HEAD_GAP -> block.style.headGapPx / 2f
-                    BODY_START -> block.style.headGapPx
-                    BODY_END -> block.style.tailGapPx
-                    TAIL_GAP -> block.style.tailGapPx / 2f
+                when (block.style.alignWithAxis) {
+                    HEAD_GAP_CENTER -> block.style.headGapPx / 2f
+                    BODY_LEFT -> block.style.headGapPx
+                    BODY_RIGHT -> block.style.tailGapPx
+                    TAIL_GAP_CENTER -> block.style.tailGapPx / 2f
                     else -> throw IllegalStateException()  // Will never happen because we partitioned beforehand.
                 }
             }
         }
     // Finally, generate block images for all horizontal blocks. The images for grouped blocks are generated in unison.
     for (blockGroup in headOrTailAlignBlockGroups1 + headOrTailAlignBlockGroups2)
-        blockImagesWithCenterLineXs.putAll(drawHorizontalSpineBlockImages(fonts, blockGroup, bodyImages))
+        blockImagesWithAxisXs.putAll(drawHorizontalSpineBlockImages(fonts, blockGroup, bodyImages))
 
     // Step 4: Now generate block images for the blocks which have a vertical spine.
     for (block in column.blocks)
-        if (block.style.spineDir == SpineDir.VERTICAL)
-            blockImagesWithCenterLineXs[block] = drawVerticalSpineBlockImage(fonts, block, bodyImages[block]!!)
+        if (block.style.spineOrientation == SpineOrientation.VERTICAL)
+            blockImagesWithAxisXs[block] = drawVerticalSpineBlockImage(fonts, block, bodyImages[block]!!)
 
     // Step 5:
     // Combine the block images for the blocks inside the column to a column image.
     val columnImage = DeferredImage()
-    val centerLineXInColumnImage = column.blocks.minOf { block -> blockImagesWithCenterLineXs[block]!!.second }
+    val axisXInColumnImage = column.blocks.minOf { block -> blockImagesWithAxisXs[block]!!.second }
     var y = 0f
     for (block in column.blocks) {
         y += block.style.vMarginPx
-        val (blockImage, centerLineXInBlockImage) = blockImagesWithCenterLineXs[block]!!
-        val x = centerLineXInColumnImage - centerLineXInBlockImage
+        val (blockImage, axisXInBlockImage) = blockImagesWithAxisXs[block]!!
+        val x = axisXInColumnImage - axisXInBlockImage
         columnImage.drawDeferredImage(blockImage, x, y, 1f)
         y += blockImage.height + block.style.vMarginPx + block.vGapAfterPx
     }
-    // Draw a guide that shows the column's center line.
-    columnImage.drawLine(CTRLINE_GUIDE_COLOR, centerLineXInColumnImage, 0f, centerLineXInColumnImage, y, isGuide = true)
+    // Draw a guide that shows the column's axis.
+    columnImage.drawLine(AXIS_GUIDE_COLOR, axisXInColumnImage, 0f, axisXInColumnImage, y, isGuide = true)
 
-    return Pair(columnImage, centerLineXInColumnImage)
+    return Pair(columnImage, axisXInColumnImage)
 }
 
 
@@ -159,25 +159,25 @@ private fun drawHorizontalSpineBlockImages(
     bodyImages: Map<Block, DeferredImage>,
 ): Map<Block, Pair<DeferredImage, Float>> {
     // This will be the return value.
-    val blockImagesWithCenterLineXs = mutableMapOf<Block, Pair<DeferredImage, Float>>()
+    val blockImagesWithAxisXs = mutableMapOf<Block, Pair<DeferredImage, Float>>()
 
     // Step 1:
     // In the drawColumnImage() function, the blocks have been grouped such that in this function, either the heads or
     // tails or nothing should be contained in a merged single-width "column". For this, depending on what should be
-    // aligned, we first determine the width the head sub-column or the tail sub-column or nothing by taking the
-    // maximum width of all head/tail strings coming from all blocks from the block group.
-    val headSharedWidth = when (blocks[0].style.centerOn) {
-        HEAD_START, HEAD, HEAD_END, HEAD_GAP, BODY_START ->
+    // aligned with the axis, we first determine the width of the head sub-column or the tail sub-column or nothing by
+    // taking the maximum width of all head/tail strings coming from all blocks from the block group.
+    val headSharedWidth = when (blocks[0].style.alignWithAxis) {
+        HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER, BODY_LEFT ->
             blocks.maxOf { block ->
-                if (block.style.spineDir == SpineDir.VERTICAL || block.head == null) 0f
+                if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.head == null) 0f
                 else fonts[block.style.headFontSpec]!!.awt.getStringWidth(block.head)
             }
         else -> null
     }
-    val tailSharedWidth = when (blocks[0].style.centerOn) {
-        BODY_END, TAIL_GAP, TAIL_START, TAIL, TAIL_END ->
+    val tailSharedWidth = when (blocks[0].style.alignWithAxis) {
+        BODY_RIGHT, TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
             blocks.maxOf { block ->
-                if (block.style.spineDir == SpineDir.VERTICAL || block.tail == null) 0f
+                if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.tail == null) 0f
                 else fonts[block.style.tailFontSpec]!!.awt.getStringWidth(block.tail)
             }
         else -> null
@@ -195,9 +195,9 @@ private fun drawHorizontalSpineBlockImages(
 
         val headStartX = 0f
         val headEndX = headStartX + headWidth
-        val bodyStartX = if (headWidth == 0f) 0f else headEndX + block.style.headGapPx
+        val bodyStartX = headEndX + (if (headWidth == 0f) 0f else block.style.headGapPx)
         val bodyEndX = bodyStartX + bodyImage.width
-        val tailStartX = bodyEndX + (if (tailWidth == 0f) 0f else bodyEndX + block.style.tailGapPx)
+        val tailStartX = bodyEndX + (if (tailWidth == 0f) 0f else block.style.tailGapPx)
         val tailEndX = tailStartX + tailWidth
 
         // Draw the block image.
@@ -214,7 +214,7 @@ private fun drawHorizontalSpineBlockImages(
         }
         // Draw the block's body.
         blockImage.drawDeferredImage(bodyImage, bodyStartX, y, 1f)
-        if (block.style.spineDir == SpineDir.VERTICAL)
+        if (block.style.spineOrientation == SpineOrientation.VERTICAL)
             y += bodyImage.height
         // Draw the block's tail.
         if (block.tail != null) {
@@ -226,26 +226,26 @@ private fun drawHorizontalSpineBlockImages(
             blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, tailStartX, y, tailWidth, bodyImage.height, isGuide = true)
         }
 
-        // Find the x coordinate of the center line in the generated image for the current block.
-        val centerLineXInImage = when (block.style.centerOn) {
-            EVERYTHING -> (headStartX + tailEndX) / 2f
-            HEAD_START -> headStartX
-            HEAD -> (headStartX + headEndX) / 2f
-            HEAD_END -> headEndX
-            HEAD_GAP -> (headEndX + bodyStartX) / 2f
-            BODY_START -> bodyStartX
-            BODY -> (bodyStartX + bodyEndX) / 2f
-            BODY_END -> bodyEndX
-            TAIL_GAP -> (bodyEndX + tailStartX) / 2f
-            TAIL_START -> tailStartX
-            TAIL -> (tailStartX + tailEndX) / 2f
-            TAIL_END -> tailEndX
+        // Find the x coordinate of the axis in the generated image for the current block.
+        val axisXInImage = when (block.style.alignWithAxis) {
+            OVERALL_CENTER -> (headStartX + tailEndX) / 2f
+            HEAD_LEFT -> headStartX
+            HEAD_CENTER -> (headStartX + headEndX) / 2f
+            HEAD_RIGHT -> headEndX
+            HEAD_GAP_CENTER -> (headEndX + bodyStartX) / 2f
+            BODY_LEFT -> bodyStartX
+            BODY_CENTER -> (bodyStartX + bodyEndX) / 2f
+            BODY_RIGHT -> bodyEndX
+            TAIL_GAP_CENTER -> (bodyEndX + tailStartX) / 2f
+            TAIL_LEFT -> tailStartX
+            TAIL_CENTER -> (tailStartX + tailEndX) / 2f
+            TAIL_RIGHT -> tailEndX
         }
 
-        blockImagesWithCenterLineXs[block] = Pair(blockImage, centerLineXInImage)
+        blockImagesWithAxisXs[block] = Pair(blockImage, axisXInImage)
     }
 
-    return blockImagesWithCenterLineXs
+    return blockImagesWithAxisXs
 }
 
 
@@ -287,18 +287,18 @@ private fun drawVerticalSpineBlockImage(
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, y, bodyImage.width, y2, isGuide = true)
     }
 
-    // Find the x coordinate of the center line in the generated image for the current block.
-    val centerLineXInImage = when (block.style.centerOn) {
-        BODY_START -> 0f
-        EVERYTHING, HEAD_GAP, BODY, TAIL_GAP -> bodyImage.width / 2f
-        BODY_END -> bodyImage.width
-        HEAD_START -> headXs.first
-        HEAD -> (headXs.first + headXs.second) / 2f
-        HEAD_END -> headXs.second
-        TAIL_START -> tailXs.first
-        TAIL -> (tailXs.first + tailXs.second) / 2f
-        TAIL_END -> tailXs.second
+    // Find the x coordinate of the axis in the generated image for the current block.
+    val axisXInImage = when (block.style.alignWithAxis) {
+        BODY_LEFT -> 0f
+        OVERALL_CENTER, HEAD_GAP_CENTER, BODY_CENTER, TAIL_GAP_CENTER -> bodyImage.width / 2f
+        BODY_RIGHT -> bodyImage.width
+        HEAD_LEFT -> headXs.first
+        HEAD_CENTER -> (headXs.first + headXs.second) / 2f
+        HEAD_RIGHT -> headXs.second
+        TAIL_LEFT -> tailXs.first
+        TAIL_CENTER -> (tailXs.first + tailXs.second) / 2f
+        TAIL_RIGHT -> tailXs.second
     }
 
-    return Pair(blockImage, centerLineXInImage)
+    return Pair(blockImage, axisXInImage)
 }

@@ -18,7 +18,7 @@ fun drawPage(
         .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
 
     // Generate an image for each column.
-    // Also remember the x coordinate of the center line inside each generated image.
+    // Also remember the x coordinate of the axis inside each generated image.
     val columnImages = page.sections
         .flatMap { section -> section.columns }
         .associateWith { column -> drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
@@ -28,9 +28,9 @@ fun drawPage(
     var y = 0f
     for (section in page.sections) {
         for (column in section.columns) {
-            val centerLineXInPageImage = global.widthPx / 2f + column.posOffsetPx
-            val (columnImage, centerLineXInColumnImage) = columnImages[column]!!
-            val x = centerLineXInPageImage - centerLineXInColumnImage
+            val axisXInPageImage = global.widthPx / 2f + column.posOffsetPx
+            val (columnImage, axisXInColumnImage) = columnImages[column]!!
+            val x = axisXInPageImage - axisXInColumnImage
             pageImage.drawDeferredImage(columnImage, x, y, 1f)
         }
 

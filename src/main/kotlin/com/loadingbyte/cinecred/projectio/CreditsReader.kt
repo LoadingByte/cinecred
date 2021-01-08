@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.Severity.WARN
 import com.loadingbyte.cinecred.l10n
+import com.loadingbyte.cinecred.l10nAll
 import com.loadingbyte.cinecred.project.*
 import org.apache.commons.csv.CSVFormat
 import java.io.File
@@ -60,8 +61,8 @@ fun readCredits(
     }
 
     val table = Table(
-        log, lines,
-        listOf("@Page Style", "@Break Align", "@Column Pos", "@Content Style", "@VGap", "@Head", "@Body", "@Tail")
+        log, lines, l10nPrefix = "projectIO.credits.table.",
+        l10nColNames = listOf("pageStyle", "breakAlign", "columnPos", "contentStyle", "vGap", "head", "body", "tail")
     )
 
     // The current content style. This variable is special because a content style stays valid until the next
@@ -81,6 +82,11 @@ fun readCredits(
     // to wait and see.
     var isBlockConclusionMarked = false
 
+    // This variable is set to true when a "@Break Align" indication is encountered. It will cause the respective
+    // current group to be concluded as soon as the current block is concluded.
+    var isBodyColsGroupConclusionMarked = false
+    var isHeadTailGroupConclusionMarked = false
+
     // Final result
     val pages = mutableListOf<Page>()
     // Current page
@@ -97,37 +103,20 @@ fun readCredits(
     var columnPosOffsetPx = 0f
     val columnBlocks = mutableListOf<Block>()
     // Current block
+    var blockStyle: ContentStyle? = null
     var blockHead: String? = null
     val blockBody = mutableListOf<BodyElement>()
     var blockTail: String? = null
 
-    // Keep track of the conclusion of blocks.
-    var didConcludeBlock = false
-
-    fun concludeBlock(vGapAfter: Float) {
-        if (blockBody.isNotEmpty()) {
-            val block = Block(contentStyle!!, blockHead, blockBody, blockTail, vGapAfter)
-            columnBlocks.add(block)
-            alignBodyColsGroupsGroup.add(block)
-            alignHeadTailGroupsGroup.add(block)
+    fun concludePage(newPageStyle: PageStyle) {
+        if (pageSections.isNotEmpty()) {
+            val page = Page(pageStyle!!, pageSections, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups)
+            pages.add(page)
         }
-        blockHead = null
-        blockBody.clear()
-        blockTail = null
-        didConcludeBlock = true
-    }
-
-    fun concludeColumn() {
-        if (columnBlocks.isNotEmpty())
-            sectionColumns.add(Column(columnPosOffsetPx, columnBlocks))
-        columnPosOffsetPx = 0f
-        columnBlocks.clear()
-    }
-
-    fun concludeSection(vGapAfter: Float) {
-        if (sectionColumns.isNotEmpty())
-            pageSections.add(Section(sectionColumns, vGapAfter))
-        sectionColumns.clear()
+        pageStyle = newPageStyle
+        pageSections.clear()
+        pageAlignBodyColsGroupsGroups.clear()
+        pageAlignHeadTailGroupsGroups.clear()
     }
 
     fun concludeAlignBodyColsGroupsGroup() {
@@ -142,15 +131,37 @@ fun readCredits(
         alignHeadTailGroupsGroup = mutableListOf()
     }
 
-    fun concludePage(newPageStyle: PageStyle) {
-        if (pageSections.isNotEmpty()) {
-            val page = Page(pageStyle!!, pageSections, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups)
-            pages.add(page)
+    fun concludeSection(vGapAfter: Float) {
+        if (sectionColumns.isNotEmpty())
+            pageSections.add(Section(sectionColumns, vGapAfter))
+        sectionColumns.clear()
+    }
+
+    fun concludeColumn() {
+        if (columnBlocks.isNotEmpty())
+            sectionColumns.add(Column(columnPosOffsetPx, columnBlocks))
+        columnPosOffsetPx = 0f
+        columnBlocks.clear()
+    }
+
+    fun concludeBlock(vGapAfter: Float) {
+        if (blockBody.isNotEmpty()) {
+            val block = Block(blockStyle!!, blockHead, blockBody, blockTail, vGapAfter)
+            columnBlocks.add(block)
+            alignBodyColsGroupsGroup.add(block)
+            alignHeadTailGroupsGroup.add(block)
         }
-        pageStyle = newPageStyle
-        pageSections.clear()
-        pageAlignBodyColsGroupsGroups.clear()
-        pageAlignHeadTailGroupsGroups.clear()
+        blockStyle = contentStyle
+        blockHead = null
+        blockBody.clear()
+        blockTail = null
+
+        if (isBodyColsGroupConclusionMarked)
+            concludeAlignBodyColsGroupsGroup()
+        if (isHeadTailGroupConclusionMarked)
+            concludeAlignHeadTailGroupsGroup()
+        isBodyColsGroupConclusionMarked = false
+        isHeadTailGroupConclusionMarked = false
     }
 
     for (row in 0 until table.numRows) {
@@ -161,12 +172,12 @@ fun readCredits(
         if (table.isEmpty(row))
             vGapAccumulator += styling.global.unitVGapPx
         // Also add explicit vertical gaps to the accumulator.
-        table.getFiniteFloat(row, "@VGap", nonNegative = true)?.let {
+        table.getFiniteFloat(row, "vGap", nonNegative = true)?.let {
             vGapAccumulator += it * styling.global.unitVGapPx
         }
 
         // If the page style cell is non-empty, conclude the previous page (if there was any) and start a new one.
-        table.getLookup(row, "@Page Style", pageStyleMap)?.let { newPageStyle ->
+        table.getLookup(row, "pageStyle", pageStyleMap)?.let { newPageStyle ->
             concludeBlock(0f)
             concludeColumn()
             concludeSection(0f)
@@ -191,16 +202,24 @@ fun readCredits(
         }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
-        // If the column cell contains "Wrap", also conclude the previous section and start a new one.
-        table.get(row, "@Column Pos", { l10n("projectIO.credits.columnTypeDesc") }) { str ->
-            when {
-                str.equals("wrap", ignoreCase = true) ->
-                    Pair(true, 0f)
-                str.contains("wrap", ignoreCase = true) ->
-                    Pair(true, str.replace("wrap", "", ignoreCase = true).trim().toFiniteFloat())
-                else ->
-                    Pair(false, str.toFiniteFloat())
-            }
+        // If the column cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
+        // previous section and start a new one.
+        val wrapKey = "projectIO.credits.table.wrap"
+        table.get(row, "columnPos", {
+            val primary = l10n(wrapKey)
+            val alternatives = l10nAll(wrapKey).toMutableSet().apply { remove(primary) }.joinToString("/") { "\"$it\"" }
+            l10n("projectIO.credits.columnPosTypeDesc", primary, alternatives)
+        }) { str ->
+            // Remove all occurrences of all wrap keywords from the string.
+            var modStr = str
+            for (wrapKeyword in l10nAll(wrapKey))
+                modStr = modStr.replace(wrapKeyword, "", ignoreCase = true)
+            // If we have removed something, there was a wrap keyword.
+            val wrap = modStr != str
+            // Convert the remaining position offset to a float, or use 0 if the str only contained a wrap keyword.
+            val posOffsetPx = if (modStr.isBlank()) 0f else modStr.trim().toFiniteFloat()
+            // Yield the result.
+            Pair(wrap, posOffsetPx)
         }?.let { (wrap, posOffsetPx) ->
             concludeBlock(0f)
             concludeColumn()
@@ -212,17 +231,17 @@ fun readCredits(
         }
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
-        // We will actually apply the new content style later. This is because the previous block has not actually
-        // been concluded yet.
-        val newContentStyle = table.getLookup(row, "@Content Style", contentStyleMap)
-        if (newContentStyle != null)
+        // Use the new content style from now on until the next explicit content style declaration.
+        table.getLookup(row, "contentStyle", contentStyleMap)?.let { newContentStyle ->
+            contentStyle = newContentStyle
             isBlockConclusionMarked = true
+        }
 
-        val newHead = table.getString(row, "@Head")
-        val newTail = table.getString(row, "@Tail")
+        val newHead = table.getString(row, "head")
+        val newTail = table.getString(row, "tail")
 
         // Get the body element, which may either be a string or a (optionally scaled) picture.
-        val bodyElem = table.get(row, "@Body", { l10n("projectIO.credits.bodyElemTypeDesc") }) { str ->
+        val bodyElem = table.get(row, "body", { l10n("projectIO.credits.bodyElemTypeDesc") }) { str ->
             // Case 1: Unscaled picture
             pictureLoaderMap[str]?.value?.let { pic -> return@get BodyElement.Pic(pic) }
             // Case 2: Scaled picture
@@ -251,22 +270,18 @@ fun readCredits(
             blockTail = newTail
         }
 
-        // If the content style was changed in this row, use the new content style from now on
-        // until the next explicit content style declaration.
-        if (newContentStyle != null)
-            contentStyle = newContentStyle
-
         // If no content style has been declared at the point where the first block starts, issue a warning and
         // fall back to the content style defined first in the content style table, or, if that table is empty,
         // to the standard content style.
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
             val msg = if (styling.contentStyles.isEmpty()) {
                 contentStyle = STANDARD_CONTENT_STYLE
-                l10n("projectIO.credits.noContentStylesAvailable", contentStyle.name)
+                l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name)
             } else {
                 contentStyle = styling.contentStyles[0]
-                l10n("projectIO.credits.noContentStyleSpecified", contentStyle.name)
+                l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name)
             }
+            blockStyle = contentStyle
             log(WARN, msg)
         }
 
@@ -274,11 +289,11 @@ fun readCredits(
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            log(WARN, l10n("projectIO.credits.headUnsupported", contentStyle.name, newHead))
+            log(WARN, l10n("projectIO.credits.headUnsupported", contentStyle!!.name, newHead))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            log(WARN, l10n("projectIO.credits.tailUnsupported", contentStyle.name, newTail))
+            log(WARN, l10n("projectIO.credits.tailUnsupported", contentStyle!!.name, newTail))
         }
 
         // If the body cell is non-empty, add its content to the current block.
@@ -289,27 +304,14 @@ fun readCredits(
         else if (newHead == null && newTail == null)
             isBlockConclusionMarked = true
 
-        // If the content style is changed at a non-standard position, issue a warning.
-        if (newContentStyle != null && !didConcludeBlock)
-            log(WARN, l10n("projectIO.credits.unexpectedContentStyle"))
-
-        // If the break alignment cell is non-empty, conclude the specified previous alignment group.
-        table.getEnum<BreakAlign>(row, "@Break Align")?.let { breakAlign ->
+        // If the break alignment cell is non-empty, mark the specified previous alignment group for conclusion.
+        // We cannot conclude it right now because we have to wait for the current block to be concluded.
+        table.getEnum<BreakAlign>(row, "breakAlign")?.let { breakAlign ->
             when (breakAlign) {
-                BreakAlign.BODY_COLUMNS -> {
-                    concludeAlignBodyColsGroupsGroup()
-                    if (!didConcludeBlock)
-                        log(WARN, l10n("projectIO.credits.unexpectedBreakBodyColumns"))
-                }
-                BreakAlign.HEAD_AND_TAIL -> {
-                    concludeAlignHeadTailGroupsGroup()
-                    if (!didConcludeBlock)
-                        log(WARN, l10n("projectIO.credits.unexpectedBreakHeadAndTail"))
-                }
+                BreakAlign.BODY_COLUMNS -> isBodyColsGroupConclusionMarked = true
+                BreakAlign.HEAD_AND_TAIL -> isHeadTailGroupConclusionMarked = true
             }
         }
-
-        didConcludeBlock = false
     }
 
     // Conclude all open credits elements that haven't been concluded yet.

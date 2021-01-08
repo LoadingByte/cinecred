@@ -50,9 +50,9 @@ private fun PageStyle.toToml(): Map<String, Any> {
 private fun ContentStyle.toToml(): Map<String, Any> {
     val toml = mutableMapOf(
         "name" to name,
+        "spineOrientation" to spineOrientation.name,
+        "alignWithAxis" to alignWithAxis.name,
         "vMarginPx" to vMarginPx,
-        "centerOn" to centerOn.name,
-        "spineDir" to spineDir.name,
         "bodyLayout" to bodyLayout.name,
         "bodyLayoutLineGapPx" to bodyLayoutLineGapPx,
         "bodyLayoutElemConform" to bodyLayoutElemConform.name,
@@ -74,7 +74,7 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         "tailGapPx" to tailGapPx,
         "tailFontSpec" to tailFontSpec.toString2()
     )
-    if (spineDir == SpineDir.VERTICAL) {
+    if (spineOrientation == SpineOrientation.VERTICAL) {
         toml.remove("headVJustify")
         toml.remove("tailVJustify")
     }

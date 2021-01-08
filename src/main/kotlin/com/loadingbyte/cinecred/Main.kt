@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf
+import com.loadingbyte.cinecred.ui.Controller
 import com.loadingbyte.cinecred.ui.MainFrame
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
@@ -13,10 +14,22 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import org.slf4j.impl.SimpleLogger
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
+import javax.swing.ToolTipManager
 
 
 fun main() {
+    // If a unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
+    // controlled fashion and inform the user.
+    Thread.setDefaultUncaughtExceptionHandler { _, e ->
+        LoggerFactory.getLogger("Uncaught Catcher").error("Uncaught exception. Will terminate the program.", e)
+        JOptionPane.showMessageDialog(
+            MainFrame, l10n("ui.main.error.msg", e), l10n("ui.main.error.title"), JOptionPane.ERROR_MESSAGE
+        )
+        Controller.tryExit()
+    }
+
     // By default, only log warning messages.
     System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn")
 
@@ -35,6 +48,10 @@ fun main() {
     } catch (t: Throwable) {
         LoggerFactory.getLogger("FFmpeg Loader").error("Failed to load FFmpeg", t)
     }
+
+    // Tooltips should not disappear on their own after some time.
+    // To achieve this, we set the dismiss delay to one hour.
+    ToolTipManager.sharedInstance().dismissDelay = 60 * 60 * 1000
 
     // MigLayout's platform-specific gaps etc. mess up our rather intricate layouts.
     // To alleviate this, we just force one invariant set of platform defaults.

@@ -15,9 +15,7 @@ import org.xml.sax.SAXException
 import java.awt.Desktop
 import java.awt.Font
 import java.awt.FontFormatException
-import java.io.BufferedReader
 import java.io.IOException
-import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -152,8 +150,8 @@ private fun loadPostScript(psFile: Path): Picture.PDF? {
         val cmd = arrayOf(gs.toString(), "-sDEVICE=pdfwrite", "-o", tmpFile.toString(), psFile.toString())
         val process = Runtime.getRuntime().exec(cmd)
         GS_STREAM_GOBBLER_EXECUTOR.submit {
-            BufferedReader(InputStreamReader(process.inputStream)).lines().forEach { GS_LOGGER.info(it) }
-            BufferedReader(InputStreamReader(process.errorStream)).lines().forEach { GS_LOGGER.error(it) }
+            process.inputStream.bufferedReader().lines().forEach { GS_LOGGER.info(it) }
+            process.errorStream.bufferedReader().lines().forEach { GS_LOGGER.error(it) }
         }
         val exitCode = process.waitFor()
         return if (exitCode != 0) null else loadPDF(tmpFile)

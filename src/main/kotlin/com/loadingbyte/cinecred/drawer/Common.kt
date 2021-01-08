@@ -9,7 +9,7 @@ import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
 
 
-val CTRLINE_GUIDE_COLOR: Color = Color(0, 200, 200)
+val AXIS_GUIDE_COLOR: Color = Color(0, 200, 200)
 val BODY_ELEM_GUIDE_COLOR = Color(130, 50, 0, 255)
 val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0, 255)
 val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0, 255)

@@ -61,10 +61,7 @@ fun readCredits(
 
     val table = Table(
         log, lines,
-        nullableColNames = listOf(
-            "@Page Style", "@Break Align", "@Column Pos", "@Content Style", "@VGap", "@Head", "@Body", "@Tail"
-        ),
-        removeInterspersedEmptyLines = false
+        listOf("@Page Style", "@Break Align", "@Column Pos", "@Content Style", "@VGap", "@Head", "@Body", "@Tail")
     )
 
     // The current content style. This variable is special because a content style stays valid until the next

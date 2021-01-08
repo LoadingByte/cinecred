@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
+import com.loadingbyte.cinecred.l10n
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.util.*
@@ -15,10 +16,11 @@ import javax.swing.table.TableCellRenderer
 object DeliverRenderQueuePanel : JPanel() {
 
     init {
-        val startPauseButton = JToggleButton("Start Render Queue", PLAY_ICON)
+        val startPauseButton = JToggleButton(l10n("ui.deliverRenderQueue.start"), PLAY_ICON)
         startPauseButton.addActionListener {
             RenderQueue.isPaused = !startPauseButton.isSelected
-            startPauseButton.text = (if (startPauseButton.isSelected) "Pause" else "Start") + " Render Queue"
+            val key = if (startPauseButton.isSelected) "ui.deliverRenderQueue.start" else "ui.deliverRenderQueue.pause"
+            startPauseButton.text = l10n(key)
         }
 
         val jobTable = JTable(JobTableModel).apply {
@@ -70,10 +72,12 @@ object DeliverRenderQueuePanel : JPanel() {
         )
     }
 
-    fun onTryOpenProjectDirOrExit(): Boolean =
+    fun onTryExit(): Boolean =
         if (!RenderQueue.isPaused && JobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
-            val msg = "There are render jobs running. Stop them and close the project anyways?"
-            showConfirmDialog(MainFrame, msg, "Render Jobs Running", YES_NO_OPTION) == NO_OPTION
+            showConfirmDialog(
+                MainFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
+                l10n("ui.deliverRenderQueue.runningWarning.title"), YES_NO_OPTION
+            ) == NO_OPTION
         } else
             true
 
@@ -90,9 +94,9 @@ object DeliverRenderQueuePanel : JPanel() {
         override fun getColumnCount() = 4
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
-            0 -> "Format"
-            1 -> "Destination"
-            2 -> "Progress"
+            0 -> l10n("ui.deliverRenderQueue.format")
+            1 -> l10n("ui.deliverRenderQueue.destination")
+            2 -> l10n("ui.deliverRenderQueue.progress")
             3 -> ""
             else -> throw IllegalArgumentException()
         }
@@ -141,7 +145,7 @@ object DeliverRenderQueuePanel : JPanel() {
     private object CancelButtonCellRenderer : TableCellRenderer {
 
         private val button = JButton(CANCEL_ICON).apply {
-            toolTipText = "Cancel/delete render job"
+            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
         }
 
         override fun getTableCellRendererComponent(
@@ -159,7 +163,7 @@ object DeliverRenderQueuePanel : JPanel() {
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
         ) = JButton(CANCEL_ICON).apply {
-            toolTipText = "Cancel/delete render job"
+            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
             addActionListener {
                 val modelRow = JobTableModel.rows[rowIdx]
                 RenderQueue.cancelJob(modelRow.job)

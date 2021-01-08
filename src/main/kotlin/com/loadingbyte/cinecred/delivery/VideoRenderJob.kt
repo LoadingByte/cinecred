@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.drawer.DeferredImage
 import com.loadingbyte.cinecred.drawer.setHighQuality
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import org.apache.batik.ext.awt.image.GraphicsUtil
@@ -49,7 +50,7 @@ class VideoRenderJob(
             }
         }
 
-        val totalNumFrames = getDurationFrames(project, pageDefImages)
+        val totalNumFrames = getRuntimeFrames(project, pageDefImages)
 
         VideoWriter(
             fileOrPattern, videoWidth, videoHeight, project.styling.global.fps, format.codecId,
@@ -174,7 +175,7 @@ class VideoRenderJob(
                             .toSortedSet(),
                 codecId, pixelFormat, alphaPixelFormat = null, codecOptions)
 
-            private fun seqSupportsAlpha(
+            private fun seqSuppAlpha(
                 label: String, fileExt: String, codecId: Int, pixelFormat: Int, alphaPixelFormat: Int
             ) = Format(label, isImageSeq = true, listOf(fileExt), codecId, pixelFormat, alphaPixelFormat, emptyMap())
 
@@ -188,9 +189,9 @@ class VideoRenderJob(
                 muxed("DNxHR SQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
                 muxed("DNxHR HQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
                 muxed("DNxHR HQX", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx")),
-                seqSupportsAlpha("DPX Image Sequence", "dpx", AV_CODEC_ID_DPX, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
-                seqSupportsAlpha("TIFF Image Sequence", "tiff", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
-                seqSupportsAlpha("PNG Image Sequence", "png", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                seqSuppAlpha(l10n("delivery.tiffImgSeq"), "tiff", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                seqSuppAlpha(l10n("delivery.dpxImgSeq"), "dpx", AV_CODEC_ID_DPX, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                seqSuppAlpha(l10n("delivery.pngImgSeq"), "png", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
             )
 
         }

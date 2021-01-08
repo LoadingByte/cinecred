@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.Severity.WARN
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.*
 import org.apache.commons.csv.CSVFormat
 import java.io.File
@@ -12,6 +13,8 @@ import java.util.*
 
 
 class ParserMsg(val lineNo: Int, val severity: Severity, val msg: String)
+
+private enum class BreakAlign { BODY_COLUMNS, HEAD_AND_TAIL }
 
 
 fun readCredits(
@@ -52,9 +55,7 @@ fun readCredits(
 
     // If no table header has been encountered, log that.
     if (lines.isEmpty()) {
-        val msg = "No table header is present in the CSV. Please refer to the sample CSV for information" +
-                "on how to build a proper CSV."
-        log.add(ParserMsg(1, Severity.ERROR, msg))
+        log.add(ParserMsg(1, Severity.ERROR, l10n("projectIO.credits.noTableHeader")))
         return Pair(log, null)
     }
 
@@ -184,20 +185,17 @@ fun readCredits(
         if (pageStyle == null) {
             val msg = if (styling.pageStyles.isEmpty()) {
                 pageStyle = STANDARD_PAGE_STYLE
-                "No page styles are available. Will default to the fallback page style '${pageStyle!!.name}'."
+                l10n("projectIO.credits.noPageStylesAvailable", pageStyle!!.name)
             } else {
                 pageStyle = styling.pageStyles.firstOrNull()
-                "For the first page, no page style is specified. Will default to the page style defined first " +
-                        "in the page style table, which is '${pageStyle!!.name}'."
+                l10n("projectIO.credits.noPageStyleSpecified", pageStyle!!.name)
             }
             log(WARN, msg)
         }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
         // If the column cell contains "Wrap", also conclude the previous section and start a new one.
-        val getColumnTypeDesc = "a column position offset from the screen center in pixels, optionally preceded by " +
-                "'Wrap' to put the new column beneath all previous columns (so, e.g., '-400' or 'Wrap -400')"
-        table.get(row, "@Column Pos", { getColumnTypeDesc }) { str ->
+        table.get(row, "@Column Pos", { l10n("projectIO.credits.columnTypeDesc") }) { str ->
             when {
                 str.equals("wrap", ignoreCase = true) ->
                     Pair(true, 0f)
@@ -227,11 +225,7 @@ fun readCredits(
         val newTail = table.getString(row, "@Tail")
 
         // Get the body element, which may either be a string or a (optionally scaled) picture.
-        val getBodyElemTypeDesc = "a valid body element, which would either be (a) a string of text or (b) a name " +
-                "or partial path to a picture file in the project folder, optionally followed by a scaling hint of " +
-                "the form '[width]x' or 'x[height]' (examples: 'John Doe', 'cinecred.png', 'logos/cinecred.png', " +
-                "'cinecred.png x200')"
-        val bodyElem = table.get(row, "@Body", { getBodyElemTypeDesc }) { str ->
+        val bodyElem = table.get(row, "@Body", { l10n("projectIO.credits.bodyElemTypeDesc") }) { str ->
             // Case 1: Unscaled picture
             pictureLoaderMap[str]?.value?.let { pic -> return@get BodyElement.Pic(pic) }
             // Case 2: Scaled picture
@@ -271,12 +265,10 @@ fun readCredits(
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
             val msg = if (styling.contentStyles.isEmpty()) {
                 contentStyle = STANDARD_CONTENT_STYLE
-                "No content styles are available. Will default to the fallback content style '${contentStyle.name}'."
+                l10n("projectIO.credits.noContentStylesAvailable", contentStyle.name)
             } else {
                 contentStyle = styling.contentStyles[0]
-                "No content style has been specified even though the first head-body-tail block starts here. " +
-                        "Will default to the content style defined first in the content style table, which is " +
-                        "'${contentStyle.name}'."
+                l10n("projectIO.credits.noContentStyleSpecified", contentStyle.name)
             }
             log(WARN, msg)
         }
@@ -285,15 +277,11 @@ fun readCredits(
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            val msg = "Head text is used even though the content style '${contentStyle.name}' doesn't support head " +
-                    "text. Will discard the head text '$newHead'."
-            log(WARN, msg)
+            log(WARN, l10n("projectIO.credits.headUnsupported", contentStyle.name, newHead))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            val msg = "Tail text is used even though the content style '${contentStyle.name}' doesn't support tail " +
-                    "text. Will discard the tail text '$newTail'."
-            log(WARN, msg)
+            log(WARN, l10n("projectIO.credits.tailUnsupported", contentStyle.name, newTail))
         }
 
         // If the body cell is non-empty, add its content to the current block.
@@ -306,22 +294,21 @@ fun readCredits(
 
         // If the content style is changed at a non-standard position, issue a warning.
         if (newContentStyle != null && !didConcludeBlock)
-            log(WARN, "Changing content style in a row where no new head-body-tail block starts.")
+            log(WARN, l10n("projectIO.credits.unexpectedContentStyle"))
 
         // If the break alignment cell is non-empty, conclude the specified previous alignment group.
-        table.get(row, "@Break Align", { "one of 'Body Columns'/'Head and Tail'" }) { str ->
-            val lc = str.toLowerCase()
-            require(lc == "body columns" || lc == "head and tail")
-            lc
-        }?.let { str ->
-            if (str == "body columns") {
-                concludeAlignBodyColsGroupsGroup()
-                if (!didConcludeBlock)
-                    log(WARN, "Breaking body column alignment in a row where no new head-body-tail block starts.")
-            } else {
-                concludeAlignHeadTailGroupsGroup()
-                if (!didConcludeBlock)
-                    log(WARN, "Breaking head and tail alignment in a row where no new head-body-tail block starts.")
+        table.getEnum<BreakAlign>(row, "@Break Align")?.let { breakAlign ->
+            when (breakAlign) {
+                BreakAlign.BODY_COLUMNS -> {
+                    concludeAlignBodyColsGroupsGroup()
+                    if (!didConcludeBlock)
+                        log(WARN, l10n("projectIO.credits.unexpectedBreakBodyColumns"))
+                }
+                BreakAlign.HEAD_AND_TAIL -> {
+                    concludeAlignHeadTailGroupsGroup()
+                    if (!didConcludeBlock)
+                        log(WARN, l10n("projectIO.credits.unexpectedBreakHeadAndTail"))
+                }
             }
         }
 

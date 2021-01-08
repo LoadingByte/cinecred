@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.FPS
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
@@ -108,33 +109,34 @@ class VideoWriter(
         val oc = AVFormatContext(null)
         this.oc = oc
         avformat_alloc_output_context2(oc, null, null, fileOrDir.toString())
-            .throwIfErrnum("Could not deduce output format from file extension")
+            .throwIfErrnum(l10n("delivery.ffmpeg.unknownMuxerError"))
 
         // Find the encoder.
         val codec = avcodec_find_encoder(codecId)
-            .throwIfNull("Could not find encoder for '${avcodec_get_name(codecId).string}'")
+            .throwIfNull(l10n("delivery.ffmpeg.unknownCodecError", avcodec_get_name(codecId).string))
 
         // Add the video stream.
         val st = avformat_new_stream(oc, null)
-            .throwIfNull("Could not allocate stream")
+            .throwIfNull(l10n("delivery.ffmpeg.allocStreamError"))
         this.st = st
         // Assigning the stream ID dynamically is technically unnecessary because we only have one stream.
         st.id(oc.nb_streams() - 1)
 
         // Allocate and configure the codec.
         val enc = avcodec_alloc_context3(codec)
-            .throwIfNull("Could not alloc an encoding context")
+            .throwIfNull(l10n("delivery.ffmpeg.allocEncoderError"))
         this.enc = enc
         configureCodec(fps, codecId)
 
         // Now that all the parameters are set, we can open the video codec and allocate the necessary encode buffer.
         withOptionsDict(codecOptions) { codecOptionsDict ->
-            avcodec_open2(enc, codec, codecOptionsDict).throwIfErrnum("Could not open video codec")
+            avcodec_open2(enc, codec, codecOptionsDict)
+                .throwIfErrnum(l10n("delivery.ffmpeg.openEncoderError"))
         }
 
         // Determine whether the output pixel format has an alpha component.
         // From that, determine the input pixel format.
-        val alpha = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("Could not retrieve pixel format info")
+        val alpha = av_pix_fmt_desc_get(outPixelFormat).throwIfNull(l10n("delivery.ffmpeg.getPixFmtError"))
             .flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
         val inPixelFormat = if (alpha) AV_PIX_FMT_ABGR else AV_PIX_FMT_BGR24
         this.inPixelFormat = inPixelFormat
@@ -149,23 +151,23 @@ class VideoWriter(
             swsCtx = sws_getContext(
                 width, height, inPixelFormat, width, height, outPixelFormat, SWS_BICUBIC,
                 null, null, null as DoublePointer?
-            ).throwIfNull("Could not initialize the conversion context")
+            ).throwIfNull(l10n("delivery.ffmpeg.getConverterError"))
         }
 
         // Copy the stream parameters to the muxer.
-        avcodec_parameters_from_context(st.codecpar(), enc).throwIfErrnum("Could not copy the stream parameters")
+        avcodec_parameters_from_context(st.codecpar(), enc).throwIfErrnum(l10n("delivery.ffmpeg.copyParamsError"))
 
         withOptionsDict(muxerOptions) { muxerOptionsDict ->
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
                 avio_open2(pb, fileOrDir.toString(), AVIO_FLAG_WRITE, null, muxerOptionsDict)
-                    .throwIfErrnum("Could not open '$fileOrDir'")
+                    .throwIfErrnum(l10n("delivery.ffmpeg.openFileError", fileOrDir))
                 oc.pb(pb)
             }
 
             // Write the stream header, if any.
-            avformat_write_header(oc, muxerOptionsDict).throwIfErrnum("Error occurred when opening output file")
+            avformat_write_header(oc, muxerOptionsDict).throwIfErrnum(l10n("delivery.ffmpeg.openFileError", fileOrDir))
         }
     }
 
@@ -203,13 +205,13 @@ class VideoWriter(
     }
 
     private fun allocFrame(pixelFormat: Int): AVFrame {
-        val frame = av_frame_alloc().throwIfNull("Could not allocate video frame").apply {
+        val frame = av_frame_alloc().throwIfNull(l10n("delivery.ffmpeg.allocFrameError")).apply {
             format(pixelFormat)
             width(width)
             height(height)
         }
         // Allocate the buffers for the frame data.
-        av_frame_get_buffer(frame, 0).throwIfErrnum("Could not allocate video frame data")
+        av_frame_get_buffer(frame, 0).throwIfErrnum(l10n("delivery.ffmpeg.allocFrameDataError"))
         return frame
     }
 
@@ -237,13 +239,13 @@ class VideoWriter(
         val inImageType = when (inPixelFormat) {
             AV_PIX_FMT_BGR24 -> BufferedImage.TYPE_3BYTE_BGR
             AV_PIX_FMT_ABGR -> BufferedImage.TYPE_4BYTE_ABGR
-            else -> throw AVException("Illegal state")
+            else -> throw AVException("Illegal state, should never happen.")
         }
         require(image.type == inImageType)
 
         // When we pass a frame to the encoder, it may keep a reference to it internally;
         // make sure we do not overwrite it here.
-        av_frame_make_writable(outFrame).throwIfErrnum("Could not make frame writable")
+        av_frame_make_writable(outFrame).throwIfErrnum(l10n("delivery.ffmpeg.makeFrameWritableError"))
 
         // Transfer the BufferedImage's data to the output frame. When the input and output pixel formats differ,
         // instead transfer the data to the input frame and then use the SWS context which converts it to the
@@ -265,6 +267,7 @@ class VideoWriter(
         val destination = PointerPointer<AVFrame>(frame)
         val source = BytePointer(ByteBuffer.wrap(((image.raster.dataBuffer) as DataBufferByte).data))
         av_image_fill_arrays(destination, frame.linesize(), source, inPixelFormat!!, width, height, 1)
+            .throwIfErrnum(l10n("delivery.ffmpeg.fillFrameError"))
     }
 
     private fun writeFrame(frame: AVFrame?): Boolean {
@@ -272,7 +275,7 @@ class VideoWriter(
         val enc = this.enc!!
 
         // Send the frame to the encoder.
-        avcodec_send_frame(enc, frame).throwIfErrnum("Error sending a frame to the encoder")
+        avcodec_send_frame(enc, frame).throwIfErrnum(l10n("delivery.ffmpeg.sendFrameError"))
 
         var ret = 0
         while (ret >= 0) {
@@ -281,14 +284,14 @@ class VideoWriter(
                 ret = avcodec_receive_packet(enc, pkt)
                 if (ret == AVERROR_EAGAIN() || ret == AVERROR_EOF)
                     break
-                ret.throwIfErrnum("Error encoding a frame")
+                ret.throwIfErrnum(l10n("delivery.ffmpeg.encodeFrameError"))
 
                 // Rescale output packet timestamp values from codec to stream timebase.
                 av_packet_rescale_ts(pkt, enc.time_base(), st.time_base())
                 pkt.stream_index(st.index())
 
                 // Write the compressed frame to the media file.
-                ret = av_write_frame(oc, pkt).throwIfErrnum("Error while writing output packet")
+                ret = av_write_frame(oc, pkt).throwIfErrnum(l10n("delivery.ffmpeg.writeFrameError"))
             } finally {
                 av_packet_unref(pkt)
             }
@@ -302,7 +305,7 @@ class VideoWriter(
             writeFrame(null)
 
             // Write the trailer, if any.
-            av_write_trailer(oc).throwIfErrnum("Error occurred when closing output file")
+            av_write_trailer(oc).throwIfErrnum(l10n("delivery.ffmpeg.closeFileError"))
         } finally {
             release()
         }
@@ -330,12 +333,12 @@ class VideoWriter(
 
     private fun <P : Pointer> P?.throwIfNull(message: String): P =
         if (this == null || this.isNull)
-            throw AVException("$message.")
+            throw AVException(l10n("delivery.ffmpeg.errorNull", message))
         else this
 
     private fun Int.throwIfErrnum(message: String): Int =
         if (this < 0)
-            throw AVException("$message: ${err2str(this)} (errnum $this)")
+            throw AVException(l10n("delivery.ffmpeg.errorNum", message, err2str(this), this))
         else this
 
     // Replicates the macro of the same name from error.h.

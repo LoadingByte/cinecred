@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.Picture
 import com.loadingbyte.cinecred.ui.MainFrame
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
@@ -131,21 +132,13 @@ private val GS_EXECUTABLE: Path? by lazy {
         }
     }
 
-    val msg = "<html>Ghostscript, which is required to incorporate <code>.ps</code> and <code>.eps</code> files, " +
-            "could not be found.<br>" +
-            "If you're on Windows or Linux, please download and install Ghostscript from here: " +
-            "<a href=\"https://www.ghostscript.com/download/gsdnld.html\">Ghostscript Download Site</a> " +
-            "(choose the \"AGPL Release\")<br>" +
-            "If you're on Mac, please download and install Ghostscript from here: " +
-            "<a href=\"https://pages.uoregon.edu/koch/\">Richard Koch's Inofficial Mac Builds</a><br>" +
-            "Afterwards, restart Cinecred, which then tries to locate Ghostscript again.</html>"
-    val ep = JEditorPane("text/html", msg)
+    val ep = JEditorPane("text/html", l10n("projectIO.ghostscriptMissing.msg"))
     ep.addHyperlinkListener { e ->
         if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)
             Desktop.getDesktop().browse(e.url.toURI())
     }
     ep.isEditable = false
-    JOptionPane.showMessageDialog(MainFrame, ep, "Ghostscript Not Found", JOptionPane.ERROR_MESSAGE)
+    JOptionPane.showMessageDialog(MainFrame, ep, l10n("projectIO.ghostscriptMissing.title"), JOptionPane.ERROR_MESSAGE)
     null
 }
 

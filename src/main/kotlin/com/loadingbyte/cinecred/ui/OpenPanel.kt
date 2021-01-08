@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.l10n
 import java.awt.Color
 import java.awt.datatransfer.DataFlavor
 import java.io.File
@@ -18,7 +19,7 @@ object OpenPanel : JPanel() {
             BorderFactory.createDashedBorder(Color(100, 100, 100), 10f, 4f, 4f, false)
         )
 
-        val selectButton = JButton("Select Project Folder", FOLDER_ICON).apply {
+        val selectButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
             alignmentX = CENTER_ALIGNMENT
             font = font.deriveFont(font.size * 1.25f)
         }
@@ -30,13 +31,13 @@ object OpenPanel : JPanel() {
                 openProjectDir(fc.selectedFile.toPath())
         }
 
-        val dropLabel = JLabel("Drop Project Folder Here").apply {
+        val dropLabel = JLabel(l10n("ui.open.drop")).apply {
             alignmentX = CENTER_ALIGNMENT
             foreground = Color.LIGHT_GRAY
             font = font.deriveFont(font.size * 2.5f)
         }
 
-        // Add the select button and the drag'n'drop hint text.
+        // Add the select button and the drag-and-drop hint text.
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         add(Box.createVerticalGlue())
         add(selectButton)
@@ -44,7 +45,7 @@ object OpenPanel : JPanel() {
         add(dropLabel)
         add(Box.createVerticalGlue())
 
-        // Add the drag'n'drop handler.
+        // Add the drag-and-drop handler.
         transferHandler = object : TransferHandler() {
 
             override fun canImport(support: TransferSupport) =

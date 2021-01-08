@@ -22,12 +22,12 @@ fun String.toFiniteFloat(nonNegative: Boolean = false, nonZero: Boolean = false)
 }
 
 
-inline fun <reified T : Enum<T>> String.toEnum(): T = enumValueOf(this)
+inline fun <reified T : Enum<T>> String.toEnum(): T = enumValueOf(toUpperCase())
 
 
 inline fun <reified T : Enum<T>, reified U : Enum<U>> String.toEnumPair(): Pair<T, U> =
     try {
-        toUpperCase().split(" ").let { (fst, snd) ->
+        split(" ").let { (fst, snd) ->
             // Allow either ordering.
             try {
                 Pair(fst.toEnum(), snd.toEnum())
@@ -41,7 +41,7 @@ inline fun <reified T : Enum<T>, reified U : Enum<U>> String.toEnumPair(): Pair<
 
 
 inline fun <reified T : Enum<T>> String.toEnumList(): List<T> =
-    toUpperCase().split(" ").map { part -> part.toEnum() }
+    split(" ").map { part -> part.toEnum() }
 
 
 fun List<Enum<*>>.toString2() = joinToString(" ") { it.name }

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.Severity
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.toFPS
 import net.miginfocom.swing.MigLayout
@@ -17,7 +18,7 @@ import javax.swing.tree.*
 import kotlin.math.floor
 
 
-object EditStylingDialog : JDialog(MainFrame, "Cinecred \u2013 Styling") {
+object EditStylingDialog : JDialog(MainFrame, "Cinecred \u2013 " + l10n("ui.styling.title")) {
 
     init {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
@@ -44,9 +45,9 @@ object EditStylingPanel : JPanel() {
 
     private var global: Global? = null
 
-    private val globalNode = DefaultMutableTreeNode("Global Styling", false)
-    private val pageStylesNode = DefaultMutableTreeNode("Page Styles", true)
-    private val contentStylesNode = DefaultMutableTreeNode("Content Styles", true)
+    private val globalNode = DefaultMutableTreeNode(l10n("ui.styling.globalStyling"), false)
+    private val pageStylesNode = DefaultMutableTreeNode(l10n("ui.styling.pageStyles"), true)
+    private val contentStylesNode = DefaultMutableTreeNode(l10n("ui.styling.contentStyles"), true)
     private val treeModel: DefaultTreeModel
     private val tree: JTree
     private var disableTreeSelectionListener = false
@@ -80,7 +81,6 @@ object EditStylingPanel : JPanel() {
             isRootVisible = false
             showsRootHandles = false
             selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
-            putClientProperty("JTree.lineStyle", "Horizontal")
         }
         // The page and content style "folders" must not be collapsed by the user.
         tree.addTreeWillExpandListener(object : TreeWillExpandListener {
@@ -144,17 +144,23 @@ object EditStylingPanel : JPanel() {
 
         // Add buttons for adding and removing page and content style nodes.
         val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))
-            .apply { toolTipText = "Add new page style" }
+            .apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
         val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
-            .apply { toolTipText = "Add new content style" }
+            .apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
         val removeButton = JButton(REMOVE_ICON)
-            .apply { toolTipText = "Remove selected style" }
+            .apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
         addPageStyleButton.addActionListener {
-            insertAndSelectSortedLeaf(pageStylesNode, STANDARD_PAGE_STYLE.copy(name = "New Page Style"))
+            insertAndSelectSortedLeaf(
+                pageStylesNode,
+                STANDARD_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName"))
+            )
             onChange()
         }
         addContentStyleButton.addActionListener {
-            insertAndSelectSortedLeaf(contentStylesNode, STANDARD_CONTENT_STYLE.copy(name = "New Content Style"))
+            insertAndSelectSortedLeaf(
+                contentStylesNode,
+                STANDARD_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName"))
+            )
             onChange()
         }
         removeButton.addActionListener {
@@ -259,20 +265,22 @@ object EditStylingPanel : JPanel() {
     private object GlobalForm : Form() {
 
         private val fpsComboBox = addComboBox(
-            "Frames Per Second", arrayOf("23.97", "24", "25", "29.97", "30", "59.94", "60"),
+            l10n("ui.styling.global.fps"), arrayOf("23.97", "24", "25", "29.97", "30", "59.94", "60"),
             verify = {
                 try {
-                    (it ?: throw VerifyResult(Severity.ERROR, "Empty.")).toFPS()
+                    it?.toFPS() ?: throw VerifyResult(Severity.ERROR, l10n("general.blank"))
                 } catch (_: IllegalArgumentException) {
-                    throw VerifyResult(Severity.ERROR, "Not an admissible frame rate.")
+                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.fpsIllFormatted"))
                 }
             }
         ).apply { isEditable = true }
 
-        private val widthPxSpinner = addSpinner("Picture Width (Pixels)", SpinnerNumberModel(1, 1, null, 10))
-        private val heightPxSpinner = addSpinner("Picture Height (Pixels)", SpinnerNumberModel(1, 1, null, 10))
-        private val backgroundColorChooserButton = addColorChooserButton("Background Color")
-        private val unitVGapPxSpinner = addSpinner("Unit \"vgap\" (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 1f))
+        private val widthPxSpinner = addSpinner(l10n("ui.styling.global.widthPx"), SpinnerNumberModel(1, 1, null, 10))
+        private val heightPxSpinner = addSpinner(l10n("ui.styling.global.heightPx"), SpinnerNumberModel(1, 1, null, 10))
+        private val backgroundColorChooserButton = addColorChooserButton(l10n("ui.styling.global.background"))
+        private val unitVGapPxSpinner = addSpinner(
+            l10n("ui.styling.global.unitVGapPx"), SpinnerNumberModel(1f, 0.01f, null, 1f)
+        )
 
         fun openGlobal(global: Global, changeCallback: (Global) -> Unit) {
             clearChangeListeners()
@@ -304,31 +312,36 @@ object EditStylingPanel : JPanel() {
 
     private object PageStyleForm : Form() {
 
-        private val nameField = addTextField("Page Style Name",
-            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, "Name is blank.") }
+        private val nameField = addTextField(
+            l10n("ui.styling.page.name"),
+            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, l10n("general.blank")) }
         )
-        private val behaviorComboBox = addComboBox("Page Behavior", PageBehavior.values(), toString = ::toDisplayString)
-        private val afterwardSlugFramesSpinner =
-            addSpinner("Afterward Slug (Frames)", SpinnerNumberModel(0, 0, null, 1))
+        private val behaviorComboBox = addComboBox(
+            l10n("ui.styling.page.behavior"), PageBehavior.values(),
+            toString = ::toDisplayString
+        )
+        private val afterwardSlugFramesSpinner = addSpinner(
+            l10n("ui.styling.page.afterwardSlugFrames"), SpinnerNumberModel(0, 0, null, 1)
+        )
         private val cardDurationFramesSpinner = addSpinner(
-            "Card Duration (Frames)", SpinnerNumberModel(0, 0, null, 1),
+            l10n("ui.styling.page.cardDurationFrames"), SpinnerNumberModel(0, 0, null, 1),
             isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
         )
         private val cardFadeInFramesSpinner = addSpinner(
-            "Fade In (Frames)", SpinnerNumberModel(0, 0, null, 1),
+            l10n("ui.styling.page.cardInFrames"), SpinnerNumberModel(0, 0, null, 1),
             isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
         )
         private val cardFadeOutFramesSpinner = addSpinner(
-            "Fade Out (Frames)", SpinnerNumberModel(0, 0, null, 1),
+            l10n("ui.styling.page.cardOutFrames"), SpinnerNumberModel(0, 0, null, 1),
             isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
         )
-        private val scrollPxPerFrame = addSpinner(
-            "Scroll Pixels per Frame", SpinnerNumberModel(1f, 0.01f, null, 1f),
+        private val scrollPxPerFrameSpinner = addSpinner(
+            l10n("ui.styling.page.scrollPxPerFrame"), SpinnerNumberModel(1f, 0.01f, null, 1f),
             isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL },
             verify = {
                 val value = it as Float
                 if (floor(value) != value)
-                    throw VerifyResult(Severity.WARN, "Fractional scroll speeds may lead to jitter")
+                    throw VerifyResult(Severity.WARN, l10n("ui.styling.page.scrollPxPerFrameFractional"))
             }
         )
 
@@ -341,7 +354,7 @@ object EditStylingPanel : JPanel() {
             cardDurationFramesSpinner.value = pageStyle.cardDurationFrames
             cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
             cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
-            scrollPxPerFrame.value = pageStyle.scrollPxPerFrame
+            scrollPxPerFrameSpinner.value = pageStyle.scrollPxPerFrame
 
             addChangeListener {
                 if (isErrorFree) {
@@ -352,7 +365,7 @@ object EditStylingPanel : JPanel() {
                         cardDurationFramesSpinner.value as Int,
                         cardFadeInFramesSpinner.value as Int,
                         cardFadeOutFramesSpinner.value as Int,
-                        scrollPxPerFrame.value as Float
+                        scrollPxPerFrameSpinner.value as Float
                     )
                     changeCallback(newPageStyle)
                 }
@@ -367,53 +380,60 @@ object EditStylingPanel : JPanel() {
         private fun isGridOrFlow(layout: Any?) = layout == BodyLayout.GRID || layout == BodyLayout.FLOW
         private fun isFlowOrParagraphs(layout: Any?) = layout == BodyLayout.FLOW || layout == BodyLayout.PARAGRAPHS
 
-        private val nameField = addTextField("Content Style Name",
-            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, "Name is blank.") }
+        private val nameField = addTextField(
+            l10n("ui.styling.content.name"),
+            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, l10n("general.blank")) }
         )
-        private val vMarginPxSpinner = addSpinner("Vertical Margin (Px)", SpinnerNumberModel(0f, 0f, null, 1f))
-        private val centerOnComboBox = addComboBox("Center On", CenterOn.values(), toString = ::toDisplayString)
-        private val spineDirComboBox = addComboBox("Spine Direction", SpineDir.values(), toString = ::toDisplayString)
+        private val vMarginPxSpinner = addSpinner(
+            l10n("ui.styling.content.vMarginPx"), SpinnerNumberModel(0f, 0f, null, 1f)
+        )
+        private val centerOnComboBox = addComboBox(
+            l10n("ui.styling.content.centerOn"), CenterOn.values(), toString = ::toDisplayString
+        )
+        private val spineDirComboBox = addComboBox(
+            l10n("ui.styling.content.spineDir"), SpineDir.values(), toString = ::toDisplayString
+        )
 
         private val bodyLayoutComboBox = addComboBox(
-            "Body Layout", BodyLayout.values(), toString = ::toDisplayString
+            l10n("ui.styling.content.bodyLayout"), BodyLayout.values(), toString = ::toDisplayString
         )
         private val bodyLayoutLineHJustifyComboBox = addComboBox(
-            "Justify Body Lines", LineHJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.lineHJustify"), LineHJustify.values(), toString = ::toDisplayString,
             isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
         )
         private val bodyLayoutColsHJustifyComboBox = addComboBoxList(
-            "Body Columns", HJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.colsHJustify"), HJustify.values(), toString = ::toDisplayString,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.GRID },
         )
         private val bodyLayoutElemHJustifyComboBox = addComboBox(
-            "Justify Body Elements", HJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.elemHJustify"), HJustify.values(), toString = ::toDisplayString,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
         private val bodyLayoutElemVJustifyComboBox = addComboBox(
-            "Align Body Elements", VJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.elemVJustify"), VJustify.values(), toString = ::toDisplayString,
             isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
         )
         private val bodyLayoutElemConformComboBox = addComboBox(
-            "Conform Body Elements", BodyElementConform.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.elemConform"), BodyElementConform.values(), toString = ::toDisplayString,
             isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
         )
         private val bodyLayoutSeparatorField = addTextField(
-            "Body Elem. Separator", grow = false,
+            l10n("ui.styling.content.separator"), grow = false,
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
         )
         private val bodyLayoutBodyWidthPxSpinner = addSpinner(
-            "Body Width (Pixels)", SpinnerNumberModel(1f, 0.01f, null, 10f),
+            l10n("ui.styling.content.bodyWidthPx"), SpinnerNumberModel(1f, 0.01f, null, 10f),
             isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
         )
         private val bodyLayoutParagraphGapPxSpinner = addSpinner(
-            "Body Paragraph Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            l10n("ui.styling.content.paragraphGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.PARAGRAPHS }
         )
         private val bodyLayoutLineGapPxSpinner = addSpinner(
-            "Body Line Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f)
+            l10n("ui.styling.content.lineGapPx"), SpinnerNumberModel(0f, 0f, null, 1f)
         )
         private val bodyLayoutHorizontalGapPxSpinner = addSpinner(
-            "Body Horizontal Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            l10n("ui.styling.content.horizontalGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = {
                 bodyLayoutComboBox.selectedItem == BodyLayout.GRID &&
                         bodyLayoutColsHJustifyComboBox.selectedItems.size >= 2 ||
@@ -421,39 +441,41 @@ object EditStylingPanel : JPanel() {
             }
         )
 
-        private val bodyFontSpecChooser = addFontSpecChooser("Body Font")
+        private val bodyFontSpecChooser = addFontSpecChooser(l10n("ui.styling.content.bodyFont"))
 
-        private val hasHeadCheckBox = addCheckBox("Enable Head")
+        private val hasHeadCheckBox = addCheckBox(l10n("ui.styling.content.hasHead"))
         private val headHJustifyComboBox = addComboBox(
-            "Justify Head", HJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.headHJustify"), HJustify.values(), toString = ::toDisplayString,
             isVisible = { hasHeadCheckBox.isSelected }
         )
         private val headVJustifyComboBox = addComboBox(
-            "Align Head", VJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.headVJustify"), VJustify.values(), toString = ::toDisplayString,
             isVisible = { hasHeadCheckBox.isSelected && spineDirComboBox.selectedItem == SpineDir.HORIZONTAL }
         )
         private val headGapPxSpinner = addSpinner(
-            "Head-Body Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            l10n("ui.styling.content.headGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = { hasHeadCheckBox.isSelected }
         )
-        private val headFontSpecChooser = addFontSpecChooser("Head Font",
+        private val headFontSpecChooser = addFontSpecChooser(
+            l10n("ui.styling.content.headFont"),
             isVisible = { hasHeadCheckBox.isSelected }
         )
 
-        private val hasTailCheckBox = addCheckBox("Enable Tail")
+        private val hasTailCheckBox = addCheckBox(l10n("ui.styling.content.hasTail"))
         private val tailHJustifyComboBox = addComboBox(
-            "Justify Tail", HJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.tailHJustify"), HJustify.values(), toString = ::toDisplayString,
             isVisible = { hasTailCheckBox.isSelected }
         )
         private val tailVJustifyComboBox = addComboBox(
-            "Align Tail", VJustify.values(), toString = ::toDisplayString,
+            l10n("ui.styling.content.tailVJustify"), VJustify.values(), toString = ::toDisplayString,
             isVisible = { hasTailCheckBox.isSelected && spineDirComboBox.selectedItem == SpineDir.HORIZONTAL }
         )
         private val tailGapPxSpinner = addSpinner(
-            "Body-Tail Gap (Px)", SpinnerNumberModel(0f, 0f, null, 1f),
+            l10n("ui.styling.content.tailGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
             isVisible = { hasTailCheckBox.isSelected }
         )
-        private val tailFontSpecChooser = addFontSpecChooser("Tail Font",
+        private val tailFontSpecChooser = addFontSpecChooser(
+            l10n("ui.styling.content.tailFont"),
             isVisible = { hasTailCheckBox.isSelected }
         )
 

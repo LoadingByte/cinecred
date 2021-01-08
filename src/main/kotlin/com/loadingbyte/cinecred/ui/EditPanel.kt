@@ -1,7 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.delivery.getDurationFrames
+import com.loadingbyte.cinecred.delivery.getRuntimeFrames
 import com.loadingbyte.cinecred.drawer.*
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
@@ -25,55 +26,53 @@ object EditPanel : JPanel() {
 
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
         isSelected = true
-        toolTipText = "Show/hide styling window"
+        toolTipText = l10n("ui.edit.toggleStyling")
         addActionListener {
             Controller.setEditStylingDialogVisible(isSelected)
         }
     }
-    private val unsavedStylingLabel = JLabel("(Unsaved Changes)").apply {
+    private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
         font = font.deriveFont(font.size * 0.8f)
     }
-    private val layoutGuidesToggleButton = JToggleButton("Layout Guides", true).apply {
-        toolTipText = "<html>Legend:<br>" +
-                "<font color=\"${CTRLINE_GUIDE_COLOR.darker().toString2()}\">Center lines</font><br>" +
-                "<font color=\"${BODY_ELEM_GUIDE_COLOR.toString2()}\">Body element bounds</font><br>" +
-                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.brighter().toString2()}\">Whole body width bounds</font><br>" +
-                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.toString2()}\">Head and tail bounds</font></html>"
+    private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
+        toolTipText = l10n(
+            "ui.edit.layoutGuidesTooltip",
+            CTRLINE_GUIDE_COLOR.darker().toString2(), BODY_ELEM_GUIDE_COLOR.toString2(),
+            BODY_WIDTH_GUIDE_COLOR.brighter().toString2(), HEAD_TAIL_GUIDE_COLOR.toString2()
+        )
         addActionListener {
             for (scrollPane in pageTabs.components)
                 ((scrollPane as JScrollPane).viewport.view as PagePreviewPanel).showGuides = isSelected
         }
     }
-    private val safeMarginsToggleButton = JToggleButton("Safe Margins", false).apply {
-        toolTipText = "<html>Show modern action safe and title safe margins.<br>" +
-                "(SMPTE ST 2046-1 standard from 2008: 93% crop action safe, 90% crop title safe)</html>"
+    private val safeAreasToggleButton = JToggleButton(l10n("ui.edit.safeAreas"), false).apply {
+        toolTipText = l10n("ui.edit.safeAreasTooltip")
         addActionListener {
             for (scrollPane in pageTabs.components)
-                ((scrollPane as JScrollPane).viewport.view as PagePreviewPanel).showSafeMargins = isSelected
+                ((scrollPane as JScrollPane).viewport.view as PagePreviewPanel).showSafeAreas = isSelected
         }
     }
-    private val durationLabel = JLabel()
+    private val runtimeLabel = JLabel()
     private val pageTabs = JTabbedPane()
 
     init {
-        val reloadCreditsButton = JButton("CSV/Fonts/Pics", REFRESH_ICON).apply {
-            toolTipText = "Manually reload credits.csv, fonts, and pictures from disk"
-            addActionListener { Controller.reloadCreditsFileAndRedraw() }
-        }
         val saveStylingButton = JButton(SAVE_ICON).apply {
-            toolTipText = "Save styling to disk"
+            toolTipText = l10n("ui.edit.saveStyling")
             addActionListener {
                 Controller.saveStyling()
                 unsavedStylingLabel.isVisible = false
             }
         }
         val reloadStylingButton = JButton(RESET_ICON).apply {
-            toolTipText = "Reload styling from disk and discard unsaved changes"
+            toolTipText = l10n("ui.edit.resetStyling")
             addActionListener {
                 if (unsavedStylingLabel.isVisible) {
-                    val msg = "There are unsaved changes to the styling. Discard changes and reload styling from disk?"
-                    if (showConfirmDialog(MainFrame, msg, "Unsaved Changes", YES_NO_OPTION) == NO_OPTION)
+                    val option = showConfirmDialog(
+                        MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
+                        l10n("ui.edit.resetUnsavedChangesWarning.title"), YES_NO_OPTION
+                    )
+                    if (option == NO_OPTION)
                         return@addActionListener
                 }
                 Controller.reloadStylingFileAndRedraw()
@@ -81,17 +80,16 @@ object EditPanel : JPanel() {
             }
         }
 
-        val topPanel = JPanel(MigLayout("", "[][]push[][][][][]push[][]push[]")).apply {
-            add(reloadCreditsButton)
-            add(JLabel("(Auto-Reload Active)").apply { font = font.deriveFont(font.size * 0.8f) })
-            add(JLabel("Styling:"))
+        val topPanel = JPanel(MigLayout("", "[]push[][][][][]push[][]push[]")).apply {
+            add(JLabel(l10n("ui.edit.autoReloadActive")))
+            add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton, "width 4%::")
             add(saveStylingButton, "width 4%::")
             add(reloadStylingButton)
             add(unsavedStylingLabel)
             add(layoutGuidesToggleButton)
-            add(safeMarginsToggleButton)
-            add(durationLabel)
+            add(safeAreasToggleButton)
+            add(runtimeLabel)
             add(pageTabs, "newline, span, grow, push")
         }
 
@@ -142,8 +140,11 @@ object EditPanel : JPanel() {
 
     fun onTryOpenProjectDirOrExit(): Boolean =
         if (unsavedStylingLabel.isVisible) {
-            val msg = "There are unsaved changes to the styling. Save changes now before closing the project?"
-            when (showConfirmDialog(MainFrame, msg, "Unsaved Changes", YES_NO_CANCEL_OPTION)) {
+            val option = showConfirmDialog(
+                MainFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
+                l10n("ui.edit.openUnsavedChangesWarning.title"), YES_NO_CANCEL_OPTION
+            )
+            when (option) {
                 YES_OPTION -> {
                     Controller.saveStyling()
                     true
@@ -159,22 +160,22 @@ object EditPanel : JPanel() {
         pageDefImages: List<DeferredImage>,
         log: List<ParserMsg>
     ) {
-        // Adjust the total duration label.
+        // Adjust the total runtime label.
         if (project.pages.isEmpty())
-            durationLabel.apply {
+            runtimeLabel.apply {
                 text = null
                 toolTipText = null
             }
         else {
             val fps = project.styling.global.fps.frac
-            var durFrames = getDurationFrames(project, pageDefImages)
+            var durFrames = getRuntimeFrames(project, pageDefImages)
             var durSeconds = (durFrames / fps).toInt()
             val durMinutes = durSeconds / 60
             durFrames -= (durSeconds * fps).toInt()
             durSeconds -= durMinutes * 60
-            durationLabel.apply {
-                text = "Duration: %02d:%02d+%02d".format(durMinutes, durSeconds, durFrames)
-                toolTipText = "Total duration is $durMinutes minutes, $durSeconds seconds, and $durFrames frames."
+            runtimeLabel.apply {
+                text = l10n("ui.edit.runtime", "%02d:%02d+%02d".format(durMinutes, durSeconds, durFrames))
+                toolTipText = l10n("ui.edit.runtimeTooltip", durMinutes, durSeconds, durFrames)
             }
         }
 
@@ -182,7 +183,8 @@ object EditPanel : JPanel() {
         while (pageTabs.tabCount > project.pages.size)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
         while (pageTabs.tabCount < project.pages.size) {
-            val tabTitle = (if (pageTabs.tabCount == 0) "Page " else "") + (pageTabs.tabCount + 1).toString()
+            val pageNumber = pageTabs.tabCount + 1
+            val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             pageTabs.addTab(tabTitle, PAGE_ICON, JScrollPane(VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_NEVER))
         }
         // Then fill each tab with its corresponding page.
@@ -193,7 +195,7 @@ object EditPanel : JPanel() {
             tabScrollPane.setViewportView(
                 PagePreviewPanel(
                     project.styling.global.widthPx, project.styling.global.background, page.style.behavior,
-                    pageDefImages[pageIdx], layoutGuidesToggleButton.isSelected, safeMarginsToggleButton.isSelected
+                    pageDefImages[pageIdx], layoutGuidesToggleButton.isSelected, safeAreasToggleButton.isSelected
                 )
             )
             tabScrollPane.verticalScrollBar.value = scrollHeight
@@ -212,7 +214,7 @@ object EditPanel : JPanel() {
         private val behavior: PageBehavior,
         private val defImage: DeferredImage,
         showGuides: Boolean,
-        showSafeMargins: Boolean
+        showSafeAreas: Boolean
     ) : JPanel() {
 
         var showGuides = showGuides
@@ -220,7 +222,7 @@ object EditPanel : JPanel() {
                 field = value
                 repaint()
             }
-        var showSafeMargins = showSafeMargins
+        var showSafeAreas = showSafeAreas
             set(value) {
                 field = value
                 repaint()
@@ -262,15 +264,15 @@ object EditPanel : JPanel() {
                 g2c.setHighQuality()
                 // Draw the a scaled-down version of the raster image to the panel.
                 g2c.drawImage(rasterImage, AffineTransform.getScaleInstance(0.5, 0.5), null)
-                // If requested, draw the action safe and title safe margins.
-                if (showSafeMargins)
-                    drawSafeMargins(g2c)
+                // If requested, draw the action safe and title safe areas.
+                if (showSafeAreas)
+                    drawSafeAreas(g2c)
             } finally {
                 g2c.dispose()
             }
         }
 
-        private fun drawSafeMargins(g2: Graphics2D) {
+        private fun drawSafeAreas(g2: Graphics2D) {
             g2.color = Color.GRAY
 
             val viewWidth = width.toFloat()
@@ -320,9 +322,9 @@ object EditPanel : JPanel() {
         override fun getColumnCount() = 3
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
-            0 -> "Severity"
-            1 -> "Line"
-            2 -> "Message"
+            0 -> l10n("ui.edit.severity")
+            1 -> l10n("ui.edit.line")
+            2 -> l10n("ui.edit.message")
             else -> throw IllegalArgumentException()
         }
 
@@ -332,8 +334,7 @@ object EditPanel : JPanel() {
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> SEVERITY_ICON[log[rowIdx].severity]!!
             1 -> log[rowIdx].lineNo
-            // Replace ' with " in messages for better readability.
-            2 -> log[rowIdx].msg.replace("'", "\"")
+            2 -> log[rowIdx].msg
             else -> throw IllegalArgumentException()
         }
 

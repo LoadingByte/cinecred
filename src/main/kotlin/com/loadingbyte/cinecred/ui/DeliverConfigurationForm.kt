@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
 import com.loadingbyte.cinecred.drawer.DeferredImage
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import java.nio.file.Files
@@ -21,7 +22,7 @@ import kotlin.math.roundToInt
 object DeliverConfigurationForm : Form() {
 
     private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
-    private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL
+    private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL).toTypedArray()
 
     private val VIDEO_IMAGE_SEQ_FORMATS = VideoRenderJob.Format.ALL.filter { it.isImageSeq }
     private val SEQ_FORMATS = WholePageSequenceRenderJob.Format.ALL + VIDEO_IMAGE_SEQ_FORMATS
@@ -31,54 +32,58 @@ object DeliverConfigurationForm : Form() {
     private var pageDefImages: List<DeferredImage> = emptyList()
 
     private val resolutionMultSpinner = addSpinner(
-        "Resolution Multiplier", SpinnerNumberModel(1f, 0.01f, null, 0.5f),
+        l10n("ui.deliverConfig.resolutionMultiplier"), SpinnerNumberModel(1f, 0.01f, null, 0.5f),
         verify = { verifyResolutionMult(it as Float) }
     )
-    private val formatComboBox = addComboBox("Output format", ALL_FORMATS.toTypedArray(), toString = { it.label })
+    private val formatComboBox = addComboBox(l10n("ui.deliverConfig.format"), ALL_FORMATS, toString = { it.label })
         .apply {
             // Avoid the scrollbar.
             maximumRowCount = model.size
             // User a custom render that shows category headers.
             renderer = object : LabeledListCellRenderer() {
-                override fun toString(value: Any) =
-                    (if (value in WHOLE_PAGE_FORMATS) "Whole Page Stills: " else "Video: ") + (value as RenderFormat).label
+                override fun toString(value: Any): String {
+                    val key =
+                        if (value in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
+                        else "ui.deliverConfig.videoFormatName"
+                    return l10n(key, (value as RenderFormat).label)
+                }
 
                 override fun getLabelLines(index: Int) = when (index) {
-                    0 -> listOf("Whole Page Stills")
-                    WHOLE_PAGE_FORMATS.size -> listOf("Video")
+                    0 -> listOf(l10n("ui.deliverConfig.wholePagesFormatCategory"))
+                    WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormatCategory"))
                     else -> emptyList()
                 }
             }
         }
 
     private val seqDirField = addFileField(
-        "Output Folder", FileType.DIRECTORY,
+        l10n("ui.deliverConfig.seqDir"), FileType.DIRECTORY,
         isVisible = { formatComboBox.selectedItem in SEQ_FORMATS },
         verify = {
             if (Files.exists(it) && Files.list(it).findFirst().isPresent)
-                throw VerifyResult(Severity.WARN, "Folder is not empty; its contents might be overwritten.")
+                throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
         }
     )
-    private val wholePageSeqFilenamePatternField = addFilenameField(
-        "Filename Pattern",
+    private val seqFilenamePatternField = addFilenameField(
+        l10n("ui.deliverConfig.seqFilenamePattern"),
         isVisible = { formatComboBox.selectedItem in WholePageSequenceRenderJob.Format.ALL },
         verify = {
             if (!it.contains(Regex("%0\\d+d")))
-                throw VerifyResult(Severity.ERROR, "Pattern doesn't contain \"%0[num digits]d\", e.g., \"%02d\".")
+                throw VerifyResult(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
         }
     ).apply { text = "page-%02d" }
 
-    private val singlefileFileField = addFileField(
-        "Output File", FileType.FILE,
+    private val singleFileField = addFileField(
+        l10n("ui.deliverConfig.singleFile"), FileType.FILE,
         isVisible = { formatComboBox.selectedItem !in SEQ_FORMATS },
         verify = {
             if (Files.exists(it))
-                throw VerifyResult(Severity.WARN, "File already exists and will be overwritten.")
+                throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
         }
     )
 
     private val alphaCheckBox = addCheckBox(
-        "Transparent Background",
+        l10n("ui.deliverConfig.alpha"),
         isVisible = { formatComboBox.selectedItem in ALPHA_FORMATS }
     )
 
@@ -86,7 +91,7 @@ object DeliverConfigurationForm : Form() {
         // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
         addChangeListener { comp -> if (comp == formatComboBox) onFormatChange() }
 
-        addSubmitButton("Add to Render Queue").apply { addActionListener { addRenderJobToQueue() } }
+        addSubmitButton(l10n("ui.deliverConfig.addToRenderQueue")).apply { addActionListener { addRenderJobToQueue() } }
     }
 
 
@@ -95,7 +100,6 @@ object DeliverConfigurationForm : Form() {
 
         val scaledWidth = (project.styling.global.widthPx * resolutionMult).roundToInt()
         val scaledHeight = (project.styling.global.heightPx * resolutionMult).roundToInt()
-        val info = "Yields resolution ${scaledWidth}x${scaledHeight}."
 
         val scrollSpeeds = project.pages
             .filter { page -> page.style.behavior == PageBehavior.SCROLL }
@@ -106,23 +110,29 @@ object DeliverConfigurationForm : Form() {
         if (fractionalScrollSpeeds.isNotEmpty())
             throw VerifyResult(
                 Severity.WARN,
-                "$info However, the following page scroll speeds are fractional or become fractional when " +
-                        "multiplying them with the resolution multiplier, which may lead to jitter: " +
-                        fractionalScrollSpeeds.joinToString() + "."
+                l10n(
+                    "ui.deliverConfig.resolutionMultiplierFractional",
+                    scaledWidth, scaledHeight, fractionalScrollSpeeds.joinToString()
+                )
             )
 
-        throw VerifyResult(Severity.INFO, info)
+        throw VerifyResult(
+            Severity.INFO,
+            l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
+        )
     }
 
     private fun onFormatChange() {
         val newFileExts = (formatComboBox.selectedItem as RenderFormat).fileExts
-        wholePageSeqFilenamePatternField.fileExts = newFileExts
-        singlefileFileField.fileExts = newFileExts
+        seqFilenamePatternField.fileExts = newFileExts
+        singleFileField.fileExts = newFileExts
     }
 
     private fun addRenderJobToQueue() {
-        if (project == null)
-            showMessageDialog(null, "No error-free project has been opened yet.", "No Open Project", ERROR_MESSAGE)
+        if (pageDefImages.isEmpty())
+            showMessageDialog(
+                null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
+            )
         else {
             val scaling = resolutionMultSpinner.value as Float
             val scaledGlobalWidth = (scaling * project!!.styling.global.widthPx).roundToInt()
@@ -135,17 +145,17 @@ object DeliverConfigurationForm : Form() {
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     scaledPageDefImages, scaledGlobalWidth, background = alphaBackground,
-                    format, dir = Path.of(seqDirField.text), filenamePattern = wholePageSeqFilenamePatternField.text
+                    format, dir = Path.of(seqDirField.text), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     scaledPageDefImages, scaledGlobalWidth, background = alphaBackground,
-                    file = Path.of(singlefileFileField.text)
+                    file = Path.of(singleFileField.text)
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, scaledPageDefImages, scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected,
-                    format, fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singlefileFileField.text)
+                    format, fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text)
                 )
-                else -> throw IllegalStateException("No renderer known for format '${format.label}'.")
+                else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }
             val destination = when (renderJob) {
                 is WholePageSequenceRenderJob -> renderJob.dir.resolve(renderJob.filenamePattern).toString()
@@ -161,7 +171,7 @@ object DeliverConfigurationForm : Form() {
         // Reset the directory-related fields to the newly opened project dir.
         val outputLoc = projectDir.toAbsolutePath().resolve("delivery").toString()
         seqDirField.text = outputLoc
-        singlefileFileField.text = outputLoc
+        singleFileField.text = outputLoc
 
         // This ensure that file extensions are sensible.
         onFormatChange()

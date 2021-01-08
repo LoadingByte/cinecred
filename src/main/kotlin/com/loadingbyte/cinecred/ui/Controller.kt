@@ -68,14 +68,14 @@ object Controller {
     }
 
     fun tryExit() {
-        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryOpenProjectDirOrExit()) {
+        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryExit()) {
             MainFrame.dispose()
             EditStylingDialog.dispose()
         }
     }
 
     fun openProjectDir(projectDir: Path) {
-        if (!EditPanel.onTryOpenProjectDirOrExit() || !DeliverRenderQueuePanel.onTryOpenProjectDirOrExit())
+        if (!EditPanel.onTryOpenProjectDirOrExit())
             return
 
         // Cancel the previous project dir change watching instruction.
@@ -148,7 +148,7 @@ object Controller {
         writeStyling(stylingFile!!, styling!!)
     }
 
-    fun reloadCreditsFileAndRedraw() {
+    private fun reloadCreditsFileAndRedraw() {
         val styling = this.styling!!
         val fontsByName = fonts.values.associateBy { font -> font.getFontName(Locale.US) }
         val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir!!.relativize(path) }
@@ -166,9 +166,8 @@ object Controller {
 
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
-                if (pages != null)
-                    DeliverConfigurationForm.updateProject(project, pageDefImages)
                 EditPanel.updateProjectAndLog(project, pageDefImages, log)
+                DeliverConfigurationForm.updateProject(project, pageDefImages)
             }
         }
     }

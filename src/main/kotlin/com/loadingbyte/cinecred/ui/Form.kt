@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.drawer.getSystemFont
+import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.FontSpec
 import net.miginfocom.swing.MigLayout
 import java.awt.*
@@ -82,7 +83,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     ): TextFieldWithFileExts {
         val field = TextFieldWithFileExts()
 
-        val browse = JButton("Browse", FOLDER_ICON)
+        val browse = JButton(l10n("ui.form.browse"), FOLDER_ICON)
         browse.addActionListener {
             val fc = JFileChooser()
             fc.fileSelectionMode = when (fileType) {
@@ -109,12 +110,12 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         val extendedVerify = {
             val fileStr = field.text.trim()
             if (fileStr.isEmpty())
-                throw VerifyResult(Severity.ERROR, "Path is empty.")
+                throw VerifyResult(Severity.ERROR, l10n("general.blank"))
             val file = Path.of(fileStr)
             if (fileType == FileType.FILE && Files.isDirectory(file))
-                throw VerifyResult(Severity.ERROR, "Path points to a folder.")
+                throw VerifyResult(Severity.ERROR, l10n("ui.form.pathIsFolder"))
             if (fileType == FileType.DIRECTORY && Files.isRegularFile(file))
-                throw VerifyResult(Severity.ERROR, "Path points to a file, not a folder.")
+                throw VerifyResult(Severity.ERROR, l10n("ui.form.pathIsFile"))
             if (verify != null)
                 verify(file)
         }
@@ -222,9 +223,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 SYSTEM_FAMILIES.getFamily(fontSpec.name) == null
             ) {
                 val substituteFontName = getSystemFont(fontSpec.name).getFontName(Locale.US)
-                val msg = "The font \"${fontSpec.name}\" is not available and will be substituted " +
-                        "by \"$substituteFontName\"."
-                throw VerifyResult(Severity.WARN, msg)
+                throw VerifyResult(Severity.WARN, l10n("ui.form.fontUnavailable", fontSpec.name, substituteFontName))
             }
             if (verify != null)
                 verify(fontSpec)
@@ -234,8 +233,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             label,
             listOf(
                 field.familyComboBox, field.fontComboBox,
-                JLabel("Color"), field.colorChooserButton,
-                JLabel("Height (Px)"), field.heightPxSpinner
+                JLabel(l10n("ui.form.fontColor")), field.colorChooserButton,
+                JLabel(l10n("ui.form.fontHeightPx")), field.heightPxSpinner
             ),
             listOf("", "newline, split", "newline, split", "", "", ""),
             isVisible, extendedVerify
@@ -428,13 +427,13 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             }
 
         init {
-            toolTipText = "Click to choose color"
+            toolTipText = l10n("ui.form.colorChooserTooltip")
 
             // Default color
             selectedColor = Color.WHITE
 
             addActionListener {
-                val newColor = JColorChooser.showDialog(null, "Choose Color", selectedColor)
+                val newColor = JColorChooser.showDialog(null, l10n("ui.form.colorChooserTitle"), selectedColor)
                 if (newColor != null) {
                     selectedColor = newColor
                     changeListener(this)
@@ -488,11 +487,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                     val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
                     val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
                     if (index == projectHeaderIdx) {
-                        add("\u2605 Project Font Families \u2605")
-                        if (projectHeaderIdx == bundledHeaderIdx) add("(No font files found in project dir)")
+                        add("\u2605 " + l10n("ui.form.fontProjectFamilies") + " \u2605")
+                        if (projectHeaderIdx == bundledHeaderIdx) add(l10n("ui.form.fontNoProjectFamilies"))
                     }
-                    if (index == bundledHeaderIdx) add("\u2605 Bundled Font Families \u2605")
-                    if (index == systemHeaderIdx) add("System Font Families")
+                    if (index == bundledHeaderIdx) add("\u2605 " + l10n("ui.form.fontBundledFamilies") + " \u2605")
+                    if (index == systemHeaderIdx) add(l10n("ui.form.fontSystemFamilies"))
                 }
             }
         }

@@ -3,13 +3,11 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.Severity
 import com.loadingbyte.cinecred.Severity.ERROR
 import com.loadingbyte.cinecred.Severity.WARN
-import com.loadingbyte.cinecred.project.FontSpec
+import com.loadingbyte.cinecred.l10n
 import org.apache.commons.csv.CSVRecord
-import java.awt.Color
 import java.util.*
 
 
-// TODO: Remove old and now unused functionality from the table class.
 class Table(
     private val log: MutableList<ParserMsg>,
     rawLines: List<CSVRecord>,
@@ -54,13 +52,13 @@ class Table(
                 col != -1 ->
                     colMap[colName] = col
                 colName in this.requiredColNames ->
-                    log(headerLineNo, ERROR, "Missing required column '$colName'.")
+                    log(headerLineNo, ERROR, l10n("projectIO.table.missingRequiredColumn", colName))
                 colName in this.defaultedColNames ->
                     log(
                         headerLineNo, WARN,
-                        "Missing column '$colName'. Will default to ${this.defaultedColNames[colName]}."
+                        l10n("projectIO.table.missingDefaultedColumn", colName, this.defaultedColNames[colName])
                     )
-                else -> log(headerLineNo, WARN, "Missing column '$colName'.")
+                else -> log(headerLineNo, WARN, l10n("projectIO.table.missingNullableColumn", colName))
             }
         }
 
@@ -68,7 +66,7 @@ class Table(
         val expectedColNamesSet = TreeSet(String.CASE_INSENSITIVE_ORDER).apply { addAll(expectedColNames) }
         for (colName in header)
             if (colName.isNotEmpty() && colName !in expectedColNamesSet)
-                log(headerLineNo, WARN, "Unexpected column '$colName'.")
+                log(headerLineNo, WARN, l10n("projectIO.table.unexpectedColumn", colName))
     }
 
     // Helper function to shorten logging calls.
@@ -92,9 +90,9 @@ class Table(
                 // Otherwise, potentially log a warning/error depending on the column type.
                 // Afterwards, the last line of this function returns null or the default value.
                 colName in requiredColNames ->
-                    log(getLineNo(row), ERROR, "Empty cell in required column '$colName'.")
+                    log(getLineNo(row), ERROR, l10n("projectIO.table.emptyRequiredCell", colName))
                 colName in defaultedColNames ->
-                    log(getLineNo(row), WARN, "Empty cell in column '$colName'. Will default to '$default'.")
+                    log(getLineNo(row), WARN, l10n("projectIO.table.emptyDefaultedCell", colName, default))
             }
         }
         // If the column is present but the cell is empty, or if the column is missing in the table,
@@ -117,9 +115,9 @@ class Table(
             val typeDesc = lazyTypeDesc()
             when (colName) {
                 in requiredColNames ->
-                    log(l, ERROR, "Empty cell required column '$colName', but must be $typeDesc.")
+                    log(l, ERROR, l10n("projectIO.table.emptyRequiredFormattedCell", colName, typeDesc))
                 in defaultedColNames ->
-                    log(l, WARN, "Empty cell in column '$colName', but must be $typeDesc. Will default to '$default'.")
+                    log(l, WARN, l10n("projectIO.table.emptyDefaultedFormattedCell", colName, typeDesc, default))
             }
         } else
             try {
@@ -131,11 +129,14 @@ class Table(
                 val typeDesc = lazyTypeDesc()
                 when (colName) {
                     in requiredColNames ->
-                        log(line, ERROR, "'$str' in required column '$colName' is not $typeDesc.")
+                        log(line, ERROR, l10n("projectIO.table.illFormattedRequiredCell", str, colName, typeDesc))
                     in defaultedColNames ->
-                        log(line, WARN, "'$str' in column '$colName' is not $typeDesc. Will default to '$default'.")
+                        log(
+                            line, WARN,
+                            l10n("projectIO.table.illFormattedDefaultedCell", str, colName, typeDesc, default)
+                        )
                     else ->
-                        log(line, WARN, "'$str' in column '$colName' is not $typeDesc. Will discard the cell.")
+                        log(line, WARN, l10n("projectIO.table.illFormattedNullableCell", str, colName, typeDesc))
                 }
             }
 
@@ -143,58 +144,33 @@ class Table(
         return default?.let(convert)
     }
 
-    fun getInt(row: Int, colName: String, nonNegative: Boolean = false, nonZero: Boolean = false): Int? =
-        get(row, colName, { "an integer" + restrictionStr(nonNegative, nonZero) }) { str ->
-            str.toInt(nonNegative, nonZero)
-        }
-
     fun getFiniteFloat(row: Int, colName: String, nonNegative: Boolean = false, nonZero: Boolean = false): Float? =
-        get(row, colName, { "a finite decimal number" + restrictionStr(nonNegative, nonZero) }) { str ->
+        get(row, colName, { l10n("projectIO.table.floatTypeDesc", restrStr(nonNegative, nonZero)).trim() }) { str ->
             str.toFiniteFloat(nonNegative, nonZero)
         }
 
     inline fun <reified T : Enum<T>> getEnum(row: Int, colName: String): T? =
-        get(row, colName, { "one of ${optionStr<T>()}" }) { str ->
+        get(row, colName, { l10n("projectIO.table.oneOfTypeDesc", optionStr<T>()) }) { str ->
             str.toEnum<T>()
         }
 
-    inline fun <reified T : Enum<T>, reified U : Enum<U>> getEnumPair(row: Int, colName: String): Pair<T, U>? =
-        get(
-            row, colName,
-            { "one of ${optionStr<T>()} and one of ${optionStr<U>()}, separated by a space, or the other way around" },
-            String::toEnumPair
-        )
-
-    inline fun <reified T : Enum<T>> getEnumList(row: Int, colName: String): List<T>? =
-        get(row, colName, { "a space-separated list of ${optionStr<T>()}" }, String::toEnumList)
-
-    fun getColor(row: Int, colName: String): Color? =
-        get(row, colName, { "a valid color" }, String::toColor)
-
-    fun getFontSpec(row: Int, colName: String): FontSpec? =
-        get(row, colName, { FONT_SPEC_TYPE_DESC }, String::toFontSpec)
-
     fun <T> getLookup(row: Int, colName: String, map: Map<String, T>): T? =
-        get(row, colName, { "one of " + map.keys.joinToString("/") + ", ignoring case" }) { str ->
+        get(row, colName, { l10n("projectIO.table.oneOfTypeDesc", map.keys.joinToString("/")) }) { str ->
             map[str] ?: throw IllegalArgumentException()
         }
 
     companion object {
 
-        private const val FONT_SPEC_TYPE_DESC = "a valid font specification consisting of at least font family, " +
-                "integer height in pixels (+ optional decimal extra line spacing in pixels), and color " +
-                "(e.g., 'sans-serif 12+4.5 white'), optionally including 'bold' and/or 'italic'"
-
-        private fun restrictionStr(nonNegative: Boolean, nonZero: Boolean) =
+        private fun restrStr(nonNegative: Boolean, nonZero: Boolean) =
             when {
-                nonNegative && nonZero -> " > 0"
-                nonNegative && !nonZero -> " >= 0"
-                !nonNegative && nonZero -> " != 0"
+                nonNegative && nonZero -> "> 0"
+                nonNegative && !nonZero -> ">= 0"
+                !nonNegative && nonZero -> "!= 0"
                 else -> ""
             }
 
         inline fun <reified T : Enum<T>> optionStr() =
-            enumValues<T>().joinToString("/") { "'" + it.name.toLowerCase().replace('_', ' ') + "'" }
+            enumValues<T>().joinToString("/") { "\"" + it.name.toLowerCase().replace('_', ' ') + "\"" }
 
     }
 

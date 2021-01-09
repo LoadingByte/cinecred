@@ -1,10 +1,8 @@
-package com.loadingbyte.cinecred.drawer
+package com.loadingbyte.cinecred.common
 
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
-import org.apache.batik.gvt.GraphicsNode
-import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.rendering.ImageType
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.awt.Color
@@ -14,7 +12,6 @@ import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
-import java.awt.image.BufferedImage
 import kotlin.math.max
 
 
@@ -54,17 +51,9 @@ class DeferredImage {
                         insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
                         insn.isGuide
                     )
-                is Instruction.DrawBufferedImage ->
-                    drawBufferedImage(
-                        insn.img, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
-                    )
-                is Instruction.DrawSVGNode ->
-                    drawSVGNode(
-                        insn.node, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
-                    )
-                is Instruction.DrawPDFPage ->
-                    drawPDFPage(
-                        insn.doc, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.isGuide
+                is Instruction.DrawPicture ->
+                    drawPicture(
+                        insn.pic.scaled(scaling), x + scaling * insn.x, y + scaling * insn.y, insn.isGuide
                     )
             }
     }
@@ -91,23 +80,10 @@ class DeferredImage {
         instructions.add(Instruction.DrawString(font, str, x, y, scaling, isGuide))
     }
 
-    fun drawBufferedImage(img: BufferedImage, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
-        width = max(width, x + scaling * img.width)
-        height = max(height, y + scaling * img.height)
-        instructions.add(Instruction.DrawBufferedImage(img, x, y, scaling, isGuide))
-    }
-
-    fun drawSVGNode(node: GraphicsNode, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
-        width = max(width, x + scaling * node.bounds.width.toFloat())
-        height = max(height, y + scaling * node.bounds.height.toFloat())
-        instructions.add(Instruction.DrawSVGNode(node, x, y, scaling, isGuide))
-    }
-
-    fun drawPDFPage(doc: PDDocument, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
-        val cropBox = doc.pages[0].cropBox
-        width = max(width, x + scaling * cropBox.width)
-        height = max(height, y + scaling * cropBox.width)
-        instructions.add(Instruction.DrawPDFPage(doc, x, y, scaling, isGuide))
+    fun drawPicture(pic: Picture, x: Float, y: Float, isGuide: Boolean = false) {
+        width = max(width, x + pic.width)
+        height = max(height, y + pic.height)
+        instructions.add(Instruction.DrawPicture(pic, x, y, isGuide))
     }
 
 
@@ -125,16 +101,8 @@ class DeferredImage {
             val font: RichFont, val str: String, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
-        class DrawBufferedImage(
-            val img: BufferedImage, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
-        ) : Instruction(isGuide)
-
-        class DrawSVGNode(
-            val node: GraphicsNode, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
-        ) : Instruction(isGuide)
-
-        class DrawPDFPage(
-            val doc: PDDocument, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+        class DrawPicture(
+            val pic: Picture, val x: Float, val y: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
     }
@@ -184,7 +152,11 @@ class DeferredImage {
                         for (word in insn.str.split(' ')) {
                             // Estimate the x coordinate where the word starts from the word's first glyph's bounds.
                             val xOffset = textLayout.getBlackBoxBounds(charIdx, charIdx + 1).bounds2D.x.toFloat()
-                            g2.drawString(word, insn.x + xOffset, y)
+                            // Note: Append a space to all words because without it, some PDF viewers give text
+                            // without any spaces when the user tries to copy it. Note that we also append a space
+                            // to the last word of the sentence to make sure that when the user tries to copy multiple
+                            // sentences, e.g., multiple lines of text, there are at least spaces between the lines.
+                            g2.drawString("$word ", insn.x + xOffset, y)
                             charIdx += word.length + 1
                         }
                         // We are done. Future text should again be vectorized, as indicated by
@@ -192,29 +164,33 @@ class DeferredImage {
                         g2.setFontTextDrawer(PdfBoxGraphics2DFontTextDrawer())
                     }
                 }
-                is Instruction.DrawBufferedImage -> {
-                    val tx = AffineTransform().apply {
-                        translate(insn.x.toDouble(), insn.y.toDouble())
-                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                is Instruction.DrawPicture -> when (val pic = insn.pic) {
+                    is Picture.Raster -> {
+                        val tx = AffineTransform()
+                        tx.translate(insn.x.toDouble(), insn.y.toDouble())
+                        tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
+                        g2.drawImage(pic.img, tx, null)
                     }
-                    g2.drawImage(insn.img, tx, null)
-                }
-                is Instruction.DrawSVGNode -> {
-                    val tx = AffineTransform().apply {
-                        translate(insn.x.toDouble(), insn.y.toDouble())
-                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                    is Picture.SVG -> {
+                        val tx = AffineTransform()
+                        tx.translate(insn.x.toDouble(), insn.y.toDouble())
+                        tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
+                        if (pic.isCropped)
+                            tx.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
+                        val prevTransform = g2.transform
+                        g2.transform(tx)
+                        pic.gvtRoot.paint(g2)
+                        g2.transform = prevTransform
                     }
-                    val prevTransform = g2.transform
-                    g2.transform(tx)
-                    insn.node.paint(g2)
-                    g2.transform = prevTransform
-                }
-                is Instruction.DrawPDFPage -> {
-                    // We first render to an image and then render that image to the target graphics because direct
-                    // rendering with PDFBox is known to sometimes have issues.
-                    val img = PDFRenderer(insn.doc).renderImage(0, insn.scaling, ImageType.ARGB)
-                    val tx = AffineTransform.getTranslateInstance(insn.x.toDouble(), insn.y.toDouble())
-                    g2.drawImage(img, tx, null)
+                    is Picture.PDF -> {
+                        // We first render to an image and then render that image to the target graphics because direct
+                        // rendering with PDFBox is known to sometimes have issues.
+                        val img = PDFRenderer(pic.doc).renderImage(0, pic.scaling, ImageType.ARGB)
+                        val tx = AffineTransform.getTranslateInstance(insn.x.toDouble(), insn.y.toDouble())
+                        if (pic.isCropped)
+                            tx.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
+                        g2.drawImage(img, tx, null)
+                    }
                 }
             }
         }

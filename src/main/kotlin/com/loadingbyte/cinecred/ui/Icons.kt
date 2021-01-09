@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.icons.FlatAbstractIcon
-import com.loadingbyte.cinecred.Severity
-import com.loadingbyte.cinecred.drawer.setHighQuality
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.setHighQuality
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext

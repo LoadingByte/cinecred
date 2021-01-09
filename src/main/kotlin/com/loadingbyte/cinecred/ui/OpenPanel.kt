@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.l10n
+import com.loadingbyte.cinecred.common.l10n
 import java.awt.Color
 import java.awt.datatransfer.DataFlavor
 import java.io.File

@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.l10n
+import com.loadingbyte.cinecred.common.l10n
 import java.awt.GraphicsEnvironment
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent

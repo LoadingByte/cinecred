@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.drawer.DeferredImage
-import com.loadingbyte.cinecred.drawer.setHighQuality
-import com.loadingbyte.cinecred.l10n
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import org.apache.batik.ext.awt.image.GraphicsUtil

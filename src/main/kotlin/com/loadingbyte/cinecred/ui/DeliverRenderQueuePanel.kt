@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
-import com.loadingbyte.cinecred.l10n
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.util.*

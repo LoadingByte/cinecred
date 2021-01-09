@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.l10n
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.FPS
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT

@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.*
+import com.loadingbyte.cinecred.common.*
 import org.apache.commons.csv.CSVRecord
 import java.util.*
 
@@ -92,17 +92,17 @@ class Table(
         }
     }
 
-    fun getFiniteFloat(row: Int, l10nColName: String, nonNegative: Boolean = false, nonZero: Boolean = false): Float? =
+    fun getFiniteFloat(row: Int, l10nColName: String, nonNeg: Boolean = false, non0: Boolean = false): Float? =
         get(row, l10nColName, {
             val restriction = when {
-                nonNegative && nonZero -> "> 0"
-                nonNegative && !nonZero -> "\u2265 0"
-                !nonNegative && nonZero -> "\u2260 0"
+                nonNeg && non0 -> "> 0"
+                nonNeg && !non0 -> "\u2265 0"
+                !nonNeg && non0 -> "\u2260 0"
                 else -> ""
             }
             l10n("projectIO.table.floatTypeDesc", restriction).trim()
         }) { str ->
-            str.toFiniteFloat(nonNegative, nonZero)
+            str.toFiniteFloat(nonNeg, non0)
         }
 
     inline fun <reified T : Enum<T>> getEnum(row: Int, l10nColName: String): T? =

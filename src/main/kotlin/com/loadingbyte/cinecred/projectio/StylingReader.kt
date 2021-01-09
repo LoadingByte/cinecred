@@ -33,21 +33,21 @@ fun readStyling(stylingFile: Path): Styling {
 
 private fun Map<*, *>.toGlobal() = Global(
     get("fps", STANDARD_GLOBAL.fps) { toFPS() },
-    get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNegative = true, nonZero = true) },
-    get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNegative = true, nonZero = true) },
+    get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
+    get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
     get("background", STANDARD_GLOBAL.background) { toColor() },
-    get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNegative = true, nonZero = true) }
+    get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 
 
 private fun Map<*, *>.toPageStyle() = PageStyle(
     get("name", STANDARD_PAGE_STYLE.name) { this },
     get("behavior", STANDARD_PAGE_STYLE.behavior) { toEnum() },
-    get("afterwardSlugFrames", STANDARD_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNegative = true) },
-    get("cardDurationFrames", STANDARD_PAGE_STYLE.cardDurationFrames) { toInt(nonNegative = true) },
-    get("cardFadeInFrames", STANDARD_PAGE_STYLE.cardFadeInFrames) { toInt(nonNegative = true) },
-    get("cardFadeOutFrames", STANDARD_PAGE_STYLE.cardFadeOutFrames) { toInt(nonNegative = true) },
-    get("scrollPxPerFrame", STANDARD_PAGE_STYLE.scrollPxPerFrame) { toFiniteFloat(nonNegative = true, nonZero = true) }
+    get("afterwardSlugFrames", STANDARD_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNeg = true) },
+    get("cardDurationFrames", STANDARD_PAGE_STYLE.cardDurationFrames) { toInt(nonNeg = true) },
+    get("cardFadeInFrames", STANDARD_PAGE_STYLE.cardFadeInFrames) { toInt(nonNeg = true) },
+    get("cardFadeOutFrames", STANDARD_PAGE_STYLE.cardFadeOutFrames) { toInt(nonNeg = true) },
+    get("scrollPxPerFrame", STANDARD_PAGE_STYLE.scrollPxPerFrame) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 
 
@@ -56,34 +56,34 @@ private fun Map<*, *>.toContentStyle(): ContentStyle {
         get("name", STANDARD_CONTENT_STYLE.name) { this },
         get("spineOrientation", STANDARD_CONTENT_STYLE.spineOrientation) { toEnum() },
         get("alignWithAxis", STANDARD_CONTENT_STYLE.alignWithAxis) { toEnum() },
-        get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNegative = true) },
+        get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNeg = true) },
         get("bodyLayout", STANDARD_CONTENT_STYLE.bodyLayout) { toEnum() },
-        get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNegative = true) },
+        get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNeg = true) },
         get("bodyLayoutElemConform", STANDARD_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },
         get("bodyLayoutElemVJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemVJustify) { toEnum() },
         get("bodyLayoutHorizontalGapPx", STANDARD_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
-            toFiniteFloat(nonNegative = true)
+            toFiniteFloat(nonNeg = true)
         },
         get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) { toEnumList() },
         get("bodyLayoutLineHJustify", STANDARD_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
         get("bodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
-            toFiniteFloat(nonNegative = true, nonZero = true)
+            toFiniteFloat(nonNeg = true, non0 = true)
         },
         get("bodyLayoutElemHJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemHJustify) { toEnum() },
         get("bodyLayoutSeparator", STANDARD_CONTENT_STYLE.bodyLayoutSeparator) { this },
         get("bodyLayoutParagraphGapPx", STANDARD_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
-            toFiniteFloat(nonNegative = true)
+            toFiniteFloat(nonNeg = true)
         },
         get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },
         keys.any { "head" in (it as String) },
         get("headHJustify", STANDARD_CONTENT_STYLE.headHJustify) { toEnum() },
         get("headVJustify", STANDARD_CONTENT_STYLE.headVJustify) { toEnum() },
-        get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNegative = true) },
+        get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNeg = true) },
         get("headFontSpec", STANDARD_CONTENT_STYLE.headFontSpec) { toFontSpec() },
         keys.any { "tail" in (it as String) },
         get("tailHJustify", STANDARD_CONTENT_STYLE.tailHJustify) { toEnum() },
         get("tailVJustify", STANDARD_CONTENT_STYLE.tailVJustify) { toEnum() },
-        get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNegative = true) },
+        get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) },
         get("tailFontSpec", STANDARD_CONTENT_STYLE.tailFontSpec) { toFontSpec() }
     )
 }

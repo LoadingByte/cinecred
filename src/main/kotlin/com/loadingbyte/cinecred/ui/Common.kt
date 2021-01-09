@@ -4,6 +4,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
 import java.awt.*
 import java.awt.geom.Rectangle2D
+import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
@@ -18,6 +19,31 @@ fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = tru
         if (endsWith(suffix, ignoreCase))
             return dropLast(suffix.length)
     return this
+}
+
+
+class LatestJobExecutor(threadName: String) {
+
+    private val queue = LinkedBlockingQueue<Runnable>()
+
+    private val thread = Thread({
+        try {
+            while (true)
+                queue.take().run()
+        } catch (_: InterruptedException) {
+            // destroy() has been called. Terminate the thread.
+        }
+    }, threadName).apply { isDaemon = true; start() }
+
+    fun submit(job: Runnable) {
+        queue.clear()
+        queue.add(job)
+    }
+
+    fun destroy() {
+        thread.interrupt()
+    }
+
 }
 
 

@@ -1,5 +1,8 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.REF_G2
+import com.loadingbyte.cinecred.common.RichFont
 import com.loadingbyte.cinecred.project.FontSpec
 import com.loadingbyte.cinecred.project.Project
 import java.awt.Font

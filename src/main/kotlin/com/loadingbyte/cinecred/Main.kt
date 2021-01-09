@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.Controller
 import com.loadingbyte.cinecred.ui.MainFrame
 import net.miginfocom.layout.PlatformDefaults

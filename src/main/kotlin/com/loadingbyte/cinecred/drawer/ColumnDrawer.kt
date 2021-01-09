@@ -1,5 +1,8 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.RichFont
+import com.loadingbyte.cinecred.common.getStringWidth
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import kotlin.math.max

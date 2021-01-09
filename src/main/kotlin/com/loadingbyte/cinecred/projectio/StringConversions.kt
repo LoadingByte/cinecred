@@ -6,17 +6,17 @@ import java.awt.Color
 import kotlin.math.floor
 
 
-fun String.toInt(nonNegative: Boolean, nonZero: Boolean = false): Int {
+fun String.toInt(nonNeg: Boolean, non0: Boolean = false): Int {
     val i = toInt()
-    if (nonNegative && i < 0 || nonZero && i == 0)
+    if (nonNeg && i < 0 || non0 && i == 0)
         throw NumberFormatException()
     return i
 }
 
 
-fun String.toFiniteFloat(nonNegative: Boolean = false, nonZero: Boolean = false): Float {
+fun String.toFiniteFloat(nonNeg: Boolean = false, non0: Boolean = false): Float {
     val f = replace(',', '.').toFloat()
-    if (!f.isFinite() || nonNegative && f < 0f || nonZero && f == 0f)
+    if (!f.isFinite() || nonNeg && f < 0f || non0 && f == 0f)
         throw NumberFormatException()
     return f
 }
@@ -56,10 +56,10 @@ fun String.toFPS(): FPS {
         str.startsWith("59.9") -> FPS(60000, 1001)
         "/" in this -> {
             val parts = split("/")
-            FPS(parts[0].toInt(nonNegative = true, nonZero = true), parts[1].toInt(nonNegative = true, nonZero = true))
+            FPS(parts[0].toInt(nonNeg = true, non0 = true), parts[1].toInt(nonNeg = true, non0 = true))
         }
         else -> {
-            val f = toFiniteFloat(nonNegative = true, nonZero = true)
+            val f = toFiniteFloat(nonNeg = true, non0 = true)
             require(floor(f) == f)
             FPS(f.toInt(), 1)
         }
@@ -77,7 +77,7 @@ fun String.toFontSpec(): FontSpec {
     fun parsePart(part: String): Boolean {
         if (height == null)
             try {
-                height = part.toInt(nonNegative = true, nonZero = true)
+                height = part.toInt(nonNeg = true, non0 = true)
                 return true
             } catch (_: NumberFormatException) {
             }

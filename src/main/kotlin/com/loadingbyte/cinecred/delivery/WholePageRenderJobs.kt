@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.drawer.DeferredImage
-import com.loadingbyte.cinecred.drawer.setHighQuality
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.setHighQuality
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.ext.awt.image.GraphicsUtil

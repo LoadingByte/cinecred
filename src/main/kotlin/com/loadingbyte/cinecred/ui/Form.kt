@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.Severity
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.getSystemFont
-import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.FontSpec
 import net.miginfocom.swing.MigLayout
 import java.awt.*

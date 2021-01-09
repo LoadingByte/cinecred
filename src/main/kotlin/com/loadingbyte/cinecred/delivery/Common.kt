@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.drawer.DeferredImage
+import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import kotlin.math.floor

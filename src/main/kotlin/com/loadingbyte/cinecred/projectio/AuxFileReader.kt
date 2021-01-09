@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.l10n
-import com.loadingbyte.cinecred.project.Picture
+import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.MainFrame
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument

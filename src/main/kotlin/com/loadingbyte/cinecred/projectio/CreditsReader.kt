@@ -1,9 +1,11 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.Severity
-import com.loadingbyte.cinecred.Severity.WARN
-import com.loadingbyte.cinecred.l10n
-import com.loadingbyte.cinecred.l10nAll
+import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
 import org.apache.commons.csv.CSVFormat
 import java.io.File
@@ -56,7 +58,7 @@ fun readCredits(
 
     // If no table header has been encountered, log that.
     if (lines.isEmpty()) {
-        log.add(ParserMsg(1, Severity.ERROR, l10n("projectIO.credits.noTableHeader")))
+        log.add(ParserMsg(1, ERROR, l10n("projectIO.credits.noTableHeader")))
         return Pair(log, null)
     }
 
@@ -172,7 +174,7 @@ fun readCredits(
         if (table.isEmpty(row))
             vGapAccumulator += styling.global.unitVGapPx
         // Also add explicit vertical gaps to the accumulator.
-        table.getFiniteFloat(row, "vGap", nonNegative = true)?.let {
+        table.getFiniteFloat(row, "vGap", nonNeg = true)?.let {
             vGapAccumulator += it * styling.global.unitVGapPx
         }
 
@@ -206,9 +208,9 @@ fun readCredits(
         // previous section and start a new one.
         val wrapKey = "projectIO.credits.table.wrap"
         table.get(row, "columnPos", {
-            val primary = l10n(wrapKey)
-            val alternatives = l10nAll(wrapKey).toMutableSet().apply { remove(primary) }.joinToString("/") { "\"$it\"" }
-            l10n("projectIO.credits.columnPosTypeDesc", primary, alternatives)
+            val wrapPrimary = l10n(wrapKey)
+            val wrapAlt = l10nAll(wrapKey).toMutableSet().apply { remove(wrapPrimary) }.joinToString("/") { "\"$it\"" }
+            l10n("projectIO.credits.columnPosTypeDesc", wrapPrimary, wrapAlt)
         }) { str ->
             // Remove all occurrences of all wrap keywords from the string.
             var modStr = str
@@ -241,22 +243,49 @@ fun readCredits(
         val newTail = table.getString(row, "tail")
 
         // Get the body element, which may either be a string or a (optionally scaled) picture.
-        val bodyElem = table.get(row, "body", { l10n("projectIO.credits.bodyElemTypeDesc") }) { str ->
-            // Case 1: Unscaled picture
-            pictureLoaderMap[str]?.value?.let { pic -> return@get BodyElement.Pic(pic) }
-            // Case 2: Scaled picture
-            pictureLoaderMap[str.substringBeforeLast(' ').trim()]?.value?.let { pic ->
-                val scaleHint = str.substringAfterLast(' ').trim()
-                val scaledPic = when {
-                    scaleHint.startsWith('x') ->
-                        pic.scaled(scaleHint.drop(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.height)
-                    scaleHint.endsWith('x') ->
-                        pic.scaled(scaleHint.dropLast(1).toFiniteFloat(nonNegative = true, nonZero = true) / pic.width)
-                    else -> throw IllegalArgumentException()
+        val cropKey = "projectIO.credits.table.crop"
+        val cropKeywords = l10nAll(cropKey).toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
+        val bodyElem = table.get(row, "body", {
+            val cropPrimary = l10n(cropKey)
+            val cropAlt = l10nAll(cropKey).toMutableSet().apply { remove(cropPrimary) }.joinToString("/") { "\"$it\"" }
+            l10n("projectIO.credits.bodyElemTypeDesc", cropPrimary, cropAlt)
+        }) { str ->
+            // Remove up to four space-separated suffixes from the string and each time check whether the remaining
+            // string is a picture. If that is the case, try to parse the suffixes as scaling and cropping hints.
+            // Theoretically, we could stop after removing two suffixes and not having found a picture by then because
+            // there are only two possible suffixes available (scaling and cropping). However, sometimes the user
+            // might accidentally add more suffixes. If we find that this is the case, we throw an exception and
+            // thereby warn the user.
+            var picName = str
+            repeat(5) {
+                pictureLoaderMap[picName]?.value?.let { origPic ->
+                    var pic = origPic
+                    val picHints = str.drop(picName.length).split(' ')
+                    // Step 1: Crop the picture if the user specified it.
+                    if (picHints.any { it in cropKeywords })
+                        pic = when (pic) {
+                            is Picture.SVG -> pic.cropped()
+                            is Picture.PDF -> pic.cropped()
+                            // Raster images cannot be cropped.
+                            is Picture.Raster -> throw IllegalArgumentException()
+                        }
+                    // Step 2: Only now, after the picture has potentially been cropped, we can apply scaling hints.
+                    for (hint in picHints)
+                        pic = when {
+                            hint.isBlank() || hint in cropKeywords -> continue
+                            hint.startsWith('x') ->
+                                pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
+                            hint.endsWith('x') ->
+                                pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
+                            // The user supplied an unknown suffix.
+                            else -> throw IllegalArgumentException()
+                        }
+                    return@get BodyElement.Pic(pic)
                 }
-                return@get BodyElement.Pic(scaledPic)
+                picName = picName.substringBeforeLast(' ').trim()
             }
-            // Case 3: String
+
+            // We could not find an image in the body element string. Just use the string as-is.
             BodyElement.Str(str)
         }
 

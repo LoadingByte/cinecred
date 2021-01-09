@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.SUPPORTED_LOCALES
+import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.SUPPORTED_LOCALES
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.draw
-import com.loadingbyte.cinecred.l10n
-import com.loadingbyte.cinecred.project.Picture
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.*
@@ -14,7 +14,6 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.WatchEvent
 import java.util.*
-import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
@@ -50,14 +49,7 @@ object Controller {
         }
     }
 
-    private val previewGenerationJob = LinkedBlockingQueue<Runnable>()
-
-    init {
-        Thread({
-            while (true)
-                previewGenerationJob.take().run()
-        }, "PreviewGenerationThread").apply { isDaemon = true }.start()
-    }
+    private val previewGenerationExecutor = LatestJobExecutor("PreviewGenerationThread")
 
     fun onChangeTab(changedToEdit: Boolean) {
         isEditTabActive = changedToEdit
@@ -211,8 +203,7 @@ object Controller {
         val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir!!.relativize(path) }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
-        previewGenerationJob.clear()
-        previewGenerationJob.add {
+        previewGenerationExecutor.submit {
             val (log, pages) = readCredits(creditsFile!!, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName, pages ?: emptyList())

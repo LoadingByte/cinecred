@@ -1,5 +1,9 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.REF_FRC
+import com.loadingbyte.cinecred.common.RichFont
+import com.loadingbyte.cinecred.common.getStringWidth
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementConform.*
 import java.awt.font.LineBreakMeasurer
@@ -147,10 +151,12 @@ fun drawBodyImageWithFlowBodyLayout(
     // Find the maximum width resp. height over all body elements.
     val maxElemWidth = block.body.maxOf { bodyElem -> bodyElem.getWidth(bodyFont) }
     val maxElemHeight = block.body.maxOf { bodyElem -> bodyElem.getHeight(bodyFont) }
+    val maxElemSideLength = max(maxElemWidth, maxElemHeight)
 
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
-    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx.coerceAtLeast(maxElemWidth)
+    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx
+        .coerceAtLeast(if (block.style.bodyLayoutElemConform == SQUARE) maxElemSideLength else maxElemWidth)
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
@@ -158,7 +164,7 @@ fun drawBodyImageWithFlowBodyLayout(
         when (block.style.bodyLayoutElemConform) {
             NOTHING, HEIGHT -> bodyElem.getWidth(bodyFont)
             WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
-            SQUARE -> max(maxElemWidth, maxElemHeight)
+            SQUARE -> maxElemSideLength
         }
     }
 
@@ -172,7 +178,7 @@ fun drawBodyImageWithFlowBodyLayout(
         val totalRigidWidth = when (block.style.bodyLayoutElemConform) {
             NOTHING, HEIGHT -> bodyLine.sumByFloat { bodyElem -> bodyElem.getWidth(bodyFont) }
             WIDTH, WIDTH_AND_HEIGHT -> bodyLine.size * maxElemWidth
-            SQUARE -> bodyLine.size * max(maxElemWidth, maxElemHeight)
+            SQUARE -> bodyLine.size * maxElemSideLength
         }
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
@@ -185,7 +191,7 @@ fun drawBodyImageWithFlowBodyLayout(
         val bodyLineHeight = when (block.style.bodyLayoutElemConform) {
             NOTHING, WIDTH -> bodyLine.maxOf { bodyElem -> bodyElem.getHeight(bodyFont) }
             HEIGHT, WIDTH_AND_HEIGHT -> maxElemHeight
-            SQUARE -> max(maxElemWidth, maxElemHeight)
+            SQUARE -> maxElemSideLength
         }
 
         // Find the x coordinate of the first body element depending on the justification.
@@ -201,7 +207,8 @@ fun drawBodyImageWithFlowBodyLayout(
         for ((idx, bodyElem) in bodyLine.withIndex()) {
             val areaWidth = when (block.style.bodyLayoutElemConform) {
                 NOTHING, HEIGHT -> bodyElem.getWidth(bodyFont)
-                WIDTH, WIDTH_AND_HEIGHT, SQUARE -> maxElemWidth
+                WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
+                SQUARE -> maxElemSideLength
             } + (if (idx == 0 || idx == bodyLine.lastIndex) horGlue / 2f else horGlue)
 
             // Draw the current body element.
@@ -388,11 +395,5 @@ private fun DeferredImage.drawJustifiedBodyElem(
     is BodyElement.Pic ->
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
-        ) { objX, objY ->
-            when (elem.pic) {
-                is Picture.Raster -> drawBufferedImage(elem.pic.img, objX, objY, elem.pic.scaling)
-                is Picture.SVG -> drawSVGNode(elem.pic.node, objX, objY, elem.pic.scaling)
-                is Picture.PDF -> drawPDFPage(elem.pic.doc, objX, objY, elem.pic.scaling)
-            }
-        }
+        ) { objX, objY -> drawPicture(elem.pic, objX, objY) }
 }

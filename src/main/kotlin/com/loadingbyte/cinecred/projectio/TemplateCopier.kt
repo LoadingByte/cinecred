@@ -1,10 +1,9 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.l10nBundle
+import com.loadingbyte.cinecred.common.l10nBundle
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-import java.util.regex.Pattern
 
 
 fun copyStylingTemplate(destDir: Path, locale: Locale) {
@@ -23,14 +22,14 @@ fun copyCreditsTemplate(destDir: Path, locale: Locale) {
 }
 
 
-private val PLACEHOLDER_REGEX = Pattern.compile("\\{([^}]+)}")
+private val PLACEHOLDER_REGEX = Regex("\\{([^}]+)}")
 
 private fun copyFillingPlaceholders(resourceName: String, dest: Path, locale: Locale) {
     val bundle = l10nBundle(locale)
     val content = Dummy.javaClass.getResourceAsStream(resourceName).use { stream ->
         stream.bufferedReader().readLines()
     }.map { line ->
-        PLACEHOLDER_REGEX.matcher(line).replaceAll { match -> bundle.getString(match.group(1)) }
+        line.replace(PLACEHOLDER_REGEX) { match -> bundle.getString(match.groups[1]!!.value) }
     }
     Files.write(dest, content)
 }

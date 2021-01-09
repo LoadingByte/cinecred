@@ -1,13 +1,13 @@
 package com.loadingbyte.cinecred.ui
 
 
-import com.loadingbyte.cinecred.Severity
+import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
-import com.loadingbyte.cinecred.drawer.DeferredImage
-import com.loadingbyte.cinecred.l10n
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import java.nio.file.Files

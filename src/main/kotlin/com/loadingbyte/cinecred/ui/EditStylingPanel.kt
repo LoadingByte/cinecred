@@ -395,6 +395,10 @@ object EditStylingPanel : JPanel() {
             l10n("ui.styling.content.vMarginPx"), SpinnerNumberModel(0f, 0f, null, 1f)
         )
 
+        init {
+            addSeparator()
+        }
+
         private val bodyLayoutComboBox = addComboBox(
             l10n("ui.styling.content.bodyLayout"), BodyLayout.values(), toString = ::l10nEnum
         )
@@ -444,6 +448,10 @@ object EditStylingPanel : JPanel() {
 
         private val bodyFontSpecChooser = addFontSpecChooser(l10n("ui.styling.content.bodyFont"))
 
+        init {
+            addSeparator()
+        }
+
         private val hasHeadCheckBox = addCheckBox(l10n("ui.styling.content.hasHead"))
         private val headHJustifyComboBox = addComboBox(
             l10n("ui.styling.content.headHJustify"), HJustify.values(), toString = ::l10nEnum,
@@ -461,6 +469,10 @@ object EditStylingPanel : JPanel() {
             l10n("ui.styling.content.headFont"),
             isVisible = { hasHeadCheckBox.isSelected }
         )
+
+        init {
+            addSeparator()
+        }
 
         private val hasTailCheckBox = addCheckBox(l10n("ui.styling.content.hasTail"))
         private val tailHJustifyComboBox = addComboBox(

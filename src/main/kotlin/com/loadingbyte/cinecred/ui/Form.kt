@@ -233,8 +233,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             label,
             listOf(
                 field.familyComboBox, field.fontComboBox,
-                JLabel(l10n("ui.form.fontColor")), field.colorChooserButton,
-                JLabel(l10n("ui.form.fontHeightPx")), field.heightPxSpinner
+                JLabel(l10n("ui.form.fontHeightPx")), field.heightPxSpinner,
+                JLabel("    " + l10n("ui.form.fontColor")), field.colorChooserButton
             ),
             listOf("", "newline, split", "newline, split", "", "", ""),
             isVisible, extendedVerify
@@ -320,6 +320,10 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         // If the form row should initially be invisible, hide it.
         if (formRow.isVisibleFunc?.invoke() == false)
             formRow.isVisible = false
+    }
+
+    fun addSeparator() {
+        add(JSeparator(), "newline, span, growx")
     }
 
     fun addSubmitButton(label: String) = JButton(label).also { button ->
@@ -501,9 +505,9 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 if (elem is Font) elem.getFontName(Locale.US) else elem as String? ?: ""
             }
         }
-        val colorChooserButton = ColorChooserButton(changeListener)
         val heightPxSpinner = JSpinner(SpinnerNumberModel(1, 1, null, 1))
             .apply { minimumSize = Dimension(50, minimumSize.height) }
+        val colorChooserButton = ColorChooserButton(changeListener)
 
         private var disableFamilyListener = false
 

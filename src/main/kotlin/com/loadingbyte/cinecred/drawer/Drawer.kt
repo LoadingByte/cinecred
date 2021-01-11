@@ -38,20 +38,24 @@ private fun createAWTFont(projectFonts: Map<String, Font>, spec: FontSpec): Font
 
     // Step 1: Exponential search to determine the rough range of the font size we're looking for.
     var size = 2f
-    for (i in 0 until 20) {  // Upper-bound the number of repetitions to avoid accidental infinite looping.
-        if (REF_G2.getFontMetrics(baseFont.deriveFont(size * size)).height >= spec.heightPx)
+    // Upper-bound the number of repetitions to avoid:
+    //   - Accidental infinite looping.
+    //   - Too large fonts cause the Java font rendering engine to destroy its own fonts.
+    for (i in 0 until 10) {
+        if (REF_G2.getFontMetrics(baseFont.deriveFont(size * 2f)).height >= spec.heightPx)
             break
-        size *= size
+        size *= 2f
     }
 
     // Step 2: Binary search to find the exact font size.
     // If $size is still 2, we look for a size between 0 and 4.
-    // Otherwise, we look for a size between $size and $size^2.
+    // Otherwise, we look for a size between $size and $size*2.
     val minSize = if (size == 2f) 0f else size
-    val maxSize = size * size
+    val maxSize = size * 2f
     var intervalLength = (maxSize - minSize) / 2f
     size = minSize + intervalLength
-    for (i in 0 until 20) {  // Upper-bound the number of repetitions to avoid accidental infinite looping.
+    // Upper-bound the number of repetitions to avoid accidental infinite looping.
+    for (i in 0 until 20) {
         intervalLength /= 2f
         val height = REF_G2.getFontMetrics(baseFont.deriveFont(size)).height
         when {

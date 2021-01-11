@@ -1,19 +1,20 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.REF_G2
 import com.loadingbyte.cinecred.common.RichFont
+import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.FontSpec
 import com.loadingbyte.cinecred.project.Project
 import java.awt.Font
 import java.awt.font.TextAttribute
 
 
-fun draw(project: Project): List<DeferredImage> {
+fun draw(project: Project): List<DrawnPage> {
     // Get all font specs that appear somewhere on some page. Note that we do not just get the font specs from the
     // content styles list because that doesn't include STANDARD_CONTENT_STYLE font specs that are used whenever
     // the content styles list is empty.
-    val fontSpecs = project.pages.asSequence().flatMap { it.sections }.flatMap { it.columns }.flatMap { it.blocks }
+    val fontSpecs = project.pages.asSequence()
+        .flatMap { it.stages }.flatMap { it.segments }.flatMap { it.columns }.flatMap { it.blocks }
         .flatMap { listOf(it.style.bodyFontSpec, it.style.headFontSpec, it.style.tailFontSpec) }
         .toSet() // Ensure that each font spec is only contained once.
 

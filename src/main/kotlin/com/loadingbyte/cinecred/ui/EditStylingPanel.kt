@@ -321,8 +321,17 @@ object EditStylingPanel : JPanel() {
         private val behaviorComboBox = addComboBox(
             l10n("ui.styling.page.behavior"), PageBehavior.values(), toString = ::l10nEnum
         )
+        private val meltWithPrevCheckBox = addCheckBox(
+            l10n("ui.styling.page.meltWithPrev"),
+            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL }
+        )
+        private val meltWithNextCheckBox = addCheckBox(
+            l10n("ui.styling.page.meltWithNext"),
+            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL }
+        )
         private val afterwardSlugFramesSpinner = addSpinner(
-            l10n("ui.styling.page.afterwardSlugFrames"), SpinnerNumberModel(0, 0, null, 1)
+            l10n("ui.styling.page.afterwardSlugFrames"), SpinnerNumberModel(0, 0, null, 1),
+            isVisible = { !(behaviorComboBox.selectedItem == PageBehavior.SCROLL && meltWithNextCheckBox.isSelected) }
         )
         private val cardDurationFramesSpinner = addSpinner(
             l10n("ui.styling.page.cardDurationFrames"), SpinnerNumberModel(0, 0, null, 1),
@@ -330,7 +339,7 @@ object EditStylingPanel : JPanel() {
         )
         private val cardFadeInFramesSpinner = addSpinner(
             l10n("ui.styling.page.cardInFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
+            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD  }
         )
         private val cardFadeOutFramesSpinner = addSpinner(
             l10n("ui.styling.page.cardOutFrames"), SpinnerNumberModel(0, 0, null, 1),
@@ -350,8 +359,10 @@ object EditStylingPanel : JPanel() {
             clearChangeListeners()
 
             nameField.text = pageStyle.name
-            afterwardSlugFramesSpinner.value = pageStyle.afterwardSlugFrames
             behaviorComboBox.selectedItem = pageStyle.behavior
+            meltWithPrevCheckBox.isSelected = pageStyle.meltWithPrev
+            meltWithNextCheckBox.isSelected = pageStyle.meltWithNext
+            afterwardSlugFramesSpinner.value = pageStyle.afterwardSlugFrames
             cardDurationFramesSpinner.value = pageStyle.cardDurationFrames
             cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
             cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
@@ -362,6 +373,8 @@ object EditStylingPanel : JPanel() {
                     val newPageStyle = PageStyle(
                         nameField.text.trim(),
                         behaviorComboBox.selectedItem as PageBehavior,
+                        meltWithPrevCheckBox.isSelected,
+                        meltWithNextCheckBox.isSelected,
                         afterwardSlugFramesSpinner.value as Int,
                         cardDurationFramesSpinner.value as Int,
                         cardFadeInFramesSpinner.value as Int,

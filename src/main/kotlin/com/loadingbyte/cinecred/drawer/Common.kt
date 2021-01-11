@@ -9,10 +9,11 @@ import com.loadingbyte.cinecred.project.VJustify
 import java.awt.Color
 
 
-val AXIS_GUIDE_COLOR: Color = Color(0, 200, 200)
-val BODY_ELEM_GUIDE_COLOR = Color(130, 50, 0, 255)
-val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0, 255)
-val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0, 255)
+val CARD_GUIDE_COLOR = Color(150, 0, 250)
+val AXIS_GUIDE_COLOR = Color(0, 200, 200)
+val BODY_ELEM_GUIDE_COLOR = Color(130, 50, 0)
+val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0)
+val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)
 
 
 inline fun DeferredImage.drawJustified(

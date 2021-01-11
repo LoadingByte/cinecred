@@ -2,8 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
@@ -58,7 +56,7 @@ fun readCredits(
 
     // If no table header has been encountered, log that.
     if (lines.isEmpty()) {
-        log.add(ParserMsg(1, ERROR, l10n("projectIO.credits.noTableHeader")))
+        log.add(ParserMsg(1, Severity.ERROR, l10n("projectIO.credits.noTableHeader")))
         return Pair(log, null)
     }
 
@@ -72,15 +70,15 @@ fun readCredits(
     var contentStyle: ContentStyle? = null
 
     // The vertical gap that should be inserted AFTER the next CONCLUDED credits element. If multiple credits
-    // elements will be concluded at the same time (e.g., a block, a column, and a section), the most significant
-    // credits element will receive the gap (in our example, that would be the section).
+    // elements will be concluded at the same time (e.g., a block, a column, and a segment), the most significant
+    // credits element will receive the gap (in our example, that would be the segment).
     var vGapAccumulator = 0f
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
     // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
     // content style changed or there was an empty row), but it cannot be concluded yet because it is unknown whether
-    // only the block or the block and more higher-order elements like a section will be concluded at the same time.
-    // In the latter case, the vertical gap accumulator would go towards the section and not the block. So we have
+    // only the block or the block and more higher-order elements like a segment will be concluded at the same time.
+    // In the latter case, the vertical gap accumulator would go towards the segment and not the block. So we have
     // to wait and see.
     var isBlockConclusionMarked = false
 
@@ -92,15 +90,17 @@ fun readCredits(
     // Final result
     val pages = mutableListOf<Page>()
     // Current page
-    var pageStyle: PageStyle? = null
-    val pageSections = mutableListOf<Section>()
+    val pageStages = mutableListOf<Stage>()
     val pageAlignBodyColsGroupsGroups = mutableListOf<List<Block>>()
     val pageAlignHeadTailGroupsGroups = mutableListOf<List<Block>>()
-    // Section and block groups
+    // Segment and block groups
     var alignBodyColsGroupsGroup = mutableListOf<Block>()
     var alignHeadTailGroupsGroup = mutableListOf<Block>()
-    // Current section
-    val sectionColumns = mutableListOf<Column>()
+    // Current stage
+    var stageStyle: PageStyle? = null
+    val stageSegments = mutableListOf<Segment>()
+    // Current segment
+    val segmentColumns = mutableListOf<Column>()
     // Current column
     var columnPosOffsetPx = 0f
     val columnBlocks = mutableListOf<Block>()
@@ -110,13 +110,24 @@ fun readCredits(
     val blockBody = mutableListOf<BodyElement>()
     var blockTail: String? = null
 
-    fun concludePage(newPageStyle: PageStyle) {
-        if (pageSections.isNotEmpty()) {
-            val page = Page(pageStyle!!, pageSections, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups)
-            pages.add(page)
+    fun concludePage() {
+        // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
+        // when they don't sit next to another scroll stages and when they are not alone on a page.
+        // We remove the empty scroll stages that don't make sense.
+        if (pageStages.isNotEmpty() && !(pageStages.size == 1 && pageStages[0].segments.isEmpty())) {
+            var idx = 0
+            while (idx < pageStages.size) {
+                val prevStageDoesNotScroll = idx == 0 || pageStages[idx - 1].style.behavior != PageBehavior.SCROLL
+                val nextStageDoesNotScroll = idx == pageStages.lastIndex ||
+                        pageStages[idx + 1].style.behavior != PageBehavior.SCROLL
+                if (pageStages[idx].segments.isNotEmpty() || prevStageDoesNotScroll && nextStageDoesNotScroll)
+                    idx++
+                else
+                    pageStages.removeAt(idx)
+            }
+            pages.add(Page(pageStages, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups))
         }
-        pageStyle = newPageStyle
-        pageSections.clear()
+        pageStages.clear()
         pageAlignBodyColsGroupsGroups.clear()
         pageAlignHeadTailGroupsGroups.clear()
     }
@@ -133,15 +144,23 @@ fun readCredits(
         alignHeadTailGroupsGroup = mutableListOf()
     }
 
-    fun concludeSection(vGapAfter: Float) {
-        if (sectionColumns.isNotEmpty())
-            pageSections.add(Section(sectionColumns, vGapAfter))
-        sectionColumns.clear()
+    fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
+        // Note: We allow that empty scroll stages to connect card stages.
+        if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL)
+            pageStages.add(Stage(stageStyle!!, stageSegments, vGapAfter))
+        stageStyle = newStageStyle
+        stageSegments.clear()
+    }
+
+    fun concludeSegment(vGapAfter: Float) {
+        if (segmentColumns.isNotEmpty())
+            stageSegments.add(Segment(segmentColumns, vGapAfter))
+        segmentColumns.clear()
     }
 
     fun concludeColumn() {
         if (columnBlocks.isNotEmpty())
-            sectionColumns.add(Column(columnPosOffsetPx, columnBlocks))
+            segmentColumns.add(Column(columnPosOffsetPx, columnBlocks))
         columnPosOffsetPx = 0f
         columnBlocks.clear()
     }
@@ -168,7 +187,7 @@ fun readCredits(
 
     for (row in 0 until table.numRows) {
         // Helper function to shorten logging calls.
-        fun log(kind: Severity, msg: String) = log.add(ParserMsg(table.getLineNo(row), kind, msg))
+        fun warn(msg: String) = log.add(ParserMsg(table.getLineNo(row), Severity.WARN, msg))
 
         // An empty row implicitly means a vertical gap of one unit after the appropriate credits element.
         if (table.isEmpty(row))
@@ -178,34 +197,37 @@ fun readCredits(
             vGapAccumulator += it * styling.global.unitVGapPx
         }
 
-        // If the page style cell is non-empty, conclude the previous page (if there was any) and start a new one.
+        // If the page style cell is non-empty, conclude the previous stage (if there was any) and start a new one.
         table.getLookup(row, "pageStyle", pageStyleMap)?.let { newPageStyle ->
             concludeBlock(0f)
             concludeColumn()
-            concludeSection(0f)
-            concludeAlignBodyColsGroupsGroup()
-            concludeAlignHeadTailGroupsGroup()
-            concludePage(newPageStyle)
+            concludeSegment(0f)
+            concludeStage(vGapAccumulator, newPageStyle)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
+
+            // If we are not melting the just concluded stage with the next one, also conclude the page.
+            if (pageStages.lastOrNull()?.style?.meltWithNext != true && !newPageStyle.meltWithPrev) {
+                concludeAlignBodyColsGroupsGroup()
+                concludeAlignHeadTailGroupsGroup()
+                concludePage()
+            }
         }
 
-        // If the first page's style is not explicitly declared, issue a warning and fall back to the
+        // If the first stage's style is not explicitly declared, issue a warning and fall back to the
         // page style defined first in the page style table, or, if that table is empty, to the standard page style.
-        if (pageStyle == null) {
-            val msg = if (styling.pageStyles.isEmpty()) {
-                pageStyle = STANDARD_PAGE_STYLE
-                l10n("projectIO.credits.noPageStylesAvailable", pageStyle!!.name)
+        if (stageStyle == null)
+            if (styling.pageStyles.isEmpty()) {
+                stageStyle = STANDARD_PAGE_STYLE
+                warn(l10n("projectIO.credits.noPageStylesAvailable", stageStyle!!.name))
             } else {
-                pageStyle = styling.pageStyles.firstOrNull()
-                l10n("projectIO.credits.noPageStyleSpecified", pageStyle!!.name)
+                stageStyle = styling.pageStyles.firstOrNull()
+                warn(l10n("projectIO.credits.noPageStyleSpecified", stageStyle!!.name))
             }
-            log(WARN, msg)
-        }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
         // If the column cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
-        // previous section and start a new one.
+        // previous segment and start a new one.
         val wrapKey = "projectIO.credits.table.wrap"
         table.get(row, "columnPos", {
             val wrapPrimary = l10n(wrapKey)
@@ -226,7 +248,7 @@ fun readCredits(
             concludeBlock(0f)
             concludeColumn()
             if (wrap)
-                concludeSection(vGapAccumulator)
+                concludeSegment(vGapAccumulator)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
             columnPosOffsetPx = posOffsetPx
@@ -303,26 +325,25 @@ fun readCredits(
         // fall back to the content style defined first in the content style table, or, if that table is empty,
         // to the standard content style.
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
-            val msg = if (styling.contentStyles.isEmpty()) {
+            if (styling.contentStyles.isEmpty()) {
                 contentStyle = STANDARD_CONTENT_STYLE
-                l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name)
+                warn(l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name))
             } else {
                 contentStyle = styling.contentStyles[0]
-                l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name)
+                warn(l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name))
             }
             blockStyle = contentStyle
-            log(WARN, msg)
         }
 
         // If the line has a head or tail even though the current content style doesn't support it,
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            log(WARN, l10n("projectIO.credits.headUnsupported", contentStyle!!.name, newHead))
+            warn(l10n("projectIO.credits.headUnsupported", contentStyle!!.name, newHead))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            log(WARN, l10n("projectIO.credits.tailUnsupported", contentStyle!!.name, newTail))
+            warn(l10n("projectIO.credits.tailUnsupported", contentStyle!!.name, newTail))
         }
 
         // If the body cell is non-empty, add its content to the current block.
@@ -346,10 +367,11 @@ fun readCredits(
     // Conclude all open credits elements that haven't been concluded yet.
     concludeBlock(0f)
     concludeColumn()
-    concludeSection(0f)
+    concludeSegment(0f)
     concludeAlignBodyColsGroupsGroup()
     concludeAlignHeadTailGroupsGroup()
-    concludePage(pageStyle!! /* we just need to put anything in here */)
+    concludeStage(0f, stageStyle!! /* we just need to put anything in here */)
+    concludePage()
 
     return Pair(log, pages)
 }

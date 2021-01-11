@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
+import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import java.nio.file.Files
@@ -29,7 +30,7 @@ object DeliverConfigurationForm : Form() {
     private val ALPHA_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL.filter { it.supportsAlpha }
 
     private var project: Project? = null
-    private var pageDefImages: List<DeferredImage> = emptyList()
+    private var drawnPages: List<DrawnPage> = emptyList()
 
     private val resolutionMultSpinner = addSpinner(
         l10n("ui.deliverConfig.resolutionMultiplier"), SpinnerNumberModel(1f, 0.01f, null, 0.5f),
@@ -102,8 +103,9 @@ object DeliverConfigurationForm : Form() {
         val scaledHeight = (project.styling.global.heightPx * resolutionMult).roundToInt()
 
         val scrollSpeeds = project.pages
-            .filter { page -> page.style.behavior == PageBehavior.SCROLL }
-            .map { page -> page.style.scrollPxPerFrame }
+            .flatMap { page -> page.stages }
+            .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
+            .map { stage -> stage.style.scrollPxPerFrame }
             .toSet()
         val fractionalScrollSpeeds = scrollSpeeds
             .filter { floor(it * resolutionMult) != it * resolutionMult }
@@ -129,30 +131,31 @@ object DeliverConfigurationForm : Form() {
     }
 
     private fun addRenderJobToQueue() {
-        if (pageDefImages.isEmpty())
+        if (drawnPages.isEmpty())
             showMessageDialog(
                 null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
             val scaling = resolutionMultSpinner.value as Float
             val scaledGlobalWidth = (scaling * project!!.styling.global.widthPx).roundToInt()
-            val scaledPageDefImages = pageDefImages.map {
-                DeferredImage().apply { drawDeferredImage(it, 0f, 0f, scaling) }
+            val scaledDrawnPages = drawnPages.map {
+                val scaledDefImage = DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
+                DrawnPage(scaledDefImage, it.stageInfo)
             }
             val alphaBackground = if (alphaCheckBox.isSelected) null else project!!.styling.global.background
 
             val format = formatComboBox.selectedItem as RenderFormat
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
-                    scaledPageDefImages, scaledGlobalWidth, background = alphaBackground,
+                    scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
                     format, dir = Path.of(seqDirField.text), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
-                    scaledPageDefImages, scaledGlobalWidth, background = alphaBackground,
+                    scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
                     file = Path.of(singleFileField.text)
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project!!, scaledPageDefImages, scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected,
+                    project!!, scaledDrawnPages, scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected,
                     format, fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text)
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
@@ -177,9 +180,9 @@ object DeliverConfigurationForm : Form() {
         onFormatChange()
     }
 
-    fun updateProject(project: Project, pageDefImages: List<DeferredImage>) {
+    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
         this.project = project
-        this.pageDefImages = pageDefImages
+        this.drawnPages = drawnPages
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
         onChange(resolutionMultSpinner)

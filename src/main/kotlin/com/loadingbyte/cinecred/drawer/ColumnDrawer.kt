@@ -107,7 +107,7 @@ fun drawColumnImage(
         y += block.style.vMarginPx
         val (blockImage, axisXInBlockImage) = blockImagesWithAxisXs[block]!!
         val x = axisXInColumnImage - axisXInBlockImage
-        columnImage.drawDeferredImage(blockImage, x, y, 1f)
+        columnImage.drawDeferredImage(blockImage, x, y)
         y += blockImage.height + block.style.vMarginPx + block.vGapAfterPx
     }
     // Draw a guide that shows the column's axis.
@@ -216,7 +216,7 @@ private fun drawHorizontalSpineBlockImages(
             blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, 0f, y, headWidth, bodyImage.height, isGuide = true)
         }
         // Draw the block's body.
-        blockImage.drawDeferredImage(bodyImage, bodyStartX, y, 1f)
+        blockImage.drawDeferredImage(bodyImage, bodyStartX, y)
         if (block.style.spineOrientation == SpineOrientation.VERTICAL)
             y += bodyImage.height
         // Draw the block's tail.
@@ -278,7 +278,7 @@ private fun drawVerticalSpineBlockImage(
         y += headFont.spec.heightPx + block.style.headGapPx
     }
     // Draw the block's body.
-    blockImage.drawDeferredImage(bodyImage, 0f, y, 1f)
+    blockImage.drawDeferredImage(bodyImage, 0f, y)
     y += bodyImage.height
     // Draw the block's tail.
     if (block.tail != null) {

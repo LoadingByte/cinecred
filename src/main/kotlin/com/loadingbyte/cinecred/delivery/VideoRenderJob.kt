@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.project.PageBehavior
+import com.loadingbyte.cinecred.project.DrawnPage
+import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Project
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.commons.io.FileUtils
@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
 
 class VideoRenderJob(
     private val project: Project,
-    private val pageDefImages: List<DeferredImage>,
+    private val drawnPages: List<DrawnPage>,
     private val scaling: Float,
     private val alpha: Boolean,
     private val format: Format,
@@ -44,13 +44,13 @@ class VideoRenderJob(
         val videoHeight = ensureMultipleOf2((project.styling.global.heightPx * scaling).roundToInt())
 
         // Convert the deferred page images to raster images.
-        val pageImages = pageDefImages.map { pageDefImage ->
-            drawImage(videoWidth, pageDefImage.height.roundToInt()) { g2 ->
-                pageDefImage.materialize(g2, drawGuides = false)
+        val pageImages = drawnPages.map { drawnPage ->
+            drawImage(videoWidth, drawnPage.defImage.height.roundToInt()) { g2 ->
+                drawnPage.defImage.materialize(g2, drawGuides = false)
             }
         }
 
-        val totalNumFrames = getRuntimeFrames(project, pageDefImages)
+        val totalNumFrames = getRuntimeFrames(project, drawnPages)
 
         VideoWriter(
             fileOrPattern, videoWidth, videoHeight, project.styling.global.fps, format.codecId,
@@ -69,14 +69,16 @@ class VideoRenderJob(
                     throw InterruptedException()
             }
 
-            fun writeStatic(image: BufferedImage, numFrames: Int) {
+            fun writeStatic(image: BufferedImage, imgTopY: Float, numFrames: Int) {
+                val scrolledImage = drawScrolledImage(videoWidth, videoHeight, image, imgTopY)
                 for (frame in 0 until numFrames) {
-                    videoWriter.writeFrame(image)
+                    videoWriter.writeFrame(scrolledImage)
                     updateProgress()
                 }
             }
 
-            fun writeFade(image: BufferedImage, numFrames: Int, fadeOut: Boolean) {
+            fun writeFade(image: BufferedImage, imgTopY: Float, numFrames: Int, fadeOut: Boolean) {
+                val scrolledImage = drawScrolledImage(videoWidth, videoHeight, image, imgTopY)
                 for (frame in 0 until numFrames) {
                     // Choose alpha such that the fade sequence doesn't contain a fully empty or fully opaque frame.
                     var alpha = (frame + 1).toFloat() / (numFrames + 1)
@@ -84,25 +86,28 @@ class VideoRenderJob(
                         alpha = 1f - alpha
                     val fadedImage = drawImage(videoWidth, videoHeight) { g2 ->
                         g2.composite = AlphaComposite.SrcOver.derive(alpha)
-                        g2.drawImage(image, 0, 0, null)
+                        g2.drawImage(scrolledImage, 0, 0, null)
                     }
                     videoWriter.writeFrame(fadedImage)
                     updateProgress()
                 }
             }
 
-            fun writeScroll(image: BufferedImage, scrollPxPerFrame: Float) {
-                // Choose y such that the scroll sequence doesn't contain a fully empty frame.
-                var y = videoHeight.toFloat() - scrollPxPerFrame
-                while (y + image.height > 0f) {
-                    val scrolledImage = drawImage(videoWidth, videoHeight) { g2 ->
-                        val translate = AffineTransform.getTranslateInstance(0.0, y.toDouble())
-                        g2.drawImage(image, translate, null)
-                    }
+            /**
+             * Returns the `imgTopY` where the scroll actually stopped.
+             */
+            fun writeScroll(
+                image: BufferedImage, imgTopYStart: Float, imgTopYStop: Float, scrollPxPerFrame: Float
+            ): Float {
+                // Choose imgTopY such that the scroll sequence never contains imgTopYStart nor imgTopYStop.
+                var imgTopY = imgTopYStart
+                while (imgTopY + scrollPxPerFrame < imgTopYStop) {
+                    imgTopY += scrollPxPerFrame
+                    val scrolledImage = drawScrolledImage(videoWidth, videoHeight, image, imgTopY)
                     videoWriter.writeFrame(scrolledImage)
                     updateProgress()
-                    y -= scrollPxPerFrame
                 }
+                return imgTopY
             }
 
             val emptyImage = drawImage(videoWidth, videoHeight) {}
@@ -110,18 +115,31 @@ class VideoRenderJob(
             // Write frames for each page as has been configured.
             for ((pageIdx, page) in project.pages.withIndex()) {
                 val pageImage = pageImages[pageIdx]
-                when (page.style.behavior) {
-                    PageBehavior.CARD -> {
-                        writeFade(pageImage, page.style.cardFadeInFrames, fadeOut = false)
-                        writeStatic(pageImage, page.style.cardDurationFrames)
-                        writeFade(pageImage, page.style.cardFadeOutFrames, fadeOut = true)
+                val stageInfo = drawnPages[pageIdx].stageInfo
+                var prevScrollActualImgTopYStop: Float? = null
+                for ((stageIdx, stage) in page.stages.withIndex())
+                    when (val info = stageInfo[stageIdx]) {
+                        is DrawnStageInfo.Card -> {
+                            val imgTopY = scaling * (info.middleY - project.styling.global.heightPx / 2f)
+                            if (stageIdx == 0)
+                                writeFade(pageImage, imgTopY, stage.style.cardFadeInFrames, fadeOut = false)
+                            writeStatic(pageImage, imgTopY, stage.style.cardDurationFrames)
+                            if (stageIdx == page.stages.lastIndex)
+                                writeFade(pageImage, imgTopY, stage.style.cardFadeOutFrames, fadeOut = true)
+                            prevScrollActualImgTopYStop = null
+                        }
+                        is DrawnStageInfo.Scroll -> {
+                            val imgTopYStart = prevScrollActualImgTopYStop
+                                ?: scaling * (info.scrollStartY - project.styling.global.heightPx / 2f)
+                            val imgTopYStop = scaling * (info.scrollStopY - project.styling.global.heightPx / 2f)
+                            prevScrollActualImgTopYStop = writeScroll(
+                                pageImage, imgTopYStart, imgTopYStop, scaling * stage.style.scrollPxPerFrame
+                            )
+                        }
                     }
-                    PageBehavior.SCROLL ->
-                        writeScroll(pageImage, scaling * page.style.scrollPxPerFrame)
-                }
 
                 if (pageIdx != project.pages.lastIndex)
-                    writeStatic(emptyImage, page.style.afterwardSlugFrames)
+                    writeStatic(emptyImage, 0f, page.stages.last().style.afterwardSlugFrames)
             }
 
             // Write one final empty frame at the end.
@@ -147,6 +165,12 @@ class VideoRenderJob(
         }
         return image
     }
+
+    private fun drawScrolledImage(width: Int, height: Int, image: BufferedImage, imgTopY: Float) =
+        drawImage(width, height) { g2 ->
+            val translate = AffineTransform.getTranslateInstance(0.0, -imgTopY.toDouble())
+            g2.drawImage(image, translate, null)
+        }
 
 
     class Format private constructor(

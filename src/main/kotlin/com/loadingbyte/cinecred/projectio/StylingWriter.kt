@@ -29,19 +29,25 @@ private fun PageStyle.toToml(): Map<String, Any> {
     val toml = mutableMapOf(
         "name" to name,
         "behavior" to behavior.name,
-        "afterwardSlugFrames" to afterwardSlugFrames
+        "meltWithPrev" to meltWithPrev,
+        "meltWithNext" to meltWithNext,
+        "afterwardSlugFrames" to afterwardSlugFrames,
+        "cardDurationFrames" to cardDurationFrames,
+        "cardFadeInFrames" to cardFadeInFrames,
+        "cardFadeOutFrames" to cardFadeOutFrames,
+        "scrollPxPerFrame" to scrollPxPerFrame
     )
-    toml += when (behavior) {
-        PageBehavior.CARD ->
-            mapOf(
-                "cardDurationFrames" to cardDurationFrames,
-                "cardFadeInFrames" to cardFadeInFrames,
-                "cardFadeOutFrames" to cardFadeOutFrames
-            )
-        PageBehavior.SCROLL ->
-            mapOf(
-                "scrollPxPerFrame" to scrollPxPerFrame
-            )
+    if (behavior == PageBehavior.CARD) {
+        toml.remove("meltWithPrev")
+        toml.remove("meltWithNext")
+        toml.remove("scrollPxPerFrame")
+    }
+    if (behavior == PageBehavior.SCROLL) {
+        toml.remove("cardDurationFrames")
+        toml.remove("cardFadeInFrames")
+        toml.remove("cardFadeOutFrames")
+        if (meltWithNext)
+            toml.remove("afterwardSlugFrames")
     }
     return toml
 }
@@ -84,6 +90,8 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         toml.remove("bodyLayoutElemHJustify")
         toml.remove("bodyLayoutSeparator")
         toml.remove("bodyLayoutParagraphGapPx")
+        if (bodyLayoutColsHJustify.size < 2)
+            toml.remove("bodyLayoutColsHJustify")
     }
     if (bodyLayout == BodyLayout.FLOW) {
         toml.remove("bodyLayoutColsHJustify")

@@ -5,9 +5,7 @@ import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
 import org.apache.pdfbox.rendering.ImageType
 import org.apache.pdfbox.rendering.PDFRenderer
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
+import java.awt.*
 import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
@@ -30,21 +28,16 @@ class DeferredImage {
         height = max(height, minHeight)
     }
 
-    fun drawDeferredImage(image: DeferredImage, x: Float, y: Float, scaling: Float) {
+    fun drawDeferredImage(image: DeferredImage, x: Float, y: Float, scaling: Float = 1f) {
         width = max(width, scaling * image.width)
         height = max(height, scaling * image.height)
 
         for (insn in image.instructions)
             when (insn) {
-                is Instruction.DrawLine ->
-                    drawLine(
-                        insn.color, x + scaling * insn.x1, y + scaling * insn.y1, x + scaling * insn.x2,
-                        y + scaling * insn.y2, insn.isGuide
-                    )
-                is Instruction.DrawRect ->
-                    drawRect(
-                        insn.color, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.width,
-                        scaling * insn.height, insn.isGuide
+                is Instruction.DrawShape ->
+                    drawShape(
+                        insn.color, insn.shape, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
+                        insn.fill, insn.isGuide
                     )
                 is Instruction.DrawString ->
                     drawString(
@@ -58,16 +51,26 @@ class DeferredImage {
             }
     }
 
-    fun drawLine(color: Color, x1: Float, y1: Float, x2: Float, y2: Float, isGuide: Boolean = false) {
-        width = max(width, max(x1, x2))
-        height = max(height, max(y1, y2))
-        instructions.add(Instruction.DrawLine(color, x1, y1, x2, y2, isGuide))
+    fun drawShape(
+        color: Color, shape: Shape, x: Float = 0f, y: Float = 0f, scaling: Float = 1f, fill: Boolean = false,
+        isGuide: Boolean = false
+    ) {
+        val bounds = shape.bounds2D
+        width = max(width, x + scaling * bounds.maxX.toFloat())
+        height = max(height, y + scaling * bounds.maxY.toFloat())
+        instructions.add(Instruction.DrawShape(color, shape, x, y, scaling, fill, isGuide))
     }
 
-    fun drawRect(color: Color, x: Float, y: Float, width: Float, height: Float, isGuide: Boolean = false) {
-        this.width = max(this.width, x + width)
-        this.height = max(this.height, y + height)
-        instructions.add(Instruction.DrawRect(color, x, y, width, height, isGuide))
+    fun drawLine(
+        color: Color, x1: Float, y1: Float, x2: Float, y2: Float, fill: Boolean = false, isGuide: Boolean = false
+    ) {
+        drawShape(color, Line2D.Float(x1, y1, x2, y2), fill = fill, isGuide = isGuide)
+    }
+
+    fun drawRect(
+        color: Color, x: Float, y: Float, width: Float, height: Float, fill: Boolean = false, isGuide: Boolean = false
+    ) {
+        drawShape(color, Rectangle2D.Float(x, y, width, height), fill = fill, isGuide = isGuide)
     }
 
     /**
@@ -89,12 +92,9 @@ class DeferredImage {
 
     private sealed class Instruction(val isGuide: Boolean) {
 
-        class DrawLine(
-            val color: Color, val x1: Float, val y1: Float, val x2: Float, val y2: Float, isGuide: Boolean
-        ) : Instruction(isGuide)
-
-        class DrawRect(
-            val color: Color, val x: Float, val y: Float, val width: Float, val height: Float, isGuide: Boolean
+        class DrawShape(
+            val color: Color, val shape: Shape, val x: Float, val y: Float, val scaling: Float, val fill: Boolean,
+            isGuide: Boolean
         ) : Instruction(isGuide)
 
         class DrawString(
@@ -108,19 +108,29 @@ class DeferredImage {
     }
 
 
-    fun materialize(g2: Graphics2D, drawGuides: Boolean = false) {
+    /**
+     * The [guideStrokeWidth] is only relevant for guides drawn with [drawShape] or its derivative methods.
+     */
+    fun materialize(g2: Graphics2D, drawGuides: Boolean = false, guideStrokeWidth: Float = 1f) {
         for (insn in instructions) {
             if (!drawGuides && insn.isGuide)
                 continue
 
             when (insn) {
-                is Instruction.DrawLine -> {
+                is Instruction.DrawShape -> {
+                    val prevTransform = g2.transform
+                    val prevStroke = g2.stroke
                     g2.color = insn.color
-                    g2.draw(Line2D.Float(insn.x1, insn.y1, insn.x2, insn.y2))
-                }
-                is Instruction.DrawRect -> {
-                    g2.color = insn.color
-                    g2.draw(Rectangle2D.Float(insn.x, insn.y, insn.width, insn.height))
+                    if (insn.isGuide)
+                        g2.stroke = BasicStroke(guideStrokeWidth)
+                    g2.translate(insn.x.toDouble(), insn.y.toDouble())
+                    g2.scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                    if (insn.fill)
+                        g2.fill(insn.shape)
+                    else
+                        g2.draw(insn.shape)
+                    g2.transform = prevTransform
+                    g2.stroke = prevStroke
                 }
                 is Instruction.DrawString -> {
                     g2.color = insn.font.spec.color

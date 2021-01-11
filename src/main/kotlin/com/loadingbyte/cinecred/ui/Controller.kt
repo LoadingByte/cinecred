@@ -207,15 +207,15 @@ object Controller {
             val (log, pages) = readCredits(creditsFile!!, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName, pages ?: emptyList())
-            val pageDefImages = when (pages) {
+            val drawnPages = when (pages) {
                 null -> emptyList()
                 else -> draw(project)
             }
 
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
-                EditPanel.updateProjectAndLog(project, pageDefImages, log)
-                DeliverConfigurationForm.updateProject(project, pageDefImages)
+                EditPanel.updateProjectAndLog(project, drawnPages, log)
+                DeliverConfigurationForm.updateProject(project, drawnPages)
             }
         }
     }

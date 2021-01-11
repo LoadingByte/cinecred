@@ -43,6 +43,8 @@ private fun Map<*, *>.toGlobal() = Global(
 private fun Map<*, *>.toPageStyle() = PageStyle(
     get("name", STANDARD_PAGE_STYLE.name) { this },
     get("behavior", STANDARD_PAGE_STYLE.behavior) { toEnum() },
+    get("meltWithPrev", STANDARD_PAGE_STYLE.meltWithPrev) { toBoolean() },
+    get("meltWithNext", STANDARD_PAGE_STYLE.meltWithNext) { toBoolean() },
     get("afterwardSlugFrames", STANDARD_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNeg = true) },
     get("cardDurationFrames", STANDARD_PAGE_STYLE.cardDurationFrames) { toInt(nonNeg = true) },
     get("cardFadeInFrames", STANDARD_PAGE_STYLE.cardFadeInFrames) { toInt(nonNeg = true) },

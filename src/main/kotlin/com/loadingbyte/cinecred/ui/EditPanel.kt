@@ -5,8 +5,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.delivery.getRuntimeFrames
 import com.loadingbyte.cinecred.drawer.*
-import com.loadingbyte.cinecred.project.PageBehavior
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
 import net.miginfocom.swing.MigLayout
@@ -14,6 +13,7 @@ import org.apache.batik.ext.awt.image.GraphicsUtil
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
@@ -41,8 +41,9 @@ object EditPanel : JPanel() {
     private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
-            AXIS_GUIDE_COLOR.darker().toString2(), BODY_ELEM_GUIDE_COLOR.toString2(),
-            BODY_WIDTH_GUIDE_COLOR.brighter().toString2(), HEAD_TAIL_GUIDE_COLOR.toString2()
+            CARD_GUIDE_COLOR.brighter().toString2(), AXIS_GUIDE_COLOR.toString2(),
+            BODY_ELEM_GUIDE_COLOR.brighter().toString2(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toString2(),
+            HEAD_TAIL_GUIDE_COLOR.brighter().toString2()
         )
         addActionListener { previewPanels.forEach { it.showGuides = isSelected } }
     }
@@ -161,7 +162,7 @@ object EditPanel : JPanel() {
 
     fun updateProjectAndLog(
         project: Project,
-        pageDefImages: List<DeferredImage>,
+        drawnPages: List<DrawnPage>,
         log: List<ParserMsg>
     ) {
         // Adjust the total runtime label.
@@ -172,14 +173,14 @@ object EditPanel : JPanel() {
             }
         else {
             val fps = project.styling.global.fps.frac
-            var durFrames = getRuntimeFrames(project, pageDefImages)
-            var durSeconds = (durFrames / fps).toInt()
+            val durOnlyFrames = getRuntimeFrames(project, drawnPages)
+            var durSeconds = (durOnlyFrames / fps).toInt()
             val durMinutes = durSeconds / 60
-            durFrames -= (durSeconds * fps).toInt()
+            val durFrames = durOnlyFrames - (durSeconds * fps).toInt()
             durSeconds -= durMinutes * 60
             runtimeLabel.apply {
                 text = l10n("ui.edit.runtime", "%02d:%02d+%02d".format(durMinutes, durSeconds, durFrames))
-                toolTipText = l10n("ui.edit.runtimeTooltip", durMinutes, durSeconds, durFrames)
+                toolTipText = l10n("ui.edit.runtimeTooltip", durMinutes, durSeconds, durFrames, durOnlyFrames)
             }
         }
 
@@ -198,13 +199,9 @@ object EditPanel : JPanel() {
         }
         // Then fill each tab with its corresponding page.
         // Make sure that each scroll pane remembers its previous scroll height.
-        for ((pageIdx, page) in project.pages.withIndex()) {
-            val tabScrollPane = pageTabs.components[pageIdx] as JScrollPane
-            val scrollHeight = tabScrollPane.verticalScrollBar.value
-            (tabScrollPane.viewport.view as PagePreviewPanel).setContent(
-                project.styling.global.widthPx, project.styling.global.background,
-                page.style.behavior, pageDefImages[pageIdx]
-            )
+        for ((drawnPage, tabScrollPane) in drawnPages.zip(pageTabs.components)) {
+            val scrollHeight = (tabScrollPane as JScrollPane).verticalScrollBar.value
+            (tabScrollPane.viewport.view as PagePreviewPanel).setContent(project.styling.global, drawnPage)
             tabScrollPane.verticalScrollBar.value = scrollHeight
         }
 
@@ -222,15 +219,17 @@ object EditPanel : JPanel() {
         private val paintingExecutor = LatestJobExecutor("PagePreviewPaintingThread-${System.identityHashCode(this)}")
 
         private var globalWidth = 0
+        private var globalHeight = 0
         private var backgroundColor = Color.BLACK
-        private var behavior = PageBehavior.CARD
         private var defImage = DeferredImage()
+        private var stageInfo = emptyList<DrawnStageInfo>()
 
-        fun setContent(globalWidth: Int, backgroundColor: Color, behavior: PageBehavior, defImage: DeferredImage) {
-            this.globalWidth = globalWidth
-            this.backgroundColor = backgroundColor
-            this.behavior = behavior
-            this.defImage = defImage
+        fun setContent(global: Global, drawnPage: DrawnPage) {
+            globalWidth = global.widthPx
+            globalHeight = global.heightPx
+            backgroundColor = global.background
+            defImage = drawnPage.defImage
+            stageInfo = drawnPage.stageInfo
             dirty = true
             revalidate()  // This changes the scrollbar length when the page height changes.
             repaint()
@@ -275,12 +274,13 @@ object EditPanel : JPanel() {
 
             val currCachedImage = cachedImage
 
-            // Use an intermediate raster image. We will first paint a scaled version of the deferred image on the
-            // raster image and then paint the raster image on the panel. The raster image is cached.
+            // Use an intermediate raster image two times the size of the panel. We first paint a scaled version
+            // of the deferred image onto the raster image and then paint the raster image onto the panel.
+            // The raster image is cached.
             // This way, we avoid having to materialize the deferred image over and over again whenever the user
             // scrolls or resizes something, which can be very expensive when the deferred image contains, e.g., PDFs.
-            // Also, we avoid directly drawing a very scaled-down version of the deferred image directly, which could
-            // lead to text kerning issues etc.
+            // Also, we avoid directly drawing a very scaled-down version of the deferred image, which could lead to
+            // text kerning issues etc.
             if (dirty) {
                 dirty = false
                 paintingExecutor.submit {
@@ -309,7 +309,7 @@ object EditPanel : JPanel() {
                     g2.fillRect(0, 0, width, preferredSize.height)
                 } else {
                     // Otherwise, paint the cached image on the panel.
-                    g2.drawImage(currCachedImage, 0, 0, null)
+                    g2.drawImage(currCachedImage, AffineTransform.getScaleInstance(0.5, 0.5), null)
                 }
                 // If requested, paint the action safe and title safe areas.
                 if (showSafeAreas)
@@ -320,7 +320,7 @@ object EditPanel : JPanel() {
         }
 
         private fun paintRasterImage(): BufferedImage {
-            val rasterImage = BufferedImage(width, preferredSize.height, BufferedImage.TYPE_3BYTE_BGR)
+            val rasterImage = BufferedImage(2 * width, 2 * preferredSize.height, BufferedImage.TYPE_3BYTE_BGR)
 
             // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
             val g2 = GraphicsUtil.createGraphics(rasterImage)
@@ -332,7 +332,9 @@ object EditPanel : JPanel() {
                 // Paint a scaled version of the deferred image on the raster image.
                 val scaledDefImage = DeferredImage()
                 scaledDefImage.drawDeferredImage(defImage, 0f, 0f, rasterImage.width / globalWidth.toFloat())
-                scaledDefImage.materialize(g2, showGuides)
+                // Note: We compute the guide stroke width such that they have a nice thin width irrespective of the
+                // configured film dimensions.
+                scaledDefImage.materialize(g2, showGuides, guideStrokeWidth = globalWidth / 1024f)
             } finally {
                 g2.dispose()
             }
@@ -340,38 +342,57 @@ object EditPanel : JPanel() {
             return rasterImage
         }
 
-        private fun paintSafeAreas(g2: Graphics2D) {
-            g2.color = Color.GRAY
+        private fun paintSafeAreas(g2Orig: Graphics2D) {
+            val g2 = g2Orig.create() as Graphics2D
+            try {
+                g2.color = Color.GRAY
 
-            val viewWidth = width.toFloat()
-            val viewHeight = preferredSize.height.toFloat()
-            val actionSafeWidth = viewWidth * 0.93f
-            val titleSafeWidth = viewWidth * 0.9f
-            val actionSafeX1 = (viewWidth - actionSafeWidth) / 2f
-            val titleSafeX1 = (viewWidth - titleSafeWidth) / 2f
-            val actionSafeX2 = actionSafeX1 + actionSafeWidth
-            val titleSafeX2 = titleSafeX1 + titleSafeWidth
-            when (behavior) {
-                PageBehavior.CARD -> {
-                    val actionSafeHeight = viewHeight * 0.93f
-                    val titleSafeHeight = viewHeight * 0.9f
-                    val actionSafeY1 = (viewHeight - actionSafeHeight) / 2f
-                    val titleSafeY1 = (viewHeight - titleSafeHeight) / 2f
+                // By asking the graphics object itself to scale such that we accommodate for the
+                // smaller preview size, we can work in regular page units in the rest of this method.
+                val previewScaling = width / globalWidth.toDouble()
+                g2.scale(previewScaling, previewScaling)
+
+                val actionSafeWidth = globalWidth * 0.93f
+                val titleSafeWidth = globalWidth * 0.9f
+                val actionSafeHeight = globalHeight * 0.93f
+                val titleSafeHeight = globalHeight * 0.9f
+                val actionSafeX1 = (globalWidth - actionSafeWidth) / 2f
+                val titleSafeX1 = (globalWidth - titleSafeWidth) / 2f
+                val actionSafeX2 = actionSafeX1 + actionSafeWidth
+                val titleSafeX2 = titleSafeX1 + titleSafeWidth
+
+                // Draw full safe area hints for each card stage.
+                for (middleY in stageInfo.filterIsInstance<DrawnStageInfo.Card>().map { it.middleY }) {
+                    val actionSafeY1 = middleY - actionSafeHeight / 2f
+                    val titleSafeY1 = middleY - titleSafeHeight / 2f
                     g2.draw(Rectangle2D.Float(actionSafeX1, actionSafeY1, actionSafeWidth, actionSafeHeight))
                     g2.draw(Rectangle2D.Float(titleSafeX1, titleSafeY1, titleSafeWidth, titleSafeHeight))
                     val titleSafeY2 = titleSafeY1 + titleSafeHeight
-                    val d = viewWidth / 200f
-                    g2.draw(Line2D.Float(titleSafeX1 - d, viewHeight / 2f, titleSafeX1 + d, viewHeight / 2f))
-                    g2.draw(Line2D.Float(titleSafeX2 - d, viewHeight / 2f, titleSafeX2 + d, viewHeight / 2f))
-                    g2.draw(Line2D.Float(viewWidth / 2f, titleSafeY1 - d, viewWidth / 2f, titleSafeY1 + d))
-                    g2.draw(Line2D.Float(viewWidth / 2f, titleSafeY2 - d, viewWidth / 2f, titleSafeY2 + d))
+                    val d = globalWidth / 200f
+                    g2.draw(Line2D.Float(titleSafeX1 - d, middleY, titleSafeX1 + d, middleY))
+                    g2.draw(Line2D.Float(titleSafeX2 - d, middleY, titleSafeX2 + d, middleY))
+                    g2.draw(Line2D.Float(globalWidth / 2f, titleSafeY1 - d, globalWidth / 2f, titleSafeY1 + d))
+                    g2.draw(Line2D.Float(globalWidth / 2f, titleSafeY2 - d, globalWidth / 2f, titleSafeY2 + d))
                 }
-                PageBehavior.SCROLL -> {
-                    g2.draw(Line2D.Float(actionSafeX1, 0f, actionSafeX1, viewHeight))
-                    g2.draw(Line2D.Float(actionSafeX2, 0f, actionSafeX2, viewHeight))
-                    g2.draw(Line2D.Float(titleSafeX1, 0f, titleSafeX1, viewHeight))
-                    g2.draw(Line2D.Float(titleSafeX2, 0f, titleSafeX2, viewHeight))
+
+                // Draw left and right safe area strips if there are scroll stages on the page. If the page starts
+                // resp. ends with a card stage, make sure to NOT draw the strips to the page's very top resp. bottom.
+                if (stageInfo.any { it is DrawnStageInfo.Scroll }) {
+                    val firstStageInfo = stageInfo.first()
+                    val lastStageInfo = stageInfo.last()
+                    val firstCardMiddleY = if (firstStageInfo is DrawnStageInfo.Card) firstStageInfo.middleY else null
+                    val lastCardMiddleY = if (lastStageInfo is DrawnStageInfo.Card) lastStageInfo.middleY else null
+                    val actionSafeY1 = firstCardMiddleY?.let { it - actionSafeHeight / 2f } ?: 0f
+                    val titleSafeY1 = firstCardMiddleY?.let { it - titleSafeHeight / 2f } ?: 0f
+                    val actionSafeY2 = lastCardMiddleY?.let { it + actionSafeHeight / 2f } ?: 0f
+                    val titleSafeY2 = lastCardMiddleY?.let { it + titleSafeHeight / 2f } ?: 0f
+                    g2.draw(Line2D.Float(actionSafeX1, actionSafeY1, actionSafeX1, actionSafeY2))
+                    g2.draw(Line2D.Float(actionSafeX2, actionSafeY1, actionSafeX2, actionSafeY2))
+                    g2.draw(Line2D.Float(titleSafeX1, titleSafeY1, titleSafeX1, titleSafeY2))
+                    g2.draw(Line2D.Float(titleSafeX2, titleSafeY1, titleSafeX2, titleSafeY2))
                 }
+            } finally {
+                g2.dispose()
             }
         }
 

@@ -43,6 +43,8 @@ class FPS(val numerator: Int, val denominator: Int) {
 data class PageStyle(
     val name: String,
     val behavior: PageBehavior,
+    val meltWithPrev: Boolean,
+    val meltWithNext: Boolean,
     val afterwardSlugFrames: Int,
     val cardDurationFrames: Int,
     val cardFadeInFrames: Int,
@@ -118,18 +120,26 @@ data class FontSpec(
 
 
 class Page(
-    val style: PageStyle,
-    sections: List<Section>,
+    stages: List<Stage>,
     alignBodyColsGroups: List<List<Block>>,
     alignHeadTailGroups: List<List<Block>>
 ) {
-    val sections: List<Section> = sections.toMutableList()
+    val stages: List<Stage> = stages.toMutableList()
     val alignBodyColsGroups: List<List<Block>> = alignBodyColsGroups.toMutableList()
     val alignHeadTailGroups: List<List<Block>> = alignHeadTailGroups.toMutableList()
 }
 
 
-class Section(
+class Stage(
+    val style: PageStyle,
+    segments: List<Segment>,
+    val vGapAfterPx: Float
+) {
+    val segments: List<Segment> = segments.toMutableList()
+}
+
+
+class Segment(
     columns: List<Column>,
     val vGapAfterPx: Float
 ) {

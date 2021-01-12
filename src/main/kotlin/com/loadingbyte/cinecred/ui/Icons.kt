@@ -51,6 +51,7 @@ val PLAY_ICON = SVGIcon.load("/icons/play.svg")
 val REMOVE_ICON = SVGIcon.load("/icons/remove.svg")
 val RESET_ICON = SVGIcon.load("/icons/reset.svg")
 val SAVE_ICON = SVGIcon.load("/icons/save.svg")
+val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 
 val SEVERITY_ICON = mapOf(

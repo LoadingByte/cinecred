@@ -339,7 +339,7 @@ object EditStylingPanel : JPanel() {
         )
         private val cardFadeInFramesSpinner = addSpinner(
             l10n("ui.styling.page.cardInFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD  }
+            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
         )
         private val cardFadeOutFramesSpinner = addSpinner(
             l10n("ui.styling.page.cardOutFrames"), SpinnerNumberModel(0, 0, null, 1),

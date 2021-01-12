@@ -184,11 +184,8 @@ object EditPanel : JPanel() {
         }
 
         // First adjust the number of tabs to the number of pages.
-        while (pageTabs.tabCount > project.pages.size) {
-            val idx = pageTabs.tabCount - 1
-            (pageTabs.components[idx] as EditPagePreviewPanel).onRemoval()
-            pageTabs.removeTabAt(idx)
-        }
+        while (pageTabs.tabCount > project.pages.size)
+            pageTabs.removeTabAt(pageTabs.tabCount - 1)
         while (pageTabs.tabCount < project.pages.size) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()

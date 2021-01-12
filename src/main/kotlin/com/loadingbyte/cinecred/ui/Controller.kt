@@ -49,7 +49,7 @@ object Controller {
         }
     }
 
-    private val previewGenerationExecutor = LatestJobExecutor("PreviewGenerationThread")
+    private val previewGenerationJobSlot = JobSlot()
 
     fun onChangeTab(changedToEdit: Boolean) {
         isEditTabActive = changedToEdit
@@ -203,7 +203,7 @@ object Controller {
         val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir!!.relativize(path) }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
-        previewGenerationExecutor.submit {
+        previewGenerationJobSlot.submit {
             val (log, pages) = readCredits(creditsFile!!, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName, pages ?: emptyList())

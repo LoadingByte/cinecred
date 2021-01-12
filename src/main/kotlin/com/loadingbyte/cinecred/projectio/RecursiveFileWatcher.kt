@@ -2,18 +2,16 @@ package com.loadingbyte.cinecred.projectio
 
 import java.nio.file.*
 import java.nio.file.StandardWatchEventKinds.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 
 abstract class RecursiveFileWatcher {
 
     private val watcher = FileSystems.getDefault().newWatchService()
     private val watchKeys = mutableMapOf<Path, WatchKey>()
-    private val lock = ReentrantLock()
+    private val lock = Any()
 
     fun watch(watchedDir: Path) {
-        lock.withLock {
+        synchronized(lock) {
             for (file in Files.walk(watchedDir))
                 if (Files.isDirectory(file))
                     watchKeys[file] = file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
@@ -21,7 +19,7 @@ abstract class RecursiveFileWatcher {
     }
 
     fun clear() {
-        lock.withLock {
+        synchronized(lock) {
             for (watchKey in watchKeys.values)
                 watchKey.cancel()
             watchKeys.clear()
@@ -32,7 +30,7 @@ abstract class RecursiveFileWatcher {
         Thread({
             while (true) {
                 val key = watcher.take()
-                lock.withLock {
+                synchronized(lock) {
                     for (event in key.pollEvents())
                         if (event.kind() != OVERFLOW) {
                             val file = (key.watchable() as Path).resolve(event.context() as Path)

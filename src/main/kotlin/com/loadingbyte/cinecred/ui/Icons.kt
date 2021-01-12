@@ -3,12 +3,12 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
 import org.apache.batik.bridge.GVTBuilder
 import org.apache.batik.bridge.UserAgentAdapter
-import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
 import java.awt.Component
@@ -22,17 +22,12 @@ import kotlin.math.roundToInt
 val WINDOW_ICON_IMAGES = run {
     val (logo, ctx) = loadSVGResource("/logo.svg")
     listOf(16, 20, 32, 40, 48, 64, 128, 256).map { size ->
-        val img = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
-        val g2 = GraphicsUtil.createGraphics(img)
-        try {
+        BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB).withG2 { g2 ->
             g2.setHighQuality()
             val scale = size / ctx.documentSize.width
             g2.transform(AffineTransform.getScaleInstance(scale, scale))
             logo.paint(g2)
-        } finally {
-            g2.dispose()
         }
-        img
     }
 }
 

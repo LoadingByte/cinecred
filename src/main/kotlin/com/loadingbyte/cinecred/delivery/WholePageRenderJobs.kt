@@ -2,9 +2,9 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.batik.dom.GenericDOMImplementation
-import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -44,17 +44,13 @@ class WholePageSequenceRenderJob(
                     val imageType = if (background != null) BufferedImage.TYPE_INT_RGB else BufferedImage.TYPE_INT_ARGB
                     val pageImage = BufferedImage(width, pageHeight, imageType)
 
-                    // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
-                    val g2 = GraphicsUtil.createGraphics(pageImage)
-                    try {
+                    pageImage.withG2 { g2 ->
                         g2.setHighQuality()
                         if (background != null) {
                             g2.color = background
                             g2.fillRect(0, 0, width, pageHeight)
                         }
                         pageDefImage.materialize(g2, drawGuides = false)
-                    } finally {
-                        g2.dispose()
                     }
 
                     ImageIO.write(pageImage, if (format == Format.PNG) "png" else "tiff", pageFile.toFile())

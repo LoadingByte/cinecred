@@ -2,10 +2,11 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Global
-import org.apache.batik.ext.awt.image.GraphicsUtil
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -24,9 +25,11 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
 
     private val imagePanel = ImagePanel().also { setViewportView(it) }
 
-    private var dirty = true
-    private var cachedImage: BufferedImage? = null
-    private val paintingExecutor = LatestJobExecutor("PagePreviewPaintingThread-${System.identityHashCode(this)}")
+    private var rasterDirty = true
+    private var cachedRasterImage: BufferedImage? = null
+    private var cachedZoomedRasterImage: BufferedImage? = null
+    private var cachedZoomedRasterImageZoom = -1f
+    private val paintingJobSlot = JobSlot()
 
     private var globalWidth = 0
     private var globalHeight = 0
@@ -43,7 +46,7 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
         backgroundColor = global.background
         defImage = drawnPage.defImage
         stageInfo = drawnPage.stageInfo
-        dirty = true
+        rasterDirty = true
         imagePanel.revalidate()  // This changes the scrollbar length when the page height changes.
         imagePanel.repaint()
 
@@ -66,7 +69,7 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
         }
     var showGuides = showGuides
         set(value) {
-            field = value; dirty = true; imagePanel.repaint()
+            field = value; rasterDirty = true; imagePanel.repaint()
         }
     var showSafeAreas = showSafeAreas
         set(value) {
@@ -81,24 +84,18 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
             override fun componentResized(e: ComponentEvent) {
                 if (prevWidth != width) {
                     prevWidth = width
-                    dirty = true
+                    rasterDirty = true
                     imagePanel.repaint()
                 }
             }
         })
     }
 
-    fun onRemoval() {
-        paintingExecutor.destroy()
-    }
-
 
     private inner class ImagePanel : JPanel() {
 
-        private val unzoomedWidth
-            get() = viewport.width
-        private val unzoomedHeight
-            get() = (defImage.height * viewport.width / globalWidth).roundToInt()
+        private val unzoomedWidth: Int get() = viewport.width
+        private val unzoomedHeight: Int get() = (defImage.height * viewport.width / globalWidth).roundToInt()
 
         // The parent scroll pane uses this information to decide on the lengths of the scrollbars.
         override fun getPreferredSize() = Dimension(
@@ -109,82 +106,95 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
 
-            val currCachedImage = cachedImage
+            val curCachedRasterImage = cachedRasterImage
 
-            // Use an intermediate raster image two times the size of the panel. We first paint a scaled version
-            // of the deferred image onto the raster image and then paint the raster image onto the panel.
-            // The raster image is cached.
-            // This way, we avoid having to materialize the deferred image over and over again whenever the user
-            // scrolls or resizes something, which can be very expensive when the deferred image contains, e.g., PDFs.
-            // Also, we avoid directly drawing a very scaled-down version of the deferred image, which could lead to
-            // text kerning issues etc.
-            if (dirty) {
-                dirty = false
-                paintingExecutor.submit {
-                    val newImage = paintRasterImage()
+            // Use two intermediate cached raster images. We first paint a scaled version of the deferred image onto a
+            // raster image two times the size of the panel. Then, we paint that raster image onto another raster image
+            // which has the zoomed size of the panel. That final image is then painted onto the panel.
+            // This way, we avoid materializing the deferred image over and over again whenever the user zooms, which
+            // can be very expensive when the deferred image contains, e.g., PDFs. We also avoid scaling the first
+            // cached raster image over and over again whenever the user scrolls.
+            // Additionally, because the first raster image has two times the size of the panel (which in total most
+            // of the time amounts to a width of ~1920), we avoid directly drawing a very scaled-down version of the
+            // deferred image, which could lead to text kerning issues etc.
+            if (rasterDirty) {
+                rasterDirty = false
+                val curZoom = zoom
+                paintingJobSlot.submit {
+                    val newRasterImage = paintRasterImage()
+                    val newZoomedRasterImage = paintZoomedRasterImage(newRasterImage, curZoom)
                     // Use invokeLater() to make sure that when the following code is executed, we are definitely
                     // no longer in the outer paintComponent() method. This way, we can go without explicit locking.
-                    // Also, we set the cachedImage variable in the AWT thread, which alleviates the need to declare
-                    // it volatile.
+                    // Also, we set the cached image variables in the AWT thread, which alleviates the need to declare
+                    // them as volatile.
                     SwingUtilities.invokeLater {
-                        cachedImage = newImage
+                        cachedRasterImage = newRasterImage
+                        cachedZoomedRasterImage = newZoomedRasterImage
+                        cachedZoomedRasterImageZoom = curZoom
                         repaint()
                     }
                 }
                 // This method will be called once again once the background thread has finished painting the
-                // intermediate image. We will now go on painting the old version of the cached image.
+                // intermediate images. We will now go on painting an old version of some cached image.
             }
 
-            // Copy the Graphics so that we can change rendering hints without affecting stuff outside this method.
-            val g2 = g.create() as Graphics2D
-            try {
-                g2.setHighQuality()
-                if (zoom != 1f)
-                    g2.scale(zoom.toDouble(), zoom.toDouble())
-                if (currCachedImage == null) {
-                    // If the preview panel has just been created, it doesn't have a cached image yet.
-                    // In that case, we just don't draw an empty background.
-                    g2.color = backgroundColor
-                    g2.fillRect(0, 0, unzoomedWidth, unzoomedHeight)
-                } else {
-                    // Otherwise, paint the cached image on the panel.
-                    g2.drawImage(currCachedImage, AffineTransform.getScaleInstance(0.5, 0.5), null)
-                }
-                // If requested, paint the action safe and title safe areas.
-                if (showSafeAreas)
-                    paintSafeAreas(g2)
-            } finally {
-                g2.dispose()
+            val curCachedZoomedRasterImage = cachedZoomedRasterImage
+            if (curCachedZoomedRasterImage != null && cachedZoomedRasterImageZoom == zoom) {
+                // If the we already have a cached version of the raster image for the current zoom,
+                // paint that onto the panel.
+                g.drawImage(curCachedZoomedRasterImage, 0, 0, null)
+            } else if (curCachedRasterImage != null) {
+                // If we have a cached version of the raster image, but not for the current zoom (because the user
+                // adjusted the zoom), create such a zoomed image, cache it, and paint it onto the panel. We do
+                // the painting in the AWT thread because it's very fast, so when zooming, the user won't notice
+                // the delay.
+                // Note that if instead the images are adjusted as a consequence of a styling change, the current
+                // cached zoomed image has been created in a background thread, so the user doesn't get noticeable
+                // hick-ups when, e.g., adjusting spinners.
+                val newZoomedRasterImage = paintZoomedRasterImage(curCachedRasterImage, zoom)
+                cachedZoomedRasterImage = newZoomedRasterImage
+                cachedZoomedRasterImageZoom = zoom
+                g.drawImage(newZoomedRasterImage, 0, 0, null)
+            } else {
+                // If the preview panel has just been created, it doesn't have a cached image yet.
+                // In that case, we just don't draw an empty background.
+                g.color = backgroundColor
+                g.fillRect(0, 0, (zoom * unzoomedWidth).roundToInt(), (zoom * unzoomedHeight).roundToInt())
             }
+            // If requested, paint the action safe and title safe areas.
+            if (showSafeAreas)
+                paintSafeAreas(g)
         }
 
         private fun paintRasterImage(): BufferedImage {
-            val rasterImage = BufferedImage(2 * unzoomedWidth, 2 * unzoomedHeight, BufferedImage.TYPE_3BYTE_BGR)
-
-            // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
-            val g2 = GraphicsUtil.createGraphics(rasterImage)
-            try {
+            val rasterImage = gCfg.createCompatibleImage(2 * unzoomedWidth, 2 * unzoomedHeight)
+            rasterImage.withG2 { g2 ->
                 g2.setHighQuality()
                 // Fill the background.
                 g2.color = backgroundColor
                 g2.fillRect(0, 0, rasterImage.width, rasterImage.height)
-                // Paint a scaled version of the deferred image on the raster image.
+                // Paint a scaled version of the deferred image onto the raster image.
                 val scaledDefImage = DeferredImage()
                 scaledDefImage.drawDeferredImage(defImage, 0f, 0f, rasterImage.width / globalWidth.toFloat())
                 // Note: We compute the guide stroke width such that they have a nice thin width irrespective of the
                 // configured film dimensions.
                 scaledDefImage.materialize(g2, showGuides, guideStrokeWidth = globalWidth / 1024f)
-            } finally {
-                g2.dispose()
             }
-
             return rasterImage
         }
 
-        private fun paintSafeAreas(g2Orig: Graphics2D) {
-            val g2 = g2Orig.create() as Graphics2D
-            try {
+        private fun paintZoomedRasterImage(rasterImage: BufferedImage, zoom: Float) =
+            gCfg.createCompatibleImage((zoom * unzoomedWidth).roundToInt(), (zoom * unzoomedHeight).roundToInt())
+                .withG2 { g2 ->
+                    g2.setHighQuality()
+                    g2.drawImage(rasterImage, AffineTransform.getScaleInstance(zoom * 0.5, zoom * 0.5), null)
+                }
+
+        private fun paintSafeAreas(g: Graphics) {
+            g.withNewG2 { g2 ->
                 g2.color = Color.GRAY
+                if (zoom != 1f)
+                    g2.scale(zoom.toDouble(), zoom.toDouble())
 
                 // By asking the graphics object itself to scale such that we accommodate for the
                 // smaller preview size, we can work in regular page units in the rest of this method.
@@ -230,11 +240,13 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
                     g2.draw(Line2D.Float(titleSafeX1, titleSafeY1, titleSafeX1, titleSafeY2))
                     g2.draw(Line2D.Float(titleSafeX2, titleSafeY1, titleSafeX2, titleSafeY2))
                 }
-            } finally {
-                g2.dispose()
             }
         }
 
+    }
+
+    companion object {
+        private val gCfg = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
     }
 
 }

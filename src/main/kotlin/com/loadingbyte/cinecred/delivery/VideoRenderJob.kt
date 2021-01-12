@@ -2,10 +2,10 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Project
-import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
@@ -150,20 +150,14 @@ class VideoRenderJob(
 
     private inline fun drawImage(width: Int, height: Int, draw: (Graphics2D) -> Unit): BufferedImage {
         val imageType = if (alpha) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
-        val image = BufferedImage(width, height, imageType)
-        // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
-        val g2 = GraphicsUtil.createGraphics(image)
-        try {
+        return BufferedImage(width, height, imageType).withG2 { g2 ->
             g2.setHighQuality()
             if (!alpha) {
                 g2.color = project.styling.global.background
                 g2.fillRect(0, 0, width, height)
             }
             draw(g2)
-        } finally {
-            g2.dispose()
         }
-        return image
     }
 
     private fun drawScrolledImage(width: Int, height: Int, image: BufferedImage, imgTopY: Float) =

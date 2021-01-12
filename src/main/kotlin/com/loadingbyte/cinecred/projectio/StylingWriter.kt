@@ -91,7 +91,7 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         toml.remove("bodyLayoutSeparator")
         toml.remove("bodyLayoutParagraphGapPx")
         if (bodyLayoutColsHJustify.size < 2)
-            toml.remove("bodyLayoutColsHJustify")
+            toml.remove("bodyLayoutHorizontalGapPx")
     }
     if (bodyLayout == BodyLayout.FLOW) {
         toml.remove("bodyLayoutColsHJustify")

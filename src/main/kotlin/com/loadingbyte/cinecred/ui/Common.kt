@@ -2,9 +2,12 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
-import java.awt.*
+import com.loadingbyte.cinecred.common.withNewG2
+import java.awt.Component
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Insets
 import java.awt.geom.Rectangle2D
-import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
@@ -19,31 +22,6 @@ fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = tru
         if (endsWith(suffix, ignoreCase))
             return dropLast(suffix.length)
     return this
-}
-
-
-class LatestJobExecutor(threadName: String) {
-
-    private val queue = LinkedBlockingQueue<Runnable>()
-
-    private val thread = Thread({
-        try {
-            while (true)
-                queue.take().run()
-        } catch (_: InterruptedException) {
-            // destroy() has been called. Terminate the thread.
-        }
-    }, threadName).apply { isDaemon = true; start() }
-
-    fun submit(job: Runnable) {
-        queue.clear()
-        queue.add(job)
-    }
-
-    fun destroy() {
-        thread.interrupt()
-    }
-
 }
 
 
@@ -107,8 +85,8 @@ abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
 
         override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
             val fontMetrics = c.getFontMetrics(list.font)
-            val g2 = g.create() as Graphics2D
-            try {
+
+            g.withNewG2 { g2 ->
                 // Draw the list background.
                 g2.color = list.background
                 g2.fillRect(x, y, width, lines.size * fontMetrics.height)
@@ -133,8 +111,6 @@ abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
                         }
                     }
                 }
-            } finally {
-                g2.dispose()
             }
         }
 

@@ -1,10 +1,8 @@
 package com.loadingbyte.cinecred.common
 
 import com.loadingbyte.cinecred.project.FontSpec
-import java.awt.Font
-import java.awt.FontMetrics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
+import org.apache.batik.ext.awt.image.GraphicsUtil
+import java.awt.*
 import java.awt.font.FontRenderContext
 import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
@@ -41,6 +39,28 @@ val REF_FRC: FontRenderContext = REF_G2.fontRenderContext
 
 class RichFont(val spec: FontSpec, val awt: Font) {
     val metrics: FontMetrics = REF_G2.getFontMetrics(awt)
+}
+
+
+inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
+    val g2 = create() as Graphics2D
+    try {
+        block(g2)
+    } finally {
+        g2.dispose()
+    }
+}
+
+
+inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
+    // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
+    val g2 = GraphicsUtil.createGraphics(this)
+    try {
+        block(g2)
+    } finally {
+        g2.dispose()
+    }
+    return this
 }
 
 

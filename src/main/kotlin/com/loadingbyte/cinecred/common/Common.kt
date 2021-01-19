@@ -2,7 +2,11 @@ package com.loadingbyte.cinecred.common
 
 import com.loadingbyte.cinecred.project.FontSpec
 import org.apache.batik.ext.awt.image.GraphicsUtil
-import java.awt.*
+import java.awt.Font
+import java.awt.FontMetrics
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
 import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
@@ -65,14 +69,17 @@ inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
 
 
 fun Graphics2D.setHighQuality() {
-    setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY)
-    setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY)
-    setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_DISABLE)
-    setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-    setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
-    setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
-    setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_ON)
+    setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
+    setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
+    setRenderingHint(KEY_DITHERING, VALUE_DITHER_DISABLE)
+    setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
+    setRenderingHint(KEY_RENDERING, VALUE_RENDER_QUALITY)
+    setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
+    // For some reason, using fractional font metrics sometimes leads to letter spacing issues. However, we have to
+    // activate it nevertheless for the getStringWidth() method to yield correct results. In DeferredImage's text
+    // drawing code, we implement a workaround that avoids the letter spacing issues.
+    setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }
 
 

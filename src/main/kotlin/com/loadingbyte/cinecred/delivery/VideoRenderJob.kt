@@ -193,9 +193,11 @@ class VideoRenderJob(
                             .toSortedSet(),
                 codecId, pixelFormat, alphaPixelFormat = null, codecOptions)
 
-            private fun seqSuppAlpha(
-                label: String, fileExt: String, codecId: Int, pixelFormat: Int, alphaPixelFormat: Int
-            ) = Format(label, isImageSeq = true, listOf(fileExt), codecId, pixelFormat, alphaPixelFormat, emptyMap())
+            private fun rgbSeqWithOptionalAlpha(
+                label: String, fileExt: String, codecId: Int, codecOptions: Map<String, String> = emptyMap()
+            ) = Format(
+                label, isImageSeq = true, listOf(fileExt), codecId, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA, codecOptions
+            )
 
             val ALL = listOf(
                 muxed("H.264", "mp4", AV_CODEC_ID_H264, AV_PIX_FMT_YUV420P),
@@ -207,9 +209,20 @@ class VideoRenderJob(
                 muxed("DNxHR SQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_sq")),
                 muxed("DNxHR HQ", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P, mapOf("profile" to "dnxhr_hq")),
                 muxed("DNxHR HQX", "mxf", AV_CODEC_ID_DNXHD, AV_PIX_FMT_YUV422P10LE, mapOf("profile" to "dnxhr_hqx")),
-                seqSuppAlpha(l10n("delivery.tiffImgSeq"), "tiff", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
-                seqSuppAlpha(l10n("delivery.dpxImgSeq"), "dpx", AV_CODEC_ID_DPX, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
-                seqSuppAlpha(l10n("delivery.pngImgSeq"), "png", AV_CODEC_ID_PNG, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA),
+                // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
+                // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
+                rgbSeqWithOptionalAlpha(
+                    l10n("delivery.tiffPackBitsImgSeq"), "tiff", AV_CODEC_ID_TIFF,
+                    mapOf("compression_algo" to "packbits")
+                ),
+                // For those who require more compression and know what they are doing (which can be expected when one
+                // exports a TIFF image sequence), we also offer the more efficient, but not universally supported
+                // Deflate compression.
+                rgbSeqWithOptionalAlpha(
+                    l10n("delivery.tiffDeflateImgSeq"), "tiff", AV_CODEC_ID_TIFF, mapOf("compression_algo" to "deflate")
+                ),
+                rgbSeqWithOptionalAlpha(l10n("delivery.dpxImgSeq"), "dpx", AV_CODEC_ID_DPX),
+                rgbSeqWithOptionalAlpha(l10n("delivery.pngImgSeq"), "png", AV_CODEC_ID_PNG),
             )
 
         }

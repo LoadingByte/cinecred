@@ -50,6 +50,8 @@ dependencies {
 configurations.all {
     // Do not let Batik & PDFBox add the commons-logging dependency; instead, we use the slf4j bridge.
     exclude group: 'commons-logging', module: 'commons-logging'
+    // The Java XML APIs are part of the JDK itself since Java 5.
+    exclude group: 'xml-apis', module: 'xml-apis'
 }
 
 compileKotlin.kotlinOptions.jvmTarget = '11'

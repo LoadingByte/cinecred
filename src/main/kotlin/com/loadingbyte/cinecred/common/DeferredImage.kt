@@ -10,6 +10,7 @@ import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
+import kotlin.math.ceil
 import kotlin.math.max
 
 
@@ -135,25 +136,38 @@ class DeferredImage {
                 is Instruction.DrawString -> {
                     g2.color = insn.font.spec.color
 
-                    val scaledFont = insn.font.awt.deriveFont(insn.font.awt.size2D * insn.scaling)
-                    val y = insn.y + insn.scaling * insn.font.metrics.ascent
+                    // Text rendering is done by first scaling up the font by a factor of "hackScaling" (which ensures
+                    // its size is at least 300pt), then converting the string to a path via TextLayout, and finally
+                    // drawing the path scaled down by a factor of "hackScaling". This has two main advantages:
+                    //   - Using a much larger font for the text layout process avoids irregular letter spacing issues
+                    //     when working with very small fonts. These issues would otherwise appear depending on the JVM
+                    //     and OS version.
+                    //   - Vector-based means of imaging like SVG exactly match the pixel-based means like PNG export.
+                    // Note that we do not use GlyphVector here because that has serious issues with kerning.
+                    val scaledFontSize = insn.font.awt.size2D * insn.scaling
+                    val hackScaling = ceil(300f / scaledFontSize)
+                    val hackScaledFont = insn.font.awt.deriveFont(scaledFontSize * hackScaling)
+                    val hackScaledTextLayout = TextLayout(insn.str, hackScaledFont, g2.fontRenderContext)
+                    val baselineY = insn.y + hackScaledTextLayout.ascent / hackScaling
 
-                    // Draw the font as a path so that vector-based means of imaging like SVG can exactly match the
-                    // pixel-based means like PNG export. Note that we do not use GlyphVector here because that has
-                    // issues with kerning.
-                    val textLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
-                    textLayout.draw(g2, insn.x, y)
+                    val prevTransform = g2.transform
+                    g2.translate(insn.x.toDouble(), baselineY.toDouble())
+                    g2.scale(1.0 / hackScaling, 1.0 / hackScaling)
+                    hackScaledTextLayout.draw(g2, 0f, 0f)
+                    g2.transform = prevTransform
 
                     // When drawing to a PDF, additionally draw some invisible strings where the visible, vectorized
                     // strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
                     if (g2 is PdfBoxGraphics2D) {
+                        val scaledFont = insn.font.awt.deriveFont(scaledFontSize)
+                        val scaledTextLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
                         // Force the following text to be drawn using any font it can find.
                         g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
                         // We use a placeholder default PDF font. We make it slightly smaller than the visible font
                         // to make sure that the invisible text completely fits into the bounding box of the visible
                         // text, even when the visible font is a narrow one. This way, spaces between words are
                         // correctly recognized by the PDF reader.
-                        g2.font = Font("SansSerif", 0, (scaledFont.size2D * 0.75f).toInt())
+                        g2.font = Font("SansSerif", 0, (scaledFontSize * 0.75f).toInt())
                         // The invisible text should of course be invisible.
                         g2.color = Color(0, 0, 0, 0)
                         // Draw each word separately at the position of the vectorized version of the word.
@@ -161,12 +175,12 @@ class DeferredImage {
                         var charIdx = 0
                         for (word in insn.str.split(' ')) {
                             // Estimate the x coordinate where the word starts from the word's first glyph's bounds.
-                            val xOffset = textLayout.getBlackBoxBounds(charIdx, charIdx + 1).bounds2D.x.toFloat()
+                            val xOffset = scaledTextLayout.getBlackBoxBounds(charIdx, charIdx + 1).bounds2D.x.toFloat()
                             // Note: Append a space to all words because without it, some PDF viewers give text
                             // without any spaces when the user tries to copy it. Note that we also append a space
                             // to the last word of the sentence to make sure that when the user tries to copy multiple
                             // sentences, e.g., multiple lines of text, there are at least spaces between the lines.
-                            g2.drawString("$word ", insn.x + xOffset, y)
+                            g2.drawString("$word ", insn.x + xOffset, baselineY)
                             charIdx += word.length + 1
                         }
                         // We are done. Future text should again be vectorized, as indicated by

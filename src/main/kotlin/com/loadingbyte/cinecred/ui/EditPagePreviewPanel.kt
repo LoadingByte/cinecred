@@ -186,7 +186,7 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
         private fun paintZoomedRasterImage(rasterImage: BufferedImage, zoom: Float) =
             gCfg.createCompatibleImage((zoom * unzoomedWidth).roundToInt(), (zoom * unzoomedHeight).roundToInt())
                 .withG2 { g2 ->
-                    g2.setHighQuality()
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
                     g2.drawImage(rasterImage, AffineTransform.getScaleInstance(zoom * 0.5, zoom * 0.5), null)
                 }
 

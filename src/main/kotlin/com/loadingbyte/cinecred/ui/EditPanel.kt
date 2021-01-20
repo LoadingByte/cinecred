@@ -78,11 +78,11 @@ object EditPanel : JPanel() {
             }
         }
 
-        val topPanel = JPanel(MigLayout("", "[]push[][][][][]push[][][][]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[]unrel:30lp[][][][][]unrel:30lp[][][][]unrel:30lp[]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton, "width 5%::")
-            add(saveStylingButton, "width 4%::")
+            add(toggleEditStylingDialogButton, "width :2*pref")
+            add(saveStylingButton, "width :2*pref")
             add(reloadStylingButton)
             add(unsavedStylingLabel)
             add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
@@ -159,13 +159,9 @@ object EditPanel : JPanel() {
         } else
             true
 
-    fun updateProjectAndLog(
-        project: Project,
-        drawnPages: List<DrawnPage>,
-        log: List<ParserMsg>
-    ) {
+    fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
         // Adjust the total runtime label.
-        if (project.pages.isEmpty())
+        if (project == null || project.pages.isEmpty())
             runtimeLabel.apply {
                 text = null
                 toolTipText = null
@@ -184,9 +180,9 @@ object EditPanel : JPanel() {
         }
 
         // First adjust the number of tabs to the number of pages.
-        while (pageTabs.tabCount > project.pages.size)
+        while (pageTabs.tabCount > drawnPages.size)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
-        while (pageTabs.tabCount < project.pages.size) {
+        while (pageTabs.tabCount < drawnPages.size) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             val previewPanel = EditPagePreviewPanel(
@@ -196,7 +192,7 @@ object EditPanel : JPanel() {
         }
         // Then fill each tab with its corresponding page.
         for ((drawnPage, previewPanel) in drawnPages.zip(previewPanels))
-            previewPanel.setContent(project.styling.global, drawnPage)
+            previewPanel.setContent(project!!.styling.global, drawnPage)
 
         // Put the new parser log messages into the log table.
         LogTableModel.log = log.sortedWith { a, b ->

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -7,6 +8,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 
 interface RenderJob {
+    fun generatesFile(file: Path): Boolean
     fun render(progressCallback: (Float) -> Unit)
 }
 
@@ -52,7 +54,7 @@ object RenderQueue {
                     runningJob.set(null)
                 } catch (e: Exception) {
                     // Note that this catch also catches InterruptedExceptions,
-                    // which occur when a job is cancelled mid-run.
+                    // which occurs when a job is cancelled while it is running.
                     job.invokeLater { job.finishCallback(e) }
                     continue
                 }
@@ -85,7 +87,7 @@ object RenderQueue {
     }
 
     fun cancelJob(job: RenderJob) {
-        // Mark the job for future cancellation so that before .
+        // Mark the job for future cancellation.
         cancelledJobs.add(job)
         if (job == runningJob.get())
             thread.interrupt()

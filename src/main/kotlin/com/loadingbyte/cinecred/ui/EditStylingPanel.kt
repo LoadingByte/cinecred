@@ -147,7 +147,9 @@ object EditStylingPanel : JPanel() {
             .apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
         val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
             .apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
-        val removeButton = JButton(REMOVE_ICON)
+        val duplicateStyleButton = JButton(DUPLICATE_ICON)
+            .apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }
+        val removeStyleButton = JButton(TRASH_ICON)
             .apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
         addPageStyleButton.addActionListener {
             insertAndSelectSortedLeaf(
@@ -163,7 +165,18 @@ object EditStylingPanel : JPanel() {
             )
             onChange()
         }
-        removeButton.addActionListener {
+        duplicateStyleButton.addActionListener {
+            val selectedObject =
+                ((tree.lastSelectedPathComponent ?: return@addActionListener) as DefaultMutableTreeNode).userObject
+            if (selectedObject is PageStyle) {
+                insertAndSelectSortedLeaf(pageStylesNode, selectedObject.copy())
+                onChange()
+            } else if (selectedObject is ContentStyle) {
+                insertAndSelectSortedLeaf(contentStylesNode, selectedObject.copy())
+                onChange()
+            }
+        }
+        removeStyleButton.addActionListener {
             val selectedNode = (tree.lastSelectedPathComponent ?: return@addActionListener) as DefaultMutableTreeNode
             if (selectedNode.userObject is PageStyle || selectedNode.userObject is ContentStyle) {
                 treeModel.removeNodeFromParent(selectedNode)
@@ -175,7 +188,8 @@ object EditStylingPanel : JPanel() {
         val leftPanel = JPanel(MigLayout()).apply {
             add(addPageStyleButton, "split, grow")
             add(addContentStyleButton, "grow")
-            add(removeButton, "grow")
+            add(duplicateStyleButton, "grow")
+            add(removeStyleButton, "grow")
             add(JScrollPane(tree), "newline, grow, push")
         }
 
@@ -188,6 +202,12 @@ object EditStylingPanel : JPanel() {
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
     }
+
+    private fun getPageStylesFromTree() =
+        pageStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as PageStyle }
+
+    private fun getContentStylesFromTree() =
+        contentStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as ContentStyle }
 
     private fun sortNode(node: DefaultMutableTreeNode) {
         // Note: We temporarily disable the tree selection listener because the node removal and subsequent insertion
@@ -251,11 +271,7 @@ object EditStylingPanel : JPanel() {
     }
 
     private fun onChange() {
-        Controller.editStylingAndRedraw(Styling(
-            global!!,
-            pageStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as PageStyle },
-            contentStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as ContentStyle }
-        ))
+        Controller.editStylingAndRedraw(Styling(global!!, getPageStylesFromTree(), getContentStylesFromTree()))
     }
 
     private fun l10nEnum(enumElem: Enum<*>) =
@@ -316,7 +332,13 @@ object EditStylingPanel : JPanel() {
 
         private val nameField = addTextField(
             l10n("ui.styling.page.name"),
-            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, l10n("general.blank")) }
+            verify = {
+                val name = it.trim()
+                if (name.isEmpty())
+                    throw VerifyResult(Severity.ERROR, l10n("general.blank"))
+                if (otherPageStyles.any { o -> o.name.equals(name, ignoreCase = true) })
+                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
+            }
         )
         private val behaviorComboBox = addComboBox(
             l10n("ui.styling.page.behavior"), PageBehavior.values(), toString = ::l10nEnum
@@ -355,7 +377,11 @@ object EditStylingPanel : JPanel() {
             }
         )
 
+        private var otherPageStyles = emptyList<PageStyle>()
+
         fun openPageStyle(pageStyle: PageStyle, changeCallback: (PageStyle) -> Unit) {
+            otherPageStyles = getPageStylesFromTree().filter { it !== pageStyle }
+
             clearChangeListeners()
 
             nameField.text = pageStyle.name
@@ -396,7 +422,13 @@ object EditStylingPanel : JPanel() {
 
         private val nameField = addTextField(
             l10n("ui.styling.content.name"),
-            verify = { if (it.trim().isEmpty()) throw VerifyResult(Severity.ERROR, l10n("general.blank")) }
+            verify = {
+                val name = it.trim()
+                if (name.isEmpty())
+                    throw VerifyResult(Severity.ERROR, l10n("general.blank"))
+                if (otherContentStyles.any { o -> o.name.equals(name, ignoreCase = true) })
+                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
+            }
         )
         private val alignWithAxisComboBox = addComboBox(
             l10n("ui.styling.content.alignWithAxis"), AlignWithAxis.values(), toString = ::l10nEnum
@@ -511,7 +543,11 @@ object EditStylingPanel : JPanel() {
             tailFontSpecChooser.projectFamilies = projectFamilies
         }
 
+        private var otherContentStyles = emptyList<ContentStyle>()
+
         fun openContentStyle(contentStyle: ContentStyle, changeCallback: (ContentStyle) -> Unit) {
+            otherContentStyles = getContentStylesFromTree().filter { it !== contentStyle }
+
             clearChangeListeners()
 
             nameField.text = contentStyle.name

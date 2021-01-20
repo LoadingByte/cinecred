@@ -35,6 +35,7 @@ val WINDOW_ICON_IMAGES = run {
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
+val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
 val EDIT_ICON = SVGIcon.load("/icons/edit.svg")
 val EYE_ICON = SVGIcon.load("/icons/eye.svg")
 val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
@@ -46,6 +47,7 @@ val PLAY_ICON = SVGIcon.load("/icons/play.svg")
 val REMOVE_ICON = SVGIcon.load("/icons/remove.svg")
 val RESET_ICON = SVGIcon.load("/icons/reset.svg")
 val SAVE_ICON = SVGIcon.load("/icons/save.svg")
+val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 

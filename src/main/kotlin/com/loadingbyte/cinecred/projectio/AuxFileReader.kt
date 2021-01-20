@@ -56,7 +56,7 @@ fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
             }
             "svg" -> return lazy { loadSVG(pictureFile) }
             "pdf" -> return lazy { loadPDF(pictureFile) }
-            "ps", "eps" -> return lazy { loadPostScript(pictureFile) }
+            "ai", "eps", "ps" -> return lazy { loadPostScript(pictureFile) }
         }
     return null
 }

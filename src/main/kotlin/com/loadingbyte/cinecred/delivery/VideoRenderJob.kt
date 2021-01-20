@@ -32,6 +32,11 @@ class VideoRenderJob(
         else -> fileOrDir
     }
 
+    override fun generatesFile(file: Path) = when {
+        format.isImageSeq -> file.startsWith(fileOrPattern.parent)
+        else -> file == fileOrPattern
+    }
+
     override fun render(progressCallback: (Float) -> Unit) {
         // If we have an image sequence, delete the sequence directory if it already exists.
         if (format.isImageSeq && Files.exists(fileOrPattern.parent))

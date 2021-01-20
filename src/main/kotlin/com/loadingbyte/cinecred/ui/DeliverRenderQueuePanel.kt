@@ -48,6 +48,9 @@ object DeliverRenderQueuePanel : JPanel() {
         add(JScrollPane(jobTable), "newline, grow, push")
     }
 
+    val renderJobs: Sequence<RenderJob>
+        get() = JobTableModel.rows.asSequence().map { it.job }
+
     fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
         val row = JobTableModel.Row(job, formatLabel, destination)
         JobTableModel.rows.add(row)

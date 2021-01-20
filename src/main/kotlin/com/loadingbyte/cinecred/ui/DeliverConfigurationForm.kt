@@ -148,15 +148,16 @@ object DeliverConfigurationForm : Form() {
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
-                    format, dir = Path.of(seqDirField.text), filenamePattern = seqFilenamePatternField.text
+                    format, dir = Path.of(seqDirField.text).normalize(), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
-                    file = Path.of(singleFileField.text)
+                    file = Path.of(singleFileField.text).normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project!!, scaledDrawnPages, scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected,
-                    format, fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text)
+                    project!!, scaledDrawnPages, scaling,
+                    alpha = format.supportsAlpha && alphaCheckBox.isSelected, format,
+                    fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }
@@ -180,7 +181,7 @@ object DeliverConfigurationForm : Form() {
         onFormatChange()
     }
 
-    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
+    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages
 

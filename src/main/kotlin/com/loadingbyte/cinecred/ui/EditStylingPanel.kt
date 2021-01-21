@@ -4,17 +4,14 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.toFPS
+import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Component
 import java.awt.GraphicsEnvironment
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.*
-import javax.swing.event.TreeExpansionEvent
-import javax.swing.event.TreeWillExpandListener
-import javax.swing.tree.*
 import kotlin.math.floor
 
 
@@ -45,103 +42,16 @@ object EditStylingPanel : JPanel() {
 
     private var global: Global? = null
 
-    private val globalNode = DefaultMutableTreeNode(l10n("ui.styling.globalStyling"), false)
-    private val pageStylesNode = DefaultMutableTreeNode(l10n("ui.styling.pageStyles"), true)
-    private val contentStylesNode = DefaultMutableTreeNode(l10n("ui.styling.contentStyles"), true)
-    private val treeModel: DefaultTreeModel
-    private val tree: JTree
-    private var disableTreeSelectionListener = false
+    // Create a panel with the three style editing forms.
+    private val rightPanelCards = CardLayout()
+    private val rightPanel = JPanel(rightPanelCards).apply {
+        add(JPanel(), "Blank")
+        add(JScrollPane(GlobalForm), "Global")
+        add(JScrollPane(PageStyleForm), "PageStyle")
+        add(JScrollPane(ContentStyleForm), "ContentStyle")
+    }
 
     init {
-        // Create a panel with the three style editing forms.
-        val rightPanelCards = CardLayout()
-        val rightPanel = JPanel(rightPanelCards).apply {
-            add(JPanel(), "Blank")
-            add(JScrollPane(GlobalForm), "Global")
-            add(JScrollPane(PageStyleForm), "PageStyle")
-            add(JScrollPane(ContentStyleForm), "ContentStyle")
-        }
-
-        // Create the tree that contains a node for the global settings, as well as nodes for the page & content styles.
-        val rootNode = DefaultMutableTreeNode().apply {
-            add(globalNode)
-            add(pageStylesNode)
-            add(contentStylesNode)
-        }
-        treeModel = DefaultTreeModel(rootNode, true)
-        tree = object : JTree(treeModel) {
-            override fun convertValueToText(
-                value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean
-            ) = when (val userObject = (value as DefaultMutableTreeNode?)?.userObject) {
-                is PageStyle -> userObject.name
-                is ContentStyle -> userObject.name
-                else -> userObject?.toString() ?: ""
-            }
-        }.apply {
-            isRootVisible = false
-            showsRootHandles = false
-            selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
-        }
-        // The page and content style "folders" must not be collapsed by the user.
-        tree.addTreeWillExpandListener(object : TreeWillExpandListener {
-            override fun treeWillExpand(event: TreeExpansionEvent) {}
-            override fun treeWillCollapse(event: TreeExpansionEvent) {
-                throw ExpandVetoException(event)
-            }
-        })
-        // Each node gets an icon depending on whether it stores the global settings, a page style, or a content style.
-        tree.cellRenderer = object : DefaultTreeCellRenderer() {
-            override fun getTreeCellRendererComponent(
-                tree: JTree, value: Any, sel: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean
-            ): Component {
-                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
-                val node = value as DefaultMutableTreeNode
-                when {
-                    node == globalNode -> icon = GLOBE_ICON
-                    node.userObject is PageStyle -> icon = FILMSTRIP_ICON
-                    node.userObject is ContentStyle -> icon = LAYOUT_ICON
-                }
-                return this
-            }
-        }
-        // When the user selects the global settings node or a page or content style node, open the corresponding form.
-        tree.addTreeSelectionListener {
-            if (disableTreeSelectionListener)
-                return@addTreeSelectionListener
-            val selectedNode = tree.lastSelectedPathComponent as DefaultMutableTreeNode?
-            val selectedNodeUserObject = selectedNode?.userObject
-            // Otherwise, open form corresponding to the selected node.
-            var scrollPane: JScrollPane? = null
-            when {
-                selectedNode == globalNode -> {
-                    scrollPane = GlobalForm.parent.parent as JScrollPane
-                    GlobalForm.openGlobal(global!!, changeCallback = { global = it; onChange() })
-                    rightPanelCards.show(rightPanel, "Global")
-                }
-                selectedNodeUserObject is PageStyle -> {
-                    scrollPane = PageStyleForm.parent.parent as JScrollPane
-                    PageStyleForm.openPageStyle(
-                        selectedNodeUserObject,
-                        changeCallback = { selectedNode.userObject = it; onChange(); sortNode(selectedNode) }
-                    )
-                    rightPanelCards.show(rightPanel, "PageStyle")
-                }
-                selectedNodeUserObject is ContentStyle -> {
-                    scrollPane = ContentStyleForm.parent.parent as JScrollPane
-                    ContentStyleForm.openContentStyle(
-                        selectedNodeUserObject,
-                        changeCallback = { selectedNode.userObject = it; onChange(); sortNode(selectedNode) }
-                    )
-                    rightPanelCards.show(rightPanel, "ContentStyle")
-                }
-                else ->
-                    rightPanelCards.show(rightPanel, "Blank")
-            }
-            // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
-            // Note that we have to delay this change because for some reason, if we don't, the change has no effect.
-            SwingUtilities.invokeLater { scrollPane?.verticalScrollBar?.value = 0 }
-        }
-
         // Add buttons for adding and removing page and content style nodes.
         val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))
             .apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
@@ -152,36 +62,20 @@ object EditStylingPanel : JPanel() {
         val removeStyleButton = JButton(TRASH_ICON)
             .apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
         addPageStyleButton.addActionListener {
-            insertAndSelectSortedLeaf(
-                pageStylesNode,
-                STANDARD_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName"))
-            )
+            EditStylingTree.addPageStyle(STANDARD_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")))
             onChange()
         }
         addContentStyleButton.addActionListener {
-            insertAndSelectSortedLeaf(
-                contentStylesNode,
-                STANDARD_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName"))
-            )
+            EditStylingTree.addContentStyle(STANDARD_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")))
             onChange()
         }
         duplicateStyleButton.addActionListener {
-            val selectedObject =
-                ((tree.lastSelectedPathComponent ?: return@addActionListener) as DefaultMutableTreeNode).userObject
-            if (selectedObject is PageStyle) {
-                insertAndSelectSortedLeaf(pageStylesNode, selectedObject.copy())
+            if (EditStylingTree.duplicateSelectedStyle())
                 onChange()
-            } else if (selectedObject is ContentStyle) {
-                insertAndSelectSortedLeaf(contentStylesNode, selectedObject.copy())
-                onChange()
-            }
         }
         removeStyleButton.addActionListener {
-            val selectedNode = (tree.lastSelectedPathComponent ?: return@addActionListener) as DefaultMutableTreeNode
-            if (selectedNode.userObject is PageStyle || selectedNode.userObject is ContentStyle) {
-                treeModel.removeNodeFromParent(selectedNode)
+            if (EditStylingTree.removeSelectedStyle())
                 onChange()
-            }
         }
 
         // Layout the tree and the buttons.
@@ -190,7 +84,7 @@ object EditStylingPanel : JPanel() {
             add(addContentStyleButton, "grow")
             add(duplicateStyleButton, "grow")
             add(removeStyleButton, "grow")
-            add(JScrollPane(tree), "newline, grow, push")
+            add(JScrollPane(EditStylingTree), "newline, grow, push")
         }
 
         // Put everything together in a split pane.
@@ -203,67 +97,33 @@ object EditStylingPanel : JPanel() {
         add(splitPane, BorderLayout.CENTER)
     }
 
-    private fun getPageStylesFromTree() =
-        pageStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as PageStyle }
-
-    private fun getContentStylesFromTree() =
-        contentStylesNode.children().toList().map { (it as DefaultMutableTreeNode).userObject as ContentStyle }
-
-    private fun sortNode(node: DefaultMutableTreeNode) {
-        // Note: We temporarily disable the tree selection listener because the node removal and subsequent insertion
-        // at another place should not close and re-open (and thus reset) the right-hand editing panel.
-        disableTreeSelectionListener = true
-        try {
-            // We also remember the current selection path so that we can restore it later.
-            val selectionPath = tree.selectionPath
-
-            val parent = node.parent as DefaultMutableTreeNode
-            treeModel.removeNodeFromParent(node)
-            var idx = parent.children().asSequence().indexOfFirst {
-                (it as DefaultMutableTreeNode).userObject.toString() > node.userObject.toString()
-            }
-            if (idx == -1)
-                idx = parent.childCount
-            treeModel.insertNodeInto(node, parent, idx)
-
-            tree.selectionPath = selectionPath
-        } finally {
-            disableTreeSelectionListener = false
-        }
+    fun openGlobal() {
+        GlobalForm.openGlobal(global!!, changeCallback = { global = it; onChange() })
+        rightPanelCards.show(rightPanel, "Global")
+        // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
+        // Note that we have to delay this change because for some reason, if we don't, the change has no effect.
+        SwingUtilities.invokeLater { (GlobalForm.parent.parent as JScrollPane).verticalScrollBar.value = 0 }
     }
 
-    private fun insertSortedLeaf(parent: MutableTreeNode, userObject: Any): DefaultMutableTreeNode {
-        val node = DefaultMutableTreeNode(userObject, false)
-        treeModel.insertNodeInto(node, parent, 0)
-        sortNode(node)
-        return node
+    fun openPageStyle(pageStyle: PageStyle) {
+        PageStyleForm.openPageStyle(pageStyle)
+        rightPanelCards.show(rightPanel, "PageStyle")
+        SwingUtilities.invokeLater { (PageStyleForm.parent.parent as JScrollPane).verticalScrollBar.value = 0 }
     }
 
-    private fun insertAndSelectSortedLeaf(parent: MutableTreeNode, userObject: Any) {
-        val leaf = insertSortedLeaf(parent, userObject)
-        val leafPath = TreePath(leaf.path)
-        tree.scrollPathToVisible(TreePath(leaf.path))
-        tree.selectionPath = leafPath
+    fun openContentStyle(contentStyle: ContentStyle) {
+        ContentStyleForm.openContentStyle(contentStyle)
+        rightPanelCards.show(rightPanel, "ContentStyle")
+        SwingUtilities.invokeLater { (ContentStyleForm.parent.parent as JScrollPane).verticalScrollBar.value = 0 }
     }
 
-    fun onLoadStyling(initialStyling: Styling) {
-        global = initialStyling.global
+    fun openBlank() {
+        rightPanelCards.show(rightPanel, "Blank")
+    }
 
-        for (node in pageStylesNode.children().toList() + contentStylesNode.children().toList())
-            treeModel.removeNodeFromParent(node as MutableTreeNode)
-
-        for (pageStyle in initialStyling.pageStyles)
-            insertSortedLeaf(pageStylesNode, pageStyle)
-        for (contentStyle in initialStyling.contentStyles)
-            insertSortedLeaf(contentStylesNode, contentStyle)
-
-        tree.expandPath(TreePath(pageStylesNode.path))
-        tree.expandPath(TreePath(contentStylesNode.path))
-
-        // First clear the current selection, which leads to the blank card showing in the right panel. This way, we
-        // make sure that no stale data is shown in the right panel. Then initially select the global settings.
-        tree.selectionRows = intArrayOf()
-        tree.setSelectionRow(0)
+    fun setStyling(styling: Styling) {
+        global = styling.global
+        EditStylingTree.setStyling(styling)
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
@@ -271,7 +131,12 @@ object EditStylingPanel : JPanel() {
     }
 
     private fun onChange() {
-        Controller.editStylingAndRedraw(Styling(global!!, getPageStylesFromTree(), getContentStylesFromTree()))
+        val styling = Styling(
+            global!!,
+            EditStylingTree.pageStyles.toImmutableList(),
+            EditStylingTree.contentStyles.toImmutableList()
+        )
+        Controller.StylingHistory.editedAndRedraw(styling)
     }
 
     private fun l10nEnum(enumElem: Enum<*>) =
@@ -379,8 +244,8 @@ object EditStylingPanel : JPanel() {
 
         private var otherPageStyles = emptyList<PageStyle>()
 
-        fun openPageStyle(pageStyle: PageStyle, changeCallback: (PageStyle) -> Unit) {
-            otherPageStyles = getPageStylesFromTree().filter { it !== pageStyle }
+        fun openPageStyle(pageStyle: PageStyle) {
+            otherPageStyles = EditStylingTree.pageStyles.filter { it !== pageStyle }
 
             clearChangeListeners()
 
@@ -407,7 +272,8 @@ object EditStylingPanel : JPanel() {
                         cardFadeOutFramesSpinner.value as Int,
                         scrollPxPerFrameSpinner.value as Float
                     )
-                    changeCallback(newPageStyle)
+                    EditStylingTree.updateSelectedStyle(newPageStyle)
+                    onChange()
                 }
             }
         }
@@ -545,8 +411,8 @@ object EditStylingPanel : JPanel() {
 
         private var otherContentStyles = emptyList<ContentStyle>()
 
-        fun openContentStyle(contentStyle: ContentStyle, changeCallback: (ContentStyle) -> Unit) {
-            otherContentStyles = getContentStylesFromTree().filter { it !== contentStyle }
+        fun openContentStyle(contentStyle: ContentStyle) {
+            otherContentStyles = EditStylingTree.contentStyles.filter { it !== contentStyle }
 
             clearChangeListeners()
 
@@ -589,7 +455,7 @@ object EditStylingPanel : JPanel() {
                         bodyLayoutElemConformComboBox.selectedItem as BodyElementConform,
                         bodyLayoutElemVJustifyComboBox.selectedItem as VJustify,
                         bodyLayoutHorizontalGapPxSpinner.value as Float,
-                        bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull(),
+                        bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull().toImmutableList(),
                         bodyLayoutLineHJustifyComboBox.selectedItem as LineHJustify,
                         bodyLayoutBodyWidthPxSpinner.value as Float,
                         bodyLayoutElemHJustifyComboBox.selectedItem as HJustify,
@@ -607,7 +473,8 @@ object EditStylingPanel : JPanel() {
                         tailGapPxSpinner.value as Float,
                         tailFontSpecChooser.selectedFontSpec
                     )
-                    changeCallback(newContentStyle)
+                    EditStylingTree.updateSelectedStyle(newContentStyle)
+                    onChange()
                 }
             }
         }

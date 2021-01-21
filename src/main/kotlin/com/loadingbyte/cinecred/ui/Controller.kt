@@ -7,6 +7,8 @@ import com.loadingbyte.cinecred.drawer.draw
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.*
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import java.awt.Font
 import java.io.IOException
 import java.nio.file.Files
@@ -27,7 +29,6 @@ object Controller {
     private var stylingFile: Path? = null
     private var creditsFile: Path? = null
 
-    private var styling: Styling? = null
     private val fonts = mutableMapOf<Path, Font>()
     private val pictureLoaders = mutableMapOf<Path, Lazy<Picture?>>()
 
@@ -40,11 +41,11 @@ object Controller {
             }
             when {
                 isCreditsFile ->
-                    SwingUtilities.invokeLater(::reloadCreditsFileAndRedraw)
+                    SwingUtilities.invokeLater(::tryReloadCreditsFileAndRedraw)
                 kind == ENTRY_DELETE ->
-                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) reloadCreditsFileAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReloadCreditsFileAndRedraw() }
                 else ->
-                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) reloadCreditsFileAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReloadCreditsFileAndRedraw() }
             }
         }
     }
@@ -69,7 +70,7 @@ object Controller {
         }
     }
 
-    fun openProjectDir(projectDir: Path) {
+    fun tryOpenProjectDir(projectDir: Path) {
         if (!EditPanel.onTryOpenProjectDirOrExit())
             return
 
@@ -94,9 +95,9 @@ object Controller {
         this.projectDir = projectDir
         this.stylingFile = stylingFile
         this.creditsFile = creditsFile
-
         fonts.clear()
         pictureLoaders.clear()
+        StylingHistory.clear()
 
         MainFrame.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
@@ -106,7 +107,7 @@ object Controller {
             tryReloadAuxFile(projectFile)
 
         // Load the initial state of the styling and credits files (the latter is invoked by the former).
-        tryReloadStylingFileAndRedraw()
+        StylingHistory.tryResetAndRedraw()
 
         // Watch for future changes in the new project dir.
         projectDirWatcher.watch(projectDir)
@@ -170,38 +171,7 @@ object Controller {
         return false
     }
 
-    /**
-     * Returns whether the styling file has successfully been reloaded.
-     * The return value doesn't tell anything about whether the redrawing was successful.
-     */
-    fun tryReloadStylingFileAndRedraw(): Boolean {
-        if (!Files.exists(stylingFile!!)) {
-            JOptionPane.showMessageDialog(
-                MainFrame, l10n("ui.edit.missingStylingFile.msg", stylingFile),
-                l10n("ui.edit.missingStylingFile.title"), JOptionPane.ERROR_MESSAGE
-            )
-            return false
-        }
-
-        val styling = readStyling(stylingFile!!)
-        this.styling = styling
-        EditPanel.onLoadStyling()
-        EditStylingPanel.onLoadStyling(styling)
-        reloadCreditsFileAndRedraw()
-        return true
-    }
-
-    fun editStylingAndRedraw(styling: Styling) {
-        this.styling = styling
-        EditPanel.onEditStyling()
-        reloadCreditsFileAndRedraw()
-    }
-
-    fun saveStyling() {
-        writeStyling(stylingFile!!, styling!!)
-    }
-
-    private fun reloadCreditsFileAndRedraw() {
+    private fun tryReloadCreditsFileAndRedraw() {
         if (!Files.exists(creditsFile!!)) {
             JOptionPane.showMessageDialog(
                 MainFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
@@ -214,7 +184,7 @@ object Controller {
         // Capture these variables in the state they are in when the function is called.
         val projectDir = this.projectDir!!
         val creditsFile = this.creditsFile!!
-        val styling = this.styling!!
+        val styling = StylingHistory.current!!
         val fonts = this.fonts
         val pictureLoaders = this.pictureLoaders
 
@@ -228,7 +198,7 @@ object Controller {
 
             val (log, pages) = readCredits(creditsFile, styling, pictureLoadersByRelPath)
 
-            val project = Project(styling, fontsByName, pages ?: emptyList())
+            val project = Project(styling, fontsByName.toImmutableMap(), (pages ?: emptyList()).toImmutableList())
             val drawnPages = when (pages) {
                 null -> emptyList()
                 else -> draw(project)
@@ -240,6 +210,78 @@ object Controller {
                 DeliverConfigurationForm.updateProject(project, drawnPages)
             }
         }
+    }
+
+
+    object StylingHistory {
+
+        private val history = mutableListOf<Styling>()
+        private var currentIdx = -1
+        private var saved: Styling? = null
+
+        val current: Styling?
+            get() = history.getOrNull(currentIdx)
+
+        fun clear() {
+            history.clear()
+            currentIdx = -1
+            saved = null
+        }
+
+        fun editedAndRedraw(new: Styling) {
+            if (new != current) {
+                while (history.lastIndex != currentIdx)
+                    history.removeAt(history.lastIndex)
+                history.add(new)
+                currentIdx++
+                onStylingChange()
+            }
+        }
+
+        fun undoAndRedraw() {
+            if (currentIdx != 0) {
+                currentIdx--
+                onStylingChange()
+                EditStylingPanel.setStyling(current!!)
+            }
+        }
+
+        fun redoAndRedraw() {
+            if (currentIdx != history.lastIndex) {
+                currentIdx++
+                onStylingChange()
+                EditStylingPanel.setStyling(current!!)
+            }
+        }
+
+        fun tryResetAndRedraw() {
+            if (!Files.exists(stylingFile!!)) {
+                JOptionPane.showMessageDialog(
+                    MainFrame, l10n("ui.edit.missingStylingFile.msg", stylingFile),
+                    l10n("ui.edit.missingStylingFile.title"), JOptionPane.ERROR_MESSAGE
+                )
+                return
+            }
+
+            val new = readStyling(stylingFile!!)
+            if (new != current) {
+                saved = new
+                editedAndRedraw(new)
+                EditStylingPanel.setStyling(new)
+            }
+        }
+
+        fun save() {
+            saved = current
+            writeStyling(stylingFile!!, current!!)
+            EditPanel.isStylingUnsaved = false
+        }
+
+        private fun onStylingChange() {
+            EditPanel.isStylingUnsaved = current != saved
+            tryReloadCreditsFileAndRedraw()
+        }
+
     }
 
 }

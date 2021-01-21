@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.toImmutableList
 import java.nio.file.Path
 
 
@@ -27,7 +28,7 @@ fun readStyling(stylingFile: Path): Styling {
     if (contentStyles.isEmpty())
         contentStyles = listOf(STANDARD_CONTENT_STYLE)
 
-    return Styling(global, pageStyles, contentStyles)
+    return Styling(global, pageStyles.toImmutableList(), contentStyles.toImmutableList())
 }
 
 
@@ -66,7 +67,9 @@ private fun Map<*, *>.toContentStyle(): ContentStyle {
         get("bodyLayoutHorizontalGapPx", STANDARD_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
             toFiniteFloat(nonNeg = true)
         },
-        get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) { toEnumList() },
+        get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) {
+            toEnumList<HJustify>().toImmutableList()
+        },
         get("bodyLayoutLineHJustify", STANDARD_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
         get("bodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
             toFiniteFloat(nonNeg = true, non0 = true)

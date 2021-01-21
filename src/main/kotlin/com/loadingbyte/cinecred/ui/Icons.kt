@@ -44,10 +44,12 @@ val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
 val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
 val PAGE_ICON = SVGIcon.load("/icons/page.svg")
 val PLAY_ICON = SVGIcon.load("/icons/play.svg")
+val REDO_ICON = SVGIcon.load("/icons/redo.svg")
 val REMOVE_ICON = SVGIcon.load("/icons/remove.svg")
 val RESET_ICON = SVGIcon.load("/icons/reset.svg")
 val SAVE_ICON = SVGIcon.load("/icons/save.svg")
 val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
+val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 

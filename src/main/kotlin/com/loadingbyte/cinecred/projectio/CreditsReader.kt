@@ -5,6 +5,8 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import org.apache.commons.csv.CSVFormat
 import java.io.File
 import java.io.StringReader
@@ -91,8 +93,8 @@ fun readCredits(
     val pages = mutableListOf<Page>()
     // Current page
     val pageStages = mutableListOf<Stage>()
-    val pageAlignBodyColsGroupsGroups = mutableListOf<List<Block>>()
-    val pageAlignHeadTailGroupsGroups = mutableListOf<List<Block>>()
+    val pageAlignBodyColsGroupsGroups = mutableListOf<ImmutableList<Block>>()
+    val pageAlignHeadTailGroupsGroups = mutableListOf<ImmutableList<Block>>()
     // Segment and block groups
     var alignBodyColsGroupsGroup = mutableListOf<Block>()
     var alignHeadTailGroupsGroup = mutableListOf<Block>()
@@ -125,7 +127,12 @@ fun readCredits(
                 else
                     pageStages.removeAt(idx)
             }
-            pages.add(Page(pageStages, pageAlignBodyColsGroupsGroups, pageAlignHeadTailGroupsGroups))
+            val page = Page(
+                pageStages.toImmutableList(),
+                pageAlignBodyColsGroupsGroups.toImmutableList(),
+                pageAlignHeadTailGroupsGroups.toImmutableList()
+            )
+            pages.add(page)
         }
         pageStages.clear()
         pageAlignBodyColsGroupsGroups.clear()
@@ -134,40 +141,40 @@ fun readCredits(
 
     fun concludeAlignBodyColsGroupsGroup() {
         if (alignBodyColsGroupsGroup.isNotEmpty())
-            pageAlignBodyColsGroupsGroups.add(alignBodyColsGroupsGroup)
+            pageAlignBodyColsGroupsGroups.add(alignBodyColsGroupsGroup.toImmutableList())
         alignBodyColsGroupsGroup = mutableListOf()
     }
 
     fun concludeAlignHeadTailGroupsGroup() {
         if (alignHeadTailGroupsGroup.isNotEmpty())
-            pageAlignHeadTailGroupsGroups.add(alignHeadTailGroupsGroup)
+            pageAlignHeadTailGroupsGroups.add(alignHeadTailGroupsGroup.toImmutableList())
         alignHeadTailGroupsGroup = mutableListOf()
     }
 
     fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
         // Note: We allow that empty scroll stages to connect card stages.
         if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL)
-            pageStages.add(Stage(stageStyle!!, stageSegments, vGapAfter))
+            pageStages.add(Stage(stageStyle!!, stageSegments.toImmutableList(), vGapAfter))
         stageStyle = newStageStyle
         stageSegments.clear()
     }
 
     fun concludeSegment(vGapAfter: Float) {
         if (segmentColumns.isNotEmpty())
-            stageSegments.add(Segment(segmentColumns, vGapAfter))
+            stageSegments.add(Segment(segmentColumns.toImmutableList(), vGapAfter))
         segmentColumns.clear()
     }
 
     fun concludeColumn() {
         if (columnBlocks.isNotEmpty())
-            segmentColumns.add(Column(columnPosOffsetPx, columnBlocks))
+            segmentColumns.add(Column(columnPosOffsetPx, columnBlocks.toImmutableList()))
         columnPosOffsetPx = 0f
         columnBlocks.clear()
     }
 
     fun concludeBlock(vGapAfter: Float) {
         if (blockBody.isNotEmpty()) {
-            val block = Block(blockStyle!!, blockHead, blockBody, blockTail, vGapAfter)
+            val block = Block(blockStyle!!, blockHead, blockBody.toImmutableList(), blockTail, vGapAfter)
             columnBlocks.add(block)
             alignBodyColsGroupsGroup.add(block)
             alignHeadTailGroupsGroup.add(block)

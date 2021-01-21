@@ -8,6 +8,8 @@ import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
 import net.miginfocom.swing.MigLayout
 import java.awt.*
+import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent.*
 import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.table.AbstractTableModel
@@ -55,35 +57,55 @@ object EditPanel : JPanel() {
     private val previewPanels get() = pageTabs.components.map { it as EditPagePreviewPanel }
 
     init {
-        val saveStylingButton = JButton(SAVE_ICON).apply {
-            toolTipText = l10n("ui.edit.saveStyling")
-            addActionListener {
-                Controller.saveStyling()
-                unsavedStylingLabel.isVisible = false
+        fun makeAction(
+            name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
+        ) = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                listener()
             }
-        }
-        val reloadStylingButton = JButton(RESET_ICON).apply {
-            toolTipText = l10n("ui.edit.resetStyling")
-            addActionListener {
-                if (unsavedStylingLabel.isVisible) {
-                    val option = showConfirmDialog(
-                        MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
-                        l10n("ui.edit.resetUnsavedChangesWarning.title"), YES_NO_OPTION
-                    )
-                    if (option == NO_OPTION)
-                        return@addActionListener
+        }.also {
+            var tooltip = l10n("ui.edit.$name")
+            if (shortcutKeyCode != -1) {
+                tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
+                for (c in arrayOf(MainFrame.contentPane as JComponent, EditStylingDialog.contentPane as JComponent)) {
+                    c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                        .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
+                    c.actionMap.put(name, it)
                 }
-                if (Controller.tryReloadStylingFileAndRedraw())
-                    unsavedStylingLabel.isVisible = false
             }
+            it.putValue(Action.SMALL_ICON, icon)
+            it.putValue(Action.SHORT_DESCRIPTION, tooltip)
         }
 
-        val topPanel = JPanel(MigLayout("", "[]unrel:30lp[][][][][]unrel:30lp[][][][]unrel:30lp[]push[]")).apply {
+        val undoStylingAction = makeAction("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
+            Controller.StylingHistory.undoAndRedraw()
+        }
+        val redoStylingAction = makeAction("redoStyling", REDO_ICON, VK_Z, CTRL_DOWN_MASK or SHIFT_DOWN_MASK) {
+            Controller.StylingHistory.redoAndRedraw()
+        }
+        val saveStylingAction = makeAction("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
+            Controller.StylingHistory.save()
+        }
+        val resetStylingAction = makeAction("resetStyling", RESET_ICON) {
+            if (isStylingUnsaved) {
+                val option = showConfirmDialog(
+                    MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
+                    l10n("ui.edit.resetUnsavedChangesWarning.title"), YES_NO_OPTION
+                )
+                if (option == NO_OPTION)
+                    return@makeAction
+            }
+            Controller.StylingHistory.tryResetAndRedraw()
+        }
+
+        val topPanel = JPanel(MigLayout("", "[]unrel:30lp[][][][][][][]unrel:30lp[][][][]unrel:30lp[]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton, "width :2*pref")
-            add(saveStylingButton, "width :2*pref")
-            add(reloadStylingButton)
+            add(toggleEditStylingDialogButton)
+            add(JButton(undoStylingAction))
+            add(JButton(redoStylingAction))
+            add(JButton(saveStylingAction))
+            add(JButton(resetStylingAction))
             add(unsavedStylingLabel)
             add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
             add(zoomSlider)
@@ -130,30 +152,24 @@ object EditPanel : JPanel() {
         toggleEditStylingDialogButton.isSelected = isVisible
     }
 
-    fun onLoadStyling() {
-        unsavedStylingLabel.isVisible = false
-    }
-
-    fun onEditStyling() {
-        unsavedStylingLabel.isVisible = true
-    }
+    var isStylingUnsaved: Boolean
+        get() = unsavedStylingLabel.isVisible
+        set(value) {
+            unsavedStylingLabel.isVisible = value
+        }
 
     fun onTryOpenProjectDirOrExit(): Boolean =
-        if (unsavedStylingLabel.isVisible) {
+        if (isStylingUnsaved) {
             val option = showConfirmDialog(
                 MainFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
                 l10n("ui.edit.openUnsavedChangesWarning.title"), YES_NO_CANCEL_OPTION
             )
             when (option) {
                 YES_OPTION -> {
-                    Controller.saveStyling()
-                    unsavedStylingLabel.isVisible = false
+                    Controller.StylingHistory.save()
                     true
                 }
-                NO_OPTION -> {
-                    unsavedStylingLabel.isVisible = false
-                    true
-                }
+                NO_OPTION -> true
                 else /* Cancel option */ -> false
             }
         } else

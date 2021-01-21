@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.project
 
+import kotlinx.collections.immutable.persistentListOf
 import java.awt.Color
 
 
@@ -35,7 +36,7 @@ val STANDARD_CONTENT_STYLE = ContentStyle(
     bodyLayoutElemConform = BodyElementConform.NOTHING,
     bodyLayoutElemVJustify = VJustify.MIDDLE,
     bodyLayoutHorizontalGapPx = 32f,
-    bodyLayoutColsHJustify = listOf(HJustify.CENTER),
+    bodyLayoutColsHJustify = persistentListOf(HJustify.CENTER),
     bodyLayoutLineHJustify = LineHJustify.CENTER,
     bodyLayoutBodyWidthPx = 1000f,
     bodyLayoutElemHJustify = HJustify.CENTER,

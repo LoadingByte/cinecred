@@ -75,7 +75,7 @@ object OpenPanel : JPanel() {
 
     private fun openProjectDir(projectDir: Path) {
         lastProjectDir = projectDir
-        Controller.openProjectDir(projectDir)
+        Controller.tryOpenProjectDir(projectDir)
     }
 
 }

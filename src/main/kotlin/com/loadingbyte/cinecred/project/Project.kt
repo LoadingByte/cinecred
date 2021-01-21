@@ -1,31 +1,27 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.Picture
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import java.awt.Color
 import java.awt.Font
 
 
 class Project(
     val styling: Styling,
-    fonts: Map<String, Font>,
-    pages: List<Page>
-) {
-    val fonts: Map<String, Font> = fonts.toMutableMap()
-    val pages: List<Page> = pages.toMutableList()
-}
+    val fonts: ImmutableMap<String, Font>,
+    val pages: ImmutableList<Page>
+)
 
 
-class Styling(
+data class Styling constructor(
     val global: Global,
-    pageStyles: List<PageStyle>,
-    contentStyles: List<ContentStyle>,
-) {
-    val pageStyles: List<PageStyle> = pageStyles.toMutableList()
-    val contentStyles: List<ContentStyle> = contentStyles.toMutableList()
-}
+    val pageStyles: ImmutableList<PageStyle>,
+    val contentStyles: ImmutableList<ContentStyle>,
+)
 
 
-class Global(
+data class Global(
     val fps: FPS,
     val widthPx: Int,
     val heightPx: Int,
@@ -34,7 +30,7 @@ class Global(
 )
 
 
-class FPS(val numerator: Int, val denominator: Int) {
+data class FPS(val numerator: Int, val denominator: Int) {
     val frac: Float
         get() = numerator.toFloat() / denominator
 }
@@ -69,7 +65,7 @@ data class ContentStyle(
     val bodyLayoutElemVJustify: VJustify,
     val bodyLayoutHorizontalGapPx: Float,
     // Body layout: Grid
-    val bodyLayoutColsHJustify: List<HJustify>,
+    val bodyLayoutColsHJustify: ImmutableList<HJustify>,
     // Body layouts: Flow, Paragraph
     val bodyLayoutLineHJustify: LineHJustify,
     val bodyLayoutBodyWidthPx: Float,
@@ -120,50 +116,38 @@ data class FontSpec(
 
 
 class Page(
-    stages: List<Stage>,
-    alignBodyColsGroups: List<List<Block>>,
-    alignHeadTailGroups: List<List<Block>>
-) {
-    val stages: List<Stage> = stages.toMutableList()
-    val alignBodyColsGroups: List<List<Block>> = alignBodyColsGroups.toMutableList()
-    val alignHeadTailGroups: List<List<Block>> = alignHeadTailGroups.toMutableList()
-}
+    val stages: ImmutableList<Stage>,
+    val alignBodyColsGroups: ImmutableList<ImmutableList<Block>>,
+    val alignHeadTailGroups: ImmutableList<ImmutableList<Block>>
+)
 
 
 class Stage(
     val style: PageStyle,
-    segments: List<Segment>,
+    val segments: ImmutableList<Segment>,
     val vGapAfterPx: Float
-) {
-    val segments: List<Segment> = segments.toMutableList()
-}
+)
 
 
 class Segment(
-    columns: List<Column>,
+    val columns: ImmutableList<Column>,
     val vGapAfterPx: Float
-) {
-    val columns: List<Column> = columns.toMutableList()
-}
+)
 
 
 class Column(
     val posOffsetPx: Float,
-    blocks: List<Block>
-) {
-    val blocks: List<Block> = blocks.toMutableList()
-}
+    val blocks: ImmutableList<Block>
+)
 
 
 class Block(
     val style: ContentStyle,
     val head: String?,
-    body: List<BodyElement>,
+    val body: ImmutableList<BodyElement>,
     val tail: String?,
     val vGapAfterPx: Float
-) {
-    val body: List<BodyElement> = body.toMutableList()
-}
+)
 
 
 sealed class BodyElement {

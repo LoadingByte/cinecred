@@ -33,7 +33,7 @@ object EditPanel : JPanel() {
     private val zoomSlider = object : JSlider(0, 50, 0) {
         val zoom get() = 1f + value / 50f
     }.apply {
-        preferredSize = Dimension(50, preferredSize.height)
+        preferredSize = preferredSize.apply { width = 50 }
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
 

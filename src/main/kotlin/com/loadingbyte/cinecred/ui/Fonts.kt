@@ -10,7 +10,7 @@ val BUNDLED_FAMILIES: FontFamilies = FontFamilies(BUNDLED_FONTS)
 val SYSTEM_FAMILIES: FontFamilies = FontFamilies(SYSTEM_FONTS)
 
 
-class FontFamily(val familyName: String, val fonts: List<Font>) {
+class FontFamily(val familyName: String, val fonts: List<Font>, val canonicalFont: Font) {
 
     private val fontNameToFont = fonts.associateBy { it.getFontName(Locale.US) }
 
@@ -61,7 +61,10 @@ class FontFamilies(fonts: Iterable<Font>) {
             familyToCFonts.getOrPut(family) { TreeSet() }.add(ComparableFont(font, name, weight, italic))
         }
 
-        list = familyToCFonts.map { (family, cFonts) -> FontFamily(family, cFonts.map { it.font }) }
+        list = familyToCFonts.map { (family, cFonts) ->
+            val canonicalFont = (cFonts.find { it.weight == 400 && !it.italic } ?: cFonts.first()).font
+            FontFamily(family, cFonts.map { it.font }, canonicalFont)
+        }
     }
 
     private fun String.removeSuffixes(): Pair<String, List<String>> {

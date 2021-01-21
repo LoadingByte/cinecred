@@ -37,7 +37,7 @@ fun newLabelTextArea() = JTextArea().apply {
 }
 
 
-open class WordWrapCellRenderer : TableCellRenderer {
+class WordWrapCellRenderer : TableCellRenderer {
 
     private val textArea = newLabelTextArea()
 
@@ -53,21 +53,38 @@ open class WordWrapCellRenderer : TableCellRenderer {
 }
 
 
-abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
+@Suppress("UNCHECKED_CAST")
+class CustomToStringListCellRenderer<E>(private val toString: (E) -> String) : DefaultListCellRenderer() {
 
     override fun getListCellRendererComponent(
         list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
     ): Component {
-        val string = value?.let(::toString) ?: ""
-        val cell = super.getListCellRendererComponent(list, string, index, isSelected, cellHasFocus)
-        val labelLines = getLabelLines(index)
-        if (labelLines.isNotEmpty())
-            (cell as JComponent).border = CompoundBorder(LabelListCellBorder(list, labelLines), cell.border)
-        return cell
+        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        text = value?.let { toString(it as E) } ?: ""
+        return this
     }
 
-    abstract fun toString(value: Any): String
-    abstract fun getLabelLines(index: Int): List<String>
+}
+
+
+class LabeledListCellRenderer<E>(
+    private val wrapped: ListCellRenderer<in E>,
+    private val groupSpacing: Int = 0,
+    private val getLabelLines: (Int) -> List<String>
+) : ListCellRenderer<E> {
+
+    override fun getListCellRendererComponent(
+        list: JList<out E>, value: E?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+    ): Component {
+        val cell = wrapped.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        // Show the label lines only in the popup menu, but not in the combo box.
+        if (index != -1) {
+            val labelLines = getLabelLines(index)
+            if (labelLines.isNotEmpty())
+                (cell as JComponent).border = CompoundBorder(LabelListCellBorder(list, labelLines), cell.border)
+        }
+        return cell
+    }
 
     /**
      * To be used in list cell components. Displays a separating label above the component.
@@ -77,11 +94,11 @@ abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
      * Inspired from here:
      * https://github.com/JFormDesigner/FlatLaf/blob/master/flatlaf-demo/src/main/java/com/formdev/flatlaf/demo/intellijthemes/ListCellTitledBorder.java
      */
-    private class LabelListCellBorder(private val list: JList<*>, val lines: List<String>) : Border {
+    private inner class LabelListCellBorder(private val list: JList<*>, val lines: List<String>) : Border {
 
         override fun isBorderOpaque() = true
         override fun getBorderInsets(c: Component) =
-            Insets(lines.size * c.getFontMetrics(list.font).height, 0, 0, 0)
+            Insets(lines.size * c.getFontMetrics(list.font).height + (lines.size - 1) / 2 * groupSpacing, 0, 0, 0)
 
         override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
             val fontMetrics = c.getFontMetrics(list.font)
@@ -89,13 +106,14 @@ abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
             g.withNewG2 { g2 ->
                 // Draw the list background.
                 g2.color = list.background
-                g2.fillRect(x, y, width, lines.size * fontMetrics.height)
+                g2.fillRect(x, y, width, getBorderInsets(c).top)
 
                 FlatUIUtils.setRenderingHints(g2)
                 g2.color = UIManager.getColor("Label.disabledForeground")
+                g2.font = list.font
 
                 for ((line, text) in lines.withIndex()) {
-                    val lineY = y + line * fontMetrics.height
+                    val lineY = y + line * fontMetrics.height + line / 2 * groupSpacing
                     val textWidth = fontMetrics.stringWidth(text)
                     // Draw the centered string.
                     FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
@@ -114,6 +132,45 @@ abstract class LabeledListCellRenderer : DefaultListCellRenderer() {
             }
         }
 
+    }
+
+}
+
+
+@Suppress("UNCHECKED_CAST")
+class CustomToStringKeySelectionManager<E>(private val toString: (E) -> String) : JComboBox.KeySelectionManager {
+
+    private var lastTime = 0L
+    private var prefix = ""
+
+    override fun selectionForKey(key: Char, model: ComboBoxModel<*>): Int {
+        var startIdx = (model as ComboBoxModel<E>).getElements().indexOfFirst { it === model.selectedItem }
+
+        val timeFactor = UIManager.get("ComboBox.timeFactor") as Long? ?: 1000L
+        val currTime = System.currentTimeMillis()
+        if (currTime - lastTime < timeFactor)
+            if (prefix.length == 1 && key == prefix[0])
+                startIdx++
+            else
+                prefix += key
+        else {
+            startIdx++
+            prefix = key.toString()
+        }
+        lastTime = currTime
+
+        fun startsWith(elem: E) = toString(elem).startsWith(prefix, ignoreCase = true)
+        val foundIdx = model.getElements(startIdx).indexOfFirst(::startsWith)
+        return if (foundIdx != -1)
+            startIdx + foundIdx
+        else
+            model.getElements(0, startIdx).indexOfFirst(::startsWith)
+    }
+
+    private fun ComboBoxModel<E>.getElements(startIdx: Int = 0, endIdx: Int = -1) = sequence<E> {
+        val endIdx2 = if (endIdx == -1) size else endIdx
+        for (idx in startIdx until endIdx2)
+            yield(getElementAt(idx))
     }
 
 }

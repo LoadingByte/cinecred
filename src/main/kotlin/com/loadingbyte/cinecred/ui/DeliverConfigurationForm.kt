@@ -41,15 +41,14 @@ object DeliverConfigurationForm : Form() {
             // Avoid the scrollbar.
             maximumRowCount = model.size
             // User a custom render that shows category headers.
-            renderer = object : LabeledListCellRenderer() {
-                override fun toString(value: Any): String {
-                    val key =
-                        if (value in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
-                        else "ui.deliverConfig.videoFormatName"
-                    return l10n(key, (value as RenderFormat).label)
-                }
-
-                override fun getLabelLines(index: Int) = when (index) {
+            val baseRenderer = CustomToStringListCellRenderer<RenderFormat> { value ->
+                val key =
+                    if (value in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
+                    else "ui.deliverConfig.videoFormatName"
+                l10n(key, value.label)
+            }
+            renderer = LabeledListCellRenderer(baseRenderer) { index ->
+                when (index) {
                     0 -> listOf(l10n("ui.deliverConfig.wholePagesFormatCategory"))
                     WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormatCategory"))
                     else -> emptyList()

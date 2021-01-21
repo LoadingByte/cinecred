@@ -9,9 +9,7 @@ import org.apache.batik.bridge.*
 import org.apache.batik.bridge.svg12.SVG12BridgeContext
 import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.slf4j.LoggerFactory
-import org.xml.sax.SAXException
 import java.awt.Desktop
 import java.awt.Font
 import java.awt.FontFormatException
@@ -47,68 +45,57 @@ fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
     val ext = pictureFile.extension
     if (Files.isRegularFile(pictureFile))
         when (ext) {
-            in RASTER_PICTURE_EXTS -> return lazy {
-                try {
-                    Picture.Raster(ImageIO.read(pictureFile.toFile()))
-                } catch (_: IOException) {
-                    null
-                }
-            }
-            "svg" -> return lazy { loadSVG(pictureFile) }
-            "pdf" -> return lazy { loadPDF(pictureFile) }
-            "ai", "eps", "ps" -> return lazy { loadPostScript(pictureFile) }
+            in RASTER_PICTURE_EXTS -> return lazy { runCatching { loadRaster(pictureFile) }.getOrNull() }
+            "svg" -> return lazy { runCatching { loadSVG(pictureFile) }.getOrNull() }
+            "pdf" -> return lazy { runCatching { loadPDF(pictureFile) }.getOrNull() }
+            "ai", "eps", "ps" -> return lazy { runCatching { loadPostScript(pictureFile) }.getOrNull() }
         }
     return null
 }
+
+
+private fun loadRaster(rasterFile: Path): Picture.Raster =
+    Picture.Raster(ImageIO.read(rasterFile.toFile()))
 
 
 // Look here for references:
 // https://github.com/apache/xmlgraphics-batik/blob/trunk/batik-transcoder/src/main/java/org/apache/batik/transcoder/SVGAbstractTranscoder.java
-private fun loadSVG(svgFile: Path): Picture.SVG? {
-    try {
-        val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-            .createDocument(svgFile.toUri().toString(), Files.newBufferedReader(svgFile)) as SVGOMDocument
-        val docRoot = doc.rootElement
-        val ctx = when {
-            doc.isSVG12 -> SVG12BridgeContext(UserAgentAdapter())
-            else -> BridgeContext(UserAgentAdapter())
-        }
-        ctx.isDynamic = true
-
-        val gvtRoot = GVTBuilder().build(ctx, doc)
-
-        val width = ctx.documentSize.width.toFloat()
-        val height = ctx.documentSize.height.toFloat()
-
-        // Dispatch an 'onload' event if needed.
-        if (ctx.isDynamic) {
-            val se = BaseScriptingEnvironment(ctx)
-            se.loadScripts()
-            se.dispatchSVGLoadEvent()
-            if (ctx.isSVG12)
-                ctx.animationEngine.currentTime = SVGUtilities.convertSnapshotTime(docRoot, null)
-        }
-
-        return Picture.SVG(gvtRoot, width, height)
-    } catch (_: IOException) {
-    } catch (_: SAXException) {
-    } catch (_: BridgeException) {
+private fun loadSVG(svgFile: Path): Picture.SVG {
+    val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
+        .createDocument(svgFile.toUri().toString(), Files.newBufferedReader(svgFile)) as SVGOMDocument
+    val docRoot = doc.rootElement
+    val ctx = when {
+        doc.isSVG12 -> SVG12BridgeContext(UserAgentAdapter())
+        else -> BridgeContext(UserAgentAdapter())
     }
-    return null
+    ctx.isDynamic = true
+
+    val gvtRoot = GVTBuilder().build(ctx, doc)
+
+    val width = ctx.documentSize.width.toFloat()
+    val height = ctx.documentSize.height.toFloat()
+
+    // Dispatch an 'onload' event if needed.
+    if (ctx.isDynamic) {
+        val se = BaseScriptingEnvironment(ctx)
+        se.loadScripts()
+        se.dispatchSVGLoadEvent()
+        if (ctx.isSVG12)
+            ctx.animationEngine.currentTime = SVGUtilities.convertSnapshotTime(docRoot, null)
+    }
+
+    return Picture.SVG(gvtRoot, width, height)
 }
 
 
-private fun loadPDF(pdfFile: Path): Picture.PDF? {
-    try {
-        // Note: We manually create an input stream and pass it to PDDocument.load() because when passing a
-        // file object to that method and letting PDFBox create the input stream, it seems to forget to close it.
-        val doc = Files.newInputStream(pdfFile).use { stream -> PDDocument.load(stream) }
-        if (doc.numberOfPages != 0)
-            return Picture.PDF(doc)
-    } catch (_: IOException) {
-    } catch (_: InvalidPasswordException) {
-    }
-    return null
+private fun loadPDF(pdfFile: Path): Picture.PDF {
+    // Note: We manually create an input stream and pass it to PDDocument.load() because when passing a
+    // file object to that method and letting PDFBox create the input stream, it seems to forget to close it.
+    val doc = Files.newInputStream(pdfFile).use { stream -> PDDocument.load(stream) }
+    if (doc.numberOfPages != 0)
+        return Picture.PDF(doc)
+    else
+        throw IOException()
 }
 
 
@@ -152,8 +139,8 @@ private val GS_EXECUTABLE: Path? by lazy {
 private val GS_STREAM_GOBBLER_EXECUTOR = Executors.newSingleThreadExecutor { r -> Thread(r, "Ghostscript") }
 private val GS_LOGGER = LoggerFactory.getLogger("Ghostscript")
 
-private fun loadPostScript(psFile: Path): Picture.PDF? {
-    val gs = GS_EXECUTABLE ?: return null
+private fun loadPostScript(psFile: Path): Picture.PDF {
+    val gs = GS_EXECUTABLE ?: throw IOException()
     val tmpFile = Files.createTempFile("cinecred-ps2pdf-", ".pdf")
     try {
         val cmd = arrayOf(gs.toString(), "-sDEVICE=pdfwrite", "-o", tmpFile.toString(), psFile.toString())
@@ -164,17 +151,18 @@ private fun loadPostScript(psFile: Path): Picture.PDF? {
         }
         val exitCode = process.waitFor()
         if (exitCode != 0)
-            return null
+            throw IOException()
         // Try for at most then seconds to access the file generated by Ghostscript. On Windows machines, the file
         // is sometimes not unlocked right away even though the Ghostscript process has already terminated, so we
         // use this spinlock-like mechanism to wait for Windows to unlock the file. This seems to be the best option.
         repeat(10) {
-            val pdf = loadPDF(tmpFile)  // Note: loadPDF() already catches IOExceptions.
-            if (pdf != null)
-                return pdf
+            try {
+                return loadPDF(tmpFile)
+            } catch (_: Exception) {
+            }
             Thread.sleep(100)
         }
-        return null
+        throw IOException()
     } finally {
         // Presumably because of some Kotlin compiler bug, we have to put try-catch block with a Files.delete()
         // into an extra method. If we don't, the compiler generates branches where the try-catch block is missing.

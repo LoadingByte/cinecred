@@ -80,54 +80,59 @@ class Table(
         return null
     }
 
-    fun <T> get(row: Int, l10nColName: String, lazyTypeDesc: () -> String, convert: (String) -> T): T? {
+    fun <T> get(row: Int, l10nColName: String, convert: (String) -> T): T? {
         val str = getString(row, l10nColName) ?: return null
         return try {
             str.let(convert)
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllFormattedCell) {
             // If the cell value is available but has the wrong format, log a warning and return null.
             val colName = header[colMap[l10nColName]!!]
-            warn(getLineNo(row), l10n("projectIO.table.illFormattedCell", str, colName, lazyTypeDesc()))
+            warn(getLineNo(row), l10n("projectIO.table.illFormattedCell", str, colName, e.message))
             null
         }
     }
 
     fun getFiniteFloat(row: Int, l10nColName: String, nonNeg: Boolean = false, non0: Boolean = false): Float? =
-        get(row, l10nColName, {
-            val restriction = when {
-                nonNeg && non0 -> "> 0"
-                nonNeg && !non0 -> "\u2265 0"
-                !nonNeg && non0 -> "\u2260 0"
-                else -> ""
+        get(row, l10nColName) { str ->
+            try {
+                str.toFiniteFloat(nonNeg, non0)
+            } catch (_: NumberFormatException) {
+                val restriction = when {
+                    nonNeg && non0 -> "> 0"
+                    nonNeg && !non0 -> "\u2265 0"
+                    !nonNeg && non0 -> "\u2260 0"
+                    else -> ""
+                }
+                throw IllFormattedCell(l10n("projectIO.table.illFormattedFloat", restriction).trim())
             }
-            l10n("projectIO.table.floatTypeDesc", restriction).trim()
-        }) { str ->
-            str.toFiniteFloat(nonNeg, non0)
         }
 
     inline fun <reified T : Enum<T>> getEnum(row: Int, l10nColName: String): T? =
-        get(row, l10nColName, {
-            val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
-            val primaryOptions = keys.map(::l10n)
-            val alternativeOptions = keys.flatMap { l10nAll(it).toMutableSet().apply { removeAll(primaryOptions) } }
-            l10n(
-                "projectIO.table.oneOfWithAlternativesTypeDesc",
-                primaryOptions.joinToString("/") { "\"$it\"" },
-                alternativeOptions.joinToString("/") { "\"$it\"" }
-            )
-        }) { str ->
+        get(row, l10nColName) { str ->
             val keyBase = "$l10nPrefix${T::class.java.simpleName}."
             for (enumElem in enumValues<T>())
                 if (l10nAll("$keyBase${enumElem.name}").any { it.equals(str, ignoreCase = true) })
                     return@get enumElem
-            throw IllegalArgumentException()
+
+            val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
+            val primaryOptions = keys.map(::l10n)
+            val alternativeOptions = keys.flatMap { l10nAll(it).toMutableSet().apply { removeAll(primaryOptions) } }
+            val msg = l10n(
+                "projectIO.table.illFormattedOneOfWithAlternatives",
+                primaryOptions.joinToString("/") { "\"$it\"" },
+                alternativeOptions.joinToString("/") { "\"$it\"" }
+            )
+            throw IllFormattedCell(msg)
         }
 
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>): T? =
-        get(row, l10nColName, {
-            l10n("projectIO.table.oneOfTypeDesc", map.keys.joinToString("/") { "\"$it\"" })
-        }) { str ->
-            map[str] ?: throw IllegalArgumentException()
+        get(row, l10nColName) { str ->
+            map[str] ?: throw IllFormattedCell(
+                l10n("projectIO.table.illFormattedOneOf", map.keys.joinToString("/") { "\"$it\"" })
+            )
         }
+
+
+    class IllFormattedCell(message: String) : Exception(message)
 
 }

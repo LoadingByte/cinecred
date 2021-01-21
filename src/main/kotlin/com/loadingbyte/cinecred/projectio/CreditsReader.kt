@@ -20,6 +20,19 @@ class ParserMsg(val lineNo: Int, val severity: Severity, val msg: String)
 private enum class BreakAlign { BODY_COLUMNS, HEAD_AND_TAIL }
 
 
+private const val WRAP_KEY = "projectIO.credits.table.wrap"
+private val WRAP_KEYWORDS = l10nAll(WRAP_KEY)
+private val WRAP_PRIMARY_KW = l10n(WRAP_KEY)
+private val WRAP_ALT_KWS = WRAP_KEYWORDS.toMutableSet()
+    .apply { remove(WRAP_PRIMARY_KW) }.joinToString("/") { "\"$it\"" }
+
+private const val CROP_KEY = "projectIO.credits.table.crop"
+private val CROP_KEYWORDS = l10nAll(CROP_KEY).toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
+private val CROP_PRIMARY_KW = l10n(CROP_KEY)
+private val CROP_ALT_KWS = l10nAll(CROP_KEY).toMutableSet()
+    .apply { remove(CROP_PRIMARY_KW) }.joinToString("/") { "\"$it\"" }
+
+
 fun readCredits(
     csvFile: Path,
     styling: Styling,
@@ -67,6 +80,9 @@ fun readCredits(
         l10nColNames = listOf("pageStyle", "breakAlign", "columnPos", "contentStyle", "vGap", "head", "body", "tail")
     )
 
+    // Helper function to shorten logging calls.
+    fun warn(row: Int, msg: String) = log.add(ParserMsg(table.getLineNo(row), Severity.WARN, msg))
+
     // The current content style. This variable is special because a content style stays valid until the next
     // explicit content style declaration.
     var contentStyle: ContentStyle? = null
@@ -111,6 +127,9 @@ fun readCredits(
     var blockHead: String? = null
     val blockBody = mutableListOf<BodyElement>()
     var blockTail: String? = null
+    // Keep track where the current head and tail have been declared. This is used by an error message.
+    var blockHeadDeclaredRow = 0
+    var blockTailDeclaredRow = 0
 
     fun concludePage() {
         // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
@@ -178,6 +197,11 @@ fun readCredits(
             columnBlocks.add(block)
             alignBodyColsGroupsGroup.add(block)
             alignHeadTailGroupsGroup.add(block)
+        } else {
+            if (blockHead != null)
+                warn(blockHeadDeclaredRow, l10n("projectIO.credits.unusedHead", blockHead))
+            if (blockTail != null)
+                warn(blockTailDeclaredRow, l10n("projectIO.credits.unusedTail", blockTail))
         }
         blockStyle = contentStyle
         blockHead = null
@@ -193,9 +217,6 @@ fun readCredits(
     }
 
     for (row in 0 until table.numRows) {
-        // Helper function to shorten logging calls.
-        fun warn(msg: String) = log.add(ParserMsg(table.getLineNo(row), Severity.WARN, msg))
-
         // An empty row implicitly means a vertical gap of one unit after the appropriate credits element.
         if (table.isEmpty(row))
             vGapAccumulator += styling.global.unitVGapPx
@@ -226,31 +247,32 @@ fun readCredits(
         if (stageStyle == null)
             if (styling.pageStyles.isEmpty()) {
                 stageStyle = STANDARD_PAGE_STYLE
-                warn(l10n("projectIO.credits.noPageStylesAvailable", stageStyle!!.name))
+                warn(row, l10n("projectIO.credits.noPageStylesAvailable", stageStyle!!.name))
             } else {
                 stageStyle = styling.pageStyles.firstOrNull()
-                warn(l10n("projectIO.credits.noPageStyleSpecified", stageStyle!!.name))
+                warn(row, l10n("projectIO.credits.noPageStyleSpecified", stageStyle!!.name))
             }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
         // If the column cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
         // previous segment and start a new one.
-        val wrapKey = "projectIO.credits.table.wrap"
-        table.get(row, "columnPos", {
-            val wrapPrimary = l10n(wrapKey)
-            val wrapAlt = l10nAll(wrapKey).toMutableSet().apply { remove(wrapPrimary) }.joinToString("/") { "\"$it\"" }
-            l10n("projectIO.credits.columnPosTypeDesc", wrapPrimary, wrapAlt)
-        }) { str ->
+        table.get(row, "columnPos") { str ->
             // Remove all occurrences of all wrap keywords from the string.
             var modStr = str
-            for (wrapKeyword in l10nAll(wrapKey))
+            for (wrapKeyword in l10nAll(WRAP_KEY))
                 modStr = modStr.replace(wrapKeyword, "", ignoreCase = true)
             // If we have removed something, there was a wrap keyword.
             val wrap = modStr != str
-            // Convert the remaining position offset to a float, or use 0 if the str only contained a wrap keyword.
-            val posOffsetPx = if (modStr.isBlank()) 0f else modStr.trim().toFiniteFloat()
-            // Yield the result.
-            Pair(wrap, posOffsetPx)
+            try {
+                // Convert the remaining position offset to a float, or use 0 if the str only contained a wrap keyword.
+                val posOffsetPx = if (modStr.isBlank()) 0f else modStr.trim().toFiniteFloat()
+                // Yield the result.
+                Pair(wrap, posOffsetPx)
+            } catch (_: NumberFormatException) {
+                throw Table.IllFormattedCell(
+                    l10n("projectIO.credits.illFormattedColumnPos", WRAP_PRIMARY_KW, WRAP_ALT_KWS)
+                )
+            }
         }?.let { (wrap, posOffsetPx) ->
             concludeBlock(0f)
             concludeColumn()
@@ -272,13 +294,7 @@ fun readCredits(
         val newTail = table.getString(row, "tail")
 
         // Get the body element, which may either be a string or a (optionally scaled) picture.
-        val cropKey = "projectIO.credits.table.crop"
-        val cropKeywords = l10nAll(cropKey).toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
-        val bodyElem = table.get(row, "body", {
-            val cropPrimary = l10n(cropKey)
-            val cropAlt = l10nAll(cropKey).toMutableSet().apply { remove(cropPrimary) }.joinToString("/") { "\"$it\"" }
-            l10n("projectIO.credits.bodyElemTypeDesc", cropPrimary, cropAlt)
-        }) { str ->
+        val bodyElem = table.get(row, "body") { str ->
             // Remove up to four space-separated suffixes from the string and each time check whether the remaining
             // string is a picture. If that is the case, try to parse the suffixes as scaling and cropping hints.
             // Theoretically, we could stop after removing two suffixes and not having found a picture by then because
@@ -287,27 +303,38 @@ fun readCredits(
             // thereby warn the user.
             var picName = str
             repeat(5) {
-                pictureLoaderMap[picName]?.value?.let { origPic ->
+                pictureLoaderMap[picName]?.let { picLoader ->
+                    val origPic = picLoader.value
+                        ?: throw Table.IllFormattedCell(l10n("projectIO.credits.illFormattedBodyElemCorrupt"))
+
                     var pic = origPic
                     val picHints = str.drop(picName.length).split(' ')
                     // Step 1: Crop the picture if the user specified it.
-                    if (picHints.any { it in cropKeywords })
+                    if (picHints.any { it in CROP_KEYWORDS })
                         pic = when (pic) {
                             is Picture.SVG -> pic.cropped()
                             is Picture.PDF -> pic.cropped()
                             // Raster images cannot be cropped.
-                            is Picture.Raster -> throw IllegalArgumentException()
+                            is Picture.Raster -> throw Table.IllFormattedCell(
+                                l10n("projectIO.credits.illFormattedBodyElemRasterCrop", CROP_PRIMARY_KW, CROP_ALT_KWS)
+                            )
                         }
                     // Step 2: Only now, after the picture has potentially been cropped, we can apply scaling hints.
                     for (hint in picHints)
-                        pic = when {
-                            hint.isBlank() || hint in cropKeywords -> continue
-                            hint.startsWith('x') ->
-                                pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
-                            hint.endsWith('x') ->
-                                pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
-                            // The user supplied an unknown suffix.
-                            else -> throw IllegalArgumentException()
+                        try {
+                            pic = when {
+                                hint.isBlank() || hint in CROP_KEYWORDS -> continue
+                                hint.startsWith('x') ->
+                                    pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
+                                hint.endsWith('x') ->
+                                    pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
+                                // The user supplied an unknown suffix.
+                                else -> throw IllegalArgumentException()
+                            }
+                        } catch (_: IllegalArgumentException) {
+                            throw Table.IllFormattedCell(
+                                l10n("projectIO.credits.illFormattedBodyElem", CROP_PRIMARY_KW, CROP_ALT_KWS)
+                            )
                         }
                     return@get BodyElement.Pic(pic)
                 }
@@ -324,8 +351,14 @@ fun readCredits(
             concludeBlock(vGapAccumulator)
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
-            blockHead = newHead
-            blockTail = newTail
+            if (newHead != null) {
+                blockHead = newHead
+                blockHeadDeclaredRow = row
+            }
+            if (newTail != null) {
+                blockTail = newTail
+                blockTailDeclaredRow = row
+            }
         }
 
         // If no content style has been declared at the point where the first block starts, issue a warning and
@@ -334,10 +367,10 @@ fun readCredits(
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
             if (styling.contentStyles.isEmpty()) {
                 contentStyle = STANDARD_CONTENT_STYLE
-                warn(l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name))
+                warn(row, l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name))
             } else {
                 contentStyle = styling.contentStyles[0]
-                warn(l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name))
+                warn(row, l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name))
             }
             blockStyle = contentStyle
         }
@@ -346,11 +379,11 @@ fun readCredits(
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            warn(l10n("projectIO.credits.headUnsupported", contentStyle!!.name, newHead))
+            warn(row, l10n("projectIO.credits.headUnsupported", newHead, contentStyle!!.name))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            warn(l10n("projectIO.credits.tailUnsupported", contentStyle!!.name, newTail))
+            warn(row, l10n("projectIO.credits.tailUnsupported", newTail, contentStyle!!.name))
         }
 
         // If the body cell is non-empty, add its content to the current block.

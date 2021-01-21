@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.common
 import com.loadingbyte.cinecred.project.FontSpec
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import java.awt.Font
-import java.awt.FontMetrics
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints.*
@@ -41,9 +40,7 @@ val REF_G2: Graphics2D = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)
 val REF_FRC: FontRenderContext = REF_G2.fontRenderContext
 
 
-class RichFont(val spec: FontSpec, val awt: Font) {
-    val metrics: FontMetrics = REF_G2.getFontMetrics(awt)
-}
+class RichFont(val spec: FontSpec, val awt: Font)
 
 
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {

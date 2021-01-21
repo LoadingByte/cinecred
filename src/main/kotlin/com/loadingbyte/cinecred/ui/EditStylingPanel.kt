@@ -153,7 +153,7 @@ object EditStylingPanel : JPanel() {
                 try {
                     it?.toFPS() ?: throw VerifyResult(Severity.ERROR, l10n("general.blank"))
                 } catch (_: IllegalArgumentException) {
-                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.fpsIllFormatted"))
+                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.illFormattedFPS"))
                 }
             }
         ).apply { isEditable = true }

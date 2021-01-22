@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
@@ -16,7 +17,10 @@ import java.awt.Dimension
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
+import javax.imageio.stream.FileImageOutputStream
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -42,7 +46,7 @@ class WholePageSequenceRenderJob(
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
-                Format.PNG, Format.TIFF -> {
+                Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
                     val imageType = if (background != null) BufferedImage.TYPE_INT_RGB else BufferedImage.TYPE_INT_ARGB
                     val pageImage = BufferedImage(width, pageHeight, imageType)
 
@@ -55,7 +59,23 @@ class WholePageSequenceRenderJob(
                         pageDefImage.materialize(g2, drawGuides = false)
                     }
 
-                    ImageIO.write(pageImage, if (format == Format.PNG) "png" else "tiff", pageFile.toFile())
+                    // Note: We do not use ImageIO.write() for two reasons:
+                    //   - We need to support TIFF compression.
+                    //   - ImageIO.write() eventually uses the com.sun class FileImageOutputStreamSpi,
+                    //     which swallows IO exceptions. Eventually, another exception for the same error
+                    //     will be thrown, but the error message is lost.
+                    val writer = ImageIO.getImageWritersBySuffix(format.fileExts[0]).next()
+                    Files.deleteIfExists(pageFile)
+                    FileImageOutputStream(pageFile.toFile()).use { stream ->
+                        writer.output = stream
+                        val param = writer.defaultWriteParam
+                        param.compressionMode = ImageWriteParam.MODE_EXPLICIT
+                        when (format) {
+                            Format.TIFF_PACK_BITS -> param.compressionType = "PackBits"
+                            Format.TIFF_DEFLATE -> param.compressionType = "Deflate"
+                        }
+                        writer.write(null, IIOImage(pageImage, null, null), param)
+                    }
                 }
                 Format.SVG -> {
                     val doc = GenericDOMImplementation.getDOMImplementation()
@@ -83,9 +103,10 @@ class WholePageSequenceRenderJob(
     class Format private constructor(label: String, fileExt: String) : RenderFormat(label, listOf(fileExt)) {
         companion object {
             val PNG = Format("PNG", "png")
-            val TIFF = Format("TIFF", "tiff")
+            val TIFF_PACK_BITS = Format(l10n("delivery.packBits", "TIFF"), "tiff")
+            val TIFF_DEFLATE = Format(l10n("delivery.deflate", "TIFF"), "tiff")
             val SVG = Format("SVG", "svg")
-            val ALL = listOf(PNG, TIFF, SVG)
+            val ALL = listOf(PNG, TIFF_PACK_BITS, TIFF_DEFLATE, SVG)
         }
     }
 

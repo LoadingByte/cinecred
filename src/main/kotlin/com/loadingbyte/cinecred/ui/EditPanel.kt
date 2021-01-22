@@ -184,14 +184,13 @@ object EditPanel : JPanel() {
             }
         else {
             val fps = project.styling.global.fps.frac
-            val durOnlyFrames = getRuntimeFrames(project, drawnPages)
-            var durSeconds = (durOnlyFrames / fps).toInt()
-            val durMinutes = durSeconds / 60
-            val durFrames = durOnlyFrames - (durSeconds * fps).toInt()
-            durSeconds -= durMinutes * 60
+            val runtime = getRuntimeFrames(project, drawnPages)
+            val rMinutes = (runtime / fps).toInt() / 60
+            val rSeconds = (runtime / fps).toInt() % 60
+            val rFrames = runtime - ((rSeconds + rMinutes * 60) * fps).toInt()
             runtimeLabel.apply {
-                text = l10n("ui.edit.runtime", "%02d:%02d+%02d".format(durMinutes, durSeconds, durFrames))
-                toolTipText = l10n("ui.edit.runtimeTooltip", durMinutes, durSeconds, durFrames, durOnlyFrames)
+                text = l10n("ui.edit.runtime", "%02d:%02d+%02d".format(rMinutes, rSeconds, rFrames))
+                toolTipText = l10n("ui.edit.runtimeTooltip", rMinutes, rSeconds, rFrames, runtime)
             }
         }
 

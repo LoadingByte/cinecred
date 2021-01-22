@@ -4,6 +4,7 @@ import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.withNewG2
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -88,10 +89,11 @@ class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val hei
 class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGIcon) :
     FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null) {
     override fun paintIcon(c: Component, g2: Graphics2D) {
-        left.svg.paint(g2)
-        val prevTransform = g2.transform
-        g2.translate(left.width + 4, 0)
-        right.svg.paint(g2)
-        g2.transform = prevTransform
+        @Suppress("NAME_SHADOWING")
+        g2.withNewG2 { g2 ->
+            left.svg.paint(g2)
+            g2.translate(left.width + 4, 0)
+            right.svg.paint(g2)
+        }
     }
 }

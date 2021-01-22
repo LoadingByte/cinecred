@@ -28,8 +28,6 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
     private val imagePanel = ImagePanel().also { setViewportView(it) }
 
     private var rasterDirty = true
-    private var cachedRasterImage: BufferedImage? = null
-    private val paintingJobSlot = JobSlot()
 
     private var globalWidth = 0
     private var globalHeight = 0
@@ -95,6 +93,9 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
 
     private inner class ImagePanel : JPanel() {
 
+        private var cachedRasterImage: BufferedImage? = null
+        private val paintingJobSlot = JobSlot()
+
         private val prefWidth: Int get() = (zoom * viewport.width).roundToInt()
         private val prefHeight: Int get() = (zoom * defImage.height * viewport.width / globalWidth).roundToInt()
 
@@ -110,34 +111,29 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
             // whenever the user scrolls, which can be very expensive when the deferred image contains, e.g., PDFs.
             if (rasterDirty) {
                 rasterDirty = false
-                paintingJobSlot.submit {
-                    val newRasterImage = paintRasterImage()
-                    // Use invokeLater() to make sure that when the following code is executed, we are definitely
-                    // no longer in the outer paintComponent() method. This way, we can go without explicit locking.
-                    // Also, we set the cached image variables in the AWT thread, which alleviates the need to declare
-                    // them as volatile.
-                    SwingUtilities.invokeLater {
-                        cachedRasterImage = newRasterImage
-                        repaint()
-                    }
+                submitPaintRasterImage(
+                    paintingJobSlot, prefWidth, prefHeight, globalWidth, backgroundColor, defImage, showGuides
+                ) { newRasterImage ->
+                    cachedRasterImage = newRasterImage
+                    repaint()
                 }
-                // This method will be called once again once the background thread has finished painting the
+                // paintComponent() will be called once again once the background thread has finished painting the
                 // intermediate images. We will now go on painting an old version of some cached image.
             }
 
-            val curCachedRasterImage = cachedRasterImage
-            if (curCachedRasterImage != null) {
-                if (prefWidth == curCachedRasterImage.width) {
+            val currCachedRasterImage = cachedRasterImage
+            if (currCachedRasterImage != null) {
+                if (prefWidth == currCachedRasterImage.width) {
                     // If the we already have a cached version of the raster image and its size matches the current
                     // zoom, paint that onto the panel.
-                    g.drawImage(curCachedRasterImage, 0, 0, null)
+                    g.drawImage(currCachedRasterImage, 0, 0, null)
                 } else g.withNewG2 { g2 ->
                     // If we have a cached version, but its size doesn't match the current zoom, for now paint a very
                     // poorly (but fastly) scaled version of the previous image onto the panel. When the background
                     // thread has finished re-rendering the image for the current zoom, that will be painted instead.
                     g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
-                    val scaling = prefWidth.toDouble() / curCachedRasterImage.width
-                    g2.drawImage(curCachedRasterImage, AffineTransform.getScaleInstance(scaling, scaling), null)
+                    val scaling = prefWidth.toDouble() / currCachedRasterImage.width
+                    g2.drawImage(currCachedRasterImage, AffineTransform.getScaleInstance(scaling, scaling), null)
                 }
             } else {
                 // If the preview panel has just been created, it doesn't have a cached image yet.
@@ -149,20 +145,6 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
             if (showSafeAreas)
                 paintSafeAreas(g)
         }
-
-        private fun paintRasterImage() =
-            gCfg.createCompatibleImage(prefWidth, prefHeight).withG2 { g2 ->
-                g2.setHighQuality()
-                // Fill the background.
-                g2.color = backgroundColor
-                g2.fillRect(0, 0, prefWidth, prefHeight)
-                // Paint a scaled version of the deferred image onto the raster image.
-                val scaledDefImage = DeferredImage()
-                scaledDefImage.drawDeferredImage(defImage, 0f, 0f, prefWidth / globalWidth.toFloat())
-                // Note: We compute the guide stroke width such that they have a nice thin width irrespective of the
-                // configured film dimensions.
-                scaledDefImage.materialize(g2, showGuides, guideStrokeWidth = globalWidth / 1024f)
-            }
 
         private fun paintSafeAreas(g: Graphics) {
             g.withNewG2 { g2 ->
@@ -218,7 +200,37 @@ class EditPagePreviewPanel(zoom: Float, showGuides: Boolean, showSafeAreas: Bool
     }
 
     companion object {
+
         private val gCfg = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+
+        // We use this external static method to absolutely ensure all variables have been captured from inside the
+        // AWT thread. We can now use these variables from another thread without fearing they might change suddenly.
+        private fun submitPaintRasterImage(
+            jobSlot: JobSlot, prefWidth: Int, prefHeight: Int, globalWidth: Int, backgroundColor: Color,
+            defImage: DeferredImage, showGuides: Boolean, onFinish: (BufferedImage) -> Unit
+        ) {
+            jobSlot.submit {
+                val rasterImage = gCfg.createCompatibleImage(prefWidth, prefHeight).withG2 { g2 ->
+                    g2.setHighQuality()
+                    // Fill the background.
+                    g2.color = backgroundColor
+                    g2.fillRect(0, 0, prefWidth, prefHeight)
+                    // Paint a scaled version of the deferred image onto the raster image.
+                    val scaledDefImage = DeferredImage()
+                    scaledDefImage.drawDeferredImage(defImage, 0f, 0f, prefWidth / globalWidth.toFloat())
+                    // Note: We compute the guide stroke width such that they have a nice thin width irrespective of
+                    // the configured film dimensions.
+                    scaledDefImage.materialize(g2, showGuides, guideStrokeWidth = globalWidth / 1024f)
+                }
+
+                // Use invokeLater() to make sure that when the following code is executed, we are definitely no longer
+                // in the paintComponent() method which calls this function. This way, we can go without explicit
+                // locking. Also, we set the cached image variables in the AWT thread, which alleviates the need to
+                // declare them as volatile.
+                SwingUtilities.invokeLater { onFinish(rasterImage) }
+            }
+        }
+
     }
 
 }

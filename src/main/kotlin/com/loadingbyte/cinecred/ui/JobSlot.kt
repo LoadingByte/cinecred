@@ -7,12 +7,13 @@ class JobSlot {
 
     private val lock = Any()
     private var job: Runnable? = null
+    private var isRunning = false
 
     fun submit(job: Runnable) {
         synchronized(lock) {
             val hadJob = this.job != null
             this.job = job
-            if (!hadJob)
+            if (!hadJob && !isRunning)
                 executor.submit(::run)
         }
     }
@@ -21,9 +22,15 @@ class JobSlot {
         val job = synchronized(lock) {
             val job = this.job!!
             this.job = null
+            isRunning = true
             job
         }
         job.run()
+        synchronized(lock) {
+            isRunning = false
+            if (this.job != null)
+                executor.submit(::run)
+        }
     }
 
     companion object {

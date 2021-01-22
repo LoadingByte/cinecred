@@ -162,7 +162,9 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             renderer = CustomToStringListCellRenderer(toString)
             keySelectionManager = CustomToStringKeySelectionManager(toString)
         }
-        addFormRow(label, listOf(field), listOf(""), isVisible, verify?.let { { it(field.selectedItem as E?) } })
+        addFormRow(
+            label, listOf(field), listOf("wmax 40%"), isVisible, verify?.let { { it(field.selectedItem as E?) } }
+        )
         field.addActionListener { onChange(field) }
         return field
     }

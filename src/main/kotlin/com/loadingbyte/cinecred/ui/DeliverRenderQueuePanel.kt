@@ -5,6 +5,8 @@ import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import javax.swing.*
 import javax.swing.JOptionPane.*
@@ -16,12 +18,8 @@ import javax.swing.table.TableCellRenderer
 object DeliverRenderQueuePanel : JPanel() {
 
     init {
-        val startPauseButton = JToggleButton(l10n("ui.deliverRenderQueue.start"), PLAY_ICON)
-        startPauseButton.addActionListener {
-            RenderQueue.isPaused = !startPauseButton.isSelected
-            val key = if (startPauseButton.isSelected) "ui.deliverRenderQueue.start" else "ui.deliverRenderQueue.pause"
-            startPauseButton.text = l10n(key)
-        }
+        val startPauseButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON)
+        startPauseButton.addActionListener { RenderQueue.isPaused = !startPauseButton.isSelected }
 
         val jobTable = JTable(JobTableModel).apply {
             // Disable cell selection because it looks weird with the custom cell renderers.
@@ -58,6 +56,9 @@ object DeliverRenderQueuePanel : JPanel() {
 
         fun setProgress(progress: Any) {
             val rowIdx = JobTableModel.rows.indexOf(row)
+            // When we receive a progress notification for the first time, we record the current timestamp.
+            if (row.startTime == null)
+                row.startTime = Instant.now()
             // Even though we still receive an update from the render thread (which is additionally delayed by
             // SwingUtilities.invokeLater), the job might have been cancelled and its row might have been removed
             // from the table. To avoid issues, we make sure to only fire updates for rows that are still present
@@ -88,6 +89,7 @@ object DeliverRenderQueuePanel : JPanel() {
     private object JobTableModel : AbstractTableModel() {
 
         class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
+            var startTime: Instant? = null
             var progress: Any = 0f
         }
 
@@ -107,7 +109,7 @@ object DeliverRenderQueuePanel : JPanel() {
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> rows[rowIdx].formatLabel
             1 -> rows[rowIdx].destination
-            2 -> rows[rowIdx].progress
+            2 -> rows[rowIdx]
             3 -> ""
             else -> throw IllegalArgumentException()
         }
@@ -125,18 +127,31 @@ object DeliverRenderQueuePanel : JPanel() {
         private val wordWrapCellRenderer = WordWrapCellRenderer()
 
         override fun getTableCellRendererComponent(
-            table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-        ): JComponent = when (value) {
+            table: JTable, row: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
+        ): JComponent = when (val progress = (row as JobTableModel.Row).progress) {
             is Float -> progressBar.apply {
-                model.value = (value * 100).toInt().coerceIn(0, 100)
+                val percentage = (progress * 100).toInt().coerceIn(0, 100)
+                model.value = percentage
                 foreground = defaultProgressBarForeground
+                if (row.startTime != null) {
+                    isStringPainted = true
+                    val d = when (percentage) {
+                        0 -> Duration.ZERO
+                        else -> Duration.between(row.startTime, Instant.now())
+                            .multipliedBy(100L - percentage).dividedBy(percentage.toLong())
+                    }
+                    val remaining = "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
+                    string = l10n("ui.deliverRenderQueue.progressInfo", percentage, remaining)
+                } else
+                    isStringPainted = false
             }
             "finished" -> progressBar.apply {
                 model.value = 100
                 foreground = Color.decode("#499C54")
+                isStringPainted = false
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
-                table, "${value.javaClass.simpleName}: ${value.localizedMessage ?: ""}",
+                table, "${progress.javaClass.simpleName}: ${progress.localizedMessage ?: ""}",
                 isSelected, hasFocus, rowIdx, colIdx
             ).apply { foreground = Color.decode("#C75450") }
             else -> throw IllegalArgumentException()

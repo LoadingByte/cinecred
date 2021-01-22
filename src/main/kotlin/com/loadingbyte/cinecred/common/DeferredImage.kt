@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.common
 
+import com.formdev.flatlaf.util.Graphics2DProxy
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
-import org.apache.pdfbox.rendering.ImageType
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.awt.*
 import java.awt.font.TextLayout
@@ -118,9 +118,7 @@ class DeferredImage {
                 continue
 
             when (insn) {
-                is Instruction.DrawShape -> {
-                    val prevTransform = g2.transform
-                    val prevStroke = g2.stroke
+                is Instruction.DrawShape -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
                     g2.color = insn.color
                     if (insn.isGuide)
                         g2.stroke = BasicStroke(guideStrokeWidth)
@@ -130,8 +128,6 @@ class DeferredImage {
                         g2.fill(insn.shape)
                     else
                         g2.draw(insn.shape)
-                    g2.transform = prevTransform
-                    g2.stroke = prevStroke
                 }
                 is Instruction.DrawString -> {
                     g2.color = insn.font.spec.color
@@ -150,11 +146,12 @@ class DeferredImage {
                     val hackScaledTextLayout = TextLayout(insn.str, hackScaledFont, g2.fontRenderContext)
                     val baselineY = insn.y + hackScaledTextLayout.ascent / hackScaling
 
-                    val prevTransform = g2.transform
-                    g2.translate(insn.x.toDouble(), baselineY.toDouble())
-                    g2.scale(1.0 / hackScaling, 1.0 / hackScaling)
-                    hackScaledTextLayout.draw(g2, 0f, 0f)
-                    g2.transform = prevTransform
+                    @Suppress("NAME_SHADOWING")
+                    g2.withNewG2 { g2 ->
+                        g2.translate(insn.x.toDouble(), baselineY.toDouble())
+                        g2.scale(1.0 / hackScaling, 1.0 / hackScaling)
+                        hackScaledTextLayout.draw(g2, 0f, 0f)
+                    }
 
                     // When drawing to a PDF, additionally draw some invisible strings where the visible, vectorized
                     // strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
@@ -195,25 +192,32 @@ class DeferredImage {
                         tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
                         g2.drawImage(pic.img, tx, null)
                     }
-                    is Picture.SVG -> {
-                        val tx = AffineTransform()
-                        tx.translate(insn.x.toDouble(), insn.y.toDouble())
-                        tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
-                        if (pic.isCropped)
-                            tx.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
-                        val prevTransform = g2.transform
-                        g2.transform(tx)
-                        pic.gvtRoot.paint(g2)
-                        g2.transform = prevTransform
+                    is Picture.SVG -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                        g2.translate(insn.x.toDouble(), insn.y.toDouble())
+                        g2.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
+                        // Batik might not be thread-safe, even though we haven't tested that.
+                        synchronized(pic.gvtRoot) {
+                            if (pic.isCropped)
+                                g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
+                            pic.gvtRoot.paint(g2)
+                        }
                     }
-                    is Picture.PDF -> {
-                        // We first render to an image and then render that image to the target graphics because direct
-                        // rendering with PDFBox is known to sometimes have issues.
-                        val img = PDFRenderer(pic.doc).renderImage(0, pic.scaling, ImageType.ARGB)
-                        val tx = AffineTransform.getTranslateInstance(insn.x.toDouble(), insn.y.toDouble())
+                    is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                        g2.translate(insn.x.toDouble(), insn.y.toDouble())
                         if (pic.isCropped)
-                            tx.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
-                        g2.drawImage(img, tx, null)
+                            g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
+                        // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
+                        // box even if g2.background is set to a transparent color. The most thorough fix is
+                        // to just block all calls to clearRect().
+                        val g2Proxy = object : Graphics2DProxy(g2) {
+                            override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
+                                // Block call.
+                            }
+                        }
+                        // PDFBox is definitely not thread-safe.
+                        synchronized(pic.doc) {
+                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
+                        }
                     }
                 }
             }

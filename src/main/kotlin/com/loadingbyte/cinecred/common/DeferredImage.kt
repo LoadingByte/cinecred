@@ -10,7 +10,6 @@ import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.Rectangle2D
-import kotlin.math.ceil
 import kotlin.math.max
 
 
@@ -130,34 +129,39 @@ class DeferredImage {
                         g2.draw(insn.shape)
                 }
                 is Instruction.DrawString -> {
-                    g2.color = insn.font.spec.color
-
-                    // Text rendering is done by first scaling up the font by a factor of "hackScaling" (which ensures
-                    // its size is at least 300pt), then converting the string to a path via TextLayout, and finally
-                    // drawing the path scaled down by a factor of "hackScaling". This has two main advantages:
-                    //   - Using a much larger font for the text layout process avoids irregular letter spacing issues
-                    //     when working with very small fonts. These issues would otherwise appear depending on the JVM
-                    //     and OS version.
-                    //   - Vector-based means of imaging like SVG exactly match the pixel-based means like PNG export.
-                    // Note that we do not use GlyphVector here because that has serious issues with kerning.
                     val scaledFontSize = insn.font.awt.size2D * insn.scaling
-                    val hackScaling = ceil(300f / scaledFontSize)
-                    val hackScaledFont = insn.font.awt.deriveFont(scaledFontSize * hackScaling)
-                    val hackScaledTextLayout = TextLayout(insn.str, hackScaledFont, g2.fontRenderContext)
-                    val baselineY = insn.y + hackScaledTextLayout.ascent / hackScaling
+                    val scaledFont = insn.font.awt.deriveFont(scaledFontSize)
+                    val scaledTextLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
+                    val baselineY = insn.y + scaledTextLayout.ascent
 
                     @Suppress("NAME_SHADOWING")
                     g2.withNewG2 { g2 ->
+                        g2.color = insn.font.spec.color
                         g2.translate(insn.x.toDouble(), baselineY.toDouble())
-                        g2.scale(1.0 / hackScaling, 1.0 / hackScaling)
-                        hackScaledTextLayout.draw(g2, 0f, 0f)
+                        // We render the text by first converting the string to a path via the TextLayout and then
+                        // filling that path. This has the following vital advantages:
+                        //   - Native text rendering via TextLayout.draw(), which internally eventually calls
+                        //     Graphics2D.drawGlyphVector(), typically ensures that each glyph is aligned at pixel
+                        //     boundaries. To achieve this, glyphs are slightly shifted to the left or right. This
+                        //     leads to inconsistent glyph spacing, which is acceptable for desktop purposes in
+                        //     exchange for higher readability, but not acceptable in a movie context. By converting
+                        //     the text layout to a path and then filling that path, we avoid calling the native text
+                        //     renderer and instead call the regular vector graphics renderer, which renders the glyphs
+                        //     at the exact positions where the text layouter has put them, without applying the
+                        //     counterproductive glyph shifting.
+                        //   - Vector-based means of imaging like SVG exactly match the raster-based means.
+                        // For these advantages, we put up with the following disadvantages:
+                        //   - Rendering this way is slower than natively rendering text via TextLayout.draw().
+                        //   - Since the glyphs are no longer aligned at pixel boundaries, heavier antialiasing kicks
+                        //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
+                        //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
+                        //     acceptable in a movie context.
+                        g2.fill(scaledTextLayout.getOutline(null))
                     }
 
                     // When drawing to a PDF, additionally draw some invisible strings where the visible, vectorized
                     // strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
                     if (g2 is PdfBoxGraphics2D) {
-                        val scaledFont = insn.font.awt.deriveFont(scaledFontSize)
-                        val scaledTextLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
                         // Force the following text to be drawn using any font it can find.
                         g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
                         // We use a placeholder default PDF font. We make it slightly smaller than the visible font

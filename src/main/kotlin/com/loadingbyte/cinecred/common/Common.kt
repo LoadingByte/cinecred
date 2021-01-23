@@ -67,15 +67,14 @@ inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
 
 fun Graphics2D.setHighQuality() {
     setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_ON)
-    setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
-    setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
+    setRenderingHint(KEY_RENDERING, VALUE_RENDER_QUALITY)
     setRenderingHint(KEY_DITHERING, VALUE_DITHER_DISABLE)
     setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
-    setRenderingHint(KEY_RENDERING, VALUE_RENDER_QUALITY)
+    setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
+    setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
     setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
-    // For some reason, using fractional font metrics sometimes leads to letter spacing issues. However, we have to
-    // activate it nevertheless for the getStringWidth() method to yield correct results. In DeferredImage's text
-    // drawing code, we implement a workaround that avoids the letter spacing issues.
+    // Note that we not only activate fractional font metrics because the result obviously looks better, but also
+    // because if we don't, the getStringWidth() method sometimes yields incorrect results.
     setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }
 

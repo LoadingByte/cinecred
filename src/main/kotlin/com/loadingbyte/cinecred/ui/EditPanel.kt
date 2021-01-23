@@ -34,6 +34,7 @@ object EditPanel : JPanel() {
         val zoom get() = 1f + value / 50f
     }.apply {
         preferredSize = preferredSize.apply { width = 50 }
+        toolTipText = l10n("ui.edit.zoom")
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
 

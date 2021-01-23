@@ -135,13 +135,17 @@ object DeliverRenderQueuePanel : JPanel() {
                 foreground = defaultProgressBarForeground
                 if (row.startTime != null) {
                     isStringPainted = true
-                    val d = when (percentage) {
-                        0 -> Duration.ZERO
-                        else -> Duration.between(row.startTime, Instant.now())
+                    string = if (percentage == 0)
+                        "$percentage %"
+                    else {
+                        val d = Duration.between(row.startTime, Instant.now())
                             .multipliedBy(100L - percentage).dividedBy(percentage.toLong())
+                        val timeRemaining = l10n(
+                            "ui.deliverRenderQueue.timeRemaining",
+                            "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
+                        )
+                        "$percentage %  \u2013  $timeRemaining"
                     }
-                    val remaining = "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
-                    string = l10n("ui.deliverRenderQueue.progressInfo", percentage, remaining)
                 } else
                     isStringPainted = false
             }

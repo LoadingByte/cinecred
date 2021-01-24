@@ -318,38 +318,10 @@ fun drawBodyImageWithParagraphsBodyLayout(
                 lineMeasurer.position = lineEndPos
                 val line = paragraph.substring(lineStartPos, lineEndPos).trim()
 
-                // Case 1a: Full justification, which requires more manual processing.
-                if (block.style.bodyLayoutLineHJustify == LineHJustify.FULL) {
-                    // Split the line into words.
-                    val words = mutableListOf<String>()
-                    val wordIter = BreakIterator.getWordInstance()
-                    wordIter.text = StringCharacterIterator(line)
-                    var wordStartPos = wordIter.first()
-                    while (true) {
-                        val wordEndPos = wordIter.next()
-                        if (wordEndPos == BreakIterator.DONE) break
-                        words.add(line.substring(wordStartPos, wordEndPos))
-                        wordStartPos = wordEndPos
-                    }
-
-                    // Determine the width of each non-space word and the width of each to-be-stretched space.
-                    val wordIsSpace = words.map { word -> word.all { char -> char.isWhitespace() } }
-                    val wordWidths = words.mapIndexed { i, word ->
-                        if (wordIsSpace[i]) 0f else bodyFont.awt.getStringWidth(word)
-                    }
-                    val spaceWidth = (bodyImageWidth - wordWidths.sum()) / wordIsSpace.count { it }
-
-                    // Finally draw the line fully justified.
-                    var x = 0f
-                    for ((wordIdx, word) in words.withIndex())
-                        x += if (wordIsSpace[wordIdx])
-                            spaceWidth
-                        else {
-                            bodyImage.drawString(bodyFont, word, x, y)
-                            wordWidths[wordIdx]
-                        }
-                }
-                // Case 1b: Left, center, or right justification, which can be drawn right away.
+                // Case 1a: Full justification.
+                if (block.style.bodyLayoutLineHJustify == LineHJustify.FULL)
+                    bodyImage.drawString(bodyFont, line, 0f, y, justificationWidth = bodyImageWidth)
+                // Case 1b: Left, center, or right justification.
                 else
                     bodyImage.drawJustifiedString(bodyFont, line, hJustify, 0f, y, bodyImageWidth)
 

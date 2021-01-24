@@ -549,7 +549,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
             private val label1 = JLabel()
             private val label2 = JLabel(l10n("ui.form.fontSample"))
-            private val panel = JPanel(MigLayout("insets 0", "[]30lp:::push[]")).apply {
+            private val panel = JPanel(MigLayout("insets 0", "[]40lp:::push[]")).apply {
                 add(label1)
                 add(label2, "width 100lp!")
             }

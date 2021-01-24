@@ -3,10 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.withNewG2
-import java.awt.Component
-import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.Insets
+import java.awt.*
 import java.awt.geom.Rectangle2D
 import javax.swing.*
 import javax.swing.border.Border
@@ -46,7 +43,7 @@ class WordWrapCellRenderer : TableCellRenderer {
     ) = textArea.apply {
         text = value as String
         setSize(table.columnModel.getColumn(colIdx).width, preferredSize.height)
-        if (table.getRowHeight(rowIdx) != preferredSize.height)
+        if (table.getRowHeight(rowIdx) < preferredSize.height)
             table.setRowHeight(rowIdx, preferredSize.height)
     }
 
@@ -174,3 +171,28 @@ class CustomToStringKeySelectionManager<E>(private val toString: (E) -> String) 
     }
 
 }
+
+
+fun trySetTaskbarIconBadge(badge: Int) {
+    if (Taskbar.Feature.ICON_BADGE_NUMBER.isSupported)
+        taskbar!!.setIconBadge(if (badge == 0) null else badge.toString())
+}
+
+fun trySetTaskbarProgress(percent: Int) {
+    if (Taskbar.Feature.PROGRESS_VALUE.isSupported)
+        taskbar!!.setProgressValue(percent)
+    else if (Taskbar.Feature.PROGRESS_VALUE_WINDOW.isSupported)
+        taskbar!!.setWindowProgressValue(MainFrame, percent)
+}
+
+fun tryRequestUserAttentionInTaskbar() {
+    if (Taskbar.Feature.USER_ATTENTION.isSupported)
+        taskbar!!.requestUserAttention(true, false)
+    else if (Taskbar.Feature.USER_ATTENTION_WINDOW.isSupported)
+        taskbar!!.requestWindowUserAttention(MainFrame)
+}
+
+private val taskbar = if (Taskbar.isTaskbarSupported()) Taskbar.getTaskbar() else null
+
+private val Taskbar.Feature.isSupported
+    get() = taskbar != null && taskbar.isSupported(this)

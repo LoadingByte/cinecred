@@ -93,4 +93,9 @@ object RenderQueue {
             thread.interrupt()
     }
 
+    fun stop() {
+        isPaused = true
+        thread.interrupt()
+    }
+
 }

@@ -172,7 +172,8 @@ object DeliverConfigurationForm : Form() {
 
     fun onOpenProjectDir(projectDir: Path) {
         // Reset the directory-related fields to the newly opened project dir.
-        val outputLoc = projectDir.toAbsolutePath().resolve("delivery").toString()
+        val defaultFilename = l10n("ui.deliverConfig.defaultFilename", projectDir.fileName)
+        val outputLoc = projectDir.toAbsolutePath().resolve(defaultFilename).toString()
         seqDirField.text = outputLoc
         singleFileField.text = outputLoc
 

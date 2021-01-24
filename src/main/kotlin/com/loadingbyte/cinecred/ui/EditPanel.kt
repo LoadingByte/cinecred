@@ -89,11 +89,13 @@ object EditPanel : JPanel() {
         }
         val resetStylingAction = makeAction("resetStyling", RESET_ICON) {
             if (isStylingUnsaved) {
-                val option = showConfirmDialog(
+                val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("general.cancel"))
+                val selectedOption = showOptionDialog(
                     MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
-                    l10n("ui.edit.resetUnsavedChangesWarning.title"), YES_NO_OPTION
+                    l10n("ui.edit.resetUnsavedChangesWarning.title"),
+                    DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
                 )
-                if (option == NO_OPTION)
+                if (selectedOption == CLOSED_OPTION || selectedOption == 1)
                     return@makeAction
             }
             Controller.StylingHistory.tryResetAndRedraw()
@@ -161,16 +163,21 @@ object EditPanel : JPanel() {
 
     fun onTryOpenProjectDirOrExit(): Boolean =
         if (isStylingUnsaved) {
-            val option = showConfirmDialog(
-                MainFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
-                l10n("ui.edit.openUnsavedChangesWarning.title"), YES_NO_CANCEL_OPTION
+            val options = arrayOf(
+                l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
+                l10n("general.cancel")
             )
-            when (option) {
-                YES_OPTION -> {
+            val selectedOption = showOptionDialog(
+                MainFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
+                l10n("ui.edit.openUnsavedChangesWarning.title"),
+                DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
+            )
+            when (selectedOption) {
+                0 -> {
                     Controller.StylingHistory.save()
                     true
                 }
-                NO_OPTION -> true
+                1 -> true
                 else /* Cancel option */ -> false
             }
         } else

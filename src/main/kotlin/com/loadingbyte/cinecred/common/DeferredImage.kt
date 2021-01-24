@@ -41,8 +41,8 @@ class DeferredImage {
                     )
                 is Instruction.DrawString ->
                     drawString(
-                        insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
-                        insn.isGuide
+                        insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y,
+                        scaling * insn.justificationWidth, scaling * insn.scaling, insn.isGuide
                     )
                 is Instruction.DrawPicture ->
                     drawPicture(
@@ -74,13 +74,18 @@ class DeferredImage {
     }
 
     /**
-     * The y coordinate used by this method differs from the one used by Graphics2D.
+     * The [y] coordinate used by this method differs from the one used by Graphics2D.
      * Here, the coordinate doesn't point to the baseline, but to the topmost part of the font.
+     * If [justificationWidth] is provided, the string is fully justified to fit that exact width.
      */
-    fun drawString(font: RichFont, str: String, x: Float, y: Float, scaling: Float = 1f, isGuide: Boolean = false) {
-        width = max(width, x + scaling * font.awt.getStringWidth(str))
+    fun drawString(
+        font: RichFont, str: String, x: Float, y: Float, justificationWidth: Float = Float.NaN, scaling: Float = 1f,
+        isGuide: Boolean = false
+    ) {
+        val unscaledWidth = if (!justificationWidth.isNaN()) justificationWidth else font.awt.getStringWidth(str)
+        width = max(width, x + scaling * unscaledWidth)
         height = max(height, y + scaling * font.spec.heightPx)
-        instructions.add(Instruction.DrawString(font, str, x, y, scaling, isGuide))
+        instructions.add(Instruction.DrawString(font, str, x, y, justificationWidth, scaling, isGuide))
     }
 
     fun drawPicture(pic: Picture, x: Float, y: Float, isGuide: Boolean = false) {
@@ -98,7 +103,8 @@ class DeferredImage {
         ) : Instruction(isGuide)
 
         class DrawString(
-            val font: RichFont, val str: String, val x: Float, val y: Float, val scaling: Float, isGuide: Boolean
+            val font: RichFont, val str: String, val x: Float, val y: Float, val justificationWidth: Float,
+            val scaling: Float, isGuide: Boolean
         ) : Instruction(isGuide)
 
         class DrawPicture(
@@ -131,8 +137,11 @@ class DeferredImage {
                 is Instruction.DrawString -> {
                     val scaledFontSize = insn.font.awt.size2D * insn.scaling
                     val scaledFont = insn.font.awt.deriveFont(scaledFontSize)
-                    val scaledTextLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
-                    val baselineY = insn.y + scaledTextLayout.ascent
+                    var scaledTextLayout = TextLayout(insn.str, scaledFont, g2.fontRenderContext)
+                    // Fully justify the text layout if requested.
+                    if (!insn.justificationWidth.isNaN())
+                        scaledTextLayout = scaledTextLayout.getJustifiedLayout(insn.justificationWidth)
+                    val baselineY = insn.y + scaledTextLayout.ascent + scaledTextLayout.leading / 2f
 
                     @Suppress("NAME_SHADOWING")
                     g2.withNewG2 { g2 ->

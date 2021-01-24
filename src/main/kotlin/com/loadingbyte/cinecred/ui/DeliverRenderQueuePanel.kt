@@ -17,10 +17,11 @@ import javax.swing.table.TableCellRenderer
 
 object DeliverRenderQueuePanel : JPanel() {
 
-    init {
-        val startPauseButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON)
-        startPauseButton.addActionListener { RenderQueue.isPaused = !startPauseButton.isSelected }
+    private val startButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON).apply {
+        addActionListener { RenderQueue.isPaused = !isSelected }
+    }
 
+    init {
         val jobTable = JTable(JobTableModel).apply {
             // Disable cell selection because it looks weird with the custom cell renderers.
             cellSelectionEnabled = false
@@ -42,7 +43,7 @@ object DeliverRenderQueuePanel : JPanel() {
         }
 
         layout = MigLayout()
-        add(startPauseButton)
+        add(startButton)
         add(JScrollPane(jobTable), "newline, grow, push")
     }
 
@@ -53,6 +54,8 @@ object DeliverRenderQueuePanel : JPanel() {
         val row = JobTableModel.Row(job, formatLabel, destination)
         JobTableModel.rows.add(row)
         JobTableModel.fireTableRowsInserted(JobTableModel.rowCount - 1, JobTableModel.rowCount - 1)
+
+        tryUpdateTaskbarBadge()
 
         fun setProgress(progress: Any) {
             val rowIdx = JobTableModel.rows.indexOf(row)
@@ -66,22 +69,53 @@ object DeliverRenderQueuePanel : JPanel() {
             if (rowIdx != -1) {
                 row.progress = progress
                 JobTableModel.fireTableCellUpdated(rowIdx, 2)
+                if (progress is Float)
+                    trySetTaskbarProgress(progress.toPercent())
             }
         }
 
-        RenderQueue.submitJob(job,
+        fun onFinish(exc: Exception?) {
+            setProgress(exc ?: FINISHED)
+            tryUpdateTaskbarBadge()
+
+            // If we just finished the last remaining job, deselect the toggle button, reset
+            if (JobTableModel.rows.all { it.isFinished }) {
+                startButton.isSelected = false
+                RenderQueue.isPaused = true
+                trySetTaskbarProgress(-1)
+                tryRequestUserAttentionInTaskbar()
+            }
+        }
+
+        RenderQueue.submitJob(
+            job,
             invokeLater = { SwingUtilities.invokeLater(it) },
-            progressCallback = { setProgress(it) },
-            finishCallback = { exc -> setProgress(exc ?: "finished") }
+            progressCallback = ::setProgress,
+            finishCallback = ::onFinish
         )
     }
 
+    private fun tryUpdateTaskbarBadge() {
+        trySetTaskbarIconBadge(JobTableModel.rows.count { !it.isFinished })
+    }
+
+    private val FINISHED = Any()
+
+    private fun Float.toPercent() = (this * 100f).toInt().coerceIn(0, 100)
+
     fun onTryExit(): Boolean =
         if (!RenderQueue.isPaused && JobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
-            showConfirmDialog(
+            val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("general.cancel"))
+            val selectedOption = showOptionDialog(
                 MainFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
-                l10n("ui.deliverRenderQueue.runningWarning.title"), YES_NO_OPTION
-            ) == NO_OPTION
+                l10n("ui.deliverRenderQueue.runningWarning.title"),
+                DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
+            )
+            if (selectedOption == 0) {
+                RenderQueue.stop()
+                true
+            } else
+                false
         } else
             true
 
@@ -91,6 +125,7 @@ object DeliverRenderQueuePanel : JPanel() {
         class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
             var startTime: Instant? = null
             var progress: Any = 0f
+            val isFinished get() = progress !is Float
         }
 
         val rows = mutableListOf<Row>()
@@ -130,7 +165,7 @@ object DeliverRenderQueuePanel : JPanel() {
             table: JTable, row: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
         ): JComponent = when (val progress = (row as JobTableModel.Row).progress) {
             is Float -> progressBar.apply {
-                val percentage = (progress * 100).toInt().coerceIn(0, 100)
+                val percentage = progress.toPercent()
                 model.value = percentage
                 foreground = defaultProgressBarForeground
                 if (row.startTime != null) {
@@ -149,7 +184,7 @@ object DeliverRenderQueuePanel : JPanel() {
                 } else
                     isStringPainted = false
             }
-            "finished" -> progressBar.apply {
+            FINISHED -> progressBar.apply {
                 model.value = 100
                 foreground = Color.decode("#499C54")
                 isStringPainted = false
@@ -191,6 +226,7 @@ object DeliverRenderQueuePanel : JPanel() {
                 RenderQueue.cancelJob(modelRow.job)
                 JobTableModel.rows.remove(modelRow)
                 JobTableModel.fireTableRowsDeleted(rowIdx, rowIdx)
+                tryUpdateTaskbarBadge()
             }
         }
 

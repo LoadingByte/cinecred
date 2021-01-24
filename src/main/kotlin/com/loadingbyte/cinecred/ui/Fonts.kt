@@ -52,7 +52,8 @@ class FontFamilies(fonts: Iterable<Font>) {
             // Find the font's weight and whether it's an italic font.
             var weight = 400
             var italic = false
-            for (removedSuffix in name.removeSuffixes().second) {
+            val cleanName = if (name.startsWith("Titillium")) name.removeSuffix("Upright") else name
+            for (removedSuffix in cleanName.removeSuffixes().second) {
                 val styleInfo = SUFFIX_TO_STYLE[removedSuffix]!!
                 weight = styleInfo.weight ?: weight
                 italic = styleInfo.italic ?: italic

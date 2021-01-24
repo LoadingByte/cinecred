@@ -66,7 +66,7 @@ class VideoRenderJob(
             var prevProgress = 0f
             fun updateProgress() {
                 val progress = videoWriter.frameCounter.toFloat() / totalNumFrames
-                if (progress > prevProgress + 0.01f) {
+                if (progress >= prevProgress + 0.01f) {
                     prevProgress = progress
                     progressCallback(progress)
                 }

@@ -1,0 +1,10 @@
+--input input/
+--main-jar @MAIN_JAR@
+--runtime-image runtime/
+--license-file LICENSE
+--java-options "-splash:$APPDIR/splash.png"
+--name Cinecred
+--app-version @VERSION@
+--description "Highly customizable movie credits editor and generator"
+--vendor "Felix Mujkanovic"
+--copyright "Copyright (c) 2021 Felix Mujkanovic, licensed under the GPLv3"

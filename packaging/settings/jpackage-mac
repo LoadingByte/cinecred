@@ -1,0 +1,3 @@
+--icon icon.icns
+--resource-dir resources/
+--mac-package-identifier Cinecred

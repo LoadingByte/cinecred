@@ -1,0 +1,8 @@
+--output runtime/
+--add-modules java.desktop,java.logging,java.xml,jdk.localedata,jdk.xml.dom,jdk.zipfs
+--include-locales=en,de
+--compress=2
+--no-header-files
+--no-man-pages
+--strip-native-commands
+--strip-debug

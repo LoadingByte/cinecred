@@ -1,0 +1,7 @@
+--type msi
+--icon icon.ico
+--win-dir-chooser
+--win-menu
+--win-menu-group Cinecred
+--win-shortcut
+--win-upgrade-uuid d3f4499f-c56c-4f7d-b051-1f8eade3fc9c

@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 
 val WINDOW_ICON_IMAGES = run {
     val (logo, ctx) = loadSVGResource("/logo.svg")
-    listOf(16, 20, 32, 40, 48, 64, 128, 256).map { size ->
+    listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB).withG2 { g2 ->
             g2.setHighQuality()
             val scale = size / ctx.documentSize.width

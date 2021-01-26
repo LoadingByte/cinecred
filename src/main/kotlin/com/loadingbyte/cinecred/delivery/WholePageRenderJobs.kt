@@ -65,16 +65,20 @@ class WholePageSequenceRenderJob(
                     //     which swallows IO exceptions. Eventually, another exception for the same error
                     //     will be thrown, but the error message is lost.
                     val writer = ImageIO.getImageWritersBySuffix(format.fileExts[0]).next()
-                    Files.deleteIfExists(pageFile)
-                    FileImageOutputStream(pageFile.toFile()).use { stream ->
-                        writer.output = stream
-                        val param = writer.defaultWriteParam
-                        param.compressionMode = ImageWriteParam.MODE_EXPLICIT
-                        when (format) {
-                            Format.TIFF_PACK_BITS -> param.compressionType = "PackBits"
-                            Format.TIFF_DEFLATE -> param.compressionType = "Deflate"
+                    try {
+                        Files.deleteIfExists(pageFile)
+                        FileImageOutputStream(pageFile.toFile()).use { stream ->
+                            writer.output = stream
+                            val param = writer.defaultWriteParam
+                            param.compressionMode = ImageWriteParam.MODE_EXPLICIT
+                            when (format) {
+                                Format.TIFF_PACK_BITS -> param.compressionType = "PackBits"
+                                Format.TIFF_DEFLATE -> param.compressionType = "Deflate"
+                            }
+                            writer.write(null, IIOImage(pageImage, null, null), param)
                         }
-                        writer.write(null, IIOImage(pageImage, null, null), param)
+                    } finally {
+                        writer.dispose()
                     }
                 }
                 Format.SVG -> {

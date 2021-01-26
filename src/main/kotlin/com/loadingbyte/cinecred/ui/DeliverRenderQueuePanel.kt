@@ -77,12 +77,12 @@ object DeliverRenderQueuePanel : JPanel() {
         fun onFinish(exc: Exception?) {
             setProgress(exc ?: FINISHED)
             tryUpdateTaskbarBadge()
+            trySetTaskbarProgress(-1)
 
-            // If we just finished the last remaining job, deselect the toggle button, reset
+            // If we just finished the last remaining job, deselect the toggle button and request user attention.
             if (JobTableModel.rows.all { it.isFinished }) {
                 startButton.isSelected = false
                 RenderQueue.isPaused = true
-                trySetTaskbarProgress(-1)
                 tryRequestUserAttentionInTaskbar()
             }
         }

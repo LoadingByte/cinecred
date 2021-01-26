@@ -165,16 +165,22 @@ object EditStylingPanel : JPanel() {
             l10n("ui.styling.global.unitVGapPx"), SpinnerNumberModel(1f, 0.01f, null, 1f)
         )
 
+        init {
+            finishInit()
+        }
+
         fun openGlobal(global: Global, changeCallback: (Global) -> Unit) {
             clearChangeListeners()
 
-            fpsComboBox.selectedItem =
-                if (global.fps.denominator == 1) global.fps.numerator.toString()
-                else "%.3f".format(global.fps.frac).dropLast(1)
-            widthPxSpinner.value = global.widthPx
-            heightPxSpinner.value = global.heightPx
-            backgroundColorChooserButton.selectedColor = global.background
-            unitVGapPxSpinner.value = global.unitVGapPx
+            withSuspendedChangeEvents {
+                fpsComboBox.selectedItem =
+                    if (global.fps.denominator == 1) global.fps.numerator.toString()
+                    else "%.3f".format(global.fps.frac).dropLast(1)
+                widthPxSpinner.value = global.widthPx
+                heightPxSpinner.value = global.heightPx
+                backgroundColorChooserButton.selectedColor = global.background
+                unitVGapPxSpinner.value = global.unitVGapPx
+            }
 
             addChangeListener {
                 if (isErrorFree) {
@@ -242,6 +248,10 @@ object EditStylingPanel : JPanel() {
             }
         )
 
+        init {
+            finishInit()
+        }
+
         private var otherPageStyles = emptyList<PageStyle>()
 
         fun openPageStyle(pageStyle: PageStyle) {
@@ -249,15 +259,17 @@ object EditStylingPanel : JPanel() {
 
             clearChangeListeners()
 
-            nameField.text = pageStyle.name
-            behaviorComboBox.selectedItem = pageStyle.behavior
-            meltWithPrevCheckBox.isSelected = pageStyle.meltWithPrev
-            meltWithNextCheckBox.isSelected = pageStyle.meltWithNext
-            afterwardSlugFramesSpinner.value = pageStyle.afterwardSlugFrames
-            cardDurationFramesSpinner.value = pageStyle.cardDurationFrames
-            cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
-            cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
-            scrollPxPerFrameSpinner.value = pageStyle.scrollPxPerFrame
+            withSuspendedChangeEvents {
+                nameField.text = pageStyle.name
+                behaviorComboBox.selectedItem = pageStyle.behavior
+                meltWithPrevCheckBox.isSelected = pageStyle.meltWithPrev
+                meltWithNextCheckBox.isSelected = pageStyle.meltWithNext
+                afterwardSlugFramesSpinner.value = pageStyle.afterwardSlugFrames
+                cardDurationFramesSpinner.value = pageStyle.cardDurationFrames
+                cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
+                cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
+                scrollPxPerFrameSpinner.value = pageStyle.scrollPxPerFrame
+            }
 
             addChangeListener {
                 if (isErrorFree) {
@@ -300,7 +312,8 @@ object EditStylingPanel : JPanel() {
             l10n("ui.styling.content.alignWithAxis"), AlignWithAxis.values(), toString = ::l10nEnum
         )
         private val spineOrientationComboBox = addComboBox(
-            l10n("ui.styling.content.spineOrientation"), SpineOrientation.values(), toString = ::l10nEnum
+            l10n("ui.styling.content.spineOrientation"), SpineOrientation.values(), toString = ::l10nEnum,
+            isVisible = { hasHeadCheckBox.isSelected || hasTailCheckBox.isSelected }
         )
         private val vMarginPxSpinner = addSpinner(
             l10n("ui.styling.content.vMarginPx"), SpinnerNumberModel(0f, 0f, null, 1f)
@@ -403,6 +416,10 @@ object EditStylingPanel : JPanel() {
             isVisible = { hasTailCheckBox.isSelected }
         )
 
+        init {
+            finishInit()
+        }
+
         fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
             bodyFontSpecChooser.projectFamilies = projectFamilies
             headFontSpecChooser.projectFamilies = projectFamilies
@@ -416,32 +433,34 @@ object EditStylingPanel : JPanel() {
 
             clearChangeListeners()
 
-            nameField.text = contentStyle.name
-            spineOrientationComboBox.selectedItem = contentStyle.spineOrientation
-            alignWithAxisComboBox.selectedItem = contentStyle.alignWithAxis
-            vMarginPxSpinner.value = contentStyle.vMarginPx
-            bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
-            bodyLayoutLineGapPxSpinner.value = contentStyle.bodyLayoutLineGapPx
-            bodyLayoutElemConformComboBox.selectedItem = contentStyle.bodyLayoutElemConform
-            bodyLayoutElemVJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemVJustify
-            bodyLayoutHorizontalGapPxSpinner.value = contentStyle.bodyLayoutHorizontalGapPx
-            bodyLayoutColsHJustifyComboBox.selectedItems = contentStyle.bodyLayoutColsHJustify
-            bodyLayoutLineHJustifyComboBox.selectedItem = contentStyle.bodyLayoutLineHJustify
-            bodyLayoutBodyWidthPxSpinner.value = contentStyle.bodyLayoutBodyWidthPx
-            bodyLayoutElemHJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemHJustify
-            bodyLayoutSeparatorField.text = contentStyle.bodyLayoutSeparator
-            bodyLayoutParagraphGapPxSpinner.value = contentStyle.bodyLayoutParagraphGapPx
-            bodyFontSpecChooser.selectedFontSpec = contentStyle.bodyFontSpec
-            hasHeadCheckBox.isSelected = contentStyle.hasHead
-            headHJustifyComboBox.selectedItem = contentStyle.headHJustify
-            headVJustifyComboBox.selectedItem = contentStyle.headVJustify
-            headGapPxSpinner.value = contentStyle.headGapPx
-            headFontSpecChooser.selectedFontSpec = contentStyle.headFontSpec
-            hasTailCheckBox.isSelected = contentStyle.hasTail
-            tailHJustifyComboBox.selectedItem = contentStyle.tailHJustify
-            tailVJustifyComboBox.selectedItem = contentStyle.tailVJustify
-            tailGapPxSpinner.value = contentStyle.tailGapPx
-            tailFontSpecChooser.selectedFontSpec = contentStyle.tailFontSpec
+            withSuspendedChangeEvents {
+                nameField.text = contentStyle.name
+                spineOrientationComboBox.selectedItem = contentStyle.spineOrientation
+                alignWithAxisComboBox.selectedItem = contentStyle.alignWithAxis
+                vMarginPxSpinner.value = contentStyle.vMarginPx
+                bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
+                bodyLayoutLineGapPxSpinner.value = contentStyle.bodyLayoutLineGapPx
+                bodyLayoutElemConformComboBox.selectedItem = contentStyle.bodyLayoutElemConform
+                bodyLayoutElemVJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemVJustify
+                bodyLayoutHorizontalGapPxSpinner.value = contentStyle.bodyLayoutHorizontalGapPx
+                bodyLayoutColsHJustifyComboBox.selectedItems = contentStyle.bodyLayoutColsHJustify
+                bodyLayoutLineHJustifyComboBox.selectedItem = contentStyle.bodyLayoutLineHJustify
+                bodyLayoutBodyWidthPxSpinner.value = contentStyle.bodyLayoutBodyWidthPx
+                bodyLayoutElemHJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemHJustify
+                bodyLayoutSeparatorField.text = contentStyle.bodyLayoutSeparator
+                bodyLayoutParagraphGapPxSpinner.value = contentStyle.bodyLayoutParagraphGapPx
+                bodyFontSpecChooser.selectedFontSpec = contentStyle.bodyFontSpec
+                hasHeadCheckBox.isSelected = contentStyle.hasHead
+                headHJustifyComboBox.selectedItem = contentStyle.headHJustify
+                headVJustifyComboBox.selectedItem = contentStyle.headVJustify
+                headGapPxSpinner.value = contentStyle.headGapPx
+                headFontSpecChooser.selectedFontSpec = contentStyle.headFontSpec
+                hasTailCheckBox.isSelected = contentStyle.hasTail
+                tailHJustifyComboBox.selectedItem = contentStyle.tailHJustify
+                tailVJustifyComboBox.selectedItem = contentStyle.tailVJustify
+                tailGapPxSpinner.value = contentStyle.tailGapPx
+                tailFontSpecChooser.selectedFontSpec = contentStyle.tailFontSpec
+            }
 
             addChangeListener {
                 if (isErrorFree) {

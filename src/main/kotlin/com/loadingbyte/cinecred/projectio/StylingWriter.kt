@@ -105,6 +105,8 @@ private fun ContentStyle.toToml(): Map<String, Any> {
         toml.remove("bodyLayoutElemHJustify")
         toml.remove("bodyLayoutSeparator")
     }
+    if (!hasHead && !hasTail)
+        toml.remove("spineOrientation")
     if (!hasHead) {
         toml.remove("headHJustify")
         toml.remove("headVJustify")

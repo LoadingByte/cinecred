@@ -88,6 +88,8 @@ object DeliverConfigurationForm : Form() {
     )
 
     init {
+        finishInit()
+
         // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
         addChangeListener { comp -> if (comp == formatComboBox) onFormatChange() }
 

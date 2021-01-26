@@ -126,7 +126,9 @@ private val GS_EXECUTABLE: Path? by lazy {
         // Ghostscript is not installed.
     }
 
-    val ep = JEditorPane("text/html", l10n("projectIO.ghostscriptMissing.msg"))
+    val linkWinLinux = "https://www.ghostscript.com/download/gsdnld.html"
+    val linkMac = "https://pages.uoregon.edu/koch/"
+    val ep = JEditorPane("text/html", l10n("projectIO.ghostscriptMissing.msg", linkWinLinux, linkMac))
     ep.addHyperlinkListener { e ->
         if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)
             Desktop.getDesktop().browse(e.url.toURI())

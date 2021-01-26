@@ -42,6 +42,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     private val componentToFormRow = mutableMapOf<Component, FormRow>()
     private var submitButton: JButton? = null
     private val changeListeners = mutableListOf<(Component) -> Unit>()
+    private var isSuspendingChangeEvents = true
 
     private fun JTextField.addChangeListener(listener: () -> Unit) {
         document.addDocumentListener(object : DocumentListener {
@@ -51,7 +52,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         })
     }
 
-    fun addTextField(
+    protected fun addTextField(
         label: String,
         grow: Boolean = true,
         isVisible: (() -> Boolean)? = null,
@@ -64,7 +65,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addFilenameField(
+    protected fun addFilenameField(
         label: String,
         isVisible: (() -> Boolean)? = null,
         verify: ((String) -> Unit)? = null
@@ -75,7 +76,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addFileField(
+    protected fun addFileField(
         label: String,
         fileType: FileType,
         isVisible: (() -> Boolean)? = null,
@@ -126,7 +127,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addSpinner(
+    protected fun addSpinner(
         label: String,
         model: SpinnerModel,
         isVisible: (() -> Boolean)? = null,
@@ -138,7 +139,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addCheckBox(
+    protected fun addCheckBox(
         label: String,
         isVisible: (() -> Boolean)? = null,
         verify: ((Boolean) -> Unit)? = null
@@ -150,7 +151,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <E> addComboBox(
+    protected fun <E> addComboBox(
         label: String,
         items: Array<E>,
         toString: (E) -> String = { it.toString() },
@@ -169,7 +170,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun <E> addComboBoxList(
+    protected fun <E> addComboBoxList(
         label: String,
         items: Array<E>,
         toString: (E) -> String = { it.toString() },
@@ -193,7 +194,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addColorChooserButton(
+    protected fun addColorChooserButton(
         label: String,
         isVisible: (() -> Boolean)? = null,
         verify: ((Color?) -> Unit)? = null
@@ -203,7 +204,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         return field
     }
 
-    fun addFontSpecChooser(
+    protected fun addFontSpecChooser(
         label: String,
         isVisible: (() -> Boolean)? = null,
         verify: ((FontSpec?) -> Unit)? = null
@@ -308,19 +309,13 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         formRows.add(formRow)
         for (comp in formRow.components)
             componentToFormRow[comp] = formRow
-
-        // Verify the initial field contents.
-        formRow.doVerify?.invoke()
-        // If the form row should initially be invisible, hide it.
-        if (formRow.isVisibleFunc?.invoke() == false)
-            formRow.isVisible = false
     }
 
-    fun addSeparator() {
+    protected fun addSeparator() {
         add(JSeparator(), "newline, span, growx")
     }
 
-    fun addSubmitButton(label: String) = JButton(label).also { button ->
+    protected fun addSubmitButton(label: String) = JButton(label).also { button ->
         submitButton = button
         add(button, "newline, skip 1, span, align left")
     }
@@ -337,18 +332,33 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         changeListeners.clear()
     }
 
-    fun onChange(component: Component) {
-        componentToFormRow[component]?.doVerify?.invoke()
+    protected fun onChange(component: Component) {
+        if (!isSuspendingChangeEvents) {
+            updateVerifyAndVisible()
+            // Notify all change listeners.
+            for (changeListener in changeListeners)
+                changeListener(component)
+        }
+    }
 
-        for (formRow in formRows)
+    protected fun finishInit() {
+        isSuspendingChangeEvents = false
+        updateVerifyAndVisible()
+    }
+
+    protected fun withSuspendedChangeEvents(block: () -> Unit) {
+        isSuspendingChangeEvents = true
+        block()
+        isSuspendingChangeEvents = false
+        updateVerifyAndVisible()
+    }
+
+    private fun updateVerifyAndVisible() {
+        for (formRow in formRows) {
+            formRow.doVerify?.invoke()
             formRow.isVisible = formRow.isVisibleFunc?.invoke() ?: true
-
-        // The submit button (if there is one) should only be clickable if there are no verification errors in the form.
+        }
         submitButton?.isEnabled = isErrorFree
-
-        // Notify all change listeners.
-        for (changeListener in changeListeners)
-            changeListener(component)
     }
 
     val isErrorFree: Boolean

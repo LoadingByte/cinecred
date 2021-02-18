@@ -1,8 +1,11 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.DeferredImage.Background
+import com.loadingbyte.cinecred.common.DeferredImage.Guides
 import com.loadingbyte.cinecred.common.RichFont
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.toImmutableList
 import java.awt.geom.Path2D
 
 
@@ -26,7 +29,9 @@ fun drawPage(
     // First, for each stage, combine the column images to a stage image, and then combine the stage images to the
     // page image. Also record for each stage its tightest top and bottom y coordinates in the overall image.
     val pageImage = DeferredImage()
-    pageImage.setMinWidth(global.widthPx.toFloat())
+    pageImage.drawRect(
+        global.background, 0f, 0f, global.widthPx.toFloat(), global.heightPx.toFloat(), fill = true, layer = Background
+    )
     val stageImageBounds = mutableListOf<Pair<Float, Float>>()
     var y = 0f
     for ((stageIdx, stage) in page.stages.withIndex()) {
@@ -42,11 +47,13 @@ fun drawPage(
             if (stageIdx == 0)
                 y += cardPaddingHeight
             if (stageIdx == page.stages.lastIndex)
-                pageImage.setMinHeight(y + stageImage.height + cardPaddingHeight)
+                pageImage.height = y + stageImage.height + cardPaddingHeight
             // Draw guides that show the boundaries of the screen as they will be when this card will be shown.
+            // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
+            // rectangle are often rendered only partially or not at all.
             pageImage.drawRect(
-                CARD_GUIDE_COLOR, 0f, y - cardPaddingHeight, global.widthPx.toFloat(), global.heightPx.toFloat(),
-                isGuide = true
+                CARD_GUIDE_COLOR, 0f, y - cardPaddingHeight, global.widthPx - 1f, global.heightPx - 1f,
+                layer = Guides
             )
             // If the card is an intermediate stage, also draw arrows that indicate that the card is intermediate.
             if (stageIdx != 0)
@@ -61,6 +68,9 @@ fun drawPage(
         // Advance to the next stage image.
         y += stageImage.height + stage.vGapAfterPx
     }
+    // Enforce that the page image has exactly the global width. This is necessary because the user might draw
+    // stuff outside the bounds defined by the global width, and we don't want that stuff to enlarge the page.
+    pageImage.width = global.widthPx.toFloat()
 
     // Find for each stage:
     //   - If it's a card stage, its middle y coordinate in the overall page image.
@@ -86,7 +96,7 @@ fun drawPage(
         }
     }
 
-    return DrawnPage(pageImage, stageInfo)
+    return DrawnPage(pageImage, stageInfo.toImmutableList())
 }
 
 
@@ -118,6 +128,6 @@ private fun DeferredImage.drawMeltedCardArrowGuide(global: Global, y: Float) {
         closePath()
     }
     drawShape(
-        CARD_GUIDE_COLOR, triangle, global.widthPx / 2f, y, global.widthPx / 100f, fill = true, isGuide = true
+        CARD_GUIDE_COLOR, triangle, global.widthPx / 2f, y, global.widthPx / 100f, fill = true, layer = Guides
     )
 }

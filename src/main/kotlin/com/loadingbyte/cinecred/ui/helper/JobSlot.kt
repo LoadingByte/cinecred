@@ -1,4 +1,4 @@
-package com.loadingbyte.cinecred.ui
+package com.loadingbyte.cinecred.ui.helper
 
 import java.util.concurrent.Executors
 

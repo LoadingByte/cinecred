@@ -1,25 +1,15 @@
-package com.loadingbyte.cinecred.ui
+package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.withNewG2
+import com.loadingbyte.cinecred.ui.MainFrame
 import java.awt.*
 import java.awt.geom.Rectangle2D
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
 import javax.swing.table.TableCellRenderer
-
-
-fun String.ensureEndsWith(suffixes: List<String>, ignoreCase: Boolean = true) =
-    if (suffixes.isEmpty() || suffixes.any { endsWith(it, ignoreCase) }) this else this + suffixes[0]
-
-fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = true): String {
-    for (suffix in suffixes)
-        if (endsWith(suffix, ignoreCase))
-            return dropLast(suffix.length)
-    return this
-}
 
 
 fun newLabelTextArea() = JTextArea().apply {

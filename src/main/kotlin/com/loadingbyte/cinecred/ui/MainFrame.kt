@@ -1,6 +1,10 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.ui.helper.DELIVER_ICON
+import com.loadingbyte.cinecred.ui.helper.EYE_ICON
+import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
+import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
 import java.awt.GraphicsEnvironment
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent

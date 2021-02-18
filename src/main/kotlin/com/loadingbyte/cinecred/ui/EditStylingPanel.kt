@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.toFPS
+import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
@@ -170,8 +171,6 @@ object EditStylingPanel : JPanel() {
         }
 
         fun openGlobal(global: Global, changeCallback: (Global) -> Unit) {
-            clearChangeListeners()
-
             withSuspendedChangeEvents {
                 fpsComboBox.selectedItem =
                     if (global.fps.denominator == 1) global.fps.numerator.toString()
@@ -180,18 +179,18 @@ object EditStylingPanel : JPanel() {
                 heightPxSpinner.value = global.heightPx
                 backgroundColorChooserButton.selectedColor = global.background
                 unitVGapPxSpinner.value = global.unitVGapPx
-            }
 
-            addChangeListener {
-                if (isErrorFree) {
-                    val newGlobal = Global(
-                        (fpsComboBox.selectedItem as String).toFPS(),
-                        widthPxSpinner.value as Int,
-                        heightPxSpinner.value as Int,
-                        backgroundColorChooserButton.selectedColor,
-                        unitVGapPxSpinner.value as Float
-                    )
-                    changeCallback(newGlobal)
+                changeListener = {
+                    if (isErrorFree) {
+                        val newGlobal = Global(
+                            (fpsComboBox.selectedItem as String).toFPS(),
+                            widthPxSpinner.value as Int,
+                            heightPxSpinner.value as Int,
+                            backgroundColorChooserButton.selectedColor,
+                            unitVGapPxSpinner.value as Float
+                        )
+                        changeCallback(newGlobal)
+                    }
                 }
             }
         }
@@ -257,8 +256,6 @@ object EditStylingPanel : JPanel() {
         fun openPageStyle(pageStyle: PageStyle) {
             otherPageStyles = EditStylingTree.pageStyles.filter { it !== pageStyle }
 
-            clearChangeListeners()
-
             withSuspendedChangeEvents {
                 nameField.text = pageStyle.name
                 behaviorComboBox.selectedItem = pageStyle.behavior
@@ -269,23 +266,23 @@ object EditStylingPanel : JPanel() {
                 cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
                 cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
                 scrollPxPerFrameSpinner.value = pageStyle.scrollPxPerFrame
-            }
 
-            addChangeListener {
-                if (isErrorFree) {
-                    val newPageStyle = PageStyle(
-                        nameField.text.trim(),
-                        behaviorComboBox.selectedItem as PageBehavior,
-                        meltWithPrevCheckBox.isSelected,
-                        meltWithNextCheckBox.isSelected,
-                        afterwardSlugFramesSpinner.value as Int,
-                        cardDurationFramesSpinner.value as Int,
-                        cardFadeInFramesSpinner.value as Int,
-                        cardFadeOutFramesSpinner.value as Int,
-                        scrollPxPerFrameSpinner.value as Float
-                    )
-                    EditStylingTree.updateSelectedStyle(newPageStyle)
-                    onChange()
+                changeListener = {
+                    if (isErrorFree) {
+                        val newPageStyle = PageStyle(
+                            nameField.text.trim(),
+                            behaviorComboBox.selectedItem as PageBehavior,
+                            meltWithPrevCheckBox.isSelected,
+                            meltWithNextCheckBox.isSelected,
+                            afterwardSlugFramesSpinner.value as Int,
+                            cardDurationFramesSpinner.value as Int,
+                            cardFadeInFramesSpinner.value as Int,
+                            cardFadeOutFramesSpinner.value as Int,
+                            scrollPxPerFrameSpinner.value as Float
+                        )
+                        EditStylingTree.updateSelectedStyle(newPageStyle)
+                        onChange()
+                    }
                 }
             }
         }
@@ -431,8 +428,6 @@ object EditStylingPanel : JPanel() {
         fun openContentStyle(contentStyle: ContentStyle) {
             otherContentStyles = EditStylingTree.contentStyles.filter { it !== contentStyle }
 
-            clearChangeListeners()
-
             withSuspendedChangeEvents {
                 nameField.text = contentStyle.name
                 spineOrientationComboBox.selectedItem = contentStyle.spineOrientation
@@ -460,40 +455,40 @@ object EditStylingPanel : JPanel() {
                 tailVJustifyComboBox.selectedItem = contentStyle.tailVJustify
                 tailGapPxSpinner.value = contentStyle.tailGapPx
                 tailFontSpecChooser.selectedFontSpec = contentStyle.tailFontSpec
-            }
 
-            addChangeListener {
-                if (isErrorFree) {
-                    val newContentStyle = ContentStyle(
-                        nameField.text.trim(),
-                        spineOrientationComboBox.selectedItem as SpineOrientation,
-                        alignWithAxisComboBox.selectedItem as AlignWithAxis,
-                        vMarginPxSpinner.value as Float,
-                        bodyLayoutComboBox.selectedItem as BodyLayout,
-                        bodyLayoutLineGapPxSpinner.value as Float,
-                        bodyLayoutElemConformComboBox.selectedItem as BodyElementConform,
-                        bodyLayoutElemVJustifyComboBox.selectedItem as VJustify,
-                        bodyLayoutHorizontalGapPxSpinner.value as Float,
-                        bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull().toImmutableList(),
-                        bodyLayoutLineHJustifyComboBox.selectedItem as LineHJustify,
-                        bodyLayoutBodyWidthPxSpinner.value as Float,
-                        bodyLayoutElemHJustifyComboBox.selectedItem as HJustify,
-                        bodyLayoutSeparatorField.text,
-                        bodyLayoutParagraphGapPxSpinner.value as Float,
-                        bodyFontSpecChooser.selectedFontSpec,
-                        hasHeadCheckBox.isSelected,
-                        headHJustifyComboBox.selectedItem as HJustify,
-                        headVJustifyComboBox.selectedItem as VJustify,
-                        headGapPxSpinner.value as Float,
-                        headFontSpecChooser.selectedFontSpec,
-                        hasTailCheckBox.isSelected,
-                        tailHJustifyComboBox.selectedItem as HJustify,
-                        tailVJustifyComboBox.selectedItem as VJustify,
-                        tailGapPxSpinner.value as Float,
-                        tailFontSpecChooser.selectedFontSpec
-                    )
-                    EditStylingTree.updateSelectedStyle(newContentStyle)
-                    onChange()
+                changeListener = {
+                    if (isErrorFree) {
+                        val newContentStyle = ContentStyle(
+                            nameField.text.trim(),
+                            spineOrientationComboBox.selectedItem as SpineOrientation,
+                            alignWithAxisComboBox.selectedItem as AlignWithAxis,
+                            vMarginPxSpinner.value as Float,
+                            bodyLayoutComboBox.selectedItem as BodyLayout,
+                            bodyLayoutLineGapPxSpinner.value as Float,
+                            bodyLayoutElemConformComboBox.selectedItem as BodyElementConform,
+                            bodyLayoutElemVJustifyComboBox.selectedItem as VJustify,
+                            bodyLayoutHorizontalGapPxSpinner.value as Float,
+                            bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull().toImmutableList(),
+                            bodyLayoutLineHJustifyComboBox.selectedItem as LineHJustify,
+                            bodyLayoutBodyWidthPxSpinner.value as Float,
+                            bodyLayoutElemHJustifyComboBox.selectedItem as HJustify,
+                            bodyLayoutSeparatorField.text,
+                            bodyLayoutParagraphGapPxSpinner.value as Float,
+                            bodyFontSpecChooser.selectedFontSpec,
+                            hasHeadCheckBox.isSelected,
+                            headHJustifyComboBox.selectedItem as HJustify,
+                            headVJustifyComboBox.selectedItem as VJustify,
+                            headGapPxSpinner.value as Float,
+                            headFontSpecChooser.selectedFontSpec,
+                            hasTailCheckBox.isSelected,
+                            tailHJustifyComboBox.selectedItem as HJustify,
+                            tailVJustifyComboBox.selectedItem as VJustify,
+                            tailGapPxSpinner.value as Float,
+                            tailFontSpecChooser.selectedFontSpec
+                        )
+                        EditStylingTree.updateSelectedStyle(newContentStyle)
+                        onChange()
+                    }
                 }
             }
         }

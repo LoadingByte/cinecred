@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.DeferredImage.Background
+import com.loadingbyte.cinecred.common.DeferredImage.Foreground
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -49,9 +51,10 @@ class VideoRenderJob(
         val videoHeight = ensureMultipleOf2((project.styling.global.heightPx * scaling).roundToInt())
 
         // Convert the deferred page images to raster images.
+        val layers = if (alpha) setOf(Foreground) else setOf(Foreground, Background)
         val pageImages = drawnPages.map { drawnPage ->
             drawImage(videoWidth, drawnPage.defImage.height.roundToInt()) { g2 ->
-                drawnPage.defImage.materialize(g2, drawGuides = false)
+                drawnPage.defImage.materialize(g2, layers)
             }
         }
 
@@ -115,7 +118,12 @@ class VideoRenderJob(
                 return imgTopY
             }
 
-            val emptyImage = drawImage(videoWidth, videoHeight) {}
+            val emptyImage = drawImage(videoWidth, videoHeight) { g2 ->
+                if (!alpha) {
+                    g2.color = project.styling.global.background
+                    g2.fillRect(0, 0, videoWidth, videoHeight)
+                }
+            }
 
             // Write frames for each page as has been configured.
             for ((pageIdx, page) in project.pages.withIndex()) {
@@ -157,10 +165,6 @@ class VideoRenderJob(
         val imageType = if (alpha) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
         return BufferedImage(width, height, imageType).withG2 { g2 ->
             g2.setHighQuality()
-            if (!alpha) {
-                g2.color = project.styling.global.background
-                g2.fillRect(0, 0, width, height)
-            }
             draw(g2)
         }
     }

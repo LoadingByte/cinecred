@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.DeferredImage.Background
+import com.loadingbyte.cinecred.common.DeferredImage.Foreground
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -12,7 +14,6 @@ import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.image.BufferedImage
 import java.nio.file.Files
@@ -21,14 +22,12 @@ import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import javax.imageio.stream.FileImageOutputStream
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 
 class WholePageSequenceRenderJob(
     private val pageDefImages: List<DeferredImage>,
-    private val width: Int,
-    private val background: Color?,
+    private val alpha: Boolean,
     private val format: Format,
     val dir: Path,
     val filenamePattern: String
@@ -39,24 +38,23 @@ class WholePageSequenceRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(dir)
 
+        val layers = if (alpha) setOf(Foreground) else setOf(Foreground, Background)
+
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
+            val pageWidth = pageDefImage.width.roundToInt()
             val pageHeight = pageDefImage.height.roundToInt()
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
                 Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
-                    val imageType = if (background != null) BufferedImage.TYPE_INT_RGB else BufferedImage.TYPE_INT_ARGB
-                    val pageImage = BufferedImage(width, pageHeight, imageType)
+                    val imageType = if (alpha) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
+                    val pageImage = BufferedImage(pageWidth, pageHeight, imageType)
 
                     pageImage.withG2 { g2 ->
                         g2.setHighQuality()
-                        if (background != null) {
-                            g2.color = background
-                            g2.fillRect(0, 0, width, pageHeight)
-                        }
-                        pageDefImage.materialize(g2, drawGuides = false)
+                        pageDefImage.materialize(g2, layers)
                     }
 
                     // Note: We do not use ImageIO.write() for two reasons:
@@ -88,12 +86,8 @@ class WholePageSequenceRenderJob(
                     ctx.comment = null
 
                     val g2 = SVGGraphics2D(ctx, true)
-                    g2.svgCanvasSize = Dimension(width, pageHeight)
-                    if (background != null) {
-                        g2.color = background
-                        g2.fillRect(0, 0, width, pageHeight)
-                    }
-                    pageDefImage.materialize(g2, drawGuides = false)
+                    g2.svgCanvasSize = Dimension(pageWidth, pageHeight)
+                    pageDefImage.materialize(g2, layers)
 
                     Files.newBufferedWriter(pageFile).use { writer -> g2.stream(writer, true) }
                 }
@@ -119,8 +113,7 @@ class WholePageSequenceRenderJob(
 
 class WholePagePDFRenderJob(
     private val pageDefImages: List<DeferredImage>,
-    private val width: Int,
-    private val background: Color?,
+    private val alpha: Boolean,
     val file: Path,
 ) : RenderJob {
 
@@ -129,20 +122,18 @@ class WholePagePDFRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(file.parent)
 
+        val layers = if (alpha) setOf(Foreground) else setOf(Foreground, Background)
+
         val pdfDoc = PDDocument()
 
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pdfPage = PDPage(PDRectangle(width.toFloat(), page.height))
+            val pdfPage = PDPage(PDRectangle(page.width, page.height))
             pdfDoc.addPage(pdfPage)
 
-            val g2 = PdfBoxGraphics2D(pdfDoc, width.toFloat(), page.height)
-            if (background != null) {
-                g2.color = background
-                g2.fillRect(0, 0, width, ceil(page.height).toInt())
-            }
-            page.materialize(g2, drawGuides = false)
+            val g2 = PdfBoxGraphics2D(pdfDoc, page.width, page.height)
+            page.materialize(g2, layers)
             g2.dispose()
 
             PDPageContentStream(pdfDoc, pdfPage).use { stream ->

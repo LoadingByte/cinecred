@@ -2,6 +2,9 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.ui.helper.FILMSTRIP_ICON
+import com.loadingbyte.cinecred.ui.helper.GLOBE_ICON
+import com.loadingbyte.cinecred.ui.helper.LAYOUT_ICON
 import java.awt.Component
 import javax.swing.*
 import javax.swing.event.TreeExpansionEvent

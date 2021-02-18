@@ -1,4 +1,4 @@
-package com.loadingbyte.cinecred.ui
+package com.loadingbyte.cinecred.ui.helper
 
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.drawer.SYSTEM_FONTS

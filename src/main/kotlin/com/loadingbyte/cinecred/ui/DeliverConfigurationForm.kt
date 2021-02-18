@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JOptionPane.ERROR_MESSAGE
@@ -91,11 +92,10 @@ object DeliverConfigurationForm : Form() {
         finishInit()
 
         // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
-        addChangeListener { comp -> if (comp == formatComboBox) onFormatChange() }
+        changeListener = { comp -> if (comp == formatComboBox) onFormatChange() }
 
         addSubmitButton(l10n("ui.deliverConfig.addToRenderQueue")).apply { addActionListener { addRenderJobToQueue() } }
     }
-
 
     private fun verifyResolutionMult(resolutionMult: Float) {
         val project = project ?: return
@@ -138,26 +138,26 @@ object DeliverConfigurationForm : Form() {
             )
         else {
             val scaling = resolutionMultSpinner.value as Float
-            val scaledGlobalWidth = (scaling * project!!.styling.global.widthPx).roundToInt()
             val scaledDrawnPages = drawnPages.map {
                 val scaledDefImage = DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
                 DrawnPage(scaledDefImage, it.stageInfo)
             }
-            val alphaBackground = if (alphaCheckBox.isSelected) null else project!!.styling.global.background
 
             val format = formatComboBox.selectedItem as RenderFormat
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
-                    scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
+                    scaledDrawnPages.map { it.defImage },
+                    alpha = alphaCheckBox.isSelected,
                     format, dir = Path.of(seqDirField.text).normalize(), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
-                    scaledDrawnPages.map { it.defImage }, scaledGlobalWidth, background = alphaBackground,
+                    scaledDrawnPages.map { it.defImage },
+                    alpha = alphaCheckBox.isSelected,
                     file = Path.of(singleFileField.text).normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project!!, scaledDrawnPages, scaling,
-                    alpha = format.supportsAlpha && alphaCheckBox.isSelected, format,
+                    project!!, scaledDrawnPages,
+                    scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected, format,
                     fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

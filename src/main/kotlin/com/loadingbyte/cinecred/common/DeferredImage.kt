@@ -13,64 +13,54 @@ import java.awt.geom.Rectangle2D
 import kotlin.math.max
 
 
-class DeferredImage {
-
-    var width = 0f; private set
-    var height = 0f; private set
+class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
 
     private val instructions = mutableListOf<Instruction>()
 
-    fun setMinWidth(minWidth: Float) {
-        width = max(width, minWidth)
-    }
-
-    fun setMinHeight(minHeight: Float) {
-        height = max(height, minHeight)
-    }
-
     fun drawDeferredImage(image: DeferredImage, x: Float, y: Float, scaling: Float = 1f) {
-        width = max(width, scaling * image.width)
-        height = max(height, scaling * image.height)
+        width = max(width, x + scaling * image.width)
+        height = max(height, y + scaling * image.height)
 
-        for (insn in image.instructions)
-            when (insn) {
-                is Instruction.DrawShape ->
-                    drawShape(
-                        insn.color, insn.shape, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
-                        insn.fill, insn.isGuide
-                    )
-                is Instruction.DrawString ->
-                    drawString(
-                        insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y,
-                        scaling * insn.justificationWidth, scaling * insn.scaling, insn.isGuide
-                    )
-                is Instruction.DrawPicture ->
-                    drawPicture(
-                        insn.pic.scaled(scaling), x + scaling * insn.x, y + scaling * insn.y, insn.isGuide
-                    )
+        for (insn in image.instructions) {
+            val newInsn = when (insn) {
+                is Instruction.DrawShape -> Instruction.DrawShape(
+                    insn.color, insn.shape, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling,
+                    insn.fill, insn.layer
+                )
+                is Instruction.DrawString -> Instruction.DrawString(
+                    insn.font, insn.str, x + scaling * insn.x, y + scaling * insn.y,
+                    scaling * insn.justificationWidth, scaling * insn.scaling, insn.layer
+                )
+                is Instruction.DrawPicture -> Instruction.DrawPicture(
+                    insn.pic.scaled(scaling), x + scaling * insn.x, y + scaling * insn.y, insn.layer
+                )
             }
+            instructions.add(newInsn)
+        }
     }
 
     fun drawShape(
         color: Color, shape: Shape, x: Float = 0f, y: Float = 0f, scaling: Float = 1f, fill: Boolean = false,
-        isGuide: Boolean = false
+        layer: Layer = Foreground
     ) {
-        val bounds = shape.bounds2D
-        width = max(width, x + scaling * bounds.maxX.toFloat())
-        height = max(height, y + scaling * bounds.maxY.toFloat())
-        instructions.add(Instruction.DrawShape(color, shape, x, y, scaling, fill, isGuide))
+        if (!layer.isHelperLayer) {
+            val bounds = shape.bounds2D
+            width = max(width, x + scaling * bounds.maxX.toFloat())
+            height = max(height, y + scaling * bounds.maxY.toFloat())
+        }
+        instructions.add(Instruction.DrawShape(color, shape, x, y, scaling, fill, layer))
     }
 
     fun drawLine(
-        color: Color, x1: Float, y1: Float, x2: Float, y2: Float, fill: Boolean = false, isGuide: Boolean = false
+        color: Color, x1: Float, y1: Float, x2: Float, y2: Float, fill: Boolean = false, layer: Layer = Foreground
     ) {
-        drawShape(color, Line2D.Float(x1, y1, x2, y2), fill = fill, isGuide = isGuide)
+        drawShape(color, Line2D.Float(x1, y1, x2, y2), fill = fill, layer = layer)
     }
 
     fun drawRect(
-        color: Color, x: Float, y: Float, width: Float, height: Float, fill: Boolean = false, isGuide: Boolean = false
+        color: Color, x: Float, y: Float, width: Float, height: Float, fill: Boolean = false, layer: Layer = Foreground
     ) {
-        drawShape(color, Rectangle2D.Float(x, y, width, height), fill = fill, isGuide = isGuide)
+        drawShape(color, Rectangle2D.Float(x, y, width, height), fill = fill, layer = layer)
     }
 
     /**
@@ -80,53 +70,65 @@ class DeferredImage {
      */
     fun drawString(
         font: RichFont, str: String, x: Float, y: Float, justificationWidth: Float = Float.NaN, scaling: Float = 1f,
-        isGuide: Boolean = false
+        layer: Layer = Foreground
     ) {
-        val unscaledWidth = if (!justificationWidth.isNaN()) justificationWidth else font.awt.getStringWidth(str)
-        width = max(width, x + scaling * unscaledWidth)
-        height = max(height, y + scaling * font.spec.heightPx)
-        instructions.add(Instruction.DrawString(font, str, x, y, justificationWidth, scaling, isGuide))
+        if (!layer.isHelperLayer) {
+            val unscaledWidth = if (!justificationWidth.isNaN()) justificationWidth else font.awt.getStringWidth(str)
+            width = max(width, x + scaling * unscaledWidth)
+            height = max(height, y + scaling * font.spec.heightPx)
+        }
+        instructions.add(Instruction.DrawString(font, str, x, y, justificationWidth, scaling, layer))
     }
 
-    fun drawPicture(pic: Picture, x: Float, y: Float, isGuide: Boolean = false) {
-        width = max(width, x + pic.width)
-        height = max(height, y + pic.height)
-        instructions.add(Instruction.DrawPicture(pic, x, y, isGuide))
+    fun drawPicture(pic: Picture, x: Float, y: Float, layer: Layer = Foreground) {
+        if (!layer.isHelperLayer) {
+            width = max(width, x + pic.width)
+            height = max(height, y + pic.height)
+        }
+        instructions.add(Instruction.DrawPicture(pic, x, y, layer))
     }
 
 
-    private sealed class Instruction(val isGuide: Boolean) {
+    abstract class Layer(val isHelperLayer: Boolean)
+
+    // These three common layers are typically used. Additional layers may be defined by users of this class.
+    object Foreground : Layer(isHelperLayer = false)
+    object Background : Layer(isHelperLayer = false)
+    object Guides : Layer(isHelperLayer = true)
+
+
+    private sealed class Instruction(val layer: Layer) {
 
         class DrawShape(
             val color: Color, val shape: Shape, val x: Float, val y: Float, val scaling: Float, val fill: Boolean,
-            isGuide: Boolean
-        ) : Instruction(isGuide)
+            layer: Layer
+        ) : Instruction(layer)
 
         class DrawString(
             val font: RichFont, val str: String, val x: Float, val y: Float, val justificationWidth: Float,
-            val scaling: Float, isGuide: Boolean
-        ) : Instruction(isGuide)
+            val scaling: Float, layer: Layer
+        ) : Instruction(layer)
 
         class DrawPicture(
-            val pic: Picture, val x: Float, val y: Float, isGuide: Boolean
-        ) : Instruction(isGuide)
+            val pic: Picture, val x: Float, val y: Float, layer: Layer
+        ) : Instruction(layer)
 
     }
 
 
     /**
-     * The [guideStrokeWidth] is only relevant for guides drawn with [drawShape] or its derivative methods.
+     * The [helperStrokeWidth] is only relevant for helper layers drawn with [drawShape] or its derivative methods.
      */
-    fun materialize(g2: Graphics2D, drawGuides: Boolean = false, guideStrokeWidth: Float = 1f) {
+    fun materialize(g2: Graphics2D, layers: Set<Layer>, helperStrokeWidth: Float = 1f) {
         for (insn in instructions) {
-            if (!drawGuides && insn.isGuide)
+            if (insn.layer !in layers)
                 continue
 
             when (insn) {
                 is Instruction.DrawShape -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
                     g2.color = insn.color
-                    if (insn.isGuide)
-                        g2.stroke = BasicStroke(guideStrokeWidth)
+                    if (insn.layer.isHelperLayer)
+                        g2.stroke = BasicStroke(helperStrokeWidth)
                     g2.translate(insn.x.toDouble(), insn.y.toDouble())
                     g2.scale(insn.scaling.toDouble(), insn.scaling.toDouble())
                     if (insn.fill)

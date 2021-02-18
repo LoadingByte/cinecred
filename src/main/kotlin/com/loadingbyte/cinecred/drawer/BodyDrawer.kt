@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.DeferredImage.Guides
 import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.common.RichFont
 import com.loadingbyte.cinecred.common.getStringWidth
@@ -100,8 +101,7 @@ fun drawBodyImagesWithGridBodyLayout(
         if (numBodyCols == 0)
             return@associateWith DeferredImage()
 
-        val bodyImage = DeferredImage()
-        bodyImage.setMinWidth(bodyImageWidth)
+        val bodyImage = DeferredImage(width = bodyImageWidth)
 
         var x = 0f
         val bodyPartitionsIter = bodyPartitions[block]!!.iterator()
@@ -112,7 +112,7 @@ fun drawBodyImagesWithGridBodyLayout(
                     bodyElem, bodyFont, justifyCol, style.bodyLayoutElemVJustify, x, y, colWidth, rowHeight
                 )
                 // Draw a guide that shows the edges of the body element space.
-                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, isGuide = true)
+                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, layer = Guides)
                 // Advance to the next line in the current column.
                 y += rowHeight + style.bodyLayoutLineGapPx
             }
@@ -169,8 +169,8 @@ fun drawBodyImageWithFlowBodyLayout(
     }
 
     // Draw the actual image.
-    val bodyImage = DeferredImage()
-    bodyImage.setMinWidth(bodyImageWidth)
+    val bodyImage = DeferredImage(width = bodyImageWidth)
+
     var y = 0f
     for (bodyLine in bodyLines) {
         // Determine the width of all rigid elements in the body line, that is, the total width of all body elements
@@ -218,7 +218,7 @@ fun drawBodyImageWithFlowBodyLayout(
             )
 
             // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, isGuide = true)
+            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, layer = Guides)
 
             if (idx != bodyLine.lastIndex) {
                 // Advance to the separator.
@@ -239,8 +239,8 @@ fun drawBodyImageWithFlowBodyLayout(
     }
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, isGuide = true)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, isGuide = true)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = Guides)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = Guides)
 
     return bodyImage
 }
@@ -301,8 +301,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
         LineHJustify.RIGHT -> HJustify.RIGHT
     }
 
-    val bodyImage = DeferredImage()
-    bodyImage.setMinWidth(bodyImageWidth)
+    val bodyImage = DeferredImage(width = bodyImageWidth)
 
     var y = 0f
     for (bodyElem in block.body) {
@@ -340,8 +339,8 @@ fun drawBodyImageWithParagraphsBodyLayout(
     }
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, isGuide = true)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, isGuide = true)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = Guides)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = Guides)
 
     return bodyImage
 }

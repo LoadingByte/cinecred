@@ -38,7 +38,7 @@ version = "1.0.0-SNAPSHOT"
 
 val slf4jVersion = "1.7.30"
 val batikVersion = "1.13"
-val javacppVersion = "1.5.4"
+val javacppVersion = "1.5.3"
 // Note: At the time of writing, the latest version of FFmpeg which is available though javacpp (4.3.1-1.5.4) crashes
 // upon libx264 encoding on Mac OS. When upgrading FFmpeg, you must check that H.264 now again works on Mac OS!
 val ffmpegVersion = "4.2.2-1.5.3"

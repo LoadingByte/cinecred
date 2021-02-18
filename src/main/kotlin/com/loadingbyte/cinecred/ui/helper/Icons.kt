@@ -1,4 +1,4 @@
-package com.loadingbyte.cinecred.ui
+package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.Severity
@@ -33,6 +33,8 @@ val WINDOW_ICON_IMAGES = run {
 }
 
 
+val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
+val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
@@ -51,6 +53,7 @@ val RESET_ICON = SVGIcon.load("/icons/reset.svg")
 val SAVE_ICON = SVGIcon.load("/icons/save.svg")
 val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
 val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
+val UNIFORM_SAFE_AREAS_ICON = SVGIcon.load("/icons/uniformSafeAreas.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 

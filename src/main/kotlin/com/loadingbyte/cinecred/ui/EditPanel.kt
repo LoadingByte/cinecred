@@ -1,11 +1,14 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.common.DeferredImage.Guides
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.getRuntimeFrames
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
+import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.*
+import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ActionEvent
@@ -14,9 +17,12 @@ import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
+import kotlin.math.roundToInt
 
 
 object EditPanel : JPanel() {
+
+    private const val MAX_ZOOM = 2f
 
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
         isSelected = true
@@ -30,8 +36,12 @@ object EditPanel : JPanel() {
         font = font.deriveFont(font.size * 0.8f)
     }
 
-    private val zoomSlider = object : JSlider(0, 50, 0) {
-        val zoom get() = 1f + value / 50f
+    private val zoomSlider = object : JSlider(0, 100, 0) {
+        var zoom: Float
+            get() = 1f + value * (MAX_ZOOM - 1f) / 100f
+            set(newZoom) {
+                value = ((newZoom - 1f) * 100f / (MAX_ZOOM - 1f)).roundToInt()
+            }
     }.apply {
         preferredSize = preferredSize.apply { width = 50 }
         toolTipText = l10n("ui.edit.zoom")
@@ -45,11 +55,19 @@ object EditPanel : JPanel() {
             BODY_ELEM_GUIDE_COLOR.brighter().toString2(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toString2(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toString2()
         )
-        addActionListener { previewPanels.forEach { it.showGuides = isSelected } }
+        addActionListener { previewPanels.forEach { it.setLayerVisible(Guides, isSelected) } }
     }
-    private val safeAreasToggleButton = JToggleButton(l10n("ui.edit.safeAreas"), false).apply {
-        toolTipText = l10n("ui.edit.safeAreasTooltip")
-        addActionListener { previewPanels.forEach { it.showSafeAreas = isSelected } }
+    private val uniformSafeAreasToggleButton = JToggleButton(UNIFORM_SAFE_AREAS_ICON, false).apply {
+        toolTipText = l10n("ui.edit.uniformSafeAreasTooltip")
+        addActionListener { previewPanels.forEach { it.setLayerVisible(UniformSafeAreas, isSelected) } }
+    }
+    private val cutSafeArea16to9ToggleButton = JToggleButton(X_16_TO_9_ICON, false).apply {
+        toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "16:9")
+        addActionListener { previewPanels.forEach { it.setLayerVisible(CutSafeArea16to9, isSelected) } }
+    }
+    private val cutSafeArea4to3ToggleButton = JToggleButton(X_4_TO_3_ICON, false).apply {
+        toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
+        addActionListener { previewPanels.forEach { it.setLayerVisible(CutSafeArea4to3, isSelected) } }
     }
     private val runtimeLabel = JLabel()
     private val pageTabs = JTabbedPane()
@@ -101,7 +119,7 @@ object EditPanel : JPanel() {
             Controller.StylingHistory.tryResetAndRedraw()
         }
 
-        val topPanel = JPanel(MigLayout("", "[]unrel:30lp[][][][][][][]unrel:30lp[][][][]unrel:30lp[]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[]30lp[][][][][][][]30lp[][][][][][]30lp[]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton)
@@ -113,7 +131,9 @@ object EditPanel : JPanel() {
             add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
             add(zoomSlider)
             add(layoutGuidesToggleButton)
-            add(safeAreasToggleButton)
+            add(uniformSafeAreasToggleButton)
+            add(cutSafeArea16to9ToggleButton)
+            add(cutSafeArea4to3ToggleButton)
             add(runtimeLabel)
             add(pageTabs, "newline, span, grow, push")
         }
@@ -208,9 +228,14 @@ object EditPanel : JPanel() {
         while (pageTabs.tabCount < drawnPages.size) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val previewPanel = EditPagePreviewPanel(
-                zoomSlider.zoom, layoutGuidesToggleButton.isSelected, safeAreasToggleButton.isSelected
-            )
+            val previewPanel = EditPagePreviewPanel(MAX_ZOOM).apply {
+                zoom = zoomSlider.zoom
+                setLayerVisible(Guides, layoutGuidesToggleButton.isSelected)
+                setLayerVisible(UniformSafeAreas, uniformSafeAreasToggleButton.isSelected)
+                setLayerVisible(CutSafeArea16to9, cutSafeArea16to9ToggleButton.isSelected)
+                setLayerVisible(CutSafeArea4to3, cutSafeArea4to3ToggleButton.isSelected)
+                zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
+            }
             pageTabs.addTab(tabTitle, PAGE_ICON, previewPanel)
         }
         // Then fill each tab with its corresponding page.

@@ -60,12 +60,16 @@ fun Form.addFileField(
             FileType.FILE -> JFileChooser.FILES_ONLY
             FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
         }
-        fc.selectedFile = File(field.text)
+        fc.selectedFile = File(field.text.ensureDoesntEndWith(field.fileExts.map { ".$it" }))
 
         if (field.fileExts.isNotEmpty()) {
             fc.isAcceptAllFileFilterUsed = false
-            for (fileExt in field.fileExts)
-                fc.addChoosableFileFilter(FileNameExtensionFilter("*.$fileExt", fileExt))
+            for (fileExt in field.fileExts) {
+                val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
+                fc.addChoosableFileFilter(filter)
+                if (field.text.endsWith(".$fileExt"))
+                    fc.fileFilter = filter
+            }
         }
 
         if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {

@@ -92,6 +92,7 @@ object Controller {
         // Remove the previous project from the UI to make sure that the user doesn't see things from the
         // previous project while the new project is loaded.
         EditPanel.updateProjectAndLog(null, emptyList(), emptyList())
+        VideoPanel.updateProject(null, emptyList())
         DeliverConfigurationForm.updateProject(null, emptyList())
 
         this.projectDir = projectDir
@@ -209,6 +210,7 @@ object Controller {
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
                 EditPanel.updateProjectAndLog(project, drawnPages, log)
+                VideoPanel.updateProject(project, drawnPages)
                 DeliverConfigurationForm.updateProject(project, drawnPages)
             }
         }

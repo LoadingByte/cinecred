@@ -83,8 +83,8 @@ object DeliverConfigurationForm : Form() {
         }
     )
 
-    private val alphaCheckBox = addCheckBox(
-        l10n("ui.deliverConfig.alpha"),
+    private val transparentCheckBox = addCheckBox(
+        l10n("ui.deliverConfig.transparent"),
         isVisible = { formatComboBox.selectedItem in ALPHA_FORMATS }
     )
 
@@ -100,9 +100,27 @@ object DeliverConfigurationForm : Form() {
     private fun verifyResolutionMult(resolutionMult: Float) {
         val project = project ?: return
 
-        val scaledWidth = (project.styling.global.widthPx * resolutionMult).roundToInt()
-        val scaledHeight = (project.styling.global.heightPx * resolutionMult).roundToInt()
+        val scaledWidth = (resolutionMult * project.styling.global.widthPx).roundToInt()
+        val scaledHeight = (resolutionMult * project.styling.global.heightPx).roundToInt()
+        val yieldMsg = l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
 
+        fun err(msg: String) {
+            throw VerifyResult(Severity.ERROR, msg)
+        }
+
+        // Check for violated restrictions of the currently selected format.
+        val format = formatComboBox.selectedItem
+        if (format is VideoRenderJob.Format)
+            if (format.widthMod2 && scaledWidth % 2 != 0)
+                err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", yieldMsg, format.label))
+            else if (format.heightMod2 && scaledHeight % 2 != 0)
+                err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", yieldMsg, format.label))
+            else if (format.minWidth != null && scaledWidth < format.minWidth)
+                err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", yieldMsg, format.label, format.minWidth))
+            else if (format.minHeight != null && scaledWidth < format.minHeight)
+                err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", yieldMsg, format.label, format.minHeight))
+
+        // Check for fractional scroll speeds.
         val scrollSpeeds = project.pages
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
@@ -113,16 +131,10 @@ object DeliverConfigurationForm : Form() {
         if (fractionalScrollSpeeds.isNotEmpty())
             throw VerifyResult(
                 Severity.WARN,
-                l10n(
-                    "ui.deliverConfig.resolutionMultiplierFractional",
-                    scaledWidth, scaledHeight, fractionalScrollSpeeds.joinToString()
-                )
+                l10n("ui.deliverConfig.resolutionMultiplierFractional", yieldMsg, fractionalScrollSpeeds.joinToString())
             )
 
-        throw VerifyResult(
-            Severity.INFO,
-            l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
-        )
+        throw VerifyResult(Severity.INFO, yieldMsg)
     }
 
     private fun onFormatChange() {
@@ -138,26 +150,26 @@ object DeliverConfigurationForm : Form() {
             )
         else {
             val scaling = resolutionMultSpinner.value as Float
-            val scaledDrawnPages = drawnPages.map {
-                val scaledDefImage = DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
-                DrawnPage(scaledDefImage, it.stageInfo)
+
+            fun getScaledPageDefImages() = drawnPages.map {
+                DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
             }
 
             val format = formatComboBox.selectedItem as RenderFormat
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
-                    scaledDrawnPages.map { it.defImage },
-                    alpha = alphaCheckBox.isSelected,
+                    getScaledPageDefImages(),
+                    transparent = transparentCheckBox.isSelected,
                     format, dir = Path.of(seqDirField.text).normalize(), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
-                    scaledDrawnPages.map { it.defImage },
-                    alpha = alphaCheckBox.isSelected,
+                    getScaledPageDefImages(),
+                    transparent = transparentCheckBox.isSelected,
                     file = Path.of(singleFileField.text).normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project!!, scaledDrawnPages,
-                    scaling, alpha = format.supportsAlpha && alphaCheckBox.isSelected, format,
+                    project!!, drawnPages,
+                    scaling, transparent = format.supportsAlpha && transparentCheckBox.isSelected, format,
                     fileOrDir = Path.of(if (format.isImageSeq) seqDirField.text else singleFileField.text).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

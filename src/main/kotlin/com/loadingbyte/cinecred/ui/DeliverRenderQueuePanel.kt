@@ -19,7 +19,10 @@ import javax.swing.table.TableCellRenderer
 object DeliverRenderQueuePanel : JPanel() {
 
     private val startButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON).apply {
-        addActionListener { RenderQueue.isPaused = !isSelected }
+        addActionListener {
+            icon = if (isSelected) PAUSE_ICON else PLAY_ICON
+            RenderQueue.isPaused = !isSelected
+        }
     }
 
     init {
@@ -82,7 +85,8 @@ object DeliverRenderQueuePanel : JPanel() {
 
             // If we just finished the last remaining job, deselect the toggle button and request user attention.
             if (JobTableModel.rows.all { it.isFinished }) {
-                startButton.isSelected = false
+                if (startButton.isSelected)
+                    startButton.doClick()
                 RenderQueue.isPaused = true
                 tryRequestUserAttentionInTaskbar()
             }

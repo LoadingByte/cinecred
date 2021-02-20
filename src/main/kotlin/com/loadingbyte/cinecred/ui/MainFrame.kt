@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.helper.DELIVER_ICON
-import com.loadingbyte.cinecred.ui.helper.EYE_ICON
-import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
-import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
+import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.GraphicsEnvironment
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -33,7 +30,8 @@ object MainFrame : JFrame("Cinecred") {
 
         tabs.apply {
             addTab(l10n("ui.main.createAndOpen"), FOLDER_ICON, OpenPanel)
-            addTab(l10n("ui.main.styleAndReview"), EYE_ICON, EditPanel)
+            addTab(l10n("ui.main.style"), EYE_ICON, EditPanel)
+            addTab(l10n("ui.main.video"), PLAY_ICON, VideoPanel)
             addTab(l10n("ui.main.deliver"), DELIVER_ICON, DeliverPanel)
             setEnabledAt(1, false)
             setEnabledAt(2, false)

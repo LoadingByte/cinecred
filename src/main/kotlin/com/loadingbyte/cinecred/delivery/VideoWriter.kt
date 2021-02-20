@@ -82,8 +82,7 @@ class VideoWriter(
     private var outFrame: AVFrame? = null
 
     // Pts of the next frame that will be generated.
-    var frameCounter = 0L
-        private set
+    private var frameCounter = 0L
 
     init {
         try {

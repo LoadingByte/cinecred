@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.DeferredImage.Guides
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.delivery.getRuntimeFrames
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.ParserMsg
@@ -69,7 +68,12 @@ object EditPanel : JPanel() {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
         addActionListener { previewPanels.forEach { it.setLayerVisible(CutSafeArea4to3, isSelected) } }
     }
-    private val runtimeLabel = JLabel()
+    private val runtimeLabel1 = JLabel().apply {
+        text = l10n("ui.edit.runtime")
+    }
+    private val runtimeLabel2 = JLabel().apply {
+        font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
+    }
     private val pageTabs = JTabbedPane()
 
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
@@ -119,7 +123,7 @@ object EditPanel : JPanel() {
             Controller.StylingHistory.tryResetAndRedraw()
         }
 
-        val topPanel = JPanel(MigLayout("", "[]30lp[][][][][][][]30lp[][][][][][]30lp[]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[]30lp[][][][][][][]30lp[][][][][][]30lp[][]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton)
@@ -134,7 +138,8 @@ object EditPanel : JPanel() {
             add(uniformSafeAreasToggleButton)
             add(cutSafeArea16to9ToggleButton)
             add(cutSafeArea4to3ToggleButton)
-            add(runtimeLabel)
+            add(runtimeLabel1)
+            add(runtimeLabel2)
             add(pageTabs, "newline, span, grow, push")
         }
 
@@ -205,21 +210,17 @@ object EditPanel : JPanel() {
 
     fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
         // Adjust the total runtime label.
-        if (project == null || project.pages.isEmpty())
-            runtimeLabel.apply {
-                text = null
-                toolTipText = null
-            }
-        else {
-            val fps = project.styling.global.fps.frac
-            val runtime = getRuntimeFrames(project, drawnPages)
-            val rMinutes = (runtime / fps).toInt() / 60
-            val rSeconds = (runtime / fps).toInt() % 60
-            val rFrames = runtime - ((rSeconds + rMinutes * 60) * fps).toInt()
-            runtimeLabel.apply {
-                text = l10n("ui.edit.runtime", "%02d:%02d+%02d".format(rMinutes, rSeconds, rFrames))
-                toolTipText = l10n("ui.edit.runtimeTooltip", rMinutes, rSeconds, rFrames, runtime)
-            }
+        if (project == null || project.pages.isEmpty()) {
+            runtimeLabel2.text = null
+            runtimeLabel2.toolTipText = null
+            runtimeLabel1.toolTipText = null
+        } else {
+            val runtime = VideoDrawer(project, drawnPages).numFrames
+            val tc = Timecode(project.styling.global.fps.frac, runtime)
+            val tooltip = l10n("ui.edit.runtimeTooltip", tc.minutes, tc.seconds, tc.frames, runtime)
+            runtimeLabel2.text = tc.toString()
+            runtimeLabel2.toolTipText = tooltip
+            runtimeLabel1.toolTipText = tooltip
         }
 
         // First adjust the number of tabs to the number of pages.

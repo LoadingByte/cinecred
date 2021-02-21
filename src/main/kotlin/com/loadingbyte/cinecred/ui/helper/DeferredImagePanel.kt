@@ -267,9 +267,7 @@ class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0
                     // Paint a scaled version of the deferred image onto the raster image.
                     val scaledImage = DeferredImage()
                     scaledImage.drawDeferredImage(image, 0f, 0f, imageScaling)
-                    // Note: We compute the helper stroke width such that the helper strokes have a nice thin width
-                    // irrespective of the configured film dimensions.
-                    scaledImage.materialize(g2, layers, helperStrokeWidth = image.width / 1024f)
+                    scaledImage.materialize(g2, layers)
                 }
 
                 onFinish(materialized)

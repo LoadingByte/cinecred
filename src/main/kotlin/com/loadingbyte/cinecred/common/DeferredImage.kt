@@ -116,25 +116,25 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
     }
 
 
-    /**
-     * The [helperStrokeWidth] is only relevant for helper layers drawn with [drawShape] or its derivative methods.
-     */
-    fun materialize(g2: Graphics2D, layers: Set<Layer>, helperStrokeWidth: Float = 1f) {
+    fun materialize(g2: Graphics2D, layers: Set<Layer>) {
         for (insn in instructions) {
             if (insn.layer !in layers)
                 continue
 
             when (insn) {
-                is Instruction.DrawShape -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                is Instruction.DrawShape -> {
+                    // We first transform the shape and then draw it without scaling the graphics object.
+                    // This ensures that the shapes will exhibit the graphics object's stroke width,
+                    // which is 1 pixel by default.
+                    val transformedShape = AffineTransform().apply {
+                        translate(insn.x.toDouble(), insn.y.toDouble())
+                        scale(insn.scaling.toDouble(), insn.scaling.toDouble())
+                    }.createTransformedShape(insn.shape)
                     g2.color = insn.color
-                    if (insn.layer.isHelperLayer)
-                        g2.stroke = BasicStroke(helperStrokeWidth)
-                    g2.translate(insn.x.toDouble(), insn.y.toDouble())
-                    g2.scale(insn.scaling.toDouble(), insn.scaling.toDouble())
                     if (insn.fill)
-                        g2.fill(insn.shape)
+                        g2.fill(transformedShape)
                     else
-                        g2.draw(insn.shape)
+                        g2.draw(transformedShape)
                 }
                 is Instruction.DrawString -> {
                     val scaledFontSize = insn.font.awt.size2D * insn.scaling

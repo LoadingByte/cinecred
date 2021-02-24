@@ -33,8 +33,8 @@ object MainFrame : JFrame("Cinecred") {
             addTab(l10n("ui.main.style"), EYE_ICON, EditPanel)
             addTab(l10n("ui.main.video"), PLAY_ICON, VideoPanel)
             addTab(l10n("ui.main.deliver"), DELIVER_ICON, DeliverPanel)
-            setEnabledAt(1, false)
-            setEnabledAt(2, false)
+            for (tabIdx in 1 until tabCount)
+                setEnabledAt(tabIdx, false)
             addChangeListener {
                 Controller.onChangeTab(changedToEdit = selectedComponent == EditPanel)
             }
@@ -44,8 +44,8 @@ object MainFrame : JFrame("Cinecred") {
 
     fun onOpenProjectDir() {
         tabs.apply {
-            setEnabledAt(1, true)
-            setEnabledAt(2, true)
+            for (tabIdx in 1 until tabCount)
+                setEnabledAt(tabIdx, true)
             selectedIndex = 1
         }
     }

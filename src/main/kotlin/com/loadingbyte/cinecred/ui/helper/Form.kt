@@ -2,11 +2,22 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.loadingbyte.cinecred.common.Severity
 import net.miginfocom.swing.MigLayout
-import java.awt.Component
 import javax.swing.*
 
 
 open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
+
+    abstract class Widget {
+        abstract val components: List<JComponent>
+        abstract val constraints: List<String>
+        abstract val verify: (() -> Unit)?
+
+        var changeListeners = mutableListOf<() -> Unit>()
+        protected fun notifyChangeListeners() {
+            for (listener in changeListeners)
+                listener()
+        }
+    }
 
     class VerifyResult(val severity: Severity, msg: String) : Exception(msg)
 
@@ -26,20 +37,15 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     private val formRows = mutableListOf<FormRow>()
-    private val componentToFormRow = mutableMapOf<Component, FormRow>()
     private var submitButton: JButton? = null
     private var isSuspendingChangeEvents = true
 
-    var changeListener: ((Component) -> Unit)? = null
+    var changeListener: ((Widget) -> Unit)? = null
 
-    fun addFormRow(
-        label: String,
-        fields: List<JComponent>,
-        constraints: List<String>,
-        isVisible: (() -> Boolean)? = null,
-        verify: (() -> Unit)? = null
-    ) {
-        require(fields.size == constraints.size)
+    fun <W : Widget> addWidget(label: String, widget: W, isVisible: (() -> Boolean)? = null): W {
+        require(widget.components.size == widget.constraints.size)
+
+        widget.changeListeners.add { onChange(widget) }
 
         val formRow = FormRow(isVisible)
 
@@ -47,14 +53,16 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         formRow.components.add(jLabel)
         add(jLabel, "newline")
 
-        formRow.components.addAll(fields)
+        formRow.components.addAll(widget.components)
         val endlineGroupId = "g" + System.identityHashCode(jLabel)
         val endlineFieldIds = mutableListOf<String>()
-        for ((fieldIdx, field) in fields.withIndex()) {
-            val fieldConstraints = mutableListOf(constraints[fieldIdx])
+        for ((fieldIdx, field) in widget.components.withIndex()) {
+            val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
             // If the field ends a line, assign it a unique ID. For this, we just use its location in memory. Also add
             // it to the "endlineGroup". These IDs will be used later when positioning the verification components.
-            if (fieldIdx == fields.lastIndex || "newline" in constraints.getOrElse(fieldIdx + 1) { "" }) {
+            if (fieldIdx == widget.components.lastIndex ||
+                "newline" in widget.constraints.getOrElse(fieldIdx + 1) { "" }
+            ) {
                 val id = "f" + System.identityHashCode(field).toString()
                 fieldConstraints.add("id $endlineGroupId.$id")
                 endlineFieldIds.add(id)
@@ -65,6 +73,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             add(field, fieldConstraints.joinToString())
         }
 
+        val verify = widget.verify
         if (verify != null) {
             val verifyIconLabel = JLabel()
             val verifyMsgArea = newLabelTextArea()
@@ -101,24 +110,26 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         }
 
         formRows.add(formRow)
-        for (comp in formRow.components)
-            componentToFormRow[comp] = formRow
+
+        return widget
     }
 
     fun addSeparator() {
         add(JSeparator(), "newline, span, growx")
     }
 
-    fun addSubmitButton(label: String) = JButton(label).also { button ->
+    fun addSubmitButton(label: String, actionListener: () -> Unit) {
+        val button = JButton(label)
+        button.addActionListener { actionListener() }
         submitButton = button
         add(button, "newline, skip 1, span, align left")
     }
 
-    fun onChange(component: Component) {
+    fun onChange(widget: Widget) {
         if (!isSuspendingChangeEvents) {
             updateVerifyAndVisible()
-            // Notify the change listener, if it is set.
-            changeListener?.invoke(component)
+            // Notify the change listener if it is set.
+            changeListener?.invoke(widget)
         }
     }
 

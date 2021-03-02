@@ -144,26 +144,55 @@ object EditStylingPanel : JPanel() {
         l10n("project.${enumElem.javaClass.simpleName}.${enumElem.name}")
 
 
+    class StyleNameWidget : TextWidget() {
+
+        override val verify = {
+            val name = text.trim()
+            if (name.isEmpty())
+                throw Form.VerifyResult(Severity.ERROR, l10n("general.blank"))
+            if (otherStyleNames.any { o -> o.equals(name, ignoreCase = true) })
+                throw Form.VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
+        }
+
+        var otherStyleNames: List<String> = emptyList()
+
+    }
+
+
     private object GlobalForm : Form() {
 
         private val SUGGESTED_FPS = floatArrayOf(23.97f, 24f, 25f, 29.97f, 30f, 59.94f, 60f)
 
-        private val fpsComboBox = addComboBox(
-            l10n("ui.styling.global.fps"), SUGGESTED_FPS.map { "%.3f".format(it).dropLast(1) }.toTypedArray(),
-            verify = {
-                try {
-                    it?.toFPS() ?: throw VerifyResult(Severity.ERROR, l10n("general.blank"))
-                } catch (_: IllegalArgumentException) {
-                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.illFormattedFPS"))
-                }
-            }
-        ).apply { isEditable = true }
-
-        private val widthPxSpinner = addSpinner(l10n("ui.styling.global.widthPx"), SpinnerNumberModel(1, 1, null, 10))
-        private val heightPxSpinner = addSpinner(l10n("ui.styling.global.heightPx"), SpinnerNumberModel(1, 1, null, 10))
-        private val backgroundColorChooserButton = addColorChooserButton(l10n("ui.styling.global.background"))
-        private val unitVGapPxSpinner = addSpinner(
-            l10n("ui.styling.global.unitVGapPx"), SpinnerNumberModel(1f, 0.01f, null, 1f)
+        private val fpsWidget = addWidget(
+            l10n("ui.styling.global.fps"),
+            ComboBoxWidget(
+                SUGGESTED_FPS.map { "%.3f".format(it).dropLast(1) },
+                isEditable = true,
+                verify = {
+                    if (it.isBlank())
+                        throw VerifyResult(Severity.ERROR, l10n("general.blank"))
+                    try {
+                        it.toFPS()
+                    } catch (_: IllegalArgumentException) {
+                        throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.illFormattedFPS"))
+                    }
+                })
+        )
+        private val widthPxWidget = addWidget(
+            l10n("ui.styling.global.widthPx"),
+            SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
+        )
+        private val heightPxWidget = addWidget(
+            l10n("ui.styling.global.heightPx"),
+            SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
+        )
+        private val backgroundWidget = addWidget(
+            l10n("ui.styling.global.background"),
+            ColorChooserButtonWidget()
+        )
+        private val unitVGapPxWidget = addWidget(
+            l10n("ui.styling.global.unitVGapPx"),
+            SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 1f))
         )
 
         init {
@@ -172,22 +201,22 @@ object EditStylingPanel : JPanel() {
 
         fun openGlobal(global: Global, changeCallback: (Global) -> Unit) {
             withSuspendedChangeEvents {
-                fpsComboBox.selectedItem =
+                fpsWidget.selectedItem =
                     if (global.fps.denominator == 1) global.fps.numerator.toString()
                     else "%.3f".format(global.fps.frac).dropLast(1)
-                widthPxSpinner.value = global.widthPx
-                heightPxSpinner.value = global.heightPx
-                backgroundColorChooserButton.selectedColor = global.background
-                unitVGapPxSpinner.value = global.unitVGapPx
+                widthPxWidget.value = global.widthPx
+                heightPxWidget.value = global.heightPx
+                backgroundWidget.selectedColor = global.background
+                unitVGapPxWidget.value = global.unitVGapPx
 
                 changeListener = {
                     if (isErrorFree) {
                         val newGlobal = Global(
-                            (fpsComboBox.selectedItem as String).toFPS(),
-                            widthPxSpinner.value as Int,
-                            heightPxSpinner.value as Int,
-                            backgroundColorChooserButton.selectedColor,
-                            unitVGapPxSpinner.value as Float
+                            fpsWidget.selectedItem.toFPS(),
+                            widthPxWidget.value as Int,
+                            heightPxWidget.value as Int,
+                            backgroundWidget.selectedColor,
+                            unitVGapPxWidget.value as Float
                         )
                         changeCallback(newGlobal)
                     }
@@ -200,85 +229,86 @@ object EditStylingPanel : JPanel() {
 
     private object PageStyleForm : Form() {
 
-        private val nameField = addTextField(
+        private val nameWidget = addWidget(
             l10n("ui.styling.page.name"),
-            verify = {
-                val name = it.trim()
-                if (name.isEmpty())
-                    throw VerifyResult(Severity.ERROR, l10n("general.blank"))
-                if (otherPageStyles.any { o -> o.name.equals(name, ignoreCase = true) })
-                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
-            }
+            StyleNameWidget()
         )
-        private val behaviorComboBox = addComboBox(
-            l10n("ui.styling.page.behavior"), PageBehavior.values(), toString = ::l10nEnum
+        private val behaviorWidget = addWidget(
+            l10n("ui.styling.page.behavior"),
+            ComboBoxWidget(PageBehavior.values().asList(), toString = ::l10nEnum)
         )
-        private val meltWithPrevCheckBox = addCheckBox(
+        private val meltWithPrevWidget = addWidget(
             l10n("ui.styling.page.meltWithPrev"),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL }
+            CheckBoxWidget(),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
         )
-        private val meltWithNextCheckBox = addCheckBox(
+        private val meltWithNextWidget = addWidget(
             l10n("ui.styling.page.meltWithNext"),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL }
+            CheckBoxWidget(),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
         )
-        private val afterwardSlugFramesSpinner = addSpinner(
-            l10n("ui.styling.page.afterwardSlugFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { !(behaviorComboBox.selectedItem == PageBehavior.SCROLL && meltWithNextCheckBox.isSelected) }
+        private val afterwardSlugFramesWidget = addWidget(
+            l10n("ui.styling.page.afterwardSlugFrames"),
+            SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
+            isVisible = { !(behaviorWidget.selectedItem == PageBehavior.SCROLL && meltWithNextWidget.isSelected) }
         )
-        private val cardDurationFramesSpinner = addSpinner(
-            l10n("ui.styling.page.cardDurationFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
+        private val cardDurationFramesWidget = addWidget(
+            l10n("ui.styling.page.cardDurationFrames"),
+            SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.CARD }
         )
-        private val cardFadeInFramesSpinner = addSpinner(
-            l10n("ui.styling.page.cardInFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
+        private val cardFadeInFramesWidget = addWidget(
+            l10n("ui.styling.page.cardInFrames"),
+            SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.CARD }
         )
-        private val cardFadeOutFramesSpinner = addSpinner(
-            l10n("ui.styling.page.cardOutFrames"), SpinnerNumberModel(0, 0, null, 1),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.CARD }
+        private val cardFadeOutFramesWidget = addWidget(
+            l10n("ui.styling.page.cardOutFrames"),
+            SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.CARD }
         )
-        private val scrollPxPerFrameSpinner = addSpinner(
-            l10n("ui.styling.page.scrollPxPerFrame"), SpinnerNumberModel(1f, 0.01f, null, 1f),
-            isVisible = { behaviorComboBox.selectedItem == PageBehavior.SCROLL },
-            verify = {
-                val value = it as Float
-                if (floor(value) != value)
-                    throw VerifyResult(Severity.WARN, l10n("ui.styling.page.scrollPxPerFrameFractional"))
-            }
+        private val scrollPxPerFrameWidget = addWidget(
+            l10n("ui.styling.page.scrollPxPerFrame"),
+            SpinnerWidget(
+                SpinnerNumberModel(1f, 0.01f, null, 1f),
+                verify = {
+                    val value = it as Float
+                    if (floor(value) != value)
+                        throw VerifyResult(Severity.WARN, l10n("ui.styling.page.scrollPxPerFrameFractional"))
+                }),
+            isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
         )
 
         init {
             finishInit()
         }
 
-        private var otherPageStyles = emptyList<PageStyle>()
-
         fun openPageStyle(pageStyle: PageStyle) {
-            otherPageStyles = EditStylingTree.pageStyles.filter { it !== pageStyle }
+            nameWidget.otherStyleNames = EditStylingTree.pageStyles.filter { it !== pageStyle }.map { it.name }
 
             withSuspendedChangeEvents {
-                nameField.text = pageStyle.name
-                behaviorComboBox.selectedItem = pageStyle.behavior
-                meltWithPrevCheckBox.isSelected = pageStyle.meltWithPrev
-                meltWithNextCheckBox.isSelected = pageStyle.meltWithNext
-                afterwardSlugFramesSpinner.value = pageStyle.afterwardSlugFrames
-                cardDurationFramesSpinner.value = pageStyle.cardDurationFrames
-                cardFadeInFramesSpinner.value = pageStyle.cardFadeInFrames
-                cardFadeOutFramesSpinner.value = pageStyle.cardFadeOutFrames
-                scrollPxPerFrameSpinner.value = pageStyle.scrollPxPerFrame
+                nameWidget.text = style.name
+                behaviorWidget.selectedItem = style.behavior
+                meltWithPrevWidget.isSelected = style.meltWithPrev
+                meltWithNextWidget.isSelected = style.meltWithNext
+                afterwardSlugFramesWidget.value = style.afterwardSlugFrames
+                cardDurationFramesWidget.value = style.cardDurationFrames
+                cardFadeInFramesWidget.value = style.cardFadeInFrames
+                cardFadeOutFramesWidget.value = style.cardFadeOutFrames
+                scrollPxPerFrameWidget.value = style.scrollPxPerFrame
 
                 changeListener = {
                     if (isErrorFree) {
                         val newPageStyle = PageStyle(
-                            nameField.text.trim(),
-                            behaviorComboBox.selectedItem as PageBehavior,
-                            meltWithPrevCheckBox.isSelected,
-                            meltWithNextCheckBox.isSelected,
-                            afterwardSlugFramesSpinner.value as Int,
-                            cardDurationFramesSpinner.value as Int,
-                            cardFadeInFramesSpinner.value as Int,
-                            cardFadeOutFramesSpinner.value as Int,
-                            scrollPxPerFrameSpinner.value as Float
+                            nameWidget.text.trim(),
+                            behaviorWidget.selectedItem,
+                            meltWithPrevWidget.isSelected,
+                            meltWithNextWidget.isSelected,
+                            afterwardSlugFramesWidget.value as Int,
+                            cardDurationFramesWidget.value as Int,
+                            cardFadeInFramesWidget.value as Int,
+                            cardFadeOutFramesWidget.value as Int,
+                            scrollPxPerFrameWidget.value as Float
                         )
                         EditStylingTree.updateSelectedStyle(newPageStyle)
                         onChange()
@@ -295,122 +325,147 @@ object EditStylingPanel : JPanel() {
         private fun isGridOrFlow(layout: Any?) = layout == BodyLayout.GRID || layout == BodyLayout.FLOW
         private fun isFlowOrParagraphs(layout: Any?) = layout == BodyLayout.FLOW || layout == BodyLayout.PARAGRAPHS
 
-        private val nameField = addTextField(
+        private val nameWidget = addWidget(
             l10n("ui.styling.content.name"),
-            verify = {
-                val name = it.trim()
-                if (name.isEmpty())
-                    throw VerifyResult(Severity.ERROR, l10n("general.blank"))
-                if (otherContentStyles.any { o -> o.name.equals(name, ignoreCase = true) })
-                    throw VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
-            }
+            StyleNameWidget()
         )
-        private val alignWithAxisComboBox = addComboBox(
-            l10n("ui.styling.content.alignWithAxis"), AlignWithAxis.values(), toString = ::l10nEnum
+        private val alignWithAxisWidget = addWidget(
+            l10n("ui.styling.content.alignWithAxis"),
+            ComboBoxWidget(AlignWithAxis.values().asList(), toString = ::l10nEnum)
         )
-        private val spineOrientationComboBox = addComboBox(
-            l10n("ui.styling.content.spineOrientation"), SpineOrientation.values(), toString = ::l10nEnum,
-            isVisible = { hasHeadCheckBox.isSelected || hasTailCheckBox.isSelected }
+        private val spineOrientationWidget = addWidget(
+            l10n("ui.styling.content.spineOrientation"),
+            ComboBoxWidget(SpineOrientation.values().asList(), toString = ::l10nEnum),
+            isVisible = { hasHeadWidget.isSelected || hasTailWidget.isSelected }
         )
-        private val vMarginPxSpinner = addSpinner(
-            l10n("ui.styling.content.vMarginPx"), SpinnerNumberModel(0f, 0f, null, 1f)
+        private val vMarginPxWidget = addWidget(
+            l10n("ui.styling.content.vMarginPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f))
         )
 
         init {
             addSeparator()
         }
 
-        private val bodyLayoutComboBox = addComboBox(
-            l10n("ui.styling.content.bodyLayout"), BodyLayout.values(), toString = ::l10nEnum
+        private val bodyLayoutWidget = addWidget(
+            l10n("ui.styling.content.bodyLayout"),
+            ComboBoxWidget(BodyLayout.values().asList(), toString = ::l10nEnum)
         )
-        private val bodyLayoutLineHJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.lineHJustify"), LineHJustify.values(), toString = ::l10nEnum,
-            isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
+        private val bodyLayoutLineHJustifyWidget = addWidget(
+            l10n("ui.styling.content.lineHJustify"),
+            ComboBoxWidget(LineHJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { isFlowOrParagraphs(bodyLayoutWidget.selectedItem) }
         )
-        private val bodyLayoutColsHJustifyComboBox = addComboBoxList(
-            l10n("ui.styling.content.colsHJustify"), HJustify.values(), toString = ::l10nEnum,
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.GRID },
+        private val bodyLayoutColsHJustifyWidget = addWidget(
+            l10n("ui.styling.content.colsHJustify"),
+            ComboBoxListWidget(HJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID },
         )
-        private val bodyLayoutElemHJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.elemHJustify"), HJustify.values(), toString = ::l10nEnum,
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
+        private val bodyLayoutElemHJustifyWidget = addWidget(
+            l10n("ui.styling.content.elemHJustify"),
+            ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
         )
-        private val bodyLayoutElemVJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.elemVJustify"), VJustify.values(), toString = ::l10nEnum,
-            isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
+        private val bodyLayoutElemVJustifyWidget = addWidget(
+            l10n("ui.styling.content.elemVJustify"),
+            ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { isGridOrFlow(bodyLayoutWidget.selectedItem) }
         )
-        private val bodyLayoutElemConformComboBox = addComboBox(
-            l10n("ui.styling.content.elemConform"), BodyElementConform.values(), toString = ::l10nEnum,
-            isVisible = { isGridOrFlow(bodyLayoutComboBox.selectedItem) }
+        private val bodyLayoutElemConfWidget = addWidget(
+            l10n("ui.styling.content.elemConform"),
+            ComboBoxWidget(BodyElementConform.values().asList(), toString = ::l10nEnum),
+            isVisible = { isGridOrFlow(bodyLayoutWidget.selectedItem) }
         )
-        private val bodyLayoutSeparatorField = addTextField(
-            l10n("ui.styling.content.separator"), grow = false,
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.FLOW }
+        private val bodyLayoutSeparatorWidget = addWidget(
+            l10n("ui.styling.content.separator"),
+            TextWidget(grow = false),
+            isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
         )
-        private val bodyLayoutBodyWidthPxSpinner = addSpinner(
-            l10n("ui.styling.content.bodyWidthPx"), SpinnerNumberModel(1f, 0.01f, null, 10f),
-            isVisible = { isFlowOrParagraphs(bodyLayoutComboBox.selectedItem) }
+        private val bodyLayoutBodyWidthPxWidget = addWidget(
+            l10n("ui.styling.content.bodyWidthPx"),
+            SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 10f)),
+            isVisible = { isFlowOrParagraphs(bodyLayoutWidget.selectedItem) }
         )
-        private val bodyLayoutParagraphGapPxSpinner = addSpinner(
-            l10n("ui.styling.content.paragraphGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
-            isVisible = { bodyLayoutComboBox.selectedItem == BodyLayout.PARAGRAPHS }
+        private val bodyLayoutParagraphGapPxWidget = addWidget(
+            l10n("ui.styling.content.paragraphGapPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+            isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.PARAGRAPHS }
         )
-        private val bodyLayoutLineGapPxSpinner = addSpinner(
-            l10n("ui.styling.content.lineGapPx"), SpinnerNumberModel(0f, 0f, null, 1f)
+        private val bodyLayoutLineGapPxWidget = addWidget(
+            l10n("ui.styling.content.lineGapPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f))
         )
-        private val bodyLayoutHorizontalGapPxSpinner = addSpinner(
-            l10n("ui.styling.content.horizontalGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
+        private val bodyLayoutHorizontalGapPxWidget = addWidget(
+            l10n("ui.styling.content.horizontalGapPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
             isVisible = {
-                bodyLayoutComboBox.selectedItem == BodyLayout.GRID &&
-                        bodyLayoutColsHJustifyComboBox.selectedItems.size >= 2 ||
-                        bodyLayoutComboBox.selectedItem == BodyLayout.FLOW
+                bodyLayoutWidget.selectedItem == BodyLayout.GRID &&
+                        bodyLayoutColsHJustifyWidget.selectedItems.size >= 2 ||
+                        bodyLayoutWidget.selectedItem == BodyLayout.FLOW
             }
         )
 
-        private val bodyFontSpecChooser = addFontSpecChooser(l10n("ui.styling.content.bodyFont"))
+        private val bodyFontSpecWidget = addWidget(
+            l10n("ui.styling.content.bodyFont"),
+            FontSpecChooserWidget()
+        )
 
         init {
             addSeparator()
         }
 
-        private val hasHeadCheckBox = addCheckBox(l10n("ui.styling.content.hasHead"))
-        private val headHJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.headHJustify"), HJustify.values(), toString = ::l10nEnum,
-            isVisible = { hasHeadCheckBox.isSelected }
+        private val hasHeadWidget = addWidget(
+            l10n("ui.styling.content.hasHead"),
+            CheckBoxWidget()
         )
-        private val headVJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.headVJustify"), VJustify.values(), toString = ::l10nEnum,
-            isVisible = { hasHeadCheckBox.isSelected && spineOrientationComboBox.selectedItem == SpineOrientation.HORIZONTAL }
+        private val headHJustifyWidget = addWidget(
+            l10n("ui.styling.content.headHJustify"),
+            ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { hasHeadWidget.isSelected }
         )
-        private val headGapPxSpinner = addSpinner(
-            l10n("ui.styling.content.headGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
-            isVisible = { hasHeadCheckBox.isSelected }
+        private val headVJustifyWidget = addWidget(
+            l10n("ui.styling.content.headVJustify"),
+            ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { hasHeadWidget.isSelected && spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
         )
-        private val headFontSpecChooser = addFontSpecChooser(
+        private val headGapPxWidget = addWidget(
+            l10n("ui.styling.content.headGapPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+            isVisible = { hasHeadWidget.isSelected }
+        )
+        private val headFontSpecWidget = addWidget(
             l10n("ui.styling.content.headFont"),
-            isVisible = { hasHeadCheckBox.isSelected }
+            FontSpecChooserWidget(),
+            isVisible = { hasHeadWidget.isSelected }
         )
 
         init {
             addSeparator()
         }
 
-        private val hasTailCheckBox = addCheckBox(l10n("ui.styling.content.hasTail"))
-        private val tailHJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.tailHJustify"), HJustify.values(), toString = ::l10nEnum,
-            isVisible = { hasTailCheckBox.isSelected }
+        private val hasTailWidget = addWidget(
+            l10n("ui.styling.content.hasTail"),
+            CheckBoxWidget()
         )
-        private val tailVJustifyComboBox = addComboBox(
-            l10n("ui.styling.content.tailVJustify"), VJustify.values(), toString = ::l10nEnum,
-            isVisible = { hasTailCheckBox.isSelected && spineOrientationComboBox.selectedItem == SpineOrientation.HORIZONTAL }
+        private val tailHJustifyWidget = addWidget(
+            l10n("ui.styling.content.tailHJustify"),
+            ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { hasTailWidget.isSelected }
         )
-        private val tailGapPxSpinner = addSpinner(
-            l10n("ui.styling.content.tailGapPx"), SpinnerNumberModel(0f, 0f, null, 1f),
-            isVisible = { hasTailCheckBox.isSelected }
+        private val tailVJustifyWidget = addWidget(
+            l10n("ui.styling.content.tailVJustify"),
+            ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
+            isVisible = { hasTailWidget.isSelected && spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
         )
-        private val tailFontSpecChooser = addFontSpecChooser(
+        private val tailGapPxWidget = addWidget(
+            l10n("ui.styling.content.tailGapPx"),
+            SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+            isVisible = { hasTailWidget.isSelected }
+        )
+        private val tailFontSpecWidget = addWidget(
             l10n("ui.styling.content.tailFont"),
-            isVisible = { hasTailCheckBox.isSelected }
+            FontSpecChooserWidget(),
+            isVisible = { hasTailWidget.isSelected }
         )
 
         init {
@@ -418,73 +473,71 @@ object EditStylingPanel : JPanel() {
         }
 
         fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-            bodyFontSpecChooser.projectFamilies = projectFamilies
-            headFontSpecChooser.projectFamilies = projectFamilies
-            tailFontSpecChooser.projectFamilies = projectFamilies
+            bodyFontSpecWidget.projectFamilies = projectFamilies
+            headFontSpecWidget.projectFamilies = projectFamilies
+            tailFontSpecWidget.projectFamilies = projectFamilies
         }
 
-        private var otherContentStyles = emptyList<ContentStyle>()
-
         fun openContentStyle(contentStyle: ContentStyle) {
-            otherContentStyles = EditStylingTree.contentStyles.filter { it !== contentStyle }
+            nameWidget.otherStyleNames = EditStylingTree.contentStyles.filter { it !== contentStyle }.map { it.name }
 
             withSuspendedChangeEvents {
-                nameField.text = contentStyle.name
-                spineOrientationComboBox.selectedItem = contentStyle.spineOrientation
-                alignWithAxisComboBox.selectedItem = contentStyle.alignWithAxis
-                vMarginPxSpinner.value = contentStyle.vMarginPx
-                bodyLayoutComboBox.selectedItem = contentStyle.bodyLayout
-                bodyLayoutLineGapPxSpinner.value = contentStyle.bodyLayoutLineGapPx
-                bodyLayoutElemConformComboBox.selectedItem = contentStyle.bodyLayoutElemConform
-                bodyLayoutElemVJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemVJustify
-                bodyLayoutHorizontalGapPxSpinner.value = contentStyle.bodyLayoutHorizontalGapPx
-                bodyLayoutColsHJustifyComboBox.selectedItems = contentStyle.bodyLayoutColsHJustify
-                bodyLayoutLineHJustifyComboBox.selectedItem = contentStyle.bodyLayoutLineHJustify
-                bodyLayoutBodyWidthPxSpinner.value = contentStyle.bodyLayoutBodyWidthPx
-                bodyLayoutElemHJustifyComboBox.selectedItem = contentStyle.bodyLayoutElemHJustify
-                bodyLayoutSeparatorField.text = contentStyle.bodyLayoutSeparator
-                bodyLayoutParagraphGapPxSpinner.value = contentStyle.bodyLayoutParagraphGapPx
-                bodyFontSpecChooser.selectedFontSpec = contentStyle.bodyFontSpec
-                hasHeadCheckBox.isSelected = contentStyle.hasHead
-                headHJustifyComboBox.selectedItem = contentStyle.headHJustify
-                headVJustifyComboBox.selectedItem = contentStyle.headVJustify
-                headGapPxSpinner.value = contentStyle.headGapPx
-                headFontSpecChooser.selectedFontSpec = contentStyle.headFontSpec
-                hasTailCheckBox.isSelected = contentStyle.hasTail
-                tailHJustifyComboBox.selectedItem = contentStyle.tailHJustify
-                tailVJustifyComboBox.selectedItem = contentStyle.tailVJustify
-                tailGapPxSpinner.value = contentStyle.tailGapPx
-                tailFontSpecChooser.selectedFontSpec = contentStyle.tailFontSpec
+                nameWidget.text = style.name
+                spineOrientationWidget.selectedItem = style.spineOrientation
+                alignWithAxisWidget.selectedItem = style.alignWithAxis
+                vMarginPxWidget.value = style.vMarginPx
+                bodyLayoutWidget.selectedItem = style.bodyLayout
+                bodyLayoutLineGapPxWidget.value = style.bodyLayoutLineGapPx
+                bodyLayoutElemConfWidget.selectedItem = style.bodyLayoutElemConform
+                bodyLayoutElemVJustifyWidget.selectedItem = style.bodyLayoutElemVJustify
+                bodyLayoutHorizontalGapPxWidget.value = style.bodyLayoutHorizontalGapPx
+                bodyLayoutColsHJustifyWidget.selectedItems = style.bodyLayoutColsHJustify
+                bodyLayoutLineHJustifyWidget.selectedItem = style.bodyLayoutLineHJustify
+                bodyLayoutBodyWidthPxWidget.value = style.bodyLayoutBodyWidthPx
+                bodyLayoutElemHJustifyWidget.selectedItem = style.bodyLayoutElemHJustify
+                bodyLayoutSeparatorWidget.text = style.bodyLayoutSeparator
+                bodyLayoutParagraphGapPxWidget.value = style.bodyLayoutParagraphGapPx
+                bodyFontSpecWidget.selectedFontSpec = style.bodyFontSpecName
+                hasHeadWidget.isSelected = style.hasHead
+                headHJustifyWidget.selectedItem = style.headHJustify
+                headVJustifyWidget.selectedItem = style.headVJustify
+                headGapPxWidget.value = style.headGapPx
+                headFontSpecWidget.selectedFontSpec = style.headFontSpecName
+                hasTailWidget.isSelected = style.hasTail
+                tailHJustifyWidget.selectedItem = style.tailHJustify
+                tailVJustifyWidget.selectedItem = style.tailVJustify
+                tailGapPxWidget.value = style.tailGapPx
+                tailFontSpecWidget.selectedFontSpec = style.tailFontSpecName
 
                 changeListener = {
                     if (isErrorFree) {
                         val newContentStyle = ContentStyle(
-                            nameField.text.trim(),
-                            spineOrientationComboBox.selectedItem as SpineOrientation,
-                            alignWithAxisComboBox.selectedItem as AlignWithAxis,
-                            vMarginPxSpinner.value as Float,
-                            bodyLayoutComboBox.selectedItem as BodyLayout,
-                            bodyLayoutLineGapPxSpinner.value as Float,
-                            bodyLayoutElemConformComboBox.selectedItem as BodyElementConform,
-                            bodyLayoutElemVJustifyComboBox.selectedItem as VJustify,
-                            bodyLayoutHorizontalGapPxSpinner.value as Float,
-                            bodyLayoutColsHJustifyComboBox.selectedItems.filterNotNull().toImmutableList(),
-                            bodyLayoutLineHJustifyComboBox.selectedItem as LineHJustify,
-                            bodyLayoutBodyWidthPxSpinner.value as Float,
-                            bodyLayoutElemHJustifyComboBox.selectedItem as HJustify,
-                            bodyLayoutSeparatorField.text,
-                            bodyLayoutParagraphGapPxSpinner.value as Float,
-                            bodyFontSpecChooser.selectedFontSpec,
-                            hasHeadCheckBox.isSelected,
-                            headHJustifyComboBox.selectedItem as HJustify,
-                            headVJustifyComboBox.selectedItem as VJustify,
-                            headGapPxSpinner.value as Float,
-                            headFontSpecChooser.selectedFontSpec,
-                            hasTailCheckBox.isSelected,
-                            tailHJustifyComboBox.selectedItem as HJustify,
-                            tailVJustifyComboBox.selectedItem as VJustify,
-                            tailGapPxSpinner.value as Float,
-                            tailFontSpecChooser.selectedFontSpec
+                            nameWidget.text.trim(),
+                            spineOrientationWidget.selectedItem,
+                            alignWithAxisWidget.selectedItem,
+                            vMarginPxWidget.value as Float,
+                            bodyLayoutWidget.selectedItem,
+                            bodyLayoutLineGapPxWidget.value as Float,
+                            bodyLayoutElemConfWidget.selectedItem,
+                            bodyLayoutElemVJustifyWidget.selectedItem,
+                            bodyLayoutHorizontalGapPxWidget.value as Float,
+                            bodyLayoutColsHJustifyWidget.selectedItems.toImmutableList(),
+                            bodyLayoutLineHJustifyWidget.selectedItem,
+                            bodyLayoutBodyWidthPxWidget.value as Float,
+                            bodyLayoutElemHJustifyWidget.selectedItem,
+                            bodyLayoutSeparatorWidget.text,
+                            bodyLayoutParagraphGapPxWidget.value as Float,
+                            bodyFontSpecWidget.selectedFontSpec,
+                            hasHeadWidget.isSelected,
+                            headHJustifyWidget.selectedItem,
+                            headVJustifyWidget.selectedItem,
+                            headGapPxWidget.value as Float,
+                            headFontSpecWidget.selectedFontSpec,
+                            hasTailWidget.isSelected,
+                            tailHJustifyWidget.selectedItem,
+                            tailVJustifyWidget.selectedItem,
+                            tailGapPxWidget.value as Float,
+                            tailFontSpecWidget.selectedFontSpec
                         )
                         EditStylingTree.updateSelectedStyle(newContentStyle)
                         onChange()

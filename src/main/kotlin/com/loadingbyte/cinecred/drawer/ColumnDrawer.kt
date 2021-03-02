@@ -4,8 +4,11 @@ import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Guides
 import com.loadingbyte.cinecred.common.RichFont
 import com.loadingbyte.cinecred.common.getStringWidth
-import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
+import com.loadingbyte.cinecred.project.Block
+import com.loadingbyte.cinecred.project.BodyLayout
+import com.loadingbyte.cinecred.project.Column
+import com.loadingbyte.cinecred.project.SpineOrientation
 import kotlin.math.max
 import kotlin.math.min
 
@@ -113,6 +116,8 @@ fun drawColumnImage(
     }
     // Draw a guide that shows the column's axis.
     columnImage.drawLine(AXIS_GUIDE_COLOR, axisXInColumnImage, 0f, axisXInColumnImage, y, layer = Guides)
+    // Ensure that the column image's height also entails the last block's vMarginPx.
+    columnImage.height = y
 
     return Pair(columnImage, axisXInColumnImage)
 }
@@ -214,7 +219,7 @@ private fun drawHorizontalSpineBlockImages(
                 0f, y, headWidth, bodyImage.height
             )
             // Draw a guide that shows the edges of the head space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, 0f, y, headWidth, bodyImage.height, layer = Guides)
+            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, 0f, y, headWidth, bodyImage.height, layer = GUIDES)
         }
         // Draw the block's body.
         blockImage.drawDeferredImage(bodyImage, bodyStartX, y)
@@ -227,7 +232,7 @@ private fun drawHorizontalSpineBlockImages(
                 tailStartX, y, tailWidth, bodyImage.height
             )
             // Draw a guide that shows the edges of the tail space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, tailStartX, y, tailWidth, bodyImage.height, layer = Guides)
+            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, tailStartX, y, tailWidth, bodyImage.height, layer = GUIDES)
         }
 
         // Find the x coordinate of the axis in the generated image for the current block.
@@ -273,8 +278,8 @@ private fun drawVerticalSpineBlockImage(
         headXs = blockImage.drawJustifiedString(headFont, block.head, block.style.headHJustify, 0f, y, bodyImage.width)
         // Draw guides that show the edges of the head space.
         val y2 = blockImage.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, 0f, 0f, y2, layer = Guides)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, 0f, bodyImage.width, y2, layer = Guides)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, 0f, 0f, y2, layer = GUIDES)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, 0f, bodyImage.width, y2, layer = GUIDES)
         // Advance to the body.
         y += headFont.spec.heightPx + block.style.headGapPx
     }
@@ -287,8 +292,8 @@ private fun drawVerticalSpineBlockImage(
         tailXs = blockImage.drawJustifiedString(tailFont, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width)
         // Draw guides that show the edges of the tail space.
         val y2 = blockImage.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y2, layer = Guides)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, y, bodyImage.width, y2, layer = Guides)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y2, layer = GUIDES)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, y, bodyImage.width, y2, layer = GUIDES)
     }
 
     // Find the x coordinate of the axis in the generated image for the current block.

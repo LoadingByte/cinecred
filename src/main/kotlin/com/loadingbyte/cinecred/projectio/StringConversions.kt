@@ -28,7 +28,8 @@ fun List<Enum<*>>.toString2() = joinToString(" ") { it.name }
 
 
 fun String.toColor(): Color = if (length == 7) Color.decode(this) else Color(Integer.decode(this), true)
-fun Color.toString2() = "#%08x".format(rgb)
+fun Color.toHex24() = "#%06x".format(rgb and 0x00ffffff)
+fun Color.toHex32() = "#%08x".format(rgb)
 
 
 fun String.toFPS(): FPS {

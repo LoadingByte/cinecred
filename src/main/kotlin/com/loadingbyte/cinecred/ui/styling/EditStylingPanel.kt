@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.Controller
@@ -43,7 +45,7 @@ object EditStylingPanel : JPanel() {
     // Create a panel with the three style editing forms.
     private val rightPanelCards = CardLayout()
     private val rightPanel = JPanel(rightPanelCards).apply {
-        add(JPanel(), "Blank")
+        add(JScrollPane() /* use a full-blown JScrollPane to match the look of the non-blank cards */, "Blank")
         add(JScrollPane(GlobalForm), "Global")
         add(JScrollPane(PageStyleForm), "PageStyle")
         add(JScrollPane(ContentStyleForm), "ContentStyle")
@@ -68,15 +70,17 @@ object EditStylingPanel : JPanel() {
             objToString = { it.name }, copyObj = { it.copy() }
         )
 
+        fun JButton.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
+
         // Add buttons for adding and removing page and content style nodes.
         val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))
-            .apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
+            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
         val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
-            .apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
+            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
         val duplicateStyleButton = JButton(DUPLICATE_ICON)
-            .apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }
+            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }
         val removeStyleButton = JButton(TRASH_ICON)
-            .apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
+            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
         addPageStyleButton.addActionListener {
             stylingTree.addListElement(STANDARD_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
             onChange()

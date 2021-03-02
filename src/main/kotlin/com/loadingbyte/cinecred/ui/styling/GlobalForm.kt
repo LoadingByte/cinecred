@@ -4,7 +4,7 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.projectio.toFPS
-import com.loadingbyte.cinecred.ui.helper.ColorChooserButtonWidget
+import com.loadingbyte.cinecred.ui.helper.ColorWellWidget
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
 import com.loadingbyte.cinecred.ui.helper.Form
 import com.loadingbyte.cinecred.ui.helper.SpinnerWidget
@@ -40,7 +40,7 @@ object GlobalForm : Form() {
     )
     private val backgroundWidget = addWidget(
         l10n("ui.styling.global.background"),
-        ColorChooserButtonWidget()
+        ColorWellWidget()
     )
     private val unitVGapPxWidget = addWidget(
         l10n("ui.styling.global.unitVGapPx"),

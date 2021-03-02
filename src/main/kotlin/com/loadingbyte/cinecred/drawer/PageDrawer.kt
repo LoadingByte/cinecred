@@ -26,12 +26,9 @@ fun drawPage(
         .flatMap { stage -> stage.segments }.flatMap { segment -> segment.columns }
         .associateWith { column -> drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
+    val pageImage = DeferredImage()
     // First, for each stage, combine the column images to a stage image, and then combine the stage images to the
     // page image. Also record for each stage its tightest top and bottom y coordinates in the overall image.
-    val pageImage = DeferredImage()
-    pageImage.drawRect(
-        global.background, 0f, 0f, global.widthPx.toFloat(), global.heightPx.toFloat(), fill = true, layer = Background
-    )
     val stageImageBounds = mutableListOf<Pair<Float, Float>>()
     var y = 0f
     for ((stageIdx, stage) in page.stages.withIndex()) {
@@ -52,8 +49,7 @@ fun drawPage(
             // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
             // rectangle are often rendered only partially or not at all.
             pageImage.drawRect(
-                CARD_GUIDE_COLOR, 0f, y - cardPaddingHeight, global.widthPx - 1f, global.heightPx - 1f,
-                layer = Guides
+                CARD_GUIDE_COLOR, 0f, y - cardPaddingHeight, global.widthPx - 1f, global.heightPx - 1f, layer = GUIDES
             )
             // If the card is an intermediate stage, also draw arrows that indicate that the card is intermediate.
             if (stageIdx != 0)
@@ -71,6 +67,11 @@ fun drawPage(
     // Enforce that the page image has exactly the global width. This is necessary because the user might draw
     // stuff outside the bounds defined by the global width, and we don't want that stuff to enlarge the page.
     pageImage.width = global.widthPx.toFloat()
+
+    // Fill the background of the page image.
+    pageImage.drawRect(
+        global.background, 0f, 0f, pageImage.width, pageImage.height, fill = true, layer = BACKGROUND
+    )
 
     // Find for each stage:
     //   - If it's a card stage, its middle y coordinate in the overall page image.
@@ -128,6 +129,6 @@ private fun DeferredImage.drawMeltedCardArrowGuide(global: Global, y: Float) {
         closePath()
     }
     drawShape(
-        CARD_GUIDE_COLOR, triangle, global.widthPx / 2f, y, global.widthPx / 100f, fill = true, layer = Guides
+        CARD_GUIDE_COLOR, triangle, global.widthPx / 2f, y, global.widthPx / 100f, fill = true, layer = GUIDES
     )
 }

@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
@@ -207,6 +209,7 @@ object DeliverRenderQueuePanel : JPanel() {
     private object CancelButtonCellRenderer : TableCellRenderer {
 
         private val button = JButton(CANCEL_ICON).apply {
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
         }
 
@@ -225,6 +228,7 @@ object DeliverRenderQueuePanel : JPanel() {
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
         ) = JButton(CANCEL_ICON).apply {
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
             addActionListener {
                 val modelRow = JobTableModel.rows[rowIdx]

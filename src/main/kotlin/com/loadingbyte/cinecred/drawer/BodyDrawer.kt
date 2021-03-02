@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Guides
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.common.RichFont
 import com.loadingbyte.cinecred.common.getStringWidth
@@ -112,7 +112,7 @@ fun drawBodyImagesWithGridBodyLayout(
                     bodyElem, bodyFont, justifyCol, style.bodyLayoutElemVJustify, x, y, colWidth, rowHeight
                 )
                 // Draw a guide that shows the edges of the body element space.
-                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, layer = Guides)
+                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, layer = GUIDES)
                 // Advance to the next line in the current column.
                 y += rowHeight + style.bodyLayoutLineGapPx
             }
@@ -218,7 +218,7 @@ fun drawBodyImageWithFlowBodyLayout(
             )
 
             // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, layer = Guides)
+            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, layer = GUIDES)
 
             if (idx != bodyLine.lastIndex) {
                 // Advance to the separator.
@@ -239,8 +239,8 @@ fun drawBodyImageWithFlowBodyLayout(
     }
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = Guides)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = Guides)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = GUIDES)
 
     return bodyImage
 }
@@ -325,7 +325,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
                     bodyImage.drawJustifiedString(bodyFont, line, hJustify, 0f, y, bodyImageWidth)
 
                 // Advance to the next line.
-                y += bodyFont.spec.heightPx
+                y += bodyFont.spec.heightPx + block.style.bodyLayoutLineGapPx
             }
         }
         // Case 2: The body element is not a string. Just draw it regularly.
@@ -339,8 +339,8 @@ fun drawBodyImageWithParagraphsBodyLayout(
     }
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = Guides)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = Guides)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = GUIDES)
 
     return bodyImage
 }

@@ -1,12 +1,15 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.DeferredImage.Guides
+import com.formdev.flatlaf.FlatClientProperties.*
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.ParserMsg
-import com.loadingbyte.cinecred.projectio.toString2
-import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.*
+import com.loadingbyte.cinecred.projectio.toHex24
+import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
+import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
+import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_AREAS
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import net.miginfocom.swing.MigLayout
@@ -51,23 +54,23 @@ object EditPanel : JPanel() {
     private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
-            CARD_GUIDE_COLOR.brighter().toString2(), AXIS_GUIDE_COLOR.toString2(),
-            BODY_ELEM_GUIDE_COLOR.brighter().toString2(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toString2(),
-            HEAD_TAIL_GUIDE_COLOR.brighter().toString2()
+            CARD_GUIDE_COLOR.brighter().toHex24(), AXIS_GUIDE_COLOR.toHex24(),
+            BODY_ELEM_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
+            HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
         )
-        addActionListener { previewPanels.forEach { it.setLayerVisible(Guides, isSelected) } }
+        addActionListener { previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) } }
     }
     private val uniformSafeAreasToggleButton = JToggleButton(UNIFORM_SAFE_AREAS_ICON, false).apply {
         toolTipText = l10n("ui.edit.uniformSafeAreasTooltip")
-        addActionListener { previewPanels.forEach { it.setLayerVisible(UniformSafeAreas, isSelected) } }
+        addActionListener { previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) } }
     }
     private val cutSafeArea16to9ToggleButton = JToggleButton(X_16_TO_9_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "16:9")
-        addActionListener { previewPanels.forEach { it.setLayerVisible(CutSafeArea16to9, isSelected) } }
+        addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) } }
     }
     private val cutSafeArea4to3ToggleButton = JToggleButton(X_4_TO_3_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
-        addActionListener { previewPanels.forEach { it.setLayerVisible(CutSafeArea4to3, isSelected) } }
+        addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) } }
     }
     private val runtimeLabel1 = JLabel().apply {
         text = l10n("ui.edit.runtime")
@@ -124,21 +127,23 @@ object EditPanel : JPanel() {
             Controller.StylingHistory.tryResetAndRedraw()
         }
 
-        val topPanel = JPanel(MigLayout("", "[]30lp[][][][][][][]30lp[][][][][][]30lp[][]push[]")).apply {
+        fun JComponent.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
+
+        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[]0[]30lp[][][][]0[]0[]30lp[][]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton)
-            add(JButton(undoStylingAction))
-            add(JButton(redoStylingAction))
-            add(JButton(saveStylingAction))
-            add(JButton(resetStylingAction))
+            add(toggleEditStylingDialogButton.makeToolbarButton())
+            add(JButton(undoStylingAction).makeToolbarButton())
+            add(JButton(redoStylingAction).makeToolbarButton())
+            add(JButton(saveStylingAction).makeToolbarButton())
+            add(JButton(resetStylingAction).makeToolbarButton())
             add(unsavedStylingLabel)
             add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
             add(zoomSlider)
             add(layoutGuidesToggleButton)
-            add(uniformSafeAreasToggleButton)
-            add(cutSafeArea16to9ToggleButton)
-            add(cutSafeArea4to3ToggleButton)
+            add(uniformSafeAreasToggleButton.makeToolbarButton())
+            add(cutSafeArea16to9ToggleButton.makeToolbarButton())
+            add(cutSafeArea4to3ToggleButton.makeToolbarButton())
             add(runtimeLabel1)
             add(runtimeLabel2)
             add(pageTabs, "newline, span, grow, push")
@@ -232,10 +237,10 @@ object EditPanel : JPanel() {
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             val previewPanel = EditPagePreviewPanel(MAX_ZOOM).apply {
                 zoom = zoomSlider.zoom
-                setLayerVisible(Guides, layoutGuidesToggleButton.isSelected)
-                setLayerVisible(UniformSafeAreas, uniformSafeAreasToggleButton.isSelected)
-                setLayerVisible(CutSafeArea16to9, cutSafeArea16to9ToggleButton.isSelected)
-                setLayerVisible(CutSafeArea4to3, cutSafeArea4to3ToggleButton.isSelected)
+                setLayerVisible(GUIDES, layoutGuidesToggleButton.isSelected)
+                setLayerVisible(UNIFORM_SAFE_AREAS, uniformSafeAreasToggleButton.isSelected)
+                setLayerVisible(CUT_SAFE_AREA_16_9, cutSafeArea16to9ToggleButton.isSelected)
+                setLayerVisible(CUT_SAFE_AREA_4_3, cutSafeArea4to3ToggleButton.isSelected)
                 zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
             }
             pageTabs.addTab(tabTitle, PAGE_ICON, previewPanel)

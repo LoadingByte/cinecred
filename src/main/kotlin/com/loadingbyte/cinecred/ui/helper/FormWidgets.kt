@@ -27,7 +27,7 @@ open class TextWidget(
 
     protected val tf = JTextField().apply {
         addChangeListener { notifyChangeListeners() }
-        setMinWidth120()
+        setMinWidth100()
     }
 
     override val components = listOf<JComponent>(tf)
@@ -142,7 +142,7 @@ class SpinnerWidget(
 
     private val spinner = JSpinner(model).apply {
         addChangeListener { notifyChangeListeners() }
-        setMinWidth120()
+        setMinWidth100()
     }
 
     override val components = listOf(spinner)
@@ -187,7 +187,7 @@ open class ComboBoxWidget<E>(
     protected val cb = JComboBox<E>().apply {
         addActionListener { notifyChangeListeners() }
         this.isEditable = isEditable
-        setMinWidth120()
+        setMinWidth100()
         renderer = CustomToStringListCellRenderer(toString)
         keySelectionManager = CustomToStringKeySelectionManager(toString)
     }
@@ -301,13 +301,13 @@ class ComboBoxListWidget<E>(
 }
 
 
-class ColorChooserButtonWidget(
+class ColorWellWidget(
     verify: ((Color) -> Unit)? = null
 ) : Form.Widget() {
 
     private val btn = object : JButton(" ") {
         init {
-            setMinWidth120()
+            setMinWidth100()
             toolTipText = l10n("ui.form.colorChooserTooltip")
         }
 
@@ -536,8 +536,8 @@ private fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boole
     return this
 }
 
-private fun <C : Component> C.setMinWidth120() {
-    minimumSize = Dimension(120, minimumSize.height)
+private fun <C : Component> C.setMinWidth100() {
+    minimumSize = Dimension(100, minimumSize.height)
 }
 
 private inline fun JTextField.addChangeListener(crossinline listener: () -> Unit) {

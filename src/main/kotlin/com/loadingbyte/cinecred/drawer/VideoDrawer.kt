@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Foreground
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.project.DrawnPage
@@ -143,7 +143,7 @@ open class VideoDrawer(
                     g2.fillRect(0, 0, width, imageHeight)
                 }
                 g2.translate(0.0, shift.toDouble())
-                scaledPageDefImg.materialize(g2, layers = setOf(Foreground))
+                scaledPageDefImg.materialize(g2, layers = listOf(FOREGROUND))
             }
         }
     }

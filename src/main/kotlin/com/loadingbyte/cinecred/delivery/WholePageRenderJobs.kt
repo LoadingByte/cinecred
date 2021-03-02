@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Background
-import com.loadingbyte.cinecred.common.DeferredImage.Foreground
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -38,7 +38,7 @@ class WholePageSequenceRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(dir)
 
-        val layers = if (transparent) setOf(Foreground) else setOf(Foreground, Background)
+        val layers = if (transparent) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
@@ -122,7 +122,7 @@ class WholePagePDFRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(file.parent)
 
-        val layers = if (transparent) setOf(Foreground) else setOf(Foreground, Background)
+        val layers = if (transparent) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 
         val pdfDoc = PDDocument()
 

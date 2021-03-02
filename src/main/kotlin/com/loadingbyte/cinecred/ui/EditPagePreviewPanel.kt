@@ -1,15 +1,15 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.*
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Layer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.STANDARD_GLOBAL
 import com.loadingbyte.cinecred.ui.helper.DeferredImagePanel
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toPersistentSet
 import java.awt.BorderLayout
 import java.awt.Color
 import javax.swing.JPanel
@@ -18,12 +18,14 @@ import kotlin.math.min
 
 class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
 
-    object UniformSafeAreas : Layer(isHelperLayer = true)
-    object CutSafeArea16to9 : Layer(isHelperLayer = true)
-    object CutSafeArea4to3 : Layer(isHelperLayer = true)
+    companion object {
+        val UNIFORM_SAFE_AREAS = Layer(isHelperLayer = true)
+        val CUT_SAFE_AREA_16_9 = Layer(isHelperLayer = true)
+        val CUT_SAFE_AREA_4_3 = Layer(isHelperLayer = true)
+    }
 
     private val imagePanel = DeferredImagePanel(maxZoom).apply {
-        layers = persistentSetOf(Foreground, Background)
+        layers = persistentListOf(BACKGROUND, FOREGROUND)
     }
 
     init {
@@ -48,18 +50,18 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
     val zoomListeners by imagePanel::zoomListeners
 
     fun setLayerVisible(layer: Layer, visible: Boolean) {
-        var layers = imagePanel.layers.toPersistentSet()
+        var layers = imagePanel.layers
         layers = if (visible) layers.add(layer) else layers.remove(layer)
         imagePanel.layers = layers
     }
 
     private fun drawSafeAreas(image: DeferredImage) {
-        drawCropMarkers(image, UniformSafeAreas, global.widthPx * 0.93f, global.heightPx * 0.93f)
-        drawCropMarkers(image, UniformSafeAreas, global.widthPx * 0.9f, global.heightPx * 0.9f, ticks = true)
-        drawCropMarkers(image, UniformSafeAreas, global.widthPx * 0.8f, global.heightPx * 0.8f, ticks = true)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.93f, global.heightPx * 0.93f)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.9f, global.heightPx * 0.9f, ticks = true)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.8f, global.heightPx * 0.8f, ticks = true)
 
-        drawCutSafeArea(image, CutSafeArea16to9, 16f / 9f)
-        drawCutSafeArea(image, CutSafeArea4to3, 4f / 3f)
+        drawCutSafeArea(image, CUT_SAFE_AREA_16_9, 16f / 9f)
+        drawCutSafeArea(image, CUT_SAFE_AREA_4_3, 4f / 3f)
     }
 
     private fun drawCutSafeArea(image: DeferredImage, layer: Layer, aspect: Float) {

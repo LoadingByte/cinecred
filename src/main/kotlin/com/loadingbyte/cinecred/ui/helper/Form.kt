@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
 import net.miginfocom.swing.MigLayout
 import javax.swing.*
@@ -89,7 +90,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 formRow.isErroneous = false
                 // Remove FlatLaf outlines.
                 for (comp in formRow.components)
-                    comp.putClientProperty("JComponent.outline", null)
+                    comp.putClientProperty(OUTLINE, null)
                 try {
                     verify()
                     verifyIconLabel.icon = null
@@ -99,9 +100,9 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                     verifyMsgArea.text = e.message
                     if (e.severity == Severity.WARN || e.severity == Severity.ERROR) {
                         // Add FlatLaf outlines.
-                        val outline = if (e.severity == Severity.WARN) "warning" else "error"
+                        val outline = if (e.severity == Severity.WARN) OUTLINE_WARNING else OUTLINE_ERROR
                         for (comp in formRow.components)
-                            comp.putClientProperty("JComponent.outline", outline)
+                            comp.putClientProperty(OUTLINE, outline)
                     }
                     if (e.severity == Severity.ERROR)
                         formRow.isErroneous = true

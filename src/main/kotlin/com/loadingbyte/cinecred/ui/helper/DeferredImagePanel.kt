@@ -5,8 +5,8 @@ import com.loadingbyte.cinecred.common.DeferredImage.Layer
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.common.withNewG2
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ComponentAdapter
@@ -40,7 +40,7 @@ class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0
         rematerialize()
     }
 
-    var layers: ImmutableSet<Layer> = persistentSetOf()
+    var layers: PersistentList<Layer> = persistentListOf()
         set(value) {
             field = value
             // Rematerialize will call canvas.repaint() once it's done.
@@ -256,7 +256,7 @@ class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
             jobSlot: JobSlot, image: DeferredImage, imageScaling: Float,
-            layers: Set<Layer>, onFinish: (BufferedImage) -> Unit
+            layers: List<Layer>, onFinish: (BufferedImage) -> Unit
         ) {
             jobSlot.submit {
                 // Use max(1, ...) to ensure that the raster image width doesn't drop to 0.

@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toString2
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.*
 import com.loadingbyte.cinecred.ui.helper.*
+import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ActionEvent

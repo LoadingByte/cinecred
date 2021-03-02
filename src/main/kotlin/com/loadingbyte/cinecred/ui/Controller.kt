@@ -9,6 +9,8 @@ import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
+import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
+import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import java.awt.Font

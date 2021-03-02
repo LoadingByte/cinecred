@@ -23,28 +23,12 @@ fun String.toFiniteFloat(nonNeg: Boolean = false, non0: Boolean = false): Float 
 
 
 inline fun <reified T : Enum<T>> String.toEnum(): T = enumValueOf(toUpperCase())
-
-
-inline fun <reified T : Enum<T>> String.toEnumList(): List<T> =
-    split(" ").map { part -> part.toEnum() }
-
-
+inline fun <reified T : Enum<T>> String.toEnumList(): List<T> = split(" ").map { part -> part.toEnum() }
 fun List<Enum<*>>.toString2() = joinToString(" ") { it.name }
 
 
-fun String.toColor(): Color =
-    STR_TO_COLOR[toLowerCase()] ?: Color.decode(this)
-
-private val STR_TO_COLOR = mapOf(
-    "white" to Color.WHITE, "lightgray" to Color.LIGHT_GRAY, "lightgrey" to Color.LIGHT_GRAY,
-    "gray" to Color.GRAY, "grey" to Color.GRAY, "darkGray" to Color.DARK_GRAY, "darkGrey" to Color.DARK_GRAY,
-    "black" to Color.BLACK, "red" to Color.RED, "pink" to Color.PINK, "orange" to Color.ORANGE,
-    "yellow" to Color.YELLOW, "green" to Color.GREEN, "magenta" to Color.MAGENTA, "purple" to Color.MAGENTA,
-    "cyan" to Color.CYAN, "blue" to Color.BLUE
-)
-
-
-fun Color.toString2() = "#%06x".format(rgb and 0xFFFFFF)
+fun String.toColor(): Color = if (length == 7) Color.decode(this) else Color(Integer.decode(this), true)
+fun Color.toString2() = "#%08x".format(rgb)
 
 
 fun String.toFPS(): FPS {

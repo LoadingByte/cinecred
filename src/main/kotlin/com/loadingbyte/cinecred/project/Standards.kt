@@ -14,7 +14,7 @@ val STANDARD_GLOBAL = Global(
 
 
 val STANDARD_PAGE_STYLE = PageStyle(
-    name = "scroll",
+    name = "???",
     behavior = PageBehavior.SCROLL,
     meltWithPrev = false,
     meltWithNext = false,
@@ -27,7 +27,7 @@ val STANDARD_PAGE_STYLE = PageStyle(
 
 
 val STANDARD_CONTENT_STYLE = ContentStyle(
-    name = "gutter",
+    name = "???",
     spineOrientation = SpineOrientation.VERTICAL,
     alignWithAxis = AlignWithAxis.OVERALL_CENTER,
     vMarginPx = 0f,

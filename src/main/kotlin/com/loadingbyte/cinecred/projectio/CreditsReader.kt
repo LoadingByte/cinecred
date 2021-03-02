@@ -243,15 +243,14 @@ fun readCredits(
         }
 
         // If the first stage's style is not explicitly declared, issue a warning and fall back to the
-        // page style defined first in the page style table, or, if that table is empty, to the standard page style.
-        if (stageStyle == null)
-            if (styling.pageStyles.isEmpty()) {
-                stageStyle = STANDARD_PAGE_STYLE
-                warn(row, l10n("projectIO.credits.noPageStylesAvailable", stageStyle!!.name))
-            } else {
-                stageStyle = styling.pageStyles.firstOrNull()
-                warn(row, l10n("projectIO.credits.noPageStyleSpecified", stageStyle!!.name))
-            }
+        // standard page style.
+        if (stageStyle == null) {
+            stageStyle = STANDARD_PAGE_STYLE
+            if (styling.pageStyles.isEmpty())
+                warn(row, l10n("projectIO.credits.noPageStylesAvailable"))
+            else
+                warn(row, l10n("projectIO.credits.noPageStyleSpecified"))
+        }
 
         // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
         // If the column cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
@@ -362,17 +361,14 @@ fun readCredits(
         }
 
         // If no content style has been declared at the point where the first block starts, issue a warning and
-        // fall back to the content style defined first in the content style table, or, if that table is empty,
-        // to the standard content style.
+        // fall back to the standard content style.
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
-            if (styling.contentStyles.isEmpty()) {
-                contentStyle = STANDARD_CONTENT_STYLE
-                warn(row, l10n("projectIO.credits.noContentStylesAvailable", contentStyle!!.name))
-            } else {
-                contentStyle = styling.contentStyles[0]
-                warn(row, l10n("projectIO.credits.noContentStyleSpecified", contentStyle!!.name))
-            }
+            contentStyle = STANDARD_CONTENT_STYLE
             blockStyle = contentStyle
+            if (styling.contentStyles.isEmpty())
+                warn(row, l10n("projectIO.credits.noContentStylesAvailable"))
+            else
+                warn(row, l10n("projectIO.credits.noContentStyleSpecified"))
         }
 
         // If the line has a head or tail even though the current content style doesn't support it,

@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import java.nio.file.Path
 
@@ -12,86 +13,78 @@ fun readStyling(stylingFile: Path): Styling {
     val globalMap = toml["global"]
     val global =
         if (globalMap == null || globalMap !is Map<*, *>) STANDARD_GLOBAL
-        else globalMap.toGlobal()
+        else readGlobal(globalMap)
 
-    val pageStyleMaps = toml["pageStyle"]
-    var pageStyles =
-        if (pageStyleMaps == null || pageStyleMaps !is List<*>) emptyList()
-        else pageStyleMaps.filterIsInstance<Map<*, *>>().map { it.toPageStyle() }
-    if (pageStyles.isEmpty())
-        pageStyles = listOf(STANDARD_PAGE_STYLE)
+    val pageStyles = readMapList(toml["pageStyle"], ::readPageStyle)
+    val contentStyles = readMapList(toml["contentStyle"], ::readContentStyle)
 
-    val contentStyleMaps = toml["contentStyle"]
-    var contentStyles =
-        if (contentStyleMaps == null || contentStyleMaps !is List<*>) emptyList()
-        else contentStyleMaps.filterIsInstance<Map<*, *>>().map { it.toContentStyle() }
-    if (contentStyles.isEmpty())
-        contentStyles = listOf(STANDARD_CONTENT_STYLE)
-
-    return Styling(global, pageStyles.toImmutableList(), contentStyles.toImmutableList())
+    return Styling(global, pageStyles, contentStyles)
 }
 
 
-private fun Map<*, *>.toGlobal() = Global(
-    get("fps", STANDARD_GLOBAL.fps) { toFPS() },
-    get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
-    get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
-    get("background", STANDARD_GLOBAL.background) { toColor() },
-    get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) }
+private fun <E> readMapList(mapList: Any?, readMap: (Map<*, *>) -> E) =
+    if (mapList == null || mapList !is List<*>) persistentListOf()
+    else mapList.filterIsInstance<Map<*, *>>().map(readMap).toImmutableList()
+
+
+private fun readGlobal(map: Map<*, *>) = Global(
+    map.get("fps", STANDARD_GLOBAL.fps) { toFPS() },
+    map.get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
+    map.get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
+    map.get("background", STANDARD_GLOBAL.background) { toColor() },
+    map.get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 
 
-private fun Map<*, *>.toPageStyle() = PageStyle(
-    get("name", STANDARD_PAGE_STYLE.name) { this },
-    get("behavior", STANDARD_PAGE_STYLE.behavior) { toEnum() },
-    get("meltWithPrev", STANDARD_PAGE_STYLE.meltWithPrev) { toBoolean() },
-    get("meltWithNext", STANDARD_PAGE_STYLE.meltWithNext) { toBoolean() },
-    get("afterwardSlugFrames", STANDARD_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNeg = true) },
-    get("cardDurationFrames", STANDARD_PAGE_STYLE.cardDurationFrames) { toInt(nonNeg = true) },
-    get("cardFadeInFrames", STANDARD_PAGE_STYLE.cardFadeInFrames) { toInt(nonNeg = true) },
-    get("cardFadeOutFrames", STANDARD_PAGE_STYLE.cardFadeOutFrames) { toInt(nonNeg = true) },
-    get("scrollPxPerFrame", STANDARD_PAGE_STYLE.scrollPxPerFrame) { toFiniteFloat(nonNeg = true, non0 = true) }
+private fun readPageStyle(map: Map<*, *>) = PageStyle(
+    map.get("name", "!! NAME MISSING !!") { this },
+    map.get("behavior", STANDARD_PAGE_STYLE.behavior) { toEnum() },
+    map.get("meltWithPrev", STANDARD_PAGE_STYLE.meltWithPrev) { toBoolean() },
+    map.get("meltWithNext", STANDARD_PAGE_STYLE.meltWithNext) { toBoolean() },
+    map.get("afterwardSlugFrames", STANDARD_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNeg = true) },
+    map.get("cardDurationFrames", STANDARD_PAGE_STYLE.cardDurationFrames) { toInt(nonNeg = true) },
+    map.get("cardFadeInFrames", STANDARD_PAGE_STYLE.cardFadeInFrames) { toInt(nonNeg = true) },
+    map.get("cardFadeOutFrames", STANDARD_PAGE_STYLE.cardFadeOutFrames) { toInt(nonNeg = true) },
+    map.get("scrollPxPerFrame", STANDARD_PAGE_STYLE.scrollPxPerFrame) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 
 
-private fun Map<*, *>.toContentStyle(): ContentStyle {
-    return ContentStyle(
-        get("name", STANDARD_CONTENT_STYLE.name) { this },
-        get("spineOrientation", STANDARD_CONTENT_STYLE.spineOrientation) { toEnum() },
-        get("alignWithAxis", STANDARD_CONTENT_STYLE.alignWithAxis) { toEnum() },
-        get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNeg = true) },
-        get("bodyLayout", STANDARD_CONTENT_STYLE.bodyLayout) { toEnum() },
-        get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNeg = true) },
-        get("bodyLayoutElemConform", STANDARD_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },
-        get("bodyLayoutElemVJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemVJustify) { toEnum() },
-        get("bodyLayoutHorizontalGapPx", STANDARD_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
-            toFiniteFloat(nonNeg = true)
-        },
-        get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) {
-            toEnumList<HJustify>().toImmutableList()
-        },
-        get("bodyLayoutLineHJustify", STANDARD_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
-        get("bodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
-            toFiniteFloat(nonNeg = true, non0 = true)
-        },
-        get("bodyLayoutElemHJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemHJustify) { toEnum() },
-        get("bodyLayoutSeparator", STANDARD_CONTENT_STYLE.bodyLayoutSeparator) { this },
-        get("bodyLayoutParagraphGapPx", STANDARD_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
-            toFiniteFloat(nonNeg = true)
-        },
-        get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },
-        keys.any { "head" in (it as String) },
-        get("headHJustify", STANDARD_CONTENT_STYLE.headHJustify) { toEnum() },
-        get("headVJustify", STANDARD_CONTENT_STYLE.headVJustify) { toEnum() },
-        get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNeg = true) },
-        get("headFontSpec", STANDARD_CONTENT_STYLE.headFontSpec) { toFontSpec() },
-        keys.any { "tail" in (it as String) },
-        get("tailHJustify", STANDARD_CONTENT_STYLE.tailHJustify) { toEnum() },
-        get("tailVJustify", STANDARD_CONTENT_STYLE.tailVJustify) { toEnum() },
-        get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) },
-        get("tailFontSpec", STANDARD_CONTENT_STYLE.tailFontSpec) { toFontSpec() }
-    )
-}
+private fun readContentStyle(map: Map<*, *>) = ContentStyle(
+    map.get("name", "!! NAME MISSING !!") { this },
+    map.get("spineOrientation", STANDARD_CONTENT_STYLE.spineOrientation) { toEnum() },
+    map.get("alignWithAxis", STANDARD_CONTENT_STYLE.alignWithAxis) { toEnum() },
+    map.get("vMarginPx", STANDARD_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNeg = true) },
+    map.get("bodyLayout", STANDARD_CONTENT_STYLE.bodyLayout) { toEnum() },
+    map.get("bodyLayoutLineGapPx", STANDARD_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("bodyLayoutElemConform", STANDARD_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },
+    map.get("bodyLayoutElemVJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemVJustify) { toEnum() },
+    map.get("bodyLayoutHorizontalGapPx", STANDARD_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
+        toFiniteFloat(nonNeg = true)
+    },
+    map.get("bodyLayoutColsHJustify", STANDARD_CONTENT_STYLE.bodyLayoutColsHJustify) {
+        toEnumList<HJustify>().toImmutableList()
+    },
+    map.get("bodyLayoutLineHJustify", STANDARD_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
+    map.get("bodyLayoutBodyWidthPx", STANDARD_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
+        toFiniteFloat(nonNeg = true, non0 = true)
+    },
+    map.get("bodyLayoutElemHJustify", STANDARD_CONTENT_STYLE.bodyLayoutElemHJustify) { toEnum() },
+    map.get("bodyLayoutSeparator", STANDARD_CONTENT_STYLE.bodyLayoutSeparator) { this },
+    map.get("bodyLayoutParagraphGapPx", STANDARD_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
+        toFiniteFloat(nonNeg = true)
+    },
+    map.get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },
+    map.keys.any { "head" in (it as String) },
+    map.get("headHJustify", STANDARD_CONTENT_STYLE.headHJustify) { toEnum() },
+    map.get("headVJustify", STANDARD_CONTENT_STYLE.headVJustify) { toEnum() },
+    map.get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("headFontSpec", STANDARD_CONTENT_STYLE.headFontSpec) { toFontSpec() },
+    map.keys.any { "tail" in (it as String) },
+    map.get("tailHJustify", STANDARD_CONTENT_STYLE.tailHJustify) { toEnum() },
+    map.get("tailVJustify", STANDARD_CONTENT_STYLE.tailVJustify) { toEnum() },
+    map.get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("tailFontSpec", STANDARD_CONTENT_STYLE.tailFontSpec) { toFontSpec() }
+)
 
 
 private inline fun <R> Map<*, *>.get(key: String, default: R, convert: String.() -> R): R =

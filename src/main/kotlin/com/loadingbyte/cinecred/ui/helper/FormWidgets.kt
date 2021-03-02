@@ -1,13 +1,12 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.drawer.getSystemFont
 import net.miginfocom.swing.MigLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Dimension
-import java.awt.Font
+import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.io.File
@@ -18,6 +17,7 @@ import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
+import kotlin.math.ceil
 
 
 open class TextWidget(
@@ -305,28 +305,60 @@ class ColorChooserButtonWidget(
     verify: ((Color) -> Unit)? = null
 ) : Form.Widget() {
 
-    private val btn = JButton(" ").apply {
-        setMinWidth120()
-        toolTipText = l10n("ui.form.colorChooserTooltip")
-        // Default color
-        background = Color.WHITE
+    private val btn = object : JButton(" ") {
+        init {
+            setMinWidth120()
+            toolTipText = l10n("ui.form.colorChooserTooltip")
+        }
+
+        override fun paintComponent(g: Graphics) {
+            g.withNewG2 { g2 ->
+                // Draw a checkerboard pattern which will be visible if the color is transparent.
+                // Clip the drawing to the rounded shape of the button (minus some slack).
+                val arc = FlatUIUtils.getBorderArc(this)
+                g2.clip(FlatUIUtils.createComponentRectangle(0.5f, 0.5f, width - 1f, height - 1f, arc))
+                g2.drawCheckerboard(width, height, 6)
+            }
+
+            super.paintComponent(g)
+        }
     }
 
     init {
         btn.addActionListener {
-            val newColor = JColorChooser.showDialog(null, l10n("ui.form.colorChooserTitle"), selectedColor)
-            if (newColor != null) {
-                selectedColor = newColor
+            var newColor: Color? = null
+
+            val chooser = JColorChooser(selectedColor)
+            chooser.previewPanel = JPanel()  // Disable preview panel
+            JColorChooser.createDialog(
+                btn, l10n("ui.form.colorChooserTitle"), true, chooser, { newColor = chooser.color }, null
+            ).isVisible = true
+
+            newColor?.let {
+                selectedColor = it
                 notifyChangeListeners()
             }
         }
     }
 
-    override val components = listOf(btn)
+    override val components = listOf<JComponent>(btn)
     override val constraints = listOf("")
     override val verify = verify?.let { { it(selectedColor) } }
 
-    var selectedColor: Color by btn::background
+    var selectedColor: Color = Color.BLACK
+        set(value) {
+            field = value
+            btn.background = value
+        }
+
+    private fun Graphics.drawCheckerboard(width: Int, height: Int, n: Int) {
+        val checkerSize = ceil(height / n.toFloat()).toInt()
+        for (x in 0 until width / checkerSize)
+            for (y in 0 until n) {
+                color = if ((x + y) % 2 == 0) Color.WHITE else Color.LIGHT_GRAY
+                fillRect(x * checkerSize, y * checkerSize, checkerSize, checkerSize)
+            }
+    }
 
 }
 

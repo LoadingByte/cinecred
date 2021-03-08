@@ -32,6 +32,11 @@ fun newLabelTextArea() = JTextArea().apply {
 }
 
 
+fun JComponent.setTableCellBackground(table: JTable, rowIdx: Int) {
+    background = if (rowIdx % 2 == 0) table.background else UIManager.getColor("Table.alternateRowColor")
+}
+
+
 class WordWrapCellRenderer : TableCellRenderer {
 
     private val textArea = newLabelTextArea()
@@ -43,6 +48,7 @@ class WordWrapCellRenderer : TableCellRenderer {
         setSize(table.columnModel.getColumn(colIdx).width, preferredSize.height)
         if (table.getRowHeight(rowIdx) < preferredSize.height)
             table.setRowHeight(rowIdx, preferredSize.height)
+        setTableCellBackground(table, rowIdx)
     }
 
 }

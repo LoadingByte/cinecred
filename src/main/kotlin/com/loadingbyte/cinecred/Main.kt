@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.Controller
 import com.loadingbyte.cinecred.ui.MainFrame
@@ -15,9 +16,11 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import org.slf4j.impl.SimpleLogger
+import java.awt.Color
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
+import javax.swing.UIManager
 
 
 fun main() {
@@ -60,6 +63,9 @@ fun main() {
 
     // Set the Swing Look & Feel.
     FlatDarkLaf.install()
+    // Enable alternated coloring of table rows.
+    val uiDefaults = UIManager.getLookAndFeelDefaults()
+    uiDefaults["Table.alternateRowColor"] = HSLColor(uiDefaults["Table.background"] as Color).adjustTone(10f)
 
     // Open the main window.
     SwingUtilities.invokeLater {

@@ -175,6 +175,7 @@ object DeliverRenderQueuePanel : JPanel() {
                 val percentage = progress.toPercent()
                 model.value = percentage
                 foreground = defaultProgressBarForeground
+                setTableCellBackground(table, rowIdx)
                 if (row.startTime != null) {
                     isStringPainted = true
                     string = if (percentage == 0)
@@ -194,6 +195,7 @@ object DeliverRenderQueuePanel : JPanel() {
             FINISHED -> progressBar.apply {
                 model.value = 100
                 foreground = Color.decode("#499C54")
+                setTableCellBackground(table, rowIdx)
                 isStringPainted = false
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(

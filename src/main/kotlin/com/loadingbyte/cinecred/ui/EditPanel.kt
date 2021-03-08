@@ -152,20 +152,21 @@ object EditPanel : JPanel() {
         val logTable = JTable(LogTableModel).apply {
             // Disable cell selection because it looks weird with the custom WordWrapCellRenderer.
             cellSelectionEnabled = false
-            // When manually the window, only the message column should be resized to accommodate
-            // for the change. All free space should be absorbed by the message column.
-            // Also prevent the user from individually resizing the columns and dragging them around.
-            autoResizeMode = JTable.AUTO_RESIZE_LAST_COLUMN
-            tableHeader.apply {
-                resizingAllowed = false
-                reorderingAllowed = false
-                resizingColumn = columnModel.getColumn(2)
-            }
-            // Center the line column.
+            // Prevent the user from dragging the columns around.
+            tableHeader.reorderingAllowed = false
+            // Lock the widths of the first two columns (severity and record number), initialize the widths of
+            // the col and cell columns with a small minimum width, and initially distribute all remaining width
+            // to the message column.
+            columnModel.getColumn(0).apply { minWidth = 24; maxWidth = 24 }
+            columnModel.getColumn(1).apply { minWidth = 48; maxWidth = 48 }
+            columnModel.getColumn(2).apply { minWidth = 96; width = 96 }
+            columnModel.getColumn(3).apply { minWidth = 96; width = 96 }
+            tableHeader.resizingColumn = columnModel.getColumn(4)
+            // Center the record number column.
             columnModel.getColumn(1).cellRenderer =
                 DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping in the message column.
-            columnModel.getColumn(2).cellRenderer = WordWrapCellRenderer()
+            columnModel.getColumn(4).cellRenderer = WordWrapCellRenderer()
         }
         val logTablePanel = JPanel(MigLayout()).apply {
             add(JScrollPane(logTable), "grow, push")
@@ -250,9 +251,7 @@ object EditPanel : JPanel() {
             previewPanel.setContent(project!!.styling.global, drawnPage)
 
         // Put the new parser log messages into the log table.
-        LogTableModel.log = log.sortedWith { a, b ->
-            b.severity.compareTo(a.severity).let { if (it != 0) it else a.lineNo.compareTo(b.lineNo) }
-        }
+        LogTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
     }
 
 
@@ -265,12 +264,14 @@ object EditPanel : JPanel() {
             }
 
         override fun getRowCount() = log.size
-        override fun getColumnCount() = 3
+        override fun getColumnCount() = 5
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
-            0 -> l10n("ui.edit.severity")
-            1 -> l10n("ui.edit.line")
-            2 -> l10n("ui.edit.message")
+            0 -> ""
+            1 -> l10n("ui.edit.record")
+            2 -> l10n("ui.edit.column")
+            3 -> l10n("ui.edit.cell")
+            4 -> l10n("ui.edit.message")
             else -> throw IllegalArgumentException()
         }
 
@@ -279,8 +280,10 @@ object EditPanel : JPanel() {
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> SEVERITY_ICON[log[rowIdx].severity]!!
-            1 -> log[rowIdx].lineNo
-            2 -> log[rowIdx].msg
+            1 -> log[rowIdx].recordNo ?: ""
+            2 -> log[rowIdx].colHeader ?: ""
+            3 -> log[rowIdx].cellValue ?: ""
+            4 -> log[rowIdx].msg
             else -> throw IllegalArgumentException()
         }
 

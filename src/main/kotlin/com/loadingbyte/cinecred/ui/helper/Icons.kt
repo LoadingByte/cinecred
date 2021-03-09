@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.setHighQuality
@@ -74,24 +75,64 @@ private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
 
 
 class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val height: Int) :
-    FlatAbstractIcon(width, height, null) {
+    FlatAbstractIcon(width, height, null), FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
+        // TODO: Custom composites are not universally supported. Once they are, use the gray filter to paint disabled icons differently.
         svg.paint(g2)
     }
 
+    override fun getDisabledIcon() = SVGIcon(svg, width, height)
+
+
     companion object {
+
+        /*private val DISABLED_COMPOSITE = run {
+            val filter = UIManager.get("Component.grayFilter") as RGBImageFilter
+            RGBFunctionComposite { rgb -> filter.filterRGB(0, 0, rgb) }
+        }*/
+
         fun load(name: String): SVGIcon {
             val (svg, ctx) = loadSVGResource(name)
             return SVGIcon(svg, ctx.documentSize.width.roundToInt(), ctx.documentSize.height.roundToInt())
         }
+
     }
+
+
+    /*private class RGBFunctionComposite(val func: (Int) -> Int) : Composite {
+        override fun createContext(
+            srcColorModel: ColorModel,
+            dstColorModel: ColorModel,
+            hints: RenderingHints
+        ) = object : CompositeContext {
+            override fun dispose() {}
+            override fun compose(src: Raster, dstIn: Raster, dstOut: WritableRaster) {
+                // Note: This method assumes that all color models are RGB.
+                val width = min(src.width, dstIn.width)
+                val height = min(src.height, dstIn.height)
+                // Create buffers.
+                val srcPixels = IntArray(width)
+                val dstInPixels = IntArray(width)
+                val dstOutPixels = IntArray(width)
+                // Compose each pixel row.
+                for (y in 0 until height) {
+                    src.getDataElements(0, y, srcPixels)
+                    dstIn.getDataElements(0, y, dstInPixels)
+                    for (x in 0 until width)
+                        dstOutPixels[x] = func(dstInPixels[x])
+                    dstOut.setDataElements(0, y, dstOutPixels)
+                }
+            }
+        }
+    }*/
 
 }
 
 
 class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGIcon) :
-    FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null) {
+    FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null), FlatLaf.DisabledIconProvider {
+
     override fun paintIcon(c: Component, g2: Graphics2D) {
         @Suppress("NAME_SHADOWING")
         g2.withNewG2 { g2 ->
@@ -100,4 +141,7 @@ class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGI
             right.svg.paint(g2)
         }
     }
+
+    override fun getDisabledIcon() = DualSVGIcon(left.disabledIcon, right.disabledIcon)
+
 }

@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.project.FPS
-import com.loadingbyte.cinecred.project.FontSpec
 import java.awt.Color
 import kotlin.math.floor
 
@@ -53,44 +52,3 @@ fun String.toFPS(): FPS {
 
 
 fun FPS.toString2() = "$numerator/$denominator"
-
-
-fun String.toFontSpec(): FontSpec {
-    var height: Int? = null
-    var color: Color? = null
-
-    fun parsePart(part: String): Boolean {
-        if (height == null)
-            try {
-                height = part.toInt(nonNeg = true, non0 = true)
-                return true
-            } catch (_: NumberFormatException) {
-            }
-        if (color == null)
-            try {
-                color = part.toColor()
-                return true
-            } catch (_: NumberFormatException) {
-            }
-        return false
-    }
-
-    // We interpret the first sequence of consecutive non-parsable parts as font face name.
-    val nameParts = mutableListOf<String>()
-    var wasLastPartParsable = false
-    for (part in this.split(" ").asReversed()) {
-        val parsable = parsePart(part)
-        if (!parsable) {
-            if (wasLastPartParsable)
-                nameParts.clear()
-            nameParts.add(part)
-        }
-        wasLastPartParsable = parsable
-    }
-
-    require(nameParts.isNotEmpty() && height != null && color != null)
-    return FontSpec(nameParts.asReversed().joinToString(" "), height!!, color!!)
-}
-
-
-fun FontSpec.toString2() = "$name $heightPx ${color.toString2()}"

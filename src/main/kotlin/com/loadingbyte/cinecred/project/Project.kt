@@ -18,6 +18,7 @@ data class Styling constructor(
     val global: Global,
     val pageStyles: ImmutableList<PageStyle>,
     val contentStyles: ImmutableList<ContentStyle>,
+    val letterStyles: ImmutableList<LetterStyle>
 )
 
 
@@ -75,17 +76,17 @@ data class ContentStyle(
     // Body layout: Paragraphs
     val bodyLayoutParagraphGapPx: Float,
     // End of body layout settings.
-    val bodyFontSpec: FontSpec,
+    val bodyLetterStyleName: String,
     val hasHead: Boolean,
     val headHJustify: HJustify,
     val headVJustify: VJustify,
     val headGapPx: Float,
-    val headFontSpec: FontSpec,
+    val headLetterStyleName: String,
     val hasTail: Boolean,
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Float,
-    val tailFontSpec: FontSpec
+    val tailLetterStyleName: String
 )
 
 
@@ -107,12 +108,20 @@ enum class LineHJustify { LEFT, CENTER, RIGHT, FULL }
 enum class BodyElementConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
 
 
-// This must be a data class because its objects will be used as hash map keys.
-data class FontSpec(
+data class LetterStyle(
     val name: String,
+    val fontName: String,
     val heightPx: Int,
-    val color: Color
+    val tracking: Float,
+    val superscript: Superscript,
+    val foreground: Color,
+    val background: Color,
+    val underline: Boolean,
+    val strikethrough: Boolean
 )
+
+
+enum class Superscript { SUP_2, SUP_1, NONE, SUB_1, SUB_2 }
 
 
 class Page(
@@ -143,14 +152,16 @@ class Column(
 
 class Block(
     val style: ContentStyle,
-    val head: String?,
+    val head: StyledString?,
     val body: ImmutableList<BodyElement>,
-    val tail: String?,
+    val tail: StyledString?,
     val vGapAfterPx: Float
 )
 
 
+typealias StyledString = List<Pair<String, LetterStyle>>
+
 sealed class BodyElement {
-    class Str(val str: String) : BodyElement()
+    class Str(val str: StyledString) : BodyElement()
     class Pic(val pic: Picture) : BodyElement()
 }

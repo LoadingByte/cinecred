@@ -17,8 +17,9 @@ fun readStyling(stylingFile: Path): Styling {
 
     val pageStyles = readMapList(toml["pageStyle"], ::readPageStyle)
     val contentStyles = readMapList(toml["contentStyle"], ::readContentStyle)
+    val letterStyles = readMapList(toml["letterStyle"], ::readLetterStyle)
 
-    return Styling(global, pageStyles, contentStyles)
+    return Styling(global, pageStyles, contentStyles, letterStyles)
 }
 
 
@@ -73,17 +74,30 @@ private fun readContentStyle(map: Map<*, *>) = ContentStyle(
     map.get("bodyLayoutParagraphGapPx", STANDARD_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
         toFiniteFloat(nonNeg = true)
     },
-    map.get("bodyFontSpec", STANDARD_CONTENT_STYLE.bodyFontSpec) { toFontSpec() },
+    map.get("bodyLetterStyleName", STANDARD_CONTENT_STYLE.bodyLetterStyleName) { this },
     map.keys.any { "head" in (it as String) },
     map.get("headHJustify", STANDARD_CONTENT_STYLE.headHJustify) { toEnum() },
     map.get("headVJustify", STANDARD_CONTENT_STYLE.headVJustify) { toEnum() },
     map.get("headGapPx", STANDARD_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("headFontSpec", STANDARD_CONTENT_STYLE.headFontSpec) { toFontSpec() },
+    map.get("headLetterStyleName", STANDARD_CONTENT_STYLE.headLetterStyleName) { this },
     map.keys.any { "tail" in (it as String) },
     map.get("tailHJustify", STANDARD_CONTENT_STYLE.tailHJustify) { toEnum() },
     map.get("tailVJustify", STANDARD_CONTENT_STYLE.tailVJustify) { toEnum() },
     map.get("tailGapPx", STANDARD_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("tailFontSpec", STANDARD_CONTENT_STYLE.tailFontSpec) { toFontSpec() }
+    map.get("tailLetterStyleName", STANDARD_CONTENT_STYLE.tailLetterStyleName) { this }
+)
+
+
+private fun readLetterStyle(map: Map<*, *>) = LetterStyle(
+    map.get("name", "!! NAME MISSING !!") { this },
+    map.get("fontName", STANDARD_LETTER_STYLE.fontName) { this },
+    map.get("heightPx", STANDARD_LETTER_STYLE.heightPx) { toInt(nonNeg = true, non0 = true) },
+    map.get("tracking", STANDARD_LETTER_STYLE.tracking) { toFiniteFloat() },
+    map.get("superscript", STANDARD_LETTER_STYLE.superscript) { toEnum() },
+    map.get("foreground", STANDARD_LETTER_STYLE.foreground) { toColor() },
+    map.get("background", STANDARD_LETTER_STYLE.background) { toColor() },
+    map.get("underline", STANDARD_LETTER_STYLE.underline) { toBoolean() },
+    map.get("strikethrough", STANDARD_LETTER_STYLE.strikethrough) { toBoolean() }
 )
 
 

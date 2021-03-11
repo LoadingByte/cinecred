@@ -1,34 +1,24 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.REF_G2
-import com.loadingbyte.cinecred.common.RichFont
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.FontSpec
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.*
 import java.awt.Font
-import java.awt.font.TextAttribute
+import java.awt.font.TextAttribute.*
 
 
 fun draw(project: Project): List<DrawnPage> {
-    // Get all font specs that appear somewhere on some page. Note that we do not just get the font specs from the
-    // content styles list because that doesn't include STANDARD_CONTENT_STYLE font specs that are used whenever
-    // the content styles list is empty.
-    val fontSpecs = project.pages.asSequence()
-        .flatMap { it.stages }.flatMap { it.segments }.flatMap { it.columns }.flatMap { it.blocks }
-        .flatMap { listOf(it.style.bodyFontSpec, it.style.headFontSpec, it.style.tailFontSpec) }
-        .toSet() // Ensure that each font spec is only contained once.
-
-    // Generate AWT fonts that realize those font specs.
-    val fonts = fontSpecs.associateWith { spec -> RichFont(spec, createAWTFont(project.fonts, spec)) }
+    // Generate AWT fonts that realize the configured letter styles, as well as the standard letter style, which
+    // functions as a fallback if the letter style name referenced in a content style is unknown.
+    val fonts = (project.styling.letterStyles + STANDARD_LETTER_STYLE)
+        .associateWith { style -> createAWTFont(project.fonts, style) }
 
     return project.pages.map { page -> drawPage(project.styling.global, fonts, page) }
 }
 
 
-private fun createAWTFont(projectFonts: Map<String, Font>, spec: FontSpec): Font {
-    val baseFont = (projectFonts[spec.name] ?: getBundledFont(spec.name) ?: getSystemFont(spec.name))
+private fun createAWTFont(projectFonts: Map<String, Font>, style: LetterStyle): Font {
+    val baseFont = (projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName))
         .deriveFont(100f)
-        .deriveFont(mapOf(TextAttribute.KERNING to TextAttribute.KERNING_ON))
 
     // Now, we need to find a font size such that produces the requested font height in pixels.
     // Theoretically, this can be done in closed form, see:
@@ -40,9 +30,9 @@ private fun createAWTFont(projectFonts: Map<String, Font>, spec: FontSpec): Font
     var size = 2f
     // Upper-bound the number of repetitions to avoid:
     //   - Accidental infinite looping.
-    //   - Too large fonts cause the Java font rendering engine to destroy its own fonts.
+    //   - Too large fonts, as they cause the Java font rendering engine to destroy its own fonts.
     for (i in 0 until 10) {
-        if (REF_G2.getFontMetrics(baseFont.deriveFont(size * 2f)).height >= spec.heightPx)
+        if (REF_G2.getFontMetrics(baseFont.deriveFont(size * 2f)).height >= style.heightPx)
             break
         size *= 2f
     }
@@ -59,11 +49,26 @@ private fun createAWTFont(projectFonts: Map<String, Font>, spec: FontSpec): Font
         intervalLength /= 2f
         val height = REF_G2.getFontMetrics(baseFont.deriveFont(size)).height
         when {
-            height == spec.heightPx -> break
-            height > spec.heightPx -> size -= intervalLength
-            height < spec.heightPx -> size += intervalLength
+            height == style.heightPx -> break
+            height > style.heightPx -> size -= intervalLength
+            height < style.heightPx -> size += intervalLength
         }
     }
 
-    return baseFont.deriveFont(size)
+    // Finally, derive a font using the found size and other properties configured in the letter style.
+    // Also turn on kerning and ligatures.
+    val fontAttrs = mapOf(
+        SIZE to size,
+        KERNING to KERNING_ON,
+        LIGATURES to LIGATURES_ON,
+        TRACKING to style.tracking,
+        SUPERSCRIPT to when (style.superscript) {
+            Superscript.SUP_2 -> 2
+            Superscript.SUP_1 -> 1
+            Superscript.NONE -> 0
+            Superscript.SUB_1 -> -1
+            Superscript.SUB_2 -> -2
+        }
+    )
+    return baseFont.deriveFont(fontAttrs)
 }

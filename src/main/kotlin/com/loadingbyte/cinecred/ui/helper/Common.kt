@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.ui.MainFrame
 import java.awt.*
 import java.awt.geom.Rectangle2D
@@ -102,32 +101,31 @@ class LabeledListCellRenderer<E>(
             Insets(lines.size * c.getFontMetrics(list.font).height + (lines.size - 1) / 2 * groupSpacing, 0, 0, 0)
 
         override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
+            val g2 = g as Graphics2D
             val fontMetrics = c.getFontMetrics(list.font)
 
-            g.withNewG2 { g2 ->
-                // Draw the list background.
-                g2.color = list.background
-                g2.fillRect(x, y, width, getBorderInsets(c).top)
+            // Draw the list background.
+            g2.color = list.background
+            g2.fillRect(x, y, width, getBorderInsets(c).top)
 
-                FlatUIUtils.setRenderingHints(g2)
-                g2.color = UIManager.getColor("Label.disabledForeground")
-                g2.font = list.font
+            FlatUIUtils.setRenderingHints(g2)
+            g2.color = UIManager.getColor("Label.disabledForeground")
+            g2.font = list.font
 
-                for ((line, text) in lines.withIndex()) {
-                    val lineY = y + line * fontMetrics.height + line / 2 * groupSpacing
-                    val textWidth = fontMetrics.stringWidth(text)
-                    // Draw the centered string.
-                    FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
-                    // On even lines, draw additional separator lines.
-                    if (line % 2 == 0) {
-                        val sepGap = UIScale.scale(4f)
-                        val sepWidth = (width - textWidth) / 2f - 2f * sepGap
-                        if (sepWidth > 0) {
-                            val sepY = lineY + fontMetrics.height / 2f
-                            val sepHeight = UIScale.scale(1f)
-                            g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
-                            g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
-                        }
+            for ((line, text) in lines.withIndex()) {
+                val lineY = y + line * fontMetrics.height + line / 2 * groupSpacing
+                val textWidth = fontMetrics.stringWidth(text)
+                // Draw the centered string.
+                FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
+                // On even lines, draw additional separator lines.
+                if (line % 2 == 0) {
+                    val sepGap = UIScale.scale(4f)
+                    val sepWidth = (width - textWidth) / 2f - 2f * sepGap
+                    if (sepWidth > 0) {
+                        val sepY = lineY + fontMetrics.height / 2f
+                        val sepHeight = UIScale.scale(1f)
+                        g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
+                        g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
                     }
                 }
             }

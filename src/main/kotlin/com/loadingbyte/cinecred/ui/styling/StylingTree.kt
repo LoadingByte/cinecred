@@ -85,10 +85,10 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getSingleton(type: Class<T>): T =
-        (singletonTypeInfos[type]!!.node.userObject as StoredObj).obj as T
+        (singletonTypeInfos.getValue(type).node.userObject as StoredObj).obj as T
 
     fun setSingleton(singleton: Any) {
-        val typeInfo = singletonTypeInfos[singleton.javaClass]!!
+        val typeInfo = singletonTypeInfos.getValue(singleton.javaClass)
         typeInfo.node.userObject = StoredObj(typeInfo, singleton)
         if (typeInfo.node == selectedNode)
             typeInfo.onSelect(singleton)
@@ -96,15 +96,29 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getList(type: Class<T>): List<T> =
-        listTypeInfos[type]!!.node.children().asSequence()
-            .map { ((it as DefaultMutableTreeNode).userObject as StoredObj).obj as T }
+        listTypeInfos.getValue(type).node.children().asSequence()
+            .map { leaf -> ((leaf as DefaultMutableTreeNode).userObject as StoredObj).obj as T }
             .toList()
 
     fun addListElement(element: Any, select: Boolean = false) {
-        val typeInfo = listTypeInfos[element.javaClass]!!
+        val typeInfo = listTypeInfos.getValue(element.javaClass)
         val newLeaf = insertSortedLeaf(typeInfo.node, StoredObj(typeInfo, element))
         if (select)
             selectNode(newLeaf)
+    }
+
+    fun <T : Any> updateListElement(oldElement: T, newElement: T) {
+        val oldTypeInfo = listTypeInfos.getValue(oldElement.javaClass)
+        val newTypeInfo = listTypeInfos.getValue(newElement.javaClass)
+        if (oldTypeInfo != newTypeInfo)
+            throw IllegalArgumentException("Both elements must belong to the same list type.")
+        for (leaf in oldTypeInfo.node.children().asSequence()) {
+            val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
+            if (leafUserObj.obj == oldElement) {
+                leaf.userObject = StoredObj(leafUserObj.typeInfo, newElement)
+                break
+            }
+        }
     }
 
     fun duplicateSelectedListElement(): Boolean {

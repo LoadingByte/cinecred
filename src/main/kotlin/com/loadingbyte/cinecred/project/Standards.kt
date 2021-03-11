@@ -42,15 +42,28 @@ val STANDARD_CONTENT_STYLE = ContentStyle(
     bodyLayoutElemHJustify = HJustify.CENTER,
     bodyLayoutSeparator = "\u2022",
     bodyLayoutParagraphGapPx = 8f,
-    bodyFontSpec = FontSpec("Archivo Narrow Bold", 32, Color.WHITE),
+    bodyLetterStyleName = "???",
     hasHead = false,
     headHJustify = HJustify.CENTER,
     headVJustify = VJustify.MIDDLE,
-    headFontSpec = FontSpec("Archivo Narrow Regular", 24, Color.WHITE),
-    headGapPx = 24f,
+    headLetterStyleName = "???",
+    headGapPx = 4f,
     hasTail = false,
     tailHJustify = HJustify.CENTER,
     tailVJustify = VJustify.MIDDLE,
-    tailFontSpec = FontSpec("Archivo Narrow Regular", 24, Color.WHITE),
-    tailGapPx = 24f
+    tailLetterStyleName = "???",
+    tailGapPx = 4f
+)
+
+
+val STANDARD_LETTER_STYLE = LetterStyle(
+    name = "???",
+    fontName = "Archivo Narrow Regular",
+    heightPx = 32,
+    tracking = 0f,
+    superscript = Superscript.NONE,
+    foreground = Color.WHITE,
+    background = Color(0, 0, 0, 0),
+    underline = false,
+    strikethrough = false
 )

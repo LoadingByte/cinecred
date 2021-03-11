@@ -1,13 +1,10 @@
 package com.loadingbyte.cinecred.common
 
-import com.loadingbyte.cinecred.project.FontSpec
 import org.apache.batik.ext.awt.image.GraphicsUtil
-import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
-import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
 import java.text.MessageFormat
 import java.util.*
@@ -40,9 +37,6 @@ val REF_G2: Graphics2D = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)
 val REF_FRC: FontRenderContext = REF_G2.fontRenderContext
 
 
-class RichFont(val spec: FontSpec, val awt: Font)
-
-
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
     val g2 = create() as Graphics2D
     try {
@@ -50,6 +44,13 @@ inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
     } finally {
         g2.dispose()
     }
+}
+
+
+inline fun Graphics2D.preserveTransform(block: () -> Unit) {
+    val prevTransform = transform  // creates a defensive copy
+    block()
+    transform = prevTransform
 }
 
 
@@ -77,7 +78,3 @@ fun Graphics2D.setHighQuality() {
     // because if we don't, the getStringWidth() method sometimes yields incorrect results.
     setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }
-
-
-fun Font.getStringWidth(str: String): Float =
-    TextLayout(str, this, REF_FRC).advance

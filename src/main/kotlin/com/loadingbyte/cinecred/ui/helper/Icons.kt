@@ -3,9 +3,9 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.preserveTransform
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
-import com.loadingbyte.cinecred.common.withNewG2
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -46,6 +46,7 @@ val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
 val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")
 val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
 val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
+val LETTERS_ICON = SVGIcon.load("/icons/letters.svg")
 val PAGE_ICON = SVGIcon.load("/icons/page.svg")
 val PAUSE_ICON = SVGIcon.load("/icons/pause.svg")
 val PLAY_ICON = SVGIcon.load("/icons/play.svg")
@@ -134,8 +135,7 @@ class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGI
     FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null), FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
-        @Suppress("NAME_SHADOWING")
-        g2.withNewG2 { g2 ->
+        g2.preserveTransform {
             left.svg.paint(g2)
             g2.translate(left.width + 4, 0)
             right.svg.paint(g2)

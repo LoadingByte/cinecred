@@ -68,7 +68,7 @@ class Table(
                 val primaryColName = "@${l10n(key)}"
                 val alternativeColNames = possibleColNames.toMutableSet()
                     .apply { remove(primaryColName) }
-                    .joinToString("/") { "\"$it\"" }
+                    .joinToString("/")
                 val msg = l10n("projectIO.table.missingExpectedColumn", alternativeColNames)
                 log.add(ParserMsg(headerRecordNo, primaryColName, null, WARN, msg))
             }
@@ -128,11 +128,13 @@ class Table(
 
         val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
         val primaryOptions = keys.map(::l10n)
-        val alternativeOptions = keys.flatMap { l10nAll(it).toMutableSet().apply { removeAll(primaryOptions) } }
+        val alternativeOptionsJoined = keys.joinToString("  /  ") { key ->
+            l10nAll(key).filter { it !in primaryOptions }.joinToString("/")
+        }
         val msg = l10n(
             "projectIO.table.illFormattedOneOfWithAlternatives",
-            primaryOptions.joinToString("/") { "\"$it\"" },
-            alternativeOptions.joinToString("/") { "\"$it\"" }
+            primaryOptions.joinToString("/"),
+            alternativeOptionsJoined
         )
         log(row, l10nColName, WARN, msg)
         return null

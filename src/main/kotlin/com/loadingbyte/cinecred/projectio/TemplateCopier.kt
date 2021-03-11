@@ -22,7 +22,7 @@ fun copyCreditsTemplate(destDir: Path, locale: Locale) {
 }
 
 
-private val PLACEHOLDER_REGEX = Regex("\\{([^}]+)}")
+private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")
 
 private fun copyFillingPlaceholders(resourceName: String, dest: Path, locale: Locale) {
     val bundle = l10nBundle(locale)

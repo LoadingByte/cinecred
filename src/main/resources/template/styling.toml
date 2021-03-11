@@ -1,129 +1,87 @@
-[global]
-fps = "24/1"
-widthPx = 1920
-heightPx = 1080
-background = "#000000"
-unitVGapPx = 32.0
-
 [[pageStyle]]
 name = "{project.defaults.pageStyleCard}"
 behavior = "CARD"
-afterwardSlugFrames = 24
-cardDurationFrames = 96
-cardFadeInFrames = 12
-cardFadeOutFrames = 12
 
 [[pageStyle]]
 name = "{project.defaults.pageStyleScroll}"
 behavior = "SCROLL"
-afterwardSlugFrames = 24
-scrollPxPerFrame = 3.0
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleBlurb}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
-bodyLayout = "PARAGRAPHS"
-bodyLayoutLineGapPx = 0.0
-bodyLayoutLineHJustify = "CENTER"
-bodyLayoutBodyWidthPx = 400.0
-bodyLayoutParagraphGapPx = 8.0
-bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
-
-[[contentStyle]]
-name = "{project.defaults.contentStyleBullets}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
-bodyLayout = "FLOW"
-bodyLayoutLineGapPx = 0.0
-bodyLayoutElemConform = "NOTHING"
-bodyLayoutElemVJustify = "MIDDLE"
-bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutLineHJustify = "CENTER"
-bodyLayoutBodyWidthPx = 1000.0
-bodyLayoutElemHJustify = "CENTER"
-bodyLayoutSeparator = "•"
-bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
-headHJustify = "CENTER"
-headGapPx = 4.0
-headFontSpec = "Archivo Narrow Regular 24 #ffffff"
-
-[[contentStyle]]
-name = "{project.defaults.contentStyleCard}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
+name = "{project.defaults.contentStyleHeading}"
 bodyLayout = "GRID"
-bodyLayoutLineGapPx = 0.0
-bodyLayoutElemConform = "WIDTH"
-bodyLayoutElemVJustify = "MIDDLE"
-bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutColsHJustify = "CENTER"
-bodyFontSpec = "Archivo Narrow Bold 100 #ffffff"
-headHJustify = "CENTER"
-headGapPx = 32.0
-headFontSpec = "Archivo Narrow Regular 50 #ffffff"
-tailHJustify = "CENTER"
-tailGapPx = 32.0
-tailFontSpec = "Archivo Narrow Regular 50 #ffffff"
+bodyLetterStyleName = "{project.defaults.letterStyleBig}"
+
+[[contentStyle]]
+name = "{project.defaults.contentStyleSubheading}"
+bodyLayout = "GRID"
+bodyLetterStyleName = "{project.defaults.letterStyleSmall}"
 
 [[contentStyle]]
 name = "{project.defaults.contentStyleGutter}"
 spineOrientation = "HORIZONTAL"
 alignWithAxis = "HEAD_GAP_CENTER"
-vMarginPx = 0.0
 bodyLayout = "GRID"
-bodyLayoutLineGapPx = 0.0
 bodyLayoutElemConform = "WIDTH"
-bodyLayoutElemVJustify = "MIDDLE"
-bodyLayoutHorizontalGapPx = 32.0
 bodyLayoutColsHJustify = "LEFT"
-bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
+bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
 headGapPx = 24.0
-headFontSpec = "Archivo Narrow Regular 24 #ffffff"
+headLetterStyleName = "{project.defaults.letterStyleSmall}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleHeading}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
-bodyLayout = "GRID"
-bodyLayoutLineGapPx = 0.0
-bodyLayoutElemConform = "NOTHING"
-bodyLayoutElemVJustify = "MIDDLE"
-bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutColsHJustify = "CENTER"
-bodyFontSpec = "Archivo Narrow Regular 32 #ffffff"
+name = "{project.defaults.contentStyleBullets}"
+bodyLayout = "FLOW"
+bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
+headLetterStyleName = "{project.defaults.letterStyleSmall}"
 
 [[contentStyle]]
 name = "{project.defaults.contentStyleLogos}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
 bodyLayout = "FLOW"
 bodyLayoutLineGapPx = 32.0
 bodyLayoutElemConform = "SQUARE"
-bodyLayoutElemVJustify = "MIDDLE"
 bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutLineHJustify = "CENTER"
 bodyLayoutBodyWidthPx = 1200.0
-bodyLayoutElemHJustify = "CENTER"
 bodyLayoutSeparator = ""
-bodyFontSpec = "Archivo Narrow Bold 32 #ffffff"
+bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleSubheading}"
-spineOrientation = "VERTICAL"
-alignWithAxis = "OVERALL_CENTER"
-vMarginPx = 0.0
+name = "{project.defaults.contentStyleBlurb}"
+bodyLayout = "PARAGRAPHS"
+bodyLayoutBodyWidthPx = 400.0
+bodyLetterStyleName = "{project.defaults.letterStyleBig}"
+
+[[contentStyle]]
+name = "{project.defaults.contentStyleCard}"
 bodyLayout = "GRID"
-bodyLayoutLineGapPx = 0.0
-bodyLayoutElemConform = "NOTHING"
-bodyLayoutElemVJustify = "MIDDLE"
-bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutColsHJustify = "CENTER"
-bodyFontSpec = "Archivo Narrow Regular 24 #ffffff"
+bodyLayoutElemConform = "WIDTH"
+bodyLetterStyleName = "{project.defaults.letterStyleCardBigBold}"
+headGapPx = 32.0
+headLetterStyleName = "{project.defaults.letterStyleCardSmall}"
+tailGapPx = 32.0
+tailLetterStyleName = "{project.defaults.letterStyleCardSmall}"
+
+[[letterStyle]]
+name = "{project.defaults.letterStyleBigBold}"
+fontName = "Archivo Narrow Bold"
+heightPx = 32
+
+[[letterStyle]]
+name = "{project.defaults.letterStyleBig}"
+fontName = "Archivo Narrow Regular"
+heightPx = 32
+
+[[letterStyle]]
+name = "{project.defaults.letterStyleSmall}"
+fontName = "Archivo Narrow Regular"
+heightPx = 24
+
+[[letterStyle]]
+name = "{project.defaults.letterStyleCardBigBold}"
+fontName = "Archivo Narrow Bold"
+heightPx = 100
+
+[[letterStyle]]
+name = "{project.defaults.letterStyleCardSmall}"
+fontName = "Archivo Narrow Regular"
+heightPx = 50

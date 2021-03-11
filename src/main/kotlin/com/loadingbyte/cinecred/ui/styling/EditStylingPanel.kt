@@ -49,6 +49,7 @@ object EditStylingPanel : JPanel() {
         add(JScrollPane(GlobalForm), "Global")
         add(JScrollPane(PageStyleForm), "PageStyle")
         add(JScrollPane(ContentStyleForm), "ContentStyle")
+        add(JScrollPane(LetterStyleForm), "LetterStyle")
     }
 
     private val stylingTree = StylingTree()
@@ -69,6 +70,11 @@ object EditStylingPanel : JPanel() {
             onSelect = ::openContentStyle,
             objToString = { it.name }, copyObj = { it.copy() }
         )
+        stylingTree.addListType(
+            LetterStyle::class.java, l10n("ui.styling.letterStyles"), LETTERS_ICON,
+            onSelect = ::openLetterStyle,
+            objToString = { it.name }, copyObj = { it.copy() }
+        )
 
         fun JButton.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
 
@@ -77,6 +83,8 @@ object EditStylingPanel : JPanel() {
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
         val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
+        val addLetterStyleButton = JButton(DualSVGIcon(ADD_ICON, LETTERS_ICON))
+            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addLetterStyleTooltip") }
         val duplicateStyleButton = JButton(DUPLICATE_ICON)
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }
         val removeStyleButton = JButton(TRASH_ICON)
@@ -87,6 +95,10 @@ object EditStylingPanel : JPanel() {
         }
         addContentStyleButton.addActionListener {
             stylingTree.addListElement(STANDARD_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
+            onChange()
+        }
+        addLetterStyleButton.addActionListener {
+            stylingTree.addListElement(STANDARD_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
             onChange()
         }
         duplicateStyleButton.addActionListener {
@@ -102,6 +114,7 @@ object EditStylingPanel : JPanel() {
         val leftPanel = JPanel(MigLayout()).apply {
             add(addPageStyleButton, "split, grow")
             add(addContentStyleButton, "grow")
+            add(addLetterStyleButton, "grow")
             add(duplicateStyleButton, "grow")
             add(removeStyleButton, "grow")
             add(JScrollPane(stylingTree), "newline, grow, push")
@@ -135,9 +148,38 @@ object EditStylingPanel : JPanel() {
 
     private fun openContentStyle(style: ContentStyle) {
         ContentStyleForm.open(
-            style, stylingTree.getList(ContentStyle::class.java),
+            style, stylingTree.getList(ContentStyle::class.java), stylingTree.getList(LetterStyle::class.java),
             onChange = { stylingTree.updateSelectedListElement(it); onChange() })
         postOpenForm("ContentStyle", ContentStyleForm)
+    }
+
+    private fun openLetterStyle(style: LetterStyle) {
+        var oldName = style.name
+        LetterStyleForm.open(
+            style, stylingTree.getList(LetterStyle::class.java),
+            onChange = {
+                stylingTree.updateSelectedListElement(it)
+
+                // If the letter style changed its name, update all occurrences of that name in all content styles.
+                val newName = it.name
+                if (oldName != newName)
+                    for (oldContentStyle in stylingTree.getList(ContentStyle::class.java)) {
+                        var newContentStyle = oldContentStyle
+                        if (newContentStyle.bodyLetterStyleName == oldName)
+                            newContentStyle = newContentStyle.copy(bodyLetterStyleName = newName)
+                        if (newContentStyle.headLetterStyleName == oldName)
+                            newContentStyle = newContentStyle.copy(headLetterStyleName = newName)
+                        if (newContentStyle.tailLetterStyleName == oldName)
+                            newContentStyle = newContentStyle.copy(tailLetterStyleName = newName)
+                        // Can use identity equals here to make the check quicker.
+                        if (oldContentStyle !== newContentStyle)
+                            stylingTree.updateListElement(oldContentStyle, newContentStyle)
+                    }
+                oldName = newName
+
+                onChange()
+            })
+        postOpenForm("LetterStyle", LetterStyleForm)
     }
 
     private fun postOpenForm(cardName: String, form: Form) {
@@ -149,18 +191,19 @@ object EditStylingPanel : JPanel() {
 
     fun setStyling(styling: Styling) {
         stylingTree.setSingleton(styling.global)
-        stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles)
+        stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles + styling.letterStyles)
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        ContentStyleForm.updateProjectFontFamilies(projectFamilies)
+        LetterStyleForm.updateProjectFontFamilies(projectFamilies)
     }
 
     private fun onChange() {
         val styling = Styling(
             stylingTree.getSingleton(Global::class.java),
             stylingTree.getList(PageStyle::class.java).toImmutableList(),
-            stylingTree.getList(ContentStyle::class.java).toImmutableList()
+            stylingTree.getList(ContentStyle::class.java).toImmutableList(),
+            stylingTree.getList(LetterStyle::class.java).toImmutableList(),
         )
         Controller.StylingHistory.editedAndRedraw(styling)
     }

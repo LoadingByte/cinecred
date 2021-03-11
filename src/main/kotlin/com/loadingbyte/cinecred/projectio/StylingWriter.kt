@@ -9,7 +9,8 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
     val toml = mapOf(
         "global" to writeGlobal(styling.global),
         "pageStyle" to styling.pageStyles.map(::writePageStyle),
-        "contentStyle" to styling.contentStyles.map(::writeContentStyle)
+        "contentStyle" to styling.contentStyles.map(::writeContentStyle),
+        "letterStyle" to styling.letterStyles.map(::writeLetterStyle)
     )
 
     Toml.write(toml, stylingFile.toFile())
@@ -70,15 +71,15 @@ private fun writeContentStyle(style: ContentStyle): Map<String, Any> {
         "bodyLayoutElemHJustify" to style.bodyLayoutElemHJustify.name,
         "bodyLayoutSeparator" to style.bodyLayoutSeparator,
         "bodyLayoutParagraphGapPx" to style.bodyLayoutParagraphGapPx,
-        "bodyFontSpec" to style.bodyFontSpec.toString2(),
+        "bodyLetterStyleName" to style.bodyLetterStyleName,
         "headHJustify" to style.headHJustify.name,
         "headVJustify" to style.headVJustify.name,
         "headGapPx" to style.headGapPx,
-        "headFontSpec" to style.headFontSpec.toString2(),
+        "headLetterStyleName" to style.headLetterStyleName,
         "tailHJustify" to style.tailHJustify.name,
         "tailVJustify" to style.tailVJustify.name,
         "tailGapPx" to style.tailGapPx,
-        "tailFontSpec" to style.tailFontSpec.toString2()
+        "tailLetterStyleName" to style.tailLetterStyleName
     )
     if (style.spineOrientation == SpineOrientation.VERTICAL) {
         toml.remove("headVJustify")
@@ -110,14 +111,27 @@ private fun writeContentStyle(style: ContentStyle): Map<String, Any> {
     if (!style.hasHead) {
         toml.remove("headHJustify")
         toml.remove("headVJustify")
-        toml.remove("headFontSpec")
+        toml.remove("headLetterStyleName")
         toml.remove("headGapPx")
     }
     if (!style.hasTail) {
         toml.remove("tailHJustify")
         toml.remove("tailVJustify")
-        toml.remove("tailFontSpec")
+        toml.remove("tailLetterStyleName")
         toml.remove("tailGapPx")
     }
     return toml
 }
+
+
+private fun writeLetterStyle(style: LetterStyle) = mapOf(
+    "name" to style.name,
+    "fontName" to style.fontName,
+    "heightPx" to style.heightPx,
+    "tracking" to style.tracking,
+    "superscript" to style.superscript.name,
+    "foreground" to style.foreground.toHex32(),
+    "background" to style.background.toHex32(),
+    "underline" to style.underline,
+    "strikethrough" to style.strikethrough
+)

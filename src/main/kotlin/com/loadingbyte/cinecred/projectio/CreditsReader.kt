@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.Picture
-import com.loadingbyte.cinecred.common.Severity.*
+import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
@@ -51,6 +51,7 @@ private class CreditsReader(
     // Note: We use maps whose keys are case insensitive here because style references should be case insensitive.
     val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
     val contentStyleMap = styling.contentStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
+    val letterStyleMap = styling.letterStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
 
     // Put the picture loaders into a map whose keys are all possible variations of referencing the picture loaders.
     // Once again use a map with case-insensitive keys.
@@ -89,7 +90,7 @@ private class CreditsReader(
     // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
     // content style changed or there was an empty row), but it cannot be concluded yet because it is unknown whether
     // only the block or the block and more higher-order elements like a segment will be concluded at the same time.
-    // In the latter case, the vertical gap accumulator would go towards the segment and not the block. So we have
+    // In the latter case, the vertical gap accumulator would be given to the segment and not the block. So we have
     // to wait and see.
     var isBlockConclusionMarked = false
 
@@ -123,9 +124,9 @@ private class CreditsReader(
 
     // Current block
     var blockStyle: ContentStyle? = null
-    var blockHead: StyledText? = null
+    var blockHead: StyledString? = null
     val blockBody = mutableListOf<BodyElement>()
-    var blockTail: StyledText? = null
+    var blockTail: StyledString? = null
 
     // Keep track where the current head and tail have been declared. This is used by an error message.
     var blockHeadDeclaredRow = 0
@@ -314,67 +315,19 @@ private class CreditsReader(
             isBlockConclusionMarked = true
         }
 
-        val newHead = table.getString(row, "head")
-        val newTail = table.getString(row, "tail")
+        // Get the body element, which may either be a styled string or a (optionally scaled) picture.
+        // If the last block's conclusion is marked, use the current content style and not the last block's
+        // content style, which no longer applies to the newly read body element.
+        val effectiveBlockStyle = if (isBlockConclusionMarked) contentStyle else blockStyle
+        val bodyElem = getBodyElement("body", effectiveBlockStyle?.bodyLetterStyleName, noPic = false)
 
-        // Get the body element, which may either be a string or a (optionally scaled) picture.
-        val bodyElem = table.getString(row, "body")?.let getBodyElem@{ str ->
-            // Remove up to four space-separated suffixes from the string and each time check whether the remaining
-            // string is a picture. If that is the case, try to parse the suffixes as scaling and cropping hints.
-            // Theoretically, we could stop after removing two suffixes and not having found a picture by then because
-            // there are only two possible suffixes available (scaling and cropping). However, sometimes the user
-            // might accidentally add more suffixes. If we find that this is the case, we throw an exception and
-            // thereby warn the user.
-            var picName = str
-            repeat(5) {
-                pictureLoaderMap[picName]?.let { picLoader ->
-                    val origPic = picLoader.value
-                    if (origPic == null) {
-                        table.log(row, "body", WARN, l10n("projectIO.credits.illFormattedBodyElemCorrupt"))
-                        // Just pretend that this cell does not reference a picture.
-                        return@repeat
-                    }
+        // Get the head and tail, which may only be styled strings.
+        // Because a non-empty head or tail always starts a new block, we can use the current content style.
+        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, noPic = true) as BodyElement.Str?)?.str
+        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, noPic = true) as BodyElement.Str?)?.str
 
-                    var pic: Picture = origPic
-                    val picHints = str.drop(picName.length).split(' ')
-                    // Step 1: Crop the picture if the user specified it.
-                    if (picHints.any { it in CROP_KW })
-                        when (pic) {
-                            is Picture.SVG -> pic = pic.cropped()
-                            is Picture.PDF -> pic = pic.cropped()
-                            // Raster images cannot be cropped.
-                            is Picture.Raster -> {
-                                val msgKey = "projectIO.credits.illFormattedBodyElemRasterCrop"
-                                table.log(row, "body", WARN, l10n(msgKey, CROP_KW.primary, CROP_KW.alt))
-                            }
-                        }
-                    // Step 2: Only now, after the picture has potentially been cropped, we can apply scaling hints.
-                    for (hint in picHints)
-                        try {
-                            pic = when {
-                                hint.isBlank() || hint in CROP_KW -> continue
-                                hint.startsWith('x') ->
-                                    pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
-                                hint.endsWith('x') ->
-                                    pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
-                                // The user supplied an unknown suffix.
-                                else -> throw IllegalArgumentException()
-                            }
-                        } catch (_: IllegalArgumentException) {
-                            val msg = l10n("projectIO.credits.illFormattedBodyElem", CROP_KW.primary, CROP_KW.alt)
-                            table.log(row, "body", WARN, msg)
-                        }
-                    return@getBodyElem BodyElement.Pic(pic)
-                }
-                picName = picName.substringBeforeLast(' ').trim()
-            }
-
-            // We could not find an image in the body element string. Just use the string as-is.
-            BodyElement.Str(str)
-        }
-
-        // If either of the head or tail cells is non-empty, or if the body cell is non empty and the conclusion of the
-        // previous block has been marked, conclude the previous block (if there was any) and start a new one.
+        // If either head or tail is available, or if a body is available and the conclusion of the previous block
+        // has been marked, conclude the previous block (if there was any) and start a new one.
         if (newHead != null || newTail != null || (isBlockConclusionMarked && bodyElem != null)) {
             concludeBlock(vGapAccumulator)
             vGapAccumulator = 0f
@@ -429,6 +382,123 @@ private class CreditsReader(
         }
     }
 
+    fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {
+        fun unknownLetterStyleMsg(name: String) =
+            l10n("projectIO.credits.unknownLetterStyle", name, letterStyleMap.keys.joinToString("/") { "\"$it\"" })
+
+        fun unknownTagMsg(tagKey: String) = l10n(
+            "projectIO.credits.unknownTagKeyword",
+            tagKey, "${STYLE_KW.primary}/${PIC_KW.primary}", "${STYLE_KW.alt}  /  ${PIC_KW.alt}"
+        )
+
+        val str = table.getString(row, l10nColName) ?: return null
+        val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: STANDARD_LETTER_STYLE
+
+        var curLetterStyle = initLetterStyle
+        val styledStr = mutableListOf<Pair<String, LetterStyle>>()
+        var picture: Picture? = null
+        parseTaggedString(str) { plain, tagKey, tagVal ->
+            when {
+                // When we encounter plaintext, add it to the styled string list using the current letter style.
+                plain != null -> styledStr.add(Pair(plain, curLetterStyle))
+                tagKey != null -> when (tagKey) {
+                    // When we encounter a style tag, change the current letter style to the desired one.
+                    in STYLE_KW -> when (tagVal) {
+                        null -> curLetterStyle = initLetterStyle
+                        else -> when (val newLetterStyle = letterStyleMap[tagVal]) {
+                            null -> table.log(row, l10nColName, WARN, unknownLetterStyleMsg(tagVal))
+                            else -> curLetterStyle = newLetterStyle
+                        }
+                    }
+                    // When we encounter a picture tag, read it and remember the loaded picture for now.
+                    // We can't immediately return because we want to issue a warning if the picture tag is not lone.
+                    in PIC_KW -> when {
+                        noPic -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureDisallowed"))
+                        else -> when (picture) {
+                            null -> picture = getPicture(l10nColName, tagVal)
+                            else -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureNotLone"))
+                        }
+                    }
+                    else -> table.log(row, l10nColName, WARN, unknownTagMsg(tagKey))
+                }
+            }
+        }
+
+        return when {
+            picture != null -> {
+                if (styledStr.isNotEmpty())
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureNotLone"))
+                BodyElement.Pic(picture!!)
+            }
+            styledStr.isNotEmpty() -> BodyElement.Str(styledStr)
+            else -> null
+        }
+    }
+
+    fun getPicture(l10nColName: String, tagVal: String?): Picture? {
+        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.primary, CROP_KW.alt)
+        fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.primary, CROP_KW.alt)
+        fun hintsUnknownMsg(hints: List<String>) =
+            l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(", ") { "\"$it\"" }, illFormattedMsg())
+
+        if (tagVal == null) {
+            table.log(row, l10nColName, WARN, illFormattedMsg())
+            return null
+        }
+
+        // Remove arbitrary many space-separated suffixes from the string and each time check whether the remaining
+        // string is a picture. If that is the case, try to parse the suffixes as scaling and cropping hints.
+        // Theoretically, we could stop after removing two suffixes and not having found a picture by then because
+        // there are only two possible suffixes available (scaling and cropping). However, sometimes the user
+        // might accidentally add more suffixes. If we find that this is the case, we inform the user.
+        var splitIdx = tagVal.length
+        do {
+            val picName = tagVal.take(splitIdx).trim()
+
+            pictureLoaderMap[picName]?.let { picLoader ->
+                var pic = picLoader.value
+                if (pic == null) {
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureCorrupt", picName))
+                    return null
+                }
+
+                val picHints = tagVal.drop(splitIdx).split(' ')
+
+                // Step 1: Crop the picture if the user wishes that.
+                if (picHints.any { it in CROP_KW })
+                    when (pic) {
+                        is Picture.SVG -> pic = pic.cropped()
+                        is Picture.PDF -> pic = pic.cropped()
+                        // Raster images cannot be cropped.
+                        is Picture.Raster -> table.log(row, l10nColName, WARN, rasterCropMsg())
+                    }
+
+                // Step 2: Only now, after the picture has potentially been cropped, we can apply the scaling hint.
+                val unknownHints = mutableListOf<String>()
+                for (hint in picHints)
+                    when {
+                        hint.isBlank() || hint in CROP_KW -> continue
+                        hint.startsWith('x') ->
+                            return pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
+                        hint.endsWith('x') ->
+                            return pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
+                        else -> unknownHints.add(hint)
+                    }
+                // If unknown hints were encountered, warn the user.
+                if (unknownHints.isNotEmpty())
+                    table.log(row, l10nColName, WARN, hintsUnknownMsg(unknownHints))
+
+                return pic
+            }
+
+            splitIdx = picName.lastIndexOf(' ')
+        } while (splitIdx != -1)
+
+        // No picture matching the tag value found.
+        table.log(row, l10nColName, WARN, illFormattedMsg())
+        return null
+    }
+
 
     /* *************************************
        ************ MISCELLANEOUS **********
@@ -436,9 +506,75 @@ private class CreditsReader(
 
     enum class BreakAlign { BODY_COLUMNS, HEAD_AND_TAIL }
 
+
     companion object {
+
         val WRAP_KW = Keyword("projectIO.credits.table.wrap")
         val CROP_KW = Keyword("projectIO.credits.table.crop")
+        val STYLE_KW = Keyword("projectIO.credits.table.style")
+        val PIC_KW = Keyword("projectIO.credits.table.pic")
+
+        inline fun parseTaggedString(str: String, callback: (String?, String?, String?) -> Unit) {
+            var idx = 0
+
+            while (true) {
+                val tagStartIdx = str.indexOfUnescaped('{', startIdx = idx)
+                if (tagStartIdx == -1)
+                    break
+                val tagEndIdx = str.indexOfUnescaped('}', startIdx = tagStartIdx + 1)
+                if (tagEndIdx == -1)
+                    break
+
+                if (tagStartIdx != idx)
+                    callback(str.substring(idx, tagStartIdx).unescape('{'), null, null)
+
+                val tag = str.substring(tagStartIdx + 1, tagEndIdx).unescape('}').trim()
+                val keyEndIdx = tag.indexOf(' ')
+                if (keyEndIdx == -1)
+                    callback(null, tag, null)
+                else
+                    callback(null, tag.substring(0, keyEndIdx), tag.substring(keyEndIdx + 1))
+
+                idx = tagEndIdx + 1
+            }
+
+            if (idx != str.length)
+                callback(str.substring(idx), null, null)
+        }
+
+        fun String.indexOfUnescaped(char: Char, startIdx: Int): Int {
+            val idx = indexOf(char, startIdx)
+            if (idx <= 0)
+                return idx
+
+            val numBackslashes = idx - 1 - indexOfLast(startIdx = idx - 1) { it != '\\' }
+            return if (numBackslashes % 2 == 0)
+                idx
+            else
+                indexOfUnescaped(char, idx + 1)
+        }
+
+        inline fun String.indexOfLast(startIdx: Int, predicate: (Char) -> Boolean): Int {
+            for (idx in startIdx.coerceIn(0, lastIndex) downTo 0) {
+                if (predicate(this[idx])) {
+                    return idx
+                }
+            }
+            return -1
+        }
+
+        fun String.unescape(char: Char): String {
+            var escIdx = indexOf("\\$char")
+            if (escIdx == -1)
+                if (isEmpty() || last() != '\\')
+                    return this
+                else
+                    escIdx = length - 1
+
+            val numBackslashes = escIdx - indexOfLast(startIdx = escIdx) { it != '\\' }
+            return substring(0, escIdx - (numBackslashes - 1) / 2) + substring(escIdx + 1).unescape(char)
+        }
+
     }
 
 
@@ -450,7 +586,7 @@ private class CreditsReader(
 
         init {
             val allKws = l10nAll(key)
-            alt = allKws.filter { it != primary }.joinToString("/") { "\"$it\"" }
+            alt = allKws.filter { it != primary }.joinToString("/")
             kwSet = allKws.toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
         }
 

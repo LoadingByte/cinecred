@@ -1,17 +1,17 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Background
-import com.loadingbyte.cinecred.common.DeferredImage.Guides
-import com.loadingbyte.cinecred.common.RichFont
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.toImmutableList
+import java.awt.Font
 import java.awt.geom.Path2D
 
 
 fun drawPage(
     global: Global,
-    fonts: Map<FontSpec, RichFont>,
+    fonts: Map<LetterStyle, Font>,
     page: Page
 ): DrawnPage {
     // Convert the aligning group lists to maps that map from block to group id.
@@ -22,9 +22,9 @@ fun drawPage(
 
     // Generate an image for each column.
     // Also remember the x coordinate of the axis inside each generated image.
-    val columnImages = page.stages
+    val drawnColumns = page.stages
         .flatMap { stage -> stage.segments }.flatMap { segment -> segment.columns }
-        .associateWith { column -> drawColumnImage(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
+        .associateWith { column -> drawColumn(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
     val pageImage = DeferredImage()
     // First, for each stage, combine the column images to a stage image, and then combine the stage images to the
@@ -33,7 +33,7 @@ fun drawPage(
     var y = 0f
     for ((stageIdx, stage) in page.stages.withIndex()) {
         // Generate an image for the current stage.
-        val stageImage = drawStageImage(global, columnImages, stage)
+        val stageImage = drawStage(global, drawnColumns, stage)
         // Special handling for card stages...
         if (stage.style.behavior == PageBehavior.CARD) {
             // The amount of padding that needs to be added above and below the card's stage image such that
@@ -101,9 +101,9 @@ fun drawPage(
 }
 
 
-private fun drawStageImage(
+private fun drawStage(
     global: Global,
-    columnImages: Map<Column, Pair<DeferredImage, Float>>,
+    columnImages: Map<Column, DrawnColumn>,
     stage: Stage
 ): DeferredImage {
     val stageImage = DeferredImage()
@@ -111,9 +111,9 @@ private fun drawStageImage(
     for (segment in stage.segments) {
         for (column in segment.columns) {
             val axisXInPageImage = global.widthPx / 2f + column.posOffsetPx
-            val (columnImage, axisXInColumnImage) = columnImages[column]!!
-            val x = axisXInPageImage - axisXInColumnImage
-            stageImage.drawDeferredImage(columnImage, x, y)
+            val drawnColumn = columnImages.getValue(column)
+            val x = axisXInPageImage - drawnColumn.axisXInImage
+            stageImage.drawDeferredImage(drawnColumn.defImage, x, y)
         }
         y = stageImage.height + segment.vGapAfterPx
     }

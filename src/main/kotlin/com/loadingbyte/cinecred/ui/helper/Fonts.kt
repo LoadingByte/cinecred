@@ -54,7 +54,7 @@ class FontFamilies(fonts: Iterable<Font>) {
             var italic = false
             val cleanName = if (name.startsWith("Titillium")) name.removeSuffix("Upright") else name
             for (removedSuffix in cleanName.removeSuffixes().second) {
-                val styleInfo = SUFFIX_TO_STYLE[removedSuffix]!!
+                val styleInfo = SUFFIX_TO_STYLE.getValue(removedSuffix)
                 weight = styleInfo.weight ?: weight
                 italic = styleInfo.italic ?: italic
             }

@@ -92,9 +92,9 @@ object ContentStyleForm : Form() {
         }
     )
 
-    private val bodyFontSpecWidget = addWidget(
-        l10n("ui.styling.content.bodyFont"),
-        FontSpecChooserWidget()
+    private val bodyLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.bodyLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable"))
     )
 
     init {
@@ -120,9 +120,9 @@ object ContentStyleForm : Form() {
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
         isVisible = { hasHeadWidget.isSelected }
     )
-    private val headFontSpecWidget = addWidget(
-        l10n("ui.styling.content.headFont"),
-        FontSpecChooserWidget(),
+    private val headLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.headLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
         isVisible = { hasHeadWidget.isSelected }
     )
 
@@ -149,20 +149,14 @@ object ContentStyleForm : Form() {
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
         isVisible = { hasTailWidget.isSelected }
     )
-    private val tailFontSpecWidget = addWidget(
-        l10n("ui.styling.content.tailFont"),
-        FontSpecChooserWidget(),
+    private val tailLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.tailLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
         isVisible = { hasTailWidget.isSelected }
     )
 
     init {
         finishInit()
-    }
-
-    fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        bodyFontSpecWidget.projectFamilies = projectFamilies
-        headFontSpecWidget.projectFamilies = projectFamilies
-        tailFontSpecWidget.projectFamilies = projectFamilies
     }
 
     private fun load(style: ContentStyle) {
@@ -181,17 +175,17 @@ object ContentStyleForm : Form() {
         bodyLayoutElemHJustifyWidget.selectedItem = style.bodyLayoutElemHJustify
         bodyLayoutSeparatorWidget.text = style.bodyLayoutSeparator
         bodyLayoutParagraphGapPxWidget.value = style.bodyLayoutParagraphGapPx
-        bodyFontSpecWidget.selectedFontSpec = style.bodyFontSpecName
+        bodyLetterStyleWidget.selectedItem = style.bodyLetterStyleName
         hasHeadWidget.isSelected = style.hasHead
         headHJustifyWidget.selectedItem = style.headHJustify
         headVJustifyWidget.selectedItem = style.headVJustify
         headGapPxWidget.value = style.headGapPx
-        headFontSpecWidget.selectedFontSpec = style.headFontSpecName
+        headLetterStyleWidget.selectedItem = style.headLetterStyleName
         hasTailWidget.isSelected = style.hasTail
         tailHJustifyWidget.selectedItem = style.tailHJustify
         tailVJustifyWidget.selectedItem = style.tailVJustify
         tailGapPxWidget.value = style.tailGapPx
-        tailFontSpecWidget.selectedFontSpec = style.tailFontSpecName
+        tailLetterStyleWidget.selectedItem = style.tailLetterStyleName
     }
 
     private fun save() = ContentStyle(
@@ -210,23 +204,31 @@ object ContentStyleForm : Form() {
         bodyLayoutElemHJustifyWidget.selectedItem,
         bodyLayoutSeparatorWidget.text,
         bodyLayoutParagraphGapPxWidget.value as Float,
-        bodyFontSpecWidget.selectedFontSpec,
+        bodyLetterStyleWidget.selectedItem,
         hasHeadWidget.isSelected,
         headHJustifyWidget.selectedItem,
         headVJustifyWidget.selectedItem,
         headGapPxWidget.value as Float,
-        headFontSpecWidget.selectedFontSpec,
+        headLetterStyleWidget.selectedItem,
         hasTailWidget.isSelected,
         tailHJustifyWidget.selectedItem,
         tailVJustifyWidget.selectedItem,
         tailGapPxWidget.value as Float,
-        tailFontSpecWidget.selectedFontSpec
+        tailLetterStyleWidget.selectedItem
     )
 
-    fun open(style: ContentStyle, allStyles: List<ContentStyle>, onChange: (ContentStyle) -> Unit) {
+    fun open(
+        style: ContentStyle, allStyles: List<ContentStyle>, letterStyles: List<LetterStyle>,
+        onChange: (ContentStyle) -> Unit
+    ) {
         nameWidget.otherStyleNames = allStyles.filter { it !== style }.map { it.name }
 
         withSuspendedChangeEvents {
+            val letterStyleNames = letterStyles.map { it.name }
+            bodyLetterStyleWidget.items = letterStyleNames
+            headLetterStyleWidget.items = letterStyleNames
+            tailLetterStyleWidget.items = letterStyleNames
+
             load(style)
             changeListener = { if (isErrorFree) onChange(save()) }
         }

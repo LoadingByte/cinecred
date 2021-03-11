@@ -476,13 +476,18 @@ private class CreditsReader(
                 // Step 2: Only now, after the picture has potentially been cropped, we can apply the scaling hint.
                 val unknownHints = mutableListOf<String>()
                 for (hint in picHints)
-                    when {
-                        hint.isBlank() || hint in CROP_KW -> continue
-                        hint.startsWith('x') ->
-                            return pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
-                        hint.endsWith('x') ->
-                            return pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
-                        else -> unknownHints.add(hint)
+                    try {
+                        return when {
+                            hint.isBlank() || hint in CROP_KW -> continue
+                            hint.startsWith('x') ->
+                                pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
+                            hint.endsWith('x') ->
+                                pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
+                            else -> throw IllegalArgumentException()
+                        }
+                    } catch (_: IllegalArgumentException) {
+                        // Note that this catch clause is mainly here because toFiniteFloat() may throw exceptions.
+                        unknownHints.add(hint)
                     }
                 // If unknown hints were encountered, warn the user.
                 if (unknownHints.isNotEmpty())

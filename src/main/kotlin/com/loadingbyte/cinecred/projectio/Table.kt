@@ -68,7 +68,7 @@ class Table(
                 val primaryColName = "@${l10n(key)}"
                 val alternativeColNames = possibleColNames.toMutableSet()
                     .apply { remove(primaryColName) }
-                    .joinToString("/")
+                    .joinToString(" | ")
                 val msg = l10n("projectIO.table.missingExpectedColumn", alternativeColNames)
                 log.add(ParserMsg(headerRecordNo, primaryColName, null, WARN, msg))
             }
@@ -128,12 +128,12 @@ class Table(
 
         val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
         val primaryOptions = keys.map(::l10n)
-        val alternativeOptionsJoined = keys.joinToString("  /  ") { key ->
-            l10nAll(key).filter { it !in primaryOptions }.joinToString("/")
+        val alternativeOptionsJoined = keys.joinToString(" || ") { key ->
+            l10nAll(key).filter { it !in primaryOptions }.joinToString(" | ")
         }
         val msg = l10n(
             "projectIO.table.illFormattedOneOfWithAlternatives",
-            primaryOptions.joinToString("/"),
+            primaryOptions.joinToString(" | "),
             alternativeOptionsJoined
         )
         log(row, l10nColName, WARN, msg)
@@ -143,7 +143,7 @@ class Table(
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>): T? {
         val str = getString(row, l10nColName) ?: return null
         map[str]?.let { return it }
-        log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedOneOf", map.keys.joinToString("/") { "\"$it\"" }))
+        log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedOneOf", map.keys.joinToString(" | ")))
         return null
     }
 

@@ -35,7 +35,6 @@ object DeliverRenderQueuePanel : JPanel() {
             tableHeader.reorderingAllowed = false
             columnModel.apply {
                 // These cells will be rendered using special components.
-                getColumn(0).cellRenderer = WordWrapCellRenderer()
                 getColumn(1).cellRenderer = WordWrapCellRenderer()
                 getColumn(2).cellRenderer = ProgressCellRenderer
                 getColumn(3).apply { cellRenderer = CancelButtonCellRenderer; cellEditor = CancelButtonCellEditor }

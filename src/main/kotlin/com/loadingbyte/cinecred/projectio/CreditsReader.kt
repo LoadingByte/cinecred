@@ -295,7 +295,7 @@ private class CreditsReader(
                 }
 
             if (erroneous) {
-                val msg = l10n("projectIO.credits.illFormattedColumnPos", WRAP_KW.primary, WRAP_KW.alt)
+                val msg = l10n("projectIO.credits.illFormattedColumnPos", WRAP_KW.msgPrimary, WRAP_KW.msgAlt)
                 table.log(row, "columnPos", WARN, msg)
             }
 
@@ -384,11 +384,11 @@ private class CreditsReader(
 
     fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {
         fun unknownLetterStyleMsg(name: String) =
-            l10n("projectIO.credits.unknownLetterStyle", name, letterStyleMap.keys.joinToString("/") { "\"$it\"" })
+            l10n("projectIO.credits.unknownLetterStyle", name, letterStyleMap.keys.joinToString(" | "))
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword",
-            tagKey, "${STYLE_KW.primary}/${PIC_KW.primary}", "${STYLE_KW.alt}  /  ${PIC_KW.alt}"
+            tagKey, "${STYLE_KW.msgPrimary} | ${PIC_KW.msgPrimary}", "${STYLE_KW.msgAlt} || ${PIC_KW.msgAlt}"
         )
 
         val str = table.getString(row, l10nColName) ?: return null
@@ -436,10 +436,10 @@ private class CreditsReader(
     }
 
     fun getPicture(l10nColName: String, tagVal: String?): Picture? {
-        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.primary, CROP_KW.alt)
-        fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.primary, CROP_KW.alt)
+        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.msgPrimary, CROP_KW.msgAlt)
+        fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.msgPrimary, CROP_KW.msgAlt)
         fun hintsUnknownMsg(hints: List<String>) =
-            l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(", ") { "\"$it\"" }, illFormattedMsg())
+            l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(" "), illFormattedMsg())
 
         if (tagVal == null) {
             table.log(row, l10nColName, WARN, illFormattedMsg())
@@ -585,14 +585,16 @@ private class CreditsReader(
 
     class Keyword(key: String) {
 
-        val primary: String = l10n(key)
-        val alt: String
-        val kwSet: Set<String>
+        private val kwSet: Set<String>
+        val msgPrimary: String
+        val msgAlt: String
 
         init {
+            val primaryKw = l10n(key)
             val allKws = l10nAll(key)
-            alt = allKws.filter { it != primary }.joinToString("/")
             kwSet = allKws.toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
+            msgPrimary = primaryKw
+            msgAlt = allKws.filter { it != primaryKw }.joinToString(" | ")
         }
 
         operator fun contains(str: String) = str in kwSet

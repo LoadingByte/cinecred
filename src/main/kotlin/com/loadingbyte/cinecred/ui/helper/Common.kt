@@ -36,13 +36,19 @@ fun JComponent.setTableCellBackground(table: JTable, rowIdx: Int) {
 }
 
 
-class WordWrapCellRenderer : TableCellRenderer {
+class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
 
-    private val textArea = newLabelTextArea()
+    private val comp = when (allowHtml) {
+        false -> newLabelTextArea()
+        true -> JEditorPane().apply {
+            contentType = "text/html"
+            isEditable = false
+        }
+    }
 
     override fun getTableCellRendererComponent(
         table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-    ) = textArea.apply {
+    ) = comp.apply {
         text = value as String
         setSize(table.columnModel.getColumn(colIdx).width, preferredSize.height)
         if (table.getRowHeight(rowIdx) < preferredSize.height)

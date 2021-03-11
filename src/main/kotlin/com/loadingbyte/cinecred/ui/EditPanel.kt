@@ -215,6 +215,10 @@ object EditPanel : JPanel() {
         } else
             true
 
+    fun onOpenProjectDir() {
+        zoomSlider.zoom = 1f
+    }
+
     fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
         // Adjust the total runtime label.
         if (project == null || project.pages.isEmpty()) {

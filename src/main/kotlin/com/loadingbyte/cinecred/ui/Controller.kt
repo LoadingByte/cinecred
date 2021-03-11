@@ -105,6 +105,7 @@ object Controller {
         StylingHistory.clear()
 
         MainFrame.onOpenProjectDir()
+        EditPanel.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
 
         // Load the initially present auxiliary files (project fonts and pictures).

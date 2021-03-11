@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 
 class WholePageSequenceRenderJob(
     private val pageDefImages: List<DeferredImage>,
-    private val transparent: Boolean,
+    private val transparentBackground: Boolean,
     private val format: Format,
     val dir: Path,
     val filenamePattern: String
@@ -38,7 +38,7 @@ class WholePageSequenceRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(dir)
 
-        val layers = if (transparent) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
+        val layers = if (transparentBackground) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
@@ -49,7 +49,8 @@ class WholePageSequenceRenderJob(
 
             when (format) {
                 Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
-                    val imageType = if (transparent) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
+                    val imageType =
+                        if (transparentBackground) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
                     val pageImage = BufferedImage(pageWidth, pageHeight, imageType)
 
                     pageImage.withG2 { g2 ->
@@ -113,7 +114,7 @@ class WholePageSequenceRenderJob(
 
 class WholePagePDFRenderJob(
     private val pageDefImages: List<DeferredImage>,
-    private val transparent: Boolean,
+    private val transparentBackground: Boolean,
     val file: Path,
 ) : RenderJob {
 
@@ -122,7 +123,7 @@ class WholePagePDFRenderJob(
     override fun render(progressCallback: (Float) -> Unit) {
         Files.createDirectories(file.parent)
 
-        val layers = if (transparent) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
+        val layers = if (transparentBackground) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 
         val pdfDoc = PDDocument()
 

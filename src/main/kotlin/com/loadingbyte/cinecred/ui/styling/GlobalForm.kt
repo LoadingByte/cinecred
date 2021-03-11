@@ -40,7 +40,9 @@ object GlobalForm : Form() {
     )
     private val backgroundWidget = addWidget(
         l10n("ui.styling.global.background"),
-        ColorWellWidget()
+        ColorWellWidget(
+            allowAlpha = false,
+            verify = { throw VerifyResult(Severity.INFO, l10n("ui.styling.global.backgroundTransparencyHint")) })
     )
     private val unitVGapPxWidget = addWidget(
         l10n("ui.styling.global.unitVGapPx"),

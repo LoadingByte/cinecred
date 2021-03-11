@@ -32,7 +32,7 @@ private fun readGlobal(map: Map<*, *>) = Global(
     map.get("fps", STANDARD_GLOBAL.fps) { toFPS() },
     map.get("widthPx", STANDARD_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
     map.get("heightPx", STANDARD_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
-    map.get("background", STANDARD_GLOBAL.background) { toColor() },
+    map.get("background", STANDARD_GLOBAL.background) { toColor(allowAlpha = false) },
     map.get("unitVGapPx", STANDARD_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 

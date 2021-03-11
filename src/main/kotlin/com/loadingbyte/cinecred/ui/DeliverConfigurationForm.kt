@@ -25,8 +25,7 @@ object DeliverConfigurationForm : Form() {
     private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
     private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
 
-    private val VIDEO_IMAGE_SEQ_FORMATS = VideoRenderJob.Format.ALL.filter { it.isImageSeq }
-    private val SEQ_FORMATS = WholePageSequenceRenderJob.Format.ALL + VIDEO_IMAGE_SEQ_FORMATS
+    private val SEQ_FORMATS = WholePageSequenceRenderJob.Format.ALL + VideoRenderJob.Format.ALL.filter { it.isImageSeq }
     private val ALPHA_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL.filter { it.supportsAlpha }
 
     private var project: Project? = null
@@ -91,8 +90,8 @@ object DeliverConfigurationForm : Form() {
         isVisible = { formatComboBox.selectedItem !in SEQ_FORMATS },
     )
 
-    private val transparentCheckBox = addWidget(
-        l10n("ui.deliverConfig.transparent"),
+    private val transparentBackgroundCheckBox = addWidget(
+        l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),
         isVisible = { formatComboBox.selectedItem in ALPHA_FORMATS }
     )
@@ -171,17 +170,17 @@ object DeliverConfigurationForm : Form() {
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
-                    transparent = transparentCheckBox.isSelected,
-                    format, dir = seqDirField.file.normalize(), filenamePattern = seqFilenamePatternField.text
+                    transparentBackgroundCheckBox.isSelected, format,
+                    dir = seqDirField.file.normalize(), filenamePattern = seqFilenamePatternField.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
-                    transparent = transparentCheckBox.isSelected,
+                    transparentBackgroundCheckBox.isSelected,
                     file = singleFileField.file.normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, drawnPages,
-                    scaling, transparent = format.supportsAlpha && transparentCheckBox.isSelected, format,
+                    scaling, transparentBackgroundCheckBox.isSelected && format.supportsAlpha, format,
                     fileOrDir = (if (format.isImageSeq) seqDirField.file else singleFileField.file).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

@@ -21,7 +21,7 @@ open class VideoDrawer(
     private val project: Project,
     drawnPages: List<DrawnPage>,
     private val scaling: Float = 1f,
-    private val transparent: Boolean = false,
+    private val transparentBackground: Boolean = false,
     private val previewMode: Boolean = false
 ) {
 
@@ -134,8 +134,9 @@ open class VideoDrawer(
             val imageHeight = ceil(scaledPageDefImg.height).toInt() + 1
             createIntermediateImage(width, imageHeight).withG2 { g2 ->
                 g2.setHighQuality()
-                if (!transparent) {
-                    // If the image should not be transparent, we have to fill in the background.
+                if (!transparentBackground) {
+                    // If the final image should not have an alpha channel, the intermediate images, which also don't
+                    // have alpha, have to have the proper background, as otherwise their background would be black.
                     // Note that we can't simply use the deferred image's background layer because that doesn't extend
                     // to the whole height of the raster image, since the raster image is higher than the deferred
                     // image to make room for the shift.
@@ -150,10 +151,11 @@ open class VideoDrawer(
 
     /**
      * This method can (and should be) overwritten by users of this class who exactly know onto what kind of
-     * graphics object they will later draw their frames.
+     * graphics object they will later draw their frames. The returned image should support alpha if and only if
+     * [transparentBackground] is true.
      */
     protected open fun createIntermediateImage(width: Int, height: Int): BufferedImage {
-        val imageType = if (transparent) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
+        val imageType = if (transparentBackground) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
         return BufferedImage(width, height, imageType)
     }
 
@@ -162,7 +164,7 @@ open class VideoDrawer(
 
         val insn = insns[frameIdx]
 
-        if (!transparent) {
+        if (!transparentBackground) {
             g2.color = project.styling.global.background
             g2.fillRect(0, 0, width, height)
         }

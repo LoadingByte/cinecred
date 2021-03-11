@@ -302,6 +302,7 @@ class ComboBoxListWidget<E>(
 
 
 class ColorWellWidget(
+    allowAlpha: Boolean = true,
     verify: ((Color) -> Unit)? = null
 ) : Form.Widget() {
 
@@ -329,7 +330,12 @@ class ColorWellWidget(
             var newColor: Color? = null
 
             val chooser = JColorChooser(selectedColor)
-            chooser.previewPanel = JPanel()  // Disable preview panel
+            // Disable the horrible preview panel.
+            chooser.previewPanel = JPanel()
+            // Disable the ability to choose transparent colors if that is desired.
+            for (chooserPanel in chooser.chooserPanels)
+                chooserPanel.isColorTransparencySelectionEnabled = allowAlpha
+            // Show the color chooser and wait for the user to close it.
             JColorChooser.createDialog(
                 btn, l10n("ui.form.colorChooserTitle"), true, chooser, { newColor = chooser.color }, null
             ).isVisible = true

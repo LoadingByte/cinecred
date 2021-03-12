@@ -1,87 +1,87 @@
 [[pageStyle]]
-name = "{project.defaults.pageStyleCard}"
+name = "{project.template.pageStyleCard}"
 behavior = "CARD"
 
 [[pageStyle]]
-name = "{project.defaults.pageStyleScroll}"
+name = "{project.template.pageStyleScroll}"
 behavior = "SCROLL"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleHeading}"
+name = "{project.template.contentStyleHeading}"
 bodyLayout = "GRID"
-bodyLetterStyleName = "{project.defaults.letterStyleBig}"
+bodyLetterStyleName = "{project.template.letterStyleBig}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleSubheading}"
+name = "{project.template.contentStyleSubheading}"
 bodyLayout = "GRID"
-bodyLetterStyleName = "{project.defaults.letterStyleSmall}"
+bodyLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleGutter}"
+name = "{project.template.contentStyleGutter}"
 spineOrientation = "HORIZONTAL"
 alignWithAxis = "HEAD_GAP_CENTER"
 bodyLayout = "GRID"
 bodyLayoutElemConform = "WIDTH"
 bodyLayoutColsHJustify = "LEFT"
-bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleBigBold}"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
 headGapPx = 24.0
-headLetterStyleName = "{project.defaults.letterStyleSmall}"
+headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleBullets}"
+name = "{project.template.contentStyleBullets}"
 bodyLayout = "FLOW"
-bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
-headLetterStyleName = "{project.defaults.letterStyleSmall}"
+bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleLogos}"
+name = "{project.template.contentStyleLogos}"
 bodyLayout = "FLOW"
 bodyLayoutLineGapPx = 32.0
 bodyLayoutElemConform = "SQUARE"
 bodyLayoutHorizontalGapPx = 32.0
 bodyLayoutBodyWidthPx = 1200.0
 bodyLayoutSeparator = ""
-bodyLetterStyleName = "{project.defaults.letterStyleBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleBigBold}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleBlurb}"
+name = "{project.template.contentStyleBlurb}"
 bodyLayout = "PARAGRAPHS"
 bodyLayoutBodyWidthPx = 400.0
-bodyLetterStyleName = "{project.defaults.letterStyleBig}"
+bodyLetterStyleName = "{project.template.letterStyleBig}"
 
 [[contentStyle]]
-name = "{project.defaults.contentStyleCard}"
+name = "{project.template.contentStyleCard}"
 bodyLayout = "GRID"
 bodyLayoutElemConform = "WIDTH"
-bodyLetterStyleName = "{project.defaults.letterStyleCardBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleCardBigBold}"
 headGapPx = 32.0
-headLetterStyleName = "{project.defaults.letterStyleCardSmall}"
+headLetterStyleName = "{project.template.letterStyleCardSmall}"
 tailGapPx = 32.0
-tailLetterStyleName = "{project.defaults.letterStyleCardSmall}"
+tailLetterStyleName = "{project.template.letterStyleCardSmall}"
 
 [[letterStyle]]
-name = "{project.defaults.letterStyleBigBold}"
+name = "{project.template.letterStyleBigBold}"
 fontName = "Archivo Narrow Bold"
 heightPx = 32
 
 [[letterStyle]]
-name = "{project.defaults.letterStyleBig}"
+name = "{project.template.letterStyleBig}"
 fontName = "Archivo Narrow Regular"
 heightPx = 32
 
 [[letterStyle]]
-name = "{project.defaults.letterStyleSmall}"
+name = "{project.template.letterStyleSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = 24
 
 [[letterStyle]]
-name = "{project.defaults.letterStyleCardBigBold}"
+name = "{project.template.letterStyleCardBigBold}"
 fontName = "Archivo Narrow Bold"
 heightPx = 100
 
 [[letterStyle]]
-name = "{project.defaults.letterStyleCardSmall}"
+name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = 50

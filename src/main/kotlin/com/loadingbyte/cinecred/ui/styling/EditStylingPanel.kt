@@ -57,7 +57,7 @@ object EditStylingPanel : JPanel() {
     init {
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
-            STANDARD_GLOBAL, l10n("ui.styling.globalStyling"), GLOBE_ICON,
+            PRESET_GLOBAL, l10n("ui.styling.globalStyling"), GLOBE_ICON,
             onSelect = ::openGlobal
         )
         stylingTree.addListType(
@@ -90,15 +90,15 @@ object EditStylingPanel : JPanel() {
         val removeStyleButton = JButton(TRASH_ICON)
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
         addPageStyleButton.addActionListener {
-            stylingTree.addListElement(STANDARD_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
+            stylingTree.addListElement(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
             onChange()
         }
         addContentStyleButton.addActionListener {
-            stylingTree.addListElement(STANDARD_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
+            stylingTree.addListElement(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
             onChange()
         }
         addLetterStyleButton.addActionListener {
-            stylingTree.addListElement(STANDARD_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
+            stylingTree.addListElement(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
             onChange()
         }
         duplicateStyleButton.addActionListener {

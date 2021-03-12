@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.common.DeferredImage.Layer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Global
-import com.loadingbyte.cinecred.project.STANDARD_GLOBAL
+import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.ui.helper.DeferredImagePanel
 import kotlinx.collections.immutable.persistentListOf
 import java.awt.BorderLayout
@@ -33,7 +33,7 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
         add(imagePanel, BorderLayout.CENTER)
     }
 
-    private var global = STANDARD_GLOBAL
+    private var global = PRESET_GLOBAL
     private var drawnPage = DrawnPage(DeferredImage(), persistentListOf())
 
     fun setContent(global: Global, drawnPage: DrawnPage) {

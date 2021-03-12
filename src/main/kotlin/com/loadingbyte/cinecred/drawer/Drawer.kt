@@ -7,9 +7,9 @@ import java.awt.font.TextAttribute.*
 
 
 fun draw(project: Project): List<DrawnPage> {
-    // Generate AWT fonts that realize the configured letter styles, as well as the standard letter style, which
+    // Generate AWT fonts that realize the configured letter styles, as well as the placeholder letter style, which
     // functions as a fallback if the letter style name referenced in a content style is unknown.
-    val fonts = (project.styling.letterStyles + STANDARD_LETTER_STYLE)
+    val fonts = (project.styling.letterStyles + PLACEHOLDER_LETTER_STYLE)
         .associateWith { style -> createAWTFont(project.fonts, style) }
 
     return project.pages.map { page -> drawPage(project.styling.global, fonts, page) }

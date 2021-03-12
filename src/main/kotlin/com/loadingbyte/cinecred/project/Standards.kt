@@ -1,10 +1,11 @@
 package com.loadingbyte.cinecred.project
 
+import com.loadingbyte.cinecred.common.l10n
 import kotlinx.collections.immutable.persistentListOf
 import java.awt.Color
 
 
-val STANDARD_GLOBAL = Global(
+val PRESET_GLOBAL = Global(
     fps = FPS(24, 1),
     widthPx = 1920,
     heightPx = 1080,
@@ -13,7 +14,7 @@ val STANDARD_GLOBAL = Global(
 )
 
 
-val STANDARD_PAGE_STYLE = PageStyle(
+val PRESET_PAGE_STYLE = PageStyle(
     name = "???",
     behavior = PageBehavior.SCROLL,
     meltWithPrev = false,
@@ -26,7 +27,7 @@ val STANDARD_PAGE_STYLE = PageStyle(
 )
 
 
-val STANDARD_CONTENT_STYLE = ContentStyle(
+val PRESET_CONTENT_STYLE = ContentStyle(
     name = "???",
     spineOrientation = SpineOrientation.VERTICAL,
     alignWithAxis = AlignWithAxis.OVERALL_CENTER,
@@ -56,7 +57,7 @@ val STANDARD_CONTENT_STYLE = ContentStyle(
 )
 
 
-val STANDARD_LETTER_STYLE = LetterStyle(
+val PRESET_LETTER_STYLE = LetterStyle(
     name = "???",
     fontName = "Archivo Narrow Regular",
     heightPx = 32,
@@ -66,4 +67,21 @@ val STANDARD_LETTER_STYLE = LetterStyle(
     background = Color(0, 0, 0, 0),
     underline = false,
     strikethrough = false
+)
+
+
+val PLACEHOLDER_PAGE_STYLE = PRESET_PAGE_STYLE.copy(
+    name = l10n("project.placeholder")
+)
+
+
+val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
+    name = l10n("project.placeholder")
+)
+
+
+val PLACEHOLDER_LETTER_STYLE = PRESET_LETTER_STYLE.copy(
+    name = l10n("project.placeholder"),
+    foreground = Color.BLACK,
+    background = Color.ORANGE
 )

@@ -150,7 +150,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     val horGap = block.style.bodyLayoutHorizontalGapPx
 
-    val bodyLetterStyle = fonts.keys.find { it.name == block.style.bodyLetterStyleName } ?: STANDARD_LETTER_STYLE
+    val bodyLetterStyle = fonts.keys.find { it.name == block.style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = block.style.bodyLayoutSeparator
     val sepStyledStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle))
 

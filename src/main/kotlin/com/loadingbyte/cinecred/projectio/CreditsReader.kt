@@ -234,7 +234,7 @@ private class CreditsReader(
         concludeSegment(0f)
         concludeAlignBodyColsGroupsGroup()
         concludeAlignHeadTailGroupsGroup()
-        concludeStage(0f, STANDARD_PAGE_STYLE /* we just need to put some arbitrary thing in here */)
+        concludeStage(0f, PLACEHOLDER_PAGE_STYLE /* we just need to put some arbitrary thing in here */)
         concludePage()
 
         return pages
@@ -267,9 +267,9 @@ private class CreditsReader(
         }
 
         // If the first stage's style is not explicitly declared, issue a warning and fall back to the
-        // standard page style.
+        // placeholder page style.
         if (stageStyle == null) {
-            stageStyle = STANDARD_PAGE_STYLE
+            stageStyle = PLACEHOLDER_PAGE_STYLE
             if (styling.pageStyles.isEmpty())
                 table.log(row, null, WARN, l10n("projectIO.credits.noPageStylesAvailable"))
             else
@@ -343,9 +343,9 @@ private class CreditsReader(
         }
 
         // If no content style has been declared at the point where the first block starts, issue a warning and
-        // fall back to the standard content style.
+        // fall back to the placeholder content style.
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
-            contentStyle = STANDARD_CONTENT_STYLE
+            contentStyle = PLACEHOLDER_CONTENT_STYLE
             blockStyle = contentStyle
             if (styling.contentStyles.isEmpty())
                 table.log(row, null, WARN, l10n("projectIO.credits.noContentStylesAvailable"))
@@ -392,7 +392,7 @@ private class CreditsReader(
         )
 
         val str = table.getString(row, l10nColName) ?: return null
-        val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: STANDARD_LETTER_STYLE
+        val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: PLACEHOLDER_LETTER_STYLE
 
         var curLetterStyle = initLetterStyle
         val styledStr = mutableListOf<Pair<String, LetterStyle>>()

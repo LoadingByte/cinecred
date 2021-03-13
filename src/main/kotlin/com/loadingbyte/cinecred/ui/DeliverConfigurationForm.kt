@@ -93,7 +93,7 @@ object DeliverConfigurationForm : Form() {
     private val transparentBackgroundCheckBox = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),
-        isVisible = { formatComboBox.selectedItem in ALPHA_FORMATS }
+        isEnabled = { formatComboBox.selectedItem in ALPHA_FORMATS }
     )
 
     init {

@@ -22,17 +22,23 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     class VerifyResult(val severity: Severity, msg: String) : Exception(msg)
 
-    private class FormRow(val isVisibleFunc: (() -> Boolean)?) {
+    private class FormRow(val isVisibleFunc: (() -> Boolean)?, val isEnabledFunc: (() -> Boolean)?) {
         val components = mutableListOf<JComponent>()
         var doVerify: (() -> Unit)? = null
 
-        // We keep track of the form rows which are visible and have a verification error (not a warning).
+        // We keep track of the form rows which are visible, enabled, and have a verification error (not a warning).
         // One can use this information to determine whether the form is error-free.
         var isVisible = true
             set(value) {
                 field = value
                 for (comp in components)
                     comp.isVisible = value
+            }
+        var isEnabled = true
+            set(value) {
+                field = value
+                for (comp in components)
+                    comp.isEnabled = value
             }
         var isErroneous = false
     }
@@ -43,12 +49,16 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     var changeListener: ((Widget) -> Unit)? = null
 
-    fun <W : Widget> addWidget(label: String, widget: W, isVisible: (() -> Boolean)? = null): W {
+    fun <W : Widget> addWidget(
+        label: String, widget: W,
+        isVisible: (() -> Boolean)? = null,
+        isEnabled: (() -> Boolean)? = null
+    ): W {
         require(widget.components.size == widget.constraints.size)
 
         widget.changeListeners.add { onChange(widget) }
 
-        val formRow = FormRow(isVisible)
+        val formRow = FormRow(isVisible, isEnabled)
 
         val jLabel = JLabel(label)
         formRow.components.add(jLabel)
@@ -92,7 +102,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 for (comp in formRow.components)
                     comp.putClientProperty(OUTLINE, null)
                 try {
-                    verify()
+                    if (formRow.isVisible && formRow.isEnabled)
+                        verify()
                     verifyIconLabel.icon = null
                     verifyMsgArea.text = null
                 } catch (e: VerifyResult) {
@@ -150,11 +161,12 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         for (formRow in formRows) {
             formRow.doVerify?.invoke()
             formRow.isVisible = formRow.isVisibleFunc?.invoke() ?: true
+            formRow.isEnabled = formRow.isEnabledFunc?.invoke() ?: true
         }
         submitButton?.isEnabled = isErrorFree
     }
 
     val isErrorFree: Boolean
-        get() = formRows.all { !it.isVisible || !it.isErroneous }
+        get() = formRows.all { !it.isVisible || !it.isEnabled || !it.isErroneous }
 
 }

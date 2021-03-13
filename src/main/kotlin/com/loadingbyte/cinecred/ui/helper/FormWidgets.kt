@@ -258,7 +258,7 @@ class ComboBoxListWidget<E>(
     private val cbs = mutableListOf<JComboBox<E>>()
 
     init {
-        addBtn.addActionListener { selectedItems = selectedItems + items[0] }
+        addBtn.addActionListener { selectedItems = selectedItems + selectedItems.last() }
         delBtn.addActionListener { selectedItems = selectedItems.dropLast(1) }
     }
 

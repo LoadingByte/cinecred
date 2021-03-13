@@ -258,8 +258,11 @@ private class CreditsReader(
             vGapAccumulator = 0f
             isBlockConclusionMarked = false
 
-            // If we are not melting the just concluded stage with the next one, also conclude the page.
-            if (pageStages.lastOrNull()?.style?.meltWithNext != true && !newPageStyle.meltWithPrev) {
+            // If we are not melting the previous stage with the future one, concluded the stage and the current page.
+            val prevPageStyle = pageStages.lastOrNull()?.style
+            if (!(prevPageStyle?.behavior == PageBehavior.SCROLL && prevPageStyle.scrollMeltWithNext) &&
+                !(newPageStyle.behavior == PageBehavior.SCROLL && newPageStyle.scrollMeltWithPrev)
+            ) {
                 concludeAlignBodyColsGroupsGroup()
                 concludeAlignHeadTailGroupsGroup()
                 concludePage()

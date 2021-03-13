@@ -121,8 +121,9 @@ fun drawBodyImagesWithGridBodyLayout(
             x += colWidth + style.gridColGapPx
         }
 
-        // Ensure that the width of the body image is always correct.
+        // Ensure that the width and height of the body image are always correct.
         bodyImage.width = bodyImageWidth
+        bodyImage.height = thisBodyRowHeights.sum() + numBodyRows.getValue(block) * style.gridRowGapPx
 
         DrawnBody(bodyImage, thisBodyRowHeights.first(), thisBodyRowHeights.last())
     }
@@ -248,14 +249,15 @@ fun drawBodyImageWithFlowBodyLayout(
         // Advance to the next body line.
         y += bodyLineHeight + style.flowLineGapPx
     }
+    y -= style.flowLineGapPx
 
     // Draw guides that show the body's left an right edges.
-    val y2 = y - block.style.bodyLayoutLineGapPx
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, y2, layer = GUIDES)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, y2, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, y, layer = GUIDES)
 
-    // Ensure that the width of the body image is always correct.
+    // Ensure that the width and height of the body image are always correct.
     bodyImage.width = bodyImageWidth
+    bodyImage.height = y
 
     return DrawnBody(bodyImage, getBodyLineHeight(bodyLines.first()), getBodyLineHeight(bodyLines.last()))
 }

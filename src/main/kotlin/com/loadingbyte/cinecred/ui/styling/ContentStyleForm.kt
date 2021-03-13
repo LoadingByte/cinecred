@@ -9,9 +9,6 @@ import javax.swing.SpinnerNumberModel
 
 object ContentStyleForm : Form() {
 
-    private fun isGridOrFlow(layout: Any?) = layout == BodyLayout.GRID || layout == BodyLayout.FLOW
-    private fun isFlowOrParagraphs(layout: Any?) = layout == BodyLayout.FLOW || layout == BodyLayout.PARAGRAPHS
-
     private val nameWidget = addWidget(
         l10n("ui.styling.content.name"),
         StyleNameWidget()
@@ -23,11 +20,15 @@ object ContentStyleForm : Form() {
     private val spineOrientationWidget = addWidget(
         l10n("ui.styling.content.spineOrientation"),
         ComboBoxWidget(SpineOrientation.values().asList(), toString = ::l10nEnum),
-        isVisible = { hasHeadWidget.isSelected || hasTailWidget.isSelected }
+        isEnabled = { hasHeadWidget.isSelected || hasTailWidget.isSelected }
     )
     private val vMarginPxWidget = addWidget(
         l10n("ui.styling.content.vMarginPx"),
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f))
+    )
+    private val bodyLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.bodyLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable"))
     )
 
     init {
@@ -38,63 +39,100 @@ object ContentStyleForm : Form() {
         l10n("ui.styling.content.bodyLayout"),
         ComboBoxWidget(BodyLayout.values().asList(), toString = ::l10nEnum)
     )
-    private val bodyLayoutLineHJustifyWidget = addWidget(
-        l10n("ui.styling.content.lineHJustify"),
-        ComboBoxWidget(LineHJustify.values().asList(), toString = ::l10nEnum),
-        isVisible = { isFlowOrParagraphs(bodyLayoutWidget.selectedItem) }
+
+    private val gridElemBoxConformWidget = addWidget(
+        l10n("ui.styling.content.gridElemBoxConform"),
+        ComboBoxWidget(BodyElementBoxConform.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID }
     )
-    private val bodyLayoutColsHJustifyWidget = addWidget(
-        l10n("ui.styling.content.colsHJustify"),
+    private val gridElemHJustifyPerColWidget = addWidget(
+        l10n("ui.styling.content.gridElemHJustifyPerCol"),
         ComboBoxListWidget(HJustify.values().asList(), toString = ::l10nEnum),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID },
     )
-    private val bodyLayoutElemHJustifyWidget = addWidget(
-        l10n("ui.styling.content.elemHJustify"),
+    private val gridElemVJustifyWidget = addWidget(
+        l10n("ui.styling.content.gridElemVJustify"),
+        ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID },
+        isEnabled = {
+            gridElemHJustifyPerColWidget.selectedItems.size >= 2 || gridElemBoxConformWidget.selectedItem.let {
+                it == BodyElementBoxConform.HEIGHT || it == BodyElementBoxConform.WIDTH_AND_HEIGHT ||
+                        it == BodyElementBoxConform.SQUARE
+            }
+        }
+    )
+    private val gridRowGapPxWidget = addWidget(
+        l10n("ui.styling.content.gridRowGapPx"),
+        SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID }
+    )
+    private val gridColGapPxWidget = addWidget(
+        l10n("ui.styling.content.gridColGapPx"),
+        SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID },
+        isEnabled = { gridElemHJustifyPerColWidget.selectedItems.size >= 2 }
+    )
+
+    private val flowElemBoxConformWidget = addWidget(
+        l10n("ui.styling.content.flowElemBoxConform"),
+        ComboBoxWidget(BodyElementBoxConform.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
+    )
+    private val flowLineHJustifyWidget = addWidget(
+        l10n("ui.styling.content.flowLineHJustify"),
+        ComboBoxWidget(LineHJustify.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
+    )
+    private val flowElemHJustifyWidget = addWidget(
+        l10n("ui.styling.content.flowElemHJustify"),
         ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
-    private val bodyLayoutElemVJustifyWidget = addWidget(
-        l10n("ui.styling.content.elemVJustify"),
+    private val flowElemVJustifyWidget = addWidget(
+        l10n("ui.styling.content.flowElemVJustify"),
         ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
-        isVisible = { isGridOrFlow(bodyLayoutWidget.selectedItem) }
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
-    private val bodyLayoutElemConfWidget = addWidget(
-        l10n("ui.styling.content.elemConform"),
-        ComboBoxWidget(BodyElementConform.values().asList(), toString = ::l10nEnum),
-        isVisible = { isGridOrFlow(bodyLayoutWidget.selectedItem) }
+    private val flowLineWidthPxWidget = addWidget(
+        l10n("ui.styling.content.flowLineWidthPx"),
+        SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 10f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
-    private val bodyLayoutSeparatorWidget = addWidget(
-        l10n("ui.styling.content.separator"),
+    private val flowLineGapPxWidget = addWidget(
+        l10n("ui.styling.content.flowLineGapPx"),
+        SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
+    )
+    private val flowHGapPxWidget = addWidget(
+        l10n("ui.styling.content.flowHGapPx"),
+        SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
+    )
+    private val flowSeparatorWidget = addWidget(
+        l10n("ui.styling.content.flowSeparator"),
         TextWidget(grow = false),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
-    private val bodyLayoutBodyWidthPxWidget = addWidget(
-        l10n("ui.styling.content.bodyWidthPx"),
-        SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 10f)),
-        isVisible = { isFlowOrParagraphs(bodyLayoutWidget.selectedItem) }
+
+    private val paragraphsLineHJustifyWidget = addWidget(
+        l10n("ui.styling.content.paragraphsLineHJustify"),
+        ComboBoxWidget(LineHJustify.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.PARAGRAPHS }
     )
-    private val bodyLayoutParagraphGapPxWidget = addWidget(
-        l10n("ui.styling.content.paragraphGapPx"),
+    private val paragraphsLineWidthPxWidget = addWidget(
+        l10n("ui.styling.content.paragraphsLineWidthPx"),
+        SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 10f)),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.PARAGRAPHS }
+    )
+    private val paragraphsParaGapPxWidget = addWidget(
+        l10n("ui.styling.content.paragraphsParaGapPx"),
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.PARAGRAPHS }
     )
-    private val bodyLayoutLineGapPxWidget = addWidget(
-        l10n("ui.styling.content.lineGapPx"),
-        SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f))
-    )
-    private val bodyLayoutHorizontalGapPxWidget = addWidget(
-        l10n("ui.styling.content.horizontalGapPx"),
+    private val paragraphsLineGapPxWidget = addWidget(
+        l10n("ui.styling.content.paragraphsLineGapPx"),
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
-        isVisible = {
-            bodyLayoutWidget.selectedItem == BodyLayout.GRID &&
-                    bodyLayoutColsHJustifyWidget.selectedItems.size >= 2 ||
-                    bodyLayoutWidget.selectedItem == BodyLayout.FLOW
-        }
-    )
-
-    private val bodyLetterStyleWidget = addWidget(
-        l10n("ui.styling.content.bodyLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable"))
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.PARAGRAPHS }
     )
 
     init {
@@ -105,6 +143,11 @@ object ContentStyleForm : Form() {
         l10n("ui.styling.content.hasHead"),
         CheckBoxWidget()
     )
+    private val headLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.headLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
+        isVisible = { hasHeadWidget.isSelected }
+    )
     private val headHJustifyWidget = addWidget(
         l10n("ui.styling.content.headHJustify"),
         ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
@@ -113,16 +156,12 @@ object ContentStyleForm : Form() {
     private val headVJustifyWidget = addWidget(
         l10n("ui.styling.content.headVJustify"),
         ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
-        isVisible = { hasHeadWidget.isSelected && spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
+        isVisible = { hasHeadWidget.isSelected },
+        isEnabled = { spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
     )
     private val headGapPxWidget = addWidget(
         l10n("ui.styling.content.headGapPx"),
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
-        isVisible = { hasHeadWidget.isSelected }
-    )
-    private val headLetterStyleWidget = addWidget(
-        l10n("ui.styling.content.headLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
         isVisible = { hasHeadWidget.isSelected }
     )
 
@@ -134,6 +173,11 @@ object ContentStyleForm : Form() {
         l10n("ui.styling.content.hasTail"),
         CheckBoxWidget()
     )
+    private val tailLetterStyleWidget = addWidget(
+        l10n("ui.styling.content.tailLetterStyle"),
+        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
+        isVisible = { hasTailWidget.isSelected }
+    )
     private val tailHJustifyWidget = addWidget(
         l10n("ui.styling.content.tailHJustify"),
         ComboBoxWidget(HJustify.values().asList(), toString = ::l10nEnum),
@@ -142,16 +186,12 @@ object ContentStyleForm : Form() {
     private val tailVJustifyWidget = addWidget(
         l10n("ui.styling.content.tailVJustify"),
         ComboBoxWidget(VJustify.values().asList(), toString = ::l10nEnum),
-        isVisible = { hasTailWidget.isSelected && spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
+        isVisible = { hasTailWidget.isSelected },
+        isEnabled = { spineOrientationWidget.selectedItem == SpineOrientation.HORIZONTAL }
     )
     private val tailGapPxWidget = addWidget(
         l10n("ui.styling.content.tailGapPx"),
         SpinnerWidget(SpinnerNumberModel(0f, 0f, null, 1f)),
-        isVisible = { hasTailWidget.isSelected }
-    )
-    private val tailLetterStyleWidget = addWidget(
-        l10n("ui.styling.content.tailLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
         isVisible = { hasTailWidget.isSelected }
     )
 
@@ -164,28 +204,35 @@ object ContentStyleForm : Form() {
         spineOrientationWidget.selectedItem = style.spineOrientation
         alignWithAxisWidget.selectedItem = style.alignWithAxis
         vMarginPxWidget.value = style.vMarginPx
-        bodyLayoutWidget.selectedItem = style.bodyLayout
-        bodyLayoutLineGapPxWidget.value = style.bodyLayoutLineGapPx
-        bodyLayoutElemConfWidget.selectedItem = style.bodyLayoutElemConform
-        bodyLayoutElemVJustifyWidget.selectedItem = style.bodyLayoutElemVJustify
-        bodyLayoutHorizontalGapPxWidget.value = style.bodyLayoutHorizontalGapPx
-        bodyLayoutColsHJustifyWidget.selectedItems = style.bodyLayoutColsHJustify
-        bodyLayoutLineHJustifyWidget.selectedItem = style.bodyLayoutLineHJustify
-        bodyLayoutBodyWidthPxWidget.value = style.bodyLayoutBodyWidthPx
-        bodyLayoutElemHJustifyWidget.selectedItem = style.bodyLayoutElemHJustify
-        bodyLayoutSeparatorWidget.text = style.bodyLayoutSeparator
-        bodyLayoutParagraphGapPxWidget.value = style.bodyLayoutParagraphGapPx
         bodyLetterStyleWidget.selectedItem = style.bodyLetterStyleName
+        bodyLayoutWidget.selectedItem = style.bodyLayout
+        gridElemBoxConformWidget.selectedItem = style.gridElemBoxConform
+        gridElemHJustifyPerColWidget.selectedItems = style.gridElemHJustifyPerCol
+        gridElemVJustifyWidget.selectedItem = style.gridElemVJustify
+        gridRowGapPxWidget.value = style.gridRowGapPx
+        gridColGapPxWidget.value = style.gridColGapPx
+        flowElemBoxConformWidget.selectedItem = style.flowElemBoxConform
+        flowLineHJustifyWidget.selectedItem = style.flowLineHJustify
+        flowElemHJustifyWidget.selectedItem = style.flowElemHJustify
+        flowElemVJustifyWidget.selectedItem = style.flowElemVJustify
+        flowLineWidthPxWidget.value = style.flowLineWidthPx
+        flowLineGapPxWidget.value = style.flowLineGapPx
+        flowHGapPxWidget.value = style.flowHGapPx
+        flowSeparatorWidget.text = style.flowSeparator
+        paragraphsLineHJustifyWidget.selectedItem = style.paragraphsLineHJustify
+        paragraphsLineWidthPxWidget.value = style.paragraphsLineWidthPx
+        paragraphsParaGapPxWidget.value = style.paragraphsParaGapPx
+        paragraphsLineGapPxWidget.value = style.paragraphsLineGapPx
         hasHeadWidget.isSelected = style.hasHead
+        headLetterStyleWidget.selectedItem = style.headLetterStyleName
         headHJustifyWidget.selectedItem = style.headHJustify
         headVJustifyWidget.selectedItem = style.headVJustify
         headGapPxWidget.value = style.headGapPx
-        headLetterStyleWidget.selectedItem = style.headLetterStyleName
         hasTailWidget.isSelected = style.hasTail
+        tailLetterStyleWidget.selectedItem = style.tailLetterStyleName
         tailHJustifyWidget.selectedItem = style.tailHJustify
         tailVJustifyWidget.selectedItem = style.tailVJustify
         tailGapPxWidget.value = style.tailGapPx
-        tailLetterStyleWidget.selectedItem = style.tailLetterStyleName
     }
 
     private fun save() = ContentStyle(
@@ -193,28 +240,35 @@ object ContentStyleForm : Form() {
         spineOrientationWidget.selectedItem,
         alignWithAxisWidget.selectedItem,
         vMarginPxWidget.value as Float,
-        bodyLayoutWidget.selectedItem,
-        bodyLayoutLineGapPxWidget.value as Float,
-        bodyLayoutElemConfWidget.selectedItem,
-        bodyLayoutElemVJustifyWidget.selectedItem,
-        bodyLayoutHorizontalGapPxWidget.value as Float,
-        bodyLayoutColsHJustifyWidget.selectedItems.toImmutableList(),
-        bodyLayoutLineHJustifyWidget.selectedItem,
-        bodyLayoutBodyWidthPxWidget.value as Float,
-        bodyLayoutElemHJustifyWidget.selectedItem,
-        bodyLayoutSeparatorWidget.text,
-        bodyLayoutParagraphGapPxWidget.value as Float,
         bodyLetterStyleWidget.selectedItem,
+        bodyLayoutWidget.selectedItem,
+        gridElemBoxConformWidget.selectedItem,
+        gridElemHJustifyPerColWidget.selectedItems.toImmutableList(),
+        gridElemVJustifyWidget.selectedItem,
+        gridRowGapPxWidget.value as Float,
+        gridColGapPxWidget.value as Float,
+        flowElemBoxConformWidget.selectedItem,
+        flowLineHJustifyWidget.selectedItem,
+        flowElemHJustifyWidget.selectedItem,
+        flowElemVJustifyWidget.selectedItem,
+        flowLineWidthPxWidget.value as Float,
+        flowLineGapPxWidget.value as Float,
+        flowHGapPxWidget.value as Float,
+        flowSeparatorWidget.text,
+        paragraphsLineHJustifyWidget.selectedItem,
+        paragraphsLineWidthPxWidget.value as Float,
+        paragraphsParaGapPxWidget.value as Float,
+        paragraphsLineGapPxWidget.value as Float,
         hasHeadWidget.isSelected,
+        headLetterStyleWidget.selectedItem,
         headHJustifyWidget.selectedItem,
         headVJustifyWidget.selectedItem,
         headGapPxWidget.value as Float,
-        headLetterStyleWidget.selectedItem,
         hasTailWidget.isSelected,
+        tailLetterStyleWidget.selectedItem,
         tailHJustifyWidget.selectedItem,
         tailVJustifyWidget.selectedItem,
-        tailGapPxWidget.value as Float,
-        tailLetterStyleWidget.selectedItem
+        tailGapPxWidget.value as Float
     )
 
     fun open(

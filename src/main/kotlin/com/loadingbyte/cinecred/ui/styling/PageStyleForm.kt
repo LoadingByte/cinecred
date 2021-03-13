@@ -18,24 +18,14 @@ object PageStyleForm : Form() {
         l10n("ui.styling.page.name"),
         StyleNameWidget()
     )
-    private val behaviorWidget = addWidget(
-        l10n("ui.styling.page.behavior"),
-        ComboBoxWidget(PageBehavior.values().asList(), toString = ::l10nEnum)
-    )
-    private val meltWithPrevWidget = addWidget(
-        l10n("ui.styling.page.meltWithPrev"),
-        CheckBoxWidget(),
-        isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
-    )
-    private val meltWithNextWidget = addWidget(
-        l10n("ui.styling.page.meltWithNext"),
-        CheckBoxWidget(),
-        isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
-    )
     private val afterwardSlugFramesWidget = addWidget(
         l10n("ui.styling.page.afterwardSlugFrames"),
         SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
-        isVisible = { !(behaviorWidget.selectedItem == PageBehavior.SCROLL && meltWithNextWidget.isSelected) }
+        isEnabled = { !(behaviorWidget.selectedItem == PageBehavior.SCROLL && scrollMeltWithNextWidget.isSelected) }
+    )
+    private val behaviorWidget = addWidget(
+        l10n("ui.styling.page.behavior"),
+        ComboBoxWidget(PageBehavior.values().asList(), toString = ::l10nEnum)
     )
     private val cardDurationFramesWidget = addWidget(
         l10n("ui.styling.page.cardDurationFrames"),
@@ -51,6 +41,16 @@ object PageStyleForm : Form() {
         l10n("ui.styling.page.cardOutFrames"),
         SpinnerWidget(SpinnerNumberModel(0, 0, null, 1)),
         isVisible = { behaviorWidget.selectedItem == PageBehavior.CARD }
+    )
+    private val scrollMeltWithPrevWidget = addWidget(
+        l10n("ui.styling.page.scrollMeltWithPrev"),
+        CheckBoxWidget(),
+        isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
+    )
+    private val scrollMeltWithNextWidget = addWidget(
+        l10n("ui.styling.page.scrollMeltWithNext"),
+        CheckBoxWidget(),
+        isVisible = { behaviorWidget.selectedItem == PageBehavior.SCROLL }
     )
     private val scrollPxPerFrameWidget = addWidget(
         l10n("ui.styling.page.scrollPxPerFrame"),
@@ -70,25 +70,25 @@ object PageStyleForm : Form() {
 
     private fun load(style: PageStyle) {
         nameWidget.text = style.name
-        behaviorWidget.selectedItem = style.behavior
-        meltWithPrevWidget.isSelected = style.meltWithPrev
-        meltWithNextWidget.isSelected = style.meltWithNext
         afterwardSlugFramesWidget.value = style.afterwardSlugFrames
+        behaviorWidget.selectedItem = style.behavior
         cardDurationFramesWidget.value = style.cardDurationFrames
         cardFadeInFramesWidget.value = style.cardFadeInFrames
         cardFadeOutFramesWidget.value = style.cardFadeOutFrames
+        scrollMeltWithPrevWidget.isSelected = style.scrollMeltWithPrev
+        scrollMeltWithNextWidget.isSelected = style.scrollMeltWithNext
         scrollPxPerFrameWidget.value = style.scrollPxPerFrame
     }
 
     private fun save() = PageStyle(
         nameWidget.text.trim(),
-        behaviorWidget.selectedItem,
-        meltWithPrevWidget.isSelected,
-        meltWithNextWidget.isSelected,
         afterwardSlugFramesWidget.value as Int,
+        behaviorWidget.selectedItem,
         cardDurationFramesWidget.value as Int,
         cardFadeInFramesWidget.value as Int,
         cardFadeOutFramesWidget.value as Int,
+        scrollMeltWithPrevWidget.isSelected,
+        scrollMeltWithNextWidget.isSelected,
         scrollPxPerFrameWidget.value as Float
     )
 

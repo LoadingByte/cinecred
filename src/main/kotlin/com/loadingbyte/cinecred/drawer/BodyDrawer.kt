@@ -4,7 +4,7 @@ import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.project.BodyElementConform.*
+import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.awt.Font
 import java.awt.font.LineBreakMeasurer
 import java.text.*
@@ -34,7 +34,7 @@ fun drawBodyImagesWithGridBodyLayout(
     //                 Extras
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
-    val numBodyCols = style.bodyLayoutColsHJustify.size
+    val numBodyCols = style.gridElemHJustifyPerCol.size
     val bodyPartitions = blocks.associateWith { block -> partitionIntoCols(block.body, numBodyCols) }
     val numBodyRows = bodyPartitions.mapValues { (_, part) -> part[0].size }
 
@@ -67,7 +67,7 @@ fun drawBodyImagesWithGridBodyLayout(
 
     val bodyColWidths: List<Float>
     val bodyRowHeights: Map<Block, List<Float>>
-    when (style.bodyLayoutElemConform) {
+    when (style.gridElemBoxConform) {
         NOTHING -> {
             bodyColWidths = independentBodyColWidths()
             bodyRowHeights = independentBodyRowHeights()
@@ -91,7 +91,7 @@ fun drawBodyImagesWithGridBodyLayout(
         }
     }
 
-    val bodyImageWidth = (numBodyCols - 1) * style.bodyLayoutHorizontalGapPx + bodyColWidths.sum()
+    val bodyImageWidth = (numBodyCols - 1) * style.gridColGapPx + bodyColWidths.sum()
 
     // Step 2:
     // Draw a deferred image for the body of each block.
@@ -106,19 +106,19 @@ fun drawBodyImagesWithGridBodyLayout(
         val thisBodyRowHeights = bodyRowHeights.getValue(block)
         var x = 0f
         val bodyPartitionsIter = bodyPartitions.getValue(block).iterator()
-        for ((justifyCol, colWidth) in style.bodyLayoutColsHJustify.zip(bodyColWidths)) {
+        for ((justifyCol, colWidth) in style.gridElemHJustifyPerCol.zip(bodyColWidths)) {
             var y = 0f
             for ((bodyElem, rowHeight) in bodyPartitionsIter.next().zip(thisBodyRowHeights)) {
                 bodyImage.drawJustifiedBodyElem(
-                    fonts, bodyElem, justifyCol, style.bodyLayoutElemVJustify, x, y, colWidth, rowHeight
+                    fonts, bodyElem, justifyCol, style.gridElemVJustify, x, y, colWidth, rowHeight
                 )
                 // Draw a guide that shows the edges of the body element space.
                 bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, layer = GUIDES)
                 // Advance to the next line in the current column.
-                y += rowHeight + style.bodyLayoutLineGapPx
+                y += rowHeight + style.gridRowGapPx
             }
             // Advance to the next column.
-            x += colWidth + style.bodyLayoutHorizontalGapPx
+            x += colWidth + style.gridColGapPx
         }
 
         // Ensure that the width of the body image is always correct.
@@ -145,13 +145,14 @@ fun drawBodyImageWithFlowBodyLayout(
     fonts: Map<LetterStyle, Font>,
     block: Block
 ): DrawnBody {
+    val style = block.style
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow body layout".
-    require(block.style.bodyLayout == BodyLayout.FLOW)
+    require(style.bodyLayout == BodyLayout.FLOW)
 
-    val horGap = block.style.bodyLayoutHorizontalGapPx
+    val horGap = style.flowHGapPx
 
-    val bodyLetterStyle = fonts.keys.find { it.name == block.style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
-    val sepStr = block.style.bodyLayoutSeparator
+    val bodyLetterStyle = fonts.keys.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+    val sepStr = style.flowSeparator
     val sepStyledStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle))
 
     // Find the maximum width resp. height over all body elements.
@@ -161,13 +162,13 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
-    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx
-        .coerceAtLeast(if (block.style.bodyLayoutElemConform == SQUARE) maxElemSideLength else maxElemWidth)
+    val bodyImageWidth = style.flowLineWidthPx
+        .coerceAtLeast(if (style.flowElemBoxConform == SQUARE) maxElemSideLength else maxElemWidth)
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
     val bodyLines = partitionIntoLines(block.body, bodyImageWidth, horGap) { bodyElem ->
-        when (block.style.bodyLayoutElemConform) {
+        when (style.flowElemBoxConform) {
             NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
             WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
             SQUARE -> maxElemSideLength
@@ -176,7 +177,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // We will later use this function to find the height of a specific body line.
     fun getBodyLineHeight(bodyLine: List<BodyElement>) =
-        when (block.style.bodyLayoutElemConform) {
+        when (style.flowElemBoxConform) {
             NOTHING, WIDTH -> bodyLine.maxOf { bodyElem -> bodyElem.getHeight() }
             HEIGHT, WIDTH_AND_HEIGHT -> maxElemHeight
             SQUARE -> maxElemSideLength
@@ -189,7 +190,7 @@ fun drawBodyImageWithFlowBodyLayout(
     for (bodyLine in bodyLines) {
         // Determine the width of all rigid elements in the body line, that is, the total width of all body elements
         // and separator strings.
-        val totalRigidWidth = when (block.style.bodyLayoutElemConform) {
+        val totalRigidWidth = when (style.flowElemBoxConform) {
             NOTHING, HEIGHT -> bodyLine.sumByFloat { bodyElem -> bodyElem.getWidth(fonts) }
             WIDTH, WIDTH_AND_HEIGHT -> bodyLine.size * maxElemWidth
             SQUARE -> bodyLine.size * maxElemSideLength
@@ -197,7 +198,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
         // such that the body line fills the whole width of the body image.
-        val horGlue = if (block.style.bodyLayoutLineHJustify != LineHJustify.FULL) 0f else
+        val horGlue = if (style.flowLineHJustify != LineHJustify.FULL) 0f else
             (bodyImageWidth - totalRigidWidth) / (bodyLine.size - 1) - horGap
 
         // Find the filled width as well as the height of the current body line.
@@ -207,7 +208,7 @@ fun drawBodyImageWithFlowBodyLayout(
         // Find the x coordinate of the first body element depending on the justification.
         // For left or full justification, we start at the leftmost position.
         // For center or right justification, we start such that the body line is centered or right-justified.
-        var x = when (block.style.bodyLayoutLineHJustify) {
+        var x = when (style.flowLineHJustify) {
             LineHJustify.LEFT, LineHJustify.FULL -> 0f
             LineHJustify.CENTER -> (bodyImageWidth - bodyLineWidth) / 2f
             LineHJustify.RIGHT -> bodyImageWidth - bodyLineWidth
@@ -215,7 +216,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Actually draw the body line using the measurements from above.
         for ((idx, bodyElem) in bodyLine.withIndex()) {
-            val areaWidth = when (block.style.bodyLayoutElemConform) {
+            val areaWidth = when (style.flowElemBoxConform) {
                 NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
                 WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
                 SQUARE -> maxElemSideLength
@@ -223,7 +224,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
-                fonts, bodyElem, block.style.bodyLayoutElemHJustify, block.style.bodyLayoutElemVJustify, x, y,
+                fonts, bodyElem, style.flowElemHJustify, style.flowElemVJustify, x, y,
                 areaWidth, bodyLineHeight,
             )
 
@@ -236,7 +237,7 @@ fun drawBodyImageWithFlowBodyLayout(
                 // Draw the separator.
                 if (sepStyledStr != null)
                     bodyImage.drawJustifiedStyledString(
-                        fonts, sepStyledStr, HJustify.CENTER, block.style.bodyLayoutElemVJustify, x, y,
+                        fonts, sepStyledStr, HJustify.CENTER, style.flowElemVJustify, x, y,
                         horGap + horGlue, bodyLineHeight
                     )
                 // Advance to the next element on the line.
@@ -245,7 +246,7 @@ fun drawBodyImageWithFlowBodyLayout(
         }
 
         // Advance to the next body line.
-        y += bodyLineHeight + block.style.bodyLayoutLineGapPx
+        y += bodyLineHeight + style.flowLineGapPx
     }
 
     // Draw guides that show the body's left an right edges.
@@ -301,14 +302,15 @@ fun drawBodyImageWithParagraphsBodyLayout(
     fonts: Map<LetterStyle, Font>,
     block: Block
 ): DrawnBody {
+    val style = block.style
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the
     // "paragraphs body layout".
-    require(block.style.bodyLayout == BodyLayout.PARAGRAPHS)
+    require(style.bodyLayout == BodyLayout.PARAGRAPHS)
 
-    val bodyImageWidth = block.style.bodyLayoutBodyWidthPx
+    val bodyImageWidth = style.paragraphsLineWidthPx
 
     // Convert lineHJustify to an appropriate HJustify which may be used in some cases down below.
-    val hJustify = when (block.style.bodyLayoutLineHJustify) {
+    val hJustify = when (style.paragraphsLineHJustify) {
         LineHJustify.LEFT -> HJustify.LEFT
         LineHJustify.CENTER, LineHJustify.FULL -> HJustify.CENTER
         LineHJustify.RIGHT -> HJustify.RIGHT
@@ -340,7 +342,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
                 val lineStyledStr = bodyElem.str.substring(lineStartPos, lineEndPos).trim()
 
                 // Case 1a: Full justification.
-                if (block.style.bodyLayoutLineHJustify == LineHJustify.FULL)
+                if (style.paragraphsLineHJustify == LineHJustify.FULL)
                     bodyImage.drawStyledString(fonts, lineStyledStr, 0f, y, justificationWidth = bodyImageWidth)
                 // Case 1b: Left, center, or right justification.
                 else
@@ -348,7 +350,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
                 // Advance to the next line.
                 val lineHeight = lineStyledStr.getHeight().toFloat()
-                y += lineHeight + block.style.bodyLayoutLineGapPx
+                y += lineHeight + style.paragraphsLineGapPx
 
                 recordBodyRowHeight(lineHeight)
             }
@@ -362,7 +364,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
         }
 
         // Advance to the next paragraph.
-        y += block.style.bodyLayoutParagraphGapPx
+        y += style.paragraphsParaGapPx
     }
 
     // Draw guides that show the body's left an right edges.

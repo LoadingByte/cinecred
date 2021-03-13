@@ -39,13 +39,13 @@ private fun readGlobal(map: Map<*, *>) = Global(
 
 private fun readPageStyle(map: Map<*, *>) = PageStyle(
     map.get("name", "!! NAME MISSING !!") { this },
-    map.get("behavior", PRESET_PAGE_STYLE.behavior) { toEnum() },
-    map.get("meltWithPrev", PRESET_PAGE_STYLE.meltWithPrev) { toBoolean() },
-    map.get("meltWithNext", PRESET_PAGE_STYLE.meltWithNext) { toBoolean() },
     map.get("afterwardSlugFrames", PRESET_PAGE_STYLE.afterwardSlugFrames) { toInt(nonNeg = true) },
+    map.get("behavior", PRESET_PAGE_STYLE.behavior) { toEnum() },
     map.get("cardDurationFrames", PRESET_PAGE_STYLE.cardDurationFrames) { toInt(nonNeg = true) },
     map.get("cardFadeInFrames", PRESET_PAGE_STYLE.cardFadeInFrames) { toInt(nonNeg = true) },
     map.get("cardFadeOutFrames", PRESET_PAGE_STYLE.cardFadeOutFrames) { toInt(nonNeg = true) },
+    map.get("scrollMeltWithPrev", PRESET_PAGE_STYLE.scrollMeltWithPrev) { toBoolean() },
+    map.get("scrollMeltWithNext", PRESET_PAGE_STYLE.scrollMeltWithNext) { toBoolean() },
     map.get("scrollPxPerFrame", PRESET_PAGE_STYLE.scrollPxPerFrame) { toFiniteFloat(nonNeg = true, non0 = true) }
 )
 
@@ -55,36 +55,42 @@ private fun readContentStyle(map: Map<*, *>) = ContentStyle(
     map.get("spineOrientation", PRESET_CONTENT_STYLE.spineOrientation) { toEnum() },
     map.get("alignWithAxis", PRESET_CONTENT_STYLE.alignWithAxis) { toEnum() },
     map.get("vMarginPx", PRESET_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNeg = true) },
+    map.get("bodyLetterStyleName", PRESET_CONTENT_STYLE.bodyLetterStyleName) { this },
     map.get("bodyLayout", PRESET_CONTENT_STYLE.bodyLayout) { toEnum() },
-    map.get("bodyLayoutLineGapPx", PRESET_CONTENT_STYLE.bodyLayoutLineGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("bodyLayoutElemConform", PRESET_CONTENT_STYLE.bodyLayoutElemConform) { toEnum() },
-    map.get("bodyLayoutElemVJustify", PRESET_CONTENT_STYLE.bodyLayoutElemVJustify) { toEnum() },
-    map.get("bodyLayoutHorizontalGapPx", PRESET_CONTENT_STYLE.bodyLayoutHorizontalGapPx) {
-        toFiniteFloat(nonNeg = true)
-    },
-    map.get("bodyLayoutColsHJustify", PRESET_CONTENT_STYLE.bodyLayoutColsHJustify) {
+    map.get("gridElemBoxConform", PRESET_CONTENT_STYLE.gridElemBoxConform) { toEnum() },
+    map.get("gridElemHJustifyPerCol", PRESET_CONTENT_STYLE.gridElemHJustifyPerCol) {
         toEnumList<HJustify>().toImmutableList()
     },
-    map.get("bodyLayoutLineHJustify", PRESET_CONTENT_STYLE.bodyLayoutLineHJustify) { toEnum() },
-    map.get("bodyLayoutBodyWidthPx", PRESET_CONTENT_STYLE.bodyLayoutBodyWidthPx) {
-        toFiniteFloat(nonNeg = true, non0 = true)
+    map.get("gridElemVJustify", PRESET_CONTENT_STYLE.gridElemVJustify) { toEnum() },
+    map.get("gridRowGapPx", PRESET_CONTENT_STYLE.gridRowGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("gridColGapPx", PRESET_CONTENT_STYLE.gridColGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("flowElemBoxConform", PRESET_CONTENT_STYLE.flowElemBoxConform) { toEnum() },
+    map.get("flowLineHJustify", PRESET_CONTENT_STYLE.flowLineHJustify) { toEnum() },
+    map.get("flowElemHJustify", PRESET_CONTENT_STYLE.flowElemHJustify) { toEnum() },
+    map.get("flowElemVJustify", PRESET_CONTENT_STYLE.flowElemVJustify) { toEnum() },
+    map.get("flowLineWidthPx", PRESET_CONTENT_STYLE.flowLineWidthPx) { toFiniteFloat(nonNeg = true, non0 = true) },
+    map.get("flowLineGapPx", PRESET_CONTENT_STYLE.flowLineGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("flowHGapPx", PRESET_CONTENT_STYLE.flowHGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("flowSeparator", PRESET_CONTENT_STYLE.flowSeparator) { this },
+    map.get("paragraphsLineHJustify", PRESET_CONTENT_STYLE.paragraphsLineHJustify) { toEnum() },
+    map.get("paragraphsLineWidthPx", PRESET_CONTENT_STYLE.paragraphsLineWidthPx) {
+        toFiniteFloat(
+            nonNeg = true,
+            non0 = true
+        )
     },
-    map.get("bodyLayoutElemHJustify", PRESET_CONTENT_STYLE.bodyLayoutElemHJustify) { toEnum() },
-    map.get("bodyLayoutSeparator", PRESET_CONTENT_STYLE.bodyLayoutSeparator) { this },
-    map.get("bodyLayoutParagraphGapPx", PRESET_CONTENT_STYLE.bodyLayoutParagraphGapPx) {
-        toFiniteFloat(nonNeg = true)
-    },
-    map.get("bodyLetterStyleName", PRESET_CONTENT_STYLE.bodyLetterStyleName) { this },
-    map.keys.any { "head" in (it as String) },
+    map.get("paragraphsParaGapPx", PRESET_CONTENT_STYLE.paragraphsParaGapPx) { toFiniteFloat(nonNeg = true) },
+    map.get("paragraphsLineGapPx", PRESET_CONTENT_STYLE.paragraphsLineGapPx) { toFiniteFloat(nonNeg = true) },
+    map.keys.any { (it as String).startsWith("head") },
+    map.get("headLetterStyleName", PRESET_CONTENT_STYLE.headLetterStyleName) { this },
     map.get("headHJustify", PRESET_CONTENT_STYLE.headHJustify) { toEnum() },
     map.get("headVJustify", PRESET_CONTENT_STYLE.headVJustify) { toEnum() },
     map.get("headGapPx", PRESET_CONTENT_STYLE.headGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("headLetterStyleName", PRESET_CONTENT_STYLE.headLetterStyleName) { this },
-    map.keys.any { "tail" in (it as String) },
+    map.keys.any { (it as String).startsWith("tail") },
+    map.get("tailLetterStyleName", PRESET_CONTENT_STYLE.tailLetterStyleName) { this },
     map.get("tailHJustify", PRESET_CONTENT_STYLE.tailHJustify) { toEnum() },
     map.get("tailVJustify", PRESET_CONTENT_STYLE.tailVJustify) { toEnum() },
-    map.get("tailGapPx", PRESET_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("tailLetterStyleName", PRESET_CONTENT_STYLE.tailLetterStyleName) { this }
+    map.get("tailGapPx", PRESET_CONTENT_STYLE.tailGapPx) { toFiniteFloat(nonNeg = true) }
 )
 
 

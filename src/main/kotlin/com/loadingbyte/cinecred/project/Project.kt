@@ -39,13 +39,13 @@ data class FPS(val numerator: Int, val denominator: Int) {
 
 data class PageStyle(
     val name: String,
-    val behavior: PageBehavior,
-    val meltWithPrev: Boolean,
-    val meltWithNext: Boolean,
     val afterwardSlugFrames: Int,
+    val behavior: PageBehavior,
     val cardDurationFrames: Int,
     val cardFadeInFrames: Int,
     val cardFadeOutFrames: Int,
+    val scrollMeltWithPrev: Boolean,
+    val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Float
 )
 
@@ -58,35 +58,35 @@ data class ContentStyle(
     val spineOrientation: SpineOrientation,
     val alignWithAxis: AlignWithAxis,
     val vMarginPx: Float,
-    val bodyLayout: BodyLayout,
-    // Body layouts: Grid, Flow, Paragraphs
-    val bodyLayoutLineGapPx: Float,
-    // Body layouts: Grid, Flow
-    val bodyLayoutElemConform: BodyElementConform,
-    val bodyLayoutElemVJustify: VJustify,
-    val bodyLayoutHorizontalGapPx: Float,
-    // Body layout: Grid
-    val bodyLayoutColsHJustify: ImmutableList<HJustify>,
-    // Body layouts: Flow, Paragraph
-    val bodyLayoutLineHJustify: LineHJustify,
-    val bodyLayoutBodyWidthPx: Float,
-    // Body layout: Flow
-    val bodyLayoutElemHJustify: HJustify,
-    val bodyLayoutSeparator: String,
-    // Body layout: Paragraphs
-    val bodyLayoutParagraphGapPx: Float,
-    // End of body layout settings.
     val bodyLetterStyleName: String,
+    val bodyLayout: BodyLayout,
+    val gridElemBoxConform: BodyElementBoxConform,
+    val gridElemHJustifyPerCol: ImmutableList<HJustify>,
+    val gridElemVJustify: VJustify,
+    val gridRowGapPx: Float,
+    val gridColGapPx: Float,
+    val flowElemBoxConform: BodyElementBoxConform,
+    val flowLineHJustify: LineHJustify,
+    val flowElemHJustify: HJustify,
+    val flowElemVJustify: VJustify,
+    val flowLineWidthPx: Float,
+    val flowLineGapPx: Float,
+    val flowHGapPx: Float,
+    val flowSeparator: String,
+    val paragraphsLineHJustify: LineHJustify,
+    val paragraphsLineWidthPx: Float,
+    val paragraphsParaGapPx: Float,
+    val paragraphsLineGapPx: Float,
     val hasHead: Boolean,
+    val headLetterStyleName: String,
     val headHJustify: HJustify,
     val headVJustify: VJustify,
     val headGapPx: Float,
-    val headLetterStyleName: String,
     val hasTail: Boolean,
+    val tailLetterStyleName: String,
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
-    val tailGapPx: Float,
-    val tailLetterStyleName: String
+    val tailGapPx: Float
 )
 
 
@@ -105,7 +105,7 @@ enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL }
-enum class BodyElementConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
+enum class BodyElementBoxConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
 
 
 data class LetterStyle(

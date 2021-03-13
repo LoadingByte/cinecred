@@ -8,58 +8,58 @@ behavior = "SCROLL"
 
 [[contentStyle]]
 name = "{project.template.contentStyleHeading}"
-bodyLayout = "GRID"
 bodyLetterStyleName = "{project.template.letterStyleBig}"
+bodyLayout = "GRID"
 
 [[contentStyle]]
 name = "{project.template.contentStyleSubheading}"
-bodyLayout = "GRID"
 bodyLetterStyleName = "{project.template.letterStyleSmall}"
+bodyLayout = "GRID"
 
 [[contentStyle]]
 name = "{project.template.contentStyleGutter}"
 spineOrientation = "HORIZONTAL"
 alignWithAxis = "HEAD_GAP_CENTER"
-bodyLayout = "GRID"
-bodyLayoutElemConform = "WIDTH"
-bodyLayoutColsHJustify = "LEFT"
 bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLayout = "GRID"
+gridElemBoxConform = "WIDTH"
+gridElemHJustifyPerCol = "LEFT"
+headLetterStyleName = "{project.template.letterStyleSmall}"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
 headGapPx = 24.0
-headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
 name = "{project.template.contentStyleBullets}"
-bodyLayout = "FLOW"
 bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLayout = "FLOW"
 headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
 name = "{project.template.contentStyleLogos}"
-bodyLayout = "FLOW"
-bodyLayoutLineGapPx = 32.0
-bodyLayoutElemConform = "SQUARE"
-bodyLayoutHorizontalGapPx = 32.0
-bodyLayoutBodyWidthPx = 1200.0
-bodyLayoutSeparator = ""
 bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLayout = "FLOW"
+flowElemBoxConform = "SQUARE"
+flowLineWidthPx = 1200.0
+flowLineGapPx = 32.0
+flowHGapPx = 32.0
+flowSeparator = ""
 
 [[contentStyle]]
 name = "{project.template.contentStyleBlurb}"
-bodyLayout = "PARAGRAPHS"
-bodyLayoutBodyWidthPx = 400.0
 bodyLetterStyleName = "{project.template.letterStyleBig}"
+bodyLayout = "PARAGRAPHS"
+paragraphsLineWidthPx = 400.0
 
 [[contentStyle]]
 name = "{project.template.contentStyleCard}"
-bodyLayout = "GRID"
-bodyLayoutElemConform = "WIDTH"
 bodyLetterStyleName = "{project.template.letterStyleCardBigBold}"
-headGapPx = 32.0
+bodyLayout = "GRID"
+gridElemBoxConform = "WIDTH"
 headLetterStyleName = "{project.template.letterStyleCardSmall}"
-tailGapPx = 32.0
+headGapPx = 32.0
 tailLetterStyleName = "{project.template.letterStyleCardSmall}"
+tailGapPx = 32.0
 
 [[letterStyle]]
 name = "{project.template.letterStyleBigBold}"

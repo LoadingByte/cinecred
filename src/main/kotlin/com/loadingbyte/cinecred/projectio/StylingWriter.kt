@@ -27,28 +27,22 @@ private fun writeGlobal(global: Global) = mapOf(
 
 
 private fun writePageStyle(style: PageStyle): Map<String, Any> {
-    val toml = mutableMapOf(
+    val toml = mutableMapOf<String, Any>(
         "name" to style.name,
-        "behavior" to style.behavior.name,
-        "meltWithPrev" to style.meltWithPrev,
-        "meltWithNext" to style.meltWithNext,
         "afterwardSlugFrames" to style.afterwardSlugFrames,
-        "cardDurationFrames" to style.cardDurationFrames,
-        "cardFadeInFrames" to style.cardFadeInFrames,
-        "cardFadeOutFrames" to style.cardFadeOutFrames,
-        "scrollPxPerFrame" to style.scrollPxPerFrame
+        "behavior" to style.behavior.name
     )
-    if (style.behavior == PageBehavior.CARD) {
-        toml.remove("meltWithPrev")
-        toml.remove("meltWithNext")
-        toml.remove("scrollPxPerFrame")
-    }
-    if (style.behavior == PageBehavior.SCROLL) {
-        toml.remove("cardDurationFrames")
-        toml.remove("cardFadeInFrames")
-        toml.remove("cardFadeOutFrames")
-        if (style.meltWithNext)
-            toml.remove("afterwardSlugFrames")
+    when (style.behavior) {
+        PageBehavior.CARD -> toml.putAll(
+            "cardDurationFrames" to style.cardDurationFrames,
+            "cardFadeInFrames" to style.cardFadeInFrames,
+            "cardFadeOutFrames" to style.cardFadeOutFrames
+        )
+        PageBehavior.SCROLL -> toml.putAll(
+            "scrollMeltWithPrev" to style.scrollMeltWithPrev,
+            "scrollMeltWithNext" to style.scrollMeltWithNext,
+            "scrollPxPerFrame" to style.scrollPxPerFrame
+        )
     }
     return toml
 }
@@ -60,66 +54,48 @@ private fun writeContentStyle(style: ContentStyle): Map<String, Any> {
         "spineOrientation" to style.spineOrientation.name,
         "alignWithAxis" to style.alignWithAxis.name,
         "vMarginPx" to style.vMarginPx,
-        "bodyLayout" to style.bodyLayout.name,
-        "bodyLayoutLineGapPx" to style.bodyLayoutLineGapPx,
-        "bodyLayoutElemConform" to style.bodyLayoutElemConform.name,
-        "bodyLayoutElemVJustify" to style.bodyLayoutElemVJustify.name,
-        "bodyLayoutHorizontalGapPx" to style.bodyLayoutHorizontalGapPx,
-        "bodyLayoutColsHJustify" to style.bodyLayoutColsHJustify.toString2(),
-        "bodyLayoutLineHJustify" to style.bodyLayoutLineHJustify.name,
-        "bodyLayoutBodyWidthPx" to style.bodyLayoutBodyWidthPx,
-        "bodyLayoutElemHJustify" to style.bodyLayoutElemHJustify.name,
-        "bodyLayoutSeparator" to style.bodyLayoutSeparator,
-        "bodyLayoutParagraphGapPx" to style.bodyLayoutParagraphGapPx,
         "bodyLetterStyleName" to style.bodyLetterStyleName,
-        "headHJustify" to style.headHJustify.name,
-        "headVJustify" to style.headVJustify.name,
-        "headGapPx" to style.headGapPx,
-        "headLetterStyleName" to style.headLetterStyleName,
-        "tailHJustify" to style.tailHJustify.name,
-        "tailVJustify" to style.tailVJustify.name,
-        "tailGapPx" to style.tailGapPx,
-        "tailLetterStyleName" to style.tailLetterStyleName
+        "bodyLayout" to style.bodyLayout.name
     )
-    if (style.spineOrientation == SpineOrientation.VERTICAL) {
-        toml.remove("headVJustify")
-        toml.remove("tailVJustify")
+    when (style.bodyLayout) {
+        BodyLayout.GRID -> toml.putAll(
+            "gridElemBoxConform" to style.gridElemBoxConform.name,
+            "gridElemHJustifyPerCol" to style.gridElemHJustifyPerCol.toString2(),
+            "gridElemVJustify" to style.gridElemVJustify.name,
+            "gridRowGapPx" to style.gridRowGapPx,
+            "gridColGapPx" to style.gridColGapPx
+        )
+        BodyLayout.FLOW -> toml.putAll(
+            "flowElemBoxConform" to style.flowElemBoxConform.name,
+            "flowLineHJustify" to style.flowLineHJustify.name,
+            "flowElemHJustify" to style.flowElemHJustify.name,
+            "flowElemVJustify" to style.flowElemVJustify.name,
+            "flowLineWidthPx" to style.flowLineWidthPx,
+            "flowLineGapPx" to style.flowLineGapPx,
+            "flowHGapPx" to style.flowHGapPx,
+            "flowSeparator" to style.flowSeparator
+        )
+        BodyLayout.PARAGRAPHS -> toml.putAll(
+            "paragraphsLineHJustify" to style.paragraphsLineHJustify.name,
+            "paragraphsLineWidthPx" to style.paragraphsLineWidthPx,
+            "paragraphsParaGapPx" to style.paragraphsParaGapPx,
+            "paragraphsLineGapPx" to style.paragraphsLineGapPx
+        )
     }
-    if (style.bodyLayout == BodyLayout.GRID) {
-        toml.remove("bodyLayoutLineHJustify")
-        toml.remove("bodyLayoutBodyWidthPx")
-        toml.remove("bodyLayoutElemHJustify")
-        toml.remove("bodyLayoutSeparator")
-        toml.remove("bodyLayoutParagraphGapPx")
-        if (style.bodyLayoutColsHJustify.size < 2)
-            toml.remove("bodyLayoutHorizontalGapPx")
-    }
-    if (style.bodyLayout == BodyLayout.FLOW) {
-        toml.remove("bodyLayoutColsHJustify")
-        toml.remove("bodyLayoutParagraphGapPx")
-    }
-    if (style.bodyLayout == BodyLayout.PARAGRAPHS) {
-        toml.remove("bodyLayoutElemConform")
-        toml.remove("bodyLayoutElemVJustify")
-        toml.remove("bodyLayoutHorizontalGapPx")
-        toml.remove("bodyLayoutColsHJustify")
-        toml.remove("bodyLayoutElemHJustify")
-        toml.remove("bodyLayoutSeparator")
-    }
-    if (!style.hasHead && !style.hasTail)
-        toml.remove("spineOrientation")
-    if (!style.hasHead) {
-        toml.remove("headHJustify")
-        toml.remove("headVJustify")
-        toml.remove("headLetterStyleName")
-        toml.remove("headGapPx")
-    }
-    if (!style.hasTail) {
-        toml.remove("tailHJustify")
-        toml.remove("tailVJustify")
-        toml.remove("tailLetterStyleName")
-        toml.remove("tailGapPx")
-    }
+    if (style.hasHead)
+        toml.putAll(
+            "headLetterStyleName" to style.headLetterStyleName,
+            "headHJustify" to style.headHJustify.name,
+            "headVJustify" to style.headVJustify.name,
+            "headGapPx" to style.headGapPx,
+        )
+    if (style.hasTail)
+        toml.putAll(
+            "tailLetterStyleName" to style.tailLetterStyleName,
+            "tailHJustify" to style.tailHJustify.name,
+            "tailVJustify" to style.tailVJustify.name,
+            "tailGapPx" to style.tailGapPx
+        )
     return toml
 }
 
@@ -135,3 +111,8 @@ private fun writeLetterStyle(style: LetterStyle) = mapOf(
     "underline" to style.underline,
     "strikethrough" to style.strikethrough
 )
+
+
+private fun <K, V> MutableMap<K, V>.putAll(vararg pairs: Pair<K, V>) {
+    putAll(pairs)
+}

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.project.DrawnPage
@@ -19,8 +20,6 @@ import kotlin.math.roundToInt
 
 
 object VideoPanel : JPanel() {
-
-    private val G_CFG = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
 
     private val playButton = JToggleButton(PLAY_ICON).also { playButton ->
         var timer: Timer? = null
@@ -114,7 +113,7 @@ object VideoPanel : JPanel() {
         makeVideoDrawerJobSlot.submit {
             val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, previewMode = true) {
                 override fun createIntermediateImage(width: Int, height: Int) =
-                    G_CFG.createCompatibleImage(width, height)
+                    gCfg.createCompatibleImage(width, height)
             }
             SwingUtilities.invokeLater {
                 this.videoDrawer = videoDrawer

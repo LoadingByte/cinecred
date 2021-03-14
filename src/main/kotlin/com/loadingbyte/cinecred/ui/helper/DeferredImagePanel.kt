@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.DeferredImage.Layer
-import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.common.withG2
-import com.loadingbyte.cinecred.common.withNewG2
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import net.miginfocom.swing.MigLayout
@@ -250,8 +247,6 @@ class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0
 
         private const val SCROLLBAR_MULT = 1024f
 
-        private val G_CFG = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
-
         // We use this external static method to absolutely ensure all variables have been captured.
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
@@ -262,7 +257,7 @@ class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0
                 // Use max(1, ...) to ensure that the raster image width doesn't drop to 0.
                 val matWidth = max(1, (imageScaling * image.width).roundToInt())
                 val matHeight = max(1, (imageScaling * image.height).roundToInt())
-                val materialized = G_CFG.createCompatibleImage(matWidth, matHeight).withG2 { g2 ->
+                val materialized = gCfg.createCompatibleImage(matWidth, matHeight).withG2 { g2 ->
                     g2.setHighQuality()
                     // Paint a scaled version of the deferred image onto the raster image.
                     val scaledImage = DeferredImage()

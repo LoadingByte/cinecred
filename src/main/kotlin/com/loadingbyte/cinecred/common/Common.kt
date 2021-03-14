@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.common
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
 import java.awt.image.BufferedImage
@@ -29,6 +30,8 @@ fun l10nAll(key: String): List<String> = l10nAllCache.getOrPut(key) {
     BUNDLES.map { bundle -> bundle.getString(key) }
 }
 
+
+val gCfg get() = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
 
 // This is a reference graphics context used to measure the size of fonts.
 val REF_G2: Graphics2D = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)

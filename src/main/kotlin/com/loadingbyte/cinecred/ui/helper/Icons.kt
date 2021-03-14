@@ -2,10 +2,7 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.preserveTransform
-import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.*
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -13,10 +10,12 @@ import org.apache.batik.bridge.GVTBuilder
 import org.apache.batik.bridge.UserAgentAdapter
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
-import java.awt.Component
-import java.awt.Graphics2D
+import java.awt.*
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.awt.image.FilteredImageSource
+import java.awt.image.ImageFilter
+import javax.swing.UIManager
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -75,58 +74,45 @@ private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
 }
 
 
-class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val height: Int) :
+class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val height: Int, val isDisabled: Boolean) :
     FlatAbstractIcon(width, height, null), FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
-        // TODO: Custom composites are not universally supported. Once they are, use the gray filter to paint disabled icons differently.
-        svg.paint(g2)
-    }
-
-    override fun getDisabledIcon() = SVGIcon(svg, width, height)
-
-
-    companion object {
-
-        /*private val DISABLED_COMPOSITE = run {
-            val filter = UIManager.get("Component.grayFilter") as RGBImageFilter
-            RGBFunctionComposite { rgb -> filter.filterRGB(0, 0, rgb) }
-        }*/
-
-        fun load(name: String): SVGIcon {
-            val (svg, ctx) = loadSVGResource(name)
-            return SVGIcon(svg, ctx.documentSize.width.roundToInt(), ctx.documentSize.height.roundToInt())
-        }
-
-    }
-
-
-    /*private class RGBFunctionComposite(val func: (Int) -> Int) : Composite {
-        override fun createContext(
-            srcColorModel: ColorModel,
-            dstColorModel: ColorModel,
-            hints: RenderingHints
-        ) = object : CompositeContext {
-            override fun dispose() {}
-            override fun compose(src: Raster, dstIn: Raster, dstOut: WritableRaster) {
-                // Note: This method assumes that all color models are RGB.
-                val width = min(src.width, dstIn.width)
-                val height = min(src.height, dstIn.height)
-                // Create buffers.
-                val srcPixels = IntArray(width)
-                val dstInPixels = IntArray(width)
-                val dstOutPixels = IntArray(width)
-                // Compose each pixel row.
-                for (y in 0 until height) {
-                    src.getDataElements(0, y, srcPixels)
-                    dstIn.getDataElements(0, y, dstInPixels)
-                    for (x in 0 until width)
-                        dstOutPixels[x] = func(dstInPixels[x])
-                    dstOut.setDataElements(0, y, dstOutPixels)
-                }
+        if (!isDisabled)
+            svg.paint(g2)
+        else {
+            // Note: Custom composites are not universally supported. Once they are, we can also use the gray filter
+            // from inside a custom composite. For now, we first render the icon to an image, then apply the gray
+            // filter to that image, and finally draw the filtered image.
+            val filter = UIManager.get("Component.grayFilter") as ImageFilter
+            // We assume that scaleX and scaleY are always identical.
+            val scaling = g2.transform.scaleX
+            // Draw the icon to an image.
+            val img = gCfg.createCompatibleImage(
+                (scaling * width).roundToInt(), (scaling * height).roundToInt(), Transparency.TRANSLUCENT
+            ).withG2 { g2i ->
+                g2i.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2i.scale(scaling, scaling)
+                svg.paint(g2i)
+            }
+            // Filter the image to make it gray.
+            val grayImg = Toolkit.getDefaultToolkit().createImage(FilteredImageSource(img.source, filter))
+            // Draw the image into the original graphics object.
+            g2.preserveTransform {
+                g2.scale(1.0 / scaling, 1.0 / scaling)
+                g2.drawImage(grayImg, 0, 0, null)
             }
         }
-    }*/
+    }
+
+    override fun getDisabledIcon() = SVGIcon(svg, width, height, true)
+
+    companion object {
+        fun load(name: String): SVGIcon {
+            val (svg, ctx) = loadSVGResource(name)
+            return SVGIcon(svg, ctx.documentSize.width.roundToInt(), ctx.documentSize.height.roundToInt(), false)
+        }
+    }
 
 }
 

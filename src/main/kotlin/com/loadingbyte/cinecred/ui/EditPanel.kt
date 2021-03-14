@@ -30,9 +30,32 @@ object EditPanel : JPanel() {
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
         isSelected = true
         toolTipText = l10n("ui.edit.toggleStyling")
+        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener {
             Controller.setEditStylingDialogVisible(isSelected)
         }
+    }
+    private val undoStylingButton = makeActToolBtn("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
+        Controller.StylingHistory.undoAndRedraw()
+    }
+    private val redoStylingButton = makeActToolBtn("redoStyling", REDO_ICON, VK_Z, CTRL_DOWN_MASK or SHIFT_DOWN_MASK) {
+        Controller.StylingHistory.redoAndRedraw()
+    }
+    private val saveStylingButton = makeActToolBtn("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
+        Controller.StylingHistory.save()
+    }
+    private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON) {
+        if (unsavedStylingLabel.isVisible) {
+            val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("general.cancel"))
+            val selectedOption = showOptionDialog(
+                MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
+                l10n("ui.edit.resetUnsavedChangesWarning.title"),
+                DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
+            )
+            if (selectedOption == CLOSED_OPTION || selectedOption == 1)
+                return@makeActToolBtn
+        }
+        Controller.StylingHistory.tryResetAndRedraw()
     }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
@@ -62,88 +85,72 @@ object EditPanel : JPanel() {
     }
     private val uniformSafeAreasToggleButton = JToggleButton(UNIFORM_SAFE_AREAS_ICON, false).apply {
         toolTipText = l10n("ui.edit.uniformSafeAreasTooltip")
+        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) } }
     }
     private val cutSafeArea16to9ToggleButton = JToggleButton(X_16_TO_9_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "16:9")
+        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) } }
     }
     private val cutSafeArea4to3ToggleButton = JToggleButton(X_4_TO_3_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
+        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) } }
     }
+
     private val runtimeLabel1 = JLabel().apply {
         text = l10n("ui.edit.runtime")
     }
     private val runtimeLabel2 = JLabel().apply {
         font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
     }
+
     private val pageTabs = JTabbedPane()
 
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
     private val previewPanels get() = pageTabs.components.map { it as EditPagePreviewPanel }
 
-    init {
-        fun makeAction(
-            name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
-        ) = object : AbstractAction() {
+    private fun makeActToolBtn(
+        name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
+    ): JButton {
+        val action = object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent) {
                 listener()
             }
-        }.also {
-            var tooltip = l10n("ui.edit.$name")
-            if (shortcutKeyCode != -1) {
-                tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
-                for (c in arrayOf(MainFrame.contentPane as JComponent, EditStylingDialog.contentPane as JComponent)) {
-                    c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                        .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
-                    c.actionMap.put(name, it)
-                }
+        }
+
+        var tooltip = l10n("ui.edit.$name")
+        if (shortcutKeyCode != -1) {
+            tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
+            for (c in arrayOf(MainFrame.contentPane as JComponent, EditStylingDialog.contentPane as JComponent)) {
+                c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                    .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
+                c.actionMap.put(name, action)
             }
-            it.putValue(Action.SMALL_ICON, icon)
-            it.putValue(Action.SHORT_DESCRIPTION, tooltip)
         }
+        action.putValue(Action.SMALL_ICON, icon)
+        action.putValue(Action.SHORT_DESCRIPTION, tooltip)
 
-        val undoStylingAction = makeAction("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
-            Controller.StylingHistory.undoAndRedraw()
-        }
-        val redoStylingAction = makeAction("redoStyling", REDO_ICON, VK_Z, CTRL_DOWN_MASK or SHIFT_DOWN_MASK) {
-            Controller.StylingHistory.redoAndRedraw()
-        }
-        val saveStylingAction = makeAction("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
-            Controller.StylingHistory.save()
-        }
-        val resetStylingAction = makeAction("resetStyling", RESET_ICON) {
-            if (isStylingUnsaved) {
-                val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("general.cancel"))
-                val selectedOption = showOptionDialog(
-                    MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
-                    l10n("ui.edit.resetUnsavedChangesWarning.title"),
-                    DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
-                )
-                if (selectedOption == CLOSED_OPTION || selectedOption == 1)
-                    return@makeAction
-            }
-            Controller.StylingHistory.tryResetAndRedraw()
-        }
+        return JButton(action).apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
+    }
 
-        fun JComponent.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
-
-        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[]0[]30lp[][][][]0[]0[]30lp[][]push[]")).apply {
+    init {
+        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]30lp[][]push[]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton.makeToolbarButton())
-            add(JButton(undoStylingAction).makeToolbarButton())
-            add(JButton(redoStylingAction).makeToolbarButton())
-            add(JButton(saveStylingAction).makeToolbarButton())
-            add(JButton(resetStylingAction).makeToolbarButton())
+            add(toggleEditStylingDialogButton)
+            add(undoStylingButton)
+            add(redoStylingButton)
+            add(saveStylingButton)
+            add(resetStylingButton)
             add(unsavedStylingLabel)
             add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
             add(zoomSlider)
             add(layoutGuidesToggleButton)
-            add(uniformSafeAreasToggleButton.makeToolbarButton())
-            add(cutSafeArea16to9ToggleButton.makeToolbarButton())
-            add(cutSafeArea4to3ToggleButton.makeToolbarButton())
+            add(uniformSafeAreasToggleButton)
+            add(cutSafeArea16to9ToggleButton)
+            add(cutSafeArea4to3ToggleButton)
             add(runtimeLabel1)
             add(runtimeLabel2)
             add(pageTabs, "newline, span, grow, push")
@@ -187,14 +194,8 @@ object EditPanel : JPanel() {
         toggleEditStylingDialogButton.isSelected = isVisible
     }
 
-    var isStylingUnsaved: Boolean
-        get() = unsavedStylingLabel.isVisible
-        set(value) {
-            unsavedStylingLabel.isVisible = value
-        }
-
     fun onTryOpenProjectDirOrExit(): Boolean =
-        if (isStylingUnsaved) {
+        if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(
                 l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
                 l10n("general.cancel")
@@ -217,6 +218,16 @@ object EditPanel : JPanel() {
 
     fun onOpenProjectDir() {
         zoomSlider.zoom = 1f
+    }
+
+    fun onStylingChange(isUnsaved: Boolean, isUndoable: Boolean, isRedoable: Boolean) {
+        unsavedStylingLabel.isVisible = isUnsaved
+        undoStylingButton.isEnabled = isUndoable
+        redoStylingButton.isEnabled = isRedoable
+    }
+
+    fun onStylingSave() {
+        unsavedStylingLabel.isVisible = false
     }
 
     fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {

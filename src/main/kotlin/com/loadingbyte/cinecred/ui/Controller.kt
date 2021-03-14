@@ -281,11 +281,11 @@ object Controller {
         fun save() {
             saved = current
             writeStyling(stylingFile!!, current!!)
-            EditPanel.isStylingUnsaved = false
+            EditPanel.onStylingSave()
         }
 
         private fun onStylingChange() {
-            EditPanel.isStylingUnsaved = current != saved
+            EditPanel.onStylingChange(current != saved, currentIdx != 0, currentIdx != history.lastIndex)
             tryReloadCreditsFileAndRedraw()
         }
 

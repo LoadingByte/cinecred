@@ -160,8 +160,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     private fun updateVerifyAndVisible() {
         for (formRow in formRows) {
             formRow.doVerify?.invoke()
-            formRow.isVisible = formRow.isVisibleFunc?.invoke() ?: true
-            formRow.isEnabled = formRow.isEnabledFunc?.invoke() ?: true
+            formRow.isVisibleFunc?.let { formRow.isVisible = it() }
+            formRow.isEnabledFunc?.let { formRow.isEnabled = it() }
         }
         submitButton?.isEnabled = isErrorFree
     }

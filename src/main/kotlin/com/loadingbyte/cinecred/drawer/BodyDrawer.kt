@@ -125,7 +125,7 @@ fun drawBodyImagesWithGridBodyLayout(
 
         // Ensure that the width and height of the body image are always correct.
         bodyImage.width = bodyImageWidth
-        bodyImage.height = thisBodyRowHeights.sum() + numBodyRows.getValue(block) * style.gridRowGapPx
+        bodyImage.height = thisBodyRowHeights.sum() + (numBodyRows.getValue(block) - 1) * style.gridRowGapPx
 
         DrawnBody(bodyImage, thisBodyRowHeights.first(), thisBodyRowHeights.last())
     }

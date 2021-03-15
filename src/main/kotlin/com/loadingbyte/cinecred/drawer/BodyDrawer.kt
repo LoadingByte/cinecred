@@ -35,12 +35,14 @@ fun drawBodyImagesWithGridBodyLayout(
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
     val numBodyCols = style.gridElemHJustifyPerCol.size
-    val bodyPartitions = blocks.associateWith { block -> partitionIntoCols(block.body, numBodyCols) }
-    val numBodyRows = bodyPartitions.mapValues { (_, part) -> part[0].size }
+    val bodyPartitions = blocks.associateWith { block ->
+        partitionIntoCols(block.body, numBodyCols, style.gridFillingOrder)
+    }
+    val numBodyRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
 
-    fun independentBodyColWidths() = List(numBodyCols) { col ->
-        bodyPartitions.values.maxOf { part ->
-            part[col].maxOfOrNull { bodyElem -> bodyElem.getWidth(fonts) } ?: 0f
+    fun independentBodyColWidths() = List(numBodyCols) { colIdx ->
+        bodyPartitions.values.maxOf { cols ->
+            cols[colIdx].maxOfOrNull { bodyElem -> bodyElem.getWidth(fonts) } ?: 0f
         }
     }
 
@@ -50,9 +52,9 @@ fun drawBodyImagesWithGridBodyLayout(
         }
 
     fun independentBodyRowHeights() = blocks.associateWith { block ->
-        List(numBodyRows.getValue(block)) { row ->
-            bodyPartitions.getValue(block).maxOf { partCol ->
-                partCol.getOrNull(row)?.getHeight() ?: 0f
+        List(numBodyRows.getValue(block)) { rowIdx ->
+            bodyPartitions.getValue(block).maxOf { col ->
+                col.getOrNull(rowIdx)?.getHeight() ?: 0f
             }
         }
     }
@@ -130,15 +132,31 @@ fun drawBodyImagesWithGridBodyLayout(
 }
 
 
-private fun <E> partitionIntoCols(list: List<E>, numCols: Int): List<List<E>> {
-    val cols = (0 until numCols).map { mutableListOf<E>() }
-    var colIdx = 0
-    for (elem in list) {
-        cols[colIdx++].add(elem)
-        if (colIdx == numCols)
-            colIdx = 0
+private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillingOrder): List<List<E>> {
+    // First fill the columns irrespective of left-to-right / right-to-left.
+    val cols = when (order) {
+        GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
+            val cols = (0 until numCols).map { mutableListOf<E>() }
+            for ((idx, elem) in list.withIndex())
+                cols[idx % cols.size].add(elem)
+            cols
+        }
+        GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
+            val numRows = (list.size + (numCols - 1)) / numCols  // ceil(list.size / numCols)
+            List(numCols) { colIdx ->
+                list.subList(
+                    (colIdx * numRows).coerceAtMost(list.size),
+                    ((colIdx + 1) * numRows).coerceAtMost(list.size)
+                )
+            }
+        }
     }
-    return cols
+
+    // Then, when the direction is right-to-left, just reverse the column order.
+    return when (order) {
+        GridFillingOrder.L2R_T2B, GridFillingOrder.T2B_L2R -> cols
+        GridFillingOrder.R2L_T2B, GridFillingOrder.T2B_R2L -> cols.asReversed()
+    }
 }
 
 
@@ -168,7 +186,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
-    val bodyLines = partitionIntoLines(block.body, bodyImageWidth, horGap) { bodyElem ->
+    val bodyLines = partitionIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
         when (style.flowElemBoxConform) {
             NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
             WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
@@ -206,7 +224,7 @@ fun drawBodyImageWithFlowBodyLayout(
         val bodyLineWidth = totalRigidWidth + (bodyLine.size - 1) * (horGap + horGlue)
         val bodyLineHeight = getBodyLineHeight(bodyLine)
 
-        // Find the x coordinate of the first body element depending on the justification.
+        // Find the x coordinate of the leftmost body element depending on the justification.
         // For left or full justification, we start at the leftmost position.
         // For center or right justification, we start such that the body line is centered or right-justified.
         var x = when (style.flowLineHJustify) {
@@ -221,7 +239,7 @@ fun drawBodyImageWithFlowBodyLayout(
                 NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
                 WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
                 SQUARE -> maxElemSideLength
-            } //+ (if (idx == 0 || idx == bodyLine.lastIndex) horGlue / 2f else horGlue)
+            }
 
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
@@ -265,6 +283,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
 private inline fun <E> partitionIntoLines(
     list: List<E>,
+    direction: FlowDirection,
     maxWidth: Float,
     minSepWidth: Float,
     getWidth: (E) -> Float
@@ -286,6 +305,11 @@ private inline fun <E> partitionIntoLines(
             x = elemWidth
         }
     }
+
+    // When the direction is reversed, just reverse the element order in each line.
+    if (direction == FlowDirection.R2L)
+        for (line in lines)
+            line.reverse()
 
     return lines
 }

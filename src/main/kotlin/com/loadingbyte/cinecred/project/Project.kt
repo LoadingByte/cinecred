@@ -60,13 +60,15 @@ data class ContentStyle(
     val vMarginPx: Float,
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
+    val gridFillingOrder: GridFillingOrder,
     val gridElemBoxConform: BodyElementBoxConform,
     val gridElemHJustifyPerCol: ImmutableList<HJustify>,
     val gridElemVJustify: VJustify,
     val gridRowGapPx: Float,
     val gridColGapPx: Float,
-    val flowElemBoxConform: BodyElementBoxConform,
+    val flowDirection: FlowDirection,
     val flowLineHJustify: LineHJustify,
+    val flowElemBoxConform: BodyElementBoxConform,
     val flowElemHJustify: HJustify,
     val flowElemVJustify: VJustify,
     val flowLineWidthPx: Float,
@@ -106,6 +108,8 @@ enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL }
 enum class BodyElementBoxConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
+enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
+enum class FlowDirection { L2R, R2L }
 
 
 data class LetterStyle(

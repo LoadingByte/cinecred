@@ -40,6 +40,11 @@ object ContentStyleForm : Form() {
         ComboBoxWidget(BodyLayout.values().asList(), toString = ::l10nEnum)
     )
 
+    private val gridFillingOrderWidget = addWidget(
+        l10n("ui.styling.content.gridFillingOrder"),
+        ComboBoxWidget(GridFillingOrder.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.GRID }
+    )
     private val gridElemBoxConformWidget = addWidget(
         l10n("ui.styling.content.gridElemBoxConform"),
         ComboBoxWidget(BodyElementBoxConform.values().asList(), toString = ::l10nEnum),
@@ -73,14 +78,26 @@ object ContentStyleForm : Form() {
         isEnabled = { gridElemHJustifyPerColWidget.selectedItems.size >= 2 }
     )
 
-    private val flowElemBoxConformWidget = addWidget(
-        l10n("ui.styling.content.flowElemBoxConform"),
-        ComboBoxWidget(BodyElementBoxConform.values().asList(), toString = ::l10nEnum),
+    private val flowDirectionWidget = addWidget(
+        l10n("ui.styling.content.flowDirection"),
+        ComboBoxWidget(
+            FlowDirection.values().asList(),
+            toString = {
+                when (it) {
+                    FlowDirection.L2R -> "\u2192"
+                    FlowDirection.R2L -> "\u2190"
+                }
+            }),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
     private val flowLineHJustifyWidget = addWidget(
         l10n("ui.styling.content.flowLineHJustify"),
         ComboBoxWidget(LineHJustify.values().asList(), toString = ::l10nEnum),
+        isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
+    )
+    private val flowElemBoxConformWidget = addWidget(
+        l10n("ui.styling.content.flowElemBoxConform"),
+        ComboBoxWidget(BodyElementBoxConform.values().asList(), toString = ::l10nEnum),
         isVisible = { bodyLayoutWidget.selectedItem == BodyLayout.FLOW }
     )
     private val flowElemHJustifyWidget = addWidget(
@@ -206,13 +223,15 @@ object ContentStyleForm : Form() {
         vMarginPxWidget.value = style.vMarginPx
         bodyLetterStyleWidget.selectedItem = style.bodyLetterStyleName
         bodyLayoutWidget.selectedItem = style.bodyLayout
+        gridFillingOrderWidget.selectedItem = style.gridFillingOrder
         gridElemBoxConformWidget.selectedItem = style.gridElemBoxConform
         gridElemHJustifyPerColWidget.selectedItems = style.gridElemHJustifyPerCol
         gridElemVJustifyWidget.selectedItem = style.gridElemVJustify
         gridRowGapPxWidget.value = style.gridRowGapPx
         gridColGapPxWidget.value = style.gridColGapPx
-        flowElemBoxConformWidget.selectedItem = style.flowElemBoxConform
+        flowDirectionWidget.selectedItem = style.flowDirection
         flowLineHJustifyWidget.selectedItem = style.flowLineHJustify
+        flowElemBoxConformWidget.selectedItem = style.flowElemBoxConform
         flowElemHJustifyWidget.selectedItem = style.flowElemHJustify
         flowElemVJustifyWidget.selectedItem = style.flowElemVJustify
         flowLineWidthPxWidget.value = style.flowLineWidthPx
@@ -242,13 +261,15 @@ object ContentStyleForm : Form() {
         vMarginPxWidget.value as Float,
         bodyLetterStyleWidget.selectedItem,
         bodyLayoutWidget.selectedItem,
+        gridFillingOrderWidget.selectedItem,
         gridElemBoxConformWidget.selectedItem,
         gridElemHJustifyPerColWidget.selectedItems.toImmutableList(),
         gridElemVJustifyWidget.selectedItem,
         gridRowGapPxWidget.value as Float,
         gridColGapPxWidget.value as Float,
-        flowElemBoxConformWidget.selectedItem,
+        flowDirectionWidget.selectedItem,
         flowLineHJustifyWidget.selectedItem,
+        flowElemBoxConformWidget.selectedItem,
         flowElemHJustifyWidget.selectedItem,
         flowElemVJustifyWidget.selectedItem,
         flowLineWidthPxWidget.value as Float,

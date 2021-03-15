@@ -57,6 +57,7 @@ private fun readContentStyle(map: Map<*, *>) = ContentStyle(
     map.get("vMarginPx", PRESET_CONTENT_STYLE.vMarginPx) { toFiniteFloat(nonNeg = true) },
     map.get("bodyLetterStyleName", PRESET_CONTENT_STYLE.bodyLetterStyleName) { this },
     map.get("bodyLayout", PRESET_CONTENT_STYLE.bodyLayout) { toEnum() },
+    map.get("gridFillingOrder", PRESET_CONTENT_STYLE.gridFillingOrder) { toEnum() },
     map.get("gridElemBoxConform", PRESET_CONTENT_STYLE.gridElemBoxConform) { toEnum() },
     map.get("gridElemHJustifyPerCol", PRESET_CONTENT_STYLE.gridElemHJustifyPerCol) {
         toEnumList<HJustify>().toImmutableList()
@@ -64,8 +65,9 @@ private fun readContentStyle(map: Map<*, *>) = ContentStyle(
     map.get("gridElemVJustify", PRESET_CONTENT_STYLE.gridElemVJustify) { toEnum() },
     map.get("gridRowGapPx", PRESET_CONTENT_STYLE.gridRowGapPx) { toFiniteFloat(nonNeg = true) },
     map.get("gridColGapPx", PRESET_CONTENT_STYLE.gridColGapPx) { toFiniteFloat(nonNeg = true) },
-    map.get("flowElemBoxConform", PRESET_CONTENT_STYLE.flowElemBoxConform) { toEnum() },
+    map.get("flowDirection", PRESET_CONTENT_STYLE.flowDirection) { toEnum() },
     map.get("flowLineHJustify", PRESET_CONTENT_STYLE.flowLineHJustify) { toEnum() },
+    map.get("flowElemBoxConform", PRESET_CONTENT_STYLE.flowElemBoxConform) { toEnum() },
     map.get("flowElemHJustify", PRESET_CONTENT_STYLE.flowElemHJustify) { toEnum() },
     map.get("flowElemVJustify", PRESET_CONTENT_STYLE.flowElemVJustify) { toEnum() },
     map.get("flowLineWidthPx", PRESET_CONTENT_STYLE.flowLineWidthPx) { toFiniteFloat(nonNeg = true, non0 = true) },

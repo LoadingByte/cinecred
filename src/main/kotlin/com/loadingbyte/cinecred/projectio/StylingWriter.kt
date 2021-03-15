@@ -59,6 +59,7 @@ private fun writeContentStyle(style: ContentStyle): Map<String, Any> {
     )
     when (style.bodyLayout) {
         BodyLayout.GRID -> toml.putAll(
+            "gridFillingOrder" to style.gridFillingOrder.name,
             "gridElemBoxConform" to style.gridElemBoxConform.name,
             "gridElemHJustifyPerCol" to style.gridElemHJustifyPerCol.toString2(),
             "gridElemVJustify" to style.gridElemVJustify.name,
@@ -66,8 +67,9 @@ private fun writeContentStyle(style: ContentStyle): Map<String, Any> {
             "gridColGapPx" to style.gridColGapPx
         )
         BodyLayout.FLOW -> toml.putAll(
-            "flowElemBoxConform" to style.flowElemBoxConform.name,
+            "flowDirection" to style.flowDirection.name,
             "flowLineHJustify" to style.flowLineHJustify.name,
+            "flowElemBoxConform" to style.flowElemBoxConform.name,
             "flowElemHJustify" to style.flowElemHJustify.name,
             "flowElemVJustify" to style.flowElemVJustify.name,
             "flowLineWidthPx" to style.flowLineWidthPx,

@@ -106,7 +106,7 @@ fun drawColumn(
     // Step 5:
     // Combine the block images for the blocks inside the column to a column image.
     val columnImage = DeferredImage()
-    val axisXInColumnImage = column.blocks.minOf { block -> drawnBlocks.getValue(block).axisXInImage }
+    val axisXInColumnImage = column.blocks.maxOf { block -> drawnBlocks.getValue(block).axisXInImage }
     var y = 0f
     for (block in column.blocks) {
         y += block.style.vMarginPx
@@ -204,9 +204,9 @@ private fun drawHorizontalSpineBlocks(
 
         val headStartX = 0f
         val headEndX = headStartX + headWidth
-        val bodyStartX = headEndX + (if (headWidth == 0f) 0f else block.style.headGapPx)
+        val bodyStartX = headEndX + (if (!block.style.hasHead) 0f else block.style.headGapPx)
         val bodyEndX = bodyStartX + bodyImage.width
-        val tailStartX = bodyEndX + (if (tailWidth == 0f) 0f else block.style.tailGapPx)
+        val tailStartX = bodyEndX + (if (!block.style.hasHead) 0f else block.style.tailGapPx)
         val tailEndX = tailStartX + tailWidth
 
         // Used later on for vertically justifying the head and tail.

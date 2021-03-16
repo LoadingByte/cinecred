@@ -34,83 +34,83 @@ fun drawBodyImagesWithGridBodyLayout(
     //                 Extras
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
-    val numBodyCols = style.gridElemHJustifyPerCol.size
+    val numCols = style.gridElemHJustifyPerCol.size
     val bodyPartitions = blocks.associateWith { block ->
-        partitionIntoCols(block.body, numBodyCols, style.gridFillingOrder)
+        partitionIntoCols(block.body, numCols, style.gridFillingOrder)
     }
-    val numBodyRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
+    val numRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
 
-    fun independentBodyColWidths() = List(numBodyCols) { colIdx ->
+    fun independentColWidths() = List(numCols) { colIdx ->
         bodyPartitions.values.maxOf { cols ->
             cols[colIdx].maxOfOrNull { bodyElem -> bodyElem.getWidth(fonts) } ?: 0f
         }
     }
 
-    fun conformedBodyColWidth() =
+    fun conformedColWidth() =
         blocks.maxOf { block ->
             block.body.maxOf { bodyElem -> bodyElem.getWidth(fonts) }
         }
 
-    fun independentBodyRowHeights() = blocks.associateWith { block ->
-        List(numBodyRows.getValue(block)) { rowIdx ->
+    fun independentRowHeights() = blocks.associateWith { block ->
+        List(numRows.getValue(block)) { rowIdx ->
             bodyPartitions.getValue(block).maxOf { col ->
                 col.getOrNull(rowIdx)?.getHeight() ?: 0f
             }
         }
     }
 
-    fun conformedBodyRowHeight() =
+    fun conformedRowHeight() =
         blocks.maxOf { block ->
             block.body.maxOf { bodyElem -> bodyElem.getHeight() }
         }
 
-    fun forEachBodyCol(width: Float) = List(numBodyCols) { width }
-    fun forEachBodyRow(height: Float) = blocks.associateWith { block -> List(numBodyRows.getValue(block)) { height } }
+    fun forEachCol(width: Float) = List(numCols) { width }
+    fun forEachRow(height: Float) = blocks.associateWith { block -> List(numRows.getValue(block)) { height } }
 
-    val bodyColWidths: List<Float>
-    val bodyRowHeights: Map<Block, List<Float>>
+    val colWidths: List<Float>
+    val rowHeights: Map<Block, List<Float>>
     when (style.gridElemBoxConform) {
         NOTHING -> {
-            bodyColWidths = independentBodyColWidths()
-            bodyRowHeights = independentBodyRowHeights()
+            colWidths = independentColWidths()
+            rowHeights = independentRowHeights()
         }
         WIDTH -> {
-            bodyColWidths = forEachBodyCol(conformedBodyColWidth())
-            bodyRowHeights = independentBodyRowHeights()
+            colWidths = forEachCol(conformedColWidth())
+            rowHeights = independentRowHeights()
         }
         HEIGHT -> {
-            bodyColWidths = independentBodyColWidths()
-            bodyRowHeights = forEachBodyRow(conformedBodyRowHeight())
+            colWidths = independentColWidths()
+            rowHeights = forEachRow(conformedRowHeight())
         }
         WIDTH_AND_HEIGHT -> {
-            bodyColWidths = forEachBodyCol(conformedBodyColWidth())
-            bodyRowHeights = forEachBodyRow(conformedBodyRowHeight())
+            colWidths = forEachCol(conformedColWidth())
+            rowHeights = forEachRow(conformedRowHeight())
         }
         SQUARE -> {
-            val size = max(conformedBodyColWidth(), conformedBodyRowHeight())
-            bodyColWidths = forEachBodyCol(size)
-            bodyRowHeights = forEachBodyRow(size)
+            val size = max(conformedColWidth(), conformedRowHeight())
+            colWidths = forEachCol(size)
+            rowHeights = forEachRow(size)
         }
     }
 
-    val bodyImageWidth = (numBodyCols - 1) * style.gridColGapPx + bodyColWidths.sum()
+    val bodyImageWidth = (numCols - 1) * style.gridColGapPx + colWidths.sum()
 
     // Step 2:
     // Draw a deferred image for the body of each block.
     return blocks.associateWith { block ->
-        // If there are no body columns, there is no place to put the body.
-        // So we can just return an empty image.
-        if (numBodyCols == 0)
+        // If there are no columns, there is no content, so we can just return an empty image.
+        if (numCols == 0)
             return@associateWith DrawnBody(DeferredImage(), 0f, 0f)
+
+        val blockRowHeights = rowHeights.getValue(block)
+        val blockCols = bodyPartitions.getValue(block)
 
         val bodyImage = DeferredImage()
 
-        val thisBodyRowHeights = bodyRowHeights.getValue(block)
         var x = 0f
-        val bodyPartitionsIter = bodyPartitions.getValue(block).iterator()
-        for ((justifyCol, colWidth) in style.gridElemHJustifyPerCol.zip(bodyColWidths)) {
+        for ((col, justifyCol, colWidth) in zip(blockCols, style.gridElemHJustifyPerCol, colWidths)) {
             var y = 0f
-            for ((bodyElem, rowHeight) in bodyPartitionsIter.next().zip(thisBodyRowHeights)) {
+            for ((bodyElem, rowHeight) in col.zip(blockRowHeights)) {
                 bodyImage.drawJustifiedBodyElem(
                     fonts, bodyElem, justifyCol, style.gridElemVJustify, x, y, colWidth, rowHeight
                 )
@@ -125,9 +125,9 @@ fun drawBodyImagesWithGridBodyLayout(
 
         // Ensure that the width and height of the body image are always correct.
         bodyImage.width = bodyImageWidth
-        bodyImage.height = thisBodyRowHeights.sum() + (numBodyRows.getValue(block) - 1) * style.gridRowGapPx
+        bodyImage.height = blockRowHeights.sum() + (numRows.getValue(block) - 1) * style.gridRowGapPx
 
-        DrawnBody(bodyImage, thisBodyRowHeights.first(), thisBodyRowHeights.last())
+        DrawnBody(bodyImage, blockRowHeights.first(), blockRowHeights.last())
     }
 }
 
@@ -142,7 +142,7 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
             cols
         }
         GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
-            val numRows = (list.size + (numCols - 1)) / numCols  // ceil(list.size / numCols)
+            val numRows = (list.size + (numCols - 1)) / numCols  // equivalent to "ceil(list.size / numCols)"
             List(numCols) { colIdx ->
                 list.subList(
                     (colIdx * numRows).coerceAtMost(list.size),
@@ -186,7 +186,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
-    val bodyLines = partitionIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
+    val lines = partitionIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
         when (style.flowElemBoxConform) {
             NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
             WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
@@ -194,47 +194,50 @@ fun drawBodyImageWithFlowBodyLayout(
         }
     }
 
-    // We will later use this function to find the height of a specific body line.
-    fun getBodyLineHeight(bodyLine: List<BodyElement>) =
+    // We will later use this function to find the height of a specific line.
+    fun getLineHeight(line: List<BodyElement>) =
         when (style.flowElemBoxConform) {
-            NOTHING, WIDTH -> bodyLine.maxOf { bodyElem -> bodyElem.getHeight() }
+            NOTHING, WIDTH -> line.maxOf { bodyElem -> bodyElem.getHeight() }
             HEIGHT, WIDTH_AND_HEIGHT -> maxElemHeight
             SQUARE -> maxElemSideLength
         }
 
-    // Draw the actual image.
+    // Start drawing the actual image.
     val bodyImage = DeferredImage()
 
     var y = 0f
-    for (bodyLine in bodyLines) {
-        // Determine the width of all rigid elements in the body line, that is, the total width of all body elements
+    for ((lineIdx, line) in lines.withIndex()) {
+        // Determine the justification of the current line.
+        val curLineHJustify = style.flowLineHJustify.toSingleLineHJustify(lastLine = lineIdx == lines.lastIndex)
+
+        // Determine the width of all rigid elements in the line, that is, the total width of all body elements
         // and separator strings.
         val totalRigidWidth = when (style.flowElemBoxConform) {
-            NOTHING, HEIGHT -> bodyLine.sumByFloat { bodyElem -> bodyElem.getWidth(fonts) }
-            WIDTH, WIDTH_AND_HEIGHT -> bodyLine.size * maxElemWidth
-            SQUARE -> bodyLine.size * maxElemSideLength
+            NOTHING, HEIGHT -> line.sumByFloat { bodyElem -> bodyElem.getWidth(fonts) }
+            WIDTH, WIDTH_AND_HEIGHT -> line.size * maxElemWidth
+            SQUARE -> line.size * maxElemSideLength
         }
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
-        // such that the body line fills the whole width of the body image.
-        val horGlue = if (style.flowLineHJustify != LineHJustify.FULL) 0f else
-            (bodyImageWidth - totalRigidWidth) / (bodyLine.size - 1) - horGap
+        // such that the line fills the whole width of the body image.
+        val horGlue = if (curLineHJustify != SingleLineHJustify.FULL) 0f else
+            (bodyImageWidth - totalRigidWidth) / (line.size - 1) - horGap
 
-        // Find the filled width as well as the height of the current body line.
-        val bodyLineWidth = totalRigidWidth + (bodyLine.size - 1) * (horGap + horGlue)
-        val bodyLineHeight = getBodyLineHeight(bodyLine)
+        // Find the filled width as well as the height of the current line.
+        val lineWidth = totalRigidWidth + (line.size - 1) * (horGap + horGlue)
+        val lineHeight = getLineHeight(line)
 
         // Find the x coordinate of the leftmost body element depending on the justification.
         // For left or full justification, we start at the leftmost position.
-        // For center or right justification, we start such that the body line is centered or right-justified.
-        var x = when (style.flowLineHJustify) {
-            LineHJustify.LEFT, LineHJustify.FULL -> 0f
-            LineHJustify.CENTER -> (bodyImageWidth - bodyLineWidth) / 2f
-            LineHJustify.RIGHT -> bodyImageWidth - bodyLineWidth
+        // For center or right justification, we start such that the line is centered or right-justified.
+        var x = when (curLineHJustify) {
+            SingleLineHJustify.LEFT, SingleLineHJustify.FULL -> 0f
+            SingleLineHJustify.CENTER -> (bodyImageWidth - lineWidth) / 2f
+            SingleLineHJustify.RIGHT -> bodyImageWidth - lineWidth
         }
 
-        // Actually draw the body line using the measurements from above.
-        for ((idx, bodyElem) in bodyLine.withIndex()) {
+        // Actually draw the line using the measurements from above.
+        for ((bodyElemIdx, bodyElem) in line.withIndex()) {
             val areaWidth = when (style.flowElemBoxConform) {
                 NOTHING, HEIGHT -> bodyElem.getWidth(fonts)
                 WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
@@ -244,28 +247,28 @@ fun drawBodyImageWithFlowBodyLayout(
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
                 fonts, bodyElem, style.flowElemHJustify, style.flowElemVJustify, x, y,
-                areaWidth, bodyLineHeight,
+                areaWidth, lineHeight,
             )
 
             // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, bodyLineHeight, layer = GUIDES)
+            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, lineHeight, layer = GUIDES)
 
-            if (idx != bodyLine.lastIndex) {
+            if (bodyElemIdx != line.lastIndex) {
                 // Advance to the separator.
                 x += areaWidth
                 // Draw the separator.
                 if (sepStyledStr != null)
                     bodyImage.drawJustifiedStyledString(
                         fonts, sepStyledStr, HJustify.CENTER, style.flowElemVJustify, x, y,
-                        horGap + horGlue, bodyLineHeight
+                        horGap + horGlue, lineHeight
                     )
                 // Advance to the next element on the line.
                 x += horGap + horGlue
             }
         }
 
-        // Advance to the next body line.
-        y += bodyLineHeight + style.flowLineGapPx
+        // Advance to the next line.
+        y += lineHeight + style.flowLineGapPx
     }
     y -= style.flowLineGapPx
 
@@ -277,7 +280,7 @@ fun drawBodyImageWithFlowBodyLayout(
     bodyImage.width = bodyImageWidth
     bodyImage.height = y
 
-    return DrawnBody(bodyImage, getBodyLineHeight(bodyLines.first()), getBodyLineHeight(bodyLines.last()))
+    return DrawnBody(bodyImage, getLineHeight(lines.first()), getLineHeight(lines.last()))
 }
 
 
@@ -335,23 +338,16 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
     val bodyImageWidth = style.paragraphsLineWidthPx
 
-    // Convert lineHJustify to an appropriate HJustify which may be used in some cases down below.
-    val hJustify = when (style.paragraphsLineHJustify) {
-        LineHJustify.LEFT -> HJustify.LEFT
-        LineHJustify.CENTER, LineHJustify.FULL -> HJustify.CENTER
-        LineHJustify.RIGHT -> HJustify.RIGHT
-    }
-
     val bodyImage = DeferredImage()
 
     // Use this to remember the height of the first and the last body row.
     // Later return these two values alongside the created body image.
-    var firstBodyRowHeight = 0f
-    var lastBodyRowHeight = 0f
-    fun recordBodyRowHeight(h: Float) {
-        if (firstBodyRowHeight == 0f)
-            firstBodyRowHeight = h
-        lastBodyRowHeight = h
+    var firstRowHeight = 0f
+    var lastRowHeight = 0f
+    fun recordRowHeight(h: Float) {
+        if (firstRowHeight == 0f)
+            firstRowHeight = h
+        lastRowHeight = h
     }
 
     var y = 0f
@@ -365,28 +361,35 @@ fun drawBodyImageWithParagraphsBodyLayout(
                 val lineStartPos = lineMeasurer.position
                 val lineEndPos = lineMeasurer.nextOffset(bodyImageWidth)
                 lineMeasurer.position = lineEndPos
+
                 val lineStyledStr = bodyElem.str.substring(lineStartPos, lineEndPos).trim()
 
+                val isLastLine = lineEndPos == attrCharIter.endIndex
+                val curLineHJustify = style.paragraphsLineHJustify.toSingleLineHJustify(isLastLine)
+
                 // Case 1a: Full justification.
-                if (style.paragraphsLineHJustify == LineHJustify.FULL)
+                if (curLineHJustify == SingleLineHJustify.FULL)
                     bodyImage.drawStyledString(fonts, lineStyledStr, 0f, y, justificationWidth = bodyImageWidth)
                 // Case 1b: Left, center, or right justification.
-                else
+                else {
+                    val hJustify = curLineHJustify.toHJustify()
                     bodyImage.drawJustifiedStyledString(fonts, lineStyledStr, hJustify, 0f, y, bodyImageWidth)
+                }
 
                 // Advance to the next line.
                 val lineHeight = lineStyledStr.getHeight().toFloat()
                 y += lineHeight + style.paragraphsLineGapPx
 
-                recordBodyRowHeight(lineHeight)
+                recordRowHeight(lineHeight)
             }
         }
         // Case 2: The body element is not a string. Just draw it regularly.
         else {
+            val hJustify = style.paragraphsLineHJustify.toSingleLineHJustify(lastLine = false).toHJustify()
             bodyImage.drawJustifiedBodyElem(fonts, bodyElem, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f)
             val bodyElemHeight = bodyElem.getHeight()
             y += bodyElemHeight
-            recordBodyRowHeight(bodyElemHeight)
+            recordRowHeight(bodyElemHeight)
         }
 
         // Advance to the next paragraph.
@@ -400,7 +403,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
     // Ensure that the width of the body image is always correct.
     bodyImage.width = bodyImageWidth
 
-    return DrawnBody(bodyImage, firstBodyRowHeight, lastBodyRowHeight)
+    return DrawnBody(bodyImage, firstRowHeight, lastRowHeight)
 }
 
 
@@ -426,4 +429,32 @@ private fun DeferredImage.drawJustifiedBodyElem(
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
         ) { objX, objY -> drawPicture(elem.pic, objX, objY) }
+}
+
+
+private enum class SingleLineHJustify { LEFT, CENTER, RIGHT, FULL }
+
+private fun LineHJustify.toSingleLineHJustify(lastLine: Boolean) = when {
+    this == LineHJustify.LEFT || lastLine && this == LineHJustify.FULL_LAST_LEFT -> SingleLineHJustify.LEFT
+    this == LineHJustify.CENTER || lastLine && this == LineHJustify.FULL_LAST_CENTER -> SingleLineHJustify.CENTER
+    this == LineHJustify.RIGHT || lastLine && this == LineHJustify.FULL_LAST_RIGHT -> SingleLineHJustify.RIGHT
+    else -> SingleLineHJustify.FULL
+}
+
+private fun SingleLineHJustify.toHJustify() = when (this) {
+    SingleLineHJustify.LEFT -> HJustify.LEFT
+    SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
+    SingleLineHJustify.RIGHT -> HJustify.RIGHT
+}
+
+
+private fun <X, Y, Z> zip(xs: Iterable<X>, ys: Iterable<Y>, zs: Iterable<Z>): Sequence<Triple<X, Y, Z>> {
+    val xsIter = xs.iterator()
+    val ysIter = ys.iterator()
+    val zsIter = zs.iterator()
+    return generateSequence {
+        if (xsIter.hasNext() && ysIter.hasNext() && zsIter.hasNext())
+            Triple(xsIter.next(), ysIter.next(), zsIter.next())
+        else null
+    }
 }

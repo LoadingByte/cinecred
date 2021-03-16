@@ -106,7 +106,7 @@ enum class AlignWithAxis {
 enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
-enum class LineHJustify { LEFT, CENTER, RIGHT, FULL }
+enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
 enum class BodyElementBoxConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
 enum class FlowDirection { L2R, R2L }

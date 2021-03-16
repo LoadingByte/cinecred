@@ -60,22 +60,16 @@ fun DeferredImage.drawStyledString(
 }
 
 
-/**
- * Returns the start and end x coordinates of the drawn string.
- */
 fun DeferredImage.drawJustifiedStyledString(
     fonts: Map<LetterStyle, Font>,
     styledStr: StyledString, hJustify: HJustify,
     areaX: Float, strY: Float, areaWidth: Float
-): Pair<Float, Float> {
+) {
     val attrCharIter = styledStr.toAttributedString(fonts).iterator
     val strWidth = attrCharIter.getWidth()
-    var outerStrX = 0f
     drawJustified(hJustify, areaX, areaWidth, strWidth) { strX ->
         drawString(attrCharIter, strX, strY)
-        outerStrX = strX
     }
-    return Pair(outerStrX, outerStrX + strWidth)
 }
 
 

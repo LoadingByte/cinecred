@@ -199,7 +199,9 @@ open class ComboBoxWidget<E>(
     var items: List<E> = emptyList()
         set(value) {
             field = value
-            cb.model = DefaultComboBoxModel(Vector(value))
+            val newModel = DefaultComboBoxModel(Vector(value))
+            selectedItem?.let { newModel.selectedItem = it }
+            cb.model = newModel
             if (!scrollbar)
                 cb.maximumRowCount = value.size
         }
@@ -218,11 +220,12 @@ open class ComboBoxWidget<E>(
 }
 
 
-class InconsistentComboBoxWidget(
-    items: List<String>,
+class InconsistentComboBoxWidget<E>(
+    items: List<E>,
+    toString: (E) -> String = { it.toString() },
     inconsistencyWarning: String? = null,
-    verify: ((String) -> Unit)? = null
-) : ComboBoxWidget<String>(items, verify = verify) {
+    verify: ((E) -> Unit)? = null
+) : ComboBoxWidget<E>(items, toString, verify = verify) {
 
     init {
         cb.addActionListener {
@@ -236,7 +239,7 @@ class InconsistentComboBoxWidget(
         super.verify?.invoke()
     }
 
-    override var selectedItem: String
+    override var selectedItem: E
         get() = super.selectedItem
         set(value) {
             cb.isEditable = value !in items

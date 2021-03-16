@@ -31,13 +31,13 @@ object DeliverConfigurationForm : Form() {
     private var project: Project? = null
     private var drawnPages: List<DrawnPage> = emptyList()
 
-    private val resolutionMultSpinner = addWidget(
+    private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
         SpinnerWidget(
             SpinnerNumberModel(1f, 0.01f, null, 0.5f),
             verify = { verifyResolutionMult(it as Float) })
     )
-    private val formatComboBox = addWidget(
+    private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
             ALL_FORMATS, scrollbar = false,
@@ -59,7 +59,7 @@ object DeliverConfigurationForm : Form() {
             })
     )
 
-    private val seqDirField = addWidget(
+    private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
         FileWidget(
             FileType.DIRECTORY,
@@ -67,19 +67,19 @@ object DeliverConfigurationForm : Form() {
                 if (Files.exists(it) && Files.list(it).findFirst().isPresent)
                     throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
             }),
-        isVisible = { formatComboBox.selectedItem in SEQ_FORMATS },
+        isVisible = { formatWidget.selectedItem in SEQ_FORMATS },
     )
-    private val seqFilenamePatternField = addWidget(
+    private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
         FilenameWidget(
             verify = {
                 if (!it.contains(Regex("%0\\d+d")))
                     throw VerifyResult(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
             }),
-        isVisible = { formatComboBox.selectedItem in WholePageSequenceRenderJob.Format.ALL },
+        isVisible = { formatWidget.selectedItem in WholePageSequenceRenderJob.Format.ALL },
     ).apply { text = "page-%02d" }
 
-    private val singleFileField = addWidget(
+    private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
         FileWidget(
             FileType.FILE,
@@ -87,20 +87,20 @@ object DeliverConfigurationForm : Form() {
                 if (Files.exists(it))
                     throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
             }),
-        isVisible = { formatComboBox.selectedItem !in SEQ_FORMATS },
+        isVisible = { formatWidget.selectedItem !in SEQ_FORMATS },
     )
 
-    private val transparentBackgroundCheckBox = addWidget(
+    private val transparentBackgroundWidget = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),
-        isEnabled = { formatComboBox.selectedItem in ALPHA_FORMATS }
+        isEnabled = { formatWidget.selectedItem in ALPHA_FORMATS }
     )
 
     init {
         finishInit()
 
         // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
-        changeListener = { comp -> if (comp == formatComboBox) onFormatChange() }
+        preChangeListener = { widget -> if (widget == formatWidget) onFormatChange() }
 
         addSubmitButton(
             l10n("ui.deliverConfig.addToRenderQueue"),
@@ -120,7 +120,7 @@ object DeliverConfigurationForm : Form() {
         }
 
         // Check for violated restrictions of the currently selected format.
-        val format = formatComboBox.selectedItem
+        val format = formatWidget.selectedItem
         if (format is VideoRenderJob.Format)
             if (format.widthMod2 && scaledWidth % 2 != 0)
                 err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", yieldMsg, format.label))
@@ -149,9 +149,9 @@ object DeliverConfigurationForm : Form() {
     }
 
     private fun onFormatChange() {
-        val newFileExts = formatComboBox.selectedItem.fileExts
-        seqFilenamePatternField.fileExts = newFileExts
-        singleFileField.fileExts = newFileExts
+        val newFileExts = formatWidget.selectedItem.fileExts
+        seqFilenamePatternWidget.fileExts = newFileExts
+        singleFileWidget.fileExts = newFileExts
     }
 
     private fun addRenderJobToQueue() {
@@ -160,28 +160,28 @@ object DeliverConfigurationForm : Form() {
                 null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
-            val scaling = resolutionMultSpinner.value as Float
+            val scaling = resolutionMultWidget.value as Float
 
             fun getScaledPageDefImages() = drawnPages.map {
                 DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
             }
 
-            val format = formatComboBox.selectedItem
+            val format = formatWidget.selectedItem
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundCheckBox.isSelected, format,
-                    dir = seqDirField.file.normalize(), filenamePattern = seqFilenamePatternField.text
+                    transparentBackgroundWidget.isSelected, format,
+                    dir = seqDirWidget.file.normalize(), filenamePattern = seqFilenamePatternWidget.text
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundCheckBox.isSelected,
-                    file = singleFileField.file.normalize()
+                    transparentBackgroundWidget.isSelected,
+                    file = singleFileWidget.file.normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, drawnPages,
-                    scaling, transparentBackgroundCheckBox.isSelected && format.supportsAlpha, format,
-                    fileOrDir = (if (format.isImageSeq) seqDirField.file else singleFileField.file).normalize()
+                    scaling, transparentBackgroundWidget.isSelected && format.supportsAlpha, format,
+                    fileOrDir = (if (format.isImageSeq) seqDirWidget.file else singleFileWidget.file).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }
@@ -199,8 +199,8 @@ object DeliverConfigurationForm : Form() {
         // Reset the directory-related fields to the newly opened project dir.
         val defaultFilename = l10n("ui.deliverConfig.defaultFilename", projectDir.fileName)
         val outputLoc = projectDir.toAbsolutePath().resolve(defaultFilename)
-        seqDirField.file = outputLoc
-        singleFileField.file = outputLoc
+        seqDirWidget.file = outputLoc
+        singleFileWidget.file = outputLoc
 
         // This ensure that file extensions are sensible.
         onFormatChange()
@@ -211,7 +211,7 @@ object DeliverConfigurationForm : Form() {
         this.drawnPages = drawnPages
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
-        onChange(resolutionMultSpinner)
+        onChange(resolutionMultWidget)
     }
 
 }

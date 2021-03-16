@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
 import javax.swing.SpinnerNumberModel
@@ -13,14 +14,18 @@ object ContentStyleForm : Form() {
         l10n("ui.styling.content.name"),
         StyleNameWidget()
     )
-    private val alignWithAxisWidget = addWidget(
-        l10n("ui.styling.content.alignWithAxis"),
-        ComboBoxWidget(AlignWithAxis.values().asList(), toString = ::l10nEnum)
-    )
     private val spineOrientationWidget = addWidget(
         l10n("ui.styling.content.spineOrientation"),
         ComboBoxWidget(SpineOrientation.values().asList(), toString = ::l10nEnum),
         isEnabled = { hasHeadWidget.isSelected || hasTailWidget.isSelected }
+    )
+    private val alignWithAxisWidget = addWidget(
+        l10n("ui.styling.content.alignWithAxis"),
+        InconsistentComboBoxWidget<AlignWithAxis>(
+            // Note: This widget will be filled with items each time the change listener is called.
+            emptyList(), toString = ::l10nEnum,
+            inconsistencyWarning = l10n("ui.styling.content.alignWithAxisUnsuitable")
+        )
     )
     private val vMarginPxWidget = addWidget(
         l10n("ui.styling.content.vMarginPx"),
@@ -28,7 +33,9 @@ object ContentStyleForm : Form() {
     )
     private val bodyLetterStyleWidget = addWidget(
         l10n("ui.styling.content.bodyLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable"))
+        InconsistentComboBoxWidget<String>(
+            emptyList(), inconsistencyWarning = l10n("ui.styling.content.letterStyleUnavailable")
+        )
     )
 
     init {
@@ -162,7 +169,9 @@ object ContentStyleForm : Form() {
     )
     private val headLetterStyleWidget = addWidget(
         l10n("ui.styling.content.headLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
+        InconsistentComboBoxWidget<String>(
+            emptyList(), inconsistencyWarning = l10n("ui.styling.content.letterStyleUnavailable")
+        ),
         isVisible = { hasHeadWidget.isSelected }
     )
     private val headHJustifyWidget = addWidget(
@@ -192,7 +201,9 @@ object ContentStyleForm : Form() {
     )
     private val tailLetterStyleWidget = addWidget(
         l10n("ui.styling.content.tailLetterStyle"),
-        InconsistentComboBoxWidget(emptyList(), l10n("ui.styling.content.letterStyleUnavailable")),
+        InconsistentComboBoxWidget<String>(
+            emptyList(), inconsistencyWarning = l10n("ui.styling.content.letterStyleUnavailable")
+        ),
         isVisible = { hasTailWidget.isSelected }
     )
     private val tailHJustifyWidget = addWidget(
@@ -214,6 +225,29 @@ object ContentStyleForm : Form() {
 
     init {
         finishInit()
+    }
+
+    private fun populateAlignWithAxisWidget() {
+        val hasHead = hasHeadWidget.isSelected
+        val hasTail = hasTailWidget.isSelected
+
+        alignWithAxisWidget.items = when (spineOrientationWidget.selectedItem) {
+            SpineOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+            SpineOrientation.HORIZONTAL -> when {
+                !hasHead && !hasTail -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+                hasHead && !hasTail -> listOf(
+                    OVERALL_CENTER,
+                    HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER,
+                    BODY_LEFT, BODY_CENTER, BODY_RIGHT
+                )
+                !hasHead && hasTail -> listOf(
+                    OVERALL_CENTER,
+                    BODY_LEFT, BODY_CENTER, BODY_RIGHT,
+                    TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
+                )
+                else -> AlignWithAxis.values().asList()
+            }
+        }
     }
 
     private fun load(style: ContentStyle) {
@@ -298,14 +332,21 @@ object ContentStyleForm : Form() {
     ) {
         nameWidget.otherStyleNames = allStyles.filter { it !== style }.map { it.name }
 
-        withSuspendedChangeEvents {
+        withoutChangeEvents {
             val letterStyleNames = letterStyles.map { it.name }
             bodyLetterStyleWidget.items = letterStyleNames
             headLetterStyleWidget.items = letterStyleNames
             tailLetterStyleWidget.items = letterStyleNames
 
             load(style)
-            changeListener = { if (isErrorFree) onChange(save()) }
+
+            populateAlignWithAxisWidget()
+
+            preChangeListener = { widget ->
+                if (widget == spineOrientationWidget || widget == hasHeadWidget || widget == hasTailWidget)
+                    populateAlignWithAxisWidget()
+            }
+            postChangeListener = { if (isErrorFree) onChange(save()) }
         }
     }
 

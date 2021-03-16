@@ -47,7 +47,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     private var submitButton: JButton? = null
     private var isSuspendingChangeEvents = true
 
-    var changeListener: ((Widget) -> Unit)? = null
+    var preChangeListener: ((Widget) -> Unit)? = null
+    var postChangeListener: ((Widget) -> Unit)? = null
 
     fun <W : Widget> addWidget(
         label: String, widget: W,
@@ -139,25 +140,25 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     fun onChange(widget: Widget) {
         if (!isSuspendingChangeEvents) {
-            updateVerifyAndVisible()
-            // Notify the change listener if it is set.
-            changeListener?.invoke(widget)
+            preChangeListener?.invoke(widget)
+            updateVerifyAndVisibleAndEnabled()
+            postChangeListener?.invoke(widget)
         }
     }
 
     protected fun finishInit() {
         isSuspendingChangeEvents = false
-        updateVerifyAndVisible()
+        updateVerifyAndVisibleAndEnabled()
     }
 
-    fun withSuspendedChangeEvents(block: () -> Unit) {
+    fun withoutChangeEvents(block: () -> Unit) {
         isSuspendingChangeEvents = true
         block()
         isSuspendingChangeEvents = false
-        updateVerifyAndVisible()
+        updateVerifyAndVisibleAndEnabled()
     }
 
-    private fun updateVerifyAndVisible() {
+    private fun updateVerifyAndVisibleAndEnabled() {
         for (formRow in formRows) {
             formRow.doVerify?.invoke()
             formRow.isVisibleFunc?.let { formRow.isVisible = it() }

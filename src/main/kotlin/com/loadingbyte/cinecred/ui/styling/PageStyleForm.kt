@@ -95,9 +95,9 @@ object PageStyleForm : Form() {
     fun open(style: PageStyle, allStyles: List<PageStyle>, onChange: (PageStyle) -> Unit) {
         nameWidget.otherStyleNames = allStyles.filter { it !== style }.map { it.name }
 
-        withSuspendedChangeEvents {
+        withoutChangeEvents {
             load(style)
-            changeListener = { if (isErrorFree) onChange(save()) }
+            postChangeListener = { if (isErrorFree) onChange(save()) }
         }
     }
 

@@ -273,16 +273,12 @@ private fun drawVerticalSpineBlock(
 ): DrawnBlock {
     val bodyImage = drawnBody.defImage
 
-    // Will store the start and end x coordinates of the head resp. tail if it exists.
-    var headXs = Pair(0f, 0f)
-    var tailXs = Pair(0f, 0f)
-
     // Draw the body image.
     val blockImage = DeferredImage()
     var y = 0f
     // Draw the block's head.
     if (block.head != null) {
-        headXs = blockImage.drawJustifiedStyledString(
+        blockImage.drawJustifiedStyledString(
             fonts, block.head, block.style.headHJustify, 0f, y, bodyImage.width
         )
         // Draw guides that show the edges of the head space.
@@ -298,7 +294,7 @@ private fun drawVerticalSpineBlock(
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx
-        tailXs = blockImage.drawJustifiedStyledString(
+        blockImage.drawJustifiedStyledString(
             fonts, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width
         )
         // Draw guides that show the edges of the tail space.
@@ -309,15 +305,9 @@ private fun drawVerticalSpineBlock(
 
     // Find the x coordinate of the axis in the generated image for the current block.
     val axisXInImage = when (block.style.alignWithAxis) {
-        BODY_LEFT -> 0f
-        OVERALL_CENTER, HEAD_GAP_CENTER, BODY_CENTER, TAIL_GAP_CENTER -> bodyImage.width / 2f
-        BODY_RIGHT -> bodyImage.width
-        HEAD_LEFT -> headXs.first
-        HEAD_CENTER -> (headXs.first + headXs.second) / 2f
-        HEAD_RIGHT -> headXs.second
-        TAIL_LEFT -> tailXs.first
-        TAIL_CENTER -> (tailXs.first + tailXs.second) / 2f
-        TAIL_RIGHT -> tailXs.second
+        HEAD_LEFT, BODY_LEFT, TAIL_LEFT -> 0f
+        OVERALL_CENTER, HEAD_CENTER, HEAD_GAP_CENTER, BODY_CENTER, TAIL_GAP_CENTER, TAIL_CENTER -> bodyImage.width / 2f
+        HEAD_RIGHT, BODY_RIGHT, TAIL_RIGHT -> bodyImage.width
     }
 
     return DrawnBlock(blockImage, axisXInImage)

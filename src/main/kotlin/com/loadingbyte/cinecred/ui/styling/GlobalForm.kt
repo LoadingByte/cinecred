@@ -72,9 +72,9 @@ object GlobalForm : Form() {
     )
 
     fun open(global: Global, onChange: (Global) -> Unit) {
-        withSuspendedChangeEvents {
+        withoutChangeEvents {
             load(global)
-            changeListener = { if (isErrorFree) onChange(save()) }
+            postChangeListener = { if (isErrorFree) onChange(save()) }
         }
     }
 

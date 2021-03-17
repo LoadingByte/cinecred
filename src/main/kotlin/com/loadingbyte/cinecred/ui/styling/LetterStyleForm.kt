@@ -25,10 +25,6 @@ object LetterStyleForm : Form() {
         l10n("ui.styling.letter.tracking"),
         SpinnerWidget(SpinnerNumberModel(0f, null, null, 0.01f))
     )
-    private val superscriptWidget = addWidget(
-        l10n("ui.styling.letter.superscript"),
-        ComboBoxWidget(Superscript.values().asList(), toString = ::l10nEnum)
-    )
     private val foregroundWidget = addWidget(
         l10n("ui.styling.letter.foreground"),
         ColorWellWidget()
@@ -45,6 +41,23 @@ object LetterStyleForm : Form() {
         l10n("ui.styling.letter.strikethrough"),
         CheckBoxWidget()
     )
+    private val smallCapsWidget = addWidget(
+        l10n("ui.styling.letter.smallCaps"),
+        CheckBoxWidget()
+    )
+    private val uppercaseWidget = addWidget(
+        l10n("ui.styling.letter.uppercase"),
+        CheckBoxWidget()
+    )
+    private val useUppercaseExceptionsWidget = addWidget(
+        l10n("ui.styling.letter.useUppercaseExceptions"),
+        CheckBoxWidget(),
+        isEnabled = { uppercaseWidget.isSelected },
+    )
+    private val superscriptWidget = addWidget(
+        l10n("ui.styling.letter.superscript"),
+        ComboBoxWidget(Superscript.values().asList(), toString = ::l10nEnum)
+    )
 
     init {
         finishInit()
@@ -59,11 +72,14 @@ object LetterStyleForm : Form() {
         fontWidget.selectedFontName = style.fontName
         heightPxWidget.value = style.heightPx
         trackingWidget.value = style.tracking
-        superscriptWidget.selectedItem = style.superscript
         foregroundWidget.selectedColor = style.foreground
         backgroundWidget.selectedColor = style.background
         underlineWidget.isSelected = style.underline
         strikethroughWidget.isSelected = style.strikethrough
+        smallCapsWidget.isSelected = style.smallCaps
+        uppercaseWidget.isSelected = style.uppercase
+        useUppercaseExceptionsWidget.isSelected = style.useUppercaseExceptions
+        superscriptWidget.selectedItem = style.superscript
     }
 
     private fun save() = LetterStyle(
@@ -71,11 +87,14 @@ object LetterStyleForm : Form() {
         fontWidget.selectedFontName,
         heightPxWidget.value as Int,
         trackingWidget.value as Float,
-        superscriptWidget.selectedItem,
         foregroundWidget.selectedColor,
         backgroundWidget.selectedColor,
         underlineWidget.isSelected,
-        strikethroughWidget.isSelected
+        strikethroughWidget.isSelected,
+        smallCapsWidget.isSelected,
+        uppercaseWidget.isSelected,
+        useUppercaseExceptionsWidget.isSelected,
+        superscriptWidget.selectedItem
     )
 
     fun open(style: LetterStyle, allStyles: List<LetterStyle>, onChange: (LetterStyle) -> Unit) {

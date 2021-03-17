@@ -33,7 +33,8 @@ private fun readGlobal(map: Map<*, *>) = Global(
     map.get("widthPx", PRESET_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
     map.get("heightPx", PRESET_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
     map.get("background", PRESET_GLOBAL.background) { toColor(allowAlpha = false) },
-    map.get("unitVGapPx", PRESET_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) }
+    map.get("unitVGapPx", PRESET_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) },
+    map.getList("uppercaseExceptions", PRESET_GLOBAL.uppercaseExceptions).filter(String::isNotBlank).toImmutableList()
 )
 
 
@@ -101,11 +102,14 @@ private fun readLetterStyle(map: Map<*, *>) = LetterStyle(
     map.get("fontName", PRESET_LETTER_STYLE.fontName) { this },
     map.get("heightPx", PRESET_LETTER_STYLE.heightPx) { toInt(nonNeg = true, non0 = true) },
     map.get("tracking", PRESET_LETTER_STYLE.tracking) { toFiniteFloat() },
-    map.get("superscript", PRESET_LETTER_STYLE.superscript) { toEnum() },
     map.get("foreground", PRESET_LETTER_STYLE.foreground) { toColor() },
     map.get("background", PRESET_LETTER_STYLE.background) { toColor() },
     map.get("underline", PRESET_LETTER_STYLE.underline) { toBoolean() },
-    map.get("strikethrough", PRESET_LETTER_STYLE.strikethrough) { toBoolean() }
+    map.get("strikethrough", PRESET_LETTER_STYLE.strikethrough) { toBoolean() },
+    map.get("smallCaps", PRESET_LETTER_STYLE.smallCaps) { toBoolean() },
+    map.get("uppercase", PRESET_LETTER_STYLE.uppercase) { toBoolean() },
+    map.get("useUppercaseExceptions", PRESET_LETTER_STYLE.useUppercaseExceptions) { toBoolean() },
+    map.get("superscript", PRESET_LETTER_STYLE.superscript) { toEnum() }
 )
 
 
@@ -115,3 +119,12 @@ private inline fun <R> Map<*, *>.get(key: String, default: R, convert: String.()
     } catch (_: RuntimeException) {
         default
     }
+
+@Suppress("UNCHECKED_CAST")
+private inline fun <reified E> Map<*, *>.getList(key: String, default: List<E>): List<E> {
+    val value = get(key)
+    return if (value is List<*> && value.all { it is E })
+        value as List<E>
+    else
+        default
+}

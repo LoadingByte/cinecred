@@ -22,7 +22,8 @@ private fun writeGlobal(global: Global) = mapOf(
     "widthPx" to global.widthPx,
     "heightPx" to global.heightPx,
     "background" to global.background.toHex24(),
-    "unitVGapPx" to global.unitVGapPx
+    "unitVGapPx" to global.unitVGapPx,
+    "uppercaseExceptions" to global.uppercaseExceptions
 )
 
 
@@ -107,11 +108,14 @@ private fun writeLetterStyle(style: LetterStyle) = mapOf(
     "fontName" to style.fontName,
     "heightPx" to style.heightPx,
     "tracking" to style.tracking,
-    "superscript" to style.superscript.name,
     "foreground" to style.foreground.toHex32(),
     "background" to style.background.toHex32(),
     "underline" to style.underline,
-    "strikethrough" to style.strikethrough
+    "strikethrough" to style.strikethrough,
+    "smallCaps" to style.smallCaps,
+    "uppercase" to style.uppercase,
+    "useUppercaseExceptions" to style.useUppercaseExceptions,
+    "superscript" to style.superscript.name
 )
 
 

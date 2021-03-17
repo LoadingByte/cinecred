@@ -4,10 +4,8 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.projectio.toFPS
-import com.loadingbyte.cinecred.ui.helper.ColorWellWidget
-import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
-import com.loadingbyte.cinecred.ui.helper.Form
-import com.loadingbyte.cinecred.ui.helper.SpinnerWidget
+import com.loadingbyte.cinecred.ui.helper.*
+import kotlinx.collections.immutable.toImmutableList
 import javax.swing.SpinnerNumberModel
 
 
@@ -48,6 +46,12 @@ object GlobalForm : Form() {
         l10n("ui.styling.global.unitVGapPx"),
         SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 1f))
     )
+    private val uppercaseExceptionsWidget = addWidget(
+        l10n("ui.styling.global.uppercaseExceptions"),
+        TextAreaWidget(
+            grow = false,
+            verify = { throw VerifyResult(Severity.INFO, l10n("ui.styling.global.uppercaseExceptionsHint")) })
+    )
 
     init {
         finishInit()
@@ -61,6 +65,7 @@ object GlobalForm : Form() {
         heightPxWidget.value = global.heightPx
         backgroundWidget.selectedColor = global.background
         unitVGapPxWidget.value = global.unitVGapPx
+        uppercaseExceptionsWidget.text = global.uppercaseExceptions.joinToString("\n")
     }
 
     private fun save() = Global(
@@ -68,7 +73,8 @@ object GlobalForm : Form() {
         widthPxWidget.value as Int,
         heightPxWidget.value as Int,
         backgroundWidget.selectedColor,
-        unitVGapPxWidget.value as Float
+        unitVGapPxWidget.value as Float,
+        uppercaseExceptionsWidget.text.split("\n").filter(String::isNotBlank).toImmutableList()
     )
 
     fun open(global: Global, onChange: (Global) -> Unit) {

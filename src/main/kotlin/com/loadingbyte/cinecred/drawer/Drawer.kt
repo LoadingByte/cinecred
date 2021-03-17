@@ -10,13 +10,19 @@ fun draw(project: Project): List<DrawnPage> {
     // Generate AWT fonts that realize the configured letter styles, as well as the placeholder letter style, which
     // functions as a fallback if the letter style name referenced in a content style is unknown.
     val fonts = (project.styling.letterStyles + PLACEHOLDER_LETTER_STYLE)
-        .associateWith { style -> createAWTFont(project.fonts, style) }
+        .associateWith { style -> createAWTFonts(project.fonts, style) }
 
-    return project.pages.map { page -> drawPage(project.styling.global, fonts, page) }
+    // Convert the list of custom uppercase exception patterns to a single regex.
+    val uppercaseExceptionsRegex = createUppercaseExceptionsRegex(project.styling.global.uppercaseExceptions)
+
+    // Store both in a TextContext object.
+    val textCtx = TextContext(fonts, uppercaseExceptionsRegex)
+
+    return project.pages.map { page -> drawPage(project.styling.global, textCtx, page) }
 }
 
 
-private fun createAWTFont(projectFonts: Map<String, Font>, style: LetterStyle): Font {
+private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle): Pair<Font, Font> {
     val baseFont = (projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName))
         .deriveFont(100f)
 
@@ -70,5 +76,49 @@ private fun createAWTFont(projectFonts: Map<String, Font>, style: LetterStyle): 
             Superscript.SUB_2 -> -2
         }
     )
-    return baseFont.deriveFont(fontAttrs)
+    val stdFont = baseFont.deriveFont(fontAttrs)
+    val smallCapsFont = stdFont.deriveFont(size * 0.7f)
+    return Pair(stdFont, smallCapsFont)
+}
+
+
+private fun createUppercaseExceptionsRegex(uppercaseExceptions: List<String>): Regex? = uppercaseExceptions
+    .filter { it.isNotBlank() && it != "_" && it != "#" }
+    .also { if (it.isEmpty()) return null }
+    .groupBy { charToKey(it.first(), 1, 2, 4) or charToKey(it.last(), 8, 16, 32) }
+    .map { (key, patterns) ->
+        val prefix = when {
+            key and 2 != 0 -> "(\\s|^)"
+            key and 4 != 0 -> "[\\p{Lu}\\p{Lt}]"
+            else -> ""
+        }
+        val suffix = when {
+            key and 16 != 0 -> "(\\s|$)"
+            key and 32 != 0 -> "[\\p{Lu}\\p{Lt}]"
+            else -> ""
+        }
+        val joinedPatterns = patterns
+            // Note: By sorting the patterns in descending order, we ensure that in the case of long patterns which
+            // contain shorter patterns (e.g., "_von und zu_" and "_von_"), the long pattern is matched if it applies,
+            // and the short pattern is only matched if the long pattern doesn't apply. If we don't enforce this,
+            // the shorter pattern might be matched, but the long pattern isn't even though it applies, which is
+            // highly unexpected behavior.
+            .sortedByDescending(String::length)
+            .joinToString("|") { pattern ->
+                when {
+                    key and (1 or 8) == 0 -> pattern.substring(1, pattern.length - 1)
+                    key and 1 == 0 -> pattern.drop(1)
+                    key and 8 == 0 -> pattern.dropLast(1)
+                    else -> pattern
+                }.let(Regex::escape)
+            }
+        "$prefix($joinedPatterns)$suffix"
+    }
+    .joinToString("|")
+    .toRegex()
+
+private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: Int) = when (char) {
+    '_' -> forUnderscore
+    '#' -> forHash
+    else -> forOther
 }

@@ -27,7 +27,8 @@ data class Global(
     val widthPx: Int,
     val heightPx: Int,
     val background: Color,
-    val unitVGapPx: Float
+    val unitVGapPx: Float,
+    val uppercaseExceptions: ImmutableList<String>
 )
 
 
@@ -117,11 +118,14 @@ data class LetterStyle(
     val fontName: String,
     val heightPx: Int,
     val tracking: Float,
-    val superscript: Superscript,
     val foreground: Color,
     val background: Color,
     val underline: Boolean,
-    val strikethrough: Boolean
+    val strikethrough: Boolean,
+    val smallCaps: Boolean,
+    val uppercase: Boolean,
+    val useUppercaseExceptions: Boolean,
+    val superscript: Superscript
 )
 
 

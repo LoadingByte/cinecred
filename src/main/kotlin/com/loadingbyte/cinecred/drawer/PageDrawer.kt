@@ -5,13 +5,12 @@ import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.toImmutableList
-import java.awt.Font
 import java.awt.geom.Path2D
 
 
 fun drawPage(
     global: Global,
-    fonts: Map<LetterStyle, Font>,
+    textCtx: TextContext,
     page: Page
 ): DrawnPage {
     // Convert the aligning group lists to maps that map from block to group id.
@@ -24,7 +23,7 @@ fun drawPage(
     // Also remember the x coordinate of the axis inside each generated image.
     val drawnColumns = page.stages
         .flatMap { stage -> stage.segments }.flatMap { segment -> segment.columns }
-        .associateWith { column -> drawColumn(fonts, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
+        .associateWith { column -> drawColumn(textCtx, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
     val pageImage = DeferredImage()
     // First, for each stage, combine the column images to a stage image, and then combine the stage images to the

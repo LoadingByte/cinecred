@@ -17,26 +17,40 @@ import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.text.JTextComponent
 import kotlin.math.ceil
+
+
+open class TextComponentWidget(
+    protected val tc: JTextComponent,
+    grow: Boolean = true,
+    verify: ((String) -> Unit)? = null
+) : Form.Widget() {
+
+    init {
+        tc.addChangeListener { notifyChangeListeners() }
+        tc.setMinWidth100()
+    }
+
+    override val components = listOf<JComponent>(tc)
+    override val constraints = listOf(if (grow) "width 40%" else "")
+    override val verify = verify?.let { { it(text) } }
+
+    var text: String by tc::text
+
+}
 
 
 open class TextWidget(
     grow: Boolean = true,
     verify: ((String) -> Unit)? = null
-) : Form.Widget() {
+) : TextComponentWidget(JTextField(), grow, verify)
 
-    protected val tf = JTextField().apply {
-        addChangeListener { notifyChangeListeners() }
-        setMinWidth100()
-    }
 
-    override val components = listOf<JComponent>(tf)
-    override val constraints = listOf(if (grow) "width 40%" else "")
-    override val verify = verify?.let { { it(text) } }
-
-    var text: String by tf::text
-
-}
+class TextAreaWidget(
+    grow: Boolean = true,
+    verify: ((String) -> Unit)? = null
+) : TextComponentWidget(JTextArea(), grow, verify)
 
 
 open class FilenameWidget(
@@ -46,9 +60,9 @@ open class FilenameWidget(
 
     init {
         // When the user leaves the text field, ensure that it ends with an admissible file extension.
-        tf.addFocusListener(object : FocusAdapter() {
+        tc.addFocusListener(object : FocusAdapter() {
             override fun focusLost(e: FocusEvent) {
-                tf.text = tf.text.ensureEndsWith(fileExts.map { ".$it" })
+                text = text.ensureEndsWith(fileExts.map { ".$it" })
             }
         })
     }
@@ -59,9 +73,9 @@ open class FilenameWidget(
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
-            if (!newFileExts.any { tf.text.endsWith(".$it") }) {
-                tf.text = tf.text.ensureDoesntEndWith(fileExts.map { ".$it" })
-                tf.text = tf.text.ensureEndsWith(newFileExts.map { ".$it" })
+            if (!newFileExts.any { text.endsWith(".$it") }) {
+                text = text.ensureDoesntEndWith(fileExts.map { ".$it" })
+                text = text.ensureEndsWith(newFileExts.map { ".$it" })
             }
             _fileExts.clear()
             _fileExts.addAll(newFileExts)
@@ -110,7 +124,7 @@ class FileWidget(
         }
     }
 
-    override val components = listOf<JComponent>(tf, browse)
+    override val components = listOf<JComponent>(tc, browse)
     override val constraints = listOf("split, width 40%", "")
 
     override val verify = {
@@ -549,7 +563,7 @@ private fun <C : Component> C.setMinWidth100() {
     minimumSize = Dimension(100, minimumSize.height)
 }
 
-private inline fun JTextField.addChangeListener(crossinline listener: () -> Unit) {
+private inline fun JTextComponent.addChangeListener(crossinline listener: () -> Unit) {
     document.addDocumentListener(object : DocumentListener {
         override fun insertUpdate(e: DocumentEvent) = listener()
         override fun removeUpdate(e: DocumentEvent) = listener()

@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
-import java.awt.Font
 import kotlin.math.max
 import kotlin.math.min
 
@@ -15,7 +14,7 @@ private typealias DrawnBlock = DrawnColumn  // Just reuse the class because the 
 
 
 fun drawColumn(
-    fonts: Map<LetterStyle, Font>,
+    textCtx: TextContext,
     column: Column,
     alignBodyColsGroupIds: Map<Block, Int>,
     alignHeadTailGroupIds: Map<Block, Int>
@@ -36,16 +35,16 @@ fun drawColumn(
         // Generate an image for the body of each block in the group. The bodies are laid out together such that,
         // for example, a "left" justification means "left" w.r.t. to the column spanned up by the widest body from
         // the block group. As a consequence, all these images also share the same width.
-        drawnBodies.putAll(drawBodyImagesWithGridBodyLayout(fonts, blockGroup))
+        drawnBodies.putAll(drawBodyImagesWithGridBodyLayout(textCtx, blockGroup))
     }
 
     // Step 2:
     // Generate images for blocks whose bodies are laid out using the "flow body layout" or "paragraphs body layout".
     for (block in column.blocks)
         if (block.style.bodyLayout == BodyLayout.FLOW)
-            drawnBodies[block] = drawBodyImageWithFlowBodyLayout(fonts, block)
+            drawnBodies[block] = drawBodyImageWithFlowBodyLayout(textCtx, block)
         else if (block.style.bodyLayout == BodyLayout.PARAGRAPHS)
-            drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(fonts, block)
+            drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(textCtx, block)
 
     // We now add heads and tails to the body images and thereby generate an image for each block.
     // We also remember the x coordinate of the axis inside each generated image.
@@ -96,12 +95,12 @@ fun drawColumn(
         }
     // Finally, generate block images for all horizontal blocks. The images for grouped blocks are generated in unison.
     for (blockGroup in headOrTailAlignBlockGroups1 + headOrTailAlignBlockGroups2)
-        drawnBlocks.putAll(drawHorizontalSpineBlocks(fonts, blockGroup, drawnBodies))
+        drawnBlocks.putAll(drawHorizontalSpineBlocks(textCtx, blockGroup, drawnBodies))
 
     // Step 4: Now generate block images for the blocks which have a vertical spine.
     for (block in column.blocks)
         if (block.style.spineOrientation == SpineOrientation.VERTICAL)
-            drawnBlocks[block] = drawVerticalSpineBlock(fonts, block, drawnBodies.getValue(block))
+            drawnBlocks[block] = drawVerticalSpineBlock(textCtx, block, drawnBodies.getValue(block))
 
     // Step 5:
     // Combine the block images for the blocks inside the column to a column image.
@@ -164,7 +163,7 @@ private inline fun <E> List<E>.fuzzyGroupBy(keySelector: (E) -> Float): List<Lis
 
 
 private fun drawHorizontalSpineBlocks(
-    fonts: Map<LetterStyle, Font>,
+    textCtx: TextContext,
     blocks: List<Block>,
     drawnBodies: Map<Block, DrawnBody>,
 ): Map<Block, DrawnBlock> {
@@ -180,7 +179,7 @@ private fun drawHorizontalSpineBlocks(
         HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER, BODY_LEFT ->
             blocks.maxOf { block ->
                 if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.head == null) 0f
-                else block.head.getWidth(fonts)
+                else block.head.getWidth(textCtx)
             }
         else -> null
     }
@@ -188,7 +187,7 @@ private fun drawHorizontalSpineBlocks(
         BODY_RIGHT, TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
             blocks.maxOf { block ->
                 if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.tail == null) 0f
-                else block.tail.getWidth(fonts)
+                else block.tail.getWidth(textCtx)
             }
         else -> null
     }
@@ -199,8 +198,8 @@ private fun drawHorizontalSpineBlocks(
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = headSharedWidth ?: block.head?.getWidth(fonts) ?: 0f
-        val tailWidth = tailSharedWidth ?: block.tail?.getWidth(fonts) ?: 0f
+        val headWidth = headSharedWidth ?: block.head?.getWidth(textCtx) ?: 0f
+        val tailWidth = tailSharedWidth ?: block.tail?.getWidth(textCtx) ?: 0f
 
         val headStartX = 0f
         val headEndX = headStartX + headWidth
@@ -223,7 +222,7 @@ private fun drawHorizontalSpineBlocks(
         // Draw the block's head.
         if (block.head != null) {
             blockImage.drawJustifiedStyledString(
-                fonts, block.head, block.style.headHJustify, block.style.headVJustify,
+                textCtx, block.head, block.style.headHJustify, block.style.headVJustify,
                 0f, y, headWidth, bodyImage.height, getReferenceHeight(block.style.headVJustify)
             )
             // Draw a guide that shows the edges of the head space.
@@ -236,7 +235,7 @@ private fun drawHorizontalSpineBlocks(
         // Draw the block's tail.
         if (block.tail != null) {
             blockImage.drawJustifiedStyledString(
-                fonts, block.tail, block.style.tailHJustify, block.style.tailVJustify,
+                textCtx, block.tail, block.style.tailHJustify, block.style.tailVJustify,
                 tailStartX, y, tailWidth, bodyImage.height, getReferenceHeight(block.style.tailVJustify)
             )
             // Draw a guide that shows the edges of the tail space.
@@ -267,7 +266,7 @@ private fun drawHorizontalSpineBlocks(
 
 
 private fun drawVerticalSpineBlock(
-    fonts: Map<LetterStyle, Font>,
+    textCtx: TextContext,
     block: Block,
     drawnBody: DrawnBody
 ): DrawnBlock {
@@ -279,7 +278,7 @@ private fun drawVerticalSpineBlock(
     // Draw the block's head.
     if (block.head != null) {
         blockImage.drawJustifiedStyledString(
-            fonts, block.head, block.style.headHJustify, 0f, y, bodyImage.width
+            textCtx, block.head, block.style.headHJustify, 0f, y, bodyImage.width
         )
         // Draw guides that show the edges of the head space.
         val y2 = blockImage.height
@@ -295,7 +294,7 @@ private fun drawVerticalSpineBlock(
     if (block.tail != null) {
         y += block.style.tailGapPx
         blockImage.drawJustifiedStyledString(
-            fonts, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width
+            textCtx, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width
         )
         // Draw guides that show the edges of the tail space.
         val y2 = blockImage.height

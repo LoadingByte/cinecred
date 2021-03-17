@@ -10,7 +10,13 @@ val PRESET_GLOBAL = Global(
     widthPx = 1920,
     heightPx = 1080,
     background = Color.BLACK,
-    unitVGapPx = 32f
+    unitVGapPx = 32f,
+    uppercaseExceptions = persistentListOf(
+        "_af_", "_auf_", "_d\u2019#", "_da_", "_Da#", "_dai_", "_Dai#", "_dal_", "_Dal#", "_dalla_",
+        "_Dalla#", "_das_", "_de_", "_de\u2019_", "_dei_", "_Dei#", "_del_", "_Del#", "_della_",
+        "_Della#", "_der_", "_des_", "_di_", "_Di#", "_do_", "_dos_", "_du_", "_e_", "_Mc#", "_Mac#",
+        "_of_", "_ten_", "_thoe_", "_til_", "_to_", "_tot_", "_van_", "_von_", "_von und zu_", "_zu_"
+    )
 )
 
 
@@ -71,11 +77,14 @@ val PRESET_LETTER_STYLE = LetterStyle(
     fontName = "Archivo Narrow Regular",
     heightPx = 32,
     tracking = 0f,
-    superscript = Superscript.NONE,
     foreground = Color.WHITE,
     background = Color(0, 0, 0, 0),
     underline = false,
-    strikethrough = false
+    strikethrough = false,
+    smallCaps = false,
+    uppercase = false,
+    useUppercaseExceptions = true,
+    superscript = Superscript.NONE
 )
 
 

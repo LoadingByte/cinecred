@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.Picture
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
 import java.awt.Color
 import java.awt.Font
 
@@ -16,9 +17,9 @@ class Project(
 
 data class Styling constructor(
     val global: Global,
-    val pageStyles: ImmutableList<PageStyle>,
-    val contentStyles: ImmutableList<ContentStyle>,
-    val letterStyles: ImmutableList<LetterStyle>
+    val pageStyles: ImmutableSet<PageStyle>,
+    val contentStyles: ImmutableSet<ContentStyle>,
+    val letterStyles: ImmutableSet<LetterStyle>
 )
 
 

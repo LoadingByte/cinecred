@@ -224,10 +224,12 @@ object EditPanel : JPanel() {
         unsavedStylingLabel.isVisible = isUnsaved
         undoStylingButton.isEnabled = isUndoable
         redoStylingButton.isEnabled = isRedoable
+        resetStylingButton.isEnabled = isUnsaved
     }
 
     fun onStylingSave() {
         unsavedStylingLabel.isVisible = false
+        resetStylingButton.isEnabled = false
     }
 
     fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {

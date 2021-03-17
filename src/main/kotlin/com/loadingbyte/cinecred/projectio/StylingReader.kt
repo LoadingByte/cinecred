@@ -2,8 +2,9 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.project.*
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import java.nio.file.Path
 
 
@@ -24,8 +25,8 @@ fun readStyling(stylingFile: Path): Styling {
 
 
 private fun <E> readMapList(mapList: Any?, readMap: (Map<*, *>) -> E) =
-    if (mapList == null || mapList !is List<*>) persistentListOf()
-    else mapList.filterIsInstance<Map<*, *>>().map(readMap).toImmutableList()
+    if (mapList == null || mapList !is List<*>) persistentSetOf()
+    else mapList.filterIsInstance<Map<*, *>>().map(readMap).toImmutableSet()
 
 
 private fun readGlobal(map: Map<*, *>) = Global(
@@ -115,7 +116,7 @@ private fun readLetterStyle(map: Map<*, *>) = LetterStyle(
 
 private inline fun <R> Map<*, *>.get(key: String, default: R, convert: String.() -> R): R =
     try {
-        get(key)?.toString()?.trim()?.let(convert) ?: default
+        get(key)?.let { convert(it.toString().trim()) } ?: default
     } catch (_: RuntimeException) {
         default
     }

@@ -100,7 +100,7 @@ object LetterStyleForm : Form() {
     fun open(style: LetterStyle, allStyles: List<LetterStyle>, onChange: (LetterStyle) -> Unit) {
         nameWidget.otherStyleNames = allStyles.filter { it !== style }.map { it.name }
 
-        withoutChangeEvents {
+        withoutChangeListeners {
             load(style)
             postChangeListener = { if (isErrorFree) onChange(save()) }
         }

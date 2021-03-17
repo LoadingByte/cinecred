@@ -78,7 +78,7 @@ object GlobalForm : Form() {
     )
 
     fun open(global: Global, onChange: (Global) -> Unit) {
-        withoutChangeEvents {
+        withoutChangeListeners {
             load(global)
             postChangeListener = { if (isErrorFree) onChange(save()) }
         }

@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.Controller
 import com.loadingbyte.cinecred.ui.MainFrame
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -192,6 +192,9 @@ object EditStylingPanel : JPanel() {
     fun setStyling(styling: Styling) {
         stylingTree.setSingleton(styling.global)
         stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles + styling.letterStyles)
+        // Simulate the user selecting the node which is already selected currently. This triggers a callback
+        // which then updates the right panel.
+        stylingTree.triggerOnSelectOrOnDeselect()
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
@@ -201,9 +204,9 @@ object EditStylingPanel : JPanel() {
     private fun onChange() {
         val styling = Styling(
             stylingTree.getSingleton(Global::class.java),
-            stylingTree.getList(PageStyle::class.java).toImmutableList(),
-            stylingTree.getList(ContentStyle::class.java).toImmutableList(),
-            stylingTree.getList(LetterStyle::class.java).toImmutableList(),
+            stylingTree.getList(PageStyle::class.java).toImmutableSet(),
+            stylingTree.getList(ContentStyle::class.java).toImmutableSet(),
+            stylingTree.getList(LetterStyle::class.java).toImmutableSet(),
         )
         Controller.StylingHistory.editedAndRedraw(styling)
     }

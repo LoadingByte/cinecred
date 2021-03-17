@@ -31,12 +31,6 @@ object DeliverConfigurationForm : Form() {
     private var project: Project? = null
     private var drawnPages: List<DrawnPage> = emptyList()
 
-    private val resolutionMultWidget = addWidget(
-        l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(
-            SpinnerNumberModel(1f, 0.01f, null, 0.5f),
-            verify = { verifyResolutionMult(it as Float) })
-    )
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
@@ -90,6 +84,12 @@ object DeliverConfigurationForm : Form() {
         isVisible = { formatWidget.selectedItem !in SEQ_FORMATS },
     )
 
+    private val resolutionMultWidget = addWidget(
+        l10n("ui.deliverConfig.resolutionMultiplier"),
+        SpinnerWidget(
+            SpinnerNumberModel(1f, 0.01f, null, 0.5f),
+            verify = { verifyResolutionMult(it as Float) })
+    )
     private val transparentBackgroundWidget = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),

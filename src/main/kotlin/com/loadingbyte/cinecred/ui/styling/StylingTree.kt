@@ -53,11 +53,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         addTreeSelectionListener {
             if (disableSelectionListener)
                 return@addTreeSelectionListener
-            val selectedNodeUserObj = (lastSelectedPathComponent as DefaultMutableTreeNode?)?.userObject
-            if (selectedNodeUserObj is StoredObj)
-                selectedNodeUserObj.typeInfo.onSelect(selectedNodeUserObj.obj)
-            else
-                onDeselect?.invoke()
+            triggerOnSelectOrOnDeselect()
         }
     }
 
@@ -90,8 +86,6 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     fun setSingleton(singleton: Any) {
         val typeInfo = singletonTypeInfos.getValue(singleton.javaClass)
         typeInfo.node.userObject = StoredObj(typeInfo, singleton)
-        if (typeInfo.node == selectedNode)
-            typeInfo.onSelect(singleton)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -150,11 +144,18 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             throw IllegalStateException()
     }
 
-    fun replaceAllListElements(newElements: List<Any>) {
-        val selectedNodeUserObj = selectedNode?.userObject
+    fun replaceAllListElements(newElements: Iterable<Any>) {
+        val selectedNodeUserObj = selectedNode?.userObject.let { if (it is StoredObj) it else null }
+
+        // If a list node is currently selected, deselect it for now. For this, the onDeselect() function is disabled
+        // because a call to a tree method should by contract never trigger such callbacks. Note that we if we wouldn't
+        // explicitly deselect the node here, it would be deselected automatically when it is removed in a couple of
+        // lines, however, then onDeselect() would be called, which we do not want.
+        if (selectedNodeUserObj?.typeInfo is TypeInfo.List)
+            withoutSelectionListener { selectionRows = intArrayOf() }
 
         for (typeInfo in listTypeInfos.values)
-            for (node in typeInfo.node.children().toList())  // .toList() avoids concurrent modification.
+            for (node in typeInfo.node.children().toList())  // Using .toList() avoids concurrent modification.
                 model.removeNodeFromParent(node as MutableTreeNode)
 
         for (element in newElements)
@@ -163,39 +164,35 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         for (typeInfo in listTypeInfos.values)
             expandPath(TreePath(typeInfo.node.path))
 
-        if (selectedNodeUserObj is StoredObj) {
-            val typeInfo = selectedNodeUserObj.typeInfo
-            if (typeInfo is TypeInfo.List) {
-                // First clear the current selection, which leads to the blank card showing in the right panel.
-                // This way, we make sure that no stale data is shown in the right panel.
-                selectionRows = intArrayOf()
+        val typeInfo = selectedNodeUserObj?.typeInfo
+        if (typeInfo is TypeInfo.List) {
+            // If a list node has previously been select, select the best matching node now...
+            val oldElem = selectedNodeUserObj.obj
+            val oldElemName = typeInfo.objToString(oldElem)
+            val candidateNodes = typeInfo.node.children().asSequence().map { it as DefaultMutableTreeNode }.toList()
 
-                // Then select the best matching node. If no node is matching, select the first node in the tree.
-                setSelectionRow(0)
+            val bestMatchingNode =
+                candidateNodes.find { (it.userObject as StoredObj).obj == oldElem }
+                    ?: candidateNodes.find { typeInfo.objToString((it.userObject as StoredObj).obj) == oldElemName }
 
-                val oldElem = selectedNodeUserObj.obj
-                typeInfo.node.children().asSequence().find {
-                    ((it as DefaultMutableTreeNode).userObject as StoredObj).obj == oldElem
-                }?.let {
-                    selectionPath = TreePath((it as DefaultMutableTreeNode).path)
-                    return
-                }
-
-                val oldElemName = typeInfo.objToString(selectedNodeUserObj.obj)
-                typeInfo.node.children().asSequence().find {
-                    typeInfo.objToString(((it as DefaultMutableTreeNode).userObject as StoredObj).obj) == oldElemName
-                }?.let {
-                    selectionPath = TreePath((it as DefaultMutableTreeNode).path)
-                }
-            }
+            // If some matching node has been found, select it. Once again, don't notify onSelect().
+            if (bestMatchingNode != null)
+                withoutSelectionListener { selectionPath = TreePath(bestMatchingNode.path) }
         }
+    }
+
+    fun triggerOnSelectOrOnDeselect() {
+        val selectedNodeUserObj = selectedNode?.userObject
+        if (selectedNodeUserObj is StoredObj)
+            selectedNodeUserObj.typeInfo.onSelect(selectedNodeUserObj.obj)
+        else
+            onDeselect?.invoke()
     }
 
     private fun sortNode(node: DefaultMutableTreeNode) {
         // Note: We temporarily disable the tree selection listener because the node removal and subsequent insertion
         // at another place should not close and re-open (and thus reset) the right-hand editing panel.
-        disableSelectionListener = true
-        try {
+        withoutSelectionListener {
             // We also remember the current selection path so that we can restore it later.
             val selectionPath = this.selectionPath
 
@@ -209,8 +206,6 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             model.insertNodeInto(node, parent, idx)
 
             this.selectionPath = selectionPath
-        } finally {
-            disableSelectionListener = false
         }
     }
 
@@ -228,6 +223,15 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         val leafPath = TreePath(node.path)
         scrollPathToVisible(TreePath(node.path))
         selectionPath = leafPath
+    }
+
+    private inline fun withoutSelectionListener(block: () -> Unit) {
+        disableSelectionListener = true
+        try {
+            block()
+        } finally {
+            disableSelectionListener = false
+        }
     }
 
 

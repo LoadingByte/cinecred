@@ -332,7 +332,7 @@ object ContentStyleForm : Form() {
     ) {
         nameWidget.otherStyleNames = allStyles.filter { it !== style }.map { it.name }
 
-        withoutChangeEvents {
+        withoutChangeListeners {
             val letterStyleNames = letterStyles.map { it.name }
             bodyLetterStyleWidget.items = letterStyleNames
             headLetterStyleWidget.items = letterStyleNames

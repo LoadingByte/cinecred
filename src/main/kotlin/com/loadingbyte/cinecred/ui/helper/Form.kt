@@ -45,7 +45,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     private val formRows = mutableListOf<FormRow>()
     private var submitButton: JButton? = null
-    private var isSuspendingChangeEvents = true
+    private var disableOnChange = true  // Will be set to false by finishInit().
 
     var preChangeListener: ((Widget) -> Unit)? = null
     var postChangeListener: ((Widget) -> Unit)? = null
@@ -139,7 +139,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     fun onChange(widget: Widget) {
-        if (!isSuspendingChangeEvents) {
+        if (!disableOnChange) {
             preChangeListener?.invoke(widget)
             updateVerifyAndVisibleAndEnabled()
             postChangeListener?.invoke(widget)
@@ -147,15 +147,18 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
     protected fun finishInit() {
-        isSuspendingChangeEvents = false
+        disableOnChange = false
         updateVerifyAndVisibleAndEnabled()
     }
 
-    fun withoutChangeEvents(block: () -> Unit) {
-        isSuspendingChangeEvents = true
-        block()
-        isSuspendingChangeEvents = false
-        updateVerifyAndVisibleAndEnabled()
+    fun withoutChangeListeners(block: () -> Unit) {
+        disableOnChange = true
+        try {
+            block()
+        } finally {
+            disableOnChange = false
+            updateVerifyAndVisibleAndEnabled()
+        }
     }
 
     private fun updateVerifyAndVisibleAndEnabled() {

@@ -14,19 +14,9 @@ import java.util.*
 class TextContext(val fonts: Map<LetterStyle, Pair<Font, Font>>, val uppercaseExceptionsRegex: Regex?)
 
 
-private inline fun StyledString.forEachRun(block: (String, LetterStyle, Int, Int) -> Unit) {
-    var runStartIdx = 0
-    for ((run, style) in this) {
-        val runEndIdx = runStartIdx + run.length
-        block(run, style, runStartIdx, runEndIdx)
-        runStartIdx = runEndIdx
-    }
-}
-
-
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
     val result = mutableListOf<Pair<String, LetterStyle>>()
-    forEachRun { run, style, runStartIdx, runEndIdx ->
+    forEachRun { _, run, style, runStartIdx, runEndIdx ->
         // Only look at the current run if the target region has already started.
         if (startIdx < runEndIdx) {
             var subrunStartIdx = 0
@@ -67,64 +57,90 @@ fun StyledString.getHeight(): Int =
 
 
 fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
-    var str = joinToString("") { (run, _) -> run }
+    // 1. Apply uppercasing to the styled string (not small caps yet!).
+    var uppercased = this
 
-    // 1. Apply uppercasing to "str" (not small caps!).
-    if (size == 1 && single().second.uppercase) {
-        // We implement uppercasing of the quite common single-run styled strings separately for performance benefits.
-        str = if (!single().second.useUppercaseExceptions || textCtx.uppercaseExceptionsRegex == null)
-            str.toUpperCase(Locale.US)
-        else
-            buildString(str.length) {
-                for (match in textCtx.uppercaseExceptionsRegex.findAll(str)) {
-                    append(str.substring(this@buildString.length, match.range.first).toUpperCase(Locale.US))
-                    append(str.substring(match.range.first, match.range.last + 1))
+    // Only run the algorithm if at least one run needs uppercasing.
+    if (any { (_, style) -> style.uppercase }) {
+        val joined = joinToString("") { (run, _) -> run }
+
+        // If later needed, precompute an uppercased version of the joined string that considers the
+        // uppercase exceptions.
+        var joinedUppercased: String? = null
+        if (textCtx.uppercaseExceptionsRegex != null && any { (_, style) -> style.useUppercaseExceptions })
+            joinedUppercased = buildString(joined.length) {
+                for (match in textCtx.uppercaseExceptionsRegex.findAll(joined)) {
+                    append(joined.substring(this@buildString.length, match.range.first).toUpperCase(Locale.ROOT))
+                    append(joined.substring(match.range.first, match.range.last + 1))
                 }
-                append(str.substring(this@buildString.length).toUpperCase(Locale.US))  // remainder
+                append(joined.substring(this@buildString.length).toUpperCase(Locale.ROOT))  // remainder
             }
-    } else if (size > 1 && any { (_, style) -> style.uppercase }) {
-        // This is the general implementation. First, create a mask that records the indices of chars which
-        // shouldn't be uppercased because they are part of user-configured "do not uppercase" patterns.
-        val mask = BooleanArray(str.length)
-        if (textCtx.uppercaseExceptionsRegex != null)
-            for (match in textCtx.uppercaseExceptionsRegex.findAll(str))
-                mask.fill(true, match.range.first, match.range.last + 1)
-        // Then do the uppercasing for each run with a uppercasing letter style.
-        str = buildString(str.length) {
-            forEachRun { run, style, runStartIdx, runEndIdx ->
-                if (!style.uppercase)
-                    append(run)
-                else if (!style.useUppercaseExceptions)
-                    append(run.toUpperCase(Locale.US))
-                else
-                    for (idx in runStartIdx until runEndIdx)
-                        append(if (mask[idx]) str[idx] else str[idx].toUpperCase())
+
+        // Now compute the uppercased styled string. For the quite common single-run styled strings, we have a
+        // special case to achieve better performance.
+        uppercased = if (size == 1)
+            listOf(Pair(joinedUppercased ?: joined.toUpperCase(Locale.ROOT), single().second))
+        else {
+            mapRuns { _, run, style, runStartIdx, runEndIdx ->
+                buildString(run.length) {
+                    if (!style.uppercase)
+                        append(run)
+                    else if (!style.useUppercaseExceptions)
+                        append(run.toUpperCase(Locale.ROOT))
+                    else
+                        append(joinedUppercased!!.substring(runStartIdx, runEndIdx))
+                }
             }
         }
     }
 
-    var effectiveStr = str
+    // 2. Prepare for small caps. For this, create the "smallCapsed" styled string, which has all runs with a small
+    //    caps style uppercased. For each character in those uppercased runs, remember whether it should be rendered
+    //    as a small cap letter or regular uppercase letter.
+    val smallCapsed: StyledString
+    var smallCapsMasks: Array<BooleanArray?>? = null
 
-    // 2. Apply small caps to "effectiveStr".
-    if (size == 1 && get(0).second.smallCaps)
-        effectiveStr = effectiveStr.toUpperCase()
-    else if (size > 1 && any { (_, style) -> style.smallCaps })
-        effectiveStr = buildString(effectiveStr.length) {
-            forEachRun { _, style, runStartIdx, runEndIdx ->
-                val run = effectiveStr.substring(runStartIdx, runEndIdx)
-                append(if (style.smallCaps) run.toUpperCase() else run)
+    if (!uppercased.any { (_, style) -> style.smallCaps })
+        smallCapsed = uppercased
+    else {
+        val masks = arrayOfNulls<BooleanArray?>(uppercased.size)
+        smallCapsMasks = masks
+        smallCapsed = uppercased.mapRuns { runIdx, run, style, _, _ ->
+            if (!style.smallCaps)
+                run
+            else {
+                val smallCapsedRun = if (style.smallCaps) run.toUpperCase(Locale.ROOT) else run
+
+                // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
+                // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
+                // in the previous line yields a string with more characters than were in the original.
+                masks[runIdx] = if (run.length == smallCapsedRun.length)
+                    BooleanArray(run.length) { idx -> run[idx].isLowerCase() }
+                else
+                    BooleanArray(smallCapsedRun.length).also { mask ->
+                        var prevEndFillIdx = 0
+                        for (idxInRun in run.indices) {
+                            val endFillIdx = run.substring(0, idxInRun + 1).toUpperCase(Locale.ROOT).length
+                            mask.fill(run[idxInRun].isLowerCase(), prevEndFillIdx, endFillIdx)
+                            prevEndFillIdx = endFillIdx
+                        }
+                    }
+
+                smallCapsedRun
             }
         }
+    }
 
-    // 3. Add attributes to the "effectiveStr" as indicated by the letter styles.
-    val attrStr = AttributedString(effectiveStr)
-    forEachRun { _, style, runStartIdx, runEndIdx ->
+    // 3. Add attributes to the "smallCapsed" string as indicated by the letter styles.
+    val attrStr = AttributedString(smallCapsed.joinToString("") { (run, _) -> run })
+    smallCapsed.forEachRun { runIdx, _, style, runStartIdx, runEndIdx ->
         val (stdFont, smallCapsFont) = textCtx.fonts.getValue(style)
         if (!style.smallCaps)
             attrStr.addAttribute(TextAttribute.FONT, stdFont, runStartIdx, runEndIdx)
         else
-            str.forEachAlternatingStrip(runStartIdx, runEndIdx, Char::isLowerCase) { isLowerCase, startIdx, endIdx ->
-                attrStr.addAttribute(TextAttribute.FONT, if (isLowerCase) smallCapsFont else stdFont, startIdx, endIdx)
+            smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
+                val font = if (isStripSmallCaps) smallCapsFont else stdFont
+                attrStr.addAttribute(TextAttribute.FONT, font, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
             }
 
         attrStr.addAttribute(TextAttribute.FOREGROUND, style.foreground, runStartIdx, runEndIdx)
@@ -138,21 +154,16 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
     return attrStr
 }
 
-private inline fun String.forEachAlternatingStrip(
-    startIdx: Int, endIdx: Int, predicate: (Char) -> Boolean, block: (Boolean, Int, Int) -> Unit
-) {
-    var state = predicate(get(startIdx))
-    var stripStartIdx = startIdx
+private inline fun BooleanArray.forEachAlternatingStrip(block: (Boolean, Int, Int) -> Unit) {
+    var state = get(0)
+    var stripStartIdx = 0
 
     while (true) {
-        val stripEndIdx = if (state)
-            indexOfFirst(stripStartIdx, endIdx) { !predicate(it) }
-        else
-            indexOfFirst(stripStartIdx, endIdx, predicate)
+        val stripEndIdx = indexOf(!state, stripStartIdx)
 
         if (stripEndIdx == -1) {
-            if (stripEndIdx != endIdx)
-                block(state, stripStartIdx, endIdx)
+            if (stripStartIdx != size)
+                block(state, stripStartIdx, size)
             break
         }
 
@@ -162,11 +173,31 @@ private inline fun String.forEachAlternatingStrip(
     }
 }
 
-private inline fun String.indexOfFirst(startIdx: Int, endIdx: Int, predicate: (Char) -> Boolean): Int {
-    for (idx in startIdx until endIdx) {
-        if (predicate(this[idx])) {
+private fun BooleanArray.indexOf(elem: Boolean, startIdx: Int): Int {
+    for (idx in startIdx until size) {
+        if (this[idx] == elem) {
             return idx
         }
     }
     return -1
+}
+
+
+private inline fun StyledString.forEachRun(block: (Int, String, LetterStyle, Int, Int) -> Unit) {
+    var runStartIdx = 0
+    for (runIdx in indices) {
+        val (run, style) = get(runIdx)
+        val runEndIdx = runStartIdx + run.length
+        block(runIdx, run, style, runStartIdx, runEndIdx)
+        runStartIdx = runEndIdx
+    }
+}
+
+
+private inline fun StyledString.mapRuns(transform: (Int, String, LetterStyle, Int, Int) -> String): StyledString {
+    val result = ArrayList<Pair<String, LetterStyle>>(size)
+    forEachRun { runIdx, run, style, runStartIdx, runEndIdx ->
+        result.add(Pair(transform(runIdx, run, style, runStartIdx, runEndIdx), style))
+    }
+    return result
 }

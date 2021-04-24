@@ -23,6 +23,7 @@ private fun writeGlobal(global: Global) = mapOf(
     "heightPx" to global.heightPx,
     "background" to global.background.toHex24(),
     "unitVGapPx" to global.unitVGapPx,
+    "locale" to global.locale.toLanguageTag(),
     "uppercaseExceptions" to global.uppercaseExceptions
 )
 

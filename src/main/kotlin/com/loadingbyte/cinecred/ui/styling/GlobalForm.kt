@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.projectio.toFPS
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
+import java.util.*
 import javax.swing.SpinnerNumberModel
 
 
@@ -46,6 +47,12 @@ object GlobalForm : Form() {
         l10n("ui.styling.global.unitVGapPx"),
         SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 1f))
     )
+    private val localeWidget = addWidget(
+        l10n("ui.styling.global.locale"),
+        InconsistentComboBoxWidget(
+            Locale.getAvailableLocales().sortedBy { it.displayName },
+            toString = { it.displayName })
+    )
     private val uppercaseExceptionsWidget = addWidget(
         l10n("ui.styling.global.uppercaseExceptions"),
         TextAreaWidget(
@@ -65,6 +72,7 @@ object GlobalForm : Form() {
         heightPxWidget.value = global.heightPx
         backgroundWidget.selectedColor = global.background
         unitVGapPxWidget.value = global.unitVGapPx
+        localeWidget.selectedItem = global.locale
         uppercaseExceptionsWidget.text = global.uppercaseExceptions.joinToString("\n")
     }
 
@@ -74,6 +82,7 @@ object GlobalForm : Form() {
         heightPxWidget.value as Int,
         backgroundWidget.selectedColor,
         unitVGapPxWidget.value as Float,
+        localeWidget.selectedItem,
         uppercaseExceptionsWidget.text.split("\n").filter(String::isNotBlank).toImmutableList()
     )
 

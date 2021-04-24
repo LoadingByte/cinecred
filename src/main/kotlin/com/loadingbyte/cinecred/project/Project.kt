@@ -6,6 +6,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 import java.awt.Color
 import java.awt.Font
+import java.util.*
 
 
 class Project(
@@ -29,6 +30,7 @@ data class Global(
     val heightPx: Int,
     val background: Color,
     val unitVGapPx: Float,
+    val locale: Locale,
     val uppercaseExceptions: ImmutableList<String>
 )
 

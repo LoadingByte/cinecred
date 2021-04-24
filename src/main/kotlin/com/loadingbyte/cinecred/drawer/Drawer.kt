@@ -16,7 +16,7 @@ fun draw(project: Project): List<DrawnPage> {
     val uppercaseExceptionsRegex = createUppercaseExceptionsRegex(project.styling.global.uppercaseExceptions)
 
     // Store both in a TextContext object.
-    val textCtx = TextContext(fonts, uppercaseExceptionsRegex)
+    val textCtx = TextContext(project.styling.global.locale, fonts, uppercaseExceptionsRegex)
 
     return project.pages.map { page -> drawPage(project.styling.global, textCtx, page) }
 }

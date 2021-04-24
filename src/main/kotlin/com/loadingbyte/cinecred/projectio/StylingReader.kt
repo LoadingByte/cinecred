@@ -6,6 +6,7 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import java.nio.file.Path
+import java.util.*
 
 
 fun readStyling(stylingFile: Path): Styling {
@@ -35,6 +36,7 @@ private fun readGlobal(map: Map<*, *>) = Global(
     map.get("heightPx", PRESET_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
     map.get("background", PRESET_GLOBAL.background) { toColor(allowAlpha = false) },
     map.get("unitVGapPx", PRESET_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) },
+    map.get("locale", PRESET_GLOBAL.locale) { Locale.forLanguageTag(this) },
     map.getList("uppercaseExceptions", PRESET_GLOBAL.uppercaseExceptions).filter(String::isNotBlank).toImmutableList()
 )
 

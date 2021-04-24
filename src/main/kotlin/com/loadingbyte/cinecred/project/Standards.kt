@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.l10n
 import kotlinx.collections.immutable.persistentListOf
 import java.awt.Color
+import java.util.*
 
 
 val PRESET_GLOBAL = Global(
@@ -11,6 +12,7 @@ val PRESET_GLOBAL = Global(
     heightPx = 1080,
     background = Color.BLACK,
     unitVGapPx = 32f,
+    locale = Locale.ENGLISH,
     uppercaseExceptions = persistentListOf(
         "_af_", "_auf_", "_d\u2019#", "_da_", "_Da#", "_dai_", "_Dai#", "_dal_", "_Dal#", "_dalla_",
         "_Dalla#", "_das_", "_de_", "_de\u2019_", "_dei_", "_Dei#", "_del_", "_Del#", "_della_",

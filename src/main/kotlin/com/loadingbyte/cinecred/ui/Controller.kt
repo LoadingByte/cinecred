@@ -199,7 +199,7 @@ object Controller {
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
             // (which is quite a lot less because function is often called multiple times in rapid succession).
-            val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.US) }
+            val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
             val (log, pages) = readCredits(creditsFile, styling, pictureLoadersByRelPath)

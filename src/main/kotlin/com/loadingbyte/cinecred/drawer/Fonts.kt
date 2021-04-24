@@ -32,9 +32,9 @@ val SYSTEM_FONTS: List<Font> =
 
 
 private val nameToBundledFont = BUNDLED_FONTS
-    .associateBy { font -> font.getFontName(Locale.US) }
+    .associateBy { font -> font.getFontName(Locale.ROOT) }
 private val nameToSystemFont = SYSTEM_FONTS
-    .associateBy { font -> font.getFontName(Locale.US) }
+    .associateBy { font -> font.getFontName(Locale.ROOT) }
 
 fun getBundledFont(name: String): Font? =
     nameToBundledFont[name]

@@ -397,7 +397,7 @@ class FontChooserWidget(
 
     private val fontComboBox = JComboBox<Any>(emptyArray()).apply {
         maximumRowCount = 20
-        fun toString(value: Any) = if (value is Font) value.getFontName(Locale.US) else value as String
+        fun toString(value: Any) = if (value is Font) value.getFontName(Locale.ROOT) else value as String
         renderer = FontSampleListCellRenderer<Any>(::toString) { if (it is Font) it else null }
         keySelectionManager = CustomToStringKeySelectionManager(::toString)
     }
@@ -411,7 +411,7 @@ class FontChooserWidget(
             BUNDLED_FAMILIES.getFamily(fontName) == null &&
             SYSTEM_FAMILIES.getFamily(fontName) == null
         ) {
-            val replFontName = getSystemFont(fontName).getFontName(Locale.US)
+            val replFontName = getSystemFont(fontName).getFontName(Locale.ROOT)
             throw Form.VerifyResult(Severity.WARN, l10n("ui.form.fontUnavailable", fontName, replFontName))
         }
         if (verify != null)
@@ -427,7 +427,7 @@ class FontChooserWidget(
     var selectedFontName: String
         get() {
             val selectedFont = fontComboBox.selectedItem
-            return if (selectedFont is Font) selectedFont.getFontName(Locale.US) else selectedFont as String? ?: ""
+            return if (selectedFont is Font) selectedFont.getFontName(Locale.ROOT) else selectedFont as String? ?: ""
         }
         set(value) {
             val family = projectFamilies.getFamily(value)

@@ -12,7 +12,7 @@ val SYSTEM_FAMILIES: FontFamilies = FontFamilies(SYSTEM_FONTS)
 
 class FontFamily(val familyName: String, val fonts: List<Font>, val canonicalFont: Font) {
 
-    private val fontNameToFont = fonts.associateBy { it.getFontName(Locale.US) }
+    private val fontNameToFont = fonts.associateBy { it.getFontName(Locale.ROOT) }
 
     fun getFont(fontName: String): Font? = fontNameToFont[fontName]
 
@@ -42,10 +42,10 @@ class FontFamilies(fonts: Iterable<Font>) {
         val familyToCFonts = TreeMap<String, TreeSet<ComparableFont>>()
 
         for (font in fonts) {
-            val name = font.getFontName(Locale.US)
+            val name = font.getFontName(Locale.ROOT)
 
             // Find the font's family.
-            var (family, _) = font.getFamily(Locale.US).removeSuffixes()
+            var (family, _) = font.getFamily(Locale.ROOT).removeSuffixes()
             if (family == "Titillium Up")
                 family = "Titillium"
 

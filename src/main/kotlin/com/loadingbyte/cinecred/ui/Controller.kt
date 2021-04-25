@@ -13,6 +13,7 @@ import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import org.apache.commons.csv.CSVRecord
 import java.awt.Font
 import java.io.IOException
 import java.nio.file.Files
@@ -33,6 +34,7 @@ object Controller {
     private var stylingFile: Path? = null
     private var creditsFile: Path? = null
 
+    private var creditsCsv: List<CSVRecord>? = null
     private val fonts = mutableMapOf<Path, Font>()
     private val pictureLoaders = mutableMapOf<Path, Lazy<Picture?>>()
 
@@ -45,16 +47,17 @@ object Controller {
             }
             when {
                 isCreditsFile ->
-                    SwingUtilities.invokeLater(::tryReloadCreditsFileAndRedraw)
+                    SwingUtilities.invokeLater { tryReloadCreditsFile(); readCreditsAndRedraw() }
                 kind == ENTRY_DELETE ->
-                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReloadCreditsFileAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) readCreditsAndRedraw() }
                 else ->
-                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReloadCreditsFileAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) readCreditsAndRedraw() }
             }
         }
     }
 
-    private val reloadCreditsFileAndRedrawJobSlot = JobSlot()
+    private val loadCreditsFileJobSlot = JobSlot()
+    private val readCreditsAndRedrawJobSlot = JobSlot()
 
     fun onChangeTab(changedToEdit: Boolean) {
         isEditTabActive = changedToEdit
@@ -100,6 +103,7 @@ object Controller {
         this.projectDir = projectDir
         this.stylingFile = stylingFile
         this.creditsFile = creditsFile
+        creditsCsv = null
         fonts.clear()
         pictureLoaders.clear()
         StylingHistory.clear()
@@ -107,6 +111,9 @@ object Controller {
         MainFrame.onOpenProjectDir()
         EditPanel.onOpenProjectDir()
         DeliverConfigurationForm.onOpenProjectDir(projectDir)
+
+        // Load the initial credits CSV.
+        tryReloadCreditsFile()
 
         // Load the initially present auxiliary files (project fonts and pictures).
         for (projectFile in Files.walk(projectDir))
@@ -177,7 +184,7 @@ object Controller {
         return false
     }
 
-    private fun tryReloadCreditsFileAndRedraw() {
+    private fun tryReloadCreditsFile() {
         if (!Files.exists(creditsFile!!)) {
             JOptionPane.showMessageDialog(
                 MainFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
@@ -187,22 +194,31 @@ object Controller {
             return
         }
 
+        // Capture this variable in the state it is in when the function is called.
+        val creditsFile = this.creditsFile!!
+
+        loadCreditsFileJobSlot.submit {
+            creditsCsv = loadCreditsFile(creditsFile)
+        }
+    }
+
+    private fun readCreditsAndRedraw() {
         // Capture these variables in the state they are in when the function is called.
         val projectDir = this.projectDir!!
-        val creditsFile = this.creditsFile!!
         val styling = StylingHistory.current!!
+        val creditsCsv = this.creditsCsv!!
         val fonts = this.fonts
         val pictureLoaders = this.pictureLoaders
 
         // Execute the reading and drawing in another thread to not block the UI thread.
-        reloadCreditsFileAndRedrawJobSlot.submit {
+        readCreditsAndRedrawJobSlot.submit {
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
-            // (which is quite a lot less because function is often called multiple times in rapid succession).
+            // (which is quite a lot less because the function is often called multiple times in rapid succession).
             val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
-            val (log, pages) = readCredits(creditsFile, styling, pictureLoadersByRelPath)
+            val (log, pages) = readCredits(creditsCsv, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName.toImmutableMap(), (pages ?: emptyList()).toImmutableList())
             val drawnPages = when (pages) {
@@ -286,7 +302,7 @@ object Controller {
 
         private fun onStylingChange() {
             EditPanel.onStylingChange(current != saved, currentIdx != 0, currentIdx != history.lastIndex)
-            tryReloadCreditsFileAndRedraw()
+            readCreditsAndRedraw()
         }
 
     }

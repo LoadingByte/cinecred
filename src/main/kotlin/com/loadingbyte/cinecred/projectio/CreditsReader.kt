@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVRecord
 import java.io.File
 import java.io.StringReader
 import java.nio.file.Files
@@ -15,17 +16,20 @@ import java.nio.file.Path
 import java.util.*
 
 
-fun readCredits(
-    csvFile: Path,
-    styling: Styling,
-    pictureLoaders: Map<Path, Lazy<Picture?>>
-): Pair<List<ParserMsg>, List<Page>?> {
+fun loadCreditsFile(csvFile: Path): List<CSVRecord> {
     // We trim the unicode character "ZERO WIDTH NO-BREAK SPACE" which is added by Excel for some reason.
     val csvStr = Files.readString(csvFile).trim(0xFEFF.toChar())
 
     // Parse the CSV file into a list of records.
-    val csv = CSVFormat.DEFAULT.parse(StringReader(csvStr)).records
+    return CSVFormat.DEFAULT.parse(StringReader(csvStr)).records
+}
 
+
+fun readCredits(
+    csv: List<CSVRecord>,
+    styling: Styling,
+    pictureLoaders: Map<Path, Lazy<Picture?>>
+): Pair<List<ParserMsg>, List<Page>?> {
     // Try to find the table in the CSV.
     val table = Table(
         csv, l10nPrefix = "projectIO.credits.table.",

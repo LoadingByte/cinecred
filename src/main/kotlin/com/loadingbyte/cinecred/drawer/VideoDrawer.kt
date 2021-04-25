@@ -11,7 +11,6 @@ import java.awt.AlphaComposite
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
-import java.util.*
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt

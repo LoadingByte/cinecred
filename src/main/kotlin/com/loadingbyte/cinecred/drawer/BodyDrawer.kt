@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.awt.font.LineBreakMeasurer
-import java.text.*
 import java.util.*
 import kotlin.math.max
 

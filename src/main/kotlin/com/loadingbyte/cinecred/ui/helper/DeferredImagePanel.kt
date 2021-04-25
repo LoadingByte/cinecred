@@ -5,7 +5,10 @@ import com.loadingbyte.cinecred.common.DeferredImage.Layer
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import net.miginfocom.swing.MigLayout
-import java.awt.*
+import java.awt.Cursor
+import java.awt.Graphics
+import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter

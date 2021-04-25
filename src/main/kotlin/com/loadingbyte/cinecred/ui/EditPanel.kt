@@ -1,10 +1,12 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.*
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.*
-import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.DrawnPage
+import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.projectio.toHex24
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
@@ -13,7 +15,8 @@ import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_A
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import net.miginfocom.swing.MigLayout
-import java.awt.*
+import java.awt.BorderLayout
+import java.awt.Font
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*

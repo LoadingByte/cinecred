@@ -1,7 +1,8 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import java.awt.Component
-import javax.swing.*
+import javax.swing.Icon
+import javax.swing.JTree
 import javax.swing.event.TreeExpansionEvent
 import javax.swing.event.TreeWillExpandListener
 import javax.swing.tree.*

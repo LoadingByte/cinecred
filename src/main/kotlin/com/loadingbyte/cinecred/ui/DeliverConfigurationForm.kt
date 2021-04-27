@@ -12,21 +12,23 @@ import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Files
-import java.nio.file.Path
+import javax.swing.JOptionPane
 import javax.swing.JOptionPane.ERROR_MESSAGE
-import javax.swing.JOptionPane.showMessageDialog
 import javax.swing.SpinnerNumberModel
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
 
-object DeliverConfigurationForm : Form() {
+class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
 
-    private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
-    private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
+    companion object {
+        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
+        private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
 
-    private val SEQ_FORMATS = WholePageSequenceRenderJob.Format.ALL + VideoRenderJob.Format.ALL.filter { it.isImageSeq }
-    private val ALPHA_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL.filter { it.supportsAlpha }
+        private val SEQ_FORMATS =
+            WholePageSequenceRenderJob.Format.ALL + VideoRenderJob.Format.ALL.filter { it.isImageSeq }
+        private val ALPHA_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL.filter { it.supportsAlpha }
+    }
 
     private var project: Project? = null
     private var drawnPages: List<DrawnPage> = emptyList()
@@ -97,15 +99,23 @@ object DeliverConfigurationForm : Form() {
     )
 
     init {
-        finishInit()
-
-        // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
-        preChangeListener = { widget -> if (widget == formatWidget) onFormatChange() }
-
         addSubmitButton(
             l10n("ui.deliverConfig.addToRenderQueue"),
             actionListener = ::addRenderJobToQueue
         )
+
+        // Set the directory-related fields to the project dir.
+        val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
+        val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
+        seqDirWidget.file = outputLoc
+        singleFileWidget.file = outputLoc
+        // This ensure that file extensions are sensible.
+        onFormatChange()
+
+        finishInit()
+
+        // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
+        preChangeListener = { widget -> if (widget == formatWidget) onFormatChange() }
     }
 
     private fun verifyResolutionMult(resolutionMult: Float) {
@@ -156,7 +166,7 @@ object DeliverConfigurationForm : Form() {
 
     private fun addRenderJobToQueue() {
         if (drawnPages.isEmpty())
-            showMessageDialog(
+            JOptionPane.showMessageDialog(
                 null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
@@ -191,22 +201,11 @@ object DeliverConfigurationForm : Form() {
                 is VideoRenderJob -> renderJob.fileOrPattern.toString()
                 else -> throw IllegalStateException()
             }
-            DeliverRenderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
+            ctrl.projectFrame.deliverPanel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
         }
     }
 
-    fun onOpenProjectDir(projectDir: Path) {
-        // Reset the directory-related fields to the newly opened project dir.
-        val defaultFilename = l10n("ui.deliverConfig.defaultFilename", projectDir.fileName)
-        val outputLoc = projectDir.toAbsolutePath().resolve(defaultFilename)
-        seqDirWidget.file = outputLoc
-        singleFileWidget.file = outputLoc
-
-        // This ensure that file extensions are sensible.
-        onFormatChange()
-    }
-
-    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
+    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages
 

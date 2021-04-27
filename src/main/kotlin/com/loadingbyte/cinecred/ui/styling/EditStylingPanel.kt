@@ -4,7 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
 import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.ui.Controller
+import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableSet
 import net.miginfocom.swing.MigLayout
@@ -13,16 +13,21 @@ import java.awt.CardLayout
 import javax.swing.*
 
 
-object EditStylingPanel : JPanel() {
+class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
-    // Create a panel with the three style editing forms.
+    private val globalForm = GlobalForm()
+    private val pageStyleForm = PageStyleForm()
+    private val contentStyleForm = ContentStyleForm()
+    private val letterStyleForm = LetterStyleForm()
+
+    // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
     private val rightPanel = JPanel(rightPanelCards).apply {
         add(JScrollPane() /* use a full-blown JScrollPane to match the look of the non-blank cards */, "Blank")
-        add(JScrollPane(GlobalForm), "Global")
-        add(JScrollPane(PageStyleForm), "PageStyle")
-        add(JScrollPane(ContentStyleForm), "ContentStyle")
-        add(JScrollPane(LetterStyleForm), "LetterStyle")
+        add(JScrollPane(globalForm), "Global")
+        add(JScrollPane(pageStyleForm), "PageStyle")
+        add(JScrollPane(contentStyleForm), "ContentStyle")
+        add(JScrollPane(letterStyleForm), "LetterStyle")
     }
 
     private val stylingTree = StylingTree()
@@ -108,27 +113,27 @@ object EditStylingPanel : JPanel() {
     }
 
     private fun openGlobal(global: Global) {
-        GlobalForm.open(global, onChange = { stylingTree.setSingleton(it); onChange() })
-        postOpenForm("Global", GlobalForm)
+        globalForm.open(global, onChange = { stylingTree.setSingleton(it); onChange() })
+        postOpenForm("Global", globalForm)
     }
 
     private fun openPageStyle(style: PageStyle) {
-        PageStyleForm.open(
+        pageStyleForm.open(
             style, stylingTree.getList(PageStyle::class.java),
             onChange = { stylingTree.updateSelectedListElement(it); onChange() })
-        postOpenForm("PageStyle", PageStyleForm)
+        postOpenForm("PageStyle", pageStyleForm)
     }
 
     private fun openContentStyle(style: ContentStyle) {
-        ContentStyleForm.open(
+        contentStyleForm.open(
             style, stylingTree.getList(ContentStyle::class.java), stylingTree.getList(LetterStyle::class.java),
             onChange = { stylingTree.updateSelectedListElement(it); onChange() })
-        postOpenForm("ContentStyle", ContentStyleForm)
+        postOpenForm("ContentStyle", contentStyleForm)
     }
 
     private fun openLetterStyle(style: LetterStyle) {
         var oldName = style.name
-        LetterStyleForm.open(
+        letterStyleForm.open(
             style, stylingTree.getList(LetterStyle::class.java),
             onChange = {
                 stylingTree.updateSelectedListElement(it)
@@ -152,7 +157,7 @@ object EditStylingPanel : JPanel() {
 
                 onChange()
             })
-        postOpenForm("LetterStyle", LetterStyleForm)
+        postOpenForm("LetterStyle", letterStyleForm)
     }
 
     private fun postOpenForm(cardName: String, form: Form) {
@@ -171,7 +176,7 @@ object EditStylingPanel : JPanel() {
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        LetterStyleForm.updateProjectFontFamilies(projectFamilies)
+        letterStyleForm.updateProjectFontFamilies(projectFamilies)
     }
 
     private fun onChange() {
@@ -181,7 +186,7 @@ object EditStylingPanel : JPanel() {
             stylingTree.getList(ContentStyle::class.java).toImmutableSet(),
             stylingTree.getList(LetterStyle::class.java).toImmutableSet(),
         )
-        Controller.StylingHistory.editedAndRedraw(styling)
+        ctrl.stylingHistory.editedAndRedraw(styling)
     }
 
 }

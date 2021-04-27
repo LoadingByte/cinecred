@@ -4,52 +4,54 @@ import java.nio.file.*
 import java.nio.file.StandardWatchEventKinds.*
 
 
-abstract class RecursiveFileWatcher {
+object RecursiveFileWatcher {
+
+    private class Order(val listener: (Path, WatchEvent.Kind<*>) -> Unit, val watchKeys: MutableSet<WatchKey>)
 
     private val watcher = FileSystems.getDefault().newWatchService()
-    private val watchKeys = mutableMapOf<Path, WatchKey>()
+    private val orders = mutableMapOf<Path, Order>()
     private val lock = Any()
 
-    fun watch(watchedDir: Path) {
+    fun watch(rootDir: Path, listener: (Path, WatchEvent.Kind<*>) -> Unit) {
         synchronized(lock) {
-            for (file in Files.walk(watchedDir))
+            val watchKeys = HashSet<WatchKey>()
+            for (file in Files.walk(rootDir))
                 if (Files.isDirectory(file))
-                    watchKeys[file] = file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+                    watchKeys.add(file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY))
+            orders[rootDir] = Order(listener, watchKeys)
         }
     }
 
-    fun clear() {
+    fun unwatch(rootDir: Path) {
         synchronized(lock) {
-            for (watchKey in watchKeys.values)
-                watchKey.cancel()
-            watchKeys.clear()
+            orders.remove(rootDir)?.watchKeys?.forEach(WatchKey::cancel)
         }
     }
 
     init {
         Thread({
             while (true) {
-                val key = watcher.take()
+                val watchKey = watcher.take()
+                val order = orders.values.first { order -> watchKey in order.watchKeys }
                 synchronized(lock) {
-                    for (event in key.pollEvents())
+                    for (event in watchKey.pollEvents())
                         if (event.kind() != OVERFLOW) {
-                            val file = (key.watchable() as Path).resolve(event.context() as Path)
+                            val file = (watchKey.watchable() as Path).resolve(event.context() as Path)
 
                             // If the file is a directory, we have to (de)register a watching instruction for it.
                             if (Files.isDirectory(file))
-                                if (event.kind() == ENTRY_CREATE)
-                                    watchKeys[file] = file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
-                                else if (event.kind() == ENTRY_DELETE)
-                                    watchKeys.remove(file)?.cancel()
+                                if (event.kind() == ENTRY_CREATE) {
+                                    val newWatchKey = file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+                                    order.watchKeys.add(newWatchKey)
+                                } else if (event.kind() == ENTRY_DELETE)
+                                    order.watchKeys.find { it.watchable() == file }?.cancel()
 
-                            onEvent(file, event.kind())
+                            order.listener(file, event.kind())
                         }
-                    key.reset()
+                    watchKey.reset()
                 }
             }
         }, "DirectoryWatcherThread").apply { isDaemon = true }.start()
     }
-
-    protected abstract fun onEvent(file: Path, kind: WatchEvent.Kind<*>)
 
 }

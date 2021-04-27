@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
-import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.draw
 import com.loadingbyte.cinecred.project.Project
@@ -10,7 +9,6 @@ import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
-import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import org.apache.commons.csv.CSVRecord
@@ -25,23 +23,43 @@ import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 
-object Controller {
+class ProjectController(val projectDir: Path, private val stylingFile: Path, private val creditsFile: Path) {
 
-    private var isEditTabActive = false
+    val projectName: String = projectDir.fileName.toString()
+
+    val stylingHistory = StylingHistory()
+
+    val projectFrame = ProjectFrame(this)
+    val editStylingDialog = EditStylingDialog(this)
+
+    private var isEditTabActive = true
     private var isEditStylingDialogVisible = true
-
-    private var projectDir: Path? = null
-    private var stylingFile: Path? = null
-    private var creditsFile: Path? = null
 
     private var creditsCsv: List<CSVRecord>? = null
     private val fonts = mutableMapOf<Path, Font>()
     private val pictureLoaders = mutableMapOf<Path, Lazy<Picture?>>()
 
-    private val projectDirWatcher = object : RecursiveFileWatcher() {
-        override fun onEvent(file: Path, kind: WatchEvent.Kind<*>) {
+    private val loadCreditsFileJobSlot = JobSlot()
+    private val readCreditsAndRedrawJobSlot = JobSlot()
+
+    init {
+        projectFrame.isVisible = true
+        editStylingDialog.isVisible = true
+
+        // Load the initial credits CSV.
+        tryReloadCreditsFile()
+
+        // Load the initially present auxiliary files (project fonts and pictures).
+        for (projectFile in Files.walk(projectDir))
+            tryReloadAuxFile(projectFile)
+
+        // Load the initial state of the styling and credits files (the latter is invoked by the former).
+        stylingHistory.tryResetAndRedraw()
+
+        // Watch for future changes in the new project dir.
+        RecursiveFileWatcher.watch(projectDir) { file: Path, kind: WatchEvent.Kind<*> ->
             val isCreditsFile = try {
-                Files.isSameFile(file, creditsFile!!)
+                Files.isSameFile(file, creditsFile)
             } catch (_: IOException) {
                 false
             }
@@ -56,95 +74,27 @@ object Controller {
         }
     }
 
-    private val loadCreditsFileJobSlot = JobSlot()
-    private val readCreditsAndRedrawJobSlot = JobSlot()
-
     fun onChangeTab(changedToEdit: Boolean) {
         isEditTabActive = changedToEdit
-        EditStylingDialog.isVisible = changedToEdit && isEditStylingDialogVisible
+        editStylingDialog.isVisible = changedToEdit && isEditStylingDialogVisible
     }
 
     fun setEditStylingDialogVisible(isVisible: Boolean) {
         isEditStylingDialogVisible = isVisible
-        EditStylingDialog.isVisible = isEditTabActive && isVisible
-        EditPanel.onSetEditStylingDialogVisible(isVisible)
+        editStylingDialog.isVisible = isEditTabActive && isVisible
+        projectFrame.editPanel.onSetEditStylingDialogVisible(isVisible)
     }
 
-    fun tryExit() {
-        if (EditPanel.onTryOpenProjectDirOrExit() && DeliverRenderQueuePanel.onTryExit()) {
-            MainFrame.dispose()
-            EditStylingDialog.dispose()
-        }
-    }
+    fun tryCloseProject(): Boolean {
+        if (!projectFrame.editPanel.onTryCloseProject() || !projectFrame.deliverPanel.renderQueuePanel.onTryCloseProject())
+            return false
 
-    fun tryOpenProjectDir(projectDir: Path) {
-        if (!EditPanel.onTryOpenProjectDirOrExit())
-            return
+        projectFrame.dispose()
+        editStylingDialog.dispose()
+        // Cancel the previous project dir change watching order.
+        RecursiveFileWatcher.unwatch(projectDir)
 
-        val stylingFile = projectDir.resolve(Path.of("Styling.toml"))
-        val creditsFile = projectDir.resolve(Path.of("Credits.csv"))
-
-        // If the two required project files don't exist yet, create them.
-        if (!Files.exists(stylingFile) || !Files.exists(creditsFile))
-            if (!tryCopyTemplate(projectDir, stylingFile, creditsFile)) {
-                // The user cancelled the project creation.
-                return
-            }
-
-        // Cancel the previous project dir change watching instruction.
-        projectDirWatcher.clear()
-
-        // Remove the previous project from the UI to make sure that the user doesn't see things from the
-        // previous project while the new project is loaded.
-        EditPanel.updateProjectAndLog(null, emptyList(), emptyList())
-        VideoPanel.updateProject(null, emptyList())
-        DeliverConfigurationForm.updateProject(null, emptyList())
-
-        this.projectDir = projectDir
-        this.stylingFile = stylingFile
-        this.creditsFile = creditsFile
-        creditsCsv = null
-        fonts.clear()
-        pictureLoaders.clear()
-        StylingHistory.clear()
-
-        MainFrame.onOpenProjectDir()
-        EditPanel.onOpenProjectDir()
-        DeliverConfigurationForm.onOpenProjectDir(projectDir)
-
-        // Load the initial credits CSV.
-        tryReloadCreditsFile()
-
-        // Load the initially present auxiliary files (project fonts and pictures).
-        for (projectFile in Files.walk(projectDir))
-            tryReloadAuxFile(projectFile)
-
-        // Load the initial state of the styling and credits files (the latter is invoked by the former).
-        StylingHistory.tryResetAndRedraw()
-
-        // Watch for future changes in the new project dir.
-        projectDirWatcher.watch(projectDir)
-    }
-
-    private fun tryCopyTemplate(projectDir: Path, stylingFile: Path, creditsFile: Path): Boolean {
-        // Wrapping locales in these objects allows us to provide custom a toString() method.
-        class WrappedLocale(val locale: Locale, val label: String) {
-            override fun toString() = label
-        }
-
-        val localeChoices = TRANSLATED_LOCALES.map { WrappedLocale(it, it.displayName) }.toTypedArray()
-        val defaultLocaleChoice = localeChoices[TRANSLATED_LOCALES.indexOf(Locale.getDefault())]
-        val choice = JOptionPane.showInputDialog(
-            MainFrame, l10n("ui.open.chooseLocale.msg"), l10n("ui.open.chooseLocale.title"),
-            JOptionPane.QUESTION_MESSAGE, null, localeChoices, defaultLocaleChoice
-        ) ?: return false  // If the user cancelled the dialog, cancel opening the project directory.
-        val locale = (choice as WrappedLocale).locale
-
-        if (!Files.exists(stylingFile))
-            copyStylingTemplate(projectDir, locale)
-        if (!Files.exists(creditsFile))
-            copyCreditsTemplate(projectDir, locale)
-
+        OpenController.onCloseProject(this)
         return true
     }
 
@@ -154,12 +104,12 @@ object Controller {
         // only consider the current render job, but all render jobs in the render job list. This ensures that even
         // the last file generated by a render job doesn't reload the project even when the render job has already
         // been marked as complete by the time the OS notifies us about the newly generated file.
-        if (DeliverRenderQueuePanel.renderJobs.any { it.generatesFile(file) })
+        if (projectFrame.deliverPanel.renderQueuePanel.renderJobs.any { it.generatesFile(file) })
             return false
 
         tryReadFont(file)?.let { font ->
             fonts[file] = font
-            EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
+            editStylingDialog.editStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
             return true
         }
         tryReadPictureLoader(file)?.let { pictureLoader ->
@@ -171,7 +121,7 @@ object Controller {
 
     private fun tryRemoveAuxFile(file: Path): Boolean {
         if (fonts.remove(file) != null) {
-            EditStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
+            editStylingDialog.editStylingPanel.updateProjectFontFamilies(FontFamilies(fonts.values))
             return true
         }
         if (pictureLoaders.remove(file) != null)
@@ -180,17 +130,14 @@ object Controller {
     }
 
     private fun tryReloadCreditsFile() {
-        if (!Files.exists(creditsFile!!)) {
+        if (!Files.exists(creditsFile)) {
             JOptionPane.showMessageDialog(
-                MainFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
+                projectFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
                 l10n("ui.edit.missingCreditsFile.title"), JOptionPane.ERROR_MESSAGE
             )
-            tryExit()
+            tryCloseProject()
             return
         }
-
-        // Capture this variable in the state it is in when the function is called.
-        val creditsFile = this.creditsFile!!
 
         loadCreditsFileJobSlot.submit {
             creditsCsv = loadCreditsFile(creditsFile)
@@ -199,11 +146,8 @@ object Controller {
 
     private fun readCreditsAndRedraw() {
         // Capture these variables in the state they are in when the function is called.
-        val projectDir = this.projectDir!!
-        val styling = StylingHistory.current!!
+        val styling = stylingHistory.current!!
         val creditsCsv = this.creditsCsv!!
-        val fonts = this.fonts
-        val pictureLoaders = this.pictureLoaders
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
@@ -223,15 +167,15 @@ object Controller {
 
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
-                EditPanel.updateProjectAndLog(project, drawnPages, log)
-                VideoPanel.updateProject(project, drawnPages)
-                DeliverConfigurationForm.updateProject(project, drawnPages)
+                projectFrame.editPanel.updateProjectAndLog(project, drawnPages, log)
+                projectFrame.videoPanel.updateProject(project, drawnPages)
+                projectFrame.deliverPanel.configurationForm.updateProject(project, drawnPages)
             }
         }
     }
 
 
-    object StylingHistory {
+    inner class StylingHistory {
 
         private val history = mutableListOf<Styling>()
         private var currentIdx = -1
@@ -239,12 +183,6 @@ object Controller {
 
         val current: Styling?
             get() = history.getOrNull(currentIdx)
-
-        fun clear() {
-            history.clear()
-            currentIdx = -1
-            saved = null
-        }
 
         fun editedAndRedraw(new: Styling) {
             if (new != current) {
@@ -260,7 +198,7 @@ object Controller {
             if (currentIdx != 0) {
                 currentIdx--
                 onStylingChange()
-                EditStylingPanel.setStyling(current!!)
+                editStylingDialog.editStylingPanel.setStyling(current!!)
             }
         }
 
@@ -268,35 +206,35 @@ object Controller {
             if (currentIdx != history.lastIndex) {
                 currentIdx++
                 onStylingChange()
-                EditStylingPanel.setStyling(current!!)
+                editStylingDialog.editStylingPanel.setStyling(current!!)
             }
         }
 
         fun tryResetAndRedraw() {
-            if (!Files.exists(stylingFile!!)) {
+            if (!Files.exists(stylingFile)) {
                 JOptionPane.showMessageDialog(
-                    MainFrame, l10n("ui.edit.missingStylingFile.msg", stylingFile),
+                    projectFrame, l10n("ui.edit.missingStylingFile.msg", stylingFile),
                     l10n("ui.edit.missingStylingFile.title"), JOptionPane.ERROR_MESSAGE
                 )
                 return
             }
 
-            val new = readStyling(stylingFile!!)
+            val new = readStyling(stylingFile)
             if (new != current) {
                 saved = new
                 editedAndRedraw(new)
-                EditStylingPanel.setStyling(new)
+                editStylingDialog.editStylingPanel.setStyling(new)
             }
         }
 
         fun save() {
             saved = current
-            writeStyling(stylingFile!!, current!!)
-            EditPanel.onStylingSave()
+            writeStyling(stylingFile, current!!)
+            projectFrame.editPanel.onStylingSave()
         }
 
         private fun onStylingChange() {
-            EditPanel.onStylingChange(current != saved, currentIdx != 0, currentIdx != history.lastIndex)
+            projectFrame.editPanel.onStylingChange(current != saved, currentIdx != 0, currentIdx != history.lastIndex)
             readCreditsAndRedraw()
         }
 

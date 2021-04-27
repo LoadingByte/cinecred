@@ -6,13 +6,10 @@ import java.awt.Color
 import java.awt.datatransfer.DataFlavor
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Path
 import javax.swing.*
 
 
 object OpenPanel : JPanel() {
-
-    private var lastProjectDir: Path? = null
 
     init {
         border = BorderFactory.createCompoundBorder(
@@ -27,9 +24,9 @@ object OpenPanel : JPanel() {
         selectButton.addActionListener {
             val fc = JFileChooser()
             fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            lastProjectDir?.let { fc.selectedFile = it.toFile() }
+            // TODO: lastProjectDir?.let { fc.selectedFile = it.toFile() }
             if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION && fc.selectedFile.isDirectory)
-                openProjectDir(fc.selectedFile.toPath())
+                OpenController.tryOpenProject(fc.selectedFile.toPath())
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
@@ -64,19 +61,14 @@ object OpenPanel : JPanel() {
                 // to make sure all action happens in the EDT thread.
                 val file = (transferData[0] as File).toPath()
                 if (Files.isDirectory(file))
-                    SwingUtilities.invokeLater { openProjectDir(file) }
+                    SwingUtilities.invokeLater { OpenController.tryOpenProject(file) }
                 else if (file.parent != null)
-                    SwingUtilities.invokeLater { openProjectDir(file.parent) }
+                    SwingUtilities.invokeLater { OpenController.tryOpenProject(file.parent) }
 
                 return true
             }
 
         }
-    }
-
-    private fun openProjectDir(projectDir: Path) {
-        lastProjectDir = projectDir
-        Controller.tryOpenProjectDir(projectDir)
     }
 
 }

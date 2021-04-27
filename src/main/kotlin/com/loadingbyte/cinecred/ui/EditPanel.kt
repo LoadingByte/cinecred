@@ -13,7 +13,6 @@ import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_AREAS
 import com.loadingbyte.cinecred.ui.helper.*
-import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.Font
@@ -26,39 +25,41 @@ import javax.swing.table.DefaultTableCellRenderer
 import kotlin.math.roundToInt
 
 
-object EditPanel : JPanel() {
+class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
-    private const val MAX_ZOOM = 2f
+    companion object {
+        private const val MAX_ZOOM = 2f
+    }
 
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
         isSelected = true
         toolTipText = l10n("ui.edit.toggleStyling")
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener {
-            Controller.setEditStylingDialogVisible(isSelected)
+            ctrl.setEditStylingDialogVisible(isSelected)
         }
     }
     private val undoStylingButton = makeActToolBtn("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
-        Controller.StylingHistory.undoAndRedraw()
+        ctrl.stylingHistory.undoAndRedraw()
     }
     private val redoStylingButton = makeActToolBtn("redoStyling", REDO_ICON, VK_Z, CTRL_DOWN_MASK or SHIFT_DOWN_MASK) {
-        Controller.StylingHistory.redoAndRedraw()
+        ctrl.stylingHistory.redoAndRedraw()
     }
     private val saveStylingButton = makeActToolBtn("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
-        Controller.StylingHistory.save()
+        ctrl.stylingHistory.save()
     }
     private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON) {
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("general.cancel"))
             val selectedOption = showOptionDialog(
-                MainFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
+                ctrl.projectFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
                 l10n("ui.edit.resetUnsavedChangesWarning.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )
             if (selectedOption == CLOSED_OPTION || selectedOption == 1)
                 return@makeActToolBtn
         }
-        Controller.StylingHistory.tryResetAndRedraw()
+        ctrl.stylingHistory.tryResetAndRedraw()
     }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
@@ -114,6 +115,8 @@ object EditPanel : JPanel() {
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
     private val previewPanels get() = pageTabs.components.map { it as EditPagePreviewPanel }
 
+    private val logTableModel = LogTableModel()
+
     private fun makeActToolBtn(
         name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
     ): JButton {
@@ -126,10 +129,15 @@ object EditPanel : JPanel() {
         var tooltip = l10n("ui.edit.$name")
         if (shortcutKeyCode != -1) {
             tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
-            for (c in arrayOf(MainFrame.contentPane as JComponent, EditStylingDialog.contentPane as JComponent)) {
-                c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                    .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
-                c.actionMap.put(name, action)
+            // ctrl.projectFrame is not available yet because the ProjectFrame hasn't been fully constructed yet.
+            // To circumvent this, we slightly postpone adding the keyboard shortcuts.
+            SwingUtilities.invokeLater {
+                for (w in arrayOf(ctrl.projectFrame, ctrl.editStylingDialog)) {
+                    val c = w.contentPane as JComponent
+                    c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                        .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
+                    c.actionMap.put(name, action)
+                }
             }
         }
         action.putValue(Action.SMALL_ICON, icon)
@@ -159,7 +167,7 @@ object EditPanel : JPanel() {
             add(pageTabs, "newline, span, grow, push")
         }
 
-        val logTable = JTable(LogTableModel).apply {
+        val logTable = JTable(logTableModel).apply {
             // Disable cell selection because it looks weird with the custom WordWrapCellRenderer.
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
@@ -197,20 +205,20 @@ object EditPanel : JPanel() {
         toggleEditStylingDialogButton.isSelected = isVisible
     }
 
-    fun onTryOpenProjectDirOrExit(): Boolean =
+    fun onTryCloseProject(): Boolean =
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(
                 l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
                 l10n("general.cancel")
             )
             val selectedOption = showOptionDialog(
-                MainFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
+                ctrl.projectFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
                 l10n("ui.edit.openUnsavedChangesWarning.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )
             when (selectedOption) {
                 0 -> {
-                    Controller.StylingHistory.save()
+                    ctrl.stylingHistory.save()
                     true
                 }
                 1 -> true
@@ -218,10 +226,6 @@ object EditPanel : JPanel() {
             }
         } else
             true
-
-    fun onOpenProjectDir() {
-        zoomSlider.zoom = 1f
-    }
 
     fun onStylingChange(isUnsaved: Boolean, isUndoable: Boolean, isRedoable: Boolean) {
         unsavedStylingLabel.isVisible = isUnsaved
@@ -271,11 +275,11 @@ object EditPanel : JPanel() {
             previewPanel.setContent(project!!.styling.global, drawnPage)
 
         // Put the new parser log messages into the log table.
-        LogTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
+        logTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
     }
 
 
-    private object LogTableModel : AbstractTableModel() {
+    private class LogTableModel : AbstractTableModel() {
 
         var log: List<ParserMsg> = emptyList()
             set(value) {

@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import javax.swing.SpinnerNumberModel
 
 
-object LetterStyleForm : Form() {
+class LetterStyleForm : Form() {
 
     private val nameWidget = addWidget(
         l10n("ui.styling.letter.name"),

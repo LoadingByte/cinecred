@@ -8,7 +8,7 @@ import kotlinx.collections.immutable.toImmutableList
 import javax.swing.SpinnerNumberModel
 
 
-object ContentStyleForm : Form() {
+class ContentStyleForm : Form() {
 
     private val nameWidget = addWidget(
         l10n("ui.styling.content.name"),

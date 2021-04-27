@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.ui.MainFrame
+import com.loadingbyte.cinecred.ui.OpenController
 import java.awt.*
 import java.awt.geom.Rectangle2D
 import javax.swing.*
@@ -190,14 +190,16 @@ fun trySetTaskbarProgress(percent: Int) {
     if (Taskbar.Feature.PROGRESS_VALUE.isSupported)
         taskbar!!.setProgressValue(percent)
     else if (Taskbar.Feature.PROGRESS_VALUE_WINDOW.isSupported)
-        taskbar!!.setWindowProgressValue(MainFrame, percent)
+        for (ctrl in OpenController.getProjectCtrls())
+            taskbar!!.setWindowProgressValue(ctrl.projectFrame, percent)
 }
 
 fun tryRequestUserAttentionInTaskbar() {
     if (Taskbar.Feature.USER_ATTENTION.isSupported)
         taskbar!!.requestUserAttention(true, false)
     else if (Taskbar.Feature.USER_ATTENTION_WINDOW.isSupported)
-        taskbar!!.requestWindowUserAttention(MainFrame)
+        for (ctrl in OpenController.getProjectCtrls())
+            taskbar!!.requestWindowUserAttention(ctrl.projectFrame)
 }
 
 private val taskbar = if (Taskbar.isTaskbarSupported()) Taskbar.getTaskbar() else null

@@ -12,7 +12,7 @@ import javax.swing.SpinnerNumberModel
 import kotlin.math.floor
 
 
-object PageStyleForm : Form() {
+class PageStyleForm : Form() {
 
     private val nameWidget = addWidget(
         l10n("ui.styling.page.name"),

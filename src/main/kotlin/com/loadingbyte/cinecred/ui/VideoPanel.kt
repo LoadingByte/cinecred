@@ -18,7 +18,18 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 
-object VideoPanel : JPanel() {
+class VideoPanel(ctrl: ProjectController) : JPanel() {
+
+    private val canvas: JPanel = object : JPanel() {
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            videoDrawer?.let { videoDrawer ->
+                g.translate((width - videoDrawer.width) / 2, 0)
+                g.clipRect(0, 0, videoDrawer.width, videoDrawer.height)
+                videoDrawer.drawFrame(g as Graphics2D, frameSlider.value)
+            }
+        }
+    }
 
     private val playButton = JToggleButton(PLAY_ICON).also { playButton ->
         var timer: Timer? = null
@@ -31,7 +42,7 @@ object VideoPanel : JPanel() {
                 timer?.stop()
             else if (project != null)
                 timer = Timer((1000f / project.styling.global.fps.frac).roundToInt()) {
-                    if (!MainFrame.isVisible) {
+                    if (!ctrl.projectFrame.isVisible) {
                         // If the main frame has been disposed, also stop the timer, because would otherwise keep
                         // generating action events, which keep AWT's EDT thread from stopping and in turn keep the
                         // whole application from closing.
@@ -46,10 +57,11 @@ object VideoPanel : JPanel() {
     }
 
     private val frameSlider = JSlider().also { frameSlider ->
+        frameSlider.value = 0
         frameSlider.addChangeListener {
             // When the slider is moved, either automatically or by hand, draw the selected frame.
             // Use paintImmediately() because repaint() might postpone the painting, which we do not want.
-            Canvas.paintImmediately(0, 0, Canvas.width, Canvas.height)
+            canvas.paintImmediately(0, 0, canvas.width, canvas.height)
             // Also adjust the time label.
             val project = project
             val videoDrawer = videoDrawer
@@ -78,7 +90,7 @@ object VideoPanel : JPanel() {
         add(playButton, "skip 1, width 2*pref!")
         add(frameSlider, "width :50sp:50sp")
         add(timecodeLabel)
-        add(Canvas, "newline, span, grow, push")
+        add(canvas, "newline, span, grow, push")
 
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
@@ -87,26 +99,20 @@ object VideoPanel : JPanel() {
         })
     }
 
-    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
+    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages
 
         if (playButton.isSelected)
             playButton.doClick()
-        if (project == null) {
-            videoDrawer = null
-            frameSlider.value = 0
-            timecodeLabel.text = null
-            Canvas.repaint()
-        } else
-            restartDrawing()
+        restartDrawing()
     }
 
     private fun restartDrawing() {
         val project = this.project ?: return
         val scaling = min(
-            Canvas.width.toFloat() / project.styling.global.widthPx,
-            Canvas.height.toFloat() / project.styling.global.heightPx
+            canvas.width.toFloat() / project.styling.global.widthPx,
+            canvas.height.toFloat() / project.styling.global.heightPx
         )
 
         makeVideoDrawerJobSlot.submit {
@@ -117,19 +123,7 @@ object VideoPanel : JPanel() {
             SwingUtilities.invokeLater {
                 this.videoDrawer = videoDrawer
                 frameSlider.maximum = videoDrawer.numFrames - 1
-                Canvas.repaint()
-            }
-        }
-    }
-
-
-    private object Canvas : JPanel() {
-        override fun paintComponent(g: Graphics) {
-            super.paintComponent(g)
-            videoDrawer?.let { videoDrawer ->
-                g.translate((width - videoDrawer.width) / 2, 0)
-                g.clipRect(0, 0, videoDrawer.width, videoDrawer.height)
-                videoDrawer.drawFrame(g as Graphics2D, frameSlider.value)
+                canvas.repaint()
             }
         }
     }

@@ -18,17 +18,21 @@ import javax.swing.table.TableCellEditor
 import javax.swing.table.TableCellRenderer
 
 
-object DeliverRenderQueuePanel : JPanel() {
+class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
     private val startButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON).apply {
         addActionListener {
+            if (jobTableModel.rows.all { it.isFinished })
+                isSelected = false
             icon = if (isSelected) PAUSE_ICON else PLAY_ICON
-            RenderQueue.isPaused = !isSelected
+            RenderQueue.setPaused(ctrl.projectDir, !isSelected)
         }
     }
 
+    private val jobTableModel = JobTableModel()
+
     init {
-        val jobTable = JTable(JobTableModel).apply {
+        val jobTable = JTable(jobTableModel).apply {
             // Disable cell selection because it looks weird with the custom cell renderers.
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
@@ -36,8 +40,11 @@ object DeliverRenderQueuePanel : JPanel() {
             columnModel.apply {
                 // These cells will be rendered using special components.
                 getColumn(1).cellRenderer = WordWrapCellRenderer()
-                getColumn(2).cellRenderer = ProgressCellRenderer
-                getColumn(3).apply { cellRenderer = CancelButtonCellRenderer; cellEditor = CancelButtonCellEditor }
+                getColumn(2).cellRenderer = ProgressCellRenderer()
+                getColumn(3).apply {
+                    cellRenderer = CancelButtonCellRenderer()
+                    cellEditor = CancelButtonCellEditor(::removeRowFromQueue)
+                }
                 // Set some sensible default column widths for all but the progress columns.
                 getColumn(0).width = 200
                 getColumn(1).width = 400
@@ -53,17 +60,17 @@ object DeliverRenderQueuePanel : JPanel() {
     }
 
     val renderJobs: Sequence<RenderJob>
-        get() = JobTableModel.rows.asSequence().map { it.job }
+        get() = jobTableModel.rows.asSequence().map { it.job }
 
     fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
         val row = JobTableModel.Row(job, formatLabel, destination)
-        JobTableModel.rows.add(row)
-        JobTableModel.fireTableRowsInserted(JobTableModel.rowCount - 1, JobTableModel.rowCount - 1)
+        jobTableModel.rows.add(row)
+        jobTableModel.fireTableRowsInserted(jobTableModel.rowCount - 1, jobTableModel.rowCount - 1)
 
         tryUpdateTaskbarBadge()
 
         fun setProgress(progress: Any) {
-            val rowIdx = JobTableModel.rows.indexOf(row)
+            val rowIdx = jobTableModel.rows.indexOf(row)
             // When we receive a progress notification for the first time, we record the current timestamp.
             if (row.startTime == null)
                 row.startTime = Instant.now()
@@ -73,7 +80,7 @@ object DeliverRenderQueuePanel : JPanel() {
             // in the table.
             if (rowIdx != -1) {
                 row.progress = progress
-                JobTableModel.fireTableCellUpdated(rowIdx, 2)
+                jobTableModel.fireTableCellUpdated(rowIdx, 2)
                 if (progress is Float)
                     trySetTaskbarProgress(progress.toPercent())
             }
@@ -85,48 +92,57 @@ object DeliverRenderQueuePanel : JPanel() {
             trySetTaskbarProgress(-1)
 
             // If we just finished the last remaining job, deselect the toggle button and request user attention.
-            if (JobTableModel.rows.all { it.isFinished }) {
+            if (jobTableModel.rows.all { it.isFinished }) {
                 if (startButton.isSelected)
                     startButton.doClick()
-                RenderQueue.isPaused = true
+                RenderQueue.setPaused(ctrl.projectDir, true)
                 tryRequestUserAttentionInTaskbar()
             }
         }
 
         RenderQueue.submitJob(
-            job,
+            ctrl.projectDir, job,
             invokeLater = { SwingUtilities.invokeLater(it) },
             progressCallback = ::setProgress,
             finishCallback = ::onFinish
         )
     }
 
-    private fun tryUpdateTaskbarBadge() {
-        trySetTaskbarIconBadge(JobTableModel.rows.count { !it.isFinished })
+    private fun removeRowFromQueue(rowIdx: Int) {
+        val modelRow = jobTableModel.rows[rowIdx]
+        RenderQueue.cancelJob(ctrl.projectDir, modelRow.job)
+        jobTableModel.rows.remove(modelRow)
+        jobTableModel.fireTableRowsDeleted(rowIdx, rowIdx)
+        tryUpdateTaskbarBadge()
     }
 
-    private val FINISHED = Any()
+    private fun tryUpdateTaskbarBadge() {
+        trySetTaskbarIconBadge(jobTableModel.rows.count { !it.isFinished })
+    }
 
-    private fun Float.toPercent() = (this * 100f).toInt().coerceIn(0, 100)
-
-    fun onTryExit(): Boolean =
-        if (!RenderQueue.isPaused && JobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
+    fun onTryCloseProject(): Boolean =
+        if (startButton.isSelected && jobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
             val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("general.cancel"))
             val selectedOption = showOptionDialog(
-                MainFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
+                ctrl.projectFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
                 l10n("ui.deliverRenderQueue.runningWarning.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )
             if (selectedOption == 0) {
-                RenderQueue.stop()
+                RenderQueue.cancelAllJobs(ctrl.projectDir)
                 true
             } else
                 false
         } else
             true
 
+    companion object {
+        private val FINISHED = Any()
+        private fun Float.toPercent() = (this * 100f).toInt().coerceIn(0, 100)
+    }
 
-    private object JobTableModel : AbstractTableModel() {
+
+    private class JobTableModel : AbstractTableModel() {
 
         class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
             var startTime: Instant? = null
@@ -161,7 +177,7 @@ object DeliverRenderQueuePanel : JPanel() {
     }
 
 
-    private object ProgressCellRenderer : TableCellRenderer {
+    private class ProgressCellRenderer : TableCellRenderer {
 
         private val progressBar = JProgressBar()
         private val defaultProgressBarForeground = progressBar.foreground
@@ -207,7 +223,7 @@ object DeliverRenderQueuePanel : JPanel() {
     }
 
 
-    private object CancelButtonCellRenderer : TableCellRenderer {
+    private class CancelButtonCellRenderer : TableCellRenderer {
 
         private val button = JButton(CANCEL_ICON).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
@@ -221,23 +237,21 @@ object DeliverRenderQueuePanel : JPanel() {
     }
 
 
-    private object CancelButtonCellEditor : AbstractCellEditor(), TableCellEditor {
+    private class CancelButtonCellEditor(private val callback: (Int) -> Unit) : AbstractCellEditor(), TableCellEditor {
+
+        private val button = JButton(CANCEL_ICON).apply {
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
+        }
 
         override fun getCellEditorValue() = null
         override fun shouldSelectCell(anEvent: EventObject) = false
 
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
-        ) = JButton(CANCEL_ICON).apply {
-            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
-            addActionListener {
-                val modelRow = JobTableModel.rows[rowIdx]
-                RenderQueue.cancelJob(modelRow.job)
-                JobTableModel.rows.remove(modelRow)
-                JobTableModel.fireTableRowsDeleted(rowIdx, rowIdx)
-                tryUpdateTaskbarBadge()
-            }
+        ) = button.apply {
+            actionListeners.forEach(::removeActionListener)
+            addActionListener { callback(rowIdx) }
         }
 
     }

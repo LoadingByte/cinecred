@@ -10,9 +10,11 @@ import java.util.*
 import javax.swing.SpinnerNumberModel
 
 
-object GlobalForm : Form() {
+class GlobalForm : Form() {
 
-    private val SUGGESTED_FPS = floatArrayOf(23.97f, 24f, 25f, 29.97f, 30f, 59.94f, 60f)
+    companion object {
+        private val SUGGESTED_FPS = floatArrayOf(23.97f, 24f, 25f, 29.97f, 30f, 59.94f, 60f)
+    }
 
     private val fpsWidget = addWidget(
         l10n("ui.styling.global.fps"),

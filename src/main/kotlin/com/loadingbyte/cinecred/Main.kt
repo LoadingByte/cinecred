@@ -4,8 +4,8 @@ import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setDefaultToClosestTranslatedLocale
-import com.loadingbyte.cinecred.ui.Controller
-import com.loadingbyte.cinecred.ui.MainFrame
+import com.loadingbyte.cinecred.ui.OpenController
+import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
 import org.bytedeco.ffmpeg.global.avcodec
@@ -24,15 +24,23 @@ import javax.swing.ToolTipManager
 import javax.swing.UIManager
 
 
+private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
+
 fun main() {
+    // Cinecred is a singleton application. When the application is launched a second time, we just simulate
+    // a second application instance in the same VM.
+    if (Singleton.invoke(SINGLETON_APP_ID, emptyArray()))
+        return
+    Singleton.start({ OpenController.showOpenFrame() }, SINGLETON_APP_ID)
+
     // If a unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
     // controlled fashion and inform the user.
     Thread.setDefaultUncaughtExceptionHandler { _, e ->
         LoggerFactory.getLogger("Uncaught Catcher").error("Uncaught exception. Will terminate the program.", e)
         JOptionPane.showMessageDialog(
-            MainFrame, l10n("ui.main.error.msg", e), l10n("ui.main.error.title"), JOptionPane.ERROR_MESSAGE
+            null, l10n("ui.main.error.msg", e), l10n("ui.main.error.title"), JOptionPane.ERROR_MESSAGE
         )
-        Controller.tryExit()
+        OpenController.tryExit()
     }
 
     // By default, only log warning messages.
@@ -73,7 +81,7 @@ fun main() {
 
     // Open the main window.
     SwingUtilities.invokeLater {
-        MainFrame.isVisible = true
+        OpenController.showOpenFrame()
     }
 }
 

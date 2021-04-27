@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.MainFrame
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.*
@@ -134,7 +133,7 @@ private val GS_EXECUTABLE: Path? by lazy {
             Desktop.getDesktop().browse(e.url.toURI())
     }
     ep.isEditable = false
-    JOptionPane.showMessageDialog(MainFrame, ep, l10n("projectIO.ghostscriptMissing.title"), JOptionPane.ERROR_MESSAGE)
+    JOptionPane.showMessageDialog(null, ep, l10n("projectIO.ghostscriptMissing.title"), JOptionPane.ERROR_MESSAGE)
     null
 }
 

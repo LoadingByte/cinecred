@@ -26,7 +26,10 @@ inline fun <reified T : Enum<T>> String.toEnumList(): List<T> = split(" ").map {
 fun List<Enum<*>>.toString2() = joinToString(" ") { it.name }
 
 
-fun String.toColor(allowAlpha: Boolean = true) = Color(Integer.decode(this), allowAlpha)
+// Note: We first have to convert to long and then to int because Integer.decode() throws an exception when a
+// overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is then 1,
+// which is interpreted as a negative sign, so this is an overflow).
+fun String.toColor(allowAlpha: Boolean = true) = Color(java.lang.Long.decode(this).toInt(), allowAlpha)
 fun Color.toHex24() = "#%06x".format(rgb and 0x00ffffff)
 fun Color.toHex32() = "#%08x".format(rgb)
 

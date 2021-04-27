@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
-import com.loadingbyte.cinecred.common.SUPPORTED_LOCALES
+import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.draw
 import com.loadingbyte.cinecred.project.Project
@@ -127,18 +127,13 @@ object Controller {
     }
 
     private fun tryCopyTemplate(projectDir: Path, stylingFile: Path, creditsFile: Path): Boolean {
-        // Find the supported locale which is closest to the user's default locale.
-        val defaultSupportedLocale = Locale.lookup(
-            listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), SUPPORTED_LOCALES.keys
-        )
-
         // Wrapping locales in these objects allows us to provide custom a toString() method.
         class WrappedLocale(val locale: Locale, val label: String) {
             override fun toString() = label
         }
 
-        val localeChoices = SUPPORTED_LOCALES.map { (locale, label) -> WrappedLocale(locale, label) }.toTypedArray()
-        val defaultLocaleChoice = localeChoices[SUPPORTED_LOCALES.keys.indexOf(defaultSupportedLocale)]
+        val localeChoices = TRANSLATED_LOCALES.map { WrappedLocale(it, it.displayName) }.toTypedArray()
+        val defaultLocaleChoice = localeChoices[TRANSLATED_LOCALES.indexOf(Locale.getDefault())]
         val choice = JOptionPane.showInputDialog(
             MainFrame, l10n("ui.open.chooseLocale.msg"), l10n("ui.open.chooseLocale.title"),
             JOptionPane.QUESTION_MESSAGE, null, localeChoices, defaultLocaleChoice

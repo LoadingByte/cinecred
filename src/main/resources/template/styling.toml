@@ -1,3 +1,6 @@
+[global]
+locale = "{locale}"
+
 [[pageStyle]]
 name = "{project.template.pageStyleCard}"
 behavior = "CARD"

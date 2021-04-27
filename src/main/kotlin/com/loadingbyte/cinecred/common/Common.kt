@@ -15,20 +15,26 @@ import java.util.*
 enum class Severity { INFO, WARN, ERROR }
 
 
-fun l10nBundle(locale: Locale): ResourceBundle = ResourceBundle.getBundle("l10n.strings", locale)
+val TRANSLATED_LOCALES = listOf(Locale.ENGLISH, Locale.GERMAN)
 
-private val DEFAULT_BUNDLE = l10nBundle(Locale.getDefault())
-fun l10n(key: String): String = DEFAULT_BUNDLE.getString(key)
-fun l10n(key: String, vararg args: Any?): String = MessageFormat.format(l10n(key), *args)
+fun setDefaultToClosestTranslatedLocale() {
+    val locale = Locale.lookup(
+        listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), TRANSLATED_LOCALES
+    ) ?: Locale.ENGLISH
+    Locale.setDefault(locale)
+}
 
-val SUPPORTED_LOCALES = mapOf(
-    Locale.ROOT to Locale.ENGLISH.displayLanguage,
-    Locale.GERMAN to Locale.GERMAN.displayLanguage
-)
-private val BUNDLES = SUPPORTED_LOCALES.keys.map { locale -> l10nBundle(locale) }
+private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT)
+private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
+
+fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
+fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String =
+    MessageFormat.format(l10n(key, locale), *args)
+
+
 private val l10nAllCache = mutableMapOf<String, List<String>>()
 fun l10nAll(key: String): List<String> = l10nAllCache.getOrPut(key) {
-    BUNDLES.map { bundle -> bundle.getString(key) }
+    TRANSLATED_LOCALES.map { locale -> getL10nBundle(locale).getString(key) }
 }
 
 

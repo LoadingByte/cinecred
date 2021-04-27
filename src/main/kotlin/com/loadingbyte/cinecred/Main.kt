@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.setDefaultToClosestTranslatedLocale
 import com.loadingbyte.cinecred.ui.Controller
 import com.loadingbyte.cinecred.ui.MainFrame
 import net.miginfocom.layout.PlatformDefaults
@@ -36,6 +37,9 @@ fun main() {
 
     // By default, only log warning messages.
     System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn")
+
+    // Set the application's locale to the translated locale which is closest to the user's default locale.
+    setDefaultToClosestTranslatedLocale()
 
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")

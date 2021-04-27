@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.l10nBundle
+import com.loadingbyte.cinecred.common.l10n
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -25,11 +25,13 @@ fun copyCreditsTemplate(destDir: Path, locale: Locale) {
 private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")
 
 private fun copyFillingPlaceholders(resourceName: String, dest: Path, locale: Locale) {
-    val bundle = l10nBundle(locale)
     val content = Dummy.javaClass.getResourceAsStream(resourceName).use { stream ->
         stream.bufferedReader().readLines()
     }.map { line ->
-        line.replace(PLACEHOLDER_REGEX) { match -> bundle.getString(match.groups[1]!!.value) }
+        line.replace(PLACEHOLDER_REGEX) { match ->
+            val key = match.groups[1]!!.value
+            if (key == "locale") locale.toLanguageTag() else l10n(key, locale)
+        }
     }
     Files.write(dest, content)
 }

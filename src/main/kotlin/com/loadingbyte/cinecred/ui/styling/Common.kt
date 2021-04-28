@@ -15,7 +15,7 @@ class StyleNameWidget : TextWidget() {
     override val verify = {
         val name = text.trim()
         if (name.isEmpty())
-            throw Form.VerifyResult(Severity.ERROR, l10n("general.blank"))
+            throw Form.VerifyResult(Severity.ERROR, l10n("ui.blank"))
         if (otherStyleNames.any { o -> o.equals(name, ignoreCase = true) })
             throw Form.VerifyResult(Severity.ERROR, l10n("ui.styling.duplicateStyleName"))
     }

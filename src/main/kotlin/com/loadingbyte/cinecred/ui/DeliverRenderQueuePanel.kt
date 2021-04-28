@@ -122,7 +122,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
     fun onTryCloseProject(): Boolean =
         if (startButton.isSelected && jobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
-            val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("general.cancel"))
+            val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("ui.cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
                 l10n("ui.deliverRenderQueue.runningWarning.title"),

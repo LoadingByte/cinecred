@@ -23,7 +23,7 @@ class GlobalForm : Form() {
             isEditable = true,
             verify = {
                 if (it.isBlank())
-                    throw VerifyResult(Severity.ERROR, l10n("general.blank"))
+                    throw VerifyResult(Severity.ERROR, l10n("ui.blank"))
                 try {
                     it.toFPS()
                 } catch (_: IllegalArgumentException) {

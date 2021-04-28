@@ -130,7 +130,7 @@ class FileWidget(
     override val verify = {
         val fileStr = text.trim()
         if (fileStr.isEmpty())
-            throw Form.VerifyResult(Severity.ERROR, l10n("general.blank"))
+            throw Form.VerifyResult(Severity.ERROR, l10n("ui.blank"))
         val file = Path.of(fileStr)
         if (fileType == FileType.FILE && Files.isDirectory(file))
             throw Form.VerifyResult(Severity.ERROR, l10n("ui.form.pathIsFolder"))

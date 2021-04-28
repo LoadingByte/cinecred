@@ -50,7 +50,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
     private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON) {
         if (unsavedStylingLabel.isVisible) {
-            val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("general.cancel"))
+            val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("ui.cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
                 l10n("ui.edit.resetUnsavedChangesWarning.title"),
@@ -209,7 +209,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(
                 l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
-                l10n("general.cancel")
+                l10n("ui.cancel")
             )
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),

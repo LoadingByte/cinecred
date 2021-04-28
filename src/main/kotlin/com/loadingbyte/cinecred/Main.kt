@@ -38,7 +38,7 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler { _, e ->
         LoggerFactory.getLogger("Uncaught Catcher").error("Uncaught exception. Will terminate the program.", e)
         JOptionPane.showMessageDialog(
-            null, l10n("ui.main.error.msg", e), l10n("ui.main.error.title"), JOptionPane.ERROR_MESSAGE
+            null, l10n("ui.error.msg", e), l10n("ui.error.title"), JOptionPane.ERROR_MESSAGE
         )
         OpenController.tryExit()
     }

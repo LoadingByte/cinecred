@@ -59,7 +59,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             if (selectedOption == CLOSED_OPTION || selectedOption == 1)
                 return@makeActToolBtn
         }
-        ctrl.stylingHistory.tryResetAndRedraw()
+        ctrl.stylingHistory.resetAndRedraw()
     }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false

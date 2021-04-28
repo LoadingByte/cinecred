@@ -12,7 +12,7 @@ import javax.swing.JDialog
 class EditStylingDialog(ctrl: ProjectController) :
     JDialog(ctrl.projectFrame, "${ctrl.projectName} \u2013 Cinecred \u2013 ${l10n("ui.styling.title")}") {
 
-    val editStylingPanel = EditStylingPanel(ctrl)
+    val panel = EditStylingPanel(ctrl)
 
     init {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
@@ -29,7 +29,7 @@ class EditStylingDialog(ctrl: ProjectController) :
 
         iconImages = WINDOW_ICON_IMAGES
 
-        contentPane.add(editStylingPanel)
+        contentPane.add(panel)
     }
 
 }

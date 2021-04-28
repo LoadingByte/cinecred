@@ -201,7 +201,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
                 is VideoRenderJob -> renderJob.fileOrPattern.toString()
                 else -> throw IllegalStateException()
             }
-            ctrl.projectFrame.deliverPanel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
+            ctrl.projectFrame.panel.deliverPanel.renderQueuePanel
+                .addRenderJobToQueue(renderJob, format.label, destination)
         }
     }
 

@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
@@ -179,7 +178,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
     private class ProgressCellRenderer : TableCellRenderer {
 
-        private val progressBar = JProgressBar()
+        private val progressBar = JProgressBar().apply { putClientProperty(PROGRESS_BAR_SQUARE, true) }
         private val defaultProgressBarForeground = progressBar.foreground
         private val wordWrapCellRenderer = WordWrapCellRenderer()
 

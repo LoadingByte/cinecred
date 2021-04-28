@@ -23,7 +23,7 @@ import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 
-class ProjectController(val projectDir: Path, private val stylingFile: Path, private val creditsFile: Path) {
+class ProjectController(val projectDir: Path) {
 
     val projectName: String = projectDir.fileName.toString()
 
@@ -31,6 +31,9 @@ class ProjectController(val projectDir: Path, private val stylingFile: Path, pri
 
     val projectFrame = ProjectFrame(this)
     val editStylingDialog = EditStylingDialog(this)
+
+    private val stylingFile = OpenController.getStylingFile(projectDir)
+    private val creditsFile = OpenController.getCreditsFile(projectDir)
 
     private var creditsCsv: List<CSVRecord>? = null
     private val fonts = mutableMapOf<Path, Font>()
@@ -160,12 +163,13 @@ class ProjectController(val projectDir: Path, private val stylingFile: Path, pri
         )
             return false
 
+        OpenController.onCloseProject(this)
+
         projectFrame.dispose()
         editStylingDialog.dispose()
         // Cancel the previous project dir change watching order.
         RecursiveFileWatcher.unwatch(projectDir)
 
-        OpenController.onCloseProject(this)
         return true
     }
 

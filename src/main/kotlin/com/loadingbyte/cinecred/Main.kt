@@ -40,7 +40,7 @@ fun main() {
         JOptionPane.showMessageDialog(
             null, l10n("ui.error.msg", e), l10n("ui.error.title"), JOptionPane.ERROR_MESSAGE
         )
-        OpenController.tryExit()
+        OpenController.tryExit(force = true)
     }
 
     // By default, only log warning messages.

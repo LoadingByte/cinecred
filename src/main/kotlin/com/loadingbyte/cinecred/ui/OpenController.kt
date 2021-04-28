@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.copyCreditsTemplate
 import com.loadingbyte.cinecred.projectio.copyStylingTemplate
+import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -83,12 +84,16 @@ object OpenController {
             OpenFrame.isVisible = false
     }
 
-    fun tryExit() {
+    fun tryExit(force: Boolean = false) {
         for (projectCtrl in projectCtrls.toMutableList() /* copy to avoid concurrent modification */)
-            if (!projectCtrl.tryCloseProject())
+            if (!projectCtrl.tryCloseProject(force) && !force)
                 return
 
         OpenFrame.dispose()
+
+        if (force)
+            for (window in Window.getWindows())
+                window.dispose()
     }
 
 }

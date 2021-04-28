@@ -85,8 +85,14 @@ class ProjectController(val projectDir: Path, private val stylingFile: Path, pri
         projectFrame.editPanel.onSetEditStylingDialogVisible(isVisible)
     }
 
-    fun tryCloseProject(): Boolean {
-        if (!projectFrame.editPanel.onTryCloseProject() || !projectFrame.deliverPanel.renderQueuePanel.onTryCloseProject())
+    fun tryCloseProject(force: Boolean = false): Boolean {
+        if (force) {
+            projectFrame.panel.editPanel.onTryCloseProject()
+            projectFrame.panel.deliverPanel.renderQueuePanel.onTryCloseProject()
+        } else if (
+            !projectFrame.panel.editPanel.onTryCloseProject() ||
+            !projectFrame.panel.deliverPanel.renderQueuePanel.onTryCloseProject()
+        )
             return false
 
         projectFrame.dispose()

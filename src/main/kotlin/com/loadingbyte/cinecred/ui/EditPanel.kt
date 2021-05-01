@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.*
@@ -110,7 +109,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
     }
 
-    private val pageTabs = JTabbedPane()
+    private val pageTabs = JTabbedPane().apply {
+        putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
+    }
 
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
     private val previewPanels get() = pageTabs.components.map { it as EditPagePreviewPanel }

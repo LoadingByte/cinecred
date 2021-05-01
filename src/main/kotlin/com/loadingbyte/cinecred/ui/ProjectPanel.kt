@@ -21,6 +21,7 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
 
     init {
         val tabs = JTabbedPane().apply {
+            putClientProperty(TABBED_PANE_SHOW_TAB_SEPARATORS, true)
             addTab(l10n("ui.project.style"), EYE_ICON, editPanel)
             addTab(l10n("ui.project.video"), PLAY_ICON, videoPanel)
             addTab(l10n("ui.project.deliver"), DELIVER_ICON, deliverPanel)

@@ -6,13 +6,24 @@ import java.nio.file.Path
 import java.util.*
 
 
-fun copyStylingTemplate(destDir: Path, locale: Locale) {
+fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyStyling: Boolean, copyCredits: Boolean) {
+    if (Files.notExists(destDir))
+        Files.createDirectories(destDir)
+
+    if (copyStyling)
+        copyStylingTemplate(destDir, locale)
+    if (copyCredits)
+        copyCreditsTemplate(destDir, locale, format)
+}
+
+
+private fun copyStylingTemplate(destDir: Path, locale: Locale) {
     val text = readFillingPlaceholders("/template/styling.toml", locale)
     Files.writeString(destDir.resolve("Styling.toml"), text)
 }
 
 
-fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
+private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
     val csv = readFillingPlaceholders("/template/credits.csv", locale)
     val spreadsheet = CsvFormat.read(csv)
     val colWidths = mapOf(3 to 14, 4 to 16, 5 to 24, 6 to 24, 7 to 24)

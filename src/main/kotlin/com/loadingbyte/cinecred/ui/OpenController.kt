@@ -1,8 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.projectio.copyCreditsTemplate
-import com.loadingbyte.cinecred.projectio.copyStylingTemplate
+import com.loadingbyte.cinecred.projectio.copyTemplate
 import com.loadingbyte.cinecred.projectio.locateCreditsFile
 import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
@@ -49,6 +48,9 @@ object OpenController {
     }
 
     fun tryOpenProject(projectDir: Path) {
+        if (Files.isRegularFile(projectDir))
+            return
+
         if (projectCtrls.any { it.projectDir == projectDir }) {
             JOptionPane.showMessageDialog(
                 OpenFrame, l10n("ui.open.alreadyOpen.msg", projectDir), l10n("ui.open.alreadyOpen.title"),
@@ -57,17 +59,17 @@ object OpenController {
             return
         }
 
-        val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
-        val creditsFile = locateCreditsFile(projectDir).first
-
         // If the two required project files don't exist yet, create them.
+        val projectDirExists = Files.exists(projectDir)
+        val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
+        val creditsFile = if (!projectDirExists) null else locateCreditsFile(projectDir).first
         val stylingFileExists = Files.exists(stylingFile)
         val creditsFileExists = creditsFile != null
-        if (!stylingFileExists || !creditsFileExists)
-            if (!tryCopyTemplate(projectDir, !stylingFileExists, !creditsFileExists)) {
-                // The user cancelled the project creation.
-                return
-            }
+        if (Files.notExists(projectDir) || !stylingFileExists || !creditsFileExists) {
+            // If the user cancels the dialog, cancel opening the project directory.
+            val (locale, format) = CreateForm.showDialog() ?: return
+            copyTemplate(projectDir, locale, format, !stylingFileExists, !creditsFileExists)
+        }
 
         // Memorize the opened project directory at the first position in the list.
         setMemorizedProjectDirs(
@@ -81,18 +83,6 @@ object OpenController {
         projectCtrls.add(projectCtrl)
 
         OpenFrame.isVisible = false
-    }
-
-    private fun tryCopyTemplate(projectDir: Path, copyStyling: Boolean, copyCredits: Boolean): Boolean {
-        // If the user cancelled the dialog, cancel opening the project directory.
-        val (locale, format) = CreateForm.showDialog() ?: return false
-
-        if (copyStyling)
-            copyStylingTemplate(projectDir, locale)
-        if (copyCredits)
-            copyCreditsTemplate(projectDir, locale, format)
-
-        return true
     }
 
     // Must only be called from ProjectController.

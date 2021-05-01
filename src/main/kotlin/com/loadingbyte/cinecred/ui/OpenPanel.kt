@@ -47,7 +47,7 @@ object OpenPanel : JPanel() {
         val fc = JFileChooser()
         fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
         OpenController.getMemorizedProjectDirs().firstOrNull()?.let { fc.selectedFile = it.toFile() }
-        if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION && fc.selectedFile.isDirectory)
+        if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
             OpenController.tryOpenProject(fc.selectedFile.toPath())
     }
 

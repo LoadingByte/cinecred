@@ -98,6 +98,8 @@ configurations.all {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
+    // TODO: Remove this once the Path API graduated from the experimental stage.
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
 }
 
 val jar: Jar by tasks

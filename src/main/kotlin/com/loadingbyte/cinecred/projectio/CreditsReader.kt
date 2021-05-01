@@ -14,6 +14,40 @@ import java.io.StringReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import java.util.stream.Stream
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
+
+
+private val CREDITS_FILE_EXTS = listOf("csv")
+
+fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
+    fun supExtsStr() = CREDITS_FILE_EXTS.joinToString(" | ")
+
+    var creditsFile: Path? = null
+    val log = mutableListOf<ParserMsg>()
+
+    val candidates = getCreditsFileCandidates(projectDir).iterator()
+    if (!candidates.hasNext())
+        log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.credits.noCreditsFile", supExtsStr())))
+    else {
+        creditsFile = candidates.next()
+        if (candidates.hasNext()) {
+            val msg = l10n("projectIO.credits.multipleCreditsFiles", supExtsStr(), creditsFile.fileName)
+            log.add(ParserMsg(null, null, null, WARN, msg))
+        }
+    }
+
+    return Pair(creditsFile, log)
+}
+
+fun getCreditsFileCandidates(projectDir: Path): Stream<Path> =
+    Files.list(projectDir)
+        .filter { Files.isRegularFile(it) && hasCreditsFileName(it) }
+        .sorted(compareBy { CREDITS_FILE_EXTS.indexOf(it.extension) })
+
+fun hasCreditsFileName(file: Path) =
+    file.nameWithoutExtension.equals("Credits", ignoreCase = true) && file.extension in CREDITS_FILE_EXTS
 
 
 fun loadCreditsFile(csvFile: Path): List<CSVRecord> {
@@ -29,7 +63,7 @@ fun readCredits(
     csv: List<CSVRecord>,
     styling: Styling,
     pictureLoaders: Map<Path, Lazy<Picture?>>
-): Pair<List<ParserMsg>, List<Page>?> {
+): Pair<List<Page>?, List<ParserMsg>> {
     // Try to find the table in the CSV.
     val table = Table(
         csv, l10nPrefix = "projectIO.credits.table.",
@@ -38,7 +72,7 @@ fun readCredits(
 
     // Read the table.
     val pages = CreditsReader(table, styling, pictureLoaders).read()
-    return Pair(table.log, pages)
+    return Pair(pages, table.log)
 }
 
 

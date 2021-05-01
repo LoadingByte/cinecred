@@ -99,13 +99,17 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
         })
     }
 
-    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
+    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages
 
         if (playButton.isSelected)
             playButton.doClick()
-        restartDrawing()
+        if (project == null) {
+            videoDrawer = null
+            canvas.repaint()
+        } else
+            restartDrawing()
     }
 
     private fun restartDrawing() {

@@ -20,11 +20,8 @@ import javax.imageio.ImageIO
 import javax.swing.JEditorPane
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
+import kotlin.io.path.extension
 import kotlin.streams.toList
-
-
-private val Path.extension: String
-    get() = fileName.toString().substringAfterLast('.').toLowerCase()
 
 
 fun tryReadFont(fontFile: Path): Font? {

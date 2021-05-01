@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
-import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.draw
+import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.*
@@ -19,7 +19,6 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.WatchEvent
 import java.util.*
-import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 
@@ -32,8 +31,10 @@ class ProjectController(val projectDir: Path) {
     val projectFrame = ProjectFrame(this)
     val editStylingDialog = EditStylingDialog(this)
 
-    private val stylingFile = OpenController.getStylingFile(projectDir)
-    private val creditsFile = OpenController.getCreditsFile(projectDir)
+    private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
+
+    private var creditsFile: Path? = null
+    private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
 
     private var creditsCsv: List<CSVRecord>? = null
     private val fonts = HashMap<Path, Font>()
@@ -48,33 +49,38 @@ class ProjectController(val projectDir: Path) {
         projectFrame.isVisible = true
         editStylingDialog.isVisible = true
 
-        // Load the initial credits CSV from disk.
-        tryReloadCreditsFile()
+        // Load the initial state of the styling from disk.
+        stylingHistory = StylingHistory(readStyling(stylingFile))
 
         // Load the initially present auxiliary files (project fonts and pictures).
         for (projectFile in Files.walk(projectDir))
             tryReloadAuxFile(projectFile)
 
-        // Load the initial state of the styling from disk.
-        stylingHistory = StylingHistory(readStyling(stylingFile))
-
-        // Read and draw the credits.
-        readCreditsAndRedraw()
+        // Try to find a credits file.
+        tryLocateCreditsFile()
+        // If present, load the initial credits CSV from disk.
+        tryReloadCreditsFile()
+        // If present, read and draw the credits.
+        tryReadCreditsAndRedraw()
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { file: Path, kind: WatchEvent.Kind<*> ->
-            val isCreditsFile = try {
-                Files.isSameFile(file, creditsFile)
-            } catch (_: IOException) {
-                false
-            }
+            val creditsFile = this.creditsFile  // capture
             when {
-                isCreditsFile ->
-                    SwingUtilities.invokeLater { tryReloadCreditsFile(); readCreditsAndRedraw() }
+                hasCreditsFileName(file) -> {
+                    tryLocateCreditsFile()
+                    val newCreditsFile = this.creditsFile
+                    if (file == newCreditsFile || newCreditsFile == null ||
+                        (creditsFile != null && !safeIsSameFile(creditsFile, newCreditsFile))
+                    ) {
+                        tryReloadCreditsFile()
+                        tryReadCreditsAndRedraw()
+                    }
+                }
                 kind == ENTRY_DELETE ->
-                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) readCreditsAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw() }
                 else ->
-                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) readCreditsAndRedraw() }
+                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw() }
             }
         }
     }
@@ -110,23 +116,40 @@ class ProjectController(val projectDir: Path) {
         return false
     }
 
-    private fun tryReloadCreditsFile() {
-        if (!Files.exists(creditsFile)) {
-            JOptionPane.showMessageDialog(
-                projectFrame, l10n("ui.edit.missingCreditsFile.msg", creditsFile),
-                l10n("ui.edit.missingCreditsFile.title"), JOptionPane.ERROR_MESSAGE
-            )
-            tryCloseProject()
-            return
-        }
-
-        creditsCsv = loadCreditsFile(creditsFile)
+    private fun tryLocateCreditsFile() {
+        val (file, log) = locateCreditsFile(projectDir)
+        creditsFileLocatingLog = log
+        creditsFile = file
     }
 
-    private fun readCreditsAndRedraw() {
+    private fun tryReloadCreditsFile() {
+        creditsCsv = try {
+            creditsFile?.let(::loadCreditsFile)
+        } catch (_: IOException) {
+            // An IO exception can occur if the credits file has disappeared in the meantime.
+            // If that happens, the file watcher will quickly trigger a locating and then a reloading call.
+            null
+        }
+    }
+
+    private fun tryReadCreditsAndRedraw() {
+        fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
+            // Make sure to update the UI from the UI thread because Swing is not thread-safe.
+            SwingUtilities.invokeLater {
+                projectFrame.panel.editPanel.updateProjectAndLog(project, drawnPages, log)
+                projectFrame.panel.videoPanel.updateProject(project, drawnPages)
+                projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
+            }
+        }
+
         // Capture these variables in the state they are in when the function is called.
         val styling = stylingHistory.current
-        val creditsCsv = this.creditsCsv!!
+        val creditsCsv = this.creditsCsv
+
+        if (creditsCsv == null) {
+            updateProjectAndLog(null, emptyList(), creditsFileLocatingLog)
+            return
+        }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
@@ -136,7 +159,7 @@ class ProjectController(val projectDir: Path) {
             val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
-            val (log, pages) = readCredits(creditsCsv, styling, pictureLoadersByRelPath)
+            val (pages, log) = readCredits(creditsCsv, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName.toImmutableMap(), (pages ?: emptyList()).toImmutableList())
             val drawnPages = when (pages) {
@@ -144,12 +167,7 @@ class ProjectController(val projectDir: Path) {
                 else -> draw(project)
             }
 
-            // Make sure to update the UI from the UI thread because Swing is not thread-safe.
-            SwingUtilities.invokeLater {
-                projectFrame.panel.editPanel.updateProjectAndLog(project, drawnPages, log)
-                projectFrame.panel.videoPanel.updateProject(project, drawnPages)
-                projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
-            }
+            updateProjectAndLog(project, drawnPages, creditsFileLocatingLog + log)
         }
     }
 
@@ -182,6 +200,20 @@ class ProjectController(val projectDir: Path) {
         isEditStylingDialogVisible = isVisible
         editStylingDialog.isVisible = isEditTabActive && isVisible
         projectFrame.panel.editPanel.onSetEditStylingDialogVisible(isVisible)
+    }
+
+
+    companion object {
+
+        const val STYLING_FILE_NAME = "Styling.toml"
+
+        private fun safeIsSameFile(p1: Path, p2: Path) =
+            try {
+                Files.isSameFile(p1, p2)
+            } catch (_: IOException) {
+                false
+            }
+
     }
 
 
@@ -243,7 +275,7 @@ class ProjectController(val projectDir: Path) {
                 isUndoable = currentIdx != 0,
                 isRedoable = currentIdx != history.lastIndex
             )
-            readCreditsAndRedraw()
+            tryReadCreditsAndRedraw()
         }
 
     }

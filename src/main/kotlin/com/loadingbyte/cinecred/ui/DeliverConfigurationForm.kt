@@ -206,7 +206,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
         }
     }
 
-    fun updateProject(project: Project, drawnPages: List<DrawnPage>) {
+    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages
 

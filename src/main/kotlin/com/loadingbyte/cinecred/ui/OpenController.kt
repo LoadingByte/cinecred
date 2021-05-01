@@ -4,6 +4,8 @@ import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.copyCreditsTemplate
 import com.loadingbyte.cinecred.projectio.copyStylingTemplate
+import com.loadingbyte.cinecred.projectio.locateCreditsFile
+import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,18 +21,16 @@ object OpenController {
 
     private val projectCtrls = mutableListOf<ProjectController>()
 
-    fun getStylingFile(projectDir: Path): Path = projectDir.resolve(Path.of("Styling.toml"))
-    fun getCreditsFile(projectDir: Path): Path = projectDir.resolve(Path.of("Credits.csv"))
-
     fun getMemorizedProjectDirs(): List<Path> {
         val dirs = prefsProjectDirs.keys()
             .sortedBy(String::toInt)
             .map { key -> Path.of(prefsProjectDirs.get(key, null)) }
             .toMutableList()
         // Remove all memorized directories which are no longer project directories.
+        // Do not base this decision on the existence of a credits file because this file might just be
+        // moved around a little by the user at the same time this function is called.
         val modified = dirs.removeAll { dir ->
-            !Files.isDirectory(dir) || !Files.isRegularFile(getStylingFile(dir)) ||
-                    !Files.isRegularFile(getCreditsFile(dir))
+            !Files.isDirectory(dir) || !Files.isRegularFile(dir.resolve(STYLING_FILE_NAME))
         }
         if (modified)
             setMemorizedProjectDirs(dirs)
@@ -59,12 +59,14 @@ object OpenController {
             return
         }
 
-        val stylingFile = getStylingFile(projectDir)
-        val creditsFile = getCreditsFile(projectDir)
+        val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
+        val creditsFile = locateCreditsFile(projectDir).second
 
         // If the two required project files don't exist yet, create them.
-        if (!Files.exists(stylingFile) || !Files.exists(creditsFile))
-            if (!tryCopyTemplate(projectDir, stylingFile, creditsFile)) {
+        val stylingFileExists = Files.exists(stylingFile)
+        val creditsFileExists = creditsFile != null
+        if (!stylingFileExists || !creditsFileExists)
+            if (!tryCopyTemplate(projectDir, !stylingFileExists, !creditsFileExists)) {
                 // The user cancelled the project creation.
                 return
             }
@@ -83,7 +85,7 @@ object OpenController {
         OpenFrame.isVisible = false
     }
 
-    private fun tryCopyTemplate(projectDir: Path, stylingFile: Path, creditsFile: Path): Boolean {
+    private fun tryCopyTemplate(projectDir: Path, copyStyling: Boolean, copyCredits: Boolean): Boolean {
         // Wrapping locales in these objects allows us to provide custom a toString() method.
         class WrappedLocale(val locale: Locale, val label: String) {
             override fun toString() = label
@@ -97,9 +99,9 @@ object OpenController {
         ) ?: return false  // If the user cancelled the dialog, cancel opening the project directory.
         val locale = (choice as WrappedLocale).locale
 
-        if (!Files.exists(stylingFile))
+        if (copyStyling)
             copyStylingTemplate(projectDir, locale)
-        if (!Files.exists(creditsFile))
+        if (copyCredits)
             copyCreditsTemplate(projectDir, locale)
 
         return true

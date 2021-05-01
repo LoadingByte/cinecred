@@ -191,8 +191,10 @@ class CheckBoxWidget(
 
 open class ComboBoxWidget<E>(
     items: List<E>,
+    selected: E? = null,
     toString: (E) -> String = { it.toString() },
     isEditable: Boolean = false,
+    hFill: Boolean = false,
     private val scrollbar: Boolean = true,
     decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>)? = null,
     verify: ((E) -> Unit)? = null
@@ -207,7 +209,7 @@ open class ComboBoxWidget<E>(
     }
 
     override val components = listOf(cb)
-    override val constraints = listOf("wmax 40%")
+    override val constraints = listOf(if (hFill) "width 100%" else "wmax 40%")
     override val verify = verify?.let { { it(selectedItem) } }
 
     var items: List<E> = emptyList()
@@ -229,6 +231,7 @@ open class ComboBoxWidget<E>(
 
     init {
         this.items = items
+        selected?.let { selectedItem = it }
     }
 
 }
@@ -239,7 +242,7 @@ class InconsistentComboBoxWidget<E>(
     toString: (E) -> String = { it.toString() },
     inconsistencyWarning: String? = null,
     verify: ((E) -> Unit)? = null
-) : ComboBoxWidget<E>(items, toString, verify = verify) {
+) : ComboBoxWidget<E>(items, toString = toString, verify = verify) {
 
     init {
         cb.addActionListener {

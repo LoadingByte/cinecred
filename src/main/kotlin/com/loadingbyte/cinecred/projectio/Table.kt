@@ -1,8 +1,10 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.Severity.*
-import org.apache.commons.csv.CSVRecord
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nAll
 import java.util.*
 
 
@@ -16,7 +18,7 @@ class ParserMsg(
 
 
 class Table(
-    csv: List<CSVRecord>,
+    spreadsheet: Spreadsheet,
     val l10nPrefix: String,
     l10nColNames: List<String>
 ) {
@@ -25,11 +27,12 @@ class Table(
 
     val numRows: Int
     private val headerRecord: List<String>
-    private val bodyRecords: List<CSVRecord>
+    private val bodyRecords: List<SpreadsheetRecord>
     private val colMap: Map<String, Int>
 
     init {
-        val headerRecordNo = csv.indexOfFirst { record -> record.any { cell -> cell.trim().startsWith("@") } }
+        val headerRecordNo = spreadsheet
+            .indexOfFirst { record -> record.cells.any { cell -> cell.trim().startsWith("@") } }
 
         if (headerRecordNo == -1) {
             // If no table header can be found, log that and bail out.
@@ -39,11 +42,11 @@ class Table(
             colMap = emptyMap()
             log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.table.noHeader")))
         } else {
-            headerRecord = csv[headerRecordNo].map { it.trim() }
+            headerRecord = spreadsheet[headerRecordNo].cells.map { it.trim() }
 
             // Determine the records which make up the data rows of the table.
-            fun isRecordNotEmpty(record: CSVRecord) = record.any { cell -> cell.isNotEmpty() }
-            val rawBodyRecords = csv.drop(headerRecordNo + 1)
+            fun isRecordNotEmpty(record: SpreadsheetRecord) = record.cells.any { cell -> cell.isNotEmpty() }
+            val rawBodyRecords = spreadsheet.drop(headerRecordNo + 1)
             bodyRecords =
                 rawBodyRecords.subList(
                     rawBodyRecords.indexOfFirst(::isRecordNotEmpty),
@@ -85,15 +88,15 @@ class Table(
         log.add(ParserMsg(row?.let(::getRecordNo), l10nColName?.let(::getColHeader), cellValue, severity, msg))
     }
 
-    fun isEmpty(row: Int): Boolean = bodyRecords[row].all { it.trim().isEmpty() }
-    fun getRecordNo(row: Int): Int = bodyRecords[row].recordNumber.toInt()
+    fun isEmpty(row: Int): Boolean = bodyRecords[row].cells.all { it.trim().isEmpty() }
+    fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
     fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
 
     fun getString(row: Int, l10nColName: String): String? {
         val col = colMap[l10nColName]
         if (col != null) {
             // If the column is present in the table, retrieve its value.
-            val str = bodyRecords[row][col].trim()
+            val str = bodyRecords[row].cells[col].trim()
             // If the value is non-empty, return it.
             if (str.isNotEmpty())
                 return str

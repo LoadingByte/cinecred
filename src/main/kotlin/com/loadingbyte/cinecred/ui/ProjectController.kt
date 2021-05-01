@@ -11,7 +11,6 @@ import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import org.apache.commons.csv.CSVRecord
 import java.awt.Font
 import java.io.IOException
 import java.nio.file.Files
@@ -32,13 +31,14 @@ class ProjectController(val projectDir: Path) {
     val editStylingDialog = EditStylingDialog(this)
 
     private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
-
     private var creditsFile: Path? = null
-    private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
 
-    private var creditsCsv: List<CSVRecord>? = null
+    private var creditsSpreadsheet: List<SpreadsheetRecord>? = null
     private val fonts = HashMap<Path, Font>()
     private val pictureLoaders = HashMap<Path, Lazy<Picture?>>()
+
+    private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
+    private var creditsFileLoadingLog: List<ParserMsg> = emptyList()
 
     private val readCreditsAndRedrawJobSlot = JobSlot()
 
@@ -58,7 +58,7 @@ class ProjectController(val projectDir: Path) {
 
         // Try to find a credits file.
         tryLocateCreditsFile()
-        // If present, load the initial credits CSV from disk.
+        // If present, load the initial credits spreadsheet from disk.
         tryReloadCreditsFile()
         // If present, read and draw the credits.
         tryReadCreditsAndRedraw()
@@ -123,12 +123,18 @@ class ProjectController(val projectDir: Path) {
     }
 
     private fun tryReloadCreditsFile() {
-        creditsCsv = try {
-            creditsFile?.let(::loadCreditsFile)
-        } catch (_: IOException) {
-            // An IO exception can occur if the credits file has disappeared in the meantime.
-            // If that happens, the file watcher will quickly trigger a locating and then a reloading call.
-            null
+        creditsSpreadsheet = null
+        creditsFileLoadingLog = emptyList()
+
+        creditsFile?.let { creditsFile ->
+            try {
+                val (spreadsheet, log) = loadCreditsFile(creditsFile)
+                creditsSpreadsheet = spreadsheet
+                creditsFileLoadingLog = log
+            } catch (_: IOException) {
+                // An IO exception can occur if the credits file has disappeared in the meantime.
+                // If that happens, the file watcher will quickly trigger a locating and then a reloading call.
+            }
         }
     }
 
@@ -144,10 +150,11 @@ class ProjectController(val projectDir: Path) {
 
         // Capture these variables in the state they are in when the function is called.
         val styling = stylingHistory.current
-        val creditsCsv = this.creditsCsv
+        val creditsSpreadsheet = this.creditsSpreadsheet
+        val locAndLoadLog = creditsFileLocatingLog + creditsFileLoadingLog
 
-        if (creditsCsv == null) {
-            updateProjectAndLog(null, emptyList(), creditsFileLocatingLog)
+        if (creditsSpreadsheet == null) {
+            updateProjectAndLog(null, emptyList(), locAndLoadLog)
             return
         }
 
@@ -159,7 +166,7 @@ class ProjectController(val projectDir: Path) {
             val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
-            val (pages, log) = readCredits(creditsCsv, styling, pictureLoadersByRelPath)
+            val (pages, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
 
             val project = Project(styling, fontsByName.toImmutableMap(), (pages ?: emptyList()).toImmutableList())
             val drawnPages = when (pages) {
@@ -167,7 +174,7 @@ class ProjectController(val projectDir: Path) {
                 else -> draw(project)
             }
 
-            updateProjectAndLog(project, drawnPages, creditsFileLocatingLog + log)
+            updateProjectAndLog(project, drawnPages, locAndLoadLog + log)
         }
     }
 

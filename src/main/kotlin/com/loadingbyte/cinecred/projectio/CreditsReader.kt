@@ -7,10 +7,7 @@ import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVRecord
 import java.io.File
-import java.io.StringReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -19,21 +16,19 @@ import kotlin.io.path.extension
 import kotlin.io.path.nameWithoutExtension
 
 
-private val CREDITS_FILE_EXTS = listOf("csv")
-
 fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-    fun supExtsStr() = CREDITS_FILE_EXTS.joinToString(" | ")
+    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString(" | ") { io -> io.fileExt }
 
     var creditsFile: Path? = null
     val log = mutableListOf<ParserMsg>()
 
     val candidates = getCreditsFileCandidates(projectDir).iterator()
     if (!candidates.hasNext())
-        log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.credits.noCreditsFile", supExtsStr())))
+        log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.credits.noCreditsFile", availExtsStr())))
     else {
         creditsFile = candidates.next()
         if (candidates.hasNext()) {
-            val msg = l10n("projectIO.credits.multipleCreditsFiles", supExtsStr(), creditsFile.fileName)
+            val msg = l10n("projectIO.credits.multipleCreditsFiles", availExtsStr(), creditsFile.fileName)
             log.add(ParserMsg(null, null, null, WARN, msg))
         }
     }
@@ -44,29 +39,32 @@ fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
 fun getCreditsFileCandidates(projectDir: Path): Stream<Path> =
     Files.list(projectDir)
         .filter { Files.isRegularFile(it) && hasCreditsFileName(it) }
-        .sorted(compareBy { CREDITS_FILE_EXTS.indexOf(it.extension) })
+        .sorted(compareBy { file ->
+            val fileExt = file.extension
+            SPREADSHEET_FORMATS.indexOfFirst { io -> io.fileExt.equals(fileExt, ignoreCase = true) }
+        })
 
-fun hasCreditsFileName(file: Path) =
-    file.nameWithoutExtension.equals("Credits", ignoreCase = true) && file.extension in CREDITS_FILE_EXTS
+fun hasCreditsFileName(file: Path): Boolean {
+    val fileExt = file.extension
+    return file.nameWithoutExtension.equals("Credits", ignoreCase = true) &&
+            SPREADSHEET_FORMATS.any { io -> io.fileExt.equals(fileExt, ignoreCase = true) }
+}
 
-
-fun loadCreditsFile(csvFile: Path): List<CSVRecord> {
-    // We trim the unicode character "ZERO WIDTH NO-BREAK SPACE" which is added by Excel for some reason.
-    val csvStr = Files.readString(csvFile).trim(0xFEFF.toChar())
-
-    // Parse the CSV file into a list of records.
-    return CSVFormat.DEFAULT.parse(StringReader(csvStr)).records
+fun loadCreditsFile(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
+    val fileExt = file.extension
+    val io = SPREADSHEET_FORMATS.first { it.fileExt.equals(fileExt, ignoreCase = true) }
+    return io.read(file)
 }
 
 
 fun readCredits(
-    csv: List<CSVRecord>,
+    spreadsheet: Spreadsheet,
     styling: Styling,
     pictureLoaders: Map<Path, Lazy<Picture?>>
 ): Pair<List<Page>?, List<ParserMsg>> {
-    // Try to find the table in the CSV.
+    // Try to find the table in the spreadsheet.
     val table = Table(
-        csv, l10nPrefix = "projectIO.credits.table.",
+        spreadsheet, l10nPrefix = "projectIO.credits.table.",
         l10nColNames = listOf("pageStyle", "breakAlign", "columnPos", "contentStyle", "vGap", "head", "body", "tail")
     )
 

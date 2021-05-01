@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.copyCreditsTemplate
 import com.loadingbyte.cinecred.projectio.copyStylingTemplate
@@ -9,7 +8,6 @@ import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.prefs.Preferences
 import javax.swing.JOptionPane
 
@@ -60,7 +58,7 @@ object OpenController {
         }
 
         val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
-        val creditsFile = locateCreditsFile(projectDir).second
+        val creditsFile = locateCreditsFile(projectDir).first
 
         // If the two required project files don't exist yet, create them.
         val stylingFileExists = Files.exists(stylingFile)
@@ -86,23 +84,13 @@ object OpenController {
     }
 
     private fun tryCopyTemplate(projectDir: Path, copyStyling: Boolean, copyCredits: Boolean): Boolean {
-        // Wrapping locales in these objects allows us to provide custom a toString() method.
-        class WrappedLocale(val locale: Locale, val label: String) {
-            override fun toString() = label
-        }
-
-        val localeChoices = TRANSLATED_LOCALES.map { WrappedLocale(it, it.displayName) }.toTypedArray()
-        val defaultLocaleChoice = localeChoices[TRANSLATED_LOCALES.indexOf(Locale.getDefault())]
-        val choice = JOptionPane.showInputDialog(
-            OpenFrame, l10n("ui.open.chooseLocale.msg"), l10n("ui.open.chooseLocale.title"),
-            JOptionPane.QUESTION_MESSAGE, null, localeChoices, defaultLocaleChoice
-        ) ?: return false  // If the user cancelled the dialog, cancel opening the project directory.
-        val locale = (choice as WrappedLocale).locale
+        // If the user cancelled the dialog, cancel opening the project directory.
+        val (locale, format) = CreateForm.showDialog() ?: return false
 
         if (copyStyling)
             copyStylingTemplate(projectDir, locale)
         if (copyCredits)
-            copyCreditsTemplate(projectDir, locale)
+            copyCreditsTemplate(projectDir, locale, format)
 
         return true
     }

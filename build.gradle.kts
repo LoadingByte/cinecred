@@ -62,11 +62,16 @@ dependencies {
     implementation("org.slf4j", "slf4j-simple", slf4jVersion)
     // Batik & PDFBox use JCL; this bridge redirects JCL to slf4j:
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
+    // JExcelApi uses log4j; this bridge redirects log4j to slf4j:
+    implementation("org.slf4j", "log4j-over-slf4j", slf4jVersion)
 
-    // CSV Parsing
+    // Spreadsheet Reading and Writing
+    implementation("ch.rabanti", "nanoxlsx4j", "1.2.8")
+    implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
+    implementation("com.github.miachm.sods", "SODS", "1.3.0")
     implementation("org.apache.commons", "commons-csv", "1.8")
 
-    // SVG Parsing and Writing
+    // SVG Reading and Writing
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
     implementation("org.apache.xmlgraphics", "batik-svggen", batikVersion)
     // For pictures embedded in the SVG:
@@ -90,10 +95,16 @@ dependencies {
 }
 
 configurations.all {
-    // Do not let Batik & PDFBox add the commons-logging dependency; instead, we use the slf4j bridge.
+    // Batik & PDFBox: We replace this commons-logging dependency by the slf4j bridge.
     exclude("commons-logging", "commons-logging")
+    // JExcelApi: We replace this log4j dependency by the slf4j bridge.
+    exclude("log4j", "log4j")
+
+    // Batik:
     // The Java XML APIs are part of the JDK itself since Java 5.
     exclude("xml-apis", "xml-apis")
+    // Batik functions well without the big xalan dependency.
+    exclude("xalan", "xalan")
 }
 
 tasks.withType<KotlinCompile> {

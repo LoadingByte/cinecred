@@ -304,7 +304,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> SEVERITY_ICON.getValue(log[rowIdx].severity)
-            1 -> log[rowIdx].recordNo ?: ""
+            1 -> log[rowIdx].recordNo?.plus(1) ?: ""
             2 -> log[rowIdx].colHeader ?: ""
             3 -> log[rowIdx].cellValue ?: ""
             4 -> log[rowIdx].msg

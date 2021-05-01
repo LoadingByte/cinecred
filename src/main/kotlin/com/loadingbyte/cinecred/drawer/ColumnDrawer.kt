@@ -20,7 +20,7 @@ fun drawColumn(
     alignHeadTailGroupIds: Map<Block, Int>
 ): DrawnColumn {
     // This list will be filled shortly. We generate an image for each block's body.
-    val drawnBodies = mutableMapOf<Block, DrawnBody>()
+    val drawnBodies = HashMap<Block, DrawnBody>()
 
     // Step 1:
     // Take the blocks whose bodies are laid out using the "grid body layout". Group blocks that share the same
@@ -48,7 +48,7 @@ fun drawColumn(
 
     // We now add heads and tails to the body images and thereby generate an image for each block.
     // We also remember the x coordinate of the axis inside each generated image.
-    val drawnBlocks = mutableMapOf<Block, DrawnBlock>()
+    val drawnBlocks = HashMap<Block, DrawnBlock>()
 
     // Step 3:
     // We start with the blocks that have a horizontal spine. Here, heads/tails that either share a common edge
@@ -168,7 +168,7 @@ private fun drawHorizontalSpineBlocks(
     drawnBodies: Map<Block, DrawnBody>,
 ): Map<Block, DrawnBlock> {
     // This will be the return value.
-    val drawnBlocks = mutableMapOf<Block, DrawnBlock>()
+    val drawnBlocks = HashMap<Block, DrawnBlock>()
 
     // Step 1:
     // In the drawColumnImage() function, the blocks have been grouped such that in this function, either the heads or

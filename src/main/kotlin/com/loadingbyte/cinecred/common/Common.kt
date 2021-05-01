@@ -32,7 +32,7 @@ fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): 
     MessageFormat.format(l10n(key, locale), *args)
 
 
-private val l10nAllCache = mutableMapOf<String, List<String>>()
+private val l10nAllCache = HashMap<String, List<String>>()
 fun l10nAll(key: String): List<String> = l10nAllCache.getOrPut(key) {
     TRANSLATED_LOCALES.map { locale -> getL10nBundle(locale).getString(key) }
 }

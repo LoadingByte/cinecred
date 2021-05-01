@@ -36,8 +36,8 @@ class ProjectController(val projectDir: Path) {
     private val creditsFile = OpenController.getCreditsFile(projectDir)
 
     private var creditsCsv: List<CSVRecord>? = null
-    private val fonts = mutableMapOf<Path, Font>()
-    private val pictureLoaders = mutableMapOf<Path, Lazy<Picture?>>()
+    private val fonts = HashMap<Path, Font>()
+    private val pictureLoaders = HashMap<Path, Lazy<Picture?>>()
 
     private val readCreditsAndRedrawJobSlot = JobSlot()
 

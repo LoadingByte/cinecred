@@ -9,7 +9,7 @@ object RecursiveFileWatcher {
     private class Order(val listener: (Path, WatchEvent.Kind<*>) -> Unit, val watchKeys: MutableSet<WatchKey>)
 
     private val watcher = FileSystems.getDefault().newWatchService()
-    private val orders = mutableMapOf<Path, Order>()
+    private val orders = HashMap<Path, Order>()
     private val lock = Any()
 
     fun watch(rootDir: Path, listener: (Path, WatchEvent.Kind<*>) -> Unit) {

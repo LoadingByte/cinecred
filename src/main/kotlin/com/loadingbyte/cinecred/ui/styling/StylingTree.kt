@@ -19,8 +19,8 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     private val model = treeModel as DefaultTreeModel
     private val rootNode = model.root as DefaultMutableTreeNode
 
-    private val singletonTypeInfos = mutableMapOf<Class<*>, TypeInfo.Singleton>()
-    private val listTypeInfos = mutableMapOf<Class<*>, TypeInfo.List>()
+    private val singletonTypeInfos = HashMap<Class<*>, TypeInfo.Singleton>()
+    private val listTypeInfos = HashMap<Class<*>, TypeInfo.List>()
 
     private var disableSelectionListener = false
 

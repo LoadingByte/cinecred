@@ -558,65 +558,66 @@ private class CreditsReader(
         val STYLE_KW = Keyword("projectIO.credits.table.style")
         val PIC_KW = Keyword("projectIO.credits.table.pic")
 
+        val TAG_DELIMITERS = listOf("{{", "}}")
+
         inline fun parseTaggedString(str: String, callback: (String?, String?, String?) -> Unit) {
             var idx = 0
 
             while (true) {
-                val tagStartIdx = str.indexOfUnescaped('{', startIdx = idx)
+                val tagStartIdx = str.indexOfUnescaped("{{", startIdx = idx)
                 if (tagStartIdx == -1)
                     break
-                val tagEndIdx = str.indexOfUnescaped('}', startIdx = tagStartIdx + 1)
+                val tagEndIdx = str.indexOfUnescaped("}}", startIdx = tagStartIdx + 2)
                 if (tagEndIdx == -1)
                     break
 
                 if (tagStartIdx != idx)
-                    callback(str.substring(idx, tagStartIdx).unescape('{'), null, null)
+                    callback(str.substring(idx, tagStartIdx).unescape(TAG_DELIMITERS), null, null)
 
-                val tag = str.substring(tagStartIdx + 1, tagEndIdx).unescape('}').trim()
+                val tag = str.substring(tagStartIdx + 2, tagEndIdx).unescape(TAG_DELIMITERS).trim()
                 val keyEndIdx = tag.indexOf(' ')
                 if (keyEndIdx == -1)
                     callback(null, tag, null)
                 else
                     callback(null, tag.substring(0, keyEndIdx), tag.substring(keyEndIdx + 1))
 
-                idx = tagEndIdx + 1
+                idx = tagEndIdx + 2
             }
 
             if (idx != str.length)
-                callback(str.substring(idx), null, null)
+                callback(str.substring(idx).unescape(TAG_DELIMITERS), null, null)
         }
 
-        fun String.indexOfUnescaped(char: Char, startIdx: Int): Int {
-            val idx = indexOf(char, startIdx)
+        fun String.indexOfUnescaped(seq: String, startIdx: Int): Int {
+            val idx = indexOf(seq, startIdx)
             if (idx <= 0)
                 return idx
 
-            val numBackslashes = idx - 1 - indexOfLast(startIdx = idx - 1) { it != '\\' }
-            return if (numBackslashes % 2 == 0)
+            return if (countPreceding('\\', idx) % 2 == 0)
                 idx
             else
-                indexOfUnescaped(char, idx + 1)
+                indexOfUnescaped(seq, idx + seq.length)
         }
 
-        inline fun String.indexOfLast(startIdx: Int, predicate: (Char) -> Boolean): Int {
-            for (idx in startIdx.coerceIn(0, lastIndex) downTo 0) {
-                if (predicate(this[idx])) {
-                    return idx
-                }
-            }
-            return -1
-        }
-
-        fun String.unescape(char: Char): String {
-            var escIdx = indexOf("\\$char")
+        fun String.unescape(seqs: Collection<String>): String {
+            var escIdx = indexOfAny(seqs.map { "\\$it" })
             if (escIdx == -1)
                 if (isEmpty() || last() != '\\')
                     return this
                 else
-                    escIdx = length - 1
+                    escIdx = lastIndex
 
-            val numBackslashes = escIdx - indexOfLast(startIdx = escIdx) { it != '\\' }
-            return substring(0, escIdx - (numBackslashes - 1) / 2) + substring(escIdx + 1).unescape(char)
+            val numBackslashes = countPreceding('\\', escIdx + 1)
+            return substring(0, escIdx - (numBackslashes - 1) / 2) + substring(escIdx + 1).unescape(seqs)
+        }
+
+        // Here, idx is exclusive.
+        fun String.countPreceding(char: Char, idx: Int): Int {
+            val actualIdx = idx.coerceIn(0, length)
+            for (precedingIdx in (actualIdx - 1) downTo 0)
+                if (this[precedingIdx] != char)
+                    return actualIdx - precedingIdx - 1
+            return actualIdx
         }
 
     }

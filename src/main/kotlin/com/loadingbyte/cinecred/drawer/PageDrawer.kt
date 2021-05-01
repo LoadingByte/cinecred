@@ -34,6 +34,7 @@ fun drawPage(
         // Generate an image for the current stage.
         val stageImage = drawStage(global, drawnColumns, stage)
         // Special handling for card stages...
+        var forcePageImageHeight: Float? = null
         if (stage.style.behavior == PageBehavior.CARD) {
             // The amount of padding that needs to be added above and below the card's stage image such that
             // it is centered on the screen.
@@ -43,7 +44,7 @@ fun drawPage(
             if (stageIdx == 0)
                 y += cardPaddingHeight
             if (stageIdx == page.stages.lastIndex)
-                pageImage.height = y + stageImage.height + cardPaddingHeight
+                forcePageImageHeight = y + stageImage.height + cardPaddingHeight
             // Draw guides that show the boundaries of the screen as they will be when this card will be shown.
             // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
             // rectangle are often rendered only partially or not at all.
@@ -60,6 +61,10 @@ fun drawPage(
         stageImageBounds.add(Pair(y, y + stageImage.height))
         // Actually draw the stage image onto the page image.
         pageImage.drawDeferredImage(stageImage, 0f, y)
+        // Only now that we have called drawDeferredImage can we apply the forced page image height (if there is one).
+        if (forcePageImageHeight != null)
+            pageImage.height = forcePageImageHeight
+
         // Advance to the next stage image.
         y += stageImage.height + stage.vGapAfterPx
     }

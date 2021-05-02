@@ -191,7 +191,6 @@ class CheckBoxWidget(
 
 open class ComboBoxWidget<E>(
     items: List<E>,
-    selected: E? = null,
     toString: (E) -> String = { it.toString() },
     isEditable: Boolean = false,
     hFill: Boolean = false,
@@ -231,7 +230,6 @@ open class ComboBoxWidget<E>(
 
     init {
         this.items = items
-        selected?.let { selectedItem = it }
     }
 
 }

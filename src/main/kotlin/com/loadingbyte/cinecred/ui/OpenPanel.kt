@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
+import com.loadingbyte.cinecred.ui.helper.PREFERENCES_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.awt.Font
@@ -27,17 +28,22 @@ object OpenPanel : JPanel() {
             font = font.deriveFont(font.size * 1.15f)
             addActionListener { onSelectButton() }
         }
+        val preferencesButton = JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
+            font = font.deriveFont(font.size * 1.15f)
+            addActionListener { PreferencesController.showPreferencesDialog(OpenFrame) }
+        }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
             foreground = Color(150, 150, 150)
             font = font.deriveFont(font.size * 2.5f).deriveFont(Font.BOLD)
         }
 
-        // Add the memorized project panel, select button, and the drag-and-drop hint text.
-        layout = MigLayout("center, center, wrap 1, gapy 60lp, hidemode 3", "center")
+        // Add the memorized project panel, buttons, and the drag-and-drop hint text.
+        layout = MigLayout("center, center, wrap 1, hidemode 3", "center")
         add(memorizedPanel)
-        add(selectButton)
-        add(dropLabel)
+        add(selectButton, "gapy 30lp")
+        add(preferencesButton)
+        add(dropLabel, "gapy 60lp")
 
         // Add the drag-and-drop handler.
         transferHandler = OpenTransferHandler
@@ -46,14 +52,14 @@ object OpenPanel : JPanel() {
     private fun onSelectButton() {
         val fc = JFileChooser()
         fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-        OpenController.getMemorizedProjectDirs().firstOrNull()?.let { fc.selectedFile = it.toFile() }
+        PreferencesController.memorizedProjectDirs.firstOrNull()?.let { fc.selectedFile = it.toFile() }
         if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
             OpenController.tryOpenProject(fc.selectedFile.toPath())
     }
 
     fun onShow() {
         memorizedPanel.removeAll()
-        for (projectDir in OpenController.getMemorizedProjectDirs()) {
+        for (projectDir in PreferencesController.memorizedProjectDirs) {
             val btn = JButton(projectDir.fileName.toString(), FOLDER_ICON).apply {
                 toolTipText = projectDir.toString()
                 font = font.deriveFont(font.size * 1.15f)

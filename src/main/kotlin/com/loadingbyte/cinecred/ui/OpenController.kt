@@ -7,38 +7,12 @@ import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.prefs.Preferences
 import javax.swing.JOptionPane
 
 
 object OpenController {
 
-    private val prefs = Preferences.userRoot().node("com/loadingbyte/cinecred")
-    private val prefsProjectDirs = prefs.node("projectDirs")
-
     private val projectCtrls = mutableListOf<ProjectController>()
-
-    fun getMemorizedProjectDirs(): List<Path> {
-        val dirs = prefsProjectDirs.keys()
-            .sortedBy(String::toInt)
-            .map { key -> Path.of(prefsProjectDirs.get(key, null)) }
-            .toMutableList()
-        // Remove all memorized directories which are no longer project directories.
-        // Do not base this decision on the existence of a credits file because this file might just be
-        // moved around a little by the user at the same time this function is called.
-        val modified = dirs.removeAll { dir ->
-            !Files.isDirectory(dir) || !Files.isRegularFile(dir.resolve(STYLING_FILE_NAME))
-        }
-        if (modified)
-            setMemorizedProjectDirs(dirs)
-        return dirs
-    }
-
-    private fun setMemorizedProjectDirs(dirs: List<Path>) {
-        prefsProjectDirs.clear()
-        for ((idx, dir) in dirs.withIndex())
-            prefsProjectDirs.put(idx.toString(), dir.toString())
-    }
 
     fun getProjectCtrls(): List<ProjectController> = projectCtrls
 
@@ -72,12 +46,11 @@ object OpenController {
         }
 
         // Memorize the opened project directory at the first position in the list.
-        setMemorizedProjectDirs(
-            getMemorizedProjectDirs().toMutableList().apply {
+        PreferencesController.memorizedProjectDirs =
+            PreferencesController.memorizedProjectDirs.toMutableList().apply {
                 remove(projectDir)
                 add(0, projectDir)
             }
-        )
 
         val projectCtrl = ProjectController(projectDir)
         projectCtrls.add(projectCtrl)

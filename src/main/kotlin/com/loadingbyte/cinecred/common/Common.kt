@@ -15,14 +15,8 @@ import java.util.*
 enum class Severity { INFO, WARN, ERROR }
 
 
-val TRANSLATED_LOCALES = listOf(Locale.ENGLISH, Locale.GERMAN)
-
-fun setDefaultToClosestTranslatedLocale() {
-    val locale = Locale.lookup(
-        listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), TRANSLATED_LOCALES
-    ) ?: Locale.ENGLISH
-    Locale.setDefault(locale)
-}
+val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN)
+val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
 private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT)
 private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
@@ -30,7 +24,6 @@ private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strin
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
 fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String =
     MessageFormat.format(l10n(key, locale), *args)
-
 
 private val l10nAllCache = HashMap<String, List<String>>()
 fun l10nAll(key: String): List<String> = l10nAllCache.getOrPut(key) {

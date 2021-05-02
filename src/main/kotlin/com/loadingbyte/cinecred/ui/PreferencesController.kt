@@ -62,9 +62,9 @@ object PreferencesController {
             prefs.put("uiLocale", value?.toLanguageTag() ?: "system")
         }
 
-    private var checkForUpdates: Boolean
+    var checkForUpdates: Boolean
         get() = prefs.getBoolean("checkForUpdates", true)
-        set(value) {
+        private set(value) {
             prefs.putBoolean("checkForUpdates", value)
         }
 

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.OpenController
@@ -18,9 +19,13 @@ import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Desktop
+import java.io.StringReader
 import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.util.logging.*
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
@@ -84,7 +89,44 @@ fun main() {
         if (!PreferencesController.onStartup())
             return@invokeLater
 
+        if (PreferencesController.checkForUpdates)
+            checkForUpdates()
+
         OpenController.showOpenFrame()
+    }
+}
+
+
+private const val DL_API_URL = "https://loadingbyte.com/cinecred/dl/api/v1/components"
+private const val HOMEPAGE_URL = "https://loadingbyte.com/cinecred/"
+
+private fun checkForUpdates() {
+    val curVersion = UncaughtHandler::class.java.getResourceAsStream("/version")!!.bufferedReader().readText().trim()
+
+    val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
+    client.sendAsync(
+        HttpRequest.newBuilder(URI.create(DL_API_URL)).build(),
+        HttpResponse.BodyHandlers.ofString()
+    ).thenAccept { resp ->
+        if (resp.statusCode() != 200)
+            return@thenAccept
+
+        @Suppress("UNCHECKED_CAST")
+        val root = Json.parse(StringReader(resp.body())) as Map<String, List<Map<String, String>>>
+        val latestStableVersion = root
+            .getValue("components")
+            .firstOrNull { it["qualifier"] == "Release" }
+            ?.getValue("version")
+
+        if (latestStableVersion != null && latestStableVersion != curVersion)
+            SwingUtilities.invokeLater {
+                val openHomepage = JOptionPane.showConfirmDialog(
+                    null, l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
+                    l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
+                ) == JOptionPane.YES_OPTION
+                if (openHomepage)
+                    Desktop.getDesktop().browse(URI(HOMEPAGE_URL))
+            }
     }
 }
 

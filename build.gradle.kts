@@ -113,6 +113,17 @@ tasks.withType<KotlinCompile> {
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
 }
 
+// Generate a resource file storing the project version.
+val generatedResourcesDir = buildDir.resolve("generated").resolve("resources")
+val generateResources by tasks.registering {
+    group = "Build"
+    doLast {
+        generatedResourcesDir.mkdirs()
+        generatedResourcesDir.resolve("version").writeText(version.toString())
+    }
+}
+sourceSets.main.get().output.dir(mapOf("builtBy" to generateResources), generatedResourcesDir)
+
 val jar: Jar by tasks
 jar.apply {
     from("LICENSE")

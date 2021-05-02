@@ -58,11 +58,11 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable-jvm", "0.3.3")
 
-    // Logging
-    implementation("org.slf4j", "slf4j-simple", slf4jVersion)
-    // Batik & PDFBox use JCL; this bridge redirects JCL to slf4j:
+    // Log to java.util.logging
+    implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
+    // Redirect other logging frameworks to slf4j.
+    // Batik & PDFBox use Jakarta Commons Logging. JExcelApi uses log4j.
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
-    // JExcelApi uses log4j; this bridge redirects log4j to slf4j:
     implementation("org.slf4j", "log4j-over-slf4j", slf4jVersion)
 
     // Spreadsheet Reading and Writing

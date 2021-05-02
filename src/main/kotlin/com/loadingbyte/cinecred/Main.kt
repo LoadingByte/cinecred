@@ -16,8 +16,12 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import org.slf4j.impl.SimpleLogger
 import java.awt.Color
+import java.awt.Desktop
+import java.lang.management.ManagementFactory
+import java.net.URI
+import java.net.URLEncoder
+import java.util.logging.*
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
@@ -34,17 +38,16 @@ fun main() {
     Singleton.start({ OpenController.showOpenFrame() }, SINGLETON_APP_ID)
 
     // If a unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
-    // controlled fashion and inform the user.
-    Thread.setDefaultUncaughtExceptionHandler { _, e ->
-        LoggerFactory.getLogger("Uncaught Catcher").error("Uncaught exception. Will terminate the program.", e)
-        JOptionPane.showMessageDialog(
-            null, l10n("ui.error.msg", e), l10n("ui.error.title"), JOptionPane.ERROR_MESSAGE
-        )
-        OpenController.tryExit(force = true)
-    }
+    // controlled fashion and inform the user. We also ask whether to send a crash report.
+    Thread.setDefaultUncaughtExceptionHandler(UncaughtHandler)
 
-    // By default, only log warning messages.
-    System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn")
+    // Remove all existing handlers from the root logger.
+    val rootLogger = Logger.getLogger("")
+    for (handler in rootLogger.handlers)
+        rootLogger.removeHandler(handler)
+    // Add new logging handlers.
+    rootLogger.addHandler(ConsoleHandler().apply { level = Level.WARNING; formatter = JULFormatter })
+    rootLogger.addHandler(JULBuilderHandler)
 
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
@@ -83,6 +86,76 @@ fun main() {
 
         OpenController.showOpenFrame()
     }
+}
+
+
+private object UncaughtHandler : Thread.UncaughtExceptionHandler {
+
+    override fun uncaughtException(t: Thread, e: Throwable) {
+        LoggerFactory.getLogger("Uncaught Exception Handler")
+            .error("Uncaught exception. Will terminate the program.", e)
+        SwingUtilities.invokeLater {
+            sendReport(e)
+            OpenController.tryExit(force = true)
+        }
+    }
+
+    private fun sendReport(e: Throwable) {
+        val send = JOptionPane.showConfirmDialog(
+            null, l10n("ui.crash.msg", e), l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
+        ) == JOptionPane.YES_OPTION
+        if (send) {
+            val address = encodeMailURIComponent("cinecred-crash-report@loadingbyte.com")
+            val subject = encodeMailURIComponent("Cinecred Crash Report")
+            // We replace tabs by four dots because some email programs trim leading tabs and spaces.
+            val body = encodeMailURIComponent(JULBuilderHandler.log.toString().replace("\t", "...."))
+            Desktop.getDesktop().mail(URI("mailto:$address?Subject=$subject&Body=$body"))
+        }
+    }
+
+    private fun encodeMailURIComponent(str: String): String =
+        URLEncoder.encode(str, "UTF-8")
+            .replace("+", "%20")
+            .replace("%21", "!")
+            .replace("%27", "'")
+            .replace("%28", "(")
+            .replace("%29", ")")
+            .replace("%7E", "~")
+
+}
+
+
+private object JULFormatter : Formatter() {
+    private val startMillis = System.currentTimeMillis()
+    private val threadMxBean = ManagementFactory.getThreadMXBean()
+    override fun format(record: LogRecord): String {
+        val millis = record.millis - startMillis
+        val threadName = threadMxBean.getThreadInfo(record.threadID.toLong()).threadName
+        val exc = record.thrown?.stackTraceToString() ?: ""
+        val msg = formatMessage(record)
+        return "$millis [$threadName] ${record.level} ${record.loggerName} - $msg\n$exc"
+    }
+}
+
+
+private object JULBuilderHandler : Handler() {
+    init {
+        level = Level.INFO
+        formatter = JULFormatter
+    }
+
+    val log = StringBuilder()
+    override fun publish(record: LogRecord) {
+        if (isLoggable(record))
+            try {
+                log.append(formatter.format(record))
+            } catch (e: Exception) {
+                reportError(null, e, ErrorManager.FORMAT_FAILURE)
+            }
+    }
+
+    override fun flush() {}
+    override fun close() {}
 }
 
 

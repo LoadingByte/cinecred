@@ -495,11 +495,12 @@ private class CreditsReader(
             val picName = tagVal.take(splitIdx).trim()
 
             pictureLoaderMap[picName]?.let { picLoader ->
-                var pic = picLoader.value
-                if (pic == null) {
+                val origPic = picLoader.value
+                if (origPic == null) {
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureCorrupt", picName))
                     return null
                 }
+                var pic: Picture = origPic
 
                 val picHints = tagVal.drop(splitIdx).split(' ')
 
@@ -516,7 +517,7 @@ private class CreditsReader(
                 val unknownHints = mutableListOf<String>()
                 for (hint in picHints)
                     try {
-                        return when {
+                        pic = when {
                             hint.isBlank() || hint in CROP_KW -> continue
                             hint.startsWith('x') ->
                                 pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)

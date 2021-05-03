@@ -44,7 +44,7 @@ fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
 fun StyledString.trim(): StyledString {
     val joined = joinToString("") { it.first }
     val startIdx = joined.indexOfFirst { !it.isWhitespace() }
-    val endIdx = joined.indexOfLast { !it.isWhitespace() }
+    val endIdx = joined.indexOfLast { !it.isWhitespace() } + 1
     return if (startIdx > endIdx) emptyList() else substring(startIdx, endIdx)
 }
 

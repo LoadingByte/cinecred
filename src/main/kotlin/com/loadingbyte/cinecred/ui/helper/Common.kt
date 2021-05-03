@@ -205,6 +205,25 @@ fun Window.setupToSnapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean
 
     // Apply the computed window bounds.
     bounds = winBounds
+
+    // On Windows 10, windows have a thick invisible border which resides inside the window bounds.
+    // If we do nothing about it, the window is not flush with the sides of the screen, but there's a thick strip
+    // of empty space between the window and the left, right, and bottom sides of the screen.
+    // To fix this, we find the exact thickness of the border by querying the window's insets (which we can only do
+    // after the window has been opened, hence the listener) and add those insets to the window bounds on the left,
+    // right, and bottom sides.
+    if (SystemInfo.isWindows_10_orLater)
+        addWindowListener(object : WindowAdapter() {
+            override fun windowOpened(e: WindowEvent?) {
+                val winInsets = insets
+                setBounds(
+                    winBounds.x - winInsets.left,
+                    winBounds.y,
+                    winBounds.width + winInsets.left + winInsets.right,
+                    winBounds.height + winInsets.bottom
+                )
+            }
+        })
 }
 
 

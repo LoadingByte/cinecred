@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Desktop
 import java.io.StringReader
-import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -169,13 +168,25 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
 
 private object JULFormatter : Formatter() {
     private val startMillis = System.currentTimeMillis()
-    private val threadMxBean = ManagementFactory.getThreadMXBean()
     override fun format(record: LogRecord): String {
         val millis = record.millis - startMillis
-        val threadName = threadMxBean.getThreadInfo(record.threadID.toLong()).threadName
+        val threadName = getThreadByID(record.threadID.toLong())?.name ?: "???"
         val exc = record.thrown?.stackTraceToString() ?: ""
         val msg = formatMessage(record)
         return "$millis [$threadName] ${record.level} ${record.loggerName} - $msg\n$exc"
+    }
+
+    private fun getThreadByID(threadID: Long): Thread? {
+        // Find the root thread group.
+        var rootGroup = Thread.currentThread().threadGroup.parent
+        while (true)
+            rootGroup = rootGroup.parent ?: break
+        // Enumerate all threads.
+        var allThreads = arrayOfNulls<Thread>(rootGroup.activeCount() + 1)
+        while (rootGroup.enumerate(allThreads) == allThreads.size)
+            allThreads = arrayOfNulls(allThreads.size * 2)
+        // Find the thread we are looking for.
+        return allThreads.find { it != null && it.id == threadID }
     }
 }
 

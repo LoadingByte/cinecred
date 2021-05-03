@@ -103,8 +103,13 @@ object RenderQueue {
 
     fun cancelJob(category: Any, job: RenderJob) {
         pollJobLock.withLock {
-            // If the job hasn't started yet, remove it from the queue.
-            queuedJobs[category]?.removeIf { it.job == job }
+            // If the job hasn't started yet, remove it from the queue and call its finish callback.
+            queuedJobs[category]?.let { queue ->
+                queue.find { it.job == job }?.let { subJob ->
+                    queue.remove(subJob)
+                    subJob.invokeLater { subJob.finishCallback(null) }
+                }
+            }
             // If the job is currently running, immediately interrupt the rendering thread.
             if (runningJob?.job == job)
                 thread.interrupt()
@@ -113,7 +118,11 @@ object RenderQueue {
 
     fun cancelAllJobs(category: Any) {
         pollJobLock.withLock {
-            queuedJobs[category]?.clear()
+            queuedJobs[category]?.let { queue ->
+                for (subJob in queue)
+                    subJob.invokeLater { subJob.finishCallback(null) }
+                queue.clear()
+            }
             if (runningJob?.category == category)
                 thread.interrupt()
         }

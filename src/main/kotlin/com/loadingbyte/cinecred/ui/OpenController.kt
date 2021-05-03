@@ -52,7 +52,11 @@ object OpenController {
                 add(0, projectDir)
             }
 
-        val projectCtrl = ProjectController(projectDir)
+        // Find the screen on which the OpenFrame currently occupies the most area.
+        // The project will be opened on that screen.
+        val openOnScreen = OpenFrame.findMostOccupiedScreen()
+
+        val projectCtrl = ProjectController(projectDir, openOnScreen)
         projectCtrls.add(projectCtrl)
 
         OpenFrame.isVisible = false

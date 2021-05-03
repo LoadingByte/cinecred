@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import java.awt.Font
+import java.awt.GraphicsConfiguration
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,7 +22,7 @@ import java.util.*
 import javax.swing.SwingUtilities
 
 
-class ProjectController(val projectDir: Path) {
+class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfiguration) {
 
     val projectName: String = projectDir.fileName.toString()
 

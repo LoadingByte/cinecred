@@ -1,9 +1,12 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
+import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.ui.OpenController
 import java.awt.*
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import java.awt.geom.Rectangle2D
 import javax.swing.*
 import javax.swing.border.Border
@@ -178,6 +181,30 @@ class CustomToStringKeySelectionManager<E>(private val toString: (E) -> String) 
             yield(getElementAt(idx))
     }
 
+}
+
+
+fun Window.setupToSnapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
+    val screenBounds = onScreen.bounds
+    val screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(onScreen)
+
+    // We want to determine the bounds of the window.
+    // Start with the bounds of the screen on which it should reside.
+    // Subtract the screen's insets (mainly caused by the taskbar) from the bounds.
+    // Also, the window should only occupy half of the screen horizontally.
+    val winBounds = Rectangle(
+        screenBounds.x + screenInsets.left,
+        screenBounds.y + screenInsets.top,
+        (screenBounds.width - screenInsets.left - screenInsets.right) / 2,
+        screenBounds.height - screenInsets.top - screenInsets.bottom
+    )
+
+    // If the window should snap to the right side, move its x coordinate.
+    if (rightSide)
+        winBounds.x += winBounds.width
+
+    // Apply the computed window bounds.
+    bounds = winBounds
 }
 
 

@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
-import java.awt.GraphicsEnvironment
+import com.loadingbyte.cinecred.ui.helper.setupToSnapToSide
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.JFrame
@@ -19,10 +19,8 @@ class ProjectFrame(ctrl: ProjectController) : JFrame("${ctrl.projectName} \u2013
             }
         })
 
-        // Make the window fill the right half of the screen.
-        val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-        setSize(maxWinBounds.width / 2, maxWinBounds.height)
-        setLocation(maxWinBounds.x, maxWinBounds.y)
+        // Make the window fill the left half of the screen.
+        setupToSnapToSide(ctrl.openOnScreen, rightSide = false)
 
         iconImages = WINDOW_ICON_IMAGES
 

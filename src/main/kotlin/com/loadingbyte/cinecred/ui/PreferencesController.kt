@@ -11,6 +11,9 @@ import java.util.prefs.Preferences
 
 object PreferencesController {
 
+    private const val UI_LOCALE_KEY = "ui_locale"
+    private const val CHECK_FOR_UPDATES_KEY = "check_for_updates"
+
     // This is the translated locale which is closest to the system's default locale.
     private val systemLocale: Locale =
         Locale.lookup(
@@ -18,13 +21,13 @@ object PreferencesController {
         ) ?: FALLBACK_TRANSLATED_LOCALE
 
     private val prefs = Preferences.userRoot().node("com/loadingbyte/cinecred")
-    private val prefsProjectDirs = prefs.node("projectDirs")
+    private val prefsProjectDirs = prefs.node("project_dirs")
 
     /**
      * Returns whether the startup process should be aborted (false) or continued (true).
      */
     fun onStartup(): Boolean {
-        val havePreferencesBeenSet = "uiLocale" in prefs.keys() && "checkForUpdates" in prefs.keys()
+        val havePreferencesBeenSet = UI_LOCALE_KEY in prefs.keys() && CHECK_FOR_UPDATES_KEY in prefs.keys()
         if (!havePreferencesBeenSet)
             prefFormValues = (PreferencesForm.showDialog(prefFormValues, null, false) ?: return false).first
         Locale.setDefault(uiLocale ?: systemLocale)
@@ -55,17 +58,17 @@ object PreferencesController {
      */
     private var uiLocale: Locale?
         get() {
-            val str = prefs.get("uiLocale", null)
+            val str = prefs.get(UI_LOCALE_KEY, null)
             return if (str == null || str == "system") null else Locale.forLanguageTag(str)
         }
         set(value) {
-            prefs.put("uiLocale", value?.toLanguageTag() ?: "system")
+            prefs.put(UI_LOCALE_KEY, value?.toLanguageTag() ?: "system")
         }
 
     var checkForUpdates: Boolean
-        get() = prefs.getBoolean("checkForUpdates", true)
+        get() = prefs.getBoolean(CHECK_FOR_UPDATES_KEY, true)
         private set(value) {
-            prefs.putBoolean("checkForUpdates", value)
+            prefs.putBoolean(CHECK_FOR_UPDATES_KEY, value)
         }
 
     var memorizedProjectDirs: List<Path>

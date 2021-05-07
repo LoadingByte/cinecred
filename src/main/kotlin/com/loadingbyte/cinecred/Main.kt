@@ -6,6 +6,8 @@ import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
+import com.loadingbyte.cinecred.ui.openHintTrack
+import com.loadingbyte.cinecred.ui.play
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
@@ -92,6 +94,7 @@ fun main() {
             checkForUpdates()
 
         OpenController.showOpenFrame()
+        openHintTrack.play()
     }
 }
 

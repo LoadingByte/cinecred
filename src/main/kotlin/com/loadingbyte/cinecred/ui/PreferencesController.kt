@@ -35,9 +35,16 @@ object PreferencesController {
     }
 
     fun showPreferencesDialog(parent: Window) {
-        val (new, exit) = PreferencesForm.showDialog(prefFormValues, parent, true) ?: return
+        val old = prefFormValues
+        val (new, exit) = PreferencesForm.showDialog(old, parent, true) ?: return
         prefFormValues = new
+
         Locale.setDefault(uiLocale ?: systemLocale)
+
+        if (OPEN_HINT_TRACK_NAME in new.pendingHintTracks && OPEN_HINT_TRACK_NAME !in old.pendingHintTracks)
+            openHintTrack.play()
+        if (PROJECT_HINT_TRACK_NAME in new.pendingHintTracks && PROJECT_HINT_TRACK_NAME !in old.pendingHintTracks)
+            OpenController.getProjectCtrls().firstOrNull()?.let(::makeProjectHintTrack)?.play()
 
         if (exit)
             OpenController.tryExit()
@@ -47,10 +54,16 @@ object PreferencesController {
      * Shortcut to quickly create or apply this value object.
      */
     private var prefFormValues: PreferencesForm.Values
-        get() = PreferencesForm.Values(uiLocale, checkForUpdates)
+        get() = PreferencesForm.Values(
+            uiLocale,
+            checkForUpdates,
+            HINT_TRACK_NAMES.filterTo(HashSet(), ::isHintTrackPending)
+        )
         set(values) {
             uiLocale = values.uiLocale
             checkForUpdates = values.checkForUpdates
+            for (trackName in HINT_TRACK_NAMES)
+                setHintTrackPending(trackName, trackName in values.pendingHintTracks)
         }
 
     /**
@@ -70,6 +83,11 @@ object PreferencesController {
         private set(value) {
             prefs.putBoolean(CHECK_FOR_UPDATES_KEY, value)
         }
+
+    fun isHintTrackPending(trackName: String): Boolean = prefs.getBoolean("${trackName}_hint_track_pending", true)
+    fun setHintTrackPending(trackName: String, pending: Boolean) {
+        prefs.putBoolean("${trackName}_hint_track_pending", pending)
+    }
 
     var memorizedProjectDirs: List<Path>
         get() {

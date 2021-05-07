@@ -14,6 +14,7 @@ import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_A
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Font
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent.*
@@ -30,7 +31,16 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         private const val MAX_ZOOM = 2f
     }
 
+    // ========== HINT OWNERS ==========
+    val toggleStylingHintOwner: Component
+    val resetStylingHintOwner: Component
+    val layoutGuidesHintOwner: Component
+    val pageTabsHintOwner: Component
+    val creditsLogHintOwner: Component
+    // =================================
+
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
+        toggleStylingHintOwner = this
         isSelected = true
         toolTipText = l10n("ui.edit.toggleStyling")
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
@@ -59,7 +69,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 return@makeActToolBtn
         }
         ctrl.stylingHistory.resetAndRedraw()
-    }
+    }.also { resetStylingHintOwner = it }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
         font = font.deriveFont(font.size * 0.8f)
@@ -78,6 +88,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
+        layoutGuidesHintOwner = this
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
             CARD_GUIDE_COLOR.brighter().toHex24(), AXIS_GUIDE_COLOR.toHex24(),
@@ -110,6 +121,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val pageTabs = JTabbedPane().apply {
+        pageTabsHintOwner = this
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
 
@@ -169,6 +181,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         val logTable = JTable(logTableModel).apply {
+            creditsLogHintOwner = this
             // Disable cell selection because it looks weird with the custom WordWrapCellRenderer.
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.

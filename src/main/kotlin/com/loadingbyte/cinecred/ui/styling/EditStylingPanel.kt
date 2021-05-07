@@ -10,10 +10,15 @@ import kotlinx.collections.immutable.toImmutableSet
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Component
 import javax.swing.*
 
 
 class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
+
+    // ========== HINT OWNERS ==========
+    val stylingTreeHintOwner: Component
+    // =================================
 
     private val globalForm = GlobalForm()
     private val pageStyleForm = PageStyleForm()
@@ -33,6 +38,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private val stylingTree = StylingTree()
 
     init {
+        stylingTreeHintOwner = stylingTree
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
             PRESET_GLOBAL, l10n("ui.styling.globalStyling"), GLOBE_ICON,

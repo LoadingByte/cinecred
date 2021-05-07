@@ -30,12 +30,19 @@ class PreferencesForm : Form() {
         CheckBoxWidget()
     )
 
+    private val hintTrackPendingWidgets = HINT_TRACK_NAMES.associateWith { trackName ->
+        addWidget(
+            l10n("ui.preferences.hintTrackPending.$trackName"),
+            CheckBoxWidget()
+        )
+    }
+
     init {
         finishInit()
     }
 
 
-    class Values(val uiLocale: Locale?, val checkForUpdates: Boolean)
+    class Values(val uiLocale: Locale?, val checkForUpdates: Boolean, val pendingHintTracks: Set<String>)
 
     companion object {
 
@@ -49,6 +56,8 @@ class PreferencesForm : Form() {
             val form = PreferencesForm().apply {
                 uiLocaleWidget.selectedItem = values.uiLocale ?: SYSTEM_LOCALE
                 checkForUpdatesWidget.isSelected = values.checkForUpdates
+                for (trackName in values.pendingHintTracks)
+                    hintTrackPendingWidgets[trackName]?.isSelected = true
             }
 
             val title = "Cinecred \u2013 ${l10n("ui.preferences.title")}"
@@ -85,7 +94,8 @@ class PreferencesForm : Form() {
                 if (pane.value == JOptionPane.OK_OPTION) {
                     val newValues = Values(
                         form.uiLocaleWidget.selectedItem.let { if (it == SYSTEM_LOCALE) null else it },
-                        form.checkForUpdatesWidget.isSelected
+                        form.checkForUpdatesWidget.isSelected,
+                        form.hintTrackPendingWidgets.filterValues(CheckBoxWidget::isSelected).keys
                     )
                     var exit = false
                     if (askForExit && newValues.uiLocale != values.uiLocale)

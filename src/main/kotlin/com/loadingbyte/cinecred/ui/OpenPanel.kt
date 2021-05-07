@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
 import com.loadingbyte.cinecred.ui.helper.PREFERENCES_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
+import java.awt.Component
 import java.awt.Font
 import java.awt.datatransfer.DataFlavor
 import java.io.File
@@ -13,6 +14,11 @@ import javax.swing.*
 
 
 object OpenPanel : JPanel() {
+
+    // ========== HINT OWNERS ==========
+    val browseHintOwner: Component
+    val dropHintOwner: Component
+    // =================================
 
     private val memorizedPanel = JPanel(MigLayout("center, wrap 3")).apply {
         alignmentX = CENTER_ALIGNMENT
@@ -25,6 +31,7 @@ object OpenPanel : JPanel() {
         )
 
         val selectButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
+            browseHintOwner = this
             font = font.deriveFont(font.size * 1.15f)
             addActionListener { onSelectButton() }
         }
@@ -34,6 +41,7 @@ object OpenPanel : JPanel() {
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
+            dropHintOwner = this
             foreground = Color(150, 150, 150)
             font = font.deriveFont(font.size * 2.5f).deriveFont(Font.BOLD)
         }

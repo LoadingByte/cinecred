@@ -50,6 +50,8 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         projectFrame.isVisible = true
         editStylingDialog.isVisible = true
 
+        makeProjectHintTrack(this).play()
+
         // Load the initial state of the styling from disk.
         stylingHistory = StylingHistory(readStyling(stylingFile))
 

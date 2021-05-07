@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
@@ -68,7 +69,7 @@ fun main() {
         // Redirect FFmpeg's logging output to slf4j.
         setLogCallback(FFmpegLogCallback)
     } catch (t: Throwable) {
-        LoggerFactory.getLogger("FFmpeg Loader").error("Failed to load FFmpeg", t)
+        LOGGER.error("Failed to load FFmpeg", t)
     }
 
     // Tooltips should not disappear on their own after some time.
@@ -136,8 +137,7 @@ private fun checkForUpdates() {
 private object UncaughtHandler : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(t: Thread, e: Throwable) {
-        LoggerFactory.getLogger("Uncaught Exception Handler")
-            .error("Uncaught exception. Will terminate the program.", e)
+        LOGGER.error("Uncaught exception. Will terminate the program.", e)
         SwingUtilities.invokeLater {
             sendReport(e)
             OpenController.tryExit(force = true)
@@ -218,13 +218,14 @@ private object JULBuilderHandler : Handler() {
 private object FFmpegLogCallback : LogCallback() {
     private val logger = LoggerFactory.getLogger("FFmpeg")
     override fun call(level: Int, msg: BytePointer) {
-        // FFmpeg's log messages contain newline characters, which we have to remove.
+        // FFmpeg's log messages end with a newline character, which we have to remove.
         val message = msg.string.trim()
         when (level) {
             AV_LOG_PANIC, AV_LOG_FATAL, AV_LOG_ERROR -> logger.error(message)
             AV_LOG_WARNING -> logger.warn(message)
             AV_LOG_INFO -> logger.info(message)
-            AV_LOG_VERBOSE, AV_LOG_DEBUG, AV_LOG_TRACE -> logger.debug(message)
+            AV_LOG_VERBOSE, AV_LOG_DEBUG -> logger.debug(message)
+            AV_LOG_TRACE -> logger.trace(message)
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.common
 
 import org.apache.batik.ext.awt.image.GraphicsUtil
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GraphicsConfiguration
@@ -10,6 +12,9 @@ import java.awt.font.FontRenderContext
 import java.awt.image.BufferedImage
 import java.text.MessageFormat
 import java.util.*
+
+
+val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 
 
 enum class Severity { INFO, WARN, ERROR }

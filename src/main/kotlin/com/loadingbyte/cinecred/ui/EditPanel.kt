@@ -122,11 +122,17 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val pageTabs = JTabbedPane().apply {
         pageTabsHintOwner = this
+        tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
+        putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
 
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
-    private val previewPanels get() = pageTabs.components.map { it as EditPagePreviewPanel }
+    private val previewPanels: List<EditPagePreviewPanel>
+        get() = ArrayList<EditPagePreviewPanel>(pageTabs.tabCount).apply {
+            for (tabIdx in 0 until pageTabs.tabCount)
+                add(pageTabs.getComponentAt(tabIdx) as EditPagePreviewPanel)
+        }
 
     private val logTableModel = LogTableModel()
 

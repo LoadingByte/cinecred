@@ -21,7 +21,7 @@ object PreferencesController {
         ) ?: FALLBACK_TRANSLATED_LOCALE
 
     private val prefs = Preferences.userRoot().node("com/loadingbyte/cinecred")
-    private val prefsProjectDirs = prefs.node("project_dirs")
+    private val prefsProjectDirs = prefs.node("projectdirs")
 
     /**
      * Returns whether the startup process should be aborted (false) or continued (true).

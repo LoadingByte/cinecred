@@ -232,7 +232,9 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
                         pic.gvtRoot.paint(g2)
                     }
                 }
-                is Picture.PDF -> g2.preserveTransform {
+                // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
+                // and sometimes even makes it totally unusable.
+                is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
                     g2.translate(insn.x.toDouble(), insn.y.toDouble())
                     if (pic.isCropped)
                         g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)

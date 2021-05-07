@@ -1,7 +1,8 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.electronwill.toml.Toml
+import com.electronwill.toml.TomlWriter
 import com.loadingbyte.cinecred.project.*
+import java.nio.file.Files
 import java.nio.file.Path
 
 
@@ -13,7 +14,10 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
         "letterStyle" to styling.letterStyles.map(::writeLetterStyle)
     )
 
-    Toml.write(toml, stylingFile.toFile())
+    Files.newBufferedWriter(stylingFile).use { writer ->
+        // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
+        TomlWriter(writer, 1, false, "\n").write(toml)
+    }
 }
 
 

@@ -30,7 +30,7 @@ object OpenPanel : JPanel() {
             BorderFactory.createDashedBorder(Color(100, 100, 100), 10f, 4f, 4f, false)
         )
 
-        val selectButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
+        val browseButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
             browseHintOwner = this
             font = font.deriveFont(font.size * 1.15f)
             addActionListener { onSelectButton() }
@@ -48,10 +48,10 @@ object OpenPanel : JPanel() {
 
         // Add the memorized project panel, buttons, and the drag-and-drop hint text.
         layout = MigLayout("center, center, wrap 1, hidemode 3", "center")
-        add(memorizedPanel)
-        add(selectButton, "gapy 30lp")
+        add(memorizedPanel, "gapbottom 30lp")
+        add(browseButton)
         add(preferencesButton)
-        add(dropLabel, "gapy 60lp")
+        add(dropLabel, "gaptop 60lp")
 
         // Add the drag-and-drop handler.
         transferHandler = OpenTransferHandler

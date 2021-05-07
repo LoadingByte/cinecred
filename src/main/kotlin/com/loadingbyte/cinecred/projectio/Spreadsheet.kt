@@ -173,7 +173,7 @@ object CsvFormat : SpreadsheetFormat {
     }
 
     override fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>) {
-        CSVFormat.DEFAULT.print(file, Charset.forName("utf-8")).use { printer ->
+        CSVFormat.DEFAULT.print(file, Charset.forName("UTF-8")).use { printer ->
             for (record in spreadsheet)
                 printer.printRecord(record.cells)
         }

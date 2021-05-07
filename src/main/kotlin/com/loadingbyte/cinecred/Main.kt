@@ -77,7 +77,8 @@ fun main() {
     ToolTipManager.sharedInstance().dismissDelay = 60 * 60 * 1000
 
     // MigLayout's platform-specific gaps etc. mess up our rather intricate layouts.
-    // To alleviate this, we just force one invariant set of platform defaults.
+    // To alleviate this, we force one invariant set of platform defaults.
+    // We chose the Gnome defaults because they waste the least space on gaps.
     PlatformDefaults.setPlatform(PlatformDefaults.GNOME)
 
     // Set the Swing Look & Feel.

@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.Component
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -20,6 +21,8 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
 
     private val tabPaneTrailingPanel = JPanel(MigLayout("insets 0, gap 0, align right"))
 
+    private var prevSelectedTab: Component = editPanel
+
     init {
         val tabs = JTabbedPane().apply {
             putClientProperty(TABBED_PANE_SHOW_TAB_SEPARATORS, true)
@@ -28,7 +31,11 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             addTab(l10n("ui.project.video"), PLAY_ICON, videoPanel)
             addTab(l10n("ui.project.deliver"), DELIVER_ICON, deliverPanel)
             addChangeListener {
-                ctrl.onChangeTab(changedToEdit = selectedComponent == editPanel)
+                ctrl.onChangeTab(
+                    enteredEdit = selectedComponent === editPanel,
+                    leftVideo = prevSelectedTab === videoPanel
+                )
+                prevSelectedTab = selectedComponent
             }
         }
 

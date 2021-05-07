@@ -99,6 +99,11 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
         })
     }
 
+    fun onLeaveTab() {
+        if (playButton.isSelected)
+            playButton.doClick()
+    }
+
     fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
         this.project = project
         this.drawnPages = drawnPages

@@ -201,9 +201,11 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         return true
     }
 
-    fun onChangeTab(changedToEdit: Boolean) {
-        isEditTabActive = changedToEdit
-        editStylingDialog.isVisible = changedToEdit && isEditStylingDialogVisible
+    fun onChangeTab(enteredEdit: Boolean, leftVideo: Boolean) {
+        isEditTabActive = enteredEdit
+        editStylingDialog.isVisible = enteredEdit && isEditStylingDialogVisible
+        if (leftVideo)
+            projectFrame.panel.videoPanel.onLeaveTab()
     }
 
     fun setEditStylingDialogVisible(isVisible: Boolean) {

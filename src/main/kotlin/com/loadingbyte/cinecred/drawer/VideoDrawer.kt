@@ -110,9 +110,15 @@ open class VideoDrawer(
         DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
     }
 
+    private val backgroundImage: BufferedImage
     private val shiftedPageImages = Array(drawnPages.size) { HashMap<Float, BufferedImage>() }
 
     init {
+        backgroundImage = createIntermediateImage(width, height).withG2 { g2 ->
+            g2.color = project.styling.global.background
+            g2.fillRect(0, 0, width, height)
+        }
+
         // In preview mode, only 0-shifted rasterized page images are used. We already precompute these now
         // to avoid wait times later when pages must be drawn in real-time.
         if (previewMode)
@@ -130,7 +136,9 @@ open class VideoDrawer(
             require(shift >= 0f && shift < 1f)
             val scaledPageDefImg = scaledPageDefImages[pageIdx]
             // Note: We add 1 to the height to make room for the shift (which is between 0 and 1).
-            val imageHeight = ceil(scaledPageDefImg.height).toInt() + 1
+            // We add 2*height to make room for buffers above and below the content; they will be in frame
+            // when a scrolling page starts and ends and need to provide the correct background color.
+            val imageHeight = ceil(scaledPageDefImg.height).toInt() + 1 + 2 * height
             createIntermediateImage(width, imageHeight).withG2 { g2 ->
                 g2.setHighQuality()
                 if (!transparentBackground) {
@@ -138,11 +146,11 @@ open class VideoDrawer(
                     // have alpha, have to have the proper background, as otherwise their background would be black.
                     // Note that we can't simply use the deferred image's background layer because that doesn't extend
                     // to the whole height of the raster image, since the raster image is higher than the deferred
-                    // image to make room for the shift.
+                    // image to make room for the shift and the start/end buffers.
                     g2.color = project.styling.global.background
                     g2.fillRect(0, 0, width, imageHeight)
                 }
-                g2.translate(0.0, shift.toDouble())
+                g2.translate(0.0, shift.toDouble() + height)
                 scaledPageDefImg.materialize(g2, layers = listOf(FOREGROUND))
             }
         }
@@ -163,22 +171,23 @@ open class VideoDrawer(
 
         val insn = insns[frameIdx]
 
-        if (!transparentBackground) {
-            g2.color = project.styling.global.background
-            g2.fillRect(0, 0, width, height)
-        }
-
-        // Note: pageIdx == -1 would mean that the frame should be empty.
-        if (insn.pageIdx != -1) {
-            if (insn.alpha != 1f)
+        // Note: pageIdx == -1 means that the frame should be empty.
+        if (insn.pageIdx == -1)
+            g2.drawImage(backgroundImage, 0, 0, null)
+        else {
+            if (insn.alpha != 1f) {
+                g2.drawImage(backgroundImage, 0, 0, null)
                 g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
+            }
 
             val shift = -insn.imgTopY
             if (!previewMode) {
-                g2.drawImage(getShiftedPageImage(insn.pageIdx, shift - floor(shift)), 0, floor(shift).toInt(), null)
+                val img = getShiftedPageImage(insn.pageIdx, shift - floor(shift))
+                g2.drawImage(img, 0, floor(shift).toInt() - height, null)
             } else {
-                val tx = AffineTransform.getTranslateInstance(0.0, shift.toDouble())
-                g2.drawImage(getShiftedPageImage(insn.pageIdx, 0f), tx, null)
+                val img = getShiftedPageImage(insn.pageIdx, 0f)
+                val tx = AffineTransform.getTranslateInstance(0.0, shift.toDouble() - height)
+                g2.drawImage(img, tx, null)
             }
         }
     }

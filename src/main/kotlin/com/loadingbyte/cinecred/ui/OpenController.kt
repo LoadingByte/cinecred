@@ -14,15 +14,24 @@ object OpenController {
 
     private val projectCtrls = mutableListOf<ProjectController>()
 
+    /**
+     * When the user clicks on a project opening button multiple times while he is waiting for the project window to
+     * open, we do not want this to really trigger multiple project openings, because that would confront him with
+     * error messages like "this project is already opened". Hence, after the user opened a project, we just block
+     * all other openings until the OpenFrame is again explicitly shown, in which case we unblock opening a project.
+     */
+    private var blockOpening = false
+
     fun getProjectCtrls(): List<ProjectController> = projectCtrls
 
     fun showOpenFrame() {
+        blockOpening = false
         OpenPanel.onShow()
         OpenFrame.isVisible = true
     }
 
     fun tryOpenProject(projectDir: Path) {
-        if (Files.isRegularFile(projectDir))
+        if (blockOpening || Files.isRegularFile(projectDir))
             return
 
         if (projectCtrls.any { it.projectDir == projectDir }) {
@@ -44,6 +53,8 @@ object OpenController {
             val (locale, format) = CreateForm.showDialog() ?: return
             copyTemplate(projectDir, locale, format, !stylingFileExists, !creditsFileExists)
         }
+
+        blockOpening = true
 
         // Memorize the opened project directory at the first position in the list.
         PreferencesController.memorizedProjectDirs =

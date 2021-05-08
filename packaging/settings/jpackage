@@ -5,6 +5,6 @@
 --java-options "-splash:$APPDIR/splash.png"
 --name Cinecred
 --app-version @VERSION@
---description "Highly customizable movie credits editor and generator"
+--description "@DESCRIPTION@"
 --vendor "Felix Mujkanovic"
 --copyright "Copyright (c) 2021 Felix Mujkanovic, licensed under the GPLv3"

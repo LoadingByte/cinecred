@@ -1,6 +1,5 @@
 --icon icon.png
+--resource-dir resources/
 --linux-deb-maintainer hello@loadingbyte.com
---linux-menu-group AudioVideo;Video;
 --linux-rpm-license-type GPLv3
 --linux-app-category video
---linux-shortcut

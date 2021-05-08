@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Cinecred
+Comment=@DESCRIPTION@
+Comment[de]=@DESCRIPTION_DE@
+Exec=/opt/cinecred/bin/Cinecred
+Icon=/opt/cinecred/lib/Cinecred.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;
+MimeType=

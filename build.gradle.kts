@@ -163,7 +163,9 @@ val preparePackagingTasks = Platform.values().map { platform ->
         from("packaging") {
             val tokens = mapOf(
                 "VERSION" to version,
-                "MAIN_JAR" to platformJar.archiveFileName.get()
+                "MAIN_JAR" to platformJar.archiveFileName.get(),
+                "DESCRIPTION" to "Create film credits\u2014without pain",
+                "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
             )
             filter<ReplaceTokens>("tokens" to tokens)
         }

@@ -8,6 +8,7 @@ behavior = "CARD"
 [[pageStyle]]
 name = "{project.template.pageStyleScroll}"
 behavior = "SCROLL"
+scrollMeltWithNext = true
 
 [[contentStyle]]
 name = "{project.template.contentStyleHeading}"

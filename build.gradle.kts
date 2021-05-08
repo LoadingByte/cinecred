@@ -195,22 +195,11 @@ val preparePackagingTasks = Platform.values().map { platform ->
             }
         }
     }
-    // On Windows, we need to provide wget.
-    val downloadWgetWindows = if (platform != Platform.WINDOWS) null else task("downloadWgetWindows") {
-        doLast {
-            pkgDir.mkdirs() // If we don't do this, ant throws an error.
-            val url = "https://eternallybored.org/misc/wget/1.20.3/64/wget.exe"
-            ant.withGroovyBuilder {
-                "get"("src" to url, "dest" to pkgDir.resolve("wget.exe"))
-            }
-        }
-    }
     // Put it all together.
     task("prepare${platform.label}Packaging") {
         group = "Packaging Preparation"
         dependsOn(copyFiles)
         dependsOn(transcodeLogo)
-        downloadWgetWindows?.let { dependsOn(it) }
     }
 }
 

@@ -45,3 +45,18 @@ rm -rf "$jdk_dir"
 if [[ "$os" == mac ]]; then
   echo "Renaming pkg package..."
   mv ./*.pkg "$(basename ./*.pkg .pkg)-x86_64.pkg"
+elif [[ "$os" == linux ]]; then
+  echo "Signing rpm package..."
+  rpm --addsign ./*.rpm
+
+  echo "Building tar.gz package..."
+  tar_gz=cinecred-@VERSION@-linux-x86_64.tar.gz
+  mkdir -p tree/
+  ar -p ./*.deb data.tar.xz | tar -xJC tree/ --strip-components=2
+  mv tree/cinecred/lib/cinecred-Cinecred.desktop tree/cinecred/cinecred.desktop
+  tar -czf "$tar_gz" -C tree/ cinecred/
+  rm -rf tree/
+
+  echo "Generating PKGBUILD..."
+  sed "s/{{SHA_256_HASH}}/$(sha256sum "$tar_gz" | cut -d ' ' -f 1)/g" misc/PKGBUILD-template > PKGBUILD
+fi

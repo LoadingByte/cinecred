@@ -1,0 +1,19 @@
+# Maintainer: Felix Mujkanovic <hello@loadingbyte.com>
+pkgname=cinecred
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="@DESCRIPTION@"
+arch=('x86_64')
+url="https://loadingbyte.com/cinecred/"
+license=('GPL3')
+source=("https://repo.loadingbyte.com/repository/maven-public/com/loadingbyte/cinecred\
+/$pkgver/cinecred-$pkgver-linux-x86_64.tar.gz")
+sha256sums=('{{SHA_256_HASH}}')
+
+package() {
+	mkdir -p "$pkgdir/opt/"
+	cp -R "$srcdir/cinecred/" "$pkgdir/opt/cinecred/"
+
+	mkdir -p "$pkgdir/usr/share/applications/"
+	mv "$pkgdir/opt/cinecred/cinecred.desktop" "$_"
+}

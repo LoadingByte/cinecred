@@ -1,5 +1,5 @@
 --type msi
---icon icon.ico
+--icon misc/icon.ico
 --win-dir-chooser
 --win-menu
 --win-menu-group Cinecred

@@ -160,7 +160,6 @@ val preparePackagingTasks = Platform.values().map { platform ->
         dependsOn("processResources")
         dependsOn(platformJar)
         into(pkgDir)
-        from("LICENSE")
         // Copy the packaging scripts "filter" (fill in) some variables. Note that we
         // don't select the scripts by platform here because that's not worth the effort.
         from("packaging") {
@@ -177,6 +176,9 @@ val preparePackagingTasks = Platform.values().map { platform ->
             from(platformJar)
             from(sourceSets.main.get().output.resourcesDir!!.resolve("splash.png"))
         }
+        into("misc") {
+            from("LICENSE")
+        }
     }
     // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
     // For Mac OS, additionally create an installer background image from the logo.
@@ -186,18 +188,18 @@ val preparePackagingTasks = Platform.values().map { platform ->
         doLast {
             when (platform) {
                 Platform.WINDOWS ->
-                    transcodeLogo(pkgDir.resolve("icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
+                    transcodeLogo(pkgDir.resolve("misc/icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
                 Platform.MAC_OS -> {
                     // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
                     // properly parsed by Mac OS. We have to leave out those sizes to avoid glitches.
-                    transcodeLogo(pkgDir.resolve("icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
+                    transcodeLogo(pkgDir.resolve("misc/icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
                     val bgFile1 = pkgDir.resolve("resources/Cinecred-background.png")
                     val bgFile2 = pkgDir.resolve("resources/Cinecred-background-darkAqua.png")
                     transcodeLogo(bgFile1, intArrayOf(180), margin = 0.13)
                     bgFile1.copyTo(bgFile2, overwrite = true)
                 }
                 Platform.LINUX ->
-                    transcodeLogo(pkgDir.resolve("icon.png"), intArrayOf(48))
+                    transcodeLogo(pkgDir.resolve("misc/icon.png"), intArrayOf(48))
             }
         }
     }

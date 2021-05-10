@@ -41,3 +41,7 @@ done
 echo "Cleaning up..."
 rm -rf runtime/
 rm -rf "$jdk_dir"
+
+if [[ "$os" == mac ]]; then
+  echo "Renaming pkg package..."
+  mv ./*.pkg "$(basename ./*.pkg .pkg)-x86_64.pkg"

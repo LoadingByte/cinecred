@@ -130,6 +130,9 @@ jar.apply {
 }
 
 
+// Cinecred implements reflective code which accesses these two packages.
+val addOpens = listOf("java.desktop/java.awt.font", "java.desktop/sun.font")
+
 // Build the universal JAR containing natives for all supported platforms.
 val buildUniversalJar by tasks.registering(Jar::class) {
     group = "Build"
@@ -165,6 +168,7 @@ val preparePackagingTasks = Platform.values().map { platform ->
                 "VERSION" to version,
                 "MAIN_JAR" to platformJar.archiveFileName.get(),
                 "DESCRIPTION" to "Create film credits\u2014without pain",
+                "JAVA_OPTIONS" to addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
                 "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
             )
             filter<ReplaceTokens>("tokens" to tokens)
@@ -220,7 +224,8 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
 
     manifest.attributes(
         "Main-Class" to "com.loadingbyte.cinecred.MainKt",
-        "SplashScreen-Image" to "splash.png"
+        "SplashScreen-Image" to "splash.png",
+        "Add-Opens" to addOpens.joinToString(" ")
     )
 
     val excludePlatforms = Platform.values().filter { it !in includePlatforms }

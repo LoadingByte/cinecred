@@ -2,7 +2,7 @@
 --main-jar @MAIN_JAR@
 --runtime-image runtime/
 --license-file LICENSE
---java-options "-splash:$APPDIR/splash.png"
+--java-options "-splash:$APPDIR/splash.png @JAVA_OPTIONS@"
 --name Cinecred
 --app-version @VERSION@
 --description "@DESCRIPTION@"

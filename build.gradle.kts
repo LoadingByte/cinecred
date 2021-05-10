@@ -167,8 +167,8 @@ val preparePackagingTasks = Platform.values().map { platform ->
             val tokens = mapOf(
                 "VERSION" to version,
                 "MAIN_JAR" to platformJar.archiveFileName.get(),
-                "DESCRIPTION" to "Create film credits\u2014without pain",
                 "JAVA_OPTIONS" to addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
+                "DESCRIPTION" to "Create film credits---without pain",
                 "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
             )
             filter<ReplaceTokens>("tokens" to tokens)

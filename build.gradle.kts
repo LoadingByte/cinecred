@@ -14,8 +14,8 @@ import javax.imageio.stream.FileImageOutputStream
 
 
 buildscript {
-    val batikVersion = "1.13"
-    val twelveMonkeysVersion = "3.6.2"
+    val batikVersion = "1.14"
+    val twelveMonkeysVersion = "3.7.0"
     repositories {
         mavenCentral()
     }
@@ -30,17 +30,21 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.21"
+    kotlin("jvm") version "1.4.32"
 }
 
 group = "com.loadingbyte"
 version = "1.0.0-SNAPSHOT"
 
 val slf4jVersion = "1.7.30"
-val batikVersion = "1.13"
+val batikVersion = "1.14"
 val javacppVersion = "1.5.3"
-// Note: At the time of writing, the latest version of FFmpeg which is available though javacpp (4.3.1-1.5.4) crashes
-// upon libx264 encoding on Mac OS. When upgrading FFmpeg, you must check that H.264 now again works on Mac OS!
+// At the time of writing, the newer versions of FFmpeg which are available though javacpp have the following problems:
+// - 4.3.2-1.5.5 produces a lot of artifacts (small white dots) when rendering H.264 on Linux. Additionally, the
+//   resulting files are much larger. Maybe these issues also occur with other formats and operating systems,
+//   but we did not check.
+// - 4.3.1-1.5.4 crashes upon libx264 encoding on Mac OS. This is however fixed in the newer version mentioned above.
+// When upgrading FFmpeg, you must check that these two issues no longer occur!
 val ffmpegVersion = "4.2.2-1.5.3"
 
 enum class Platform(val label: String, val slug: String) {
@@ -51,12 +55,10 @@ enum class Platform(val label: String, val slug: String) {
 
 repositories {
     mavenCentral()
-    // For kotlinx immutable collections:
-    jcenter()
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable-jvm", "0.3.3")
+    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable-jvm", "0.3.4")
 
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
@@ -78,8 +80,8 @@ dependencies {
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
     // PDF Reading and Writing
-    implementation("org.apache.pdfbox", "pdfbox", "2.0.22")
-    implementation("de.rototor.pdfbox", "graphics2d", "0.30")
+    implementation("org.apache.pdfbox", "pdfbox", "2.0.23")
+    implementation("de.rototor.pdfbox", "graphics2d", "0.31")
 
     // Video Encoding
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -90,8 +92,8 @@ dependencies {
     }
 
     // UI
-    implementation("com.miglayout", "miglayout-swing", "5.2")
-    implementation("com.formdev", "flatlaf", "0.46")
+    implementation("com.miglayout", "miglayout-swing", "11.0")
+    implementation("com.formdev", "flatlaf", "1.1.2")
 }
 
 configurations.all {
@@ -109,7 +111,7 @@ configurations.all {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
-    // TODO: Remove this once the Path API graduated from the experimental stage.
+    // TODO: Remove this once the Path API graduated from the experimental stage (happens in Kotlin 1.5).
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
 }
 

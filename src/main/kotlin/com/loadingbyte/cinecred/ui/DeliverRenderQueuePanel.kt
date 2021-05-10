@@ -81,21 +81,21 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
                 row.progress = progress
                 jobTableModel.fireTableCellUpdated(rowIdx, 2)
                 if (progress is Float)
-                    trySetTaskbarProgress(progress.toPercent())
+                    trySetTaskbarProgress(ctrl.projectFrame, progress.toPercent())
             }
         }
 
         fun onFinish(exc: Exception?) {
             setProgress(exc ?: FINISHED)
             tryUpdateTaskbarBadge()
-            trySetTaskbarProgress(-1)
+            trySetTaskbarProgress(ctrl.projectFrame, -1)
 
             // If we just finished the last remaining job, deselect the toggle button and request user attention.
             if (jobTableModel.rows.all { it.isFinished }) {
                 if (startButton.isSelected)
                     startButton.doClick()
                 RenderQueue.setPaused(ctrl.projectDir, true)
-                tryRequestUserAttentionInTaskbar()
+                tryRequestUserAttentionInTaskbar(ctrl.projectFrame)
             }
         }
 

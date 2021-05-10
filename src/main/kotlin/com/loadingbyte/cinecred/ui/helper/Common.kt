@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.ui.OpenController
 import java.awt.*
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -232,20 +231,18 @@ fun trySetTaskbarIconBadge(badge: Int) {
         taskbar!!.setIconBadge(if (badge == 0) null else badge.toString())
 }
 
-fun trySetTaskbarProgress(percent: Int) {
+fun trySetTaskbarProgress(window: Window, percent: Int) {
     if (Taskbar.Feature.PROGRESS_VALUE.isSupported)
         taskbar!!.setProgressValue(percent)
-    else if (Taskbar.Feature.PROGRESS_VALUE_WINDOW.isSupported)
-        for (ctrl in OpenController.getProjectCtrls())
-            taskbar!!.setWindowProgressValue(ctrl.projectFrame, percent)
+    if (Taskbar.Feature.PROGRESS_VALUE_WINDOW.isSupported)
+        taskbar!!.setWindowProgressValue(window, percent)
 }
 
-fun tryRequestUserAttentionInTaskbar() {
+fun tryRequestUserAttentionInTaskbar(window: Window) {
     if (Taskbar.Feature.USER_ATTENTION.isSupported)
         taskbar!!.requestUserAttention(true, false)
-    else if (Taskbar.Feature.USER_ATTENTION_WINDOW.isSupported)
-        for (ctrl in OpenController.getProjectCtrls())
-            taskbar!!.requestWindowUserAttention(ctrl.projectFrame)
+    if (Taskbar.Feature.USER_ATTENTION_WINDOW.isSupported)
+        taskbar!!.requestWindowUserAttention(window)
 }
 
 private val taskbar = if (Taskbar.isTaskbarSupported()) Taskbar.getTaskbar() else null

@@ -1,6 +1,7 @@
-# Cinecred
+Cinecred
+========
 
-Create film credits---without pain.
+Create beautiful film credit sequences—without pain.
 
 Visit the website at https://loadingbyte.com/cinecred/ for further information about the nature of this software, as well as manifold download options.
 

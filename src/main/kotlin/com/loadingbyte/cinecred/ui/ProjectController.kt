@@ -19,6 +19,7 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.WatchEvent
 import java.util.*
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
 
@@ -201,10 +202,11 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         return true
     }
 
-    fun onChangeTab(enteredEdit: Boolean, leftVideo: Boolean) {
+    fun onChangeTab(leftPanel: JPanel, enteredPanel: JPanel) {
+        val enteredEdit = enteredPanel is EditPanel
         isEditTabActive = enteredEdit
         editStylingDialog.isVisible = enteredEdit && isEditStylingDialogVisible
-        if (leftVideo)
+        if (leftPanel is VideoPanel)
             projectFrame.panel.videoPanel.onLeaveTab()
     }
 

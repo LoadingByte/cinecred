@@ -188,6 +188,10 @@ class VideoWriter(
         st.time_base(timebase)
         enc.time_base(timebase)
 
+        // Some muxers, for example MKV, require the framerate to be set directly on the stream.
+        // Otherwise, they infer it incorrectly.
+        st.avg_frame_rate(AVRational().apply { num(fps.numerator); den(fps.denominator) })
+
         when (codecId) {
             // Needed to avoid using macroblocks in which some coeffs overflow.
             // This does not happen with normal video, it just happens here as
@@ -285,12 +289,18 @@ class VideoWriter(
                     break
                 ret.throwIfErrnum("delivery.ffmpeg.encodeFrameError")
 
-                // Rescale output packet timestamp values from codec to stream timebase.
-                av_packet_rescale_ts(pkt, enc.time_base(), st.time_base())
+                // Inform the packet about which stream it should be written to.
                 pkt.stream_index(st.index())
 
+                // Set the duration of the frame delivered by the current packet. This is required for most codec/muxer
+                // combinations to recognize the framerate. Relative to the encoder timebase (which is 1/fps) for now.
+                pkt.duration(1)
+
+                // Now rescale output packet timestamp values (including duration) from codec to stream timebase.
+                av_packet_rescale_ts(pkt, enc.time_base(), st.time_base())
+
                 // Write the compressed frame to the media file.
-                ret = av_write_frame(oc, pkt).throwIfErrnum("delivery.ffmpeg.writeFrameError")
+                ret = av_interleaved_write_frame(oc, pkt).throwIfErrnum("delivery.ffmpeg.writeFrameError")
             } finally {
                 av_packet_unref(pkt)
             }

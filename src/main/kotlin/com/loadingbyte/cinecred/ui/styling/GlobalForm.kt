@@ -2,10 +2,13 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.projectio.toFPS
+import com.loadingbyte.cinecred.projectio.toString2
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
+import java.text.NumberFormat
 import java.util.*
 import javax.swing.SpinnerNumberModel
 
@@ -13,19 +16,52 @@ import javax.swing.SpinnerNumberModel
 class GlobalForm : Form() {
 
     companion object {
-        private val SUGGESTED_FPS = floatArrayOf(23.97f, 24f, 25f, 29.97f, 30f, 59.94f, 60f)
+
+        private val SUGGESTED_FRAC_FPS = listOf(
+            23.98 to FPS(24000, 1001),
+            29.97 to FPS(30000, 1001),
+            47.95 to FPS(48000, 1001),
+            59.94 to FPS(60000, 1001)
+        )
+        private val SUGGESTED_FPS: List<FPS>
+
+        init {
+            val suggestedIntFPS = listOf(24, 25, 30, 48, 50, 60)
+                .map { it.toDouble() to FPS(it, 1) }
+            SUGGESTED_FPS = (SUGGESTED_FRAC_FPS + suggestedIntFPS)
+                .sortedBy { it.first }
+                .map { it.second }
+        }
+
+        private fun String.fpsFromDisplayString(): FPS {
+            runCatching(NumberFormat.getNumberInstance()::parse).onSuccess { frac ->
+                SUGGESTED_FRAC_FPS.find { it.first == frac }?.let { return it.second }
+            }
+            runCatching(String::toInt).onSuccess { return FPS(it, 1) }
+            return toFPS()
+        }
+
+        private fun FPS.toDisplayString(): String {
+            val frac = SUGGESTED_FRAC_FPS.find { it.second == this }?.first
+            return when {
+                frac != null -> NumberFormat.getNumberInstance().format(frac)
+                denominator == 1 -> numerator.toString()
+                else -> toString2()
+            }
+        }
+
     }
 
     private val fpsWidget = addWidget(
         l10n("ui.styling.global.fps"),
         ComboBoxWidget(
-            SUGGESTED_FPS.map { "%.3f".format(it).dropLast(1) },
+            SUGGESTED_FPS.map { it.toDisplayString() },
             isEditable = true,
             verify = {
                 if (it.isBlank())
                     throw VerifyResult(Severity.ERROR, l10n("ui.blank"))
                 try {
-                    it.toFPS()
+                    it.fpsFromDisplayString()
                 } catch (_: IllegalArgumentException) {
                     throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.illFormattedFPS"))
                 }
@@ -67,9 +103,7 @@ class GlobalForm : Form() {
     }
 
     private fun load(global: Global) {
-        fpsWidget.selectedItem =
-            if (global.fps.denominator == 1) global.fps.numerator.toString()
-            else "%.3f".format(global.fps.frac).dropLast(1)
+        fpsWidget.selectedItem = global.fps.toDisplayString()
         widthPxWidget.value = global.widthPx
         heightPxWidget.value = global.heightPx
         backgroundWidget.selectedColor = global.background
@@ -79,7 +113,7 @@ class GlobalForm : Form() {
     }
 
     private fun save() = Global(
-        fpsWidget.selectedItem.toFPS(),
+        fpsWidget.selectedItem.fpsFromDisplayString(),
         widthPxWidget.value as Int,
         heightPxWidget.value as Int,
         backgroundWidget.selectedColor,

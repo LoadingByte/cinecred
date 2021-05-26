@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.project.FPS
 import java.awt.Color
-import kotlin.math.floor
 
 
 fun String.toInt(nonNeg: Boolean, non0: Boolean = false): Int {
@@ -35,22 +34,9 @@ fun Color.toHex32() = "#%08x".format(rgb)
 
 
 fun String.toFPS(): FPS {
-    val str = replace(',', '.')
-    return when {
-        // We have a special case for three quite common fractional fps to make sure that they're as precise as possible.
-        str.startsWith("23.9") -> FPS(24000, 1001)
-        str.startsWith("29.9") -> FPS(30000, 1001)
-        str.startsWith("59.9") -> FPS(60000, 1001)
-        "/" in this -> {
-            val parts = split("/")
-            FPS(parts[0].toInt(nonNeg = true, non0 = true), parts[1].toInt(nonNeg = true, non0 = true))
-        }
-        else -> {
-            val f = toFiniteFloat(nonNeg = true, non0 = true)
-            require(floor(f) == f)
-            FPS(f.toInt(), 1)
-        }
-    }
+    val parts = split("/")
+    require(parts.size == 2)
+    return FPS(parts[0].toInt(nonNeg = true, non0 = true), parts[1].toInt(nonNeg = true, non0 = true))
 }
 
 

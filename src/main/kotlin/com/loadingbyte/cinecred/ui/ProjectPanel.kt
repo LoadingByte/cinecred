@@ -18,12 +18,13 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
     val videoPanel = VideoPanel(ctrl)
     val deliverPanel = DeliverPanel(ctrl)
 
+    private val tabPane = JTabbedPane()
     private val tabPaneTrailingPanel = JPanel(MigLayout("insets 0, gap 0, align right"))
 
     private var prevSelectedTab: JPanel = editPanel
 
     init {
-        val tabs = JTabbedPane().apply {
+        tabPane.apply {
             putClientProperty(TABBED_PANE_SHOW_TAB_SEPARATORS, true)
             putClientProperty(TABBED_PANE_TRAILING_COMPONENT, tabPaneTrailingPanel)
             addTab(l10n("ui.project.edit"), EYE_ICON, editPanel)
@@ -45,7 +46,7 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             })
 
         layout = BorderLayout()
-        add(tabs, BorderLayout.CENTER)
+        add(tabPane, BorderLayout.CENTER)
     }
 
     private fun addTabPaneTrailingComponent(component: JComponent) {
@@ -56,6 +57,10 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             putClientProperty(OUTLINE, Color(0, 0, 0, 0))
         }
         tabPaneTrailingPanel.add(component, "growy, pushy")
+    }
+
+    fun selectTab(panel: JPanel) {
+        tabPane.selectedComponent = panel
     }
 
 }

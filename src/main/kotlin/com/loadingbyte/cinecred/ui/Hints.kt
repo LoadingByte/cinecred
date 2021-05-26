@@ -35,17 +35,19 @@ val openHintTrack = HintTrack(
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel.editPanel
     val stylingPanel = ctrl.editStylingDialog.panel
+    val goEditPnl = fun() { ctrl.projectFrame.panel.selectTab(editPanel) }
     return HintTrack(
         PROJECT_HINT_TRACK_NAME, listOf(
-            Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE),
-            Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP),
-            Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM),
+            Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),
+            Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP, goEditPnl),
+            Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM, goEditPnl),
             Hint(l10n("ui.hints.projectTrack.stylingTree"), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
+                goEditPnl()
                 ctrl.setEditStylingDialogVisible(true)
             },
-            Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.resetStylingHintOwner, Side.BOTTOM),
-            Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.layoutGuidesHintOwner, Side.BOTTOM),
-            Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE)
+            Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.resetStylingHintOwner, Side.BOTTOM, goEditPnl),
+            Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.layoutGuidesHintOwner, Side.BOTTOM, goEditPnl),
+            Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE, goEditPnl)
         )
     )
 }

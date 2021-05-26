@@ -42,9 +42,9 @@ object PreferencesController {
         Locale.setDefault(uiLocale ?: systemLocale)
 
         if (OPEN_HINT_TRACK_NAME in new.pendingHintTracks && OPEN_HINT_TRACK_NAME !in old.pendingHintTracks)
-            openHintTrack.play()
+            openHintTrack.playIfPending()
         if (PROJECT_HINT_TRACK_NAME in new.pendingHintTracks && PROJECT_HINT_TRACK_NAME !in old.pendingHintTracks)
-            OpenController.getProjectCtrls().firstOrNull()?.let(::makeProjectHintTrack)?.play()
+            OpenController.getProjectCtrls().firstOrNull()?.let(::makeProjectHintTrack)?.playIfPending()
 
         if (exit)
             OpenController.tryExit()

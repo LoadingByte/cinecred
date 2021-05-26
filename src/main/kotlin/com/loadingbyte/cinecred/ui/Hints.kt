@@ -51,7 +51,7 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
 }
 
 
-fun HintTrack.play() {
+fun HintTrack.playIfPending() {
     if (PreferencesController.isHintTrackPending(name)) {
         // Often, when this function is called, the window where the first hint appears hasn't been validated yet.
         // To circumvent the hint briefly appearing at a strange position and then moving to its proper position,

@@ -26,7 +26,7 @@ private fun copyStylingTemplate(destDir: Path, locale: Locale) {
 private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
     val csv = readFillingPlaceholders("/template/credits.csv", locale)
     val spreadsheet = CsvFormat.read(csv)
-    val colWidths = mapOf(3 to 14, 4 to 16, 5 to 24, 6 to 24, 7 to 24)
+    val colWidths = mapOf(1 to 14, 4 to 16, 5 to 24, 6 to 24, 7 to 24)
     format.write(destDir.resolve("Credits.${format.fileExt}"), spreadsheet, colWidths)
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")

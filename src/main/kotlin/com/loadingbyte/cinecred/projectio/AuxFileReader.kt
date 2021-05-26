@@ -126,7 +126,9 @@ private val GS_EXECUTABLE: Path? by lazy {
     val linkMac = "https://pages.uoregon.edu/koch/"
     val ep = JEditorPane("text/html", l10n("projectIO.ghostscriptMissing.msg", linkWinLinux, linkMac))
     ep.addHyperlinkListener { e ->
-        if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)
+        if (e.eventType == HyperlinkEvent.EventType.ACTIVATED &&
+            Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
+        )
             Desktop.getDesktop().browse(e.url.toURI())
     }
     ep.isEditable = false

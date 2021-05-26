@@ -128,7 +128,9 @@ private fun checkForUpdates() {
                     null, l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
                     l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
                 ) == JOptionPane.YES_OPTION
-                if (openHomepage)
+                if (openHomepage &&
+                    Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
+                )
                     Desktop.getDesktop().browse(URI(HOMEPAGE_URL))
             }
     }
@@ -149,7 +151,7 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         val send = JOptionPane.showConfirmDialog(
             null, l10n("ui.crash.msg", e), l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
         ) == JOptionPane.YES_OPTION
-        if (send) {
+        if (send && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.MAIL)) {
             val address = encodeMailURIComponent("cinecred-crash-report@loadingbyte.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
             // We replace tabs by four dots because some email programs trim leading tabs and spaces.

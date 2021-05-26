@@ -50,10 +50,10 @@ object XlsxFormat : SpreadsheetFormat {
             val numRows = sheet.lastRowNumber + 1
             val numCols = sheet.lastColumnNumber + 1
 
-            val stringMatrix = Array(numRows) { Array(numCols) { "" } }
+            val cellMatrix = Array(numRows) { Array(numCols) { "" } }
             for (cell in sheet.cells.values)
-                stringMatrix[cell.rowNumber][cell.columnNumber] = cell.value.toString()
-            stringMatrix.mapIndexed { idx, cells -> SpreadsheetRecord(idx, cells.asList()) }
+                cellMatrix[cell.rowNumber][cell.columnNumber] = cell.value.toString()
+            cellMatrix.mapIndexed { idx, cells -> SpreadsheetRecord(idx, cells.asList()) }
         }
     )
 
@@ -64,7 +64,7 @@ object XlsxFormat : SpreadsheetFormat {
 
         for (record in spreadsheet)
             record.cells.forEachIndexed { col, cell ->
-                sheet.addCell(cell, col, record.recordNo)
+                sheet.addCell(cell.autoCast(), col, record.recordNo)
             }
 
         for ((col, width) in colWidths)
@@ -104,7 +104,11 @@ object XlsFormat : SpreadsheetFormat {
 
         for (record in spreadsheet)
             record.cells.forEachIndexed { col, cell ->
-                sheet.addCell(Label(col, record.recordNo, cell))
+                val castedCell = cell.autoCast()
+                sheet.addCell(
+                    if (castedCell is Double) jxl.write.Number(col, record.recordNo, castedCell)
+                    else Label(col, record.recordNo, cell)
+                )
             }
 
         for ((col, width) in colWidths)
@@ -138,8 +142,8 @@ object OdsFormat : SpreadsheetFormat {
         val numCols = spreadsheet[0].cells.size
 
         val sheet = Sheet(file.nameWithoutExtension, numRows, numCols)
-        val stringMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row].cells[col] } }
-        sheet.dataRange.values = stringMatrix
+        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row].cells[col].autoCast() } }
+        sheet.dataRange.values = cellMatrix
 
         for ((col, width) in colWidths)
             sheet.setColumnWidth(col, width * 2.0)
@@ -180,6 +184,14 @@ object CsvFormat : SpreadsheetFormat {
     }
 
 }
+
+
+private fun String.autoCast(): Any =
+    try {
+        toDouble()
+    } catch (_: NumberFormatException) {
+        this
+    }
 
 
 // Helper function to avoid duplicate code.

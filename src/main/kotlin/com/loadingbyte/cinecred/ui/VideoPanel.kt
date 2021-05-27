@@ -6,7 +6,10 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
-import com.loadingbyte.cinecred.ui.helper.*
+import com.loadingbyte.cinecred.ui.helper.JobSlot
+import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
+import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
+import com.loadingbyte.cinecred.ui.helper.SEVERITY_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Font
 import java.awt.Graphics
@@ -62,15 +65,8 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
             // When the slider is moved, either automatically or by hand, draw the selected frame.
             // Use paintImmediately() because repaint() might postpone the painting, which we do not want.
             canvas.paintImmediately(0, 0, canvas.width, canvas.height)
-            // Also adjust the time label.
-            val project = project
-            val videoDrawer = videoDrawer
-            if (project != null && videoDrawer != null) {
-                val fps = project.styling.global.fps.frac
-                val curTc = Timecode(fps, frameSlider.value)
-                val runtimeTc = Timecode(fps, videoDrawer.numFrames)
-                timecodeLabel.text = "$curTc / $runtimeTc"
-            }
+            // Also adjust the timecode label.
+            adjustTimecodeLabel()
         }
     }
 
@@ -113,8 +109,11 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
         if (project == null) {
             videoDrawer = null
             canvas.repaint()
-        } else
+            timecodeLabel.text = null
+        } else {
             restartDrawing()
+            adjustTimecodeLabel()
+        }
     }
 
     private fun restartDrawing() {
@@ -135,6 +134,15 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
                 canvas.repaint()
             }
         }
+    }
+
+    private fun adjustTimecodeLabel() {
+        val project = project ?: return
+        val videoDrawer = videoDrawer ?: return
+        val fps = project.styling.global.fps.frac
+        val curTc = Timecode(fps, frameSlider.value)
+        val runtimeTc = Timecode(fps, videoDrawer.numFrames)
+        timecodeLabel.text = "$curTc / $runtimeTc"
     }
 
 }

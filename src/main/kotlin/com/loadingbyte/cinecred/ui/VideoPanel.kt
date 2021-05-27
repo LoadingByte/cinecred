@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
 import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
@@ -139,9 +140,10 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
     private fun adjustTimecodeLabel() {
         val project = project ?: return
         val videoDrawer = videoDrawer ?: return
-        val fps = project.styling.global.fps.frac
-        val curTc = Timecode(fps, frameSlider.value)
-        val runtimeTc = Timecode(fps, videoDrawer.numFrames)
+        val fps = project.styling.global.fps
+        val timecodeFormat = project.styling.global.timecodeFormat
+        val curTc = formatTimecode(fps, timecodeFormat, frameSlider.value)
+        val runtimeTc = formatTimecode(fps, timecodeFormat, videoDrawer.numFrames)
         timecodeLabel.text = "$curTc / $runtimeTc"
     }
 

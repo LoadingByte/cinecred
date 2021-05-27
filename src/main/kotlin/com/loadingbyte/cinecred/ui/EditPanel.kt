@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
+import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.projectio.toHex24
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
@@ -267,9 +268,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             runtimeLabel1.toolTipText = null
         } else {
             val runtime = VideoDrawer(project, drawnPages).numFrames
-            val tc = Timecode(project.styling.global.fps.frac, runtime)
-            val tooltip = l10n("ui.edit.runtimeTooltip", tc.minutes, tc.seconds, tc.frames, runtime)
-            runtimeLabel2.text = tc.toString()
+            val tc = formatTimecode(project.styling.global.fps, project.styling.global.timecodeFormat, runtime)
+            val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
+            runtimeLabel2.text = tc
             runtimeLabel2.toolTipText = tooltip
             runtimeLabel1.toolTipText = tooltip
         }

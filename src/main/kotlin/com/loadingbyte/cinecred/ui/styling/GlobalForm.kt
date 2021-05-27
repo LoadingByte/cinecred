@@ -4,6 +4,8 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.Global
+import com.loadingbyte.cinecred.project.TimecodeFormat
+import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import com.loadingbyte.cinecred.projectio.toFPS
 import com.loadingbyte.cinecred.projectio.toString2
 import com.loadingbyte.cinecred.ui.helper.*
@@ -75,6 +77,13 @@ class GlobalForm : Form() {
                 }
             })
     )
+    private val timecodeFormatWidget = addWidget(
+        l10n("ui.styling.global.timecodeFormat"),
+        InconsistentComboBoxWidget<TimecodeFormat>(
+            emptyList(), toString = ::l10nEnum,
+            inconsistencyWarning = l10n("ui.styling.global.timecodeFormatUnsuitable")
+        )
+    )
     private val backgroundWidget = addWidget(
         l10n("ui.styling.global.background"),
         ColorWellWidget(
@@ -102,10 +111,23 @@ class GlobalForm : Form() {
         finishInit()
     }
 
+    private fun populateTimecodeFormatWidget() {
+        timecodeFormatWidget.items = mutableListOf<TimecodeFormat>().apply {
+            add(TimecodeFormat.SMPTE_NON_DROP_FRAME)
+            runCatching { fpsWidget.selectedItem.fpsFromDisplayString() }.onSuccess { fps ->
+                if (fps.supportsDropFrameTimecode)
+                    add(TimecodeFormat.SMPTE_DROP_FRAME)
+            }
+            add(TimecodeFormat.CLOCK)
+            add(TimecodeFormat.FRAMES)
+        }
+    }
+
     private fun load(global: Global) {
         widthPxWidget.value = global.widthPx
         heightPxWidget.value = global.heightPx
         fpsWidget.selectedItem = global.fps.toDisplayString()
+        timecodeFormatWidget.selectedItem = global.timecodeFormat
         backgroundWidget.selectedColor = global.background
         unitVGapPxWidget.value = global.unitVGapPx
         localeWidget.selectedItem = global.locale
@@ -116,6 +138,7 @@ class GlobalForm : Form() {
         widthPxWidget.value as Int,
         heightPxWidget.value as Int,
         fpsWidget.selectedItem.fpsFromDisplayString(),
+        timecodeFormatWidget.selectedItem,
         backgroundWidget.selectedColor,
         unitVGapPxWidget.value as Float,
         localeWidget.selectedItem,
@@ -125,6 +148,11 @@ class GlobalForm : Form() {
     fun open(global: Global, onChange: (Global) -> Unit) {
         withoutChangeListeners {
             load(global)
+            populateTimecodeFormatWidget()
+            preChangeListener = { widget ->
+                if (widget == fpsWidget)
+                    populateTimecodeFormatWidget()
+            }
             postChangeListener = { if (isErrorFree) onChange(save()) }
         }
     }

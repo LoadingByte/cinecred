@@ -13,14 +13,6 @@ import javax.swing.border.CompoundBorder
 import javax.swing.table.TableCellRenderer
 
 
-class Timecode(fps: Float, frameIdx: Int) {
-    val minutes = (frameIdx / fps).toInt() / 60
-    val seconds = (frameIdx / fps).toInt() % 60
-    val frames = frameIdx - ((seconds + minutes * 60) * fps).toInt()
-    override fun toString() = "%02d:%02d+%02d".format(minutes, seconds, frames)
-}
-
-
 fun newLabelTextArea() = JTextArea().apply {
     background = null
     isEditable = false

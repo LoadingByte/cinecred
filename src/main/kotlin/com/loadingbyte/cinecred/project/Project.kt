@@ -28,6 +28,7 @@ data class Global(
     val widthPx: Int,
     val heightPx: Int,
     val fps: FPS,
+    val timecodeFormat: TimecodeFormat,
     val background: Color,
     val unitVGapPx: Float,
     val locale: Locale,
@@ -39,6 +40,9 @@ data class FPS(val numerator: Int, val denominator: Int) {
     val frac: Float
         get() = numerator.toFloat() / denominator
 }
+
+
+enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, CLOCK, FRAMES }
 
 
 data class PageStyle(

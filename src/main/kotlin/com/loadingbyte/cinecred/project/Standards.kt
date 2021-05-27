@@ -10,6 +10,7 @@ val PRESET_GLOBAL = Global(
     widthPx = 1920,
     heightPx = 1080,
     fps = FPS(24, 1),
+    timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
     background = Color.BLACK,
     unitVGapPx = 32f,
     locale = Locale.ENGLISH,

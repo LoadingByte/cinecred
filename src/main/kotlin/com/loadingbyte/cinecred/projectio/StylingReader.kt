@@ -34,6 +34,7 @@ private fun readGlobal(map: Map<*, *>) = Global(
     map.get("widthPx", PRESET_GLOBAL.widthPx) { toInt(nonNeg = true, non0 = true) },
     map.get("heightPx", PRESET_GLOBAL.heightPx) { toInt(nonNeg = true, non0 = true) },
     map.get("fps", PRESET_GLOBAL.fps) { toFPS() },
+    map.get("timecodeFormat", PRESET_GLOBAL.timecodeFormat) { toEnum() },
     map.get("background", PRESET_GLOBAL.background) { toColor(allowAlpha = false) },
     map.get("unitVGapPx", PRESET_GLOBAL.unitVGapPx) { toFiniteFloat(nonNeg = true, non0 = true) },
     map.get("locale", PRESET_GLOBAL.locale) { Locale.forLanguageTag(this) },

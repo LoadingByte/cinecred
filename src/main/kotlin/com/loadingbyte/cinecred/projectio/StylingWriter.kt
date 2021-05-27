@@ -25,6 +25,7 @@ private fun writeGlobal(global: Global) = mapOf(
     "widthPx" to global.widthPx,
     "heightPx" to global.heightPx,
     "fps" to global.fps.toString2(),
+    "timecodeFormat" to global.timecodeFormat.name,
     "background" to global.background.toHex24(),
     "unitVGapPx" to global.unitVGapPx,
     "locale" to global.locale.toLanguageTag(),

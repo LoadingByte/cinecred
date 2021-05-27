@@ -7,9 +7,9 @@ import java.util.*
 
 
 val PRESET_GLOBAL = Global(
-    fps = FPS(24, 1),
     widthPx = 1920,
     heightPx = 1080,
+    fps = FPS(24, 1),
     background = Color.BLACK,
     unitVGapPx = 32f,
     locale = Locale.ENGLISH,

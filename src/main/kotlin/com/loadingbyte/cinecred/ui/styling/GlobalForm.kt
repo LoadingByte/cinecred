@@ -52,6 +52,14 @@ class GlobalForm : Form() {
 
     }
 
+    private val widthPxWidget = addWidget(
+        l10n("ui.styling.global.widthPx"),
+        SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
+    )
+    private val heightPxWidget = addWidget(
+        l10n("ui.styling.global.heightPx"),
+        SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
+    )
     private val fpsWidget = addWidget(
         l10n("ui.styling.global.fps"),
         ComboBoxWidget(
@@ -66,14 +74,6 @@ class GlobalForm : Form() {
                     throw VerifyResult(Severity.ERROR, l10n("ui.styling.global.illFormattedFPS"))
                 }
             })
-    )
-    private val widthPxWidget = addWidget(
-        l10n("ui.styling.global.widthPx"),
-        SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
-    )
-    private val heightPxWidget = addWidget(
-        l10n("ui.styling.global.heightPx"),
-        SpinnerWidget(SpinnerNumberModel(1, 1, null, 10))
     )
     private val backgroundWidget = addWidget(
         l10n("ui.styling.global.background"),
@@ -103,9 +103,9 @@ class GlobalForm : Form() {
     }
 
     private fun load(global: Global) {
-        fpsWidget.selectedItem = global.fps.toDisplayString()
         widthPxWidget.value = global.widthPx
         heightPxWidget.value = global.heightPx
+        fpsWidget.selectedItem = global.fps.toDisplayString()
         backgroundWidget.selectedColor = global.background
         unitVGapPxWidget.value = global.unitVGapPx
         localeWidget.selectedItem = global.locale
@@ -113,9 +113,9 @@ class GlobalForm : Form() {
     }
 
     private fun save() = Global(
-        fpsWidget.selectedItem.fpsFromDisplayString(),
         widthPxWidget.value as Int,
         heightPxWidget.value as Int,
+        fpsWidget.selectedItem.fpsFromDisplayString(),
         backgroundWidget.selectedColor,
         unitVGapPxWidget.value as Float,
         localeWidget.selectedItem,

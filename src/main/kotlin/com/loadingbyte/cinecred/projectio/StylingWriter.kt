@@ -22,9 +22,9 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
 
 
 private fun writeGlobal(global: Global) = mapOf(
-    "fps" to global.fps.toString2(),
     "widthPx" to global.widthPx,
     "heightPx" to global.heightPx,
+    "fps" to global.fps.toString2(),
     "background" to global.background.toHex24(),
     "unitVGapPx" to global.unitVGapPx,
     "locale" to global.locale.toLanguageTag(),

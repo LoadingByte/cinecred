@@ -25,9 +25,9 @@ data class Styling constructor(
 
 
 data class Global(
-    val fps: FPS,
     val widthPx: Int,
     val heightPx: Int,
+    val fps: FPS,
     val background: Color,
     val unitVGapPx: Float,
     val locale: Locale,

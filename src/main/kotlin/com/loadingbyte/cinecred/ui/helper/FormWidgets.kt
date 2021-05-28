@@ -67,8 +67,7 @@ open class FilenameWidget(
         })
     }
 
-    var fileExts: List<String>
-        get() = _fileExts
+    var fileExts: List<String> = emptyList()
         set(newFileExts) {
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
@@ -77,11 +76,8 @@ open class FilenameWidget(
                 text = text.ensureDoesntEndWith(fileExts.map { ".$it" })
                 text = text.ensureEndsWith(newFileExts.map { ".$it" })
             }
-            _fileExts.clear()
-            _fileExts.addAll(newFileExts)
+            field = newFileExts.toMutableList()  // copy
         }
-
-    private var _fileExts = mutableListOf<String>()
 
 }
 
@@ -213,7 +209,7 @@ open class ComboBoxWidget<E>(
 
     var items: List<E> = emptyList()
         set(value) {
-            field = value
+            field = value.toMutableList()  // copy
             val newModel = DefaultComboBoxModel(Vector(value))
             selectedItem?.let { newModel.selectedItem = it }
             cb.model = newModel
@@ -289,7 +285,7 @@ class ComboBoxListWidget<E>(
 
     var items: List<E> = items
         set(value) {
-            field = value
+            field = value.toMutableList()  // copy
             for (cb in cbs)
                 cb.model = DefaultComboBoxModel(Vector(value))
         }

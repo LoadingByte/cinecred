@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.projectio
 import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Color
 import java.nio.file.Path
@@ -11,27 +10,65 @@ import java.util.*
 
 
 fun readStyling(stylingFile: Path): Styling {
-    val toml = Toml.read(stylingFile.toFile())
+    val toml = Toml.read(stylingFile.toFile()) as MutableMap<String, Any>
 
-    val globalMap = toml["global"]
-    val global =
-        if (globalMap == null || globalMap !is Map<*, *>) PRESET_GLOBAL
-        else readStyle(globalMap, PRESET_GLOBAL)
+    val rawStyling = RawStyling(
+        readMap(toml["global"]),
+        readMapList(toml["pageStyle"]),
+        readMapList(toml["contentStyle"]),
+        readMapList(toml["letterStyle"])
+    )
 
-    val pageStyles = readMapList(toml["pageStyle"]) { readStyle(it, PRESET_PAGE_STYLE) }
-    val contentStyles = readMapList(toml["contentStyle"]) { readStyle(it, PRESET_CONTENT_STYLE) }
-    val letterStyles = readMapList(toml["letterStyle"]) { readStyle(it, PRESET_LETTER_STYLE) }
+    // If the styling file has been saved by an older version of the program and some aspects of the format have
+    // changed since then, adjust the TOML map to reflect the new structure.
+    migrate(rawStyling)
 
-    return Styling(global, pageStyles, contentStyles, letterStyles)
+    return Styling(
+        readStyle(rawStyling.global, PRESET_GLOBAL),
+        rawStyling.pageStyles.map { readStyle(it, PRESET_PAGE_STYLE) }.toImmutableList(),
+        rawStyling.contentStyles.map { readStyle(it, PRESET_CONTENT_STYLE) }.toImmutableList(),
+        rawStyling.letterStyles.map { readStyle(it, PRESET_LETTER_STYLE) }.toImmutableList()
+    )
 }
 
 
-private fun <E> readMapList(mapList: Any?, readMap: (Map<*, *>) -> E) =
-    if (mapList == null || mapList !is List<*>) persistentListOf()
-    else mapList.filterIsInstance<Map<*, *>>().map(readMap).toImmutableList()
+private class RawStyling(
+    val global: MutableMap<String, Any>,
+    val pageStyles: MutableList<MutableMap<String, Any>>,
+    val contentStyles: MutableList<MutableMap<String, Any>>,
+    val letterStyles: MutableList<MutableMap<String, Any>>
+)
 
 
-private fun <S : Style> readStyle(map: Map<*, *>, stylePreset: S): S {
+@Suppress("UNCHECKED_CAST")
+private fun readMap(map: Any?): MutableMap<String, Any> =
+    if (map !is Map<*, *>) mutableMapOf()
+    else map.toMutableMap() as MutableMap<String, Any>
+
+private fun readMapList(mapList: Any?): MutableList<MutableMap<String, Any>> =
+    if (mapList !is List<*>) mutableListOf()
+    else mapList.filterIsInstanceTo(mutableListOf())
+
+
+private fun migrate(rawStyling: RawStyling) {
+    // 1.0.0 -> 1.1.0: Enum lists are now stored as string lists instead of space-delimited strings.
+    for (contentStyle in rawStyling.contentStyles) {
+        val gridElemHJustifyPerCol = contentStyle["gridElemHJustifyPerCol"]
+        if (gridElemHJustifyPerCol is String)
+            contentStyle["gridElemHJustifyPerCol"] = gridElemHJustifyPerCol.split(" ")
+    }
+
+    // 1.0.0 -> 1.1.0: Whether a content style has a head and/or tail is now stored explicitly.
+    for (contentStyle in rawStyling.contentStyles) {
+        if ("hasHead" !in contentStyle)
+            contentStyle["hasHead"] = contentStyle.keys.any { it.startsWith("head") }
+        if ("hasTail" !in contentStyle)
+            contentStyle["hasTail"] = contentStyle.keys.any { it.startsWith("tail") }
+    }
+}
+
+
+private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
     val styleClass = stylePreset.javaClass
 
     val settingValues = getStyleSettings(styleClass).map { setting ->
@@ -43,7 +80,7 @@ private fun <S : Style> readStyle(map: Map<*, *>, stylePreset: S): S {
             else
                 convert(setting.type, map[setting.name]!!.toString())
         } catch (_: RuntimeException) {
-            // Also catches NullPointerException & ClassCastException
+            // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
             setting.get(stylePreset)
         }
     }
@@ -58,7 +95,7 @@ private fun convert(type: Class<*>, str: String): Any = when (type) {
     Boolean::class.java -> str.toBoolean()
     String::class.java -> str
     Locale::class.java -> Locale.forLanguageTag(str)
-    Color::class.java -> str.toColor()
+    Color::class.java -> str.hexToColor()
     FPS::class.java -> str.toFPS()
     else -> when {
         Enum::class.java.isAssignableFrom(type) ->

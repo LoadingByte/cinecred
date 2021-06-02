@@ -9,11 +9,11 @@ import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-import java.util.stream.Stream
 import kotlin.io.path.extension
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.nameWithoutExtension
 
 
@@ -23,12 +23,12 @@ fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
     var creditsFile: Path? = null
     val log = mutableListOf<ParserMsg>()
 
-    val candidates = getCreditsFileCandidates(projectDir).iterator()
-    if (!candidates.hasNext())
+    val candidates = getCreditsFileCandidates(projectDir)
+    if (candidates.isEmpty())
         log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.noCreditsFile", availExtsStr())))
     else {
-        creditsFile = candidates.next()
-        if (candidates.hasNext()) {
+        creditsFile = candidates.first()
+        if (candidates.size > 1) {
             val msg = l10n("projectIO.credits.multipleCreditsFiles", availExtsStr(), creditsFile.fileName)
             log.add(ParserMsg(null, null, null, WARN, msg))
         }
@@ -37,13 +37,14 @@ fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
     return Pair(creditsFile, log)
 }
 
-fun getCreditsFileCandidates(projectDir: Path): Stream<Path> =
-    Files.list(projectDir)
-        .filter { Files.isRegularFile(it) && hasCreditsFileName(it) }
-        .sorted(compareBy { file ->
+fun getCreditsFileCandidates(projectDir: Path): List<Path> =
+    projectDir
+        .runCatching(Path::listDirectoryEntries).getOrDefault(emptyList())
+        .filter { file -> file.isRegularFile() && hasCreditsFileName(file) }
+        .sortedBy { file ->
             val fileExt = file.extension
             SPREADSHEET_FORMATS.indexOfFirst { io -> io.fileExt.equals(fileExt, ignoreCase = true) }
-        })
+        }
 
 fun hasCreditsFileName(file: Path): Boolean {
     val fileExt = file.extension

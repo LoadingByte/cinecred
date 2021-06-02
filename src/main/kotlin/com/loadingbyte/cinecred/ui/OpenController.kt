@@ -8,6 +8,7 @@ import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JOptionPane
+import kotlin.io.path.notExists
 
 
 object OpenController {
@@ -43,15 +44,16 @@ object OpenController {
         }
 
         // If the two required project files don't exist yet, create them.
-        val projectDirExists = Files.exists(projectDir)
         val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
-        val creditsFile = if (!projectDirExists) null else locateCreditsFile(projectDir).first
-        val stylingFileExists = Files.exists(stylingFile)
-        val creditsFileExists = creditsFile != null
-        if (Files.notExists(projectDir) || !stylingFileExists || !creditsFileExists) {
+        if (projectDir.notExists() || stylingFile.notExists() || locateCreditsFile(projectDir).first == null) {
             // If the user cancels the dialog, cancel opening the project directory.
             val (locale, format) = CreateForm.showDialog() ?: return
-            copyTemplate(projectDir, locale, format, !stylingFileExists, !creditsFileExists)
+            copyTemplate(
+                projectDir, locale, format,
+                // Verify a second time that the two required project files still do not exists,
+                // in case the user has created them manually in the meantime.
+                copyStyling = stylingFile.notExists(), copyCredits = locateCreditsFile(projectDir).first == null
+            )
         }
 
         blockOpening = true

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
@@ -24,7 +25,7 @@ fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
 
     val candidates = getCreditsFileCandidates(projectDir).iterator()
     if (!candidates.hasNext())
-        log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.credits.noCreditsFile", availExtsStr())))
+        log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.noCreditsFile", availExtsStr())))
     else {
         creditsFile = candidates.next()
         if (candidates.hasNext()) {
@@ -61,7 +62,7 @@ fun readCredits(
     spreadsheet: Spreadsheet,
     styling: Styling,
     pictureLoaders: Map<Path, Lazy<Picture?>>
-): Pair<List<Page>?, List<ParserMsg>> {
+): Pair<List<Page>, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.",

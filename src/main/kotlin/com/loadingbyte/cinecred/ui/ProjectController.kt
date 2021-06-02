@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
-import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.drawer.draw
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
@@ -40,7 +40,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
     private var creditsFile: Path? = null
 
-    private var creditsSpreadsheet: List<SpreadsheetRecord>? = null
+    private var creditsSpreadsheet: Spreadsheet = emptyList()
     private val fonts = ConcurrentHashMap<Path, Font>()
     private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
@@ -127,12 +127,12 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
     private fun tryLocateCreditsFile() {
         val (file, log) = locateCreditsFile(projectDir)
-        creditsFileLocatingLog = log
         creditsFile = file
+        creditsFileLocatingLog = log
     }
 
     private fun tryReloadCreditsFile() {
-        creditsSpreadsheet = null
+        creditsSpreadsheet = emptyList()
         creditsFileLoadingLog = emptyList()
 
         creditsFile?.let { creditsFile ->
@@ -148,10 +148,10 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     }
 
     private fun tryReadCreditsAndRedraw() {
-        fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
+        fun updateProject(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
-                projectFrame.panel.editPanel.updateProjectAndLog(project, drawnPages, styErr, log)
+                projectFrame.panel.editPanel.updateProject(project, drawnPages, styErr, log)
                 projectFrame.panel.videoPanel.updateProject(project, drawnPages)
                 projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
             }
@@ -162,18 +162,16 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         val creditsSpreadsheet = this.creditsSpreadsheet
         val locAndLoadLog = creditsFileLocatingLog + creditsFileLoadingLog
 
-        if (creditsSpreadsheet == null) {
-            updateProjectAndLog(null, emptyList(), false, locAndLoadLog)
-            return
-        }
+        // If the credits file could not be located or loaded, abort and notify the UI about the error.
+        if (locAndLoadLog.any { it.severity == ERROR })
+            return updateProject(null, emptyList(), styErr = false, locAndLoadLog)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
-            // If the styling is erroneous, abort drawing notify the UI about the error.
-            if (verifyStylingConstraints(styling).any { it.severity == Severity.ERROR }) {
-                updateProjectAndLog(null, emptyList(), true, emptyList())
-                return@submit
-            }
+            // Verify the styling in the extra thread because that is not entirely cheap.
+            // If the styling is erroneous, abort and notify the UI about the error.
+            if (verifyStylingConstraints(styling).any { it.severity == ERROR })
+                return@submit updateProject(null, emptyList(), styErr = true, locAndLoadLog)
 
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
@@ -183,13 +181,14 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
             val (pages, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
 
-            val project = Project(styling, fontsByName.toImmutableMap(), (pages ?: emptyList()).toImmutableList())
-            val drawnPages = when (pages) {
-                null -> emptyList()
-                else -> draw(project)
-            }
+            // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
+            if (log.any { it.severity == ERROR })
+                return@submit updateProject(null, emptyList(), styErr = false, locAndLoadLog + log)
 
-            updateProjectAndLog(project, drawnPages, false, locAndLoadLog + log)
+            val project = Project(styling, fontsByName.toImmutableMap(), pages.toImmutableList())
+            val drawnPages = draw(project)
+
+            updateProject(project, drawnPages, styErr = false, locAndLoadLog + log)
         }
     }
 

@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.DrawnPage
@@ -128,14 +129,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
+    private val pageErrorLabel = JLabel().apply {
+        foreground = PALETTE_RED
+        font = font.deriveFont(font.size * 2f).deriveFont(Font.BOLD)
+    }
     private val pagePanelCards = CardLayout()
     private val pagePanel = JPanel(pagePanelCards).apply {
         add(pageTabs, "Pages")
         add(JPanel(MigLayout()).apply {
-            add(JLabel(l10n("ui.edit.error")).apply {
-                foreground = PALETTE_RED
-                font = font.deriveFont(font.size * 2f).deriveFont(Font.BOLD)
-            }, "push, center")
+            add(pageErrorLabel, "push, center")
         }, "Error")
     }
 
@@ -271,10 +273,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         resetStylingButton.isEnabled = false
     }
 
-    fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
+    fun updateProject(project: Project?, drawnPages: List<DrawnPage>, stylingError: Boolean, log: List<ParserMsg>) {
         // Adjust the total runtime label.
         if (project == null || project.pages.isEmpty()) {
-            runtimeLabel2.text = null
+            runtimeLabel2.text = "\u2013"
             runtimeLabel2.toolTipText = null
             runtimeLabel1.toolTipText = null
         } else {
@@ -286,11 +288,18 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             runtimeLabel1.toolTipText = tooltip
         }
 
-        if (!styErr) {
+        // Update the pages tabs or show a big error notice.
+        val creditsError = log.any { it.severity == Severity.ERROR }
+        if (stylingError)
+            pageErrorLabel.text = l10n("ui.edit.stylingError")
+        else if (creditsError)
+            pageErrorLabel.text = l10n("ui.edit.creditsError")
+        if (stylingError || creditsError)
+            pagePanelCards.show(pagePanel, "Error")
+        else {
             pagePanelCards.show(pagePanel, "Pages")
             updatePageTabs(project, drawnPages)
-        } else
-            pagePanelCards.show(pagePanel, "Error")
+        }
 
         // Put the new parser log messages into the log table.
         logTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))

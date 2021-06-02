@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.github.miachm.sods.Sheet
 import com.github.miachm.sods.SpreadSheet
+import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import jxl.write.Label
@@ -206,7 +207,9 @@ private inline fun <W> readOfficeDocument(
     val workbook = open()
     val numSheets = getNumSheets(workbook)
 
-    if (numSheets != 1)
+    if (numSheets == 0)
+        log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
+    else if (numSheets > 1)
         log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.spreadsheet.multipleSheets", file)))
 
     return Pair(if (numSheets == 0) emptyList() else read(workbook), log)

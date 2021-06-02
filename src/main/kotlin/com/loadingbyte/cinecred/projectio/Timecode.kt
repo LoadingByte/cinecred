@@ -21,22 +21,18 @@ fun formatTimecode(fps: FPS, format: TimecodeFormat, frames: Int): String = when
         formatSmpteNonDropFrame(intFPS, frames, ':')
     }
     TimecodeFormat.SMPTE_DROP_FRAME -> {
-        // If drop-frame timecode is not supported, fall back to non drop-frame timecode.
-        if (!fps.supportsDropFrameTimecode)
-            formatTimecode(fps, TimecodeFormat.SMPTE_NON_DROP_FRAME, frames)
-        else {
-            val intFPS = fps.numerator / 1000
-            // Number of frames that are dropped every minute (apart from every 10th minute).
-            val dropFactor = intFPS / 15
-            // Number of frames in a 10-minute-cycle, i.e., the number of frames in 00:00:00:00 to 00:00:09:23.
-            val numFramesPerCycle = 9 * (intFPS * 60 - dropFactor) + 1 * (intFPS * 60)
-            // A frame counter that includes the dropped frames. As soon as we have this, we can just pass it
-            // through a non drop-frame timecode formatter to obtain our final timecode string.
-            val framesPlusDropped = frames +
-                    dropFactor * ((frames / numFramesPerCycle) * 9) +
-                    dropFactor * ((frames % numFramesPerCycle - dropFactor) / (intFPS * 60 - dropFactor))
-            formatSmpteNonDropFrame(intFPS, framesPlusDropped, ';')
-        }
+        require(fps.supportsDropFrameTimecode)
+        val intFPS = fps.numerator / 1000
+        // Number of frames that are dropped every minute (apart from every 10th minute).
+        val dropFactor = intFPS / 15
+        // Number of frames in a 10-minute-cycle, i.e., the number of frames in 00:00:00:00 to 00:00:09:23.
+        val numFramesPerCycle = 9 * (intFPS * 60 - dropFactor) + 1 * (intFPS * 60)
+        // A frame counter that includes the dropped frames. As soon as we have this, we can just pass it
+        // through a non drop-frame timecode formatter to obtain our final timecode string.
+        val framesPlusDropped = frames +
+                dropFactor * ((frames / numFramesPerCycle) * 9) +
+                dropFactor * ((frames % numFramesPerCycle - dropFactor) / (intFPS * 60 - dropFactor))
+        formatSmpteNonDropFrame(intFPS, framesPlusDropped, ';')
     }
     TimecodeFormat.CLOCK -> {
         // nanos = frames * (1/fps) * NANOS_PER_SECOND; reordered for maximum accuracy.

@@ -199,13 +199,13 @@ open class ComboBoxWidget<E>(
     toString: (E) -> String = { it.toString() },
     hFill: Boolean = false,
     private val scrollbar: Boolean = true,
-    decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>)? = null
+    decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
 ) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
 
     protected val cb = JComboBox<E>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
         setMinWidth100()
-        renderer = CustomToStringListCellRenderer(itemClass, toString)
+        renderer = decorateRenderer(CustomToStringListCellRenderer(itemClass, toString))
         keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
     }
 

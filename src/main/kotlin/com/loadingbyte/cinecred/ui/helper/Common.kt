@@ -60,14 +60,16 @@ class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
 class CustomToStringListCellRenderer<E>(
     private val itemClass: Class<E>,
     private val toString: (E) -> String
-) : DefaultListCellRenderer() {
+) : ListCellRenderer<E> {
+
+    private val delegate = DefaultListCellRenderer()
 
     override fun getListCellRendererComponent(
-        list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+        list: JList<out E>?, value: E, index: Int, isSelected: Boolean, cellHasFocus: Boolean
     ): Component {
-        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-        text = value?.let { toString(itemClass.cast(it)) } ?: ""
-        return this
+        delegate.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        delegate.text = value?.let { toString(itemClass.cast(it)) } ?: ""
+        return delegate
     }
 
 }

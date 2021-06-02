@@ -2,71 +2,109 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
+import kotlinx.collections.immutable.ImmutableList
 import net.miginfocom.swing.MigLayout
 import javax.swing.*
 
 
 open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
-    abstract class Widget {
-        abstract val components: List<JComponent>
-        abstract val constraints: List<String>
-        abstract val verify: (() -> Unit)?
+    class Notice(val severity: Severity, val msg: String?)
 
-        var changeListeners = mutableListOf<() -> Unit>()
+    interface Widget<V> {
+        val components: List<JComponent>
+        val constraints: List<String>
+
+        val labelComp: JLabel
+        val noticeIconComp: JLabel
+        val noticeMsgComp: JTextArea
+
+        var value: V
+        var changeListeners: MutableList<() -> Unit>
+        var isVisible: Boolean
+        var isEnabled: Boolean
+        var notice: Notice?
+        var noticeOverride: Notice?
+    }
+
+    abstract class AbstractWidget<V> : Widget<V> {
+
+        override val labelComp = JLabel()
+        override val noticeIconComp = JLabel()
+        override val noticeMsgComp = newLabelTextArea()
+
+        override var changeListeners = mutableListOf<() -> Unit>()
+
+        override var isVisible = true
+            set(isVisible) {
+                field = isVisible
+                for (comp in components)
+                    comp.isVisible = isVisible
+                labelComp.isVisible = isVisible
+                noticeIconComp.isVisible = isVisible
+                noticeMsgComp.isVisible = isVisible
+            }
+
+        override var isEnabled = true
+            set(isEnabled) {
+                field = isEnabled
+                for (comp in components)
+                    comp.isEnabled = isEnabled
+            }
+
+        override var notice: Notice? = null
+            set(notice) {
+                field = notice
+                applyEffectiveNotice()
+            }
+
+        override var noticeOverride: Notice? = null
+            set(noticeOverride) {
+                field = noticeOverride
+                applyEffectiveNotice()
+            }
+
+        private fun applyEffectiveNotice() {
+            val effectiveNotice = noticeOverride ?: notice
+            noticeIconComp.icon = effectiveNotice?.let { SEVERITY_ICON[it.severity] }
+            noticeMsgComp.text = effectiveNotice?.msg
+            // Adjust FlatLaf outlines.
+            val outline = when (effectiveNotice?.severity) {
+                Severity.WARN -> OUTLINE_WARNING
+                Severity.ERROR -> OUTLINE_ERROR
+                else -> null
+            }
+            for (comp in components)
+                comp.putClientProperty(OUTLINE, outline)
+        }
+
         protected fun notifyChangeListeners() {
             for (listener in changeListeners)
                 listener()
         }
+
     }
 
-    class VerifyResult(val severity: Severity, msg: String) : Exception(msg)
-
-    private class FormRow(val isVisibleFunc: (() -> Boolean)?, val isEnabledFunc: (() -> Boolean)?) {
-        val components = mutableListOf<JComponent>()
-        var doVerify: (() -> Unit)? = null
-
-        // We keep track of the form rows which are visible, enabled, and have a verification error (not a warning).
-        // One can use this information to determine whether the form is error-free.
-        var isVisible = true
-            set(value) {
-                field = value
-                for (comp in components)
-                    comp.isVisible = value
-            }
-        var isEnabled = true
-            set(value) {
-                field = value
-                for (comp in components)
-                    comp.isEnabled = value
-            }
-        var isErroneous = false
+    interface ChoiceWidget<V, E> : Widget<V> {
+        var items: ImmutableList<E>
     }
 
-    private val formRows = mutableListOf<FormRow>()
-    private var submitButton: JButton? = null
-    private var disableOnChange = true  // Will be set to false by finishInit().
+    interface FontRelatedWidget<V> : Widget<V> {
+        var projectFamilies: FontFamilies
+    }
 
-    var preChangeListener: ((Widget) -> Unit)? = null
-    var postChangeListener: ((Widget) -> Unit)? = null
 
-    fun <W : Widget> addWidget(
-        label: String, widget: W,
-        isVisible: (() -> Boolean)? = null,
-        isEnabled: (() -> Boolean)? = null
-    ): W {
+    private val widgets = mutableListOf<Widget<*>>()
+
+    fun <W : Widget<*>> addWidget(label: String, widget: W): W {
         require(widget.components.size == widget.constraints.size)
 
         widget.changeListeners.add { onChange(widget) }
 
-        val formRow = FormRow(isVisible, isEnabled)
+        widget.labelComp.text = label
+        add(widget.labelComp, "newline")
 
-        val jLabel = JLabel(label)
-        formRow.components.add(jLabel)
-        add(jLabel, "newline")
-
-        formRow.components.addAll(widget.components)
-        val endlineGroupId = "g" + System.identityHashCode(jLabel)
+        val endlineGroupId = "g" + System.identityHashCode(widget.labelComp)
         val endlineFieldIds = mutableListOf<String>()
         for ((fieldIdx, field) in widget.components.withIndex()) {
             val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
@@ -85,45 +123,13 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             add(field, fieldConstraints.joinToString())
         }
 
-        val verify = widget.verify
-        if (verify != null) {
-            val verifyIconLabel = JLabel()
-            val verifyMsgArea = newLabelTextArea()
-            formRow.components.addAll(arrayOf(verifyIconLabel, verifyMsgArea))
+        // Position the notice components using coordinates relative to the fields that are at the line ends.
+        val iconLabelId = "c${System.identityHashCode(widget.noticeIconComp)}"
+        val startYExpr = "${endlineFieldIds[0]}.y"
+        add(widget.noticeIconComp, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) ($startYExpr + 3)")
+        add(widget.noticeMsgComp, "pos $iconLabelId.x2 $startYExpr visual.x2 null")
 
-            // Position the verification components using coordinates relative to the fields that are at the line ends.
-            val iconLabelId = "c${System.identityHashCode(verifyIconLabel)}"
-            val startYExpr = "${endlineFieldIds[0]}.y"
-            add(verifyIconLabel, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) ($startYExpr + 3)")
-            add(verifyMsgArea, "pos $iconLabelId.x2 $startYExpr visual.x2 null")
-
-            formRow.doVerify = {
-                formRow.isErroneous = false
-                // Remove FlatLaf outlines.
-                for (comp in formRow.components)
-                    comp.putClientProperty(OUTLINE, null)
-                try {
-                    if (formRow.isVisible && formRow.isEnabled)
-                        verify()
-                    verifyIconLabel.icon = null
-                    verifyMsgArea.text = null
-                } catch (e: VerifyResult) {
-                    verifyIconLabel.icon = SEVERITY_ICON[e.severity]
-                    verifyMsgArea.text = e.message
-                    if (e.severity == Severity.WARN || e.severity == Severity.ERROR) {
-                        // Add FlatLaf outlines.
-                        val outline = if (e.severity == Severity.WARN) OUTLINE_WARNING else OUTLINE_ERROR
-                        for (comp in formRow.components)
-                            comp.putClientProperty(OUTLINE, outline)
-                    }
-                    if (e.severity == Severity.ERROR)
-                        formRow.isErroneous = true
-                }
-            }
-        }
-
-        formRows.add(formRow)
-
+        widgets.add(widget)
         return widget
     }
 
@@ -131,46 +137,12 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         add(JSeparator(), "newline, span, growx")
     }
 
-    fun addSubmitButton(label: String, actionListener: () -> Unit) {
-        val button = JButton(label)
-        button.addActionListener { actionListener() }
-        submitButton = button
-        add(button, "newline, skip 1, span, align left")
+    fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
+        for (widget in widgets)
+            if (widget is FontRelatedWidget)
+                widget.projectFamilies = projectFamilies
     }
 
-    fun onChange(widget: Widget) {
-        if (!disableOnChange) {
-            preChangeListener?.invoke(widget)
-            updateVerifyAndVisibleAndEnabled()
-            postChangeListener?.invoke(widget)
-        }
-    }
-
-    protected fun finishInit() {
-        disableOnChange = false
-        updateVerifyAndVisibleAndEnabled()
-    }
-
-    fun withoutChangeListeners(block: () -> Unit) {
-        disableOnChange = true
-        try {
-            block()
-        } finally {
-            disableOnChange = false
-            updateVerifyAndVisibleAndEnabled()
-        }
-    }
-
-    private fun updateVerifyAndVisibleAndEnabled() {
-        for (formRow in formRows) {
-            formRow.doVerify?.invoke()
-            formRow.isVisibleFunc?.let { formRow.isVisible = it() }
-            formRow.isEnabledFunc?.let { formRow.isEnabled = it() }
-        }
-        submitButton?.isEnabled = isErrorFree
-    }
-
-    val isErrorFree: Boolean
-        get() = formRows.all { !it.isVisible || !it.isEnabled || !it.isErroneous }
+    protected open fun onChange(widget: Widget<*>) {}
 
 }

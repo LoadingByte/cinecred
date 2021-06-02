@@ -5,30 +5,29 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
-import com.loadingbyte.cinecred.ui.helper.Form
+import com.loadingbyte.cinecred.ui.helper.EasyForm
 import java.util.*
 import javax.swing.JOptionPane
 
 
-class CreateForm : Form() {
+class CreateForm : EasyForm() {
 
     private val localeWidget = addWidget(
         l10n("ui.create.locale"),
         ComboBoxWidget(
-            TRANSLATED_LOCALES,
+            Locale::class.java, TRANSLATED_LOCALES,
             hFill = true, toString = { it.displayName })
     )
 
     private val formatWidget = addWidget(
         l10n("ui.create.format"),
         ComboBoxWidget(
-            SPREADSHEET_FORMATS,
+            SpreadsheetFormat::class.java, SPREADSHEET_FORMATS,
             hFill = true, toString = { l10n("ui.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" })
     )
 
     init {
-        finishInit()
-        localeWidget.selectedItem = Locale.getDefault()
+        localeWidget.value = Locale.getDefault()
     }
 
 
@@ -40,7 +39,7 @@ class CreateForm : Form() {
                 JOptionPane.OK_CANCEL_OPTION
             )
             return if (option == JOptionPane.OK_OPTION)
-                Pair(form.localeWidget.selectedItem, form.formatWidget.selectedItem)
+                Pair(form.localeWidget.value, form.formatWidget.value)
             else
                 null
         }

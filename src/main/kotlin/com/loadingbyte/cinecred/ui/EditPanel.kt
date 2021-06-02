@@ -15,6 +15,7 @@ import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_A
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Component
 import java.awt.Font
 import java.awt.event.ActionEvent
@@ -60,7 +61,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
     private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON) {
         if (unsavedStylingLabel.isVisible) {
-            val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("ui.cancel"))
+            val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
                 l10n("ui.edit.resetUnsavedChangesWarning.title"),
@@ -127,6 +128,18 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
+    private val pagePanelCards = CardLayout()
+    private val pagePanel = JPanel(pagePanelCards).apply {
+        add(pageTabs, "Pages")
+        add(JPanel(MigLayout()).apply {
+            add(JLabel(l10n("ui.edit.error")).apply {
+                foreground = PALETTE_RED
+                font = font.deriveFont(font.size * 2f).deriveFont(Font.BOLD)
+            }, "push, center")
+        }, "Error")
+    }
+
+    private val logTableModel = LogTableModel()
 
     // Utility to quickly get all PagePreviewPanels from the tabbed pane.
     private val previewPanels: List<EditPagePreviewPanel>
@@ -134,8 +147,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             for (tabIdx in 0 until pageTabs.tabCount)
                 add(pageTabs.getComponentAt(tabIdx) as EditPagePreviewPanel)
         }
-
-    private val logTableModel = LogTableModel()
 
     private fun makeActToolBtn(
         name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
@@ -184,7 +195,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(cutSafeArea4to3ToggleButton)
             add(runtimeLabel1)
             add(runtimeLabel2)
-            add(pageTabs, "newline, span, grow, push")
+            add(pagePanel, "newline, span, grow, push")
         }
 
         val logTable = JTable(logTableModel).apply {
@@ -230,7 +241,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(
                 l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
-                l10n("ui.cancel")
+                l10n("cancel")
             )
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
@@ -260,7 +271,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         resetStylingButton.isEnabled = false
     }
 
-    fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
+    fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
         // Adjust the total runtime label.
         if (project == null || project.pages.isEmpty()) {
             runtimeLabel2.text = null
@@ -275,6 +286,17 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             runtimeLabel1.toolTipText = tooltip
         }
 
+        if (!styErr) {
+            pagePanelCards.show(pagePanel, "Pages")
+            updatePageTabs(project, drawnPages)
+        } else
+            pagePanelCards.show(pagePanel, "Error")
+
+        // Put the new parser log messages into the log table.
+        logTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
+    }
+
+    private fun updatePageTabs(project: Project?, drawnPages: List<DrawnPage>) {
         // First adjust the number of tabs to the number of pages.
         while (pageTabs.tabCount > drawnPages.size)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
@@ -294,9 +316,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Then fill each tab with its corresponding page.
         for ((drawnPage, previewPanel) in drawnPages.zip(previewPanels))
             previewPanel.setContent(project!!.styling.global, drawnPage)
-
-        // Put the new parser log messages into the log table.
-        logTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
     }
 
 

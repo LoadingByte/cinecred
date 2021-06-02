@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.Color
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -129,7 +128,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
     fun onTryCloseProject(): Boolean =
         if (startButton.isSelected && jobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
-            val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("ui.cancel"))
+            val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
                 l10n("ui.deliverRenderQueue.runningWarning.title"),
@@ -216,14 +215,14 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
             }
             FINISHED -> progressBar.apply {
                 model.value = 100
-                foreground = Color.decode("#499C54")
+                foreground = PALETTE_GREEN
                 setTableCellBackground(table, rowIdx)
                 isStringPainted = false
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
                 table, "${progress.javaClass.simpleName}: ${progress.localizedMessage ?: ""}",
                 isSelected, hasFocus, rowIdx, colIdx
-            ).apply { foreground = Color.decode("#C75450") }
+            ).apply { foreground = PALETTE_RED }
             else -> throw IllegalArgumentException()
         }
 

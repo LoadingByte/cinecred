@@ -1,17 +1,22 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
-import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
-import com.loadingbyte.cinecred.drawer.getSystemFont
+import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.projectio.toFPS
+import com.loadingbyte.cinecred.projectio.toString2
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.event.ItemEvent
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
+import java.text.NumberFormat
 import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -21,11 +26,10 @@ import javax.swing.text.JTextComponent
 import kotlin.math.ceil
 
 
-open class TextComponentWidget(
+abstract class AbstractTextComponentWidget<V>(
     protected val tc: JTextComponent,
-    grow: Boolean = true,
-    verify: ((String) -> Unit)? = null
-) : Form.Widget() {
+    grow: Boolean = true
+) : Form.AbstractWidget<V>() {
 
     init {
         tc.addChangeListener { notifyChangeListeners() }
@@ -34,60 +38,72 @@ open class TextComponentWidget(
 
     override val components = listOf<JComponent>(tc)
     override val constraints = listOf(if (grow) "width 40%" else "")
-    override val verify = verify?.let { { it(text) } }
-
-    var text: String by tc::text
 
 }
 
 
-open class TextWidget(
-    grow: Boolean = true,
-    verify: ((String) -> Unit)? = null
-) : TextComponentWidget(JTextField(), grow, verify)
+class TextWidget(
+    grow: Boolean = true
+) : AbstractTextComponentWidget<String>(JTextField(), grow) {
+    override var value: String by tc::text
+}
 
 
-class TextAreaWidget(
-    grow: Boolean = true,
-    verify: ((String) -> Unit)? = null
-) : TextComponentWidget(JTextArea(), grow, verify)
+class TextListWidget(
+    grow: Boolean = true
+) : AbstractTextComponentWidget<ImmutableList<String>>(JTextArea(), grow) {
+    override var value: ImmutableList<String>
+        get() = tc.text.split("\n").filter(String::isNotBlank).toImmutableList()
+        set(value) {
+            tc.text = value.joinToString("\n")
+        }
+}
 
 
-open class FilenameWidget(
-    grow: Boolean = true,
-    verify: ((String) -> Unit)? = null
-) : TextWidget(grow, verify) {
+abstract class AbstractFilenameWidget<V>(
+    grow: Boolean = true
+) : AbstractTextComponentWidget<V>(JTextField(), grow) {
 
     init {
         // When the user leaves the text field, ensure that it ends with an admissible file extension.
         tc.addFocusListener(object : FocusAdapter() {
             override fun focusLost(e: FocusEvent) {
-                text = text.ensureEndsWith(fileExts.map { ".$it" })
+                tc.text = tc.text.ensureEndsWith(fileExts.map { ".$it" })
             }
         })
     }
 
-    var fileExts: List<String> = emptyList()
+    var fileExts: ImmutableList<String> = persistentListOf()
         set(newFileExts) {
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
-            if (!newFileExts.any { text.endsWith(".$it") }) {
-                text = text.ensureDoesntEndWith(fileExts.map { ".$it" })
-                text = text.ensureEndsWith(newFileExts.map { ".$it" })
+            if (!newFileExts.any { tc.text.endsWith(".$it") }) {
+                tc.text = tc.text.ensureDoesntEndWith(fileExts.map { ".$it" })
+                tc.text = tc.text.ensureEndsWith(newFileExts.map { ".$it" })
             }
-            field = newFileExts.toMutableList()  // copy
+            field = newFileExts
         }
 
+}
+
+
+class FilenameWidget(
+    grow: Boolean = true
+) : AbstractFilenameWidget<String>(grow) {
+    override var value: String
+        get() = tc.text.trim()
+        set(value) {
+            tc.text = value.trim()
+        }
 }
 
 
 enum class FileType { FILE, DIRECTORY }
 
 class FileWidget(
-    fileType: FileType,
-    verify: ((Path) -> Unit)? = null
-) : FilenameWidget() {
+    fileType: FileType
+) : AbstractFilenameWidget<Path>() {
 
     private val browse = JButton(l10n("ui.form.browse"), FOLDER_ICON)
 
@@ -98,23 +114,23 @@ class FileWidget(
                 FileType.FILE -> JFileChooser.FILES_ONLY
                 FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
             }
-            fc.selectedFile = File(text.ensureDoesntEndWith(fileExts.map { ".$it" }))
+            fc.selectedFile = File(tc.text.ensureDoesntEndWith(fileExts.map { ".$it" }))
 
             if (fileExts.isNotEmpty()) {
                 fc.isAcceptAllFileFilterUsed = false
                 for (fileExt in fileExts) {
                     val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
                     fc.addChoosableFileFilter(filter)
-                    if (text.endsWith(".$fileExt"))
+                    if (tc.text.endsWith(".$fileExt"))
                         fc.fileFilter = filter
                 }
             }
 
             if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
-                text = fc.selectedFile.absolutePath
+                tc.text = fc.selectedFile.absolutePath
                 if (fileExts.isNotEmpty()) {
                     val selectedFileExts = (fc.fileFilter as FileNameExtensionFilter).extensions
-                    text = text.ensureEndsWith(selectedFileExts.map { ".$it" })
+                    tc.text = tc.text.ensureEndsWith(selectedFileExts.map { ".$it" })
                 }
             }
         }
@@ -123,32 +139,18 @@ class FileWidget(
     override val components = listOf<JComponent>(tc, browse)
     override val constraints = listOf("split, width 40%", "")
 
-    override val verify = {
-        val fileStr = text.trim()
-        if (fileStr.isEmpty())
-            throw Form.VerifyResult(Severity.ERROR, l10n("ui.blank"))
-        val file = Path.of(fileStr)
-        if (fileType == FileType.FILE && Files.isDirectory(file))
-            throw Form.VerifyResult(Severity.ERROR, l10n("ui.form.pathIsFolder"))
-        if (fileType == FileType.DIRECTORY && Files.isRegularFile(file))
-            throw Form.VerifyResult(Severity.ERROR, l10n("ui.form.pathIsFile"))
-        if (verify != null)
-            verify(file)
-    }
-
-    var file: Path
-        get() = Path.of(text.trim())
+    override var value: Path
+        get() = Path.of(tc.text.trim())
         set(value) {
-            text = value.toString()
+            tc.text = value.toString()
         }
 
 }
 
 
 class SpinnerWidget(
-    model: SpinnerModel,
-    verify: ((Any) -> Unit)? = null
-) : Form.Widget() {
+    model: SpinnerModel
+) : Form.AbstractWidget<Any>() {
 
     private val spinner = JSpinner(model).apply {
         addChangeListener { notifyChangeListeners() }
@@ -157,26 +159,22 @@ class SpinnerWidget(
 
     override val components = listOf(spinner)
     override val constraints = listOf("")
-    override val verify = verify?.let { { it(value) } }
 
-    var value: Any by spinner::value
+    override var value: Any by spinner::value
 
 }
 
 
-class CheckBoxWidget(
-    verify: ((Boolean) -> Unit)? = null
-) : Form.Widget() {
+class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 
     private val cb = JCheckBox().apply {
-        addActionListener { notifyChangeListeners() }
+        addItemListener { notifyChangeListeners() }
     }
 
     override val components = listOf(cb)
     override val constraints = listOf("")
-    override val verify = verify?.let { { it(isSelected) } }
 
-    var isSelected: Boolean
+    override var value: Boolean
         get() = cb.isSelected
         set(value) {
             cb.isSelected = value
@@ -186,85 +184,143 @@ class CheckBoxWidget(
 
 
 open class ComboBoxWidget<E>(
+    private val itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String = { it.toString() },
-    isEditable: Boolean = false,
     hFill: Boolean = false,
     private val scrollbar: Boolean = true,
-    decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>)? = null,
-    verify: ((E) -> Unit)? = null
-) : Form.Widget() {
+    decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>)? = null
+) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
 
     protected val cb = JComboBox<E>().apply {
-        addActionListener { notifyChangeListeners() }
-        this.isEditable = isEditable
+        addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
         setMinWidth100()
-        renderer = CustomToStringListCellRenderer(toString)
-        keySelectionManager = CustomToStringKeySelectionManager(toString)
+        renderer = CustomToStringListCellRenderer(itemClass, toString)
+        keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
     }
 
     override val components = listOf(cb)
     override val constraints = listOf(if (hFill) "width 100%" else "wmax 40%")
-    override val verify = verify?.let { { it(selectedItem) } }
 
-    var items: List<E> = emptyList()
-        set(value) {
-            field = value.toMutableList()  // copy
-            val newModel = DefaultComboBoxModel(Vector(value))
-            selectedItem?.let { newModel.selectedItem = it }
+    final override var items: ImmutableList<E> = persistentListOf()
+        set(items) {
+            field = items
+            val newModel = DefaultComboBoxModel(Vector(items))
+            value?.let { newModel.selectedItem = it }
             cb.model = newModel
             if (!scrollbar)
-                cb.maximumRowCount = value.size
+                cb.maximumRowCount = items.size
         }
 
-    open var selectedItem: E
-        @Suppress("UNCHECKED_CAST")
-        get() = cb.selectedItem as E
+    override var value: E
+        get() = itemClass.cast(cb.selectedItem)
         set(value) {
             cb.selectedItem = value
         }
 
     init {
-        this.items = items
+        this.items = items.toImmutableList()
     }
 
 }
 
 
-class InconsistentComboBoxWidget<E>(
+class InconsistentComboBoxWidget<E : Any>(
+    itemClass: Class<E>,
     items: List<E>,
-    toString: (E) -> String = { it.toString() },
-    inconsistencyWarning: String? = null,
-    verify: ((E) -> Unit)? = null
-) : ComboBoxWidget<E>(items, toString = toString, verify = verify) {
+    toString: (E) -> String = { it.toString() }
+) : ComboBoxWidget<E>(itemClass, items, toString) {
 
-    init {
-        cb.addActionListener {
-            cb.isEditable = false
-        }
-    }
-
-    override val verify: () -> Unit = {
-        if (selectedItem !in this.items && inconsistencyWarning != null)
-            throw Form.VerifyResult(Severity.WARN, inconsistencyWarning)
-        super.verify?.invoke()
-    }
-
-    override var selectedItem: E
-        get() = super.selectedItem
+    override var value: E
+        get() = super.value
         set(value) {
             cb.isEditable = value !in items
-            super.selectedItem = value
+            super.value = value
+            cb.isEditable = false
         }
+
+}
+
+
+open class EditableComboBoxWidget<E>(
+    itemClass: Class<E>,
+    items: List<E>,
+    toString: (E) -> String,
+    fromString: ((String) -> E)
+) : ComboBoxWidget<E>(itemClass, items, toString) {
+
+    init {
+        cb.isEditable = true
+
+        val wrappedEditor = cb.editor
+        cb.editor = object : ComboBoxEditor by wrappedEditor {
+            private var prevItem: Any? = null
+
+            override fun getItem(): Any? =
+                try {
+                    fromString(wrappedEditor.item as String)
+                } catch (_: IllegalArgumentException) {
+                    item = prevItem
+                    prevItem
+                }
+
+            override fun setItem(item: Any?) {
+                prevItem = item
+                wrappedEditor.item = toString(itemClass.cast(item))
+            }
+        }
+    }
+
+}
+
+
+class FPSWidget : EditableComboBoxWidget<FPS>(FPS::class.java, SUGGESTED_FPS, ::toDisplayString, ::fromDisplayString) {
+
+    companion object {
+
+        private val SUGGESTED_FRAC_FPS = listOf(
+            23.98 to FPS(24000, 1001),
+            29.97 to FPS(30000, 1001),
+            47.95 to FPS(48000, 1001),
+            59.94 to FPS(60000, 1001)
+        )
+        private val SUGGESTED_FPS: List<FPS>
+
+        init {
+            val suggestedIntFPS = listOf(24, 25, 30, 48, 50, 60)
+                .map { it.toDouble() to FPS(it, 1) }
+            SUGGESTED_FPS = (SUGGESTED_FRAC_FPS + suggestedIntFPS)
+                .sortedBy { it.first }
+                .map { it.second }
+        }
+
+        private fun toDisplayString(fps: FPS): String {
+            val frac = SUGGESTED_FRAC_FPS.find { it.second == fps }?.first
+            return when {
+                frac != null -> NumberFormat.getNumberInstance().format(frac)
+                fps.denominator == 1 -> fps.numerator.toString()
+                else -> fps.toString2()
+            }
+        }
+
+        private fun fromDisplayString(str: String): FPS {
+            runCatching { NumberFormat.getNumberInstance().parse(str) }.onSuccess { frac ->
+                SUGGESTED_FRAC_FPS.find { it.first == frac }?.let { return it.second }
+            }
+            runCatching(str::toInt).onSuccess { return FPS(it, 1) }
+            return str.toFPS()
+        }
+
+    }
 
 }
 
 
 class ComboBoxListWidget<E>(
+    private val itemClass: Class<E>,
     items: List<E>,
-    private val toString: (E) -> String = { it.toString() },
-    verify: ((List<E>) -> Unit)? = null
-) : Form.Widget() {
+    private val toString: (E) -> String = { it.toString() }
+) : Form.AbstractWidget<ImmutableList<E>>(), Form.ChoiceWidget<ImmutableList<E>, E> {
 
     private val panel = JPanel(MigLayout("insets 0"))
     private val addBtn = JButton(ADD_ICON)
@@ -272,8 +328,8 @@ class ComboBoxListWidget<E>(
     private val cbs = mutableListOf<JComboBox<E>>()
 
     init {
-        addBtn.addActionListener { selectedItems = selectedItems + selectedItems.last() }
-        delBtn.addActionListener { selectedItems = selectedItems.dropLast(1) }
+        addBtn.addActionListener { value = (value + value.last()).toImmutableList() }
+        delBtn.addActionListener { value = value.dropLast(1).toImmutableList() }
     }
 
     override val components = listOf<JComponent>(panel, addBtn, delBtn)
@@ -281,31 +337,29 @@ class ComboBoxListWidget<E>(
     // Note: We have to manually specify "aligny top" for the ComboBoxList for some reason. If we don't and a
     // multiline verification message occurs, the ComboBoxList does for some reason align itself in the middle.
     override val constraints = listOf("split, aligny top", "", "")
-    override val verify = verify?.let { { it(selectedItems) } }
 
-    var items: List<E> = items
-        set(value) {
-            field = value.toMutableList()  // copy
+    override var items: ImmutableList<E> = items.toImmutableList()
+        set(items) {
+            field = items
             for (cb in cbs)
-                cb.model = DefaultComboBoxModel(Vector(value))
+                cb.model = DefaultComboBoxModel(Vector(items))
         }
 
-    var selectedItems: List<E>
-        @Suppress("UNCHECKED_CAST")
-        get() = cbs.map { it.selectedItem as E }
-        set(sel) {
-            while (cbs.size < sel.size) {
+    override var value: ImmutableList<E>
+        get() = cbs.map { itemClass.cast(it.selectedItem) }.toImmutableList()
+        set(value) {
+            while (cbs.size < value.size) {
                 val comboBox = JComboBox(DefaultComboBoxModel(Vector(items))).apply {
-                    addActionListener { notifyChangeListeners() }
-                    renderer = CustomToStringListCellRenderer(toString)
-                    keySelectionManager = CustomToStringKeySelectionManager(toString)
+                    addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
+                    renderer = CustomToStringListCellRenderer(itemClass, toString)
+                    keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
                 }
                 cbs.add(comboBox)
                 panel.add(comboBox)
             }
-            while (cbs.size > sel.size)
+            while (cbs.size > value.size)
                 panel.remove(cbs.removeLast())
-            for ((comboBox, item) in cbs.zip(sel))
+            for ((comboBox, item) in cbs.zip(value))
                 comboBox.selectedItem = item
             panel.revalidate()
             delBtn.isEnabled = cbs.size != 1
@@ -316,9 +370,8 @@ class ComboBoxListWidget<E>(
 
 
 class ColorWellWidget(
-    allowAlpha: Boolean = true,
-    verify: ((Color) -> Unit)? = null
-) : Form.Widget() {
+    allowAlpha: Boolean = true
+) : Form.AbstractWidget<Color>() {
 
     private val btn = object : JButton(" ") {
         init {
@@ -343,7 +396,7 @@ class ColorWellWidget(
         btn.addActionListener {
             var newColor: Color? = null
 
-            val chooser = JColorChooser(selectedColor)
+            val chooser = JColorChooser(value)
             // Disable the horrible preview panel.
             chooser.previewPanel = JPanel()
             // Disable the ability to choose transparent colors if that is desired.
@@ -354,21 +407,18 @@ class ColorWellWidget(
                 btn, l10n("ui.form.colorChooserTitle"), true, chooser, { newColor = chooser.color }, null
             ).isVisible = true
 
-            newColor?.let {
-                selectedColor = it
-                notifyChangeListeners()
-            }
+            newColor?.let { value = it }
         }
     }
 
     override val components = listOf<JComponent>(btn)
     override val constraints = listOf("")
-    override val verify = verify?.let { { it(selectedColor) } }
 
-    var selectedColor: Color = Color.BLACK
+    override var value: Color = Color.BLACK
         set(value) {
             field = value
             btn.background = value
+            notifyChangeListeners()
         }
 
     private fun Graphics.drawCheckerboard(width: Int, height: Int, n: Int) {
@@ -383,45 +433,30 @@ class ColorWellWidget(
 }
 
 
-class FontChooserWidget(
-    verify: ((String) -> Unit)? = null
-) : Form.Widget() {
+class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<String> {
 
     private val familyComboBox = JComboBox<FontFamily>().apply {
         maximumRowCount = 20
-        keySelectionManager = CustomToStringKeySelectionManager<FontFamily> { it.familyName }
+        keySelectionManager = CustomToStringKeySelectionManager(FontFamily::class.java) { it.familyName }
     }
 
     private val fontComboBox = JComboBox<Any>(emptyArray()).apply {
         maximumRowCount = 20
         fun toString(value: Any) = if (value is Font) value.getFontName(Locale.ROOT) else value as String
         renderer = FontSampleListCellRenderer<Any>(::toString) { if (it is Font) it else null }
-        keySelectionManager = CustomToStringKeySelectionManager(::toString)
+        keySelectionManager = CustomToStringKeySelectionManager(Any::class.java, ::toString)
     }
 
     override val components = listOf(familyComboBox, fontComboBox)
     override val constraints = listOf("width 40%!", "newline, width 40%!")
 
-    override val verify = {
-        val fontName = selectedFontName
-        if (projectFamilies.getFamily(fontName) == null &&
-            BUNDLED_FAMILIES.getFamily(fontName) == null &&
-            SYSTEM_FAMILIES.getFamily(fontName) == null
-        ) {
-            val replFontName = getSystemFont(fontName).getFontName(Locale.ROOT)
-            throw Form.VerifyResult(Severity.WARN, l10n("ui.form.fontUnavailable", fontName, replFontName))
-        }
-        if (verify != null)
-            verify(fontName)
-    }
-
-    var projectFamilies: FontFamilies = FontFamilies(emptyList())
+    override var projectFamilies: FontFamilies = FontFamilies(emptyList())
         set(value) {
             field = value
             populateFamilyComboBox()
         }
 
-    var selectedFontName: String
+    override var value: String
         get() {
             val selectedFont = fontComboBox.selectedItem
             return if (selectedFont is Font) selectedFont.getFontName(Locale.ROOT) else selectedFont as String? ?: ""
@@ -470,10 +505,9 @@ class FontChooserWidget(
                 if (selectedFamily != null)
                     fontComboBox.selectedItem = selectedFamily.canonicalFont
                 fontComboBox.isEditable = false
-                notifyChangeListeners()
             }
         }
-        fontComboBox.addActionListener { notifyChangeListeners() }
+        fontComboBox.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
 
         populateFamilyComboBox()
     }
@@ -483,10 +517,10 @@ class FontChooserWidget(
         // it would trigger multiple times and, even worse, with intermediate states.
         disableFamilyListener = true
         try {
-            val selected = selectedFontName
+            val selected = value
             val families = projectFamilies.list + BUNDLED_FAMILIES.list + SYSTEM_FAMILIES.list
             familyComboBox.model = DefaultComboBoxModel(families.toTypedArray())
-            selectedFontName = selected
+            value = selected
         } finally {
             disableFamilyListener = false
         }

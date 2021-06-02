@@ -4,6 +4,7 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
@@ -11,6 +12,7 @@ import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
+import kotlinx.collections.immutable.toImmutableList
 import java.nio.file.Files
 import javax.swing.JOptionPane
 import javax.swing.JOptionPane.ERROR_MESSAGE
@@ -19,7 +21,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 
-class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
+class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm() {
 
     companion object {
         private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
@@ -36,7 +38,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
-            ALL_FORMATS, scrollbar = false,
+            RenderFormat::class.java, ALL_FORMATS, scrollbar = false,
             toString = {
                 val key =
                     if (it in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
@@ -57,45 +59,52 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
 
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
-        FileWidget(
-            FileType.DIRECTORY,
-            verify = {
-                if (Files.exists(it) && Files.list(it).findFirst().isPresent)
-                    throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
-            }),
-        isVisible = { formatWidget.selectedItem in SEQ_FORMATS },
+        FileWidget(FileType.DIRECTORY),
+        isVisible = { formatWidget.value in SEQ_FORMATS },
+        verify = {
+            when {
+                it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
+                Files.isRegularFile(it) -> Notice(Severity.ERROR, l10n("ui.deliverConfig.seqDirIsFile"))
+                Files.isDirectory(it) && Files.list(it).findFirst().isPresent ->
+                    Notice(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
+                else -> null
+            }
+        }
     )
     private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
-        FilenameWidget(
-            verify = {
-                if (!it.contains(Regex("%0\\d+d")))
-                    throw VerifyResult(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
-            }),
-        isVisible = { formatWidget.selectedItem in WholePageSequenceRenderJob.Format.ALL },
-    ).apply { text = "page-%02d" }
+        FilenameWidget(),
+        isVisible = { formatWidget.value in WholePageSequenceRenderJob.Format.ALL },
+        verify = {
+            if (!it.contains(Regex("%0\\d+d")))
+                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
+            else null
+        }
+    ).apply { value = "page-%02d" }
 
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
-        FileWidget(
-            FileType.FILE,
-            verify = {
-                if (Files.exists(it))
-                    throw VerifyResult(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
-            }),
-        isVisible = { formatWidget.selectedItem !in SEQ_FORMATS },
+        FileWidget(FileType.FILE),
+        isVisible = { formatWidget.value !in SEQ_FORMATS },
+        verify = {
+            when {
+                it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
+                Files.isDirectory(it) -> Notice(Severity.ERROR, l10n("ui.deliverConfig.singleFileIsFolder"))
+                Files.isRegularFile(it) -> Notice(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
+                else -> null
+            }
+        }
     )
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(
-            SpinnerNumberModel(1f, 0.01f, null, 0.5f),
-            verify = { verifyResolutionMult(it as Float) })
+        SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 0.5f)),
+        verify = { verifyResolutionMult(it as Float) }
     )
     private val transparentBackgroundWidget = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),
-        isEnabled = { formatWidget.selectedItem in ALPHA_FORMATS }
+        isEnabled = { formatWidget.value in ALPHA_FORMATS }
     )
 
     init {
@@ -107,39 +116,41 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
         // Set the directory-related fields to the project dir.
         val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
         val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
-        seqDirWidget.file = outputLoc
-        singleFileWidget.file = outputLoc
+        seqDirWidget.value = outputLoc
+        singleFileWidget.value = outputLoc
         // This ensure that file extensions are sensible.
         onFormatChange()
-
-        finishInit()
-
-        // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
-        preChangeListener = { widget -> if (widget == formatWidget) onFormatChange() }
     }
 
-    private fun verifyResolutionMult(resolutionMult: Float) {
-        val project = project ?: return
+    override fun onChange(widget: Widget<*>) {
+        // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
+        if (widget == formatWidget)
+            onFormatChange()
+
+        super.onChange(widget)
+    }
+
+    private fun verifyResolutionMult(resolutionMult: Float): Notice? {
+        val project = this.project ?: return null
 
         val scaledWidth = (resolutionMult * project.styling.global.widthPx).roundToInt()
         val scaledHeight = (resolutionMult * project.styling.global.heightPx).roundToInt()
         val yieldMsg = l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
 
-        fun err(msg: String) {
-            throw VerifyResult(Severity.ERROR, msg)
-        }
+        fun err(msg: String) = Notice(Severity.ERROR, msg)
 
         // Check for violated restrictions of the currently selected format.
-        val format = formatWidget.selectedItem
+        val format = formatWidget.value
+        val forLabel = format.label
         if (format is VideoRenderJob.Format)
             if (format.widthMod2 && scaledWidth % 2 != 0)
-                err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", yieldMsg, format.label))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", yieldMsg, forLabel))
             else if (format.heightMod2 && scaledHeight % 2 != 0)
-                err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", yieldMsg, format.label))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", yieldMsg, forLabel))
             else if (format.minWidth != null && scaledWidth < format.minWidth)
-                err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", yieldMsg, format.label, format.minWidth))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", yieldMsg, forLabel, format.minWidth))
             else if (format.minHeight != null && scaledWidth < format.minHeight)
-                err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", yieldMsg, format.label, format.minHeight))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", yieldMsg, forLabel, format.minHeight))
 
         // Check for fractional scroll speeds.
         val scrollSpeeds = project.pages
@@ -150,16 +161,16 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
         val fractionalScrollSpeeds = scrollSpeeds
             .filter { floor(it * resolutionMult) != it * resolutionMult }
         if (fractionalScrollSpeeds.isNotEmpty())
-            throw VerifyResult(
+            return Notice(
                 Severity.WARN,
                 l10n("ui.deliverConfig.resolutionMultiplierFractional", yieldMsg, fractionalScrollSpeeds.joinToString())
             )
 
-        throw VerifyResult(Severity.INFO, yieldMsg)
+        return Notice(Severity.INFO, yieldMsg)
     }
 
     private fun onFormatChange() {
-        val newFileExts = formatWidget.selectedItem.fileExts
+        val newFileExts = formatWidget.value.fileExts.toImmutableList()
         seqFilenamePatternWidget.fileExts = newFileExts
         singleFileWidget.fileExts = newFileExts
     }
@@ -176,22 +187,22 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : Form() {
                 DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
             }
 
-            val format = formatWidget.selectedItem
+            val format = formatWidget.value
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundWidget.isSelected, format,
-                    dir = seqDirWidget.file.normalize(), filenamePattern = seqFilenamePatternWidget.text
+                    transparentBackgroundWidget.value, format,
+                    dir = seqDirWidget.value.normalize(), filenamePattern = seqFilenamePatternWidget.value
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundWidget.isSelected,
-                    file = singleFileWidget.file.normalize()
+                    transparentBackgroundWidget.value,
+                    file = singleFileWidget.value.normalize()
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, drawnPages,
-                    scaling, transparentBackgroundWidget.isSelected && format.supportsAlpha, format,
-                    fileOrDir = (if (format.isImageSeq) seqDirWidget.file else singleFileWidget.file).normalize()
+                    scaling, transparentBackgroundWidget.value && format.supportsAlpha, format,
+                    fileOrDir = (if (format.isImageSeq) seqDirWidget.value else singleFileWidget.value).normalize()
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }

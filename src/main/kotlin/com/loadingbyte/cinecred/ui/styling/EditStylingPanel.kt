@@ -6,7 +6,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -20,10 +20,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     val stylingTreeHintOwner: Component
     // =================================
 
-    private val globalForm = GlobalForm()
-    private val pageStyleForm = PageStyleForm()
-    private val contentStyleForm = ContentStyleForm()
-    private val letterStyleForm = LetterStyleForm()
+    private val globalForm = StyleForm(Global::class.java)
+    private val pageStyleForm = StyleForm(PageStyle::class.java)
+    private val contentStyleForm = StyleForm(ContentStyle::class.java)
+    private val letterStyleForm = StyleForm(LetterStyle::class.java)
 
     // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
@@ -36,6 +36,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val stylingTree = StylingTree()
+
+    // Cache the styling which is currently stored in the styling tree as well as its constraint violations,
+    // so that we don't have to repeatedly regenerate both.
+    private var styling: Styling? = null
+    private var constraintViolations: List<ConstraintViolation> = emptyList()
+
+    // Keep track of the form which is currently open.
+    private var openedForm: StyleForm<*>? = null
 
     init {
         stylingTreeHintOwner = stylingTree
@@ -115,37 +123,39 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun openBlank() {
+        openedForm = null
         rightPanelCards.show(rightPanel, "Blank")
     }
 
     private fun openGlobal(global: Global) {
-        globalForm.open(global, onChange = { stylingTree.setSingleton(it); onChange() })
+        globalForm.open(global, onChange = { stylingTree.setSingleton(globalForm.save()); onChange() })
         postOpenForm("Global", globalForm)
     }
 
     private fun openPageStyle(style: PageStyle) {
         pageStyleForm.open(
-            style, stylingTree.getList(PageStyle::class.java),
-            onChange = { stylingTree.updateSelectedListElement(it); onChange() })
+            style,
+            onChange = { stylingTree.updateSelectedListElement(pageStyleForm.save()); onChange() })
         postOpenForm("PageStyle", pageStyleForm)
     }
 
     private fun openContentStyle(style: ContentStyle) {
         contentStyleForm.open(
-            style, stylingTree.getList(ContentStyle::class.java), stylingTree.getList(LetterStyle::class.java),
-            onChange = { stylingTree.updateSelectedListElement(it); onChange() })
+            style,
+            onChange = { stylingTree.updateSelectedListElement(contentStyleForm.save()); onChange() })
         postOpenForm("ContentStyle", contentStyleForm)
     }
 
     private fun openLetterStyle(style: LetterStyle) {
         var oldName = style.name
         letterStyleForm.open(
-            style, stylingTree.getList(LetterStyle::class.java),
+            style,
             onChange = {
-                stylingTree.updateSelectedListElement(it)
+                val newStyle = letterStyleForm.save()
+                stylingTree.updateSelectedListElement(newStyle)
 
                 // If the letter style changed its name, update all occurrences of that name in all content styles.
-                val newName = it.name
+                val newName = newStyle.name
                 if (oldName != newName)
                     for (oldContentStyle in stylingTree.getList(ContentStyle::class.java)) {
                         var newContentStyle = oldContentStyle
@@ -166,7 +176,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         postOpenForm("LetterStyle", letterStyleForm)
     }
 
-    private fun postOpenForm(cardName: String, form: Form) {
+    private fun postOpenForm(cardName: String, form: StyleForm<*>) {
+        openedForm = form
+        adjustOpenedForm()
         rightPanelCards.show(rightPanel, cardName)
         // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
         // Note that we have to delay this change because for some reason, if we don't, the change has no effect.
@@ -174,6 +186,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun setStyling(styling: Styling) {
+        this.styling = styling
+        constraintViolations = ctrl.verifyStylingConstraints(styling)
+
         stylingTree.setSingleton(styling.global)
         stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles + styling.letterStyles)
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
@@ -188,11 +203,34 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun onChange() {
         val styling = Styling(
             stylingTree.getSingleton(Global::class.java),
-            stylingTree.getList(PageStyle::class.java).toImmutableSet(),
-            stylingTree.getList(ContentStyle::class.java).toImmutableSet(),
-            stylingTree.getList(LetterStyle::class.java).toImmutableSet(),
+            stylingTree.getList(PageStyle::class.java).toImmutableList(),
+            stylingTree.getList(ContentStyle::class.java).toImmutableList(),
+            stylingTree.getList(LetterStyle::class.java).toImmutableList(),
         )
+        this.styling = styling
+        constraintViolations = ctrl.verifyStylingConstraints(styling)
+
+        adjustOpenedForm()
         ctrl.stylingHistory.editedAndRedraw(styling)
+    }
+
+    private fun adjustOpenedForm() {
+        val styling = this.styling ?: return
+        val openedForm = this.openedForm ?: return
+
+        val openedStyle = openedForm.save()
+
+        openedForm.clearNoticeOverrides()
+        for (violation in constraintViolations)
+            if (violation.style == openedStyle)
+                openedForm.setNoticeOverride(violation.setting, Form.Notice(violation.severity, violation.msg))
+
+        for (meta in getStyleMeta(openedStyle))
+            if (meta is DynChoiceConstr<Style, *>) {
+                val choices = meta.choices(styling, openedStyle).toImmutableList()
+                for (setting in meta.settings)
+                    openedForm.setDynChoices(setting, choices)
+            }
     }
 
 }

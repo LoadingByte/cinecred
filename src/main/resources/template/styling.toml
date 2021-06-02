@@ -28,6 +28,7 @@ bodyLetterStyleName = "{project.template.letterStyleBigBold}"
 bodyLayout = "GRID"
 gridElemBoxConform = "WIDTH"
 gridElemHJustifyPerCol = "LEFT"
+hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
@@ -37,6 +38,7 @@ headGapPx = 24.0
 name = "{project.template.contentStyleBullets}"
 bodyLetterStyleName = "{project.template.letterStyleBigBold}"
 bodyLayout = "FLOW"
+hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
@@ -60,8 +62,10 @@ name = "{project.template.contentStyleCard}"
 bodyLetterStyleName = "{project.template.letterStyleCardBigBold}"
 bodyLayout = "GRID"
 gridElemBoxConform = "WIDTH"
+hasHead = true
 headLetterStyleName = "{project.template.letterStyleCardSmall}"
 headGapPx = 32.0
+hasTail = true
 tailLetterStyleName = "{project.template.letterStyleCardSmall}"
 tailGapPx = 32.0
 

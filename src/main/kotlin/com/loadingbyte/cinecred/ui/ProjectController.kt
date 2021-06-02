@@ -1,13 +1,17 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.drawer.draw
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.project.Styling
+import com.loadingbyte.cinecred.project.verifyConstraints
 import com.loadingbyte.cinecred.projectio.*
+import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
+import com.loadingbyte.cinecred.ui.helper.SYSTEM_FAMILIES
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -143,10 +147,10 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     }
 
     private fun tryReadCreditsAndRedraw() {
-        fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, log: List<ParserMsg>) {
+        fun updateProjectAndLog(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
-                projectFrame.panel.editPanel.updateProjectAndLog(project, drawnPages, log)
+                projectFrame.panel.editPanel.updateProjectAndLog(project, drawnPages, styErr, log)
                 projectFrame.panel.videoPanel.updateProject(project, drawnPages)
                 projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
             }
@@ -158,12 +162,18 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         val locAndLoadLog = creditsFileLocatingLog + creditsFileLoadingLog
 
         if (creditsSpreadsheet == null) {
-            updateProjectAndLog(null, emptyList(), locAndLoadLog)
+            updateProjectAndLog(null, emptyList(), false, locAndLoadLog)
             return
         }
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
+            // If the styling is erroneous, abort drawing notify the UI about the error.
+            if (verifyStylingConstraints(styling).any { it.severity == Severity.ERROR }) {
+                updateProjectAndLog(null, emptyList(), true, emptyList())
+                return@submit
+            }
+
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
             // (which is quite a lot less because the function is often called multiple times in rapid succession).
@@ -178,7 +188,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                 else -> draw(project)
             }
 
-            updateProjectAndLog(project, drawnPages, locAndLoadLog + log)
+            updateProjectAndLog(project, drawnPages, false, locAndLoadLog + log)
         }
     }
 
@@ -215,6 +225,16 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         editStylingDialog.isVisible = isEditTabActive && isVisible
         projectFrame.panel.editPanel.onSetEditStylingDialogVisible(isVisible)
     }
+
+    /**
+     * Note: In contrast to most methods in this class, this method has no side-effects.
+     */
+    fun verifyStylingConstraints(styling: Styling) =
+        verifyConstraints(styling, isFontName = { fontName ->
+            fonts.values.any { font -> fontName == font.getFontName(Locale.ROOT) } ||
+                    BUNDLED_FAMILIES.getFamily(fontName) != null ||
+                    SYSTEM_FAMILIES.getFamily(fontName) != null
+        })
 
 
     companion object {

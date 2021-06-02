@@ -4,7 +4,7 @@ import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
-import com.loadingbyte.cinecred.ui.helper.Form
+import com.loadingbyte.cinecred.ui.helper.EasyForm
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
 import java.awt.Toolkit
 import java.awt.Window
@@ -16,12 +16,12 @@ import javax.swing.JFrame
 import javax.swing.JOptionPane
 
 
-class PreferencesForm : Form() {
+class PreferencesForm : EasyForm() {
 
     private val uiLocaleWidget = addWidget(
         l10n("ui.preferences.uiLocale"),
         ComboBoxWidget(
-            listOf(SYSTEM_LOCALE) + TRANSLATED_LOCALES, hFill = true,
+            Locale::class.java, listOf(SYSTEM_LOCALE) + TRANSLATED_LOCALES, hFill = true,
             toString = { if (it == SYSTEM_LOCALE) l10n("ui.preferences.uiLocaleSystem") else it.displayName })
     )
 
@@ -37,10 +37,6 @@ class PreferencesForm : Form() {
         )
     }
 
-    init {
-        finishInit()
-    }
-
 
     class Values(val uiLocale: Locale?, val checkForUpdates: Boolean, val pendingHintTracks: Set<String>)
 
@@ -54,10 +50,10 @@ class PreferencesForm : Form() {
          */
         fun showDialog(values: Values, parent: Window?, askForExit: Boolean): Pair<Values, Boolean>? {
             val form = PreferencesForm().apply {
-                uiLocaleWidget.selectedItem = values.uiLocale ?: SYSTEM_LOCALE
-                checkForUpdatesWidget.isSelected = values.checkForUpdates
+                uiLocaleWidget.value = values.uiLocale ?: SYSTEM_LOCALE
+                checkForUpdatesWidget.value = values.checkForUpdates
                 for (trackName in values.pendingHintTracks)
-                    hintTrackPendingWidgets[trackName]?.isSelected = true
+                    hintTrackPendingWidgets[trackName]?.value = true
             }
 
             val title = "Cinecred \u2013 ${l10n("ui.preferences.title")}"
@@ -93,9 +89,9 @@ class PreferencesForm : Form() {
             fun onClose() {
                 if (pane.value == JOptionPane.OK_OPTION) {
                     val newValues = Values(
-                        form.uiLocaleWidget.selectedItem.let { if (it == SYSTEM_LOCALE) null else it },
-                        form.checkForUpdatesWidget.isSelected,
-                        form.hintTrackPendingWidgets.filterValues(CheckBoxWidget::isSelected).keys
+                        form.uiLocaleWidget.value.let { if (it == SYSTEM_LOCALE) null else it },
+                        form.checkForUpdatesWidget.value,
+                        form.hintTrackPendingWidgets.filterValues(CheckBoxWidget::value).keys
                     )
                     var exit = false
                     if (askForExit && newValues.uiLocale != values.uiLocale)

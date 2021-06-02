@@ -13,6 +13,10 @@ import javax.swing.border.CompoundBorder
 import javax.swing.table.TableCellRenderer
 
 
+val PALETTE_RED: Color = Color.decode("#C75450")
+val PALETTE_GREEN: Color = Color.decode("#499C54")
+
+
 fun newLabelTextArea() = JTextArea().apply {
     background = null
     isEditable = false
@@ -53,14 +57,16 @@ class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
 }
 
 
-@Suppress("UNCHECKED_CAST")
-class CustomToStringListCellRenderer<E>(private val toString: (E) -> String) : DefaultListCellRenderer() {
+class CustomToStringListCellRenderer<E>(
+    private val itemClass: Class<E>,
+    private val toString: (E) -> String
+) : DefaultListCellRenderer() {
 
     override fun getListCellRendererComponent(
         list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
     ): Component {
         super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-        text = value?.let { toString(it as E) } ?: ""
+        text = value?.let { toString(itemClass.cast(it)) } ?: ""
         return this
     }
 
@@ -136,14 +142,16 @@ class LabeledListCellRenderer<E>(
 }
 
 
-@Suppress("UNCHECKED_CAST")
-class CustomToStringKeySelectionManager<E>(private val toString: (E) -> String) : JComboBox.KeySelectionManager {
+class CustomToStringKeySelectionManager<E>(
+    private val itemClass: Class<E>,
+    private val toString: (E) -> String
+) : JComboBox.KeySelectionManager {
 
     private var lastTime = 0L
     private var prefix = ""
 
     override fun selectionForKey(key: Char, model: ComboBoxModel<*>): Int {
-        var startIdx = (model as ComboBoxModel<E>).getElements().indexOfFirst { it === model.selectedItem }
+        var startIdx = model.getElements().indexOfFirst { it === model.selectedItem }
 
         val timeFactor = UIManager.get("ComboBox.timeFactor") as Long? ?: 1000L
         val currTime = System.currentTimeMillis()
@@ -166,10 +174,10 @@ class CustomToStringKeySelectionManager<E>(private val toString: (E) -> String) 
             model.getElements(0, startIdx).indexOfFirst(::startsWith)
     }
 
-    private fun ComboBoxModel<E>.getElements(startIdx: Int = 0, endIdx: Int = -1): List<E> = mutableListOf<E>().apply {
+    private fun ComboBoxModel<*>.getElements(startIdx: Int = 0, endIdx: Int = -1): List<E> = mutableListOf<E>().apply {
         val endIdx2 = if (endIdx == -1) size else endIdx
         for (idx in startIdx until endIdx2)
-            add(getElementAt(idx))
+            add(itemClass.cast(getElementAt(idx)))
     }
 
 }

@@ -16,12 +16,14 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import java.awt.Dimension
 import java.awt.image.BufferedImage
-import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import javax.imageio.stream.FileImageOutputStream
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.math.roundToInt
 
 
@@ -36,7 +38,7 @@ class WholePageSequenceRenderJob(
     override fun generatesFile(file: Path) = file.startsWith(dir)
 
     override fun render(progressCallback: (Float) -> Unit) {
-        Files.createDirectories(dir)
+        dir.createDirectories()
 
         val layers = if (transparentBackground) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 
@@ -65,7 +67,7 @@ class WholePageSequenceRenderJob(
                     //     will be thrown, but the error message is lost.
                     val writer = ImageIO.getImageWritersBySuffix(format.fileExts[0]).next()
                     try {
-                        Files.deleteIfExists(pageFile)
+                        pageFile.deleteIfExists()
                         FileImageOutputStream(pageFile.toFile()).use { stream ->
                             writer.output = stream
                             val param = writer.defaultWriteParam
@@ -90,7 +92,7 @@ class WholePageSequenceRenderJob(
                     g2.svgCanvasSize = Dimension(pageWidth, pageHeight)
                     pageDefImage.materialize(g2, layers)
 
-                    Files.newBufferedWriter(pageFile).use { writer -> g2.stream(writer, true) }
+                    pageFile.bufferedWriter().use { writer -> g2.stream(writer, true) }
                 }
             }
 
@@ -121,7 +123,7 @@ class WholePagePDFRenderJob(
     override fun generatesFile(file: Path) = file == this.file
 
     override fun render(progressCallback: (Float) -> Unit) {
-        Files.createDirectories(file.parent)
+        file.parent.createDirectories()
 
         val layers = if (transparentBackground) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
 

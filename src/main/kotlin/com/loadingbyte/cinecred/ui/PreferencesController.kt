@@ -7,6 +7,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.prefs.Preferences
+import kotlin.io.path.isDirectory
+import kotlin.io.path.isRegularFile
 
 
 object PreferencesController {
@@ -99,7 +101,7 @@ object PreferencesController {
             // Do not base this decision on the existence of a credits file because this file might just be
             // moved around a little by the user at the same time this function is called.
             val modified = dirs.removeAll { dir ->
-                !Files.isDirectory(dir) || !Files.isRegularFile(dir.resolve(ProjectController.STYLING_FILE_NAME))
+                !dir.isDirectory() || !dir.resolve(ProjectController.STYLING_FILE_NAME).isRegularFile()
             }
             if (modified)
                 memorizedProjectDirs = dirs

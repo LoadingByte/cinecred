@@ -5,9 +5,9 @@ import com.loadingbyte.cinecred.projectio.copyTemplate
 import com.loadingbyte.cinecred.projectio.locateCreditsFile
 import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
-import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JOptionPane
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.notExists
 
 
@@ -32,7 +32,7 @@ object OpenController {
     }
 
     fun tryOpenProject(projectDir: Path) {
-        if (blockOpening || Files.isRegularFile(projectDir))
+        if (blockOpening || projectDir.isRegularFile())
             return
 
         if (projectCtrls.any { it.projectDir == projectDir }) {

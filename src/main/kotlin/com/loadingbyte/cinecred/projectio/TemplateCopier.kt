@@ -4,11 +4,14 @@ import com.loadingbyte.cinecred.common.l10n
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.createDirectories
+import kotlin.io.path.notExists
+import kotlin.io.path.writeText
 
 
 fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyStyling: Boolean, copyCredits: Boolean) {
-    if (Files.notExists(destDir))
-        Files.createDirectories(destDir)
+    if (destDir.notExists())
+        destDir.createDirectories()
 
     if (copyStyling)
         copyStylingTemplate(destDir, locale)
@@ -19,7 +22,7 @@ fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyS
 
 private fun copyStylingTemplate(destDir: Path, locale: Locale) {
     val text = readFillingPlaceholders("/template/styling.toml", locale)
-    Files.writeString(destDir.resolve("Styling.toml"), text)
+    destDir.resolve("Styling.toml").writeText(text)
 }
 
 
@@ -30,8 +33,8 @@ private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: Spreadshe
     format.write(destDir.resolve("Credits.${format.fileExt}"), spreadsheet, colWidths)
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
-    if (!Files.exists(logoFile)) {
-        Files.createDirectories(logoFile.parent)
+    if (logoFile.notExists()) {
+        logoFile.parent.createDirectories()
         Dummy.javaClass.getResourceAsStream("/logo.svg")!!.use { stream -> Files.copy(stream, logoFile) }
     }
 }

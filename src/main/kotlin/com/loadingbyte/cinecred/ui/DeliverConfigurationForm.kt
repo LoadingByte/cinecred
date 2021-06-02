@@ -13,10 +13,13 @@ import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
-import java.nio.file.Files
 import javax.swing.JOptionPane
 import javax.swing.JOptionPane.ERROR_MESSAGE
 import javax.swing.SpinnerNumberModel
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.useDirectoryEntries
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -64,8 +67,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         verify = {
             when {
                 it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
-                Files.isRegularFile(it) -> Notice(Severity.ERROR, l10n("ui.deliverConfig.seqDirIsFile"))
-                Files.isDirectory(it) && Files.list(it).findFirst().isPresent ->
+                it.isRegularFile() -> Notice(Severity.ERROR, l10n("ui.deliverConfig.seqDirIsFile"))
+                it.isDirectory() && it.useDirectoryEntries { seq -> seq.iterator().hasNext() } ->
                     Notice(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
                 else -> null
             }
@@ -89,8 +92,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         verify = {
             when {
                 it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
-                Files.isDirectory(it) -> Notice(Severity.ERROR, l10n("ui.deliverConfig.singleFileIsFolder"))
-                Files.isRegularFile(it) -> Notice(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
+                it.isDirectory() -> Notice(Severity.ERROR, l10n("ui.deliverConfig.singleFileIsFolder"))
+                it.exists() -> Notice(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
                 else -> null
             }
         }

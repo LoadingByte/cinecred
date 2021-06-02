@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import java.nio.file.*
 import java.nio.file.StandardWatchEventKinds.*
+import kotlin.io.path.isDirectory
 
 
 object RecursiveFileWatcher {
@@ -16,7 +17,7 @@ object RecursiveFileWatcher {
         synchronized(lock) {
             val watchKeys = HashSet<WatchKey>()
             for (file in Files.walk(rootDir))
-                if (Files.isDirectory(file))
+                if (file.isDirectory())
                     watchKeys.add(file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY))
             orders[rootDir] = Order(listener, watchKeys)
         }
@@ -39,7 +40,7 @@ object RecursiveFileWatcher {
                             val file = (watchKey.watchable() as Path).resolve(event.context() as Path)
 
                             // If the file is a directory, we have to (de)register a watching instruction for it.
-                            if (Files.isDirectory(file))
+                            if (file.isDirectory())
                                 if (event.kind() == ENTRY_CREATE) {
                                     val newWatchKey = file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
                                     order.watchKeys.add(newWatchKey)

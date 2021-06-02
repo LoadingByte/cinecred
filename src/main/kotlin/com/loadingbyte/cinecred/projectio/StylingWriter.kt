@@ -6,9 +6,9 @@ import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.project.findIrrelevantSettings
 import com.loadingbyte.cinecred.project.getStyleSettings
 import java.awt.Color
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.bufferedWriter
 
 
 fun writeStyling(stylingFile: Path, styling: Styling) {
@@ -19,7 +19,7 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
         "letterStyle" to styling.letterStyles.map(::writeStyle)
     )
 
-    Files.newBufferedWriter(stylingFile).use { writer ->
+    stylingFile.bufferedWriter().use { writer ->
         // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
         TomlWriter(writer, 1, false, "\n").write(toml)
     }

@@ -11,6 +11,7 @@ import java.awt.datatransfer.DataFlavor
 import java.io.File
 import java.nio.file.Files
 import javax.swing.*
+import kotlin.io.path.isDirectory
 
 
 object OpenPanel : JPanel() {
@@ -95,7 +96,7 @@ object OpenPanel : JPanel() {
             // Note: As the drag-and-drop thread is not the EDT thread, we use SwingUtilities.invokeLater()
             // to make sure all action happens in the EDT thread.
             val file = (transferData[0] as File).toPath()
-            if (Files.isDirectory(file))
+            if (file.isDirectory())
                 SwingUtilities.invokeLater { OpenController.tryOpenProject(file) }
             else if (file.parent != null)
                 SwingUtilities.invokeLater { OpenController.tryOpenProject(file.parent) }

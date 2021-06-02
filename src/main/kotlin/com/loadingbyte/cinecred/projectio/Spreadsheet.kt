@@ -13,6 +13,7 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.readText
 
 
 typealias Spreadsheet = List<SpreadsheetRecord>
@@ -162,7 +163,7 @@ object CsvFormat : SpreadsheetFormat {
     override val fileExt = "csv"
 
     override fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
-        return Pair(read(Files.readString(file)), emptyList())
+        return Pair(read(file.readText()), emptyList())
     }
 
     fun read(text: String): Spreadsheet {

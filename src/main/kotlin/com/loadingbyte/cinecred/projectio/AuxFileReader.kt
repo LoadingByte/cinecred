@@ -13,20 +13,18 @@ import java.awt.Desktop
 import java.awt.Font
 import java.awt.FontFormatException
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import javax.imageio.ImageIO
 import javax.swing.JEditorPane
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
-import kotlin.io.path.extension
-import kotlin.streams.toList
+import kotlin.io.path.*
 
 
 fun tryReadFont(fontFile: Path): Font? {
     val ext = fontFile.extension
-    if (Files.isRegularFile(fontFile) && (ext == "ttf" || ext == "otf"))
+    if (fontFile.isRegularFile() && (ext == "ttf" || ext == "otf"))
         try {
             return Font.createFonts(fontFile.toFile())[0]
         } catch (_: FontFormatException) {
@@ -39,7 +37,7 @@ private val RASTER_PICTURE_EXTS = ImageIO.getReaderFileSuffixes().toSet()
 
 fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
     val ext = pictureFile.extension
-    if (Files.isRegularFile(pictureFile))
+    if (pictureFile.isRegularFile())
         when (ext) {
             in RASTER_PICTURE_EXTS -> return lazy { runCatching { loadRaster(pictureFile) }.getOrNull() }
             "svg" -> return lazy { runCatching { loadSVG(pictureFile) }.getOrNull() }
@@ -58,7 +56,7 @@ private fun loadRaster(rasterFile: Path): Picture.Raster =
 // https://github.com/apache/xmlgraphics-batik/blob/trunk/batik-transcoder/src/main/java/org/apache/batik/transcoder/SVGAbstractTranscoder.java
 private fun loadSVG(svgFile: Path): Picture.SVG {
     val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-        .createDocument(svgFile.toUri().toString(), Files.newBufferedReader(svgFile)) as SVGOMDocument
+        .createDocument(svgFile.toUri().toString(), svgFile.bufferedReader()) as SVGOMDocument
     val docRoot = doc.rootElement
     val ctx = when {
         doc.isSVG12 -> SVG12BridgeContext(UserAgentAdapter())
@@ -87,7 +85,7 @@ private fun loadSVG(svgFile: Path): Picture.SVG {
 private fun loadPDF(pdfFile: Path): Picture.PDF {
     // Note: We manually create an input stream and pass it to PDDocument.load() because when passing a
     // file object to that method and letting PDFBox create the input stream, it seems to forget to close it.
-    val doc = Files.newInputStream(pdfFile).use { stream -> PDDocument.load(stream) }
+    val doc = pdfFile.inputStream().use { stream -> PDDocument.load(stream) }
     if (doc.numberOfPages != 0)
         return Picture.PDF(doc)
     else
@@ -99,10 +97,10 @@ private val GS_EXECUTABLE: Path? by lazy {
     try {
         if (System.getProperty("os.name").startsWith("windows", ignoreCase = true)) {
             for (dir in listOf(Path.of("C:\\Program Files\\gs"), Path.of("C:\\Program Files (x86)\\gs")))
-                if (Files.isDirectory(dir))
-                    for (dir2 in Files.list(dir).toList().sortedDescending()) {
+                if (dir.isDirectory())
+                    for (dir2 in dir.listDirectoryEntries().sortedDescending()) {
                         val gs = dir.resolve(dir2).resolve("bin\\gswin64c.exe")
-                        if (Files.isExecutable(gs))
+                        if (gs.isExecutable())
                             return@lazy gs
                     }
         } else {
@@ -112,7 +110,7 @@ private val GS_EXECUTABLE: Path? by lazy {
                     listOf(home.resolve("bin"), home.resolve("Applications"))
             for (dir in candidateDirs) {
                 val gs = dir.resolve("gs")
-                if (Files.isExecutable(gs))
+                if (gs.isExecutable())
                     return@lazy gs
             }
         }
@@ -141,7 +139,7 @@ private val GS_LOGGER = LoggerFactory.getLogger("Ghostscript")
 
 private fun loadPostScript(psFile: Path): Picture.PDF {
     val gs = GS_EXECUTABLE ?: throw IOException()
-    val tmpFile = Files.createTempFile("cinecred-ps2pdf-", ".pdf")
+    val tmpFile = createTempFile("cinecred-ps2pdf-", ".pdf")
     try {
         val cmd = arrayOf(gs.toString(), "-sDEVICE=pdfwrite", "-o", tmpFile.toString(), psFile.toString())
         val process = Runtime.getRuntime().exec(cmd)
@@ -164,7 +162,7 @@ private fun loadPostScript(psFile: Path): Picture.PDF {
         }
         throw IOException()
     } finally {
-        // Presumably because of some Kotlin compiler bug, we have to put try-catch block with a Files.delete()
+        // Presumably because of some Kotlin compiler bug, we have to put try-catch block with a deleteExisting() call
         // into an extra method. If we don't, the compiler generates branches where the try-catch block is missing.
         tryDeleteFile(tmpFile)
     }
@@ -172,7 +170,7 @@ private fun loadPostScript(psFile: Path): Picture.PDF {
 
 private fun tryDeleteFile(file: Path) {
     try {
-        Files.delete(file)
+        file.deleteExisting()
     } catch (_: IOException) {
         // Ignore; don't bother the user when a probably tiny PDF file can't be deleted that will be deleted
         // by the OS the next time the user restarts his system anyways.

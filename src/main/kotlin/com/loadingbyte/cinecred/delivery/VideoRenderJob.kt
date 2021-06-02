@@ -10,8 +10,9 @@ import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.image.BufferedImage
-import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 
 
 class VideoRenderJob(
@@ -35,10 +36,10 @@ class VideoRenderJob(
 
     override fun render(progressCallback: (Float) -> Unit) {
         // If we have an image sequence, delete the sequence directory if it already exists.
-        if (format.isImageSeq && Files.exists(fileOrPattern.parent))
+        if (format.isImageSeq && fileOrPattern.parent.exists())
             FileUtils.cleanDirectory(fileOrPattern.parent.toFile())
         // Make sure that the parent directory exists.
-        Files.createDirectories(fileOrPattern.parent)
+        fileOrPattern.parent.createDirectories()
 
         val imageType = if (transparentBackground) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
 

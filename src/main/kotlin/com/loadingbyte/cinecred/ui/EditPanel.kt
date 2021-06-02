@@ -302,7 +302,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         // Put the new parser log messages into the log table.
-        logTableModel.log = log.sortedWith(compareBy(ParserMsg::severity, ParserMsg::recordNo))
+        logTableModel.log = log.sortedWith(compareByDescending(ParserMsg::severity).thenBy(ParserMsg::recordNo))
     }
 
     private fun updatePageTabs(project: Project?, drawnPages: List<DrawnPage>) {

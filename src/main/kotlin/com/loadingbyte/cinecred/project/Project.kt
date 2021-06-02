@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.Picture
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.toImmutableSet
 import java.awt.Color
 import java.awt.Font
 import java.util.*
@@ -20,7 +21,30 @@ data class Styling constructor(
     val pageStyles: ImmutableList<PageStyle>,
     val contentStyles: ImmutableList<ContentStyle>,
     val letterStyles: ImmutableList<LetterStyle>
-)
+) {
+
+    // We want to allow duplicate styles, but equality should ignore order and duplicates. Hence, we use lists to
+    // store the styles, but generate the following sets, which are then only used for equals() and hashCode().
+    // Note that since almost every styling object will eventually have its equals() or hashCode() called,
+    // we do not need to make these properties lazy.
+    private val pageStyleSet = pageStyles.toImmutableSet()
+    private val contentStyleSet = contentStyles.toImmutableSet()
+    private val letterStyleSet = letterStyles.toImmutableSet()
+
+    override fun equals(other: Any?) =
+        this === other ||
+                other is Styling && global == other.global && pageStyleSet == other.pageStyleSet &&
+                contentStyleSet == other.contentStyleSet && letterStyleSet == other.letterStyleSet
+
+    override fun hashCode(): Int {
+        var result = global.hashCode()
+        result = 31 * result + pageStyleSet.hashCode()
+        result = 31 * result + contentStyleSet.hashCode()
+        result = 31 * result + letterStyleSet.hashCode()
+        return result
+    }
+
+}
 
 
 data class Global(

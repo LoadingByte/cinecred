@@ -55,17 +55,20 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.addListType(
             PageStyle::class.java, l10n("ui.styling.pageStyles"), FILMSTRIP_ICON,
             onSelect = ::openPageStyle,
-            objToString = { it.name }, copyObj = { it.copy() }
+            objToString = PageStyle::name,
+            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
         )
         stylingTree.addListType(
             ContentStyle::class.java, l10n("ui.styling.contentStyles"), LAYOUT_ICON,
             onSelect = ::openContentStyle,
-            objToString = { it.name }, copyObj = { it.copy() }
+            objToString = ContentStyle::name,
+            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
         )
         stylingTree.addListType(
             LetterStyle::class.java, l10n("ui.styling.letterStyles"), LETTERS_ICON,
             onSelect = ::openLetterStyle,
-            objToString = { it.name }, copyObj = { it.copy() }
+            objToString = LetterStyle::name,
+            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
         )
 
         fun JButton.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
@@ -94,7 +97,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             onChange()
         }
         duplicateStyleButton.addActionListener {
-            if (stylingTree.duplicateSelectedListElement())
+            if (stylingTree.duplicateSelectedListElement(selectDuplicate = true))
                 onChange()
         }
         removeStyleButton.addActionListener {

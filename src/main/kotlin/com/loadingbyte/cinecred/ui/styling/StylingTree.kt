@@ -116,10 +116,10 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
-    fun duplicateSelectedListElement(): Boolean {
+    fun duplicateSelectedListElement(selectDuplicate: Boolean = false): Boolean {
         val selectedNodeUserObj = (selectedNode ?: return false).userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
-            addListElement(selectedNodeUserObj.typeInfo.copyObj(selectedNodeUserObj.obj))
+            addListElement(selectedNodeUserObj.typeInfo.copyObj(selectedNodeUserObj.obj), selectDuplicate)
             return true
         }
         return false

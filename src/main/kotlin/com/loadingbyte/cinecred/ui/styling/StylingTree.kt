@@ -199,8 +199,9 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
             val parent = node.parent as DefaultMutableTreeNode
             model.removeNodeFromParent(node)
+            val nodeStr = node.userObject.toString()
             var idx = parent.children().asSequence().indexOfFirst {
-                (it as DefaultMutableTreeNode).userObject.toString() > node.userObject.toString()
+                String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr) > 0
             }
             if (idx == -1)
                 idx = parent.childCount

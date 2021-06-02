@@ -19,8 +19,6 @@ import java.nio.file.Path
 import java.text.NumberFormat
 import java.util.*
 import javax.swing.*
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.JTextComponent
 import kotlin.math.ceil
@@ -32,7 +30,14 @@ abstract class AbstractTextComponentWidget<V>(
 ) : Form.AbstractWidget<V>() {
 
     init {
-        tc.addChangeListener { notifyChangeListeners() }
+        tc.addFocusListener(object : FocusAdapter() {
+            override fun focusLost(e: FocusEvent) {
+                notifyChangeListeners()
+            }
+        })
+        if (tc is JTextField)
+            tc.addActionListener { notifyChangeListeners() }
+
         tc.setMinWidth100()
     }
 
@@ -45,7 +50,12 @@ abstract class AbstractTextComponentWidget<V>(
 class TextWidget(
     grow: Boolean = true
 ) : AbstractTextComponentWidget<String>(JTextField(), grow) {
-    override var value: String by tc::text
+    override var value: String
+        get() = tc.text
+        set(value) {
+            tc.text = value
+            notifyChangeListeners()
+        }
 }
 
 
@@ -56,6 +66,7 @@ class TextListWidget(
         get() = tc.text.split("\n").filter(String::isNotBlank).toImmutableList()
         set(value) {
             tc.text = value.joinToString("\n")
+            notifyChangeListeners()
         }
 }
 
@@ -63,15 +74,6 @@ class TextListWidget(
 abstract class AbstractFilenameWidget<V>(
     grow: Boolean = true
 ) : AbstractTextComponentWidget<V>(JTextField(), grow) {
-
-    init {
-        // When the user leaves the text field, ensure that it ends with an admissible file extension.
-        tc.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) {
-                tc.text = tc.text.ensureEndsWith(fileExts.map { ".$it" })
-            }
-        })
-    }
 
     var fileExts: ImmutableList<String> = persistentListOf()
         set(newFileExts) {
@@ -85,6 +87,12 @@ abstract class AbstractFilenameWidget<V>(
             field = newFileExts
         }
 
+    override fun notifyChangeListeners() {
+        // Ensure that the filename ends with an admissible file extension.
+        tc.text = tc.text.ensureEndsWith(fileExts.map { ".$it" })
+        super.notifyChangeListeners()
+    }
+
 }
 
 
@@ -95,6 +103,7 @@ class FilenameWidget(
         get() = tc.text.trim()
         set(value) {
             tc.text = value.trim()
+            notifyChangeListeners()
         }
 }
 
@@ -143,6 +152,7 @@ class FileWidget(
         get() = Path.of(tc.text.trim())
         set(value) {
             tc.text = value.toString()
+            notifyChangeListeners()
         }
 
 }
@@ -592,12 +602,4 @@ private fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boole
 
 private fun <C : Component> C.setMinWidth100() {
     minimumSize = Dimension(100, minimumSize.height)
-}
-
-private inline fun JTextComponent.addChangeListener(crossinline listener: () -> Unit) {
-    document.addDocumentListener(object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = listener()
-        override fun removeUpdate(e: DocumentEvent) = listener()
-        override fun changedUpdate(e: DocumentEvent) = listener()
-    })
 }

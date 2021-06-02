@@ -78,7 +78,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 comp.putClientProperty(OUTLINE, outline)
         }
 
-        protected fun notifyChangeListeners() {
+        protected open fun notifyChangeListeners() {
             for (listener in changeListeners)
                 listener()
         }

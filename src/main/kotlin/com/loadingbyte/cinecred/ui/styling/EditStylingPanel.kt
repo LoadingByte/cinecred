@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
 import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
@@ -190,12 +191,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun setStyling(styling: Styling) {
         this.styling = styling
-        constraintViolations = ctrl.verifyStylingConstraints(styling)
 
         stylingTree.setSingleton(styling.global)
         stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles + styling.letterStyles)
+        refreshConstraintViolations()
+
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
-        // which then updates the right panel.
+        // which then updates the right panel. If the node is a style node, that callback will also in turn call
+        // postOpenForm(), which will in turn call adjustOpenedForm().
         stylingTree.triggerOnSelectOrOnDeselect()
     }
 
@@ -211,10 +214,21 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             stylingTree.getList(LetterStyle::class.java).toImmutableList(),
         )
         this.styling = styling
-        constraintViolations = ctrl.verifyStylingConstraints(styling)
 
+        refreshConstraintViolations()
         adjustOpenedForm()
         ctrl.stylingHistory.editedAndRedraw(styling)
+    }
+
+    private fun refreshConstraintViolations() {
+        constraintViolations = ctrl.verifyStylingConstraints(styling ?: return)
+
+        val severityPerStyle = HashMap<Style, Severity>()
+        for (violation in constraintViolations)
+            severityPerStyle[violation.style] =
+                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.style, Severity.values()[0]))
+        val extraIcons = severityPerStyle.mapValues { (_, severity) -> listOf(SEVERITY_ICON.getValue(severity)) }
+        stylingTree.setExtraIcons(extraIcons)
     }
 
     private fun adjustOpenedForm() {

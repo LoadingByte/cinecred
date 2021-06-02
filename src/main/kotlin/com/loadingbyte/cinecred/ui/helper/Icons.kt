@@ -20,6 +20,8 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 
+const val ICON_ICON_GAP = 4
+
 val WINDOW_ICON_IMAGES = run {
     val (logo, ctx) = loadSVGResource("/logo.svg")
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
@@ -119,12 +121,13 @@ class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val hei
 
 
 class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGIcon) :
-    FlatAbstractIcon(left.width + 4 + right.width, max(left.height, right.height), null), FlatLaf.DisabledIconProvider {
+    FlatAbstractIcon(left.width + ICON_ICON_GAP + right.width, max(left.height, right.height), null),
+    FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         g2.preserveTransform {
             left.svg.paint(g2)
-            g2.translate(left.width + 4, 0)
+            g2.translate(left.width + ICON_ICON_GAP, 0)
             right.svg.paint(g2)
         }
     }

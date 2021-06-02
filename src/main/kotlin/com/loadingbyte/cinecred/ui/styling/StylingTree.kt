@@ -1,6 +1,9 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.ui.helper.ICON_ICON_GAP
 import java.awt.Component
+import java.awt.Dimension
+import java.awt.Graphics
 import javax.swing.Icon
 import javax.swing.JTree
 import javax.swing.event.TreeExpansionEvent
@@ -38,17 +41,8 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         })
 
         // Each node gets an icon depending on which type it is part of.
-        setCellRenderer(object : DefaultTreeCellRenderer() {
-            override fun getTreeCellRendererComponent(
-                tree: JTree, value: Any, sel: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean
-            ): Component {
-                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
-                val userObj = (value as DefaultMutableTreeNode).userObject
-                if (userObj is StoredObj)
-                    icon = userObj.typeInfo.icon
-                return this
-            }
-        })
+        // In addition, optional extra icons are rendered at the right side of each node.
+        setCellRenderer(StylingTreeCellRenderer())
 
         // When the user selects a node that stores an object, notify the callback.
         addTreeSelectionListener {
@@ -62,10 +56,9 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     fun <T : Any> addSingletonType(initial: T, label: String, icon: Icon, onSelect: (T) -> Unit) {
         val node = DefaultMutableTreeNode(null, false)
         model.insertNodeInto(node, rootNode, rootNode.childCount)
-        singletonTypeInfos[initial.javaClass] = TypeInfo.Singleton(
-            icon, node, onSelect as (Any) -> Unit, label
-        )
-        setSingleton(initial)
+        val typeInfo = TypeInfo.Singleton(icon, node, onSelect as (Any) -> Unit, label)
+        singletonTypeInfos[initial.javaClass] = typeInfo
+        node.userObject = StoredObj(typeInfo, initial)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -86,7 +79,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     fun setSingleton(singleton: Any) {
         val typeInfo = singletonTypeInfos.getValue(singleton.javaClass)
-        typeInfo.node.userObject = StoredObj(typeInfo, singleton)
+        (typeInfo.node.userObject as StoredObj).obj = singleton
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -139,7 +132,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         val selectedNode = selectedNode ?: throw IllegalStateException()
         val selectedNodeUserObj = selectedNode.userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
-            selectedNode.userObject = StoredObj(selectedNodeUserObj.typeInfo, newElement)
+            selectedNodeUserObj.obj = newElement
             sortNode(selectedNode)
         } else
             throw IllegalStateException()
@@ -179,6 +172,22 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             // If some matching node has been found, select it. Once again, don't notify onSelect().
             if (bestMatchingNode != null)
                 withoutSelectionListener { selectionPath = TreePath(bestMatchingNode.path) }
+        }
+    }
+
+    fun setExtraIcons(perObj: Map<Any, List<Icon>>) {
+        for (typeInfo in singletonTypeInfos.values) {
+            val nodeUserObj = typeInfo.node.userObject as StoredObj
+            nodeUserObj.extraIcons = perObj[nodeUserObj.obj] ?: emptyList()
+        }
+        model.nodesChanged(rootNode, IntArray(rootNode.childCount) { it })
+
+        for (typeInfo in listTypeInfos.values) {
+            for (leaf in typeInfo.node.children()) {
+                val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
+                leafUserObj.extraIcons = perObj[leafUserObj.obj] ?: emptyList()
+            }
+            model.nodesChanged(typeInfo.node, IntArray(typeInfo.node.childCount) { it })
         }
     }
 
@@ -261,11 +270,50 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
 
-    private inner class StoredObj(val typeInfo: TypeInfo, val obj: Any) {
+    private inner class StoredObj(val typeInfo: TypeInfo, var obj: Any, var extraIcons: List<Icon> = emptyList()) {
         override fun toString() = when (typeInfo) {
             is TypeInfo.Singleton -> typeInfo.label
             is TypeInfo.List -> typeInfo.objToString(obj)
         }
+    }
+
+
+    private class StylingTreeCellRenderer : DefaultTreeCellRenderer() {
+
+        private var extraIcons: List<Icon> = emptyList()
+
+        override fun getTreeCellRendererComponent(
+            tree: JTree, value: Any, sel: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean
+        ): Component {
+            super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus)
+            val userObj = (value as DefaultMutableTreeNode).userObject
+            if (userObj is StoredObj) {
+                icon = userObj.typeInfo.icon
+                extraIcons = userObj.extraIcons
+            } else
+                extraIcons = emptyList()
+            return this
+        }
+
+        override fun getPreferredSize(): Dimension? = super.getPreferredSize()?.let { pref ->
+            var newPrefWidth = pref.width
+            if (extraIcons.isNotEmpty())
+                newPrefWidth += 2 * iconTextGap +  // Multiply by 2 to increase the spacing between text & icons.
+                        ICON_ICON_GAP * (extraIcons.size - 1) +
+                        extraIcons.sumBy(Icon::getIconWidth)
+            Dimension(newPrefWidth, pref.height)
+        }
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            var x = width - 3  // Subtract 3 because super.getPreferredSize() adds 3 to the preferred width.
+            for (icon in extraIcons.asReversed()) {
+                x -= icon.iconWidth
+                icon.paintIcon(this, g, x, (height - icon.iconHeight) / 2)
+                x -= ICON_ICON_GAP
+            }
+        }
+
     }
 
 }

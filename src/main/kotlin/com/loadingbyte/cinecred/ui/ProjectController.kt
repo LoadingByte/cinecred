@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
 import java.nio.file.WatchEvent
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
@@ -40,8 +41,8 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     private var creditsFile: Path? = null
 
     private var creditsSpreadsheet: List<SpreadsheetRecord>? = null
-    private val fonts = HashMap<Path, Font>()
-    private val pictureLoaders = HashMap<Path, Lazy<Picture?>>()
+    private val fonts = ConcurrentHashMap<Path, Font>()
+    private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
     private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
     private var creditsFileLoadingLog: List<ParserMsg> = emptyList()

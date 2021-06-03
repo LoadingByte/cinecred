@@ -1,8 +1,54 @@
 Cinecred Changelog
 ==================
 
+1.1.0-SNAPSHOT
+--------------
+
+### Additions
+
+- Erroneous styling may be loaded, saved, and edited, but such an erroneous
+  project is not rendered, and instead error notices are displayed. This makes
+  the editing process more intuitive.
+- Errors and warnings in styles as well as unused styles are indicated in the
+  styling tree.
+- When the credits file is erroneous, a prominent error notice is displayed.
+- Added a project-wide timecode format setting, supporting SMPTE Non Drop-Frame,
+  SMPTE Drop-Frame (only for suitable frame rates), a clock timecode, and the
+  plain number of frames.
+
+### Fixes
+
+- Delivered video files no longer have inaccurate framerates, e.g., 24.02
+  instead of 24.
+- When the user opens an empty project folder, copies his own files into the
+  project folder, and only then accepts the template copying dialog, his
+  manually copied files are no longer overwritten.
+- Numbers are now displayed as numbers (and not as strings) in credits
+  spreadsheet files generated from the template.
+- Fixed a potential race condition when changing auxiliary files (fonts and
+  pictures) and the project at the same time.
+
+#### UI Fixes
+
+- A duplicated style now has a name different from the respective original style
+  to avoid bugging the user with a duplicated style name error message.
+- Editing a styling text field no longer redraws the project for every single
+  typed character.
+- The styling tree now ignores case when ordering the styles.
+- Log messages are now ordered by decreasing severity.
+- Project hints now select the tab in which their target lies before displaying.
+- The timecodes in the video preview tab now update when the project changes.
+
+### Notes
+
+- Reorder the credits spreadsheet columns into a more logical default order.
+- The format of `Styling.toml` has slightly changed. Nevertheless, old files can
+  still be opened and are migrated to the new format when the styling is saved.
+
+
 1.0.0
 -----
 
 ### Additions
-* Initial release of Cinecred.
+
+- Initial release of Cinecred.

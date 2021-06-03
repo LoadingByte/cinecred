@@ -1,3 +1,10 @@
+### Custom ###
+
+publishing/*
+!publishing/*.sh
+
+
+
 ### IntelliJ IDEA ###
 
 .idea/

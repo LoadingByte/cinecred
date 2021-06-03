@@ -220,6 +220,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.stylingHistory.editedAndRedraw(styling)
     }
 
+    fun updateProject(project: Project?) {
+        updateUnusedStyles(project)
+    }
+
     private fun refreshConstraintViolations() {
         constraintViolations = ctrl.verifyStylingConstraints(styling ?: return)
 
@@ -227,8 +231,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         for (violation in constraintViolations)
             severityPerStyle[violation.style] =
                 maxOf(violation.severity, severityPerStyle.getOrDefault(violation.style, Severity.values()[0]))
-        val extraIcons = severityPerStyle.mapValues { (_, severity) -> listOf(SEVERITY_ICON.getValue(severity)) }
-        stylingTree.setExtraIcons(extraIcons)
+        stylingTree.adjustAppearance(getExtraIcons = { style ->
+            val severity = severityPerStyle[style]
+            if (severity == null) emptyList() else listOf(SEVERITY_ICON.getValue(severity))
+        })
     }
 
     private fun adjustOpenedForm() {
@@ -248,6 +254,54 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 for (setting in meta.settings)
                     openedForm.setDynChoices(setting, choices)
             }
+    }
+
+    private fun updateUnusedStyles(project: Project?) {
+        val styling = this.styling
+
+        val unusedStyles = HashSet<Style>()
+        if (styling != null && project != null) {
+            // Mark all styles as unused. Next, we will gradually remove all styles which are actually used.
+            unusedStyles.addAll(styling.pageStyles)
+            unusedStyles.addAll(styling.contentStyles)
+            unusedStyles.addAll(styling.letterStyles)
+
+            for (contentStyle in styling.contentStyles) {
+                // Remove the content style's body letter style.
+                styling.letterStyles.find { it.name == contentStyle.bodyLetterStyleName }?.let(unusedStyles::remove)
+                // If the content style supports heads, remove its head letter style.
+                if (contentStyle.hasHead)
+                    styling.letterStyles.find { it.name == contentStyle.headLetterStyleName }?.let(unusedStyles::remove)
+                // If the content style supports heads, remove its tail letter style.
+                if (contentStyle.hasTail)
+                    styling.letterStyles.find { it.name == contentStyle.tailLetterStyleName }?.let(unusedStyles::remove)
+            }
+
+            for (page in project.pages)
+                for (stage in page.stages) {
+                    // Remove the stage's page style.
+                    unusedStyles -= stage.style
+                    for (segment in stage.segments)
+                        for (column in segment.columns)
+                            for (block in column.blocks) {
+                                // Remove the block's content style.
+                                unusedStyles -= block.style
+                                // Remove the head's letter styles.
+                                for ((_, letterStyle) in block.head.orEmpty())
+                                    unusedStyles -= letterStyle
+                                // Remove the tail's letter styles.
+                                for ((_, letterStyle) in block.tail.orEmpty())
+                                    unusedStyles -= letterStyle
+                                // Remove the body's letter styles.
+                                for (bodyElem in block.body)
+                                    if (bodyElem is BodyElement.Str)
+                                        for ((_, letterStyle) in bodyElem.str)
+                                            unusedStyles -= letterStyle
+                            }
+                }
+        }
+
+        stylingTree.adjustAppearance(isGrayedOut = unusedStyles::contains)
     }
 
 }

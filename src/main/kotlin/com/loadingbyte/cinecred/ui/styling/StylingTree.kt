@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.ui.helper.ICON_ICON_GAP
+import com.loadingbyte.cinecred.ui.helper.SVGIcon
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
@@ -175,17 +176,19 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
-    fun setExtraIcons(perObj: Map<Any, List<Icon>>) {
+    fun adjustAppearance(isGrayedOut: ((Any) -> Boolean)? = null, getExtraIcons: ((Any) -> List<SVGIcon>)? = null) {
         for (typeInfo in singletonTypeInfos.values) {
             val nodeUserObj = typeInfo.node.userObject as StoredObj
-            nodeUserObj.extraIcons = perObj[nodeUserObj.obj] ?: emptyList()
+            isGrayedOut?.let { nodeUserObj.isGrayedOut = it(nodeUserObj.obj) }
+            getExtraIcons?.let { nodeUserObj.extraIcons = it(nodeUserObj.obj) }
         }
         model.nodesChanged(rootNode, IntArray(rootNode.childCount) { it })
 
         for (typeInfo in listTypeInfos.values) {
             for (leaf in typeInfo.node.children()) {
                 val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
-                leafUserObj.extraIcons = perObj[leafUserObj.obj] ?: emptyList()
+                isGrayedOut?.let { leafUserObj.isGrayedOut = it(leafUserObj.obj) }
+                getExtraIcons?.let { leafUserObj.extraIcons = it(leafUserObj.obj) }
             }
             model.nodesChanged(typeInfo.node, IntArray(typeInfo.node.childCount) { it })
         }
@@ -270,7 +273,12 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
 
-    private inner class StoredObj(val typeInfo: TypeInfo, var obj: Any, var extraIcons: List<Icon> = emptyList()) {
+    private class StoredObj(
+        val typeInfo: TypeInfo,
+        var obj: Any,
+        var isGrayedOut: Boolean = false,
+        var extraIcons: List<SVGIcon> = emptyList()
+    ) {
         override fun toString() = when (typeInfo) {
             is TypeInfo.Singleton -> typeInfo.label
             is TypeInfo.List -> typeInfo.objToString(obj)
@@ -289,9 +297,13 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             val userObj = (value as DefaultMutableTreeNode).userObject
             if (userObj is StoredObj) {
                 icon = userObj.typeInfo.icon
+                isEnabled = !userObj.isGrayedOut
                 extraIcons = userObj.extraIcons
-            } else
+            } else {
+                // Icon has already been set by super call.
+                isEnabled = true
                 extraIcons = emptyList()
+            }
             return this
         }
 

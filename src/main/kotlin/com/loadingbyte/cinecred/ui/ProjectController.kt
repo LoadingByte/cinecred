@@ -152,6 +152,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
             // Make sure to update the UI from the UI thread because Swing is not thread-safe.
             SwingUtilities.invokeLater {
                 projectFrame.panel.editPanel.updateProject(project, drawnPages, styErr, log)
+                editStylingDialog.panel.updateProject(project)
                 projectFrame.panel.videoPanel.updateProject(project, drawnPages)
                 projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
             }

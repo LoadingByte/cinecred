@@ -50,6 +50,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 field = isEnabled
                 for (comp in components)
                     comp.isEnabled = isEnabled
+                labelComp.isEnabled = isEnabled
+                applyEffectiveNotice()
             }
 
         override var notice: Notice? = null
@@ -65,7 +67,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             }
 
         private fun applyEffectiveNotice() {
-            val effectiveNotice = noticeOverride ?: notice
+            val effectiveNotice = if (isEnabled) noticeOverride ?: notice else null
             noticeIconComp.icon = effectiveNotice?.let { SEVERITY_ICON[it.severity] }
             noticeMsgComp.text = effectiveNotice?.msg
             // Adjust FlatLaf outlines.

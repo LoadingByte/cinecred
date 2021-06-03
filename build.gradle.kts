@@ -38,14 +38,8 @@ version = "1.1.0-SNAPSHOT"
 
 val slf4jVersion = "1.7.30"
 val batikVersion = "1.14"
-val javacppVersion = "1.5.3"
-// At the time of writing, the newer versions of FFmpeg which are available though javacpp have the following problems:
-// - 4.3.2-1.5.5 produces a lot of artifacts (small white dots) when rendering H.264 on Linux. Additionally, the
-//   resulting files are much larger. Maybe these issues also occur with other formats and operating systems,
-//   but we did not check.
-// - 4.3.1-1.5.4 crashes upon libx264 encoding on Mac OS. This is however fixed in the newer version mentioned above.
-// When upgrading FFmpeg, you must check that these two issues no longer occur!
-val ffmpegVersion = "4.2.2-1.5.3"
+val javacppVersion = "1.5.5"
+val ffmpegVersion = "4.3.2-$javacppVersion"
 
 enum class Platform(val label: String, val slug: String) {
     WINDOWS("Windows", "windows-x86_64"),
@@ -88,7 +82,7 @@ dependencies {
     implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
     for (platform in Platform.values()) {
         implementation("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slug)
-        implementation("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = platform.slug)
+        implementation("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slug}-gpl")
     }
 
     // UI

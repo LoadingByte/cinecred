@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
  * we devise our own scrollable panel for displaying a [DeferredImage]. We also implement additional features
  * like panning (via clicking and dragging) and zooming.
  */
-class DeferredImagePanel(val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0")) {
+class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, insets 0")) {
 
     private var image: DeferredImage? = null
 

@@ -5,10 +5,7 @@ import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.OpenController
-import com.loadingbyte.cinecred.ui.PreferencesController
-import com.loadingbyte.cinecred.ui.openHintTrack
-import com.loadingbyte.cinecred.ui.playIfPending
+import com.loadingbyte.cinecred.ui.*
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
@@ -115,6 +112,8 @@ private fun checkForUpdates() {
         if (resp.statusCode() != 200)
             return@thenAccept
 
+        // Note: If the following processing fails for some reason, the thrown exception is just swallowed by the
+        // CompletableFuture context. Since we do not need to react to a failed update check, this is finde.
         @Suppress("UNCHECKED_CAST")
         val root = Json.parse(StringReader(resp.body())) as Map<String, List<Map<String, String>>>
         val latestStableVersion = root
@@ -125,7 +124,7 @@ private fun checkForUpdates() {
         if (latestStableVersion != null && latestStableVersion != curVersion)
             SwingUtilities.invokeLater {
                 val openHomepage = JOptionPane.showConfirmDialog(
-                    null, l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
+                    OpenFrame, l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
                     l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
                 ) == JOptionPane.YES_OPTION
                 if (openHomepage &&

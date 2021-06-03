@@ -138,8 +138,8 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
     }
 
     private fun adjustTimecodeLabel() {
-        val project = project ?: return
-        val videoDrawer = videoDrawer ?: return
+        val project = this.project ?: return
+        val videoDrawer = this.videoDrawer ?: return
         val fps = project.styling.global.fps
         val timecodeFormat = project.styling.global.timecodeFormat
         val curTc = formatTimecode(fps, timecodeFormat, frameSlider.value)

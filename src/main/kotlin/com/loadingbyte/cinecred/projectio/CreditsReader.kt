@@ -37,7 +37,7 @@ fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
     return Pair(creditsFile, log)
 }
 
-fun getCreditsFileCandidates(projectDir: Path): List<Path> =
+private fun getCreditsFileCandidates(projectDir: Path): List<Path> =
     projectDir
         .runCatching(Path::listDirectoryEntries).getOrDefault(emptyList())
         .filter { file -> file.isRegularFile() && hasCreditsFileName(file) }

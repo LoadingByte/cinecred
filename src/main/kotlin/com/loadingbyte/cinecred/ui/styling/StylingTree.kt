@@ -63,7 +63,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> addListType(
+    fun <T : Any> addListType(
         type: Class<T>, label: String, icon: Icon,
         onSelect: (T) -> Unit, objToString: (T) -> String, copyObj: (T) -> T
     ) {
@@ -75,7 +75,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getSingleton(type: Class<T>): T =
+    fun <T : Any> getSingleton(type: Class<T>): T =
         (singletonTypeInfos.getValue(type).node.userObject as StoredObj).obj as T
 
     fun setSingleton(singleton: Any) {
@@ -84,7 +84,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getList(type: Class<T>): List<T> =
+    fun <T : Any> getList(type: Class<T>): List<T> =
         listTypeInfos.getValue(type).node.children().asSequence()
             .map { leaf -> ((leaf as DefaultMutableTreeNode).userObject as StoredObj).obj as T }
             .toList()
@@ -101,7 +101,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         val newTypeInfo = listTypeInfos.getValue(newElement.javaClass)
         if (oldTypeInfo != newTypeInfo)
             throw IllegalArgumentException("Both elements must belong to the same list type.")
-        for (leaf in oldTypeInfo.node.children().asSequence()) {
+        for (leaf in oldTypeInfo.node.children()) {
             val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
             if (leafUserObj.obj == oldElement) {
                 leaf.userObject = StoredObj(leafUserObj.typeInfo, newElement)
@@ -120,7 +120,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     fun removeSelectedListElement(): Boolean {
-        val selectedNode = selectedNode ?: return false
+        val selectedNode = this.selectedNode ?: return false
         val selectedNodeUserObj = selectedNode.userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
             model.removeNodeFromParent(selectedNode)

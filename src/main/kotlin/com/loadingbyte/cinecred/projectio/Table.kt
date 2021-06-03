@@ -89,8 +89,9 @@ class Table(
     }
 
     fun isEmpty(row: Int): Boolean = bodyRecords[row].cells.all { it.trim().isEmpty() }
-    fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
-    fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
+
+    private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
+    private fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
 
     fun getString(row: Int, l10nColName: String): String? {
         val col = colMap[l10nColName]
@@ -111,9 +112,9 @@ class Table(
             str.toFiniteFloat(nonNeg, non0)
         } catch (_: NumberFormatException) {
             val restriction = when {
-                nonNeg && non0 -> "> 0"
-                nonNeg && !non0 -> "\u2265 0"
-                !nonNeg && non0 -> "\u2260 0"
+                nonNeg && non0 -> " > 0"
+                nonNeg && !non0 -> " \u2265 0"
+                !nonNeg && non0 -> " \u2260 0"
                 else -> ""
             }
             log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedFloat", restriction).trim())

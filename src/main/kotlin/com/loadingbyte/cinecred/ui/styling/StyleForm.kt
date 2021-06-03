@@ -105,10 +105,13 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     fun open(style: S, onChange: (() -> Unit)?) {
         changeListener = null
         disableRefresh = true
-        for ((setting, settingWidget) in settingWidgets)
-            @Suppress("UNCHECKED_CAST")
-            (settingWidget as Widget<Any?>).value = setting.get(style)
-        disableRefresh = false
+        try {
+            for ((setting, settingWidget) in settingWidgets)
+                @Suppress("UNCHECKED_CAST")
+                (settingWidget as Widget<Any?>).value = setting.get(style)
+        } finally {
+            disableRefresh = false
+        }
         refresh()
         changeListener = onChange
     }

@@ -17,7 +17,7 @@ abstract class StyleSetting<S : Style, V> {
     abstract fun get(style: S): V
 
     override fun equals(other: Any?) =
-        other is StyleSetting<*, *> && styleClass == other.styleClass && name == other.name
+        this === other || other is StyleSetting<*, *> && styleClass == other.styleClass && name == other.name
 
     override fun hashCode(): Int {
         var result = styleClass.hashCode()

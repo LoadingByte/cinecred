@@ -15,7 +15,7 @@ val BUNDLED_FONTS: List<Font> = run {
         .listDirectoryEntries()
         .map { file -> file.inputStream().use { Font.createFonts(it)[0] } }
 
-    val uri = (object {}.javaClass).getResource("/fonts").toURI()
+    val uri = (object {}.javaClass).getResource("/fonts")!!.toURI()
     if (uri.scheme == "jar")
         FileSystems
             .newFileSystem(uri, emptyMap<String, Any>())
@@ -26,8 +26,7 @@ val BUNDLED_FONTS: List<Font> = run {
 
 // Load the fonts that are present on the system.
 val SYSTEM_FONTS: List<Font> =
-    GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts
-        .toList()
+    GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.toList()
 
 
 private val nameToBundledFont = BUNDLED_FONTS

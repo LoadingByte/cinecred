@@ -67,7 +67,7 @@ fun readCredits(
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.",
-        l10nColNames = listOf("pageStyle", "columnPos", "breakAlign", "vGap", "contentStyle", "head", "body", "tail")
+        l10nColNames = listOf("head", "body", "tail", "vGap", "contentStyle", "breakAlign", "columnPos", "pageStyle")
     )
 
     // Read the table.

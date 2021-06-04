@@ -88,10 +88,11 @@ class Table(
         log.add(ParserMsg(row?.let(::getRecordNo), l10nColName?.let(::getColHeader), cellValue, severity, msg))
     }
 
-    fun isEmpty(row: Int): Boolean = bodyRecords[row].cells.all { it.trim().isEmpty() }
-
     private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
     private fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
+
+    fun isEmpty(row: Int, l10nColName: String): Boolean =
+        colMap[l10nColName]?.let { col -> bodyRecords[row].cells[col].isBlank() } ?: true
 
     fun getString(row: Int, l10nColName: String): String? {
         val col = colMap[l10nColName]

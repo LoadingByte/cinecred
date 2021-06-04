@@ -119,10 +119,13 @@ private class CreditsReader(
     // explicit content style declaration.
     var contentStyle: ContentStyle? = null
 
-    // The vertical gap that should be inserted AFTER the next CONCLUDED credits element. If multiple credits
-    // elements will be concluded at the same time (e.g., a block, a column, and a segment), the most significant
-    // credits element will receive the gap (in our example, that would be the segment).
-    var vGapAccumulator = 0f
+    // These variables keep track of the vertical gap that should be inserted AFTER the next CONCLUDED credits element.
+    // If the gap is not specified explicitly in the vGap table column, it will be implicitly inferred from the number
+    // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
+    // (e.g., a block, a column, and a segment), the most significant credits element will receive the gap
+    // (in our example, that would be the segment).
+    var explicitVGapInUnits: Float? = null
+    var implicitVGapInUnits: Int = 0
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
     // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
@@ -169,6 +172,13 @@ private class CreditsReader(
     // Keep track where the current head and tail have been declared. This is used by an error message.
     var blockHeadDeclaredRow = 0
     var blockTailDeclaredRow = 0
+
+    fun pullVGap(): Float {
+        val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toFloat()) * styling.global.unitVGapPx
+        explicitVGapInUnits = null
+        implicitVGapInUnits = 0
+        return vGap
+    }
 
     fun concludePage() {
         // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
@@ -279,12 +289,18 @@ private class CreditsReader(
     }
 
     fun readRow() {
-        // An empty row implicitly means a vertical gap of one unit after the appropriate credits element.
-        if (table.isEmpty(row))
-            vGapAccumulator += styling.global.unitVGapPx
-        // Also add explicit vertical gaps to the accumulator.
+        // A row without head, body, and tail implicitly means a 1-unit vertical gap after the previous credits element.
+        val isHBTFreeRow = table.isEmpty(row, "head") && table.isEmpty(row, "body") && table.isEmpty(row, "tail")
+        if (isHBTFreeRow)
+            implicitVGapInUnits += 1
+        // The user may explicitly specify the vertical gap size. Per gap, only one specification is permitted.
         table.getFiniteFloat(row, "vGap", nonNeg = true)?.let {
-            vGapAccumulator += it * styling.global.unitVGapPx
+            if (!isHBTFreeRow)
+                table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapInContentRow"))
+            if (explicitVGapInUnits == null)
+                explicitVGapInUnits = it
+            else
+                table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapInUnits))
         }
 
         // If the page style cell is non-empty, conclude the previous stage (if there was any) and start a new one.
@@ -292,8 +308,7 @@ private class CreditsReader(
             concludeBlock(0f)
             concludeColumn()
             concludeSegment(0f)
-            concludeStage(vGapAccumulator, newPageStyle)
-            vGapAccumulator = 0f
+            concludeStage(pullVGap(), newPageStyle)
             isBlockConclusionMarked = false
 
             // If we are not melting the previous stage with the future one, concluded the stage and the current page.
@@ -342,9 +357,9 @@ private class CreditsReader(
 
             concludeBlock(0f)
             concludeColumn()
+            val vGap = pullVGap()  // Reset the vGap even if we don't use it.
             if (wrap)
-                concludeSegment(vGapAccumulator)
-            vGapAccumulator = 0f
+                concludeSegment(vGap)
             isBlockConclusionMarked = false
             columnPosOffsetPx = posOffsetPx
         }
@@ -370,8 +385,7 @@ private class CreditsReader(
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
         if (newHead != null || newTail != null || (isBlockConclusionMarked && bodyElem != null)) {
-            concludeBlock(vGapAccumulator)
-            vGapAccumulator = 0f
+            concludeBlock(pullVGap())
             isBlockConclusionMarked = false
             if (newHead != null) {
                 blockHead = newHead

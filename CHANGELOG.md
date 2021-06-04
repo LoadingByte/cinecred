@@ -27,6 +27,8 @@ Cinecred Changelog
   spreadsheet files generated from the template.
 - Fixed a potential race condition when changing auxiliary files (fonts and
   pictures) and the project at the same time.
+- Aspect ratios are now limited to avoid the program crashing when unreasonably
+  small aspect ratios are used.
 
 #### UI Fixes
 

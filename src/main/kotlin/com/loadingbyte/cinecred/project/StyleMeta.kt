@@ -12,9 +12,18 @@ import kotlin.math.floor
 import kotlin.reflect.KProperty1
 
 
+private const val ASPECT_RATIO_LIMIT = 32
+
 private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
     NumberConstr(ERROR, Global::widthPx, LARGER_0),
     NumberConstr(ERROR, Global::heightPx, LARGER_0),
+    JudgeConstr(
+        ERROR, l10n("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT), Global::widthPx, Global::heightPx,
+        judge = { _, global ->
+            val aspectRatio = global.widthPx.toFloat() / global.heightPx
+            aspectRatio in 1f / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1f
+        }
+    ),
     FPSConstr(ERROR, Global::fps),
     NumberConstr(ERROR, Global::unitVGapPx, LARGER_0),
     DynChoiceConstr(ERROR, Global::timecodeFormat) { _, global ->

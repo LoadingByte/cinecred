@@ -73,15 +73,16 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 
     val settingValues = getStyleSettings(styleClass).map { setting ->
         try {
-            if (ImmutableList::class.java.isAssignableFrom(setting.type))
-                (map[setting.name]!! as List<*>)
+            val value = if (ImmutableList::class.java.isAssignableFrom(setting.type))
+                (map.getValue(setting.name) as List<*>)
                     .map { convert(setting.genericArg!!, it.toString()) }
                     .toImmutableList()
             else
-                convert(setting.type, map[setting.name]!!.toString())
+                convert(setting.type, map.getValue(setting.name).toString())
+            setting.valueToPlain(value)
         } catch (_: RuntimeException) {
             // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
-            setting.get(stylePreset)
+            setting.getPlain(stylePreset)
         }
     }
 
@@ -90,9 +91,9 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 
 
 private fun convert(type: Class<*>, str: String): Any = when (type) {
-    Int::class.java -> str.toInt()
-    Float::class.java -> str.toFloat()
-    Boolean::class.java -> str.toBoolean()
+    Int::class.javaPrimitiveType, Int::class.javaObjectType -> str.toInt()
+    Float::class.javaPrimitiveType, Float::class.javaObjectType -> str.toFloat()
+    Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> str.toBoolean()
     String::class.java -> str
     Locale::class.java -> Locale.forLanguageTag(str)
     Color::class.java -> str.hexToColor()

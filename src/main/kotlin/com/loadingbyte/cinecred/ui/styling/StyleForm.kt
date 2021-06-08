@@ -30,20 +30,20 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val settingMeta = getStyleMeta(styleClass).filter { m -> setting in m.settings }
         val settingGenericArg = setting.genericArg
 
-        return when (setting.type) {
-            Int::class.java -> {
+        val settingWidget = when (setting.type) {
+            Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
                 val min = if (inequality == LARGER_0) 1 else if (inequality == LARGER_OR_EQUAL_0) 0 else null
                 val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Int>>()?.stepSize ?: 1
                 SpinnerWidget(SpinnerNumberModel(min ?: 0, min, null, step))
             }
-            Float::class.java -> {
+            Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
                 val min = if (inequality == LARGER_0) 0.01f else if (inequality == LARGER_OR_EQUAL_0) 0f else null
                 val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Float>>()?.stepSize ?: 1f
                 SpinnerWidget(SpinnerNumberModel(min ?: 0f, min, null, step))
             }
-            Boolean::class.java -> CheckBoxWidget()
+            Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {
                 settingMeta.oneOf<DynChoiceConstr<S, *>>() != null -> InconsistentComboBoxWidget(
                     String::class.java, emptyList()
@@ -63,10 +63,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                         setting.type as Class<*>, emptyList(),
                         toString = { l10nEnum(it as Enum<*>) }
                     )
-                    else -> ComboBoxWidget(
-                        setting.type, setting.type.enumConstants.asList(),
-                        toString = { l10nEnum(it as Enum<*>) }
-                    )
+                    else -> makeEnumCBoxWidget(setting.type as Class<*>)
                 }
                 ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
                     String::class.java == settingGenericArg -> TextListWidget(
@@ -80,9 +77,20 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
+
+        return when (setting) {
+            is OptionallyEffectiveStyleSetting -> OptionallyEffectiveWidget(settingWidget)
+            else -> settingWidget
+        }
     }
 
-    private fun <G> makeEnumCBoxListWidget(enumClass: Class<G>) =
+    private fun <E> makeEnumCBoxWidget(enumClass: Class<E>) =
+        ComboBoxWidget(
+            enumClass, enumClass.enumConstants.asList(),
+            toString = { l10nEnum(it as Enum<*>) }
+        )
+
+    private fun <E> makeEnumCBoxListWidget(enumClass: Class<E>) =
         ComboBoxListWidget(
             enumClass, enumClass.enumConstants.asList(),
             toString = { l10nEnum(it as Enum<*>) }
@@ -108,7 +116,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         try {
             for ((setting, settingWidget) in settingWidgets)
                 @Suppress("UNCHECKED_CAST")
-                (settingWidget as Widget<Any?>).value = setting.get(style)
+                (settingWidget as Widget<Any?>).value = setting.getPlain(style)
         } finally {
             disableRefresh = false
         }
@@ -143,11 +151,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             return
 
         val style = save()
-        val irrelevantSettings = findIrrelevantSettings(style)
-        val inadmissibleSettings = findInadmissibleSettings(style)
+        val ineffectiveSettings = findIneffectiveSettings(style)
         for ((setting, settingWidget) in settingWidgets) {
-            settingWidget.isVisible = setting !in irrelevantSettings
-            settingWidget.isEnabled = setting !in inadmissibleSettings
+            val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
+            settingWidget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
+            settingWidget.isEnabled = effectivity >= Effectivity.OPTIONALLY_INEFFECTIVE
         }
     }
 

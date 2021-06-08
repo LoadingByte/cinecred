@@ -4,6 +4,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.project.OptionallyEffective
 import com.loadingbyte.cinecred.projectio.toFPS
 import com.loadingbyte.cinecred.projectio.toString2
 import kotlinx.collections.immutable.ImmutableList
@@ -585,6 +586,41 @@ class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<
         }
 
     }
+
+}
+
+
+class OptionallyEffectiveWidget<V>(
+    override val wrapped: Form.Widget<V>
+) : Form.AbstractWidget<OptionallyEffective<V>>(), Form.WrapperWidget<OptionallyEffective<V>, Form.Widget<V>> {
+
+    init {
+        wrapped.changeListeners.add(::notifyChangeListeners)
+    }
+
+    private val cb = JCheckBox().apply {
+        addItemListener {
+            wrapped.isEnabled = isSelected
+            notifyChangeListeners()
+        }
+    }
+
+    override val components = listOf(cb) + wrapped.components
+    override val constraints = listOf("split") + wrapped.constraints
+
+    override var value: OptionallyEffective<V>
+        get() = OptionallyEffective(cb.isSelected, wrapped.value)
+        set(value) {
+            cb.isSelected = value.isEffective
+            wrapped.value = value.value
+        }
+
+    override var isEnabled: Boolean
+        get() = super.isEnabled
+        set(isEnabled) {
+            super.isEnabled = isEnabled
+            wrapped.isEnabled = cb.isSelected
+        }
 
 }
 

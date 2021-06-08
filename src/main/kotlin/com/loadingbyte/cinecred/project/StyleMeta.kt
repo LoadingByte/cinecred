@@ -9,71 +9,71 @@ import com.loadingbyte.cinecred.project.NumberConstr.Inequality.*
 import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import java.awt.Color
 import kotlin.math.floor
-import kotlin.reflect.KProperty1
 
 
 private const val ASPECT_RATIO_LIMIT = 32
 
 private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
-    NumberConstr(ERROR, Global::widthPx, LARGER_0),
-    NumberConstr(ERROR, Global::heightPx, LARGER_0),
+    NumberConstr(ERROR, Global::widthPx.st(), LARGER_0),
+    NumberConstr(ERROR, Global::heightPx.st(), LARGER_0),
     JudgeConstr(
-        ERROR, l10n("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT), Global::widthPx, Global::heightPx,
+        ERROR, l10n("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
+        Global::widthPx.st(), Global::heightPx.st(),
         judge = { _, global ->
             val aspectRatio = global.widthPx.toFloat() / global.heightPx
             aspectRatio in 1f / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1f
         }
     ),
-    FPSConstr(ERROR, Global::fps),
-    NumberConstr(ERROR, Global::unitVGapPx, LARGER_0),
-    DynChoiceConstr(ERROR, Global::timecodeFormat) { _, global ->
+    FPSConstr(ERROR, Global::fps.st()),
+    DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, global ->
         val formats = TimecodeFormat.values().toMutableList().apply { }
         if (!global.fps.supportsDropFrameTimecode)
             formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
         formats
     },
-    ColorConstr(ERROR, Global::background, allowAlpha = false),
-    NumberStepWidgetSpec(Global::widthPx, 10),
-    NumberStepWidgetSpec(Global::heightPx, 10),
-    DontGrowWidgetSpec(Global::uppercaseExceptions)
+    ColorConstr(ERROR, Global::background.st(), allowAlpha = false),
+    NumberConstr(ERROR, Global::unitVGapPx.st(), LARGER_0),
+    NumberStepWidgetSpec(Global::widthPx.st(), 10),
+    NumberStepWidgetSpec(Global::heightPx.st(), 10),
+    DontGrowWidgetSpec(Global::uppercaseExceptions.st())
 )
 
 
 private val PAGE_STYLE_META: List<StyleMeta<PageStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), PageStyle::name) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), PageStyle::name) { styling, style ->
+    JudgeConstr(WARN, l10n("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    NumberConstr(ERROR, PageStyle::afterwardSlugFrames, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardDurationFrames, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardFadeInFrames, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardFadeOutFrames, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::scrollPxPerFrame, LARGER_0),
-    JudgeConstr(WARN, l10n("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame) { _, style ->
+    NumberConstr(ERROR, PageStyle::afterwardSlugFrames.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, PageStyle::cardDurationFrames.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, PageStyle::cardFadeInFrames.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, PageStyle::cardFadeOutFrames.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, PageStyle::scrollPxPerFrame.st(), LARGER_0),
+    JudgeConstr(WARN, l10n("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
         val value = style.scrollPxPerFrame
         floor(value) == value
     },
-    OccurrenceSpec(
-        PageStyle::cardDurationFrames, PageStyle::cardFadeInFrames, PageStyle::cardFadeOutFrames,
-        isRelevant = { style -> style.behavior == PageBehavior.CARD }
+    EffectivitySpec(
+        PageStyle::cardDurationFrames.st(), PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
+        isTotallyIneffective = { style -> style.behavior != PageBehavior.CARD }
     ),
-    OccurrenceSpec(
-        PageStyle::scrollMeltWithPrev, PageStyle::scrollMeltWithNext, PageStyle::scrollPxPerFrame,
-        isRelevant = { style -> style.behavior == PageBehavior.SCROLL }
+    EffectivitySpec(
+        PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st(), PageStyle::scrollPxPerFrame.st(),
+        isTotallyIneffective = { style -> style.behavior != PageBehavior.SCROLL }
     ),
-    OccurrenceSpec(
-        PageStyle::afterwardSlugFrames,
-        isAdmissible = { style -> !(style.behavior == PageBehavior.SCROLL && style.scrollMeltWithNext) }
+    EffectivitySpec(
+        PageStyle::afterwardSlugFrames.st(),
+        isAlmostEffective = { style -> style.behavior == PageBehavior.SCROLL && style.scrollMeltWithNext }
     )
 )
 
 
 private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), ContentStyle::name) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), ContentStyle::name) { styling, style ->
+    JudgeConstr(WARN, l10n("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    DynChoiceConstr(WARN, ContentStyle::alignWithAxis) { _, style ->
+    DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, style ->
         when (style.spineOrientation) {
             SpineOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             SpineOrientation.HORIZONTAL -> when {
@@ -92,87 +92,89 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
             }
         }
     },
-    NumberConstr(ERROR, ContentStyle::vMarginPx, LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::vMarginPx.st(), LARGER_OR_EQUAL_0),
     DynChoiceConstr(
-        WARN, ContentStyle::bodyLetterStyleName, ContentStyle::headLetterStyleName, ContentStyle::tailLetterStyleName,
+        WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
+        ContentStyle::tailLetterStyleName.st(),
         choices = { styling, _ -> styling.letterStyles.map(LetterStyle::name) }
     ),
-    NumberConstr(ERROR, ContentStyle::gridRowGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::gridColGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::flowLineWidthPx, LARGER_0),
-    NumberConstr(ERROR, ContentStyle::flowLineGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::flowHGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsLineWidthPx, LARGER_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsParaGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsLineGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::headGapPx, LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::tailGapPx, LARGER_OR_EQUAL_0),
-    OccurrenceSpec(
-        ContentStyle::gridFillingOrder, ContentStyle::gridElemBoxConform, ContentStyle::gridElemHJustifyPerCol,
-        ContentStyle::gridElemVJustify, ContentStyle::gridRowGapPx, ContentStyle::gridColGapPx,
-        isRelevant = { style -> style.bodyLayout == BodyLayout.GRID }
+    NumberConstr(ERROR, ContentStyle::gridRowGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::gridColGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::flowLineWidthPx.st(), LARGER_0),
+    NumberConstr(ERROR, ContentStyle::flowLineGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::flowHGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), LARGER_0),
+    NumberConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::headGapPx.st(), LARGER_OR_EQUAL_0),
+    NumberConstr(ERROR, ContentStyle::tailGapPx.st(), LARGER_OR_EQUAL_0),
+    EffectivitySpec(
+        ContentStyle::gridFillingOrder.st(), ContentStyle::gridElemBoxConform.st(),
+        ContentStyle::gridElemHJustifyPerCol.st(), ContentStyle::gridElemVJustify.st(), ContentStyle::gridRowGapPx.st(),
+        ContentStyle::gridColGapPx.st(),
+        isTotallyIneffective = { style -> style.bodyLayout != BodyLayout.GRID }
     ),
-    OccurrenceSpec(
-        ContentStyle::flowDirection, ContentStyle::flowLineHJustify, ContentStyle::flowElemBoxConform,
-        ContentStyle::flowElemHJustify, ContentStyle::flowElemVJustify, ContentStyle::flowLineWidthPx,
-        ContentStyle::flowLineGapPx, ContentStyle::flowHGapPx, ContentStyle::flowSeparator,
-        isRelevant = { style -> style.bodyLayout == BodyLayout.FLOW }
+    EffectivitySpec(
+        ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowElemBoxConform.st(),
+        ContentStyle::flowElemHJustify.st(), ContentStyle::flowElemVJustify.st(), ContentStyle::flowLineWidthPx.st(),
+        ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),
+        isTotallyIneffective = { style -> style.bodyLayout != BodyLayout.FLOW }
     ),
-    OccurrenceSpec(
-        ContentStyle::paragraphsLineHJustify, ContentStyle::paragraphsLineWidthPx, ContentStyle::paragraphsParaGapPx,
-        ContentStyle::paragraphsLineGapPx,
-        isRelevant = { style -> style.bodyLayout == BodyLayout.PARAGRAPHS }
+    EffectivitySpec(
+        ContentStyle::paragraphsLineHJustify.st(), ContentStyle::paragraphsLineWidthPx.st(),
+        ContentStyle::paragraphsParaGapPx.st(), ContentStyle::paragraphsLineGapPx.st(),
+        isTotallyIneffective = { style -> style.bodyLayout != BodyLayout.PARAGRAPHS }
     ),
-    OccurrenceSpec(
-        ContentStyle::headLetterStyleName, ContentStyle::headHJustify, ContentStyle::headVJustify,
-        ContentStyle::headGapPx,
-        isRelevant = ContentStyle::hasHead
+    EffectivitySpec(
+        ContentStyle::headLetterStyleName.st(), ContentStyle::headHJustify.st(), ContentStyle::headVJustify.st(),
+        ContentStyle::headGapPx.st(),
+        isTotallyIneffective = { style -> !style.hasHead }
     ),
-    OccurrenceSpec(
-        ContentStyle::tailLetterStyleName, ContentStyle::tailHJustify, ContentStyle::tailVJustify,
-        ContentStyle::tailGapPx,
-        isRelevant = ContentStyle::hasTail
+    EffectivitySpec(
+        ContentStyle::tailLetterStyleName.st(), ContentStyle::tailHJustify.st(), ContentStyle::tailVJustify.st(),
+        ContentStyle::tailGapPx.st(),
+        isTotallyIneffective = { style -> !style.hasTail }
     ),
-    OccurrenceSpec(
-        ContentStyle::spineOrientation,
-        isAdmissible = { style -> style.hasHead || style.hasTail }
+    EffectivitySpec(
+        ContentStyle::spineOrientation.st(),
+        isAlmostEffective = { style -> !style.hasHead && !style.hasTail }
     ),
-    OccurrenceSpec(
-        ContentStyle::gridElemVJustify,
-        isAdmissible = { style ->
-            style.gridElemHJustifyPerCol.size >= 2 || style.gridElemBoxConform.let {
-                it == BodyElementBoxConform.HEIGHT || it == BodyElementBoxConform.WIDTH_AND_HEIGHT ||
-                        it == BodyElementBoxConform.SQUARE
+    EffectivitySpec(
+        ContentStyle::gridElemVJustify.st(),
+        isAlmostEffective = { style ->
+            style.gridElemHJustifyPerCol.size < 2 && style.gridElemBoxConform.let {
+                it != BodyElementBoxConform.HEIGHT && it != BodyElementBoxConform.WIDTH_AND_HEIGHT &&
+                        it != BodyElementBoxConform.SQUARE
             }
         }
     ),
-    OccurrenceSpec(
-        ContentStyle::gridColGapPx,
-        isAdmissible = { style -> style.gridElemHJustifyPerCol.size >= 2 }
+    EffectivitySpec(
+        ContentStyle::gridColGapPx.st(),
+        isAlmostEffective = { style -> style.gridElemHJustifyPerCol.size < 2 }
     ),
-    OccurrenceSpec(
-        ContentStyle::headVJustify,
-        isAdmissible = { style -> style.spineOrientation == SpineOrientation.HORIZONTAL }
+    EffectivitySpec(
+        ContentStyle::headVJustify.st(),
+        isAlmostEffective = { style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
     ),
-    OccurrenceSpec(
-        ContentStyle::tailVJustify,
-        isAdmissible = { style -> style.spineOrientation == SpineOrientation.HORIZONTAL }
+    EffectivitySpec(
+        ContentStyle::tailVJustify.st(),
+        isAlmostEffective = { style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
     ),
-    NumberStepWidgetSpec(ContentStyle::flowLineWidthPx, 10f),
-    DontGrowWidgetSpec(ContentStyle::flowSeparator),
-    NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx, 10f)
+    NumberStepWidgetSpec(ContentStyle::flowLineWidthPx.st(), 10f),
+    DontGrowWidgetSpec(ContentStyle::flowSeparator.st()),
+    NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f)
 )
 
 
 private val LETTER_STYLE_META: List<StyleMeta<LetterStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), LetterStyle::name) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), LetterStyle::name) { styling, style ->
+    JudgeConstr(WARN, l10n("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    FontNameConstr(WARN, LetterStyle::fontName),
-    NumberConstr(ERROR, LetterStyle::heightPx, LARGER_0),
-    OccurrenceSpec(LetterStyle::useUppercaseExceptions, isAdmissible = LetterStyle::uppercase),
-    NumberStepWidgetSpec(LetterStyle::tracking, 0.01f)
+    FontNameConstr(WARN, LetterStyle::fontName.st()),
+    NumberConstr(ERROR, LetterStyle::heightPx.st(), LARGER_0),
+    EffectivitySpec(LetterStyle::useUppercaseExceptions.st(), isAlmostEffective = { style -> !style.uppercase }),
+    NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f)
 )
 
 
@@ -180,80 +182,77 @@ typealias Style = Any
 
 
 sealed class StyleMeta<S : Style, V>(
-    vararg props: KProperty1<S, V>
+    vararg settings: StyleSetting<S, V>
 ) {
-    val settings: List<StyleSetting<S, V>> = props.map(::toStyleSetting)
+    val settings: List<StyleSetting<S, V>> = settings.toList()
 }
 
 
 class NumberConstr<S : Style>(
     val severity: Severity,
-    prop: KProperty1<S, Number>,
+    setting: StyleSetting<S, Number>,
     val inequality: Inequality = NONE,
     val finite: Boolean = true
-) : StyleMeta<S, Number>(prop) {
+) : StyleMeta<S, Number>(setting) {
     enum class Inequality { NONE, LARGER_OR_EQUAL_0, LARGER_0 }
 }
 
 
 class DynChoiceConstr<S : Style, V>(
     val severity: Severity,
-    vararg props: KProperty1<S, V>,
+    vararg settings: StyleSetting<S, V>,
     val choices: (Styling, S) -> List<V>
-) : StyleMeta<S, V>(*props)
+) : StyleMeta<S, V>(*settings)
 
 
 class ColorConstr<S : Style>(
     val severity: Severity,
-    prop: KProperty1<S, Color>,
+    setting: StyleSetting<S, Color>,
     val allowAlpha: Boolean
-) : StyleMeta<S, Color>(prop)
+) : StyleMeta<S, Color>(setting)
 
 
 class FPSConstr<S : Style>(
     val severity: Severity,
-    prop: KProperty1<S, FPS>
-) : StyleMeta<S, FPS>(prop)
+    setting: StyleSetting<S, FPS>
+) : StyleMeta<S, FPS>(setting)
 
 
 class FontNameConstr<S : Style>(
     val severity: Severity,
-    prop: KProperty1<S, String>
-) : StyleMeta<S, String>(prop)
+    setting: StyleSetting<S, String>
+) : StyleMeta<S, String>(setting)
 
 
 class JudgeConstr<S : Style>(
     val severity: Severity,
     val msg: String,
-    vararg props: KProperty1<S, *>,
+    vararg settings: StyleSetting<S, Any?>,
     val judge: (Styling, S) -> Boolean
-) : StyleMeta<S, Any?>(*props)
+) : StyleMeta<S, Any?>(*settings)
 
 
-class OccurrenceSpec<S : Style>(
-    vararg props: KProperty1<S, *>,
-    val isRelevant: ((S) -> Boolean)? = null,
-    val isAdmissible: ((S) -> Boolean)? = null
-) : StyleMeta<S, Any?>(*props) {
+class EffectivitySpec<S : Style>(
+    vararg settings: StyleSetting<S, Any?>,
+    val isAlmostEffective: ((S) -> Boolean)? = null,
+    val isTotallyIneffective: ((S) -> Boolean)? = null
+) : StyleMeta<S, Any?>(*settings) {
     init {
-        require(isRelevant != null || isAdmissible != null)
+        require(isAlmostEffective != null || isTotallyIneffective != null)
     }
 }
 
 
 class DontGrowWidgetSpec<S : Style>(
-    prop: KProperty1<S, *>
-) : StyleMeta<S, Any?>(prop)
+    setting: StyleSetting<S, Any?>
+) : StyleMeta<S, Any?>(setting)
 
 
 class NumberStepWidgetSpec<S : Style, N : Number>(
-    prop: KProperty1<S, N>,
+    setting: StyleSetting<S, N>,
     val stepSize: N
-) : StyleMeta<S, N>(prop)
+) : StyleMeta<S, N>(setting)
 
-
-fun <S : Style> getStyleMeta(style: S): List<StyleMeta<S, *>> =
-    getStyleMeta(style.javaClass)
 
 @Suppress("UNCHECKED_CAST")
 fun <S : Style> getStyleMeta(styleClass: Class<S>): List<StyleMeta<S, *>> = when (styleClass) {
@@ -265,26 +264,27 @@ fun <S : Style> getStyleMeta(styleClass: Class<S>): List<StyleMeta<S, *>> = when
 }
 
 
-fun <S : Style> findIrrelevantSettings(style: S) =
-    evaluateOccurrence(style, OccurrenceSpec<S>::isRelevant)
+enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, OPTIONALLY_INEFFECTIVE, EFFECTIVE }
 
-fun <S : Style> findInadmissibleSettings(style: S) =
-    evaluateOccurrence(style, OccurrenceSpec<S>::isAdmissible)
+fun <S : Style> findIneffectiveSettings(style: S): Map<StyleSetting<*, *>, Effectivity> {
+    val result = HashMap<StyleSetting<*, *>, Effectivity>()
 
-private fun <S : Style> evaluateOccurrence(
-    style: S,
-    which: (OccurrenceSpec<S>) -> ((S) -> Boolean)?
-): Set<StyleSetting<*, *>> {
-    val explicitlyPositive = HashSet<StyleSetting<*, *>>()
-    val explicitlyNegative = HashSet<StyleSetting<*, *>>()
-    for (meta in getStyleMeta(style))
-        if (meta is OccurrenceSpec) {
-            val func = which(meta)
-            if (func != null)
-                (if (func(style)) explicitlyPositive else explicitlyNegative).addAll(meta.settings)
+    for (setting in getStyleSettings(style.javaClass))
+        if (setting is OptionallyEffectiveStyleSetting && !setting.getPlain(style).isEffective)
+            result[setting] = Effectivity.OPTIONALLY_INEFFECTIVE
+
+    fun mark(settings: List<StyleSetting<*, *>>, tier: Effectivity) {
+        for (setting in settings)
+            result[setting] = minOf(result[setting] ?: tier, tier)
+    }
+
+    for (meta in getStyleMeta(style.javaClass))
+        if (meta is EffectivitySpec) {
+            meta.isAlmostEffective?.let { if (it(style)) mark(meta.settings, Effectivity.ALMOST_EFFECTIVE) }
+            meta.isTotallyIneffective?.let { if (it(style)) mark(meta.settings, Effectivity.TOTALLY_INEFFECTIVE) }
         }
-    explicitlyNegative.removeAll(explicitlyPositive)
-    return explicitlyNegative
+
+    return result
 }
 
 
@@ -298,15 +298,16 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
     }
 
     fun <S : Style> verifyStyle(style: S) {
-        val ignoreSettings = findIrrelevantSettings(style) + findInadmissibleSettings(style)
+        val ignoreSettings = findIneffectiveSettings(style)
 
-        for (meta in getStyleMeta(style))
+        for (meta in getStyleMeta(style.javaClass))
             when (meta) {
                 is NumberConstr ->
-                    for (setting in meta.settings.filter { it !in ignoreSettings })
-                        if (meta.inequality == LARGER_OR_EQUAL_0 && setting.get(style).toFloat() < 0 ||
-                            meta.inequality == LARGER_0 && setting.get(style).toFloat() <= 0 ||
-                            meta.finite && !setting.get(style).toFloat().isFinite()
+                    for (setting in meta.settings.filter { it !in ignoreSettings }) {
+                        val value = setting.getValue(style).toFloat()
+                        if (meta.inequality == LARGER_OR_EQUAL_0 && value < 0f ||
+                            meta.inequality == LARGER_0 && value <= 0f ||
+                            meta.finite && !value.isFinite()
                         ) {
                             val key = when {
                                 meta.finite -> "project.styling.constr.finiteNumber"
@@ -319,21 +320,22 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                             }
                             log(style, setting, meta.severity, l10n(key, restriction))
                         }
+                    }
                 is DynChoiceConstr ->
                     for (setting in meta.settings.filter { it !in ignoreSettings })
-                        if (setting.get(style) !in meta.choices(styling, style))
+                        if (setting.getValue(style) !in meta.choices(styling, style))
                             log(style, setting, meta.severity, l10n("project.styling.constr.dynChoice"))
                 is ColorConstr ->
                     for (setting in meta.settings.filter { it !in ignoreSettings })
-                        if (!meta.allowAlpha && setting.get(style).alpha != 255)
+                        if (!meta.allowAlpha && setting.getValue(style).alpha != 255)
                             log(style, setting, meta.severity, l10n("project.styling.constr.colorAlpha"))
                 is FPSConstr ->
                     for (setting in meta.settings.filter { it !in ignoreSettings })
-                        if (setting.get(style).run { numerator <= 0 || denominator <= 0 || !frac.isFinite() })
+                        if (setting.getValue(style).run { numerator <= 0 || denominator <= 0 || !frac.isFinite() })
                             log(style, setting, meta.severity, l10n("project.styling.constr.fps"))
                 is FontNameConstr ->
                     for (setting in meta.settings.filter { it !in ignoreSettings })
-                        if (!isFontName(setting.get(style)))
+                        if (!isFontName(setting.getValue(style)))
                             log(style, setting, meta.severity, l10n("project.styling.constr.font"))
                 is JudgeConstr ->
                     if (!meta.judge(styling, style)) {

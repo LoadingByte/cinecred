@@ -162,6 +162,9 @@ data class LetterStyle(
 enum class Superscript { SUP_2, SUP_1, NONE, SUB_1, SUB_2 }
 
 
+data class OptionallyEffective<out T>(val isEffective: Boolean, val value: T)
+
+
 class Page(
     val stages: ImmutableList<Stage>,
     val alignBodyColsGroups: ImmutableList<ImmutableList<Block>>,

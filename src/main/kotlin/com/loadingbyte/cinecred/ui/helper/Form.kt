@@ -87,6 +87,10 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
     }
 
+    interface WrapperWidget<V, W : Widget<*>> : Widget<V> {
+        val wrapped: W
+    }
+
     interface ChoiceWidget<V, E> : Widget<V> {
         var items: ImmutableList<E>
     }

@@ -3,7 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.electronwill.toml.TomlWriter
 import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.Styling
-import com.loadingbyte.cinecred.project.findIrrelevantSettings
+import com.loadingbyte.cinecred.project.findIneffectiveSettings
 import com.loadingbyte.cinecred.project.getStyleSettings
 import java.awt.Color
 import java.nio.file.Path
@@ -29,10 +29,10 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
 private fun <S : Any> writeStyle(style: S): Map<String, Any> {
     // The order of the settings should be preserved, hence we use a linked map.
     val toml = LinkedHashMap<String, Any>()
-    val excludedSettings = findIrrelevantSettings(style)
+    val excludedSettings = findIneffectiveSettings(style)
     for (setting in getStyleSettings(style.javaClass))
         if (setting !in excludedSettings)
-            setting.get(style)?.let { toml[setting.name] = convert(it) }
+            setting.getValue(style)?.let { toml[setting.name] = convert(it) }
     return toml
 }
 

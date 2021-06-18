@@ -88,6 +88,9 @@ dependencies {
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
     implementation("com.formdev", "flatlaf", "1.1.2")
+
+    // Testing
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.7.2")
 }
 
 configurations.all {
@@ -107,6 +110,10 @@ tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "11"
     // TODO: Remove this once the Path API graduated from the experimental stage (happens in Kotlin 1.5).
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 // Generate a resource file storing the project version.

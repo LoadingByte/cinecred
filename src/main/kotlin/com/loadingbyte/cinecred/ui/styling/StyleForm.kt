@@ -35,13 +35,13 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
                 val min = if (inequality == LARGER_0) 1 else if (inequality == LARGER_OR_EQUAL_0) 0 else null
                 val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Int>>()?.stepSize ?: 1
-                SpinnerWidget(SpinnerNumberModel(min ?: 0, min, null, step))
+                SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(min ?: 0, min, null, step))
             }
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
                 val min = if (inequality == LARGER_0) 0.01f else if (inequality == LARGER_OR_EQUAL_0) 0f else null
                 val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Float>>()?.stepSize ?: 1f
-                SpinnerWidget(SpinnerNumberModel(min ?: 0f, min, null, step))
+                SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(min ?: 0f, min, null, step))
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {

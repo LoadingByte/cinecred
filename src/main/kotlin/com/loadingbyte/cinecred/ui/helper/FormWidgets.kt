@@ -159,11 +159,16 @@ class FileWidget(
 }
 
 
-class SpinnerWidget(
+open class SpinnerWidget<V>(
+    private val valueClass: Class<V>,
     model: SpinnerModel
-) : Form.AbstractWidget<Any>() {
+) : Form.AbstractWidget<V>() {
 
-    private val spinner = JSpinner(model).apply {
+    init {
+        require(!valueClass.isPrimitive)
+    }
+
+    protected val spinner = JSpinner(model).apply {
         addChangeListener { notifyChangeListeners() }
         setMinWidth100()
     }
@@ -171,7 +176,11 @@ class SpinnerWidget(
     override val components = listOf(spinner)
     override val constraints = listOf("")
 
-    override var value: Any by spinner::value
+    override var value: V
+        get() = valueClass.cast(spinner.value)
+        set(value) {
+            spinner.value = value
+        }
 
 }
 

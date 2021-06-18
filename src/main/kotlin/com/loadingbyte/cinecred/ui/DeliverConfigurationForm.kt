@@ -101,8 +101,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(SpinnerNumberModel(1f, 0.01f, null, 0.5f)),
-        verify = { verifyResolutionMult(it as Float) }
+        SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(1f, 0.01f, null, 0.5f)),
+        verify = ::verifyResolutionMult
     )
     private val transparentBackgroundWidget = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
@@ -184,7 +184,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
                 null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
-            val scaling = resolutionMultWidget.value as Float
+            val scaling = resolutionMultWidget.value
 
             fun getScaledPageDefImages() = drawnPages.map {
                 DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }

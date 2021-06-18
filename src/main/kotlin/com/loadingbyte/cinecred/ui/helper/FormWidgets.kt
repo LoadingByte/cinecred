@@ -5,6 +5,9 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.OptionallyEffective
+import com.loadingbyte.cinecred.project.TimecodeFormat
+import com.loadingbyte.cinecred.projectio.formatTimecode
+import com.loadingbyte.cinecred.projectio.parseTimecode
 import com.loadingbyte.cinecred.projectio.toFPS
 import com.loadingbyte.cinecred.projectio.toString2
 import kotlinx.collections.immutable.ImmutableList
@@ -21,6 +24,8 @@ import java.text.NumberFormat
 import java.util.*
 import javax.swing.*
 import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.text.DefaultFormatter
+import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
 import kotlin.math.ceil
 
@@ -181,6 +186,55 @@ open class SpinnerWidget<V>(
         set(value) {
             spinner.value = value
         }
+
+}
+
+
+class TimecodeWidget(
+    model: SpinnerNumberModel,
+    fps: FPS,
+    timecodeFormat: TimecodeFormat
+) : SpinnerWidget<Int>(Int::class.javaObjectType, model) {
+
+    var fps: FPS = fps
+        set(fps) {
+            field = fps
+            updateFormatter()
+        }
+
+    var timecodeFormat: TimecodeFormat = timecodeFormat
+        set(timecodeFormat) {
+            field = timecodeFormat
+            updateFormatter()
+        }
+
+    private val editor = JSpinner.DefaultEditor(spinner).apply {
+        textField.isEditable = true
+    }
+
+    init {
+        spinner.font = Font(Font.MONOSPACED, Font.PLAIN, spinner.font.size)
+        spinner.editor = editor
+        updateFormatter()
+    }
+
+    private fun updateFormatter() {
+        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter(fps, timecodeFormat))
+    }
+
+
+    private class TimecodeFormatter(
+        private val fps: FPS,
+        private val timecodeFormat: TimecodeFormat
+    ) : DefaultFormatter() {
+
+        override fun valueToString(value: Any?): String? =
+            runCatching { formatTimecode(fps, timecodeFormat, value as Int) }.getOrNull()
+
+        override fun stringToValue(string: String?): Int? =
+            runCatching { parseTimecode(fps, timecodeFormat, string!!) }.getOrNull()
+
+    }
 
 }
 

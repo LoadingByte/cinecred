@@ -248,11 +248,19 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             if (violation.style == openedStyle)
                 openedForm.setNoticeOverride(violation.setting, Form.Notice(violation.severity, violation.msg))
 
-        for (meta in getStyleMeta(openedStyle))
-            if (meta is DynChoiceConstr<Style, *>) {
-                val choices = meta.choices(styling, openedStyle).toImmutableList()
-                for (setting in meta.settings)
-                    openedForm.setDynChoices(setting, choices)
+        for (meta in getStyleMeta(openedStyle.javaClass))
+            when (meta) {
+                is DynChoiceConstr -> {
+                    val choices = meta.choices(styling, openedStyle).toImmutableList()
+                    for (setting in meta.settings)
+                        openedForm.setDynChoices(setting, choices)
+                }
+                is TimecodeWidgetSpec -> {
+                    val fps = meta.getFPS(styling, openedStyle)
+                    val timecodeFormat = meta.getTimecodeFormat(styling, openedStyle)
+                    for (setting in meta.settings)
+                        openedForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
+                }
             }
     }
 

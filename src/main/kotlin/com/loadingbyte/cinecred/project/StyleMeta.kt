@@ -254,6 +254,13 @@ class NumberStepWidgetSpec<S : Style, N : Number>(
 ) : StyleMeta<S, N>(setting)
 
 
+class TimecodeWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Number>,
+    val getFPS: (Styling, S) -> FPS,
+    val getTimecodeFormat: (Styling, S) -> TimecodeFormat
+) : StyleMeta<S, Number>(setting)
+
+
 @Suppress("UNCHECKED_CAST")
 fun <S : Style> getStyleMeta(styleClass: Class<S>): List<StyleMeta<S, *>> = when (styleClass) {
     Global::class.java -> GLOBAL_META as List<StyleMeta<S, *>>

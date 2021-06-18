@@ -35,7 +35,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
                 val min = if (inequality == LARGER_0) 1 else if (inequality == LARGER_OR_EQUAL_0) 0 else null
                 val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Int>>()?.stepSize ?: 1
-                SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(min ?: 0, min, null, step))
+                val model = SpinnerNumberModel(min ?: 0, min, null, step)
+                if (settingMeta.oneOf<TimecodeWidgetSpec<S>>() != null)
+                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0])
+                else
+                    SpinnerWidget(Int::class.javaObjectType, model)
             }
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
@@ -138,7 +142,20 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     fun setDynChoices(setting: StyleSetting<*, *>, choices: ImmutableList<*>) {
         @Suppress("UNCHECKED_CAST")
-        (settingWidgets[setting]!! as ChoiceWidget<*, Any?>).items = choices
+        (getBackingWidget(setting) as ChoiceWidget<*, Any?>).items = choices
+    }
+
+    fun setTimecodeFPSAndFormat(setting: StyleSetting<*, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
+        val timecodeWidget = getBackingWidget(setting) as TimecodeWidget
+        timecodeWidget.fps = fps
+        timecodeWidget.timecodeFormat = timecodeFormat
+    }
+
+    private fun getBackingWidget(setting: StyleSetting<*, *>): Widget<*> {
+        var widget = settingWidgets[setting]!!
+        while (widget is WrapperWidget<*, *>)
+            widget = widget.wrapped
+        return widget
     }
 
     override fun onChange(widget: Widget<*>) {

@@ -61,9 +61,6 @@ open class VideoDrawer(
             if (pageIdx != project.pages.lastIndex)
                 writeStatic(-1, 0f, page.stages.last().style.afterwardSlugFrames)
         }
-
-        // Write one final empty frame at the end.
-        insns.add(Insn(-1, 0f, 1f))
     }
 
     private fun writeStatic(pageIdx: Int, imgTopY: Float, numFrames: Int) {

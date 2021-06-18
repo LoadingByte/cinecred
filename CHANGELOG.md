@@ -48,6 +48,7 @@ Cinecred Changelog
   specified ones is no longer possible, and the latter take precedence. Also,
   specifying vertical gaps in rows with head, body, and/or tail is now
   discouraged as the gap's belonging is ambiguous.
+- The renderer will no longer write a final empty frame.
 - Improved the default spreadsheet by resizing the columns and reodering them so
   the head, body, and tail columns come first.
 - The format of `Styling.toml` has slightly changed. Nevertheless, old files can

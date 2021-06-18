@@ -183,7 +183,7 @@ private object JULFormatter : Formatter() {
 
     private fun getThreadByID(threadID: Long): Thread? {
         // Find the root thread group.
-        var rootGroup = Thread.currentThread().threadGroup.parent
+        var rootGroup = Thread.currentThread().threadGroup ?: return null
         while (true)
             rootGroup = rootGroup.parent ?: break
         // Enumerate all threads.

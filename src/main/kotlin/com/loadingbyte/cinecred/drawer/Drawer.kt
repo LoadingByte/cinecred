@@ -18,7 +18,7 @@ fun draw(project: Project): List<DrawnPage> {
     // Store both in a TextContext object.
     val textCtx = TextContext(project.styling.global.locale, fonts, uppercaseExceptionsRegex)
 
-    return project.pages.map { page -> drawPage(project.styling.global, textCtx, page) }
+    return drawPages(project.styling.global, textCtx, project.pages, project.runtimeGroups)
 }
 
 

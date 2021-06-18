@@ -31,10 +31,12 @@ private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
             formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
         formats
     },
+    NumberConstr(ERROR, Global::runtimeFrames.st(), LARGER_0),
     ColorConstr(ERROR, Global::background.st(), allowAlpha = false),
     NumberConstr(ERROR, Global::unitVGapPx.st(), LARGER_0),
     NumberStepWidgetSpec(Global::widthPx.st(), 10),
     NumberStepWidgetSpec(Global::heightPx.st(), 10),
+    TimecodeWidgetSpec(Global::runtimeFrames.st(), { _, global -> global.fps }, { _, global -> global.timecodeFormat }),
     DontGrowWidgetSpec(Global::uppercaseExceptions.st())
 )
 

@@ -2,6 +2,9 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.common.Y.Companion.plus
+import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
+import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import kotlin.math.max
@@ -104,19 +107,21 @@ fun drawColumn(
 
     // Step 5:
     // Combine the block images for the blocks inside the column to a column image.
-    val columnImage = DeferredImage()
     val axisXInColumnImage = column.blocks.maxOf { block -> drawnBlocks.getValue(block).axisXInImage }
-    var y = 0f
+    val columnImageWidth = axisXInColumnImage +
+            column.blocks.maxOf { block -> drawnBlocks.getValue(block).run { defImage.width - axisXInImage } }
+    val columnImage = DeferredImage(width = columnImageWidth)
+    var y = 0f.toY()
     for (block in column.blocks) {
-        y += block.style.vMarginPx
+        y += block.style.vMarginPx.toElasticY()
         val drawnBlock = drawnBlocks.getValue(block)
         val x = axisXInColumnImage - drawnBlock.axisXInImage
         columnImage.drawDeferredImage(drawnBlock.defImage, x, y)
-        y += drawnBlock.defImage.height + block.style.vMarginPx + block.vGapAfterPx
+        y += drawnBlock.defImage.height + (block.style.vMarginPx + block.vGapAfterPx).toElasticY()
     }
     // Draw a guide that shows the column's axis.
-    columnImage.drawLine(AXIS_GUIDE_COLOR, axisXInColumnImage, 0f, axisXInColumnImage, y, layer = GUIDES)
-    // Ensure that the column image's height also entails the last block's vMarginPx.
+    columnImage.drawLine(AXIS_GUIDE_COLOR, axisXInColumnImage, 0f.toY(), axisXInColumnImage, y, layer = GUIDES)
+    // Set the column image's height; note that it of course entails the last block's vMarginPx.
     columnImage.height = y
 
     return DrawnColumn(columnImage, axisXInColumnImage)
@@ -211,35 +216,37 @@ private fun drawHorizontalSpineBlocks(
         // Used later on for vertically justifying the head and tail.
         fun getReferenceHeight(vJustify: VJustify) =
             when (vJustify) {
-                VJustify.TOP -> drawnBody.firstRowHeight
+                VJustify.TOP -> drawnBody.firstRowHeight.toY()
                 VJustify.MIDDLE -> null
-                VJustify.BOTTOM -> drawnBody.lastRowHeight
+                VJustify.BOTTOM -> drawnBody.lastRowHeight.toY()
             }
 
         // Draw the block image.
-        val blockImage = DeferredImage()
-        var y = 0f
+        val blockImageHeight = bodyImage.height
+        val blockImage = DeferredImage(width = tailEndX - headStartX, height = blockImageHeight)
         // Draw the block's head.
         if (block.head != null) {
             blockImage.drawJustifiedStyledString(
                 textCtx, block.head, block.style.headHJustify, block.style.headVJustify,
-                0f, y, headWidth, bodyImage.height, getReferenceHeight(block.style.headVJustify)
+                headStartX, 0f.toY(), headWidth, blockImageHeight, getReferenceHeight(block.style.headVJustify)
             )
             // Draw a guide that shows the edges of the head space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, 0f, y, headWidth, bodyImage.height, layer = GUIDES)
+            blockImage.drawRect(
+                HEAD_TAIL_GUIDE_COLOR, headStartX, 0f.toY(), headWidth, blockImageHeight, layer = GUIDES
+            )
         }
         // Draw the block's body.
-        blockImage.drawDeferredImage(bodyImage, bodyStartX, y)
-        if (block.style.spineOrientation == SpineOrientation.VERTICAL)
-            y += bodyImage.height
+        blockImage.drawDeferredImage(bodyImage, bodyStartX, 0f.toY())
         // Draw the block's tail.
         if (block.tail != null) {
             blockImage.drawJustifiedStyledString(
                 textCtx, block.tail, block.style.tailHJustify, block.style.tailVJustify,
-                tailStartX, y, tailWidth, bodyImage.height, getReferenceHeight(block.style.tailVJustify)
+                tailStartX, 0f.toY(), tailWidth, blockImageHeight, getReferenceHeight(block.style.tailVJustify)
             )
             // Draw a guide that shows the edges of the tail space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, tailStartX, y, tailWidth, bodyImage.height, layer = GUIDES)
+            blockImage.drawRect(
+                HEAD_TAIL_GUIDE_COLOR, tailStartX, 0f.toY(), tailWidth, blockImageHeight, layer = GUIDES
+            )
         }
 
         // Find the x coordinate of the axis in the generated image for the current block.
@@ -273,34 +280,34 @@ private fun drawVerticalSpineBlock(
     val bodyImage = drawnBody.defImage
 
     // Draw the body image.
-    val blockImage = DeferredImage()
-    var y = 0f
+    val blockImageWidth = bodyImage.width
+    val blockImage = DeferredImage(blockImageWidth)
+    var y = 0f.toY()
     // Draw the block's head.
     if (block.head != null) {
-        blockImage.drawJustifiedStyledString(
-            textCtx, block.head, block.style.headHJustify, 0f, y, bodyImage.width
-        )
+        blockImage.drawJustifiedStyledString(textCtx, block.head, block.style.headHJustify, 0f, y, blockImageWidth)
         // Draw guides that show the edges of the head space.
-        val y2 = blockImage.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, 0f, 0f, y2, layer = GUIDES)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, 0f, bodyImage.width, y2, layer = GUIDES)
+        val headHeight = block.head.getHeight().toFloat()
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + headHeight, layer = GUIDES)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + headHeight, layer = GUIDES)
         // Advance to the body.
-        y += block.head.getHeight() + block.style.headGapPx
+        y += headHeight + block.style.headGapPx.toElasticY()
     }
     // Draw the block's body.
     blockImage.drawDeferredImage(bodyImage, 0f, y)
     y += bodyImage.height
     // Draw the block's tail.
     if (block.tail != null) {
-        y += block.style.tailGapPx
-        blockImage.drawJustifiedStyledString(
-            textCtx, block.tail, block.style.tailHJustify, 0f, y, bodyImage.width
-        )
+        y += block.style.tailGapPx.toElasticY()
+        blockImage.drawJustifiedStyledString(textCtx, block.tail, block.style.tailHJustify, 0f, y, blockImageWidth)
         // Draw guides that show the edges of the tail space.
-        val y2 = blockImage.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y2, layer = GUIDES)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, bodyImage.width, y, bodyImage.width, y2, layer = GUIDES)
+        val tailHeight = block.tail.getHeight().toFloat()
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + tailHeight, layer = GUIDES)
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + tailHeight, layer = GUIDES)
+        // Advance to below the tail.
+        y += tailHeight
     }
+    blockImage.height = y
 
     // Find the x coordinate of the axis in the generated image for the current block.
     val axisXInImage = when (block.style.alignWithAxis) {

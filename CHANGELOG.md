@@ -15,6 +15,10 @@ Cinecred Changelog
 - Added a project-wide timecode format setting, supporting SMPTE Non Drop-Frame,
   SMPTE Drop-Frame (only for suitable frame rates), a clock timecode, and the
   plain number of frames.
+- One can specify the desired runtime of individual pages and/or the whole
+  sequence. Vertical gaps are then automatically stretched to achieve that
+  runtime as close as possible.
+- The runtime of each stage is displayed as a layout guide.
 
 ### Fixes
 

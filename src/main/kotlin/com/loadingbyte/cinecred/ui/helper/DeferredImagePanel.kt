@@ -33,7 +33,7 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
     private var image: DeferredImage? = null
 
     fun setImage(image: DeferredImage?) {
-        require(image == null || image.width != 0f && image.height != 0f)
+        require(image == null || image.width != 0f && image.height.resolve() != 0f)
         this.image = image
         coerceViewportAndCalibrateScrollbars()
         // Rematerialize will call canvas.repaint() once it's done.
@@ -168,11 +168,12 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
 
     // In image coordinates:
     private val viewportWidth get() = image!!.width / zoom
-    private val viewportHeight get() = min(image!!.height, canvas.height.also { require(it != 0) } / imageScaling)
+    private val viewportHeight
+        get() = min(image!!.height.resolve(), canvas.height.also { require(it != 0) } / imageScaling)
     private val minViewportCenterX get() = viewportWidth / 2f
     private val maxViewportCenterX get() = image!!.width - minViewportCenterX
     private val minViewportCenterY get() = viewportHeight / 2f
-    private val maxViewportCenterY get() = image!!.height - minViewportCenterY
+    private val maxViewportCenterY get() = image!!.height.resolve() - minViewportCenterY
 
     private val imageScaling get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
 
@@ -194,7 +195,7 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
                 extent = (viewportWidth * SCROLLBAR_MULT).roundToInt()
             }
             yScrollbar.model.apply {
-                maximum = (image.height * SCROLLBAR_MULT).roundToInt()
+                maximum = (image.height.resolve() * SCROLLBAR_MULT).roundToInt()
                 extent = (viewportHeight * SCROLLBAR_MULT).roundToInt()
             }
             // Disable scrollbars if they have no room to scroll.
@@ -259,12 +260,11 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
             jobSlot.submit {
                 // Use max(1, ...) to ensure that the raster image width doesn't drop to 0.
                 val matWidth = max(1, (imageScaling * image.width).roundToInt())
-                val matHeight = max(1, (imageScaling * image.height).roundToInt())
+                val matHeight = max(1, (imageScaling * image.height.resolve()).roundToInt())
                 val materialized = gCfg.createCompatibleImage(matWidth, matHeight).withG2 { g2 ->
                     g2.setHighQuality()
                     // Paint a scaled version of the deferred image onto the raster image.
-                    val scaledImage = DeferredImage()
-                    scaledImage.drawDeferredImage(image, 0f, 0f, imageScaling)
+                    val scaledImage = image.copy(universeScaling = imageScaling)
                     scaledImage.materialize(g2, layers)
                 }
 

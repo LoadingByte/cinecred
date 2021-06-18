@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -40,7 +39,7 @@ open class VideoDrawer(
             for ((stageIdx, stage) in page.stages.withIndex())
                 when (val stageInfo = drawnPages[pageIdx].stageInfo[stageIdx]) {
                     is DrawnStageInfo.Card -> {
-                        val imgTopY = scaling * (stageInfo.middleY - project.styling.global.heightPx / 2f)
+                        val imgTopY = scaling * (stageInfo.middleY.resolve() - project.styling.global.heightPx / 2f)
                         if (stageIdx == 0)
                             writeFade(pageIdx, imgTopY, stage.style.cardFadeInFrames, fadeOut = false)
                         writeStatic(pageIdx, imgTopY, stage.style.cardDurationFrames)
@@ -50,8 +49,9 @@ open class VideoDrawer(
                     }
                     is DrawnStageInfo.Scroll -> {
                         val imgTopYStart = prevScrollActualImgTopYStop
-                            ?: scaling * (stageInfo.scrollStartY - project.styling.global.heightPx / 2f)
-                        val imgTopYStop = scaling * (stageInfo.scrollStopY - project.styling.global.heightPx / 2f)
+                            ?: scaling * (stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2f)
+                        val imgTopYStop =
+                            scaling * (stageInfo.scrollStopY.resolve() - project.styling.global.heightPx / 2f)
                         prevScrollActualImgTopYStop = writeScroll(
                             pageIdx, imgTopYStart, imgTopYStop, scaling * stage.style.scrollPxPerFrame
                         )
@@ -84,13 +84,14 @@ open class VideoDrawer(
     private fun writeScroll(
         pageIdx: Int, imgTopYStart: Float, imgTopYStop: Float, scrollPxPerFrame: Float
     ): Float {
-        // Choose imgTopY such that the scroll sequence never contains imgTopYStart nor imgTopYStop.
-        var imgTopY = imgTopYStart
-        while (imgTopY + scrollPxPerFrame < imgTopYStop) {
-            imgTopY += scrollPxPerFrame
+        // Find the number of frames making up the scroll. It should neither include the frame at imgTopYStart
+        // nor the one at imgTopYStop, hence the -1.
+        val numFrames = discretizeScrollFrames((imgTopYStop - imgTopYStart) / scrollPxPerFrame - 1f)
+        for (frame in 0 until numFrames) {
+            val imgTopY = imgTopYStart + (frame + 1) * scrollPxPerFrame
             insns.add(Insn(pageIdx, imgTopY, 1f))
         }
-        return imgTopY
+        return imgTopYStart + numFrames * scrollPxPerFrame
     }
 
     val numFrames = insns.size
@@ -103,9 +104,7 @@ open class VideoDrawer(
        ************ RASTER DRAWING **********
        ************************************** */
 
-    private val scaledPageDefImages = drawnPages.map {
-        DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
-    }
+    private val scaledPageDefImages = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
 
     private val backgroundImage: BufferedImage
     private val shiftedPageImages = Array(drawnPages.size) { HashMap<Float, BufferedImage>() }
@@ -135,7 +134,7 @@ open class VideoDrawer(
             // Note: We add 1 to the height to make room for the shift (which is between 0 and 1).
             // We add 2*height to make room for buffers above and below the content; they will be in frame
             // when a scrolling page starts and ends and need to provide the correct background color.
-            val imageHeight = ceil(scaledPageDefImg.height).toInt() + 1 + 2 * height
+            val imageHeight = ceil(scaledPageDefImg.height.resolve()).toInt() + 1 + 2 * height
             createIntermediateImage(width, imageHeight).withG2 { g2 ->
                 g2.setHighQuality()
                 if (!transparentBackground) {
@@ -192,6 +191,10 @@ open class VideoDrawer(
 
     companion object {
         private const val MAX_SHIFTED_PAGE_IMAGES = 16
+
+        // If the numFrames float just slightly larger than an integer, we want it to be handled as if it was the
+        // integer to compensate for floating point inaccuracy. That is why we have the -0.02 in there.
+        fun discretizeScrollFrames(numFrames: Float): Int = ceil(numFrames - 0.02f).toInt()
     }
 
 }

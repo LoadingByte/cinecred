@@ -180,13 +180,15 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
             val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
-            val (pages, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
+            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
 
             // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
             if (log.any { it.severity == ERROR })
                 return@submit updateProject(null, emptyList(), styErr = false, locAndLoadLog + log)
 
-            val project = Project(styling, fontsByName.toImmutableMap(), pages.toImmutableList())
+            val project = Project(
+                styling, fontsByName.toImmutableMap(), pages.toImmutableList(), runtimeGroups.toImmutableList()
+            )
             val drawnPages = draw(project)
 
             updateProject(project, drawnPages, styErr = false, locAndLoadLog + log)

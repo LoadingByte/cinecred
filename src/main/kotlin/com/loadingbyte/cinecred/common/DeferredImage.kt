@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.common
 
 import com.formdev.flatlaf.util.Graphics2DProxy
+import com.loadingbyte.cinecred.common.Y.Companion.toY
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
@@ -20,7 +21,7 @@ import java.text.CharacterIterator
 import kotlin.math.max
 
 
-class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
+class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private val instructions = HashMap<Layer, MutableList<Instruction>>()
 
@@ -28,49 +29,41 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
         instructions.getOrPut(layer) { ArrayList() }.add(insn)
     }
 
-    fun drawDeferredImage(image: DeferredImage, x: Float, y: Float, scaling: Float = 1f) {
-        width = max(width, x + scaling * image.width)
-        height = max(height, y + scaling * image.height)
+    fun copy(universeScaling: Float = 1f, elasticScaling: Float = 1f): DeferredImage {
+        val copy = DeferredImage(
+            width = width * universeScaling,
+            height = (height * universeScaling).scaleElastic(elasticScaling)
+        )
+        copy.drawDeferredImage(this, universeScaling = universeScaling, elasticScaling = elasticScaling)
+        return copy
+    }
 
-        for ((layer, insns) in image.instructions.entries)
-            for (insn in insns) {
-                val newInsn = when (insn) {
-                    is Instruction.DrawShapes -> Instruction.DrawShapes(
-                        insn.shapes, x + scaling * insn.x, y + scaling * insn.y, scaling * insn.scaling, insn.fill
-                    )
-                    is Instruction.DrawPicture -> Instruction.DrawPicture(
-                        insn.pic.scaled(scaling), x + scaling * insn.x, y + scaling * insn.y
-                    )
-                    is Instruction.DrawInvisiblePDFStrings -> Instruction.DrawInvisiblePDFStrings(
-                        insn.parts, x + scaling * insn.x, y + scaling * insn.baselineY, scaling * insn.scaling
-                    )
-                }
-                addInstruction(layer, newInsn)
-            }
+    fun drawDeferredImage(
+        image: DeferredImage, x: Float = 0f, y: Y = 0f.toY(), universeScaling: Float = 1f, elasticScaling: Float = 1f
+    ) {
+        for (layer in image.instructions.keys) {
+            val insn = Instruction.DrawDeferredImageLayer(image, layer, x, y, universeScaling, elasticScaling)
+            addInstruction(layer, insn)
+        }
     }
 
     fun drawShape(
-        color: Color, shape: Shape, x: Float = 0f, y: Float = 0f, scaling: Float = 1f, fill: Boolean = false,
-        layer: Layer = FOREGROUND
+        color: Color, shape: Shape, x: Float, y: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
-        if (!layer.isHelperLayer) {
-            val bounds = shape.bounds2D
-            width = max(width, x + scaling * bounds.maxX.toFloat())
-            height = max(height, y + scaling * bounds.maxY.toFloat())
-        }
-        addInstruction(layer, Instruction.DrawShapes(listOf(Pair(shape, color)), x, y, scaling, fill))
+        addInstruction(layer, Instruction.DrawShapes(listOf(Pair(shape, color)), x, y, fill))
     }
 
     fun drawLine(
-        color: Color, x1: Float, y1: Float, x2: Float, y2: Float, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, x1: Float, y1: Y, x2: Float, y2: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
-        drawShape(color, Line2D.Float(x1, y1, x2, y2), fill = fill, layer = layer)
+        addInstruction(layer, Instruction.DrawLine(color, x1, y1, x2, y2, fill))
     }
 
     fun drawRect(
-        color: Color, x: Float, y: Float, width: Float, height: Float, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, x: Float, y: Y, width: Float, height: Y, fill: Boolean = false,
+        layer: Layer = FOREGROUND
     ) {
-        drawShape(color, Rectangle2D.Float(x, y, width, height), fill = fill, layer = layer)
+        addInstruction(layer, Instruction.DrawRect(color, x, y, width, height, fill))
     }
 
     /**
@@ -82,17 +75,17 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
      *     [TextAttribute.FOREGROUND] at every character.
      */
     fun drawString(
-        attrCharIter: AttributedCharacterIterator, x: Float, y: Float, justificationWidth: Float = Float.NaN,
-        scaling: Float = 1f, layer: Layer = FOREGROUND
+        attrCharIter: AttributedCharacterIterator, x: Float, y: Y, justificationWidth: Float = Float.NaN,
+        layer: Layer = FOREGROUND
     ) {
-        // Find the height of the tallest font in the attributed string, and find the distance between y and that
-        // font's baseline. In case there are multiple tallest fonts, take the largest distance.
+        // Find the distance between y and the baseline of the tallest font in the attributed string.
+        // In case there are multiple tallest fonts, take the largest distance.
         var maxFontHeight = 0
         var aboveBaseline = 0f
         attrCharIter.forEachRunOf(TextAttribute.FONT) {
             val font = attrCharIter.getAttribute(TextAttribute.FONT) as Font? ?: throw IllegalArgumentException()
             val normFontMetrics = REF_G2.getFontMetrics(font.deriveFont(FONT_NORMALIZATION_ATTRS))
-            if (normFontMetrics.height > maxFontHeight) {
+            if (normFontMetrics.height >= maxFontHeight) {
                 maxFontHeight = normFontMetrics.height
                 aboveBaseline = max(aboveBaseline, normFontMetrics.ascent + normFontMetrics.leading / 2f)
             }
@@ -106,12 +99,6 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
         // Fully justify the text layout if requested.
         if (!justificationWidth.isNaN())
             textLayout = textLayout.getJustifiedLayout(justificationWidth)
-
-        // If the layer isn't a helper layer, adjust the DeferredImage's width and height to accommodate for the string.
-        if (!layer.isHelperLayer) {
-            width = max(width, x + scaling * textLayout.advance)
-            height = max(height, y + scaling * maxFontHeight)
-        }
 
         // We render the text by first converting the string to a path via the TextLayout and then
         // later filling that path. This has the following vital advantages:
@@ -148,7 +135,7 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
         }
 
         // Finally, add a drawing instruction using all prepared information.
-        addInstruction(layer, Instruction.DrawShapes(fill, x, baselineY, scaling, fill = true))
+        addInstruction(layer, Instruction.DrawShapes(fill, x, baselineY, fill = true))
 
         // When drawing to a PDF, we additionally want to draw some invisible strings at the places where the visible,
         // vectorized strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
@@ -180,94 +167,150 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
                 }
         }
         // Finally, add a drawing instruction for the invisible PDF strings.
-        addInstruction(layer, Instruction.DrawInvisiblePDFStrings(invisParts, x, baselineY, scaling))
+        addInstruction(layer, Instruction.DrawInvisiblePDFStrings(invisParts, x, baselineY))
     }
 
-    fun drawPicture(pic: Picture, x: Float, y: Float, layer: Layer = FOREGROUND) {
-        if (!layer.isHelperLayer) {
-            width = max(width, x + pic.width)
-            height = max(height, y + pic.height)
-        }
+    fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
         addInstruction(layer, Instruction.DrawPicture(pic, x, y))
     }
 
     fun materialize(g2: Graphics2D, layers: List<Layer>) {
-        for (layer in layers)
-            for (insn in instructions[layer] ?: emptyList())
-                materializeInstruction(g2, insn)
+        materializeDeferredImage(g2, 0f, 0f, 1f, 1f, this, layers)
     }
 
-    private fun materializeInstruction(g2: Graphics2D, insn: Instruction) {
+    private fun materializeDeferredImage(
+        g2: Graphics2D, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        image: DeferredImage, layers: List<Layer>
+    ) {
+        for (layer in layers)
+            for (insn in image.instructions.getOrDefault(layer, emptyList()))
+                materializeInstruction(g2, x, y, universeScaling, elasticScaling, insn)
+    }
+
+    private fun materializeInstruction(
+        g2: Graphics2D, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        insn: Instruction
+    ) {
         when (insn) {
-            is Instruction.DrawShapes -> {
-                // We first transform the shapes and then draw them without scaling the graphics object.
-                // This ensures that the shapes will exhibit the graphics object's stroke width,
-                // which is 1 pixel by default.
+            is Instruction.DrawDeferredImageLayer -> materializeDeferredImage(
+                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, insn.image,
+                listOf(insn.layer)
+            )
+            is Instruction.DrawShapes -> materializeShapes(
+                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
+                insn.shapes, insn.fill
+            )
+            is Instruction.DrawLine -> materializeShape(
+                g2, Line2D.Float(
+                    x + universeScaling * insn.x1, y + universeScaling * insn.y1.resolve(elasticScaling),
+                    x + universeScaling * insn.x2, y + universeScaling * insn.y2.resolve(elasticScaling)
+                ), insn.color, insn.fill
+            )
+            is Instruction.DrawRect -> materializeShape(
+                g2, Rectangle2D.Float(
+                    x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                    universeScaling * insn.width, universeScaling * insn.height.resolve(elasticScaling)
+                ), insn.color, insn.fill
+            )
+            is Instruction.DrawPicture -> materializePicture(
+                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                insn.pic.scaled(universeScaling)
+            )
+            is Instruction.DrawInvisiblePDFStrings -> materializeInvisiblePDFStrings(
+                g2, x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
+                universeScaling, insn.parts
+            )
+        }
+    }
+
+    private fun materializeShapes(
+        g2: Graphics2D, x: Float, y: Float, universeScaling: Float,
+        shapes: List<Pair<Shape, Color>>, fill: Boolean
+    ) {
+        // We first transform the shapes and then draw them without scaling the graphics object.
+        // This ensures that the shapes will exhibit the graphics object's stroke width,
+        // which is 1 pixel by default.
+        val tx = AffineTransform()
+        tx.translate(x.toDouble(), y.toDouble())
+        tx.scale(universeScaling.toDouble(), universeScaling.toDouble())
+        for ((shape, color) in shapes) {
+            val transformedShape = tx.createTransformedShape(shape)
+            materializeShape(g2, transformedShape, color, fill)
+        }
+    }
+
+    private fun materializeShape(
+        g2: Graphics2D,
+        shape: Shape, color: Color, fill: Boolean
+    ) {
+        g2.color = color
+        if (fill)
+            g2.fill(shape)
+        else
+            g2.draw(shape)
+    }
+
+    private fun materializePicture(
+        g2: Graphics2D, x: Float, y: Float,
+        pic: Picture
+    ) {
+        when (pic) {
+            is Picture.Raster -> {
                 val tx = AffineTransform()
-                tx.translate(insn.x.toDouble(), insn.y.toDouble())
-                tx.scale(insn.scaling.toDouble(), insn.scaling.toDouble())
-                for ((shape, color) in insn.shapes) {
-                    g2.color = color
-                    val transformedShape = tx.createTransformedShape(shape)
-                    if (insn.fill)
-                        g2.fill(transformedShape)
-                    else
-                        g2.draw(transformedShape)
-                }
+                tx.translate(x.toDouble(), y.toDouble())
+                tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
+                g2.drawImage(pic.img, tx, null)
             }
-            is Instruction.DrawPicture -> when (val pic = insn.pic) {
-                is Picture.Raster -> {
-                    val tx = AffineTransform()
-                    tx.translate(insn.x.toDouble(), insn.y.toDouble())
-                    tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
-                    g2.drawImage(pic.img, tx, null)
-                }
-                is Picture.SVG -> g2.preserveTransform {
-                    g2.translate(insn.x.toDouble(), insn.y.toDouble())
-                    g2.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
-                    // Batik might not be thread-safe, even though we haven't tested that.
-                    synchronized(pic.gvtRoot) {
-                        if (pic.isCropped)
-                            g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
-                        pic.gvtRoot.paint(g2)
-                    }
-                }
-                // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
-                // and sometimes even makes it totally unusable.
-                is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
-                    g2.translate(insn.x.toDouble(), insn.y.toDouble())
+            is Picture.SVG -> g2.preserveTransform {
+                g2.translate(x.toDouble(), y.toDouble())
+                g2.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
+                // Batik might not be thread-safe, even though we haven't tested that.
+                synchronized(pic.gvtRoot) {
                     if (pic.isCropped)
-                        g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
-                    // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
-                    // box even if g2.background is set to a transparent color. The most thorough fix is
-                    // to just block all calls to clearRect().
-                    val g2Proxy = object : Graphics2DProxy(g2) {
-                        override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
-                            // Block call.
-                        }
-                    }
-                    // PDFBox is definitely not thread-safe.
-                    synchronized(pic.doc) {
-                        PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
-                    }
+                        g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
+                    pic.gvtRoot.paint(g2)
                 }
             }
-            is Instruction.DrawInvisiblePDFStrings -> {
-                if (g2 is PdfBoxGraphics2D) {
-                    // Force the following text to be drawn using any font it can find.
-                    g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
-                    // The invisible text should of course be invisible.
-                    g2.color = Color(0, 0, 0, 0)
-                    for (part in insn.parts) {
-                        // We use a placeholder default PDF font.
-                        g2.font = Font("SansSerif", 0, (insn.scaling * part.fontSize).toInt())
-                        g2.drawString(part.str, insn.x + insn.scaling * part.unscaledXOffset, insn.baselineY)
+            // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
+            // and sometimes even makes it totally unusable.
+            is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                g2.translate(x.toDouble(), y.toDouble())
+                if (pic.isCropped)
+                    g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
+                // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
+                // box even if g2.background is set to a transparent color. The most thorough fix is
+                // to just block all calls to clearRect().
+                val g2Proxy = object : Graphics2DProxy(g2) {
+                    override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
+                        // Block call.
                     }
-                    // We are done. Future text should again be vectorized, as indicated by
-                    // the presence of the default, unconfigured FontTextDrawer.
-                    g2.setFontTextDrawer(PdfBoxGraphics2DFontTextDrawer())
+                }
+                // PDFBox is definitely not thread-safe.
+                synchronized(pic.doc) {
+                    PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
                 }
             }
+        }
+    }
+
+    private fun materializeInvisiblePDFStrings(
+        g2: Graphics2D, x: Float, baselineY: Float, universeScaling: Float,
+        parts: List<Instruction.DrawInvisiblePDFStrings.Part>
+    ) {
+        if (g2 is PdfBoxGraphics2D) {
+            // Force the following text to be drawn using any font it can find.
+            g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
+            // The invisible text should of course be invisible.
+            g2.color = Color(0, 0, 0, 0)
+            for (part in parts) {
+                // We use a placeholder default PDF font.
+                g2.font = Font("SansSerif", 0, (universeScaling * part.fontSize).toInt())
+                g2.drawString(part.str, x + universeScaling * part.unscaledXOffset, baselineY)
+            }
+            // We are done. Future text should again be vectorized, as indicated by
+            // the presence of the default, unconfigured FontTextDrawer.
+            g2.setFontTextDrawer(PdfBoxGraphics2DFontTextDrawer())
         }
     }
 
@@ -275,9 +318,9 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
     companion object {
 
         // These three common layers are typically used. Additional layers may be defined by users of this class.
-        val FOREGROUND = Layer(isHelperLayer = false)
-        val BACKGROUND = Layer(isHelperLayer = false)
-        val GUIDES = Layer(isHelperLayer = true)
+        val FOREGROUND = Layer()
+        val BACKGROUND = Layer()
+        val GUIDES = Layer()
 
         private val FONT_NORMALIZATION_ATTRS = mapOf(TextAttribute.SUPERSCRIPT to null)
 
@@ -304,21 +347,34 @@ class DeferredImage(var width: Float = 0f, var height: Float = 0f) {
     }
 
 
-    class Layer(val isHelperLayer: Boolean)
+    class Layer
 
 
     private sealed class Instruction {
 
+        class DrawDeferredImageLayer(
+            val image: DeferredImage, val layer: Layer, val x: Float, val y: Y, val universeScaling: Float,
+            val elasticScaling: Float
+        ) : Instruction()
+
         class DrawShapes(
-            val shapes: List<Pair<Shape, Color>>, val x: Float, val y: Float, val scaling: Float, val fill: Boolean
+            val shapes: List<Pair<Shape, Color>>, val x: Float, val y: Y, val fill: Boolean
+        ) : Instruction()
+
+        class DrawLine(
+            val color: Color, val x1: Float, val y1: Y, val x2: Float, val y2: Y, val fill: Boolean
+        ) : Instruction()
+
+        class DrawRect(
+            val color: Color, val x: Float, val y: Y, val width: Float, val height: Y, val fill: Boolean
         ) : Instruction()
 
         class DrawPicture(
-            val pic: Picture, val x: Float, val y: Float
+            val pic: Picture, val x: Float, val y: Y
         ) : Instruction()
 
         class DrawInvisiblePDFStrings(
-            val parts: List<Part>, val x: Float, val baselineY: Float, val scaling: Float
+            val parts: List<Part>, val x: Float, val baselineY: Y
         ) : Instruction() {
             class Part(val str: String, val unscaledXOffset: Float, val fontSize: Float)
         }

@@ -46,7 +46,7 @@ class WholePageSequenceRenderJob(
             if (Thread.interrupted()) return
 
             val pageWidth = pageDefImage.width.roundToInt()
-            val pageHeight = pageDefImage.height.roundToInt()
+            val pageHeight = pageDefImage.height.resolve().roundToInt()
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
@@ -132,10 +132,13 @@ class WholePagePDFRenderJob(
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pdfPage = PDPage(PDRectangle(page.width, page.height))
+            val pageWidth = page.width
+            val pageHeight = page.height.resolve()
+
+            val pdfPage = PDPage(PDRectangle(pageWidth, pageHeight))
             pdfDoc.addPage(pdfPage)
 
-            val g2 = PdfBoxGraphics2D(pdfDoc, page.width, page.height)
+            val g2 = PdfBoxGraphics2D(pdfDoc, pageWidth, pageHeight)
             page.materialize(g2, layers)
             g2.dispose()
 

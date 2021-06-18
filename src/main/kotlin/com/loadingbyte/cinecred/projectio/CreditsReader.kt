@@ -7,7 +7,9 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import java.io.File
 import java.nio.file.Path
 import java.util.*
@@ -63,16 +65,17 @@ fun readCredits(
     spreadsheet: Spreadsheet,
     styling: Styling,
     pictureLoaders: Map<Path, Lazy<Picture?>>
-): Pair<List<Page>, List<ParserMsg>> {
+): Triple<List<Page>, List<RuntimeGroup>, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
-        spreadsheet, l10nPrefix = "projectIO.credits.table.",
-        l10nColNames = listOf("head", "body", "tail", "vGap", "contentStyle", "breakAlign", "columnPos", "pageStyle")
+        spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
+            "head", "body", "tail", "vGap", "contentStyle", "breakAlign", "columnPos", "pageStyle", "pageRuntime"
+        )
     )
 
     // Read the table.
-    val pages = CreditsReader(table, styling, pictureLoaders).read()
-    return Pair(pages, table.log)
+    val (pages, runtimeGroups) = CreditsReader(table, styling, pictureLoaders).read()
+    return Triple(pages, runtimeGroups, table.log)
 }
 
 
@@ -142,6 +145,8 @@ private class CreditsReader(
 
     // Final result
     val pages = mutableListOf<Page>()
+    val unnamedRuntimeGroups = mutableListOf<RuntimeGroup>()
+    val namedRuntimeGroups = mutableMapOf<String, RuntimeGroup>()
 
     // Current page
     val pageStages = mutableListOf<Stage>()
@@ -155,6 +160,8 @@ private class CreditsReader(
     // Current stage
     var stageStyle: PageStyle? = null
     val stageSegments = mutableListOf<Segment>()
+    var stageRuntimeFrames: Int? = null
+    var stageRuntimeGroupName: String? = null
 
     // Current segment
     val segmentColumns = mutableListOf<Column>()
@@ -220,11 +227,28 @@ private class CreditsReader(
     }
 
     fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
-        // Note: We allow that empty scroll stages to connect card stages.
-        if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL)
-            pageStages.add(Stage(stageStyle!!, stageSegments.toImmutableList(), vGapAfter))
+        // Note: We allow empty scroll stages to connect card stages.
+        if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
+            val stage = Stage(stageStyle!!, stageSegments.toImmutableList(), vGapAfter)
+            pageStages.add(stage)
+
+            // If directed, add the new stage to a runtime group.
+            val stageRtFrames = stageRuntimeFrames
+            val stageRtGroupName = stageRuntimeGroupName
+            if (stageRtGroupName != null && stageRtGroupName in namedRuntimeGroups) {
+                val oldGroup = namedRuntimeGroups.getValue(stageRtGroupName)
+                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(
+                    oldGroup.stages.toPersistentList().add(stage), oldGroup.runtimeFrames
+                )
+            } else if (stageRtGroupName != null && stageRtFrames != null)
+                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(persistentListOf(stage), stageRtFrames)
+            else if (stageRtFrames != null)
+                unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), stageRtFrames))
+        }
         stageStyle = newStageStyle
         stageSegments.clear()
+        stageRuntimeFrames = null
+        stageRuntimeGroupName = null
     }
 
     fun concludeSegment(vGapAfter: Float) {
@@ -270,7 +294,7 @@ private class CreditsReader(
        ************ ACTUAL PARSING **********
        ************************************** */
 
-    fun read(): List<Page> {
+    fun read(): Pair<List<Page>, List<RuntimeGroup>> {
         for (row in 0 until table.numRows) {
             this.row = row
             readRow()
@@ -285,7 +309,10 @@ private class CreditsReader(
         concludeStage(0f, PLACEHOLDER_PAGE_STYLE /* we just need to put some arbitrary thing in here */)
         concludePage()
 
-        return pages
+        // Collect the runtime groups
+        val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
+
+        return Pair(pages, runtimeGroups)
     }
 
     fun readRow() {
@@ -319,6 +346,32 @@ private class CreditsReader(
                 concludeAlignBodyColsGroupsGroup()
                 concludeAlignHeadTailGroupsGroup()
                 concludePage()
+            }
+        }
+        table.getString(row, "pageRuntime")?.let { str ->
+            if (table.isEmpty(row, "pageStyle"))
+                table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.pageRuntimeInIntermediateRow"))
+            else if (str in namedRuntimeGroups)
+                stageRuntimeGroupName = str
+            else {
+                val fps = styling.global.fps
+                val timecodeFormat = styling.global.timecodeFormat
+                try {
+                    if (' ' in str) {
+                        val (timecode, runtimeGroupName) = str.split(' ', limit = 2)
+                        if (runtimeGroupName in namedRuntimeGroups) {
+                            val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
+                            table.log(row, "pageRuntime", WARN, msg)
+                        } else {
+                            stageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
+                            stageRuntimeGroupName = runtimeGroupName
+                        }
+                    } else
+                        stageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
+                } catch (_: IllegalArgumentException) {
+                    val sampleTc = formatTimecode(fps, timecodeFormat, 7127)
+                    table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", sampleTc))
+                }
             }
         }
 

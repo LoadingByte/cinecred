@@ -1,13 +1,15 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.Y
+import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.StyledString
 import com.loadingbyte.cinecred.project.VJustify
 import java.awt.Color
 
 
-val CARD_GUIDE_COLOR = Color(150, 0, 250)
+val STAGE_GUIDE_COLOR = Color(182, 70, 250)
 val AXIS_GUIDE_COLOR = Color(0, 200, 200)
 val BODY_ELEM_GUIDE_COLOR = Color(130, 50, 0)
 val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0)
@@ -32,10 +34,10 @@ inline fun DeferredImage.drawJustified(
 
 inline fun DeferredImage.drawJustified(
     hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Float,
-    areaWidth: Float, areaHeight: Float,
-    objWidth: Float, objHeight: Float,
-    draw: DeferredImage.(Float, Float) -> Unit
+    areaX: Float, areaY: Y,
+    areaWidth: Float, areaHeight: Y,
+    objWidth: Float, objHeight: Y,
+    draw: DeferredImage.(Float, Y) -> Unit
 ) {
     val objY = when (vJustify) {
         VJustify.TOP -> areaY
@@ -47,7 +49,7 @@ inline fun DeferredImage.drawJustified(
 
 
 fun DeferredImage.drawStyledString(
-    textCtx: TextContext, styledStr: StyledString, x: Float, y: Float, justificationWidth: Float = Float.NaN
+    textCtx: TextContext, styledStr: StyledString, x: Float, y: Y, justificationWidth: Float = Float.NaN
 ) {
     drawString(styledStr.toAttributedString(textCtx).iterator, x, y, justificationWidth)
 }
@@ -56,7 +58,7 @@ fun DeferredImage.drawStyledString(
 fun DeferredImage.drawJustifiedStyledString(
     textCtx: TextContext,
     styledStr: StyledString, hJustify: HJustify,
-    areaX: Float, strY: Float, areaWidth: Float
+    areaX: Float, strY: Y, areaWidth: Float
 ) {
     val attrCharIter = styledStr.toAttributedString(textCtx).iterator
     val strWidth = attrCharIter.getWidth()
@@ -69,15 +71,15 @@ fun DeferredImage.drawJustifiedStyledString(
 fun DeferredImage.drawJustifiedStyledString(
     textCtx: TextContext,
     styledStr: StyledString, hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Float, areaWidth: Float, areaHeight: Float,
-    referenceHeight: Float? = null
+    areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y,
+    referenceHeight: Y? = null
 ) {
     val attrCharIter = styledStr.toAttributedString(textCtx).iterator
-    val strHeight = styledStr.getHeight()
-    val diff = if (referenceHeight == null) 0f else referenceHeight - strHeight
+    val strHeight = styledStr.getHeight().toFloat().toY()
+    val diff = if (referenceHeight == null) 0f.toY() else referenceHeight - strHeight
     drawJustified(
         hJustify, vJustify, areaX, areaY + diff / 2f, areaWidth, areaHeight - diff,
-        attrCharIter.getWidth(), strHeight.toFloat()
+        attrCharIter.getWidth(), strHeight
     ) { strX, strY ->
         drawString(attrCharIter, strX, strY)
     }

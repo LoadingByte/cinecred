@@ -3,6 +3,10 @@ package com.loadingbyte.cinecred.drawer
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.REF_FRC
+import com.loadingbyte.cinecred.common.Y
+import com.loadingbyte.cinecred.common.Y.Companion.plus
+import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
+import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.awt.font.LineBreakMeasurer
@@ -103,27 +107,26 @@ fun drawBodyImagesWithGridBodyLayout(
         val blockRowHeights = rowHeights.getValue(block)
         val blockCols = bodyPartitions.getValue(block)
 
-        val bodyImage = DeferredImage()
+        val bodyImage = DeferredImage(
+            width = bodyImageWidth,
+            height = blockRowHeights.sum() + ((numRows.getValue(block) - 1) * style.gridRowGapPx).toElasticY()
+        )
 
         var x = 0f
         for ((col, justifyCol, colWidth) in zip(blockCols, style.gridElemHJustifyPerCol, colWidths)) {
-            var y = 0f
+            var y = 0f.toY()
             for ((bodyElem, rowHeight) in col.zip(blockRowHeights)) {
                 bodyImage.drawJustifiedBodyElem(
-                    textCtx, bodyElem, justifyCol, style.gridElemVJustify, x, y, colWidth, rowHeight
+                    textCtx, bodyElem, justifyCol, style.gridElemVJustify, x, y, colWidth, rowHeight.toY()
                 )
                 // Draw a guide that shows the edges of the body element space.
-                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight, layer = GUIDES)
+                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight.toY(), layer = GUIDES)
                 // Advance to the next line in the current column.
-                y += rowHeight + style.gridRowGapPx
+                y += rowHeight + style.gridRowGapPx.toElasticY()
             }
             // Advance to the next column.
             x += colWidth + style.gridColGapPx
         }
-
-        // Ensure that the width and height of the body image are always correct.
-        bodyImage.width = bodyImageWidth
-        bodyImage.height = blockRowHeights.sum() + (numRows.getValue(block) - 1) * style.gridRowGapPx
 
         DrawnBody(bodyImage, blockRowHeights.first(), blockRowHeights.last())
     }
@@ -201,9 +204,9 @@ fun drawBodyImageWithFlowBodyLayout(
         }
 
     // Start drawing the actual image.
-    val bodyImage = DeferredImage()
+    val bodyImage = DeferredImage(width = bodyImageWidth)
 
-    var y = 0f
+    var y = 0f.toY()
     for ((lineIdx, line) in lines.withIndex()) {
         // Determine the justification of the current line.
         val curLineHJustify = style.flowLineHJustify.toSingleLineHJustify(lastLine = lineIdx == lines.lastIndex)
@@ -245,11 +248,11 @@ fun drawBodyImageWithFlowBodyLayout(
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
                 textCtx, bodyElem, style.flowElemHJustify, style.flowElemVJustify, x, y,
-                areaWidth, lineHeight,
+                areaWidth, lineHeight.toY(),
             )
 
             // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, lineHeight, layer = GUIDES)
+            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, lineHeight.toY(), layer = GUIDES)
 
             if (bodyElemIdx != line.lastIndex) {
                 // Advance to the separator.
@@ -258,7 +261,7 @@ fun drawBodyImageWithFlowBodyLayout(
                 if (sepStyledStr != null)
                     bodyImage.drawJustifiedStyledString(
                         textCtx, sepStyledStr, HJustify.CENTER, style.flowElemVJustify, x, y,
-                        horGap + horGlue, lineHeight
+                        horGap + horGlue, lineHeight.toY()
                     )
                 // Advance to the next element on the line.
                 x += horGap + horGlue
@@ -266,17 +269,16 @@ fun drawBodyImageWithFlowBodyLayout(
         }
 
         // Advance to the next line.
-        y += lineHeight + style.flowLineGapPx
+        y += lineHeight + style.flowLineGapPx.toElasticY()
     }
-    y -= style.flowLineGapPx
+    y -= style.flowLineGapPx.toElasticY()
+
+    // Set the height of the body image.
+    bodyImage.height = y
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, y, layer = GUIDES)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, y, layer = GUIDES)
-
-    // Ensure that the width and height of the body image are always correct.
-    bodyImage.width = bodyImageWidth
-    bodyImage.height = y
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
 
     return DrawnBody(bodyImage, getLineHeight(lines.first()), getLineHeight(lines.last()))
 }
@@ -336,7 +338,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
     val bodyImageWidth = style.paragraphsLineWidthPx
 
-    val bodyImage = DeferredImage()
+    val bodyImage = DeferredImage(width = bodyImageWidth)
 
     // Use this to remember the height of the first and the last body row.
     // Later return these two values alongside the created body image.
@@ -348,7 +350,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
         lastRowHeight = h
     }
 
-    var y = 0f
+    var y = 0f.toY()
     for (bodyElem in block.body) {
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
@@ -376,30 +378,32 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
                 // Advance to the next line.
                 val lineHeight = lineStyledStr.getHeight().toFloat()
-                y += lineHeight + style.paragraphsLineGapPx
+                y += lineHeight + style.paragraphsLineGapPx.toElasticY()
 
                 recordRowHeight(lineHeight)
             }
+            y -= style.paragraphsLineGapPx.toElasticY()
         }
         // Case 2: The body element is not a string. Just draw it regularly.
         else {
             val hJustify = style.paragraphsLineHJustify.toSingleLineHJustify(lastLine = false).toHJustify()
-            bodyImage.drawJustifiedBodyElem(textCtx, bodyElem, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f)
+            bodyImage.drawJustifiedBodyElem(textCtx, bodyElem, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f.toY())
             val bodyElemHeight = bodyElem.getHeight()
             y += bodyElemHeight
             recordRowHeight(bodyElemHeight)
         }
 
         // Advance to the next paragraph.
-        y += style.paragraphsParaGapPx
+        y += style.paragraphsParaGapPx.toElasticY()
     }
+    y -= style.paragraphsParaGapPx.toElasticY()
+
+    // Set the height of the body image.
+    bodyImage.height = y
 
     // Draw guides that show the body's left an right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f, 0f, bodyImage.height, layer = GUIDES)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f, bodyImageWidth, bodyImage.height, layer = GUIDES)
-
-    // Ensure that the width of the body image is always correct.
-    bodyImage.width = bodyImageWidth
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
 
     return DrawnBody(bodyImage, firstRowHeight, lastRowHeight)
 }
@@ -419,13 +423,13 @@ private fun BodyElement.getHeight(): Float = when (this) {
 private fun DeferredImage.drawJustifiedBodyElem(
     textCtx: TextContext,
     elem: BodyElement, hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Float, areaWidth: Float, areaHeight: Float
+    areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y
 ) = when (elem) {
     is BodyElement.Str ->
         drawJustifiedStyledString(textCtx, elem.str, hJustify, vJustify, areaX, areaY, areaWidth, areaHeight)
     is BodyElement.Pic ->
         drawJustified(
-            hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height
+            hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height.toY()
         ) { objX, objY -> drawPicture(elem.pic, objX, objY) }
 }
 

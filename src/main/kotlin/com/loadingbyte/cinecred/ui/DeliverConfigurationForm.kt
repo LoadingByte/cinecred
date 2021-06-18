@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
 
-import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderFormat
@@ -186,9 +185,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         else {
             val scaling = resolutionMultWidget.value
 
-            fun getScaledPageDefImages() = drawnPages.map {
-                DeferredImage().apply { drawDeferredImage(it.defImage, 0f, 0f, scaling) }
-            }
+            fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
 
             val format = formatWidget.value
             val renderJob = when (format) {

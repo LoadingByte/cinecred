@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.DeferredImage.Layer
+import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Global
@@ -19,9 +20,9 @@ import kotlin.math.min
 class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
 
     companion object {
-        val UNIFORM_SAFE_AREAS = Layer(isHelperLayer = true)
-        val CUT_SAFE_AREA_16_9 = Layer(isHelperLayer = true)
-        val CUT_SAFE_AREA_4_3 = Layer(isHelperLayer = true)
+        val UNIFORM_SAFE_AREAS = Layer()
+        val CUT_SAFE_AREA_16_9 = Layer()
+        val CUT_SAFE_AREA_4_3 = Layer()
     }
 
     private val imagePanel = DeferredImagePanel(maxZoom).apply {
@@ -40,8 +41,7 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
         this.global = global
         this.drawnPage = drawnPage
 
-        val image = DeferredImage()
-        image.drawDeferredImage(drawnPage.defImage, 0f, 0f)
+        val image = drawnPage.defImage.copy()
         drawSafeAreas(image)
         imagePanel.setImage(image)
     }
@@ -86,14 +86,15 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
             val cropY1 = middleY - cropHeight / 2f
             val cropY2 = cropY1 + cropHeight
 
-            image.drawRect(c, cropX1, cropY1, cropWidth, cropHeight, layer = layer)
+            image.drawRect(c, cropX1, cropY1, cropWidth, cropHeight.toY(), layer = layer)
 
             if (ticks) {
                 val d = global.widthPx / 200f
+                val middleX = global.widthPx / 2f
                 image.drawLine(c, cropX1 - d, middleY, cropX1 + d, middleY, layer = layer)
                 image.drawLine(c, cropX2 - d, middleY, cropX2 + d, middleY, layer = layer)
-                image.drawLine(c, global.widthPx / 2f, cropY1 - d, global.widthPx / 2f, cropY1 + d, layer = layer)
-                image.drawLine(c, global.widthPx / 2f, cropY2 - d, global.widthPx / 2f, cropY2 + d, layer = layer)
+                image.drawLine(c, middleX, cropY1 - d, middleX, cropY1 + d, layer = layer)
+                image.drawLine(c, middleX, cropY2 - d, middleX, cropY2 + d, layer = layer)
             }
         }
 
@@ -103,7 +104,7 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
             val firstStageInfo = drawnPage.stageInfo.first()
             val lastStageInfo = drawnPage.stageInfo.last()
 
-            var cropY1 = 0f
+            var cropY1 = 0f.toY()
             var cropY2 = image.height
             if (firstStageInfo is DrawnStageInfo.Card)
                 cropY1 = firstStageInfo.middleY - cropHeight / 2f

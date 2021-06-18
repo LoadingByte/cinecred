@@ -12,7 +12,8 @@ import java.util.*
 class Project(
     val styling: Styling,
     val fonts: ImmutableMap<String, Font>,
-    val pages: ImmutableList<Page>
+    val pages: ImmutableList<Page>,
+    val runtimeGroups: ImmutableList<RuntimeGroup>
 )
 
 
@@ -52,6 +53,7 @@ data class Global(
     val heightPx: Int,
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
+    val runtimeFrames: OptionallyEffective<Int>,
     val background: Color,
     val unitVGapPx: Float,
     val locale: Locale,
@@ -206,3 +208,6 @@ sealed class BodyElement {
     class Str(val str: StyledString) : BodyElement()
     class Pic(val pic: Picture) : BodyElement()
 }
+
+
+class RuntimeGroup(val stages: ImmutableList<Stage>, val runtimeFrames: Int)

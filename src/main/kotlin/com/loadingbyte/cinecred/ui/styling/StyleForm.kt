@@ -88,13 +88,13 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         }
     }
 
-    private fun <E> makeEnumCBoxWidget(enumClass: Class<E>) =
+    private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>) =
         ComboBoxWidget(
             enumClass, enumClass.enumConstants.asList(),
             toString = { l10nEnum(it as Enum<*>) }
         )
 
-    private fun <E> makeEnumCBoxListWidget(enumClass: Class<E>) =
+    private fun <E : Any /* non-null */> makeEnumCBoxListWidget(enumClass: Class<E>) =
         ComboBoxListWidget(
             enumClass, enumClass.enumConstants.asList(),
             toString = { l10nEnum(it as Enum<*>) }

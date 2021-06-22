@@ -257,7 +257,7 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 }
 
 
-open class ComboBoxWidget<E>(
+open class ComboBoxWidget<E : Any /* non-null */>(
     private val itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String = { it.toString() },
@@ -279,15 +279,22 @@ open class ComboBoxWidget<E>(
     final override var items: ImmutableList<E> = persistentListOf()
         set(items) {
             field = items
-            val newModel = DefaultComboBoxModel(Vector(items))
-            value?.let { newModel.selectedItem = it }
-            cb.model = newModel
+            val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
+            cb.model = makeModel(Vector(items), oldSelectedItem)
+            if (cb.selectedItem != oldSelectedItem)
+                notifyChangeListeners()
             if (!scrollbar)
                 cb.maximumRowCount = items.size
         }
 
+    protected open fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+        DefaultComboBoxModel(items).apply {
+            if (oldSelectedItem in items)
+                selectedItem = oldSelectedItem
+        }
+
     override var value: E
-        get() = itemClass.cast(cb.selectedItem)
+        get() = itemClass.cast(cb.selectedItem!!)
         set(value) {
             cb.selectedItem = value
         }
@@ -299,11 +306,14 @@ open class ComboBoxWidget<E>(
 }
 
 
-class InconsistentComboBoxWidget<E : Any>(
+class InconsistentComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String = { it.toString() }
 ) : ComboBoxWidget<E>(itemClass, items, toString) {
+
+    override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+        DefaultComboBoxModel(items).apply { selectedItem = oldSelectedItem }
 
     override var value: E
         get() = super.value
@@ -316,7 +326,7 @@ class InconsistentComboBoxWidget<E : Any>(
 }
 
 
-open class EditableComboBoxWidget<E>(
+open class EditableComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String,
@@ -340,10 +350,13 @@ open class EditableComboBoxWidget<E>(
 
             override fun setItem(item: Any?) {
                 prevItem = item
-                wrappedEditor.item = toString(itemClass.cast(item))
+                wrappedEditor.item = item?.let { toString(itemClass.cast(it)) }
             }
         }
     }
+
+    override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+        DefaultComboBoxModel(items).apply { selectedItem = oldSelectedItem }
 
 }
 
@@ -390,7 +403,7 @@ class FPSWidget : EditableComboBoxWidget<FPS>(FPS::class.java, SUGGESTED_FPS, ::
 }
 
 
-class ComboBoxListWidget<E>(
+class ComboBoxListWidget<E : Any /* non-null */>(
     private val itemClass: Class<E>,
     items: List<E>,
     private val toString: (E) -> String = { it.toString() }
@@ -415,12 +428,22 @@ class ComboBoxListWidget<E>(
     override var items: ImmutableList<E> = items.toImmutableList()
         set(items) {
             field = items
-            for (cb in cbs)
-                cb.model = DefaultComboBoxModel(Vector(items))
+            var willNotifyChangeListeners = false
+            for (cb in cbs) {
+                val oldSelectedItem = cb.selectedItem
+                cb.model = DefaultComboBoxModel(Vector(items)).apply {
+                    if (oldSelectedItem in items)
+                        selectedItem = oldSelectedItem
+                }
+                if (cb.selectedItem != oldSelectedItem)
+                    willNotifyChangeListeners = true
+            }
+            if (willNotifyChangeListeners)
+                notifyChangeListeners()
         }
 
     override var value: ImmutableList<E>
-        get() = cbs.map { itemClass.cast(it.selectedItem) }.toImmutableList()
+        get() = cbs.map { itemClass.cast(it.selectedItem!!) }.toImmutableList()
         set(value) {
             while (cbs.size < value.size) {
                 val comboBox = JComboBox(DefaultComboBoxModel(Vector(items))).apply {
@@ -547,6 +570,7 @@ class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<
                 familyComboBox.selectedItem = null
                 fontComboBox.isEditable = true
                 fontComboBox.selectedItem = value
+                fontComboBox.isEditable = false
             }
         }
 
@@ -572,13 +596,16 @@ class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<
             }
         }
 
-        familyComboBox.addActionListener {
-            if (!disableFamilyListener) {
+        familyComboBox.addItemListener { e ->
+            if (!disableFamilyListener && e.stateChange == ItemEvent.SELECTED) {
                 val selectedFamily = familyComboBox.selectedItem as FontFamily?
-                fontComboBox.model = DefaultComboBoxModel(selectedFamily?.fonts?.toTypedArray() ?: emptyArray())
-                if (selectedFamily != null)
-                    fontComboBox.selectedItem = selectedFamily.canonicalFont
-                fontComboBox.isEditable = false
+                fontComboBox.model = when (selectedFamily) {
+                    null -> DefaultComboBoxModel()
+                    else -> DefaultComboBoxModel<Any>(selectedFamily.fonts.toTypedArray()).apply {
+                        selectedItem = selectedFamily.canonicalFont
+                    }
+                }
+                notifyChangeListeners()
             }
         }
         fontComboBox.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }

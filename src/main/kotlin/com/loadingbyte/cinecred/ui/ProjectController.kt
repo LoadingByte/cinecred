@@ -44,8 +44,13 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     private val fonts = ConcurrentHashMap<Path, Font>()
     private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
+    // The state that is relevant for pushStateIntoUI().
     private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
     private var creditsFileLoadingLog: List<ParserMsg> = emptyList()
+    private var creditsFileReadingLog: List<ParserMsg> = emptyList()
+    private var stylingError = false
+    private var project: Project? = null
+    private var drawnPages: List<DrawnPage> = emptyList()
 
     private val readCreditsAndRedrawJobSlot = JobSlot()
 
@@ -84,7 +89,8 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                     ) {
                         tryReloadCreditsFile()
                         tryReadCreditsAndRedraw()
-                    }
+                    } else
+                        pushStateIntoUI()  // Update the log entry regarding multiple credits files.
                 }
                 kind == ENTRY_DELETE ->
                     SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw() }
@@ -92,6 +98,14 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                     SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw() }
             }
         }
+    }
+
+    private fun pushStateIntoUI() {
+        val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
+        projectFrame.panel.editPanel.updateProject(project, drawnPages, stylingError, log)
+        editStylingDialog.panel.updateProject(project)
+        projectFrame.panel.videoPanel.updateProject(project, drawnPages)
+        projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
     }
 
     private fun tryReloadAuxFile(file: Path): Boolean {
@@ -148,31 +162,26 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     }
 
     private fun tryReadCreditsAndRedraw() {
-        fun updateProject(project: Project?, drawnPages: List<DrawnPage>, styErr: Boolean, log: List<ParserMsg>) {
-            // Make sure to update the UI from the UI thread because Swing is not thread-safe.
-            SwingUtilities.invokeLater {
-                projectFrame.panel.editPanel.updateProject(project, drawnPages, styErr, log)
-                editStylingDialog.panel.updateProject(project)
-                projectFrame.panel.videoPanel.updateProject(project, drawnPages)
-                projectFrame.panel.deliverPanel.configurationForm.updateProject(project, drawnPages)
-            }
-        }
-
         // Capture these variables in the state they are in when the function is called.
         val styling = stylingHistory.current
         val creditsSpreadsheet = this.creditsSpreadsheet
-        val locAndLoadLog = creditsFileLocatingLog + creditsFileLoadingLog
+
+        // Reset these variables. We will set some of them in the following code, depending on which problems occur.
+        creditsFileReadingLog = emptyList()
+        stylingError = false
+        project = null
+        drawnPages = emptyList()
 
         // If the credits file could not be located or loaded, abort and notify the UI about the error.
-        if (locAndLoadLog.any { it.severity == ERROR })
-            return updateProject(null, emptyList(), styErr = false, locAndLoadLog)
+        if (creditsFileLocatingLog.any { it.severity == ERROR } || creditsFileLoadingLog.any { it.severity == ERROR })
+            return pushStateIntoUI()
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyStylingConstraints(styling).any { it.severity == ERROR })
-                return@submit updateProject(null, emptyList(), styErr = true, locAndLoadLog)
+                return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
 
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
@@ -184,14 +193,19 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
             // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
             if (log.any { it.severity == ERROR })
-                return@submit updateProject(null, emptyList(), styErr = false, locAndLoadLog + log)
+                return@submit SwingUtilities.invokeLater { creditsFileReadingLog = log; pushStateIntoUI() }
 
             val project = Project(
                 styling, fontsByName.toImmutableMap(), pages.toImmutableList(), runtimeGroups.toImmutableList()
             )
             val drawnPages = draw(project)
 
-            updateProject(project, drawnPages, styErr = false, locAndLoadLog + log)
+            SwingUtilities.invokeLater {
+                creditsFileReadingLog = log
+                this.project = project
+                this.drawnPages = drawnPages
+                pushStateIntoUI()
+            }
         }
     }
 

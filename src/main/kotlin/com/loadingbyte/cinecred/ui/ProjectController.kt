@@ -58,12 +58,12 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
         makeProjectHintTrack(this).playIfPending()
 
-        // Load the initial state of the styling from disk.
-        stylingHistory = StylingHistory(readStyling(stylingFile))
-
         // Load the initially present auxiliary files (project fonts and pictures).
         for (projectFile in Files.walk(projectDir))
             tryReloadAuxFile(projectFile)
+
+        // Load the initial state of the styling from disk.
+        stylingHistory = StylingHistory(readStyling(stylingFile))
 
         // Try to find a credits file.
         tryLocateCreditsFile()

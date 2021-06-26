@@ -19,6 +19,8 @@ Cinecred Changelog
   sequence. Vertical gaps are then automatically stretched to achieve that
   runtime as close as possible.
 - The runtime of each stage is displayed as a layout guide.
+- Editing a styling setting multiple times in rapid succession now only leaves
+  one undo state.
 
 ### Fixes
 

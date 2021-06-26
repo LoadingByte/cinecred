@@ -3,10 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.drawer.draw
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.Project
-import com.loadingbyte.cinecred.project.Styling
-import com.loadingbyte.cinecred.project.verifyConstraints
+import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
@@ -276,17 +273,35 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         val current: Styling
             get() = history[currentIdx]
 
+        private var lastEditedSetting: StyleSetting<*, *>? = null
+        private var lastEditedMillis = 0L
+
         init {
             projectFrame.panel.editPanel.onStylingChange(isUnsaved = false, isUndoable = false, isRedoable = false)
             editStylingDialog.panel.setStyling(saved)
         }
 
-        fun editedAndRedraw(new: Styling) {
+        fun editedAndRedraw(new: Styling, edited: StyleSetting<*, *>?) {
             if (new != current) {
+                // If the user edits the styling after having undoed some steps, those steps are now dropped.
                 while (history.lastIndex != currentIdx)
                     history.removeAt(history.lastIndex)
-                history.add(new)
-                currentIdx++
+                // If the user edits the same setting multiple times in quick succession, do not memorize a new
+                // state for each edit, but instead overwrite the last state after each edit. This for example avoids
+                // a new state being created for each increment of a spinner.
+                val currMillis = System.currentTimeMillis()
+                if (lastEditedSetting != null && lastEditedSetting == edited && currMillis - lastEditedMillis < 1000)
+                    if (history.size >= 2 && history[currentIdx - 1] == new) {
+                        history.removeLast()
+                        currentIdx--
+                    } else
+                        history[currentIdx] = new
+                else {
+                    history.add(new)
+                    currentIdx++
+                }
+                lastEditedSetting = edited
+                lastEditedMillis = currMillis
                 onStylingChange()
             }
         }
@@ -294,6 +309,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         fun undoAndRedraw() {
             if (currentIdx != 0) {
                 currentIdx--
+                lastEditedSetting = null
                 onStylingChange()
                 editStylingDialog.panel.setStyling(current)
             }
@@ -302,6 +318,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         fun redoAndRedraw() {
             if (currentIdx != history.lastIndex) {
                 currentIdx++
+                lastEditedSetting = null
                 onStylingChange()
                 editStylingDialog.panel.setStyling(current)
             }
@@ -309,7 +326,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
         fun resetAndRedraw() {
             if (saved != current) {
-                editedAndRedraw(saved)
+                editedAndRedraw(saved, null)
                 editStylingDialog.panel.setStyling(saved)
             }
         }
@@ -317,6 +334,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         fun save() {
             writeStyling(stylingFile, current)
             saved = current
+            lastEditedSetting = null  // Saving always creates a new undo state.
             projectFrame.panel.editPanel.onStylingSave()
         }
 

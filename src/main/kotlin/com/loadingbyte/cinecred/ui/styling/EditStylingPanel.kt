@@ -132,21 +132,23 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun openGlobal(global: Global) {
-        globalForm.open(global, onChange = { stylingTree.setSingleton(globalForm.save()); onChange() })
+        globalForm.open(
+            global,
+            onChange = { changed -> stylingTree.setSingleton(globalForm.save()); onChange(changed) })
         postOpenForm("Global", globalForm)
     }
 
     private fun openPageStyle(style: PageStyle) {
         pageStyleForm.open(
             style,
-            onChange = { stylingTree.updateSelectedListElement(pageStyleForm.save()); onChange() })
+            onChange = { changed -> stylingTree.updateSelectedListElement(pageStyleForm.save()); onChange(changed) })
         postOpenForm("PageStyle", pageStyleForm)
     }
 
     private fun openContentStyle(style: ContentStyle) {
         contentStyleForm.open(
             style,
-            onChange = { stylingTree.updateSelectedListElement(contentStyleForm.save()); onChange() })
+            onChange = { changed -> stylingTree.updateSelectedListElement(contentStyleForm.save()); onChange(changed) })
         postOpenForm("ContentStyle", contentStyleForm)
     }
 
@@ -154,7 +156,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         var oldName = style.name
         letterStyleForm.open(
             style,
-            onChange = {
+            onChange = { changed ->
                 val newStyle = letterStyleForm.save()
                 stylingTree.updateSelectedListElement(newStyle)
 
@@ -175,7 +177,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                     }
                 oldName = newName
 
-                onChange()
+                onChange(changed)
             })
         postOpenForm("LetterStyle", letterStyleForm)
     }
@@ -206,7 +208,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         letterStyleForm.updateProjectFontFamilies(projectFamilies)
     }
 
-    private fun onChange() {
+    private fun onChange(changed: StyleSetting<*, *>? = null) {
         val styling = Styling(
             stylingTree.getSingleton(Global::class.java),
             stylingTree.getList(PageStyle::class.java).toImmutableList(),
@@ -217,7 +219,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         refreshConstraintViolations()
         adjustOpenedForm()
-        ctrl.stylingHistory.editedAndRedraw(styling)
+        ctrl.stylingHistory.editedAndRedraw(styling, changed)
     }
 
     fun updateProject(project: Project?) {

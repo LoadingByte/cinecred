@@ -14,10 +14,10 @@ import javax.swing.SpinnerNumberModel
 
 class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
-    private var changeListener: (() -> Unit)? = null
+    private var changeListener: ((StyleSetting<S, *>) -> Unit)? = null
 
     // It is important that this map preserves insertion order.
-    private val settingWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>()
+    private val settingWidgets = SimpleLinkedBiMap<StyleSetting<S, *>, Widget<*>>()
 
     private var disableRefresh = false
 
@@ -114,7 +114,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         settingWidgets[setting] = settingWidget
     }
 
-    fun open(style: S, onChange: (() -> Unit)?) {
+    fun open(style: S, onChange: ((StyleSetting<S, *>) -> Unit)?) {
         changeListener = null
         disableRefresh = true
         try {
@@ -160,7 +160,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     override fun onChange(widget: Widget<*>) {
         refresh()
-        changeListener?.invoke()
+        changeListener?.invoke(settingWidgets.getReverse(widget)!!)
     }
 
     private fun refresh() {
@@ -192,6 +192,26 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
         private fun l10nEnum(enumElem: Enum<*>) =
             l10n("project.${enumElem.javaClass.simpleName}.${enumElem.name}")
+
+    }
+
+
+    private class SimpleLinkedBiMap<K, V> : Iterable<Map.Entry<K, V>> {
+
+        private val ktv = LinkedHashMap<K, V>()
+        private val vtk = HashMap<V, K>()
+
+        val values: Collection<V> = ktv.values
+
+        override fun iterator(): Iterator<Map.Entry<K, V>> = ktv.iterator()
+
+        operator fun set(key: K, value: V) {
+            ktv[key] = value
+            vtk[value] = key
+        }
+
+        operator fun get(key: Any?): V? = ktv[key]
+        fun getReverse(value: Any?): K? = vtk[value]
 
     }
 

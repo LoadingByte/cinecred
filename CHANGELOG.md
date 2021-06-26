@@ -21,6 +21,7 @@ Cinecred Changelog
 - The runtime of each stage is displayed as a layout guide.
 - Editing a styling setting multiple times in rapid succession now only leaves
   one undo state.
+- While choosing a color, the preview constantly updates.
 
 ### Fixes
 

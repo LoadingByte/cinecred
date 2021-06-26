@@ -481,20 +481,21 @@ class ColorWellWidget(
 
     init {
         btn.addActionListener {
-            var newColor: Color? = null
+            val oldColor = value
 
-            val chooser = JColorChooser(value)
+            val chooser = JColorChooser(oldColor)
             // Disable the horrible preview panel.
             chooser.previewPanel = JPanel()
             // Disable the ability to choose transparent colors if that is desired.
             for (chooserPanel in chooser.chooserPanels)
                 chooserPanel.isColorTransparencySelectionEnabled = allowAlpha
+            // Whenever the user changes the color, call the change listener.
+            chooser.selectionModel.addChangeListener { value = chooser.color }
             // Show the color chooser and wait for the user to close it.
-            JColorChooser.createDialog(
-                btn, l10n("ui.form.colorChooserTitle"), true, chooser, { newColor = chooser.color }, null
-            ).isVisible = true
-
-            newColor?.let { value = it }
+            // If he cancels the dialog, revert to the old color.
+            val cancelListener = { _: Any -> value = oldColor }
+            JColorChooser.createDialog(btn, l10n("ui.form.colorChooserTitle"), true, chooser, null, cancelListener)
+                .isVisible = true
         }
     }
 

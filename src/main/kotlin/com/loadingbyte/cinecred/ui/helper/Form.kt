@@ -68,7 +68,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
 
         private fun applyEffectiveNotice() {
             val effectiveNotice = if (isEnabled) noticeOverride ?: notice else null
-            noticeIconComp.icon = effectiveNotice?.let { SEVERITY_ICON[it.severity] }
+            noticeIconComp.icon = effectiveNotice?.severity?.icon
             noticeMsgComp.text = effectiveNotice?.msg
             // Adjust FlatLaf outlines.
             val outline = when (effectiveNotice?.severity) {

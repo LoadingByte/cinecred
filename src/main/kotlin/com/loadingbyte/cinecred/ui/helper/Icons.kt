@@ -42,10 +42,12 @@ val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
 val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
 val EDIT_ICON = SVGIcon.load("/icons/edit.svg")
+val ERROR_ICON = SVGIcon.load("/icons/error.svg")
 val EYE_ICON = SVGIcon.load("/icons/eye.svg")
 val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
 val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")
 val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
+val INFO_ICON = SVGIcon.load("/icons/info.svg")
 val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
 val LETTERS_ICON = SVGIcon.load("/icons/letters.svg")
 val PAGE_ICON = SVGIcon.load("/icons/page.svg")
@@ -59,14 +61,16 @@ val SAVE_ICON = SVGIcon.load("/icons/save.svg")
 val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
 val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
 val UNIFORM_SAFE_AREAS_ICON = SVGIcon.load("/icons/uniformSafeAreas.svg")
+val WARN_ICON = SVGIcon.load("/icons/warn.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 
-val SEVERITY_ICON = mapOf(
-    Severity.INFO to SVGIcon.load("/icons/info.svg"),
-    Severity.WARN to SVGIcon.load("/icons/warn.svg"),
-    Severity.ERROR to SVGIcon.load("/icons/error.svg")
-)
+val Severity.icon
+    get() = when (this) {
+        Severity.INFO -> INFO_ICON
+        Severity.WARN -> WARN_ICON
+        Severity.ERROR -> ERROR_ICON
+    }
 
 
 private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {

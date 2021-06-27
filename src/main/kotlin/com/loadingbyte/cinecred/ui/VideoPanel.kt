@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.VideoDrawer
@@ -10,7 +9,7 @@ import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
 import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
-import com.loadingbyte.cinecred.ui.helper.SEVERITY_ICON
+import com.loadingbyte.cinecred.ui.helper.WARN_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Font
 import java.awt.Graphics
@@ -83,7 +82,7 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
 
     init {
         layout = MigLayout("insets 12lp n n n, gapy 10lp", "[]push[][][]push[]")
-        add(JLabel(l10n("ui.video.warning"), SEVERITY_ICON[Severity.WARN], JLabel.CENTER), "span, growx")
+        add(JLabel(l10n("ui.video.warning"), WARN_ICON, JLabel.CENTER), "span, growx")
         add(playButton, "skip 1, width 2*pref!")
         add(frameSlider, "width :50sp:50sp")
         add(timecodeLabel)

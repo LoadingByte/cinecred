@@ -235,7 +235,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 maxOf(violation.severity, severityPerStyle.getOrDefault(violation.style, Severity.values()[0]))
         stylingTree.adjustAppearance(getExtraIcons = { style ->
             val severity = severityPerStyle[style]
-            if (severity == null) emptyList() else listOf(SEVERITY_ICON.getValue(severity))
+            if (severity == null) emptyList() else listOf(severity.icon)
         })
     }
 

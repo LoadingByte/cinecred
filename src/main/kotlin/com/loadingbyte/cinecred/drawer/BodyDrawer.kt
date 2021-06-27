@@ -291,10 +291,19 @@ private inline fun <E> partitionIntoLines(
     minSepWidth: Float,
     getWidth: (E) -> Float
 ): List<List<E>> {
-    val queue: Queue<E> = LinkedList(list)
-    val lines = mutableListOf<MutableList<E>>(mutableListOf())
+    if (list.isEmpty())
+        return emptyList()
 
-    var x = -minSepWidth
+    val queue: Queue<E> = LinkedList(list)
+    val lines = ArrayList<MutableList<E>>()
+    var x: Float
+
+    // We extracted this code from the loop below to ensure that the first line list is never an empty list,
+    // even if there are floating point inaccuracies.
+    val firstElem = queue.remove()
+    x = getWidth(firstElem)
+    lines.add(arrayListOf(firstElem))
+
     while (queue.isNotEmpty()) {
         val elem = queue.remove()
         val elemWidth = getWidth(elem)

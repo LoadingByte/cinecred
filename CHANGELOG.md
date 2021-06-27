@@ -36,6 +36,8 @@ Cinecred Changelog
   pictures) and the project at the same time.
 - Aspect ratios are now limited to avoid the program crashing when unreasonably
   small aspect ratios are used.
+- Fix first line of flow layout sometimes being empty, leading to empty space
+  and crashes.
 
 #### UI Fixes
 

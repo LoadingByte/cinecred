@@ -267,10 +267,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun updateUnusedStyles(project: Project?) {
-        val styling = this.styling
-
         val unusedStyles = HashSet<Style>()
-        if (styling != null && project != null) {
+
+        if (project != null) {
+            val styling = project.styling
+
             // Mark all styles as unused. Next, we will gradually remove all styles which are actually used.
             unusedStyles.addAll(styling.pageStyles)
             unusedStyles.addAll(styling.contentStyles)

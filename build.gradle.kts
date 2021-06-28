@@ -87,7 +87,7 @@ dependencies {
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
-    implementation("com.formdev", "flatlaf", "1.1.2")
+    implementation("com.formdev", "flatlaf", "1.2")
 
     // Testing
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.7.2")

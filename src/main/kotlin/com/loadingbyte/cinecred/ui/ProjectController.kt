@@ -290,18 +290,25 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                 // state for each edit, but instead overwrite the last state after each edit. This for example avoids
                 // a new state being created for each increment of a spinner.
                 val currMillis = System.currentTimeMillis()
-                if (lastEditedSetting != null && lastEditedSetting == edited && currMillis - lastEditedMillis < 1000)
+                val rapidSucc = edited != null && lastEditedSetting == edited && currMillis - lastEditedMillis < 1000
+                lastEditedSetting = edited
+                lastEditedMillis = currMillis
+                if (rapidSucc) {
+                    // Normally, if the user edits the same widget multiple times in rapid succession, we fall into
+                    // the else case, where we overwrite the history's last state (the previous version of the rapid
+                    // succession edit) by the current state. However, if the user round-tripped back to the state
+                    // where he started out at the beginning of his rapid succession edits, we remove the rapid
+                    // succession state entirely and terminate the rapid succession edit.
                     if (history.size >= 2 && history[currentIdx - 1] == new) {
                         history.removeLast()
                         currentIdx--
+                        lastEditedSetting = null
                     } else
                         history[currentIdx] = new
-                else {
+                } else {
                     history.add(new)
                     currentIdx++
                 }
-                lastEditedSetting = edited
-                lastEditedMillis = currMillis
                 onStylingChange()
             }
         }

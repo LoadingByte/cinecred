@@ -165,6 +165,7 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
         isAlmostEffective = { style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
     ),
     ToggleButtonGroupWidgetSpec(ContentStyle::spineOrientation.st(), ICON_AND_LABEL),
+    NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemBoxConform.st(), ICON),
@@ -179,8 +180,10 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
     DontGrowWidgetSpec(ContentStyle::flowSeparator.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
     NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f),
+    NewSectionWidgetSpec(ContentStyle::hasHead.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
+    NewSectionWidgetSpec(ContentStyle::hasTail.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
 )
@@ -261,6 +264,11 @@ class EffectivitySpec<S : Style>(
         require(isAlmostEffective != null || isTotallyIneffective != null)
     }
 }
+
+
+class NewSectionWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Any?>
+) : StyleMeta<S, Any?>(setting)
 
 
 class DontGrowWidgetSpec<S : Style>(

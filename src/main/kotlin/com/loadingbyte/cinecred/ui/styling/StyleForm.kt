@@ -23,12 +23,15 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     private var disableRefresh = false
 
     init {
-        for (setting in getStyleSettings(styleClass))
-            addSettingWidget(setting, makeSettingWidget(setting))
+        for (setting in getStyleSettings(styleClass)) {
+            val settingMeta = getStyleMeta(styleClass).filter { m -> setting in m.settings }
+            if (settingMeta.oneOf<NewSectionWidgetSpec<S>>() != null)
+                addSeparator()
+            addSettingWidget(setting, makeSettingWidget(setting, settingMeta))
+        }
     }
 
-    private fun <V> makeSettingWidget(setting: StyleSetting<S, V>): Widget<*> {
-        val settingMeta = getStyleMeta(styleClass).filter { m -> setting in m.settings }
+    private fun <V> makeSettingWidget(setting: StyleSetting<S, V>, settingMeta: List<StyleMeta<S, *>>): Widget<*> {
         val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<*>>()
 
         val settingGenericArg = setting.genericArg

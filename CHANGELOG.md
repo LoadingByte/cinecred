@@ -19,6 +19,8 @@ Cinecred Changelog
   sequence. Vertical gaps are then automatically stretched to achieve that
   runtime as close as possible.
 - The runtime of each stage is displayed as a layout guide.
+- Where possible, dropdown menus were replaced by toggle button groups, which
+  mostly also include icons.
 - Editing a styling setting multiple times in rapid succession now only leaves
   one undo state.
 - While choosing a color, the preview constantly updates.

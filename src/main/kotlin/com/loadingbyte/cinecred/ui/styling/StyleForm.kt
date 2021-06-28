@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.ImmutableList
 import java.awt.Color
 import java.util.*
+import javax.swing.Icon
 import javax.swing.SpinnerNumberModel
 
 
@@ -28,6 +29,8 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     private fun <V> makeSettingWidget(setting: StyleSetting<S, V>): Widget<*> {
         val settingMeta = getStyleMeta(styleClass).filter { m -> setting in m.settings }
+        val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<*>>()
+
         val settingGenericArg = setting.genericArg
 
         val settingWidget = when (setting.type) {
@@ -67,13 +70,19 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                         setting.type as Class<*>, emptyList(),
                         toString = { l10nEnum(it as Enum<*>) }
                     )
+                    toggleButtonGroupWidgetSpec != null ->
+                        makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show, list = false)
                     else -> makeEnumCBoxWidget(setting.type as Class<*>)
                 }
                 ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
                     String::class.java == settingGenericArg -> TextListWidget(
                         grow = settingMeta.oneOf<DontGrowWidgetSpec<S>>() == null
                     )
-                    Enum::class.java.isAssignableFrom(settingGenericArg) -> makeEnumCBoxListWidget(settingGenericArg)
+                    Enum::class.java.isAssignableFrom(settingGenericArg) ->
+                        if (toggleButtonGroupWidgetSpec != null)
+                            makeEnumTBGWidget(settingGenericArg, toggleButtonGroupWidgetSpec.show, list = true)
+                        else
+                            throw UnsupportedOperationException("Enum lists must use ToggleButtonGroupWidgetSpec.")
                     else -> throw UnsupportedOperationException(
                         "UI unsupported for objects of type ${setting.type.name}<${settingGenericArg.name}>."
                     )
@@ -94,11 +103,27 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             toString = { l10nEnum(it as Enum<*>) }
         )
 
-    private fun <E : Any /* non-null */> makeEnumCBoxListWidget(enumClass: Class<E>) =
-        ComboBoxListWidget(
-            enumClass, enumClass.enumConstants.asList(),
-            toString = { l10nEnum(it as Enum<*>) }
-        )
+    private fun <E : Any /* non-null */> makeEnumTBGWidget(
+        enumClass: Class<E>,
+        show: ToggleButtonGroupWidgetSpec.Show,
+        list: Boolean
+    ): Widget<*> {
+        var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
+        var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
+        var toTooltip: ((E) -> String)? = toLabel
+        if (show == ToggleButtonGroupWidgetSpec.Show.ICON)
+            toLabel = null
+        else if (show == ToggleButtonGroupWidgetSpec.Show.LABEL) {
+            toIcon = null
+            toTooltip = null
+        }
+
+        val items = enumClass.enumConstants.asList()
+        return if (list)
+            ToggleButtonGroupListWidget(items, toIcon, toLabel, toTooltip)
+        else
+            ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
+    }
 
     private fun addSettingWidget(setting: StyleSetting<S, *>, settingWidget: Widget<*>) {
         val l10nKey = "ui.styling." +

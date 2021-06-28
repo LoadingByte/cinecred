@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import com.loadingbyte.cinecred.project.NumberConstr.Inequality.*
+import com.loadingbyte.cinecred.project.ToggleButtonGroupWidgetSpec.Show.*
 import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import java.awt.Color
 import kotlin.math.floor
@@ -66,7 +67,8 @@ private val PAGE_STYLE_META: List<StyleMeta<PageStyle, *>> = listOf(
     EffectivitySpec(
         PageStyle::afterwardSlugFrames.st(),
         isAlmostEffective = { style -> style.behavior == PageBehavior.SCROLL && style.scrollMeltWithNext }
-    )
+    ),
+    ToggleButtonGroupWidgetSpec(PageStyle::behavior.st(), LABEL)
 )
 
 
@@ -162,9 +164,25 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
         ContentStyle::tailVJustify.st(),
         isAlmostEffective = { style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
     ),
+    ToggleButtonGroupWidgetSpec(ContentStyle::spineOrientation.st(), ICON_AND_LABEL),
+    ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridElemBoxConform.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridElemVJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowElemBoxConform.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowElemHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowElemVJustify.st(), ICON),
     NumberStepWidgetSpec(ContentStyle::flowLineWidthPx.st(), 10f),
     DontGrowWidgetSpec(ContentStyle::flowSeparator.st()),
-    NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f)
+    ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
+    NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
 )
 
 
@@ -254,6 +272,14 @@ class NumberStepWidgetSpec<S : Style, N : Number>(
     setting: StyleSetting<S, N>,
     val stepSize: N
 ) : StyleMeta<S, N>(setting)
+
+
+class ToggleButtonGroupWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Any>,
+    val show: Show
+) : StyleMeta<S, Any>(setting) {
+    enum class Show { LABEL, ICON, ICON_AND_LABEL }
+}
 
 
 class TimecodeWidgetSpec<S : Style>(

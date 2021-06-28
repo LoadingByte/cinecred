@@ -1,6 +1,9 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
+import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_BORDERLESS
 import com.formdev.flatlaf.ui.FlatUIUtils
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
@@ -393,16 +396,100 @@ class FPSWidget : EditableComboBoxWidget<FPS>(FPS::class.java, SUGGESTED_FPS, ::
 }
 
 
-class ComboBoxListWidget<E : Any /* non-null */>(
-    private val itemClass: Class<E>,
+class ToggleButtonGroupWidget<E : Any /* non-null */>(
     items: List<E>,
-    private val toString: (E) -> String = { it.toString() }
+    private val toIcon: ((E) -> Icon)? = null,
+    private val toLabel: ((E) -> String)? = null,
+    private val toTooltip: ((E) -> String)? = null
+) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
+
+    private val panel = GroupPanel()
+    private val btnGroup = ButtonGroup()
+
+    override val components = listOf<JComponent>(panel)
+    override val constraints = listOf("")
+
+    override var items: ImmutableList<E> = persistentListOf()
+        set(items) {
+            field = items
+            panel.removeAll()
+            btnGroup.elements.toList().forEach(btnGroup::remove)
+            for (item in items) {
+                val btn = JToggleButton()
+                toIcon?.let { btn.icon = it(item) }
+                toLabel?.let { btn.text = it(item) }
+                toTooltip?.let { btn.toolTipText = it(item) }
+                btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
+                btn.model.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
+                panel.add(btn)
+                btnGroup.add(btn)
+            }
+        }
+
+    override var value: E
+        get() = items[btnGroup.elements.asSequence().indexOfFirst { it.model == btnGroup.selection }]
+        set(value) {
+            val idx = items.indexOf(value)
+            if (idx == -1)
+                throw IllegalArgumentException()
+            btnGroup.setSelected(btnGroup.elements.asSequence().drop(idx).first().model, true)
+        }
+
+    override var isEnabled: Boolean
+        get() = super.isEnabled
+        set(isEnabled) {
+            super.isEnabled = isEnabled
+            for (btn in btnGroup.elements)
+                btn.isEnabled = isEnabled
+        }
+
+    init {
+        this.items = items.toImmutableList()
+    }
+
+
+    private class GroupPanel : JPanel(MigLayout("insets 0 1lp 0 1lp, gap 0")) {
+
+        val arc = UIManager.getInt("Button.arc").toFloat()
+        val backgroundColor: Color = UIManager.getColor("ComboBox.background")
+        val disabledBackgroundColor: Color = UIManager.getColor("ComboBox.disabledBackground")
+        val borderColor: Color = UIManager.getColor("Component.borderColor")
+        val disabledBorderColor: Color = UIManager.getColor("Component.disabledBorderColor")
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            g.withNewG2 { g2 ->
+                FlatUIUtils.setRenderingHints(g2)
+                g2.color = if (isEnabled) backgroundColor else disabledBackgroundColor
+                FlatUIUtils.paintComponentBackground(g2, 0, 0, width, height, 0f, UIScale.scale(arc))
+            }
+        }
+
+        override fun paintChildren(g: Graphics) {
+            super.paintChildren(g)
+            g.withNewG2 { g2 ->
+                FlatUIUtils.setRenderingHints(g2)
+                g2.color = if (isEnabled) borderColor else disabledBorderColor
+                FlatUIUtils.paintComponentBorder(g2, 0, 0, width, height, 0f, UIScale.scale(1f), UIScale.scale(arc))
+            }
+        }
+
+    }
+
+}
+
+
+class ToggleButtonGroupListWidget<E : Any /* non-null */>(
+    items: List<E>,
+    private val toIcon: ((E) -> Icon)? = null,
+    private val toLabel: ((E) -> String)? = null,
+    private val toTooltip: ((E) -> String)? = null
 ) : Form.AbstractWidget<ImmutableList<E>>(), Form.ChoiceWidget<ImmutableList<E>, E> {
 
     private val panel = JPanel(MigLayout("insets 0"))
     private val addBtn = JButton(ADD_ICON)
     private val delBtn = JButton(REMOVE_ICON).apply { isEnabled = false }
-    private val cbs = mutableListOf<JComboBox<E>>()
+    private val tbgs = mutableListOf<ToggleButtonGroupWidget<E>>()
 
     init {
         addBtn.addActionListener { value = (value + value.last()).toImmutableList() }
@@ -419,13 +506,10 @@ class ComboBoxListWidget<E : Any /* non-null */>(
         set(items) {
             field = items
             var willNotifyChangeListeners = false
-            for (cb in cbs) {
-                val oldSelectedItem = cb.selectedItem
-                cb.model = DefaultComboBoxModel(Vector(items)).apply {
-                    if (oldSelectedItem in items)
-                        selectedItem = oldSelectedItem
-                }
-                if (cb.selectedItem != oldSelectedItem)
+            for (tbg in tbgs) {
+                val oldValue = tbg.value
+                tbg.items = items
+                if (tbg.value != oldValue)
                     willNotifyChangeListeners = true
             }
             if (willNotifyChangeListeners)
@@ -433,23 +517,20 @@ class ComboBoxListWidget<E : Any /* non-null */>(
         }
 
     override var value: ImmutableList<E>
-        get() = cbs.map { itemClass.cast(it.selectedItem!!) }.toImmutableList()
+        get() = tbgs.map { it.value }.toImmutableList()
         set(value) {
-            while (cbs.size < value.size) {
-                val comboBox = JComboBox(DefaultComboBoxModel(Vector(items))).apply {
-                    addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-                    renderer = CustomToStringListCellRenderer(itemClass, toString)
-                    keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
-                }
-                cbs.add(comboBox)
-                panel.add(comboBox)
+            while (tbgs.size < value.size) {
+                val tbg = ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
+                tbg.changeListeners.add(::notifyChangeListeners)
+                tbgs.add(tbg)
+                panel.add(tbg.components[0], tbg.constraints[0])
             }
-            while (cbs.size > value.size)
-                panel.remove(cbs.removeLast())
-            for ((comboBox, item) in cbs.zip(value))
-                comboBox.selectedItem = item
+            while (tbgs.size > value.size)
+                panel.remove(tbgs.removeLast().components[0])
+            for ((tbg, item) in tbgs.zip(value))
+                tbg.value = item
             panel.revalidate()
-            delBtn.isEnabled = cbs.size != 1
+            delBtn.isEnabled = tbgs.size != 1
             notifyChangeListeners()
         }
 

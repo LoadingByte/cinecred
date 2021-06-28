@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.project.*
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -38,6 +39,8 @@ val WINDOW_ICON_IMAGES = run {
 val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
 val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
+val ARROW_LEFT_ICON = SVGIcon.load("/icons/arrowLeft.svg")
+val ARROW_RIGHT_ICON = SVGIcon.load("/icons/arrowRight.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
 val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
@@ -70,6 +73,124 @@ val Severity.icon
         Severity.INFO -> INFO_ICON
         Severity.WARN -> WARN_ICON
         Severity.ERROR -> ERROR_ICON
+    }
+
+
+private val SPINE_ORIENTATION_HORIZONTAL_ICON = SVGIcon.load("/icons/spineOrientation/horizontal.svg")
+private val SPINE_ORIENTATION_VERTICAL_ICON = SVGIcon.load("/icons/spineOrientation/vertical.svg")
+
+val SpineOrientation.icon
+    get() = when (this) {
+        SpineOrientation.HORIZONTAL -> SPINE_ORIENTATION_HORIZONTAL_ICON
+        SpineOrientation.VERTICAL -> SPINE_ORIENTATION_VERTICAL_ICON
+    }
+
+
+private val BODY_LAYOUT_GRID_ICON = SVGIcon.load("/icons/bodyLayout/grid.svg")
+private val BODY_LAYOUT_FLOW_ICON = SVGIcon.load("/icons/bodyLayout/flow.svg")
+private val BODY_LAYOUT_PARAGRAPHS_ICON = SVGIcon.load("/icons/bodyLayout/paragraphs.svg")
+
+val BodyLayout.icon
+    get() = when (this) {
+        BodyLayout.GRID -> BODY_LAYOUT_GRID_ICON
+        BodyLayout.FLOW -> BODY_LAYOUT_FLOW_ICON
+        BodyLayout.PARAGRAPHS -> BODY_LAYOUT_PARAGRAPHS_ICON
+    }
+
+
+private val H_JUSTIFY_LEFT_ICON = SVGIcon.load("/icons/hJustify/left.svg")
+private val H_JUSTIFY_CENTER_ICON = SVGIcon.load("/icons/hJustify/center.svg")
+private val H_JUSTIFY_RIGHT_ICON = SVGIcon.load("/icons/hJustify/right.svg")
+
+val HJustify.icon
+    get() = when (this) {
+        HJustify.LEFT -> H_JUSTIFY_LEFT_ICON
+        HJustify.CENTER -> H_JUSTIFY_CENTER_ICON
+        HJustify.RIGHT -> H_JUSTIFY_RIGHT_ICON
+    }
+
+
+private val V_JUSTIFY_TOP_ICON = SVGIcon.load("/icons/vJustify/top.svg")
+private val V_JUSTIFY_MIDDLE_ICON = SVGIcon.load("/icons/vJustify/middle.svg")
+private val V_JUSTIFY_BOTTOM_ICON = SVGIcon.load("/icons/vJustify/bottom.svg")
+
+val VJustify.icon
+    get() = when (this) {
+        VJustify.TOP -> V_JUSTIFY_TOP_ICON
+        VJustify.MIDDLE -> V_JUSTIFY_MIDDLE_ICON
+        VJustify.BOTTOM -> V_JUSTIFY_BOTTOM_ICON
+    }
+
+
+private val LINE_H_JUSTIFY_LEFT_ICON = SVGIcon.load("/icons/lineHJustify/left.svg")
+private val LINE_H_JUSTIFY_CENTER_ICON = SVGIcon.load("/icons/lineHJustify/center.svg")
+private val LINE_H_JUSTIFY_RIGHT_ICON = SVGIcon.load("/icons/lineHJustify/right.svg")
+private val LINE_H_JUSTIFY_FULL_LAST_LEFT_ICON = SVGIcon.load("/icons/lineHJustify/fullLastLeft.svg")
+private val LINE_H_JUSTIFY_FULL_LAST_CENTER_ICON = SVGIcon.load("/icons/lineHJustify/fullLastCenter.svg")
+private val LINE_H_JUSTIFY_FULL_LAST_RIGHT_ICON = SVGIcon.load("/icons/lineHJustify/fullLastRight.svg")
+private val LINE_H_JUSTIFY_FULL_LAST_FULL_ICON = SVGIcon.load("/icons/lineHJustify/fullLastFull.svg")
+
+val LineHJustify.icon
+    get() = when (this) {
+        LineHJustify.LEFT -> LINE_H_JUSTIFY_LEFT_ICON
+        LineHJustify.CENTER -> LINE_H_JUSTIFY_CENTER_ICON
+        LineHJustify.RIGHT -> LINE_H_JUSTIFY_RIGHT_ICON
+        LineHJustify.FULL_LAST_LEFT -> LINE_H_JUSTIFY_FULL_LAST_LEFT_ICON
+        LineHJustify.FULL_LAST_CENTER -> LINE_H_JUSTIFY_FULL_LAST_CENTER_ICON
+        LineHJustify.FULL_LAST_RIGHT -> LINE_H_JUSTIFY_FULL_LAST_RIGHT_ICON
+        LineHJustify.FULL_LAST_FULL -> LINE_H_JUSTIFY_FULL_LAST_FULL_ICON
+    }
+
+
+private val BODY_ELEMENT_BOX_CONFORM_NOTHING_ICON = SVGIcon.load("/icons/bodyElementBoxConform/nothing.svg")
+private val BODY_ELEMENT_BOX_CONFORM_WIDTH_ICON = SVGIcon.load("/icons/bodyElementBoxConform/width.svg")
+private val BODY_ELEMENT_BOX_CONFORM_HEIGHT_ICON = SVGIcon.load("/icons/bodyElementBoxConform/height.svg")
+private val BODY_ELEMENT_BOX_CONFORM_WAH_ICON = SVGIcon.load("/icons/bodyElementBoxConform/widthAndHeight.svg")
+private val BODY_ELEMENT_BOX_CONFORM_SQUARE_ICON = SVGIcon.load("/icons/bodyElementBoxConform/square.svg")
+
+val BodyElementBoxConform.icon
+    get() = when (this) {
+        BodyElementBoxConform.NOTHING -> BODY_ELEMENT_BOX_CONFORM_NOTHING_ICON
+        BodyElementBoxConform.WIDTH -> BODY_ELEMENT_BOX_CONFORM_WIDTH_ICON
+        BodyElementBoxConform.HEIGHT -> BODY_ELEMENT_BOX_CONFORM_HEIGHT_ICON
+        BodyElementBoxConform.WIDTH_AND_HEIGHT -> BODY_ELEMENT_BOX_CONFORM_WAH_ICON
+        BodyElementBoxConform.SQUARE -> BODY_ELEMENT_BOX_CONFORM_SQUARE_ICON
+    }
+
+
+private val GRID_FILLING_ORDER_L2R_T2B_ICON = SVGIcon.load("/icons/gridFillingOrder/l2r-t2b.svg")
+private val GRID_FILLING_ORDER_R2L_T2B_ICON = SVGIcon.load("/icons/gridFillingOrder/r2l-t2b.svg")
+private val GRID_FILLING_ORDER_T2B_L2R_ICON = SVGIcon.load("/icons/gridFillingOrder/t2b-l2r.svg")
+private val GRID_FILLING_ORDER_T2B_R2L_ICON = SVGIcon.load("/icons/gridFillingOrder/t2b-r2l.svg")
+
+val GridFillingOrder.icon
+    get() = when (this) {
+        GridFillingOrder.L2R_T2B -> GRID_FILLING_ORDER_L2R_T2B_ICON
+        GridFillingOrder.R2L_T2B -> GRID_FILLING_ORDER_R2L_T2B_ICON
+        GridFillingOrder.T2B_L2R -> GRID_FILLING_ORDER_T2B_L2R_ICON
+        GridFillingOrder.T2B_R2L -> GRID_FILLING_ORDER_T2B_R2L_ICON
+    }
+
+
+val FlowDirection.icon
+    get() = when (this) {
+        FlowDirection.L2R -> ARROW_RIGHT_ICON
+        FlowDirection.R2L -> ARROW_LEFT_ICON
+    }
+
+
+val Enum<*>.icon
+    get() = when (this) {
+        is Severity -> icon
+        is SpineOrientation -> icon
+        is BodyLayout -> icon
+        is HJustify -> icon
+        is VJustify -> icon
+        is LineHJustify -> icon
+        is BodyElementBoxConform -> icon
+        is GridFillingOrder -> icon
+        is FlowDirection -> icon
+        else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }
 
 

@@ -137,7 +137,7 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
     // First fill the columns irrespective of left-to-right / right-to-left.
     val cols = when (order) {
         GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
-            val cols = (0 until numCols).map { mutableListOf<E>() }
+            val cols = (0 until numCols).map { ArrayList<E>() }
             for ((idx, elem) in list.withIndex())
                 cols[idx % cols.size].add(elem)
             cols
@@ -313,7 +313,7 @@ private inline fun <E> partitionIntoLines(
             lines.last().add(elem)
         } else {
             // Case 2: The element does not fit on the current line. Start a new line.
-            lines.add(mutableListOf(elem))
+            lines.add(arrayListOf(elem))
             x = elemWidth
         }
     }

@@ -32,55 +32,59 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     private fun <V> makeSettingWidget(setting: StyleSetting<S, V>, settingMeta: List<StyleMeta<S, *>>): Widget<*> {
+        val numberConstr = settingMeta.oneOf<NumberConstr<S>>()
+        val dynChoiceConstr = settingMeta.oneOf<DynChoiceConstr<S, *>>()
+        val colorConstr = settingMeta.oneOf<ColorConstr<S>>()
+        val fontNameConstr = settingMeta.oneOf<FontNameConstr<S>>()
+        val dontGrowWidgetSpec = settingMeta.oneOf<DontGrowWidgetSpec<S>>()
+        val numberStepWidgetSpec = settingMeta.oneOf<NumberStepWidgetSpec<S, *>>()
         val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<*>>()
+        val timecodeWidgetSpec = settingMeta.oneOf<TimecodeWidgetSpec<S>>()
 
         val settingGenericArg = setting.genericArg
 
         val settingWidget = when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
-                val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
+                val inequality = numberConstr?.inequality
                 val min = if (inequality == LARGER_0) 1 else if (inequality == LARGER_OR_EQUAL_0) 0 else null
-                val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Int>>()?.stepSize ?: 1
+                val step = numberStepWidgetSpec?.stepSize ?: 1
                 val model = SpinnerNumberModel(min ?: 0, min, null, step)
-                if (settingMeta.oneOf<TimecodeWidgetSpec<S>>() != null)
+                if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0])
                 else
                     SpinnerWidget(Int::class.javaObjectType, model)
             }
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
-                val inequality = settingMeta.oneOf<NumberConstr<S>>()?.inequality
+                val inequality = numberConstr?.inequality
                 val min = if (inequality == LARGER_0) 0.01f else if (inequality == LARGER_OR_EQUAL_0) 0f else null
-                val step = settingMeta.oneOf<NumberStepWidgetSpec<S, Float>>()?.stepSize ?: 1f
+                val step = numberStepWidgetSpec?.stepSize ?: 1f
                 SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(min ?: 0f, min, null, step))
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {
-                settingMeta.oneOf<DynChoiceConstr<S, *>>() != null -> InconsistentComboBoxWidget(
-                    String::class.java, emptyList()
-                )
-                settingMeta.oneOf<FontNameConstr<S>>() != null -> FontChooserWidget()
-                else -> TextWidget(grow = settingMeta.oneOf<DontGrowWidgetSpec<S>>() == null)
+                dynChoiceConstr != null -> InconsistentComboBoxWidget(String::class.java, emptyList())
+                fontNameConstr != null -> FontChooserWidget()
+                else -> TextWidget(grow = dontGrowWidgetSpec == null)
             }
             Locale::class.java -> InconsistentComboBoxWidget(
                 Locale::class.java, Locale.getAvailableLocales().sortedBy(Locale::getDisplayName),
                 toString = Locale::getDisplayName
             )
-            Color::class.java -> ColorWellWidget(allowAlpha = settingMeta.oneOf<ColorConstr<S>>()?.allowAlpha ?: true)
+            Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true)
             FPS::class.java -> FPSWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
-                    settingMeta.oneOf<DynChoiceConstr<S, *>>() != null -> InconsistentComboBoxWidget(
+                    dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type as Class<*>, emptyList(),
                         toString = { l10nEnum(it as Enum<*>) }
                     )
                     toggleButtonGroupWidgetSpec != null ->
                         makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show, list = false)
-                    else -> makeEnumCBoxWidget(setting.type as Class<*>)
+                    else ->
+                        makeEnumCBoxWidget(setting.type as Class<*>)
                 }
                 ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
-                    String::class.java == settingGenericArg -> TextListWidget(
-                        grow = settingMeta.oneOf<DontGrowWidgetSpec<S>>() == null
-                    )
+                    String::class.java == settingGenericArg -> TextListWidget(grow = dontGrowWidgetSpec == null)
                     Enum::class.java.isAssignableFrom(settingGenericArg) ->
                         if (toggleButtonGroupWidgetSpec != null)
                             makeEnumTBGWidget(settingGenericArg, toggleButtonGroupWidgetSpec.show, list = true)
@@ -103,8 +107,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>) =
         ComboBoxWidget(
             enumClass, enumClass.enumConstants.asList(),
-            toString = { l10nEnum(it as Enum<*>) }
-        )
+            toString = { l10nEnum(it as Enum<*>) })
 
     private fun <E : Any /* non-null */> makeEnumTBGWidget(
         enumClass: Class<E>,

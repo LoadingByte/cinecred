@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import java.awt.Window
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.prefs.Preferences

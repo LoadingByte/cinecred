@@ -9,7 +9,6 @@ import java.awt.Component
 import java.awt.Font
 import java.awt.datatransfer.DataFlavor
 import java.io.File
-import java.nio.file.Files
 import javax.swing.*
 import kotlin.io.path.isDirectory
 

@@ -21,8 +21,8 @@ Cinecred Changelog
 - The runtime of each stage is displayed as a layout guide.
 - Where possible, dropdown menus were replaced by toggle button groups, which
   mostly also include icons.
-- Editing a styling setting multiple times in rapid succession now only leaves
-  one undo state.
+- Editing a styling setting multiple times in rapid succession only leaves one
+  undo state.
 - While choosing a color, the preview constantly updates.
 
 ### Fixes
@@ -45,8 +45,6 @@ Cinecred Changelog
 
 - A duplicated style now has a name different from the respective original style
   to avoid bugging the user with a duplicated style name error message.
-- Editing a styling text field no longer redraws the project for every single
-  typed character.
 - The styling tree now ignores case when ordering the styles.
 - Log messages are now ordered by decreasing severity.
 - Project hints now select the tab in which their target lies before displaying.
@@ -60,8 +58,8 @@ Cinecred Changelog
   specifying vertical gaps in rows with head, body, and/or tail is now
   discouraged as the gap's belonging is ambiguous.
 - The renderer will no longer write a final empty frame.
-- Improved the default spreadsheet by resizing the columns and reodering them so
-  the head, body, and tail columns come first.
+- Improved the default spreadsheet by resizing the columns and reordering them
+  so the head, body, and tail columns come first.
 - The format of `Styling.toml` has slightly changed. Nevertheless, old files can
   still be opened and are migrated to the new format when the styling is saved.
 

@@ -34,7 +34,7 @@ plugins {
 }
 
 group = "com.loadingbyte"
-version = "1.1.0"
+version = "1.2.0-SNAPSHOT"
 
 val slf4jVersion = "1.7.31"
 val batikVersion = "1.14"

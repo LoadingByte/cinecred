@@ -243,7 +243,7 @@ private fun drawPage(
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
         val attrs = mapOf(
-            TextAttribute.FONT to Font(Font.MONOSPACED, Font.PLAIN, global.widthPx / 80),
+            TextAttribute.FONT to Font(Font.MONOSPACED, Font.BOLD, global.widthPx / 80),
             TextAttribute.FOREGROUND to STAGE_GUIDE_COLOR
         )
         val attrCharIter = AttributedString(str, attrs).iterator

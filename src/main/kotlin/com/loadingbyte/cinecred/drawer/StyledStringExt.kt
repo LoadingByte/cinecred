@@ -74,23 +74,23 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
         if (textCtx.uppercaseExceptionsRegex != null && any { (_, style) -> style.useUppercaseExceptions })
             joinedUppercased = buildString(joined.length) {
                 for (match in textCtx.uppercaseExceptionsRegex.findAll(joined)) {
-                    append(joined.substring(this@buildString.length, match.range.first).toUpperCase(textCtx.locale))
+                    append(joined.substring(this@buildString.length, match.range.first).uppercase(textCtx.locale))
                     append(joined.substring(match.range.first, match.range.last + 1))
                 }
-                append(joined.substring(this@buildString.length).toUpperCase(textCtx.locale))  // remainder
+                append(joined.substring(this@buildString.length).uppercase(textCtx.locale))  // remainder
             }
 
         // Now compute the uppercased styled string. For the quite common single-run styled strings, we have a
         // special case to achieve better performance.
         uppercased = if (size == 1)
-            listOf(Pair(joinedUppercased ?: joined.toUpperCase(textCtx.locale), single().second))
+            listOf(Pair(joinedUppercased ?: joined.uppercase(textCtx.locale), single().second))
         else {
             mapRuns { _, run, style, runStartIdx, runEndIdx ->
                 buildString(run.length) {
                     if (!style.uppercase)
                         append(run)
                     else if (!style.useUppercaseExceptions)
-                        append(run.toUpperCase(textCtx.locale))
+                        append(run.uppercase(textCtx.locale))
                     else
                         append(joinedUppercased!!.substring(runStartIdx, runEndIdx))
                 }
@@ -113,7 +113,7 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
             if (!style.smallCaps)
                 run
             else {
-                val smallCapsedRun = if (style.smallCaps) run.toUpperCase(textCtx.locale) else run
+                val smallCapsedRun = if (style.smallCaps) run.uppercase(textCtx.locale) else run
 
                 // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
                 // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
@@ -124,7 +124,7 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
                     BooleanArray(smallCapsedRun.length).also { mask ->
                         var prevEndFillIdx = 0
                         for (idxInRun in run.indices) {
-                            val endFillIdx = run.substring(0, idxInRun + 1).toUpperCase(textCtx.locale).length
+                            val endFillIdx = run.substring(0, idxInRun + 1).uppercase(textCtx.locale).length
                             mask.fill(run[idxInRun].isLowerCase(), prevEndFillIdx, endFillIdx)
                             prevEndFillIdx = endFillIdx
                         }

@@ -48,7 +48,7 @@ fun drawPages(
             )
         // If requested, adjust all remaining stages to best achieve the desired overall runtime of the whole sequence.
         if (global.runtimeFrames.isEffective) {
-            val pauseFrames = pages.dropLast(1).sumBy { it.stages.last().style.afterwardSlugFrames }
+            val pauseFrames = pages.dropLast(1).sumOf { it.stages.last().style.afterwardSlugFrames }
             val runtimeStages = runtimeGroups.flatMap(RuntimeGroup::stages)
             val allStages = stageImages.keys
             matchRuntime(

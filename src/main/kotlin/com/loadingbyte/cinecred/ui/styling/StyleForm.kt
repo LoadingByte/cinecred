@@ -130,7 +130,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     private fun addSettingWidget(setting: StyleSetting<S, *>, settingWidget: Widget<*>) {
         val l10nKey = "ui.styling." +
-                styleClass.simpleName.removeSuffix("Style").toLowerCase() +
+                styleClass.simpleName.removeSuffix("Style").lowercase() +
                 ".${setting.name}"
 
         try {

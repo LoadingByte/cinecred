@@ -12,6 +12,10 @@ fun String.toFiniteFloat(nonNeg: Boolean = false, non0: Boolean = false): Float 
 }
 
 
+fun <T> String.toEnum(enumClass: Class<T>): T =
+    enumClass.enumConstants.first { (it as Enum<*>).name.equals(this, ignoreCase = true) }
+
+
 // Note: We first have to convert to long and then to int because String.toInt() throws an exception when an
 // overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is then 1,
 // which is interpreted as a negative sign, so this is an overflow).

@@ -111,7 +111,7 @@ private class ReflectedRegularStyleSetting<S : Style>(
     name: String
 ) : AbstractStyleSetting<S, Any?>(styleClass, name), RegularStyleSetting<S, Any?> {
 
-    private val getter = styleClass.getDeclaredMethod("get" + name.capitalize(Locale.ROOT))
+    private val getter = styleClass.getDeclaredMethod("get" + name.replaceFirstChar(Char::uppercase))
 
     override fun getPlain(style: S): Any? = getter.invoke(style)
     override fun getValue(style: S): Any? = getPlain(style)
@@ -124,7 +124,7 @@ private class ReflectedOptEffStyleSetting<S : Style>(
     name: String
 ) : AbstractStyleSetting<S, Any?>(styleClass, name), OptionallyEffectiveStyleSetting<S, Any?> {
 
-    private val getter = styleClass.getDeclaredMethod("get" + name.capitalize(Locale.ROOT))
+    private val getter = styleClass.getDeclaredMethod("get" + name.replaceFirstChar(Char::uppercase))
 
     override fun getPlain(style: S) = getter.invoke(style) as OptionallyEffective<Any?>
     override fun getValue(style: S): Any? = getPlain(style).value

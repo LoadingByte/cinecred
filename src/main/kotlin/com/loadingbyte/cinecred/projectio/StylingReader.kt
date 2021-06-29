@@ -99,9 +99,7 @@ private fun convert(type: Class<*>, str: String): Any = when (type) {
     Color::class.java -> str.hexToColor()
     FPS::class.java -> str.toFPS()
     else -> when {
-        Enum::class.java.isAssignableFrom(type) ->
-            @Suppress("UNCHECKED_CAST")
-            java.lang.Enum.valueOf(type as Class<Enum<*>>, str.toUpperCase())
+        Enum::class.java.isAssignableFrom(type) -> str.toEnum(type)
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

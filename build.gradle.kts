@@ -30,13 +30,13 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.4.32"
+    kotlin("jvm") version "1.5.20"
 }
 
 group = "com.loadingbyte"
 version = "1.1.0-SNAPSHOT"
 
-val slf4jVersion = "1.7.30"
+val slf4jVersion = "1.7.31"
 val batikVersion = "1.14"
 val javacppVersion = "1.5.5"
 val ffmpegVersion = "4.3.2-$javacppVersion"
@@ -52,7 +52,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable-jvm", "0.3.4")
+    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.3.4")
 
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
@@ -74,8 +74,8 @@ dependencies {
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
     // PDF Reading and Writing
-    implementation("org.apache.pdfbox", "pdfbox", "2.0.23")
-    implementation("de.rototor.pdfbox", "graphics2d", "0.31")
+    implementation("org.apache.pdfbox", "pdfbox", "2.0.24")
+    implementation("de.rototor.pdfbox", "graphics2d", "0.32")
 
     // Video Encoding
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -107,9 +107,7 @@ configurations.all {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
-    // TODO: Remove this once the Path API graduated from the experimental stage (happens in Kotlin 1.5).
-    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.io.path.ExperimentalPathApi"
+    kotlinOptions.jvmTarget = "16"
 }
 
 tasks.withType<Test> {

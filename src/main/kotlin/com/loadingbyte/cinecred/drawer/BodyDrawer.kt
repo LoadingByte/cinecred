@@ -214,7 +214,7 @@ fun drawBodyImageWithFlowBodyLayout(
         // Determine the width of all rigid elements in the line, that is, the total width of all body elements
         // and separator strings.
         val totalRigidWidth = when (style.flowElemBoxConform) {
-            NOTHING, HEIGHT -> line.sumByFloat { bodyElem -> bodyElem.getWidth(textCtx) }
+            NOTHING, HEIGHT -> line.sumOf { bodyElem -> bodyElem.getWidth(textCtx) }
             WIDTH, WIDTH_AND_HEIGHT -> line.size * maxElemWidth
             SQUARE -> line.size * maxElemSideLength
         }
@@ -327,7 +327,7 @@ private inline fun <E> partitionIntoLines(
 }
 
 
-private inline fun <E> Iterable<E>.sumByFloat(selector: (E) -> Float): Float {
+private inline fun <E> Iterable<E>.sumOf(selector: (E) -> Float): Float {
     var sum = 0f
     for (elem in this) {
         sum += selector(elem)

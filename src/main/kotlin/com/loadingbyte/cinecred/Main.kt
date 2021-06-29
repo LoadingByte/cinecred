@@ -79,7 +79,7 @@ fun main() {
     PlatformDefaults.setPlatform(PlatformDefaults.GNOME)
 
     // Set the Swing Look & Feel.
-    FlatDarkLaf.install()
+    FlatDarkLaf.setup()
     // Enable alternated coloring of table rows.
     val uiDefaults = UIManager.getLookAndFeelDefaults()
     uiDefaults["Table.alternateRowColor"] = HSLColor(uiDefaults["Table.background"] as Color).adjustTone(10f)
@@ -175,7 +175,7 @@ private object JULFormatter : Formatter() {
     private val startMillis = System.currentTimeMillis()
     override fun format(record: LogRecord): String {
         val millis = record.millis - startMillis
-        val threadName = getThreadByID(record.threadID.toLong())?.name ?: "???"
+        val threadName = getThreadByID(record.longThreadID)?.name ?: "???"
         val exc = record.thrown?.stackTraceToString() ?: ""
         val msg = formatMessage(record)
         return "$millis [$threadName] ${record.level} ${record.loggerName} - $msg\n$exc"

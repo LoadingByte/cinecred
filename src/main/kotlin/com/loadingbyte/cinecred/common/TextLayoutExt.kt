@@ -66,6 +66,3 @@ private fun Class<*>.findVirtual(name: String, type: MethodType) =
 
 private fun Class<*>.findGetter(name: String, type: Class<*>) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findGetter(this, name, type)
-
-// TODO: Java 12 has this method, but we are not on Java 12 yet. Remove it when we upgrade to Java 12.
-private fun Class<*>.arrayType() = java.lang.reflect.Array.newInstance(this, 0).javaClass

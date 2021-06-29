@@ -312,7 +312,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             if (extraIcons.isNotEmpty())
                 newPrefWidth += 2 * iconTextGap +  // Multiply by 2 to increase the spacing between text & icons.
                         ICON_ICON_GAP * (extraIcons.size - 1) +
-                        extraIcons.sumBy(Icon::getIconWidth)
+                        extraIcons.sumOf(Icon::getIconWidth)
             Dimension(newPrefWidth, pref.height)
         }
 

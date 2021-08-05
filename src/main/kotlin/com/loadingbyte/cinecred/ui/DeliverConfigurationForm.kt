@@ -3,17 +3,13 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.delivery.RenderFormat
-import com.loadingbyte.cinecred.delivery.VideoRenderJob
-import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
-import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
+import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toImmutableList
-import javax.swing.JOptionPane
-import javax.swing.JOptionPane.ERROR_MESSAGE
+import javax.swing.JOptionPane.*
 import javax.swing.SpinnerNumberModel
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
@@ -28,10 +24,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     companion object {
         private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
         private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
-
-        private val SEQ_FORMATS =
-            WholePageSequenceRenderJob.Format.ALL + VideoRenderJob.Format.ALL.filter { it.isImageSeq }
-        private val ALPHA_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL.filter { it.supportsAlpha }
     }
 
     private var project: Project? = null
@@ -62,16 +54,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
         FileWidget(FileType.DIRECTORY),
-        isVisible = { formatWidget.value in SEQ_FORMATS },
-        verify = {
-            when {
-                it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
-                it.isRegularFile() -> Notice(Severity.ERROR, l10n("ui.deliverConfig.seqDirIsFile"))
-                it.isDirectory() && it.useDirectoryEntries { seq -> seq.iterator().hasNext() } ->
-                    Notice(Severity.WARN, l10n("ui.deliverConfig.seqDirNonEmpty"))
-                else -> null
-            }
-        }
+        isVisible = { formatWidget.value.fileSeq },
+        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
     )
     private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
@@ -87,15 +71,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
         FileWidget(FileType.FILE),
-        isVisible = { formatWidget.value !in SEQ_FORMATS },
-        verify = {
-            when {
-                it.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
-                it.isDirectory() -> Notice(Severity.ERROR, l10n("ui.deliverConfig.singleFileIsFolder"))
-                it.exists() -> Notice(Severity.WARN, l10n("ui.deliverConfig.singleFileExists"))
-                else -> null
-            }
-        }
+        isVisible = { !formatWidget.value.fileSeq },
+        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
     )
 
     private val resolutionMultWidget = addWidget(
@@ -106,7 +83,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val transparentBackgroundWidget = addWidget(
         l10n("ui.deliverConfig.transparentBackground"),
         CheckBoxWidget(),
-        isEnabled = { formatWidget.value in ALPHA_FORMATS }
+        isEnabled = { formatWidget.value.supportsAlpha }
     )
 
     init {
@@ -179,30 +156,63 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
 
     private fun addRenderJobToQueue() {
         if (drawnPages.isEmpty())
-            JOptionPane.showMessageDialog(
-                null, l10n("ui.deliverConfig.noPages.msg"), l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
+            showMessageDialog(
+                ctrl.projectFrame, l10n("ui.deliverConfig.noPages.msg"),
+                l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
+            val format = formatWidget.value
+            val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
             val scaling = resolutionMultWidget.value
+
+            fun wrongFileTypeDialog(msg: String) = showMessageDialog(
+                ctrl.projectFrame, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
+            )
+
+            fun overwriteDialog(msg: String) = showConfirmDialog(
+                ctrl.projectFrame, msg, l10n("ui.deliverConfig.overwrite.title"), OK_CANCEL_OPTION
+            ) == OK_OPTION
+
+            // If there is any issue with the output file or folder, inform the user and abort if necessary.
+            if (format.fileSeq) {
+                if (fileOrDir.isRegularFile()) {
+                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", fileOrDir))
+                    return
+                } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))
+                        return
+                } else if (fileOrDir.isDirectory() && fileOrDir.useDirectoryEntries { seq -> seq.iterator().hasNext() })
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", fileOrDir)))
+                        return
+            } else {
+                if (fileOrDir.isDirectory()) {
+                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.folder", fileOrDir))
+                    return
+                } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", fileOrDir)))
+                        return
+                } else if (fileOrDir.exists() || RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) })
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileExists", fileOrDir)))
+                        return
+            }
 
             fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
 
-            val format = formatWidget.value
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
                     transparentBackgroundWidget.value, format,
-                    dir = seqDirWidget.value.normalize(), filenamePattern = seqFilenamePatternWidget.value
+                    dir = fileOrDir, filenamePattern = seqFilenamePatternWidget.value
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
                     transparentBackgroundWidget.value,
-                    file = singleFileWidget.value.normalize()
+                    file = fileOrDir
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, drawnPages,
                     scaling, transparentBackgroundWidget.value && format.supportsAlpha, format,
-                    fileOrDir = (if (format.isImageSeq) seqDirWidget.value else singleFileWidget.value).normalize()
+                    fileOrDir = fileOrDir
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }

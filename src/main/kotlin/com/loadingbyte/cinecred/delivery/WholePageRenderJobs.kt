@@ -10,6 +10,7 @@ import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
+import org.apache.commons.io.FileUtils
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
@@ -24,6 +25,7 @@ import javax.imageio.stream.FileImageOutputStream
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
 import kotlin.math.roundToInt
 
 
@@ -38,6 +40,8 @@ class WholePageSequenceRenderJob(
     override fun generatesFile(file: Path) = file.startsWith(dir)
 
     override fun render(progressCallback: (Float) -> Unit) {
+        if (dir.exists())
+            FileUtils.cleanDirectory(dir.toFile())
         dir.createDirectories()
 
         val layers = if (transparentBackground) listOf(FOREGROUND) else listOf(BACKGROUND, FOREGROUND)
@@ -101,7 +105,8 @@ class WholePageSequenceRenderJob(
     }
 
 
-    class Format private constructor(label: String, fileExt: String) : RenderFormat(label, listOf(fileExt)) {
+    class Format private constructor(label: String, fileExt: String) :
+        RenderFormat(label, fileSeq = true, listOf(fileExt), supportsAlpha = true) {
         companion object {
             val PNG = Format("PNG", "png")
             val TIFF_PACK_BITS = Format(l10n("delivery.packBits", "TIFF"), "tiff")
@@ -155,7 +160,7 @@ class WholePagePDFRenderJob(
 
 
     companion object {
-        val FORMAT = RenderFormat("PDF", listOf("pdf"))
+        val FORMAT = RenderFormat("PDF", fileSeq = false, listOf("pdf"), supportsAlpha = true)
     }
 
 }

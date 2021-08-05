@@ -25,18 +25,18 @@ class VideoRenderJob(
 ) : RenderJob {
 
     val fileOrPattern: Path = when {
-        format.isImageSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts[0]}")
+        format.fileSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts[0]}")
         else -> fileOrDir
     }
 
     override fun generatesFile(file: Path) = when {
-        format.isImageSeq -> file.startsWith(fileOrPattern.parent)
+        format.fileSeq -> file.startsWith(fileOrPattern.parent)
         else -> file == fileOrPattern
     }
 
     override fun render(progressCallback: (Float) -> Unit) {
         // If we have an image sequence, delete the sequence directory if it already exists.
-        if (format.isImageSeq && fileOrPattern.parent.exists())
+        if (format.fileSeq && fileOrPattern.parent.exists())
             FileUtils.cleanDirectory(fileOrPattern.parent.toFile())
         // Make sure that the parent directory exists.
         fileOrPattern.parent.createDirectories()
@@ -77,7 +77,7 @@ class VideoRenderJob(
 
     class Format private constructor(
         label: String,
-        val isImageSeq: Boolean,
+        fileSeq: Boolean,
         fileExts: List<String>,
         val codecId: Int,
         val pixelFormat: Int,
@@ -87,9 +87,7 @@ class VideoRenderJob(
         val heightMod2: Boolean = false,
         val minWidth: Int? = null,
         val minHeight: Int? = null
-    ) : RenderFormat(label, fileExts) {
-
-        val supportsAlpha = alphaPixelFormat != null
+    ) : RenderFormat(label, fileSeq, fileExts, supportsAlpha = alphaPixelFormat != null) {
 
         companion object {
 
@@ -102,24 +100,24 @@ class VideoRenderJob(
                             .toSortedSet()
 
             private fun prores(label: String, profile: String) = Format(
-                label, isImageSeq = false, muxerFileExts(AV_CODEC_ID_PRORES, "mov"), AV_CODEC_ID_PRORES,
+                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_PRORES, "mov"), AV_CODEC_ID_PRORES,
                 AV_PIX_FMT_YUV422P10LE, codecOptions = mapOf("profile" to profile), widthMod2 = true
             )
 
             private fun dnxhr(label: String, pixelFormat: Int, profile: String) = Format(
-                label, isImageSeq = false, muxerFileExts(AV_CODEC_ID_DNXHD, "mxf"), AV_CODEC_ID_DNXHD,
+                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_DNXHD, "mxf"), AV_CODEC_ID_DNXHD,
                 pixelFormat, codecOptions = mapOf("profile" to profile), minWidth = 256, minHeight = 120
             )
 
             private fun rgbSeqWithOptionalAlpha(
                 label: String, fileExt: String, codecId: Int, codecOptions: Map<String, String> = emptyMap()
             ) = Format(
-                label, isImageSeq = true, listOf(fileExt), codecId, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA, codecOptions
+                label, fileSeq = true, listOf(fileExt), codecId, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA, codecOptions
             )
 
             val ALL = listOf(
                 Format(
-                    "H.264", isImageSeq = false, muxerFileExts(AV_CODEC_ID_H264, "mp4"), AV_CODEC_ID_H264,
+                    "H.264", fileSeq = false, muxerFileExts(AV_CODEC_ID_H264, "mp4"), AV_CODEC_ID_H264,
                     AV_PIX_FMT_YUV420P, widthMod2 = true, heightMod2 = true
                 ),
                 prores("ProRes 422 Proxy", "0"),

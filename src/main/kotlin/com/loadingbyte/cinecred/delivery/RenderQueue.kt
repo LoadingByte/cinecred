@@ -90,6 +90,16 @@ object RenderQueue {
         }
     }
 
+    fun getRemainingJobs(): List<RenderJob> =
+        pollJobLock.withLock {
+            val remJobs = ArrayList<RenderJob>()
+            runningJob?.let { remJobs.add(it.job) }
+            for (queue in queuedJobs.values)
+                for (job in queue)
+                    remJobs.add(job.job)
+            remJobs
+        }
+
     fun submitJob(
         category: Any,
         job: RenderJob,

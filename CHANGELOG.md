@@ -4,6 +4,11 @@ Cinecred Changelog
 1.2.0-SNAPSHOT
 --------------
 
+### Additions
+
+- When adding a render job that overwrites existing files or the output of a
+  previous job, the user is now confronted with a proper and reliable warning.
+
 
 1.1.0
 -----

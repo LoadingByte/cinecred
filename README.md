@@ -5,6 +5,13 @@ Create beautiful film credit sequences—without pain.
 
 Visit the website at https://loadingbyte.com/cinecred/ for further information about the nature of this software, as well as manifold download options.
 
+## Running
+
+To run the main class at `com.loadingbyte.cinecred.Main`, the following VM arguments are required:
+
+    --add-opens java.desktop/java.awt.font=ALL-UNNAMED
+    --add-opens java.desktop/sun.font=ALL-UNNAMED
+
 ## Internal: Releasing
 
 The following information is only relevant for building binaries of a new version and publishing them to the various distribution channels.

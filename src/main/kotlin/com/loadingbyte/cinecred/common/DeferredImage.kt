@@ -80,14 +80,15 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     ) {
         // Find the distance between y and the baseline of the tallest font in the attributed string.
         // In case there are multiple tallest fonts, take the largest distance.
-        var maxFontHeight = 0
+        var maxFontHeight = 0f
         var aboveBaseline = 0f
-        attrCharIter.forEachRunOf(TextAttribute.FONT) {
+        attrCharIter.forEachRunOf(TextAttribute.FONT) { runEndIdx ->
             val font = attrCharIter.getAttribute(TextAttribute.FONT) as Font? ?: throw IllegalArgumentException()
-            val normFontMetrics = REF_G2.getFontMetrics(font.deriveFont(FONT_NORMALIZATION_ATTRS))
-            if (normFontMetrics.height >= maxFontHeight) {
-                maxFontHeight = normFontMetrics.height
-                aboveBaseline = max(aboveBaseline, normFontMetrics.ascent + normFontMetrics.leading / 2f)
+            val normFontLM = font.deriveFont(FONT_NORMALIZATION_ATTRS)
+                .getLineMetrics(attrCharIter, attrCharIter.index, runEndIdx, REF_FRC)
+            if (normFontLM.height >= maxFontHeight) {
+                maxFontHeight = normFontLM.height
+                aboveBaseline = max(aboveBaseline, normFontLM.ascent + normFontLM.leading / 2f)
             }
         }
         // The drawing instruction requires a y coordinate that points to the baseline of the string, so

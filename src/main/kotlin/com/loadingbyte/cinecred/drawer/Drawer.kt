@@ -1,9 +1,10 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.REF_G2
+import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.project.*
 import java.awt.Font
 import java.awt.font.TextAttribute.*
+import kotlin.math.abs
 
 
 fun draw(project: Project): List<DrawnPage> {
@@ -22,6 +23,8 @@ fun draw(project: Project): List<DrawnPage> {
 }
 
 
+private const val LINE_METRICS_SAMPLE = "Beispiel!"
+
 private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle): Pair<Font, Font> {
     val baseFont = (projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName))
         .deriveFont(100f)
@@ -38,7 +41,7 @@ private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle):
     //   - Accidental infinite looping.
     //   - Too large fonts, as they cause the Java font rendering engine to destroy its own fonts.
     for (i in 0 until 10) {
-        if (REF_G2.getFontMetrics(baseFont.deriveFont(size * 2f)).height >= style.heightPx)
+        if (baseFont.deriveFont(size * 2f).getLineMetrics(LINE_METRICS_SAMPLE, REF_FRC).height >= style.heightPx)
             break
         size *= 2f
     }
@@ -53,9 +56,9 @@ private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle):
     // Upper-bound the number of repetitions to avoid accidental infinite looping.
     for (i in 0 until 20) {
         intervalLength /= 2f
-        val height = REF_G2.getFontMetrics(baseFont.deriveFont(size)).height
+        val height = baseFont.deriveFont(size).getLineMetrics(LINE_METRICS_SAMPLE, REF_FRC).height
         when {
-            height == style.heightPx -> break
+            abs(height - style.heightPx) < 0.001f -> break
             height > style.heightPx -> size -= intervalLength
             height < style.heightPx -> size += intervalLength
         }

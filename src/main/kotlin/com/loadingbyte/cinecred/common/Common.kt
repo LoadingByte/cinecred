@@ -39,11 +39,11 @@ fun l10nAll(key: String): List<String> = l10nAllCache.getOrPut(key) {
 val gCfg: GraphicsConfiguration
     get() = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
 
-// This is a reference graphics context used to measure the size of fonts.
-val REF_G2: Graphics2D = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)
+// This is a reference font render context used to measure the size of fonts.
+val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)
     .createGraphics()
     .apply { setHighQuality() }
-val REF_FRC: FontRenderContext = REF_G2.fontRenderContext
+    .fontRenderContext
 
 
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {

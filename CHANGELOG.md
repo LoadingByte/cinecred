@@ -9,6 +9,11 @@ Cinecred Changelog
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
 
+### Fixes
+
+- Text is sized and positioned more precisely by employing floating point
+  instead of integer precision.
+
 
 1.1.0
 -----

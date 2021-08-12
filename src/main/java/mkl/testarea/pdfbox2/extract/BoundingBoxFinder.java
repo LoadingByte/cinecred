@@ -177,9 +177,13 @@ public class BoundingBoxFinder extends PDFGraphicsStreamEngine {
         addToPath(x3, y3);
     }
 
+    private static final Point2D DUMMY_POINT = new Point2D.Float();
+
     @Override
     public Point2D getCurrentPoint() throws IOException {
-        return null;
+        // The operators processors for lineTo, curveTo, etc. emit warnings if this method returns null.
+        // We return some dummy point to silence those warnings.
+        return DUMMY_POINT;
     }
 
     @Override

@@ -22,9 +22,15 @@ import javax.swing.event.HyperlinkEvent
 import kotlin.io.path.*
 
 
+private fun String.equalsAny(other: Collection<String>, ignoreCase: Boolean = false) =
+    other.any { equals(it, ignoreCase) }
+
+
+private val FONT_FILE_EXTS = listOf("ttf", "ttc", "otf", "otc")
+
 fun tryReadFonts(fontFile: Path): List<Font> {
     val ext = fontFile.extension
-    if (fontFile.isRegularFile() && (ext == "ttf" || ext == "otf"))
+    if (fontFile.isRegularFile() && ext.equalsAny(FONT_FILE_EXTS, ignoreCase = true))
         try {
             return Font.createFonts(fontFile.toFile()).toList()
         } catch (_: FontFormatException) {
@@ -34,15 +40,20 @@ fun tryReadFonts(fontFile: Path): List<Font> {
 
 
 private val RASTER_PICTURE_EXTS = ImageIO.getReaderFileSuffixes().toSet()
+private val POSTSCRIPT_EXTS = listOf("ai", "eps", "ps")
 
 fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
     val ext = pictureFile.extension
     if (pictureFile.isRegularFile())
-        when (ext) {
-            in RASTER_PICTURE_EXTS -> return lazy { runCatching { loadRaster(pictureFile) }.getOrNull() }
-            "svg" -> return lazy { runCatching { loadSVG(pictureFile) }.getOrNull() }
-            "pdf" -> return lazy { runCatching { loadPDF(pictureFile) }.getOrNull() }
-            "ai", "eps", "ps" -> return lazy { runCatching { loadPostScript(pictureFile) }.getOrNull() }
+        when {
+            ext.equalsAny(RASTER_PICTURE_EXTS, ignoreCase = true) ->
+                return lazy { runCatching { loadRaster(pictureFile) }.getOrNull() }
+            ext.equals("svg", ignoreCase = true) ->
+                return lazy { runCatching { loadSVG(pictureFile) }.getOrNull() }
+            ext.equals("pdf", ignoreCase = true) ->
+                return lazy { runCatching { loadPDF(pictureFile) }.getOrNull() }
+            ext.equalsAny(POSTSCRIPT_EXTS, ignoreCase = true) ->
+                return lazy { runCatching { loadPostScript(pictureFile) }.getOrNull() }
         }
     return null
 }

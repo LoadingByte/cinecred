@@ -38,7 +38,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
     private var creditsFile: Path? = null
 
     private var creditsSpreadsheet: Spreadsheet = emptyList()
-    private val fonts = ConcurrentHashMap<Path, Font>()
+    private val fonts = ConcurrentHashMap<Path, List<Font>>()
     private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
     // The state that is relevant for pushStateIntoUI().
@@ -114,21 +114,24 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         if (projectFrame.panel.deliverPanel.renderQueuePanel.renderJobs.any { it.generatesFile(file) })
             return false
 
-        tryReadFont(file)?.let { font ->
-            fonts[file] = font
-            editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values))
+        val newFonts = tryReadFonts(file)
+        if (newFonts.isNotEmpty()) {
+            fonts[file] = newFonts
+            editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
+
         tryReadPictureLoader(file)?.let { pictureLoader ->
             pictureLoaders[file] = pictureLoader
             return true
         }
+
         return false
     }
 
     private fun tryRemoveAuxFile(file: Path): Boolean {
         if (fonts.remove(file) != null) {
-            editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values))
+            editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
         if (pictureLoaders.remove(file) != null)
@@ -183,7 +186,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
             // We only now build these maps because it is expensive to build them and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
             // (which is quite a lot less because the function is often called multiple times in rapid succession).
-            val fontsByName = fonts.mapKeys { (_, font) -> font.getFontName(Locale.ROOT) }
+            val fontsByName = fonts.values.flatten().associateBy { font -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
             val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
@@ -245,7 +248,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
      */
     fun verifyStylingConstraints(styling: Styling) =
         verifyConstraints(styling, isFontName = { fontName ->
-            fonts.values.any { font -> fontName == font.getFontName(Locale.ROOT) } ||
+            fonts.values.any { it.any { font -> fontName == font.getFontName(Locale.ROOT) } } ||
                     BUNDLED_FAMILIES.getFamily(fontName) != null ||
                     SYSTEM_FAMILIES.getFamily(fontName) != null
         })

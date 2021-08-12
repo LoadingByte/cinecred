@@ -22,14 +22,14 @@ import javax.swing.event.HyperlinkEvent
 import kotlin.io.path.*
 
 
-fun tryReadFont(fontFile: Path): Font? {
+fun tryReadFonts(fontFile: Path): List<Font> {
     val ext = fontFile.extension
     if (fontFile.isRegularFile() && (ext == "ttf" || ext == "otf"))
         try {
-            return Font.createFonts(fontFile.toFile())[0]
+            return Font.createFonts(fontFile.toFile()).toList()
         } catch (_: FontFormatException) {
         }
-    return null
+    return emptyList()
 }
 
 

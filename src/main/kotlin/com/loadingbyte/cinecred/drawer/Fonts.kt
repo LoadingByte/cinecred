@@ -26,7 +26,13 @@ val BUNDLED_FONTS: List<Font> = run {
 
 // Load the fonts that are present on the system.
 val SYSTEM_FONTS: List<Font> =
-    GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.toList()
+    GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.filter { font ->
+        when (font.getFamily(Locale.ROOT)) {
+            // Exclude the logical fonts since they differ unpredictably between systems.
+            Font.DIALOG, Font.DIALOG_INPUT, Font.SANS_SERIF, Font.SERIF, Font.MONOSPACED -> false
+            else -> true
+        }
+    }
 
 
 private val nameToBundledFont = BUNDLED_FONTS

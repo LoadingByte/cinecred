@@ -6,6 +6,9 @@ Cinecred Changelog
 
 ### Additions
 
+- Exported PDFs render text directly instead of drawing filled outlines of text.
+  This change increases render quality and speed, decreases file size, and
+  improves the user experience when selecting and copying text.
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
 
@@ -13,6 +16,15 @@ Cinecred Changelog
 
 - Text is sized and positioned more precisely by employing floating point
   instead of integer precision.
+- User-supplied font collections (ttc/otc) are now supported.
+- User-supplied auxiliary files (fonts and pictures) are recognized regardless
+  of their file extension's case.
+
+### Notes
+
+- Removed support for logical fonts like "SansSerif". Using them in a design
+  program like Cinecred does not make any sense as they are highly
+  system-dependent.
 
 
 1.1.0

@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
@@ -143,12 +142,8 @@ class WholePagePDFRenderJob(
             val pdfPage = PDPage(PDRectangle(pageWidth, pageHeight))
             pdfDoc.addPage(pdfPage)
 
-            val g2 = PdfBoxGraphics2D(pdfDoc, pageWidth, pageHeight)
-            page.materialize(g2, layers)
-            g2.dispose()
-
             PDPageContentStream(pdfDoc, pdfPage).use { stream ->
-                stream.drawForm(g2.xFormObject)
+                page.materialize(pdfDoc, stream, pageHeight, layers)
             }
 
             progressCallback((idx + 1).toFloat() / pageDefImages.size)

@@ -3,9 +3,22 @@ package com.loadingbyte.cinecred.common
 import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextForcedDrawer
+import org.apache.fontbox.ttf.OTFParser
+import org.apache.fontbox.ttf.OpenTypeFont
+import org.apache.fontbox.ttf.TTFParser
+import org.apache.fontbox.ttf.TrueTypeCollection
+import org.apache.pdfbox.multipdf.LayerUtility
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.font.PDFont
+import org.apache.pdfbox.pdmodel.font.PDType0Font
+import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.rendering.PDFRenderer
+import org.apache.pdfbox.util.Matrix
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
@@ -14,10 +27,13 @@ import java.awt.font.TextAttribute
 import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
+import java.awt.geom.PathIterator
 import java.awt.geom.Rectangle2D
+import java.io.DataInputStream
 import java.text.AttributedCharacterIterator
 import java.text.AttributedCharacterIterator.Attribute
 import java.text.CharacterIterator
+import java.util.*
 import kotlin.math.max
 
 
@@ -42,7 +58,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         image: DeferredImage, x: Float = 0f, y: Y = 0f.toY(), universeScaling: Float = 1f, elasticScaling: Float = 1f
     ) {
         for (layer in image.instructions.keys) {
-            val insn = Instruction.DrawDeferredImageLayer(image, layer, x, y, universeScaling, elasticScaling)
+            val insn = Instruction.DrawDeferredImageLayer(x, y, universeScaling, elasticScaling, image, layer)
             addInstruction(layer, insn)
         }
     }
@@ -50,20 +66,20 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     fun drawShape(
         color: Color, shape: Shape, x: Float, y: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
-        addInstruction(layer, Instruction.DrawShapes(listOf(Pair(shape, color)), x, y, fill))
+        addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill))
     }
 
     fun drawLine(
         color: Color, x1: Float, y1: Y, x2: Float, y2: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
-        addInstruction(layer, Instruction.DrawLine(color, x1, y1, x2, y2, fill))
+        addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, fill))
     }
 
     fun drawRect(
         color: Color, x: Float, y: Y, width: Float, height: Y, fill: Boolean = false,
         layer: Layer = FOREGROUND
     ) {
-        addInstruction(layer, Instruction.DrawRect(color, x, y, width, height, fill))
+        addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
     /**
@@ -119,200 +135,92 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
         //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
         //     acceptable in a movie context.
-        val fill = mutableListOf<Pair<Shape, Color>>()
         // Start with the background fillings for each run with non-null background color.
+        val bgs = mutableListOf<Pair<Shape, Color>>()
         attrCharIter.forEachRunOf(TextAttribute.BACKGROUND) { runEndIdx ->
             val bg = attrCharIter.getAttribute(TextAttribute.BACKGROUND) as Color?
             if (bg != null) {
                 val highlightShape = textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx)
-                fill.add(Pair(highlightShape, bg))
+                bgs.add(Pair(highlightShape, bg))
             }
         }
-        // Then lay the foreground outline fillings for each run of different foreground color on top of that.
+        // Then collect the foreground outline fillings for each run of different foreground color.
+        val fgs = mutableListOf<Pair<Shape, Color>>()
         attrCharIter.forEachRunOf(TextAttribute.FOREGROUND) { runEndIdx ->
             val fg = attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color? ?: throw IllegalArgumentException()
             val outline = textLayout.getOutline(attrCharIter.index, runEndIdx)
-            fill.add(Pair(outline, fg))
+            fgs.add(Pair(outline, fg))
         }
 
         // Finally, add a drawing instruction using all prepared information.
-        addInstruction(layer, Instruction.DrawShapes(fill, x, baselineY, fill = true))
-
-        // When drawing to a PDF, we additionally want to draw some invisible strings at the places where the visible,
-        // vectorized strings already lie. Even though this is nowhere near accurate, it enables text copying in PDFs.
-        // We now collect information in order to create an instruction for this purpose.
-        val invisParts = mutableListOf<Instruction.DrawInvisiblePDFStrings.Part>()
-        // Extract the string from the character iterator.
-        val str = attrCharIter.getString()
-        // Handle each run of a different font separately.
-        attrCharIter.forEachRunOf(TextAttribute.FONT) { runEndIdx ->
-            val font = attrCharIter.getAttribute(TextAttribute.FONT) as Font
-            // We make the invisible placeholder default PDF font slightly smaller than the visible font
-            // to make sure that the invisible text completely fits into the bounding box of the visible
-            // text, even when the visible font is a narrow one. This way, spaces between words are
-            // correctly recognized by the PDF reader.
-            val invisFontSize = font.size2D * 0.75f
-            // We want to draw each word separately at the position of the vectorized version of the word.
-            // This way, inaccuracies concerning font family, weight, kerning, etc. don't hurt too much.
-            var charIdx = 0
-            for (word in str.substring(attrCharIter.index, runEndIdx).split(' '))
-                if (word.isNotBlank()) {
-                    // Estimate the relative x coordinate where the word starts from the word's first glyph's bounds.
-                    val xOffset = textLayout.getBlackBoxBounds(charIdx, charIdx + 1).bounds2D.x.toFloat()
-                    // Note: Append a space to all words because without it, some PDF viewers yield text
-                    // without any spaces when the user tries to copy it. Note that we also append a space
-                    // to the last word of the sentence to make sure that when the user tries to copy multiple
-                    // sentences, e.g., multiple lines of text, there are at least spaces between the lines.
-                    invisParts.add(Instruction.DrawInvisiblePDFStrings.Part("$word ", xOffset, invisFontSize))
-                    charIdx += word.length + 1
-                }
-        }
-        // Finally, add a drawing instruction for the invisible PDF strings.
-        addInstruction(layer, Instruction.DrawInvisiblePDFStrings(invisParts, x, baselineY))
+        addInstruction(layer, Instruction.DrawString(x, baselineY, attrCharIter, textLayout, fgs, bgs))
     }
 
     fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
-        addInstruction(layer, Instruction.DrawPicture(pic, x, y))
+        addInstruction(layer, Instruction.DrawPicture(x, y, pic))
     }
 
     fun materialize(g2: Graphics2D, layers: List<Layer>) {
-        materializeDeferredImage(g2, 0f, 0f, 1f, 1f, this, layers)
+        materializeDeferredImage(Graphics2DBackend(g2), 0f, 0f, 1f, 1f, this, layers)
+    }
+
+    fun materialize(doc: PDDocument, cs: PDPageContentStream, csHeight: Float, layers: List<Layer>) {
+        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0f, 0f, 1f, 1f, this, layers)
     }
 
     private fun materializeDeferredImage(
-        g2: Graphics2D, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        backend: MaterializationBackend, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
         image: DeferredImage, layers: List<Layer>
     ) {
         for (layer in layers)
             for (insn in image.instructions.getOrDefault(layer, emptyList()))
-                materializeInstruction(g2, x, y, universeScaling, elasticScaling, insn)
+                materializeInstruction(backend, x, y, universeScaling, elasticScaling, insn)
     }
 
     private fun materializeInstruction(
-        g2: Graphics2D, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        backend: MaterializationBackend, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
         insn: Instruction
     ) {
         when (insn) {
             is Instruction.DrawDeferredImageLayer -> materializeDeferredImage(
-                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
                 universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, insn.image,
                 listOf(insn.layer)
             )
-            is Instruction.DrawShapes -> materializeShapes(
-                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
-                insn.shapes, insn.fill
+            is Instruction.DrawShape -> materializeShape(
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                universeScaling, insn.shape, insn.color, insn.fill
             )
             is Instruction.DrawLine -> materializeShape(
-                g2, Line2D.Float(
-                    x + universeScaling * insn.x1, y + universeScaling * insn.y1.resolve(elasticScaling),
-                    x + universeScaling * insn.x2, y + universeScaling * insn.y2.resolve(elasticScaling)
-                ), insn.color, insn.fill
+                backend, x, y, universeScaling,
+                Line2D.Float(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
+                insn.color, insn.fill
             )
             is Instruction.DrawRect -> materializeShape(
-                g2, Rectangle2D.Float(
-                    x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                    universeScaling * insn.width, universeScaling * insn.height.resolve(elasticScaling)
+                backend, x, y, universeScaling,
+                Rectangle2D.Float(
+                    insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
                 ), insn.color, insn.fill
             )
-            is Instruction.DrawPicture -> materializePicture(
-                g2, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+            is Instruction.DrawString -> backend.materializeString(
+                x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
+                insn.attrCharIter, insn.textLayout, insn.foregroundShapes, insn.backgroundShapes
+            )
+            is Instruction.DrawPicture -> backend.materializePicture(
+                x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
                 insn.pic.scaled(universeScaling)
             )
-            is Instruction.DrawInvisiblePDFStrings -> materializeInvisiblePDFStrings(
-                g2, x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
-                universeScaling, insn.parts
-            )
-        }
-    }
-
-    private fun materializeShapes(
-        g2: Graphics2D, x: Float, y: Float, universeScaling: Float,
-        shapes: List<Pair<Shape, Color>>, fill: Boolean
-    ) {
-        // We first transform the shapes and then draw them without scaling the graphics object.
-        // This ensures that the shapes will exhibit the graphics object's stroke width,
-        // which is 1 pixel by default.
-        val tx = AffineTransform()
-        tx.translate(x.toDouble(), y.toDouble())
-        tx.scale(universeScaling.toDouble(), universeScaling.toDouble())
-        for ((shape, color) in shapes) {
-            val transformedShape = tx.createTransformedShape(shape)
-            materializeShape(g2, transformedShape, color, fill)
         }
     }
 
     private fun materializeShape(
-        g2: Graphics2D,
+        backend: MaterializationBackend, x: Float, y: Float, scaling: Float,
         shape: Shape, color: Color, fill: Boolean
     ) {
-        g2.color = color
-        if (fill)
-            g2.fill(shape)
-        else
-            g2.draw(shape)
-    }
-
-    private fun materializePicture(
-        g2: Graphics2D, x: Float, y: Float,
-        pic: Picture
-    ) {
-        when (pic) {
-            is Picture.Raster -> {
-                val tx = AffineTransform()
-                tx.translate(x.toDouble(), y.toDouble())
-                tx.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
-                g2.drawImage(pic.img, tx, null)
-            }
-            is Picture.SVG -> g2.preserveTransform {
-                g2.translate(x.toDouble(), y.toDouble())
-                g2.scale(pic.scaling.toDouble(), pic.scaling.toDouble())
-                // Batik might not be thread-safe, even though we haven't tested that.
-                synchronized(pic.gvtRoot) {
-                    if (pic.isCropped)
-                        g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
-                    pic.gvtRoot.paint(g2)
-                }
-            }
-            // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
-            // and sometimes even makes it totally unusable.
-            is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
-                g2.translate(x.toDouble(), y.toDouble())
-                if (pic.isCropped)
-                    g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
-                // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
-                // box even if g2.background is set to a transparent color. The most thorough fix is
-                // to just block all calls to clearRect().
-                val g2Proxy = object : Graphics2DProxy(g2) {
-                    override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
-                        // Block call.
-                    }
-                }
-                // PDFBox is definitely not thread-safe.
-                synchronized(pic.doc) {
-                    PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
-                }
-            }
-        }
-    }
-
-    private fun materializeInvisiblePDFStrings(
-        g2: Graphics2D, x: Float, baselineY: Float, universeScaling: Float,
-        parts: List<Instruction.DrawInvisiblePDFStrings.Part>
-    ) {
-        if (g2 is PdfBoxGraphics2D) {
-            // Force the following text to be drawn using any font it can find.
-            g2.setFontTextDrawer(PdfBoxGraphics2DFontTextForcedDrawer())
-            // The invisible text should of course be invisible.
-            g2.color = Color(0, 0, 0, 0)
-            for (part in parts) {
-                // We use a placeholder default PDF font.
-                g2.font = Font("SansSerif", 0, (universeScaling * part.fontSize).toInt())
-                g2.drawString(part.str, x + universeScaling * part.unscaledXOffset, baselineY)
-            }
-            // We are done. Future text should again be vectorized, as indicated by
-            // the presence of the default, unconfigured FontTextDrawer.
-            g2.setFontTextDrawer(PdfBoxGraphics2DFontTextDrawer())
-        }
+        // We first transform the shape and then draw it without scaling the canvas.
+        // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
+        val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
+        backend.materializeShape(tx.createTransformedShape(shape), color, fill)
     }
 
 
@@ -324,6 +232,25 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         val GUIDES = Layer()
 
         private val FONT_NORMALIZATION_ATTRS = mapOf(TextAttribute.SUPERSCRIPT to null)
+
+        private inline fun FloatArray.indexOfFirst(
+            start: Int = 0, end: Int = -1, step: Int = 1, predicate: (Float) -> Boolean
+        ): Int {
+            for (idx in start until (if (end == -1) size else end) step step)
+                if (predicate(this[idx]))
+                    return idx
+            return -1
+        }
+
+        private fun FloatArray.isFinite(start: Int = 0, end: Int = -1): Boolean =
+            indexOfFirst(start, end) { !it.isFinite() } == -1
+
+        private fun AffineTransform.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
+        private fun AffineTransform.scale(s: Float) = scale(s.toDouble(), s.toDouble())
+        private fun Graphics2D.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
+        private fun Graphics2D.scale(s: Float) = scale(s.toDouble(), s.toDouble())
+        private fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
+        private fun Matrix.scale(s: Float) = scale(s, s)
 
         private fun CharacterIterator.getString(): String {
             val result = StringBuilder(endIndex - beginIndex)
@@ -354,30 +281,367 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     private sealed class Instruction {
 
         class DrawDeferredImageLayer(
-            val image: DeferredImage, val layer: Layer, val x: Float, val y: Y, val universeScaling: Float,
-            val elasticScaling: Float
+            val x: Float, val y: Y, val universeScaling: Float, val elasticScaling: Float,
+            val image: DeferredImage, val layer: Layer
         ) : Instruction()
 
-        class DrawShapes(
-            val shapes: List<Pair<Shape, Color>>, val x: Float, val y: Y, val fill: Boolean
+        class DrawShape(
+            val x: Float, val y: Y, val shape: Shape, val color: Color, val fill: Boolean
         ) : Instruction()
 
         class DrawLine(
-            val color: Color, val x1: Float, val y1: Y, val x2: Float, val y2: Y, val fill: Boolean
+            val x1: Float, val y1: Y, val x2: Float, val y2: Y, val color: Color, val fill: Boolean
         ) : Instruction()
 
         class DrawRect(
-            val color: Color, val x: Float, val y: Y, val width: Float, val height: Y, val fill: Boolean
+            val x: Float, val y: Y, val width: Float, val height: Y, val color: Color, val fill: Boolean
+        ) : Instruction()
+
+        class DrawString(
+            val x: Float, val y: Y, val attrCharIter: AttributedCharacterIterator, val textLayout: TextLayout,
+            val foregroundShapes: List<Pair<Shape, Color>>, val backgroundShapes: List<Pair<Shape, Color>>
         ) : Instruction()
 
         class DrawPicture(
-            val pic: Picture, val x: Float, val y: Y
+            val x: Float, val y: Y, val pic: Picture
         ) : Instruction()
 
-        class DrawInvisiblePDFStrings(
-            val parts: List<Part>, val x: Float, val baselineY: Y
-        ) : Instruction() {
-            class Part(val str: String, val unscaledXOffset: Float, val fontSize: Float)
+    }
+
+
+    private interface MaterializationBackend {
+
+        fun materializeShape(shape: Shape, color: Color, fill: Boolean)
+
+        fun materializeString(
+            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+        )
+
+        fun materializePicture(x: Float, y: Float, pic: Picture)
+
+    }
+
+
+    private class Graphics2DBackend(private val g2: Graphics2D) : MaterializationBackend {
+
+        override fun materializeShape(shape: Shape, color: Color, fill: Boolean) {
+            g2.color = color
+            if (fill)
+                g2.fill(shape)
+            else
+                g2.draw(shape)
+        }
+
+        override fun materializeString(
+            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+        ) {
+            g2.preserveTransform {
+                g2.translate(x, y)
+                g2.scale(scaling)
+                for ((shape, color) in backgroundShapes)
+                    materializeShape(shape, color, fill = true)
+                for ((shape, color) in foregroundShapes)
+                    materializeShape(shape, color, fill = true)
+            }
+        }
+
+        override fun materializePicture(x: Float, y: Float, pic: Picture) {
+            when (pic) {
+                is Picture.Raster -> {
+                    val tx = AffineTransform().apply { translate(x, y); scale(pic.scaling) }
+                    g2.drawImage(pic.img, tx, null)
+                }
+                is Picture.SVG -> g2.preserveTransform {
+                    g2.translate(x, y)
+                    g2.scale(pic.scaling)
+                    // Batik might not be thread-safe, even though we haven't tested that.
+                    synchronized(pic.gvtRoot) {
+                        if (pic.isCropped)
+                            g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
+                        pic.gvtRoot.paint(g2)
+                    }
+                }
+                // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
+                // and sometimes even makes it totally unusable.
+                is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                    g2.translate(x, y)
+                    if (pic.isCropped)
+                        g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
+                    // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
+                    // box even if g2.background is set to a transparent color. The most thorough fix is
+                    // to just block all calls to clearRect().
+                    val g2Proxy = object : Graphics2DProxy(g2) {
+                        override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
+                            // Block call.
+                        }
+                    }
+                    // PDFBox is definitely not thread-safe.
+                    synchronized(pic.doc) {
+                        PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
+                    }
+                }
+            }
+        }
+
+    }
+
+
+    private class PDFBackend(
+        private val doc: PDDocument,
+        private val cs: PDPageContentStream,
+        private val csHeight: Float
+    ) : MaterializationBackend {
+
+        private val docRes = docResMap.getOrPut(doc) { DocRes(doc) }
+
+        private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
+            val pi = shape.getPathIterator(AffineTransform())
+            val coords = FloatArray(6)
+            while (!pi.isDone) {
+                when (pi.currentSegment(coords)) {
+                    PathIterator.SEG_MOVETO ->
+                        if (coords.isFinite(end = 2))
+                            cs.moveTo(coords[0], coords[1])
+                    PathIterator.SEG_LINETO ->
+                        if (coords.isFinite(end = 2))
+                            cs.lineTo(coords[0], coords[1])
+                    PathIterator.SEG_QUADTO ->
+                        if (coords.isFinite(end = 4))
+                            cs.curveTo1(coords[0], coords[1], coords[2], coords[3])
+                    PathIterator.SEG_CUBICTO ->
+                        if (coords.isFinite(end = 6))
+                            cs.curveTo(coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
+                    PathIterator.SEG_CLOSE ->
+                        cs.closePath()
+                }
+                pi.next()
+            }
+
+            if (fill)
+                if (pi.windingRule == PathIterator.WIND_EVEN_ODD)
+                    cs.fillEvenOdd()
+                else
+                    cs.fill()
+            else
+                cs.stroke()
+        }
+
+        override fun materializeShape(shape: Shape, color: Color, fill: Boolean) {
+            cs.saveGraphicsState()
+            setColor(color, fill)
+            cs.transform(Matrix().apply { translate(0f, csHeight); scale(1f, -1f) })
+            materializeShapeWithoutTransforming(shape, fill)
+            cs.restoreGraphicsState()
+        }
+
+        override fun materializeString(
+            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+        ) {
+            require(TextAttribute.CHAR_REPLACEMENT !in attrCharIter.allAttributeKeys)
+
+            val str = attrCharIter.getString()
+
+            // Note: We assume that every TextLineComponent of the TextLayout is indeed based on a GlyphVector.
+            // Since we do not use TextAttribute.CHAR_REPLACEMENT in this program, that assumption will always hold
+            // and is checked by the require() call above.
+            val tlGVs = textLayout.getGlyphVectors()
+
+            cs.saveGraphicsState()
+            cs.transform(Matrix().apply { translate(x, csHeight - y); scale(scaling) })
+
+            // Fill the precomputed background shapes. Superscripting has already been applied when they were created.
+            val flipYTx = AffineTransform().apply { scale(1.0, -1.0) }
+            for ((shape, color) in backgroundShapes) {
+                setColor(color, fill = true)
+                materializeShapeWithoutTransforming(flipYTx.createTransformedShape(shape), fill = true)
+            }
+
+            // Draw the text by drawing each GlyphVector.
+            cs.beginText()
+            for (tlGV in tlGVs) {
+                attrCharIter.index = tlGV.startCharIdx
+
+                val font = tlGV.gv.font
+                val pdFont = getPDFont(font)
+
+                // If superscripting is enabled, find the appropriately downscaled font size.
+                val fontSize = if (font.attributes[TextAttribute.SUPERSCRIPT] == null) font.size2D else {
+                    val runStr = str.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
+                    val slm = font.getLineMetrics(runStr, REF_FRC)
+                    val nlm = font.deriveFont(FONT_NORMALIZATION_ATTRS).getLineMetrics(runStr, REF_FRC)
+                    font.size2D * slm.height / nlm.height
+                }
+
+                val numGlyphs = tlGV.gv.numGlyphs
+                val glyphs = tlGV.gv.getGlyphCodes(0, numGlyphs, null)
+                val glyphPos = tlGV.gv.getGlyphPositions(0, numGlyphs, null)
+                val xShifts = FloatArray(numGlyphs - 1)
+                for (glyphIdx in 0 until numGlyphs - 1) {
+                    val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
+                    val wantedWidth = (glyphPos[(glyphIdx + 1) * 2] - glyphPos[glyphIdx * 2]) * 1000f / fontSize
+                    xShifts[glyphIdx] = actualWidth - wantedWidth
+                }
+
+                cs.setFont(pdFont, fontSize)
+                setColor(attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color, fill = true)
+                cs.setTextMatrix(Matrix.getTranslateInstance(tlGV.x, tlGV.y - glyphPos[1]))
+                cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
+            }
+            cs.endText()
+
+            // Where applicable, draw underline & strikethrough.
+            for (tlGV in tlGVs) {
+                attrCharIter.index = tlGV.startCharIdx
+
+                val ul = attrCharIter.getAttribute(TextAttribute.UNDERLINE) == TextAttribute.UNDERLINE_ON
+                val st = attrCharIter.getAttribute(TextAttribute.STRIKETHROUGH) == TextAttribute.STRIKETHROUGH_ON
+
+                if (ul || st) {
+                    // In case of superscripting, we still retrieve the font metrics of the unscaled font since they
+                    // already include all the changes made by superscripting, and scaling would distort them.
+                    val lm = tlGV.gv.font.getLineMetrics(str.substring(tlGV.startCharIdx, tlGV.stopCharIdx), REF_FRC)
+
+                    val numGlyphs = tlGV.gv.numGlyphs
+                    val glyphPos = tlGV.gv.getGlyphPositions(0, numGlyphs + 1, null)
+
+                    fun drawLine(offset: Float, thickness: Float) {
+                        // Since the thickness of underlining and strikethrough usually does not depend on
+                        // superscripting in Java, we accordingly use the non-downscaled font size for computing
+                        // the fallback thickness.
+                        cs.setLineWidth(if (thickness > 0.00001f) thickness else 0.04f * tlGV.gv.font.size2D)
+                        val lineY = tlGV.y - offset
+                        cs.moveTo(tlGV.x + glyphPos[0], lineY)
+                        cs.lineTo(tlGV.x + glyphPos[numGlyphs * 2], lineY)
+                        cs.stroke()
+                    }
+
+                    setColor(attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color, fill = false)
+                    if (ul)
+                        drawLine(lm.underlineOffset, lm.underlineThickness)
+                    if (st)
+                        drawLine(lm.strikethroughOffset, lm.strikethroughThickness)
+                }
+            }
+
+            cs.restoreGraphicsState()
+        }
+
+        override fun materializePicture(x: Float, y: Float, pic: Picture) {
+            val mat = Matrix().apply { translate(x, csHeight - y - pic.height) }
+
+            when (pic) {
+                is Picture.Raster -> {
+                    mat.scale(pic.width, pic.height)
+                    // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
+                    // images to produce smaller files.
+                    val pdImg = docRes.pdImages.getOrPut(pic) { JPEGFactory.createFromImage(doc, pic.img) }
+                    cs.drawImage(pdImg, mat)
+                }
+                is Picture.SVG -> {
+                    val pdForm = docRes.pdForms.getOrPut(pic) {
+                        val g2 = PdfBoxGraphics2D(doc, pic.width, pic.height)
+                        g2.scale(pic.scaling)
+                        // Batik might not be thread-safe, even though we haven't tested that.
+                        synchronized(pic.gvtRoot) {
+                            if (pic.isCropped)
+                                g2.translate(-pic.gvtRoot.bounds.x, -pic.gvtRoot.bounds.y)
+                            pic.gvtRoot.paint(g2)
+                        }
+                        g2.dispose()
+                        g2.xFormObject
+                    }
+                    cs.saveGraphicsState()
+                    cs.transform(mat)
+                    cs.drawForm(pdForm)
+                    cs.restoreGraphicsState()
+                }
+                is Picture.PDF -> {
+                    mat.scale(pic.scaling)
+                    if (pic.isCropped) {
+                        val origHeight = pic.doc.pages[0].cropBox.height
+                        mat.translate(-pic.minBox.x, pic.minBox.maxY - origHeight)
+                    }
+                    val pdForm = docRes.pdForms.getOrPut(pic) {
+                        // PDFBox is not thread-safe.
+                        synchronized(pic.doc) {
+                            docRes.layerUtil.importPageAsForm(pic.doc, 0)
+                        }
+                    }
+                    cs.saveGraphicsState()
+                    cs.transform(mat)
+                    cs.drawForm(pdForm)
+                    cs.restoreGraphicsState()
+                }
+            }
+        }
+
+        private fun setColor(color: Color, fill: Boolean) {
+            if (fill)
+                cs.setNonStrokingColor(color)
+            else
+                cs.setStrokingColor(color)
+
+            cs.setGraphicsStateParameters(docRes.extGStates.getOrPut(color.alpha) {
+                PDExtendedGraphicsState().apply {
+                    if (fill)
+                        nonStrokingAlphaConstant = color.alpha / 255f
+                    else
+                        strokingAlphaConstant = color.alpha / 255f
+                }
+            })
+        }
+
+        private fun getPDFont(font: Font): PDFont {
+            val psName = font.psName
+
+            if (psName !in docRes.pdFonts)
+                try {
+                    val fontFile = font.getFontFile().toFile()
+                    when (DataInputStream(fontFile.inputStream()).use { it.readInt() }) {
+                        0x74746366 -> {
+                            TrueTypeCollection(fontFile).processAllFonts { ttf ->
+                                docRes.pdFonts[ttf.name] = PDType0Font.load(doc, ttf, ttf !is OpenTypeFont)
+                            }
+                            if (psName !in docRes.pdFonts) {
+                                val msg = "Successfully loaded the font file '{}' for PDF embedding, but the font " +
+                                        "'{}' which lead to that file can for some reason not be found in there."
+                                LOGGER.warn(msg, fontFile, psName)
+                                // Memoize the fallback font to avoid trying to load the font file again.
+                                docRes.pdFonts[psName] = PDType1Font.HELVETICA
+                            }
+                        }
+                        0x4f54544f ->
+                            docRes.pdFonts[psName] = PDType0Font.load(doc, OTFParser().parse(fontFile), false)
+                        else ->
+                            // Here, one could theoretically enable embedSubset. However, our string writing logic
+                            // directly writes font-specific glyphs (in contrast to unicode codepoints) since this is
+                            // the only way we can leverage the power of TextLayout and also the only way we can write
+                            // some special ligatures that have no unicode codepoint. Now, since PDFBox's font
+                            // subsetting mechanism only works on codepoints and not on glyphs, we cannot use it.
+                            docRes.pdFonts[psName] = PDType0Font.load(doc, TTFParser().parse(fontFile), false)
+                    }
+                } catch (e: Exception) {
+                    LOGGER.warn("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
+                    // Memoize the fallback font to avoid trying to load the font file again.
+                    docRes.pdFonts[psName] = PDType1Font.HELVETICA
+                }
+
+            return docRes.pdFonts.getValue(psName)
+        }
+
+        companion object {
+            private val docResMap = WeakHashMap<PDDocument, DocRes>()
+        }
+
+        private class DocRes(doc: PDDocument) {
+            val extGStates = HashMap<Int /* alpha */, PDExtendedGraphicsState>()
+            val pdFonts = HashMap<String /* font name */, PDFont>()
+            val pdImages = HashMap<Picture.Raster, PDImageXObject>()
+            val pdForms = HashMap<Picture, PDFormXObject>()
+            val layerUtil by lazy { LayerUtility(doc) }
         }
 
     }

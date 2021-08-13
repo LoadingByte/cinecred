@@ -89,7 +89,7 @@ private class CreditsReader(
        ************ CREATE LOOKUPS **********
        ************************************** */
 
-    // Note: We use maps whose keys are case insensitive here because style references should be case insensitive.
+    // Note: We use maps whose keys are case-insensitive here because style references should be case-insensitive.
     val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
     val contentStyleMap = styling.contentStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
     val letterStyleMap = styling.letterStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
@@ -101,7 +101,7 @@ private class CreditsReader(
         // For example, the path "a/b/c.png" could be expressed as "c.png", "", "b/c.png", or "a/b/c.png".
         (0 until path.nameCount).asSequence()
             .map { idx -> path.subpath(idx, path.nameCount).toString() }
-            // Allow both Windows an Unix file separators.
+            // Allow both Windows and Unix file separators.
             .flatMap { key ->
                 listOf(
                     key.replace(File.separatorChar, '/') to pictureLoader,

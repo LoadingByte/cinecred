@@ -32,6 +32,7 @@ import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.DefaultFormatter
 import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
+import kotlin.io.path.Path
 import kotlin.math.ceil
 
 
@@ -149,7 +150,7 @@ class FileWidget(
     override val constraints = listOf("split, width 40%", "")
 
     override var value: Path
-        get() = Path.of(tc.text.trim())
+        get() = Path(tc.text.trim())
         set(value) {
             tc.text = value.toString()
         }

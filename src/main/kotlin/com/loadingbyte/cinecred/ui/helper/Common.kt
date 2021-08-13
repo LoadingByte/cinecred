@@ -106,7 +106,7 @@ class LabeledListCellRenderer<E>(
 
         override fun isBorderOpaque() = true
         override fun getBorderInsets(c: Component) =
-            Insets(lines.size * c.getFontMetrics(list.font).height + (lines.size - 1) / 2 * groupSpacing, 0, 0, 0)
+            Insets(lines.size * c.getFontMetrics(list.font).height + groupSpacing * (lines.size - 1) / 2, 0, 0, 0)
 
         override fun paintBorder(c: Component, g: Graphics, x: Int, y: Int, width: Int, height: Int) {
             val g2 = g as Graphics2D

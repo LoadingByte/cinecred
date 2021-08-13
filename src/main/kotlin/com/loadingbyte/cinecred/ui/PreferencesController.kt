@@ -6,6 +6,7 @@ import java.awt.Window
 import java.nio.file.Path
 import java.util.*
 import java.util.prefs.Preferences
+import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
@@ -94,7 +95,7 @@ object PreferencesController {
         get() {
             val dirs = prefsProjectDirs.keys()
                 .sortedBy(String::toInt)
-                .map { key -> Path.of(prefsProjectDirs.get(key, null)) }
+                .map { key -> Path(prefsProjectDirs.get(key, null)) }
                 .toMutableList()
             // Remove all memorized directories which are no longer project directories.
             // Do not base this decision on the existence of a credits file because this file might just be

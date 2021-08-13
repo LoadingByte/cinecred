@@ -107,7 +107,7 @@ private fun loadPDF(pdfFile: Path): Picture.PDF {
 private val GS_EXECUTABLE: Path? by lazy {
     try {
         if (System.getProperty("os.name").startsWith("windows", ignoreCase = true)) {
-            for (dir in listOf(Path.of("C:\\Program Files\\gs"), Path.of("C:\\Program Files (x86)\\gs")))
+            for (dir in listOf(Path("C:\\Program Files\\gs"), Path("C:\\Program Files (x86)\\gs")))
                 if (dir.isDirectory())
                     for (dir2 in dir.listDirectoryEntries().sortedDescending()) {
                         val gs = dir.resolve(dir2).resolve("bin\\gswin64c.exe")
@@ -115,7 +115,7 @@ private val GS_EXECUTABLE: Path? by lazy {
                             return@lazy gs
                     }
         } else {
-            val home = Path.of(System.getProperty("user.home"))
+            val home = Path(System.getProperty("user.home"))
             val candidateDirs = System.getenv("PATH").split(':').map(Path::of) +
                     listOf("/bin", "/usr/bin", "/usr/local", "/usr/local/bin", "/opt/local/bin").map(Path::of) +
                     listOf(home.resolve("bin"), home.resolve("Applications"))

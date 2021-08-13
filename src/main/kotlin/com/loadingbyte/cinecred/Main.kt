@@ -41,7 +41,7 @@ fun main() {
         return
     Singleton.start({ OpenController.showOpenFrame() }, SINGLETON_APP_ID)
 
-    // If a unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
+    // If an unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
     // controlled fashion and inform the user. We also ask whether to send a crash report.
     Thread.setDefaultUncaughtExceptionHandler(UncaughtHandler)
 

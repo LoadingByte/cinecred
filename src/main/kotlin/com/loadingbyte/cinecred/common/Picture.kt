@@ -12,6 +12,7 @@ sealed class Picture {
     abstract val width: Float
     abstract val height: Float
     abstract fun scaled(scaling: Float): Picture
+    open fun dispose() {}
 
 
     class Raster(val img: BufferedImage, val scaling: Float = 1f) : Picture() {
@@ -52,6 +53,10 @@ sealed class Picture {
 
         override fun scaled(scaling: Float) = PDF(aDoc, this.scaling * scaling, isCropped)
         fun cropped() = PDF(aDoc, scaling, isCropped = true)
+
+        override fun dispose() {
+            doc.close()
+        }
 
         private class AugmentedDoc(val doc: PDDocument) {
             val minBox: Rectangle2D by lazy {

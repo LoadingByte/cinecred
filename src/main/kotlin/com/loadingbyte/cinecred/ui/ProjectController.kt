@@ -223,8 +223,14 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
         projectFrame.dispose()
         editStylingDialog.dispose()
+
         // Cancel the previous project dir change watching order.
         RecursiveFileWatcher.unwatch(projectDir)
+
+        // Dispose of all loaded pictures.
+        for (pictureLoader in pictureLoaders.values)
+            if (pictureLoader.isInitialized())
+                pictureLoader.value?.dispose()
 
         return true
     }

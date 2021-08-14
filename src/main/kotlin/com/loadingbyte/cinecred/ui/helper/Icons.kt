@@ -39,8 +39,6 @@ val WINDOW_ICON_IMAGES = run {
 val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
 val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
-val ARROW_LEFT_ICON = SVGIcon.load("/icons/arrowLeft.svg")
-val ARROW_RIGHT_ICON = SVGIcon.load("/icons/arrowRight.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val DELIVER_ICON = SVGIcon.load("/icons/deliver.svg")
 val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
@@ -66,6 +64,16 @@ val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
 val UNIFORM_SAFE_AREAS_ICON = SVGIcon.load("/icons/uniformSafeAreas.svg")
 val WARN_ICON = SVGIcon.load("/icons/warn.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
+
+val ARROW_LEFT_ICON = SVGIcon.load("/icons/arrow/left.svg")
+val ARROW_RIGHT_ICON = SVGIcon.load("/icons/arrow/right.svg")
+
+val BEARING_LEFT_ICON = SVGIcon.load("/icons/bearing/left.svg")
+val BEARING_CENTER_ICON = SVGIcon.load("/icons/bearing/center.svg")
+val BEARING_RIGHT_ICON = SVGIcon.load("/icons/bearing/right.svg")
+val BEARING_TOP_ICON = SVGIcon.load("/icons/bearing/top.svg")
+val BEARING_MIDDLE_ICON = SVGIcon.load("/icons/bearing/middle.svg")
+val BEARING_BOTTOM_ICON = SVGIcon.load("/icons/bearing/bottom.svg")
 
 
 val Severity.icon
@@ -98,27 +106,19 @@ val BodyLayout.icon
     }
 
 
-private val H_JUSTIFY_LEFT_ICON = SVGIcon.load("/icons/hJustify/left.svg")
-private val H_JUSTIFY_CENTER_ICON = SVGIcon.load("/icons/hJustify/center.svg")
-private val H_JUSTIFY_RIGHT_ICON = SVGIcon.load("/icons/hJustify/right.svg")
-
 val HJustify.icon
     get() = when (this) {
-        HJustify.LEFT -> H_JUSTIFY_LEFT_ICON
-        HJustify.CENTER -> H_JUSTIFY_CENTER_ICON
-        HJustify.RIGHT -> H_JUSTIFY_RIGHT_ICON
+        HJustify.LEFT -> BEARING_LEFT_ICON
+        HJustify.CENTER -> BEARING_CENTER_ICON
+        HJustify.RIGHT -> BEARING_RIGHT_ICON
     }
 
 
-private val V_JUSTIFY_TOP_ICON = SVGIcon.load("/icons/vJustify/top.svg")
-private val V_JUSTIFY_MIDDLE_ICON = SVGIcon.load("/icons/vJustify/middle.svg")
-private val V_JUSTIFY_BOTTOM_ICON = SVGIcon.load("/icons/vJustify/bottom.svg")
-
 val VJustify.icon
     get() = when (this) {
-        VJustify.TOP -> V_JUSTIFY_TOP_ICON
-        VJustify.MIDDLE -> V_JUSTIFY_MIDDLE_ICON
-        VJustify.BOTTOM -> V_JUSTIFY_BOTTOM_ICON
+        VJustify.TOP -> BEARING_TOP_ICON
+        VJustify.MIDDLE -> BEARING_MIDDLE_ICON
+        VJustify.BOTTOM -> BEARING_BOTTOM_ICON
     }
 
 

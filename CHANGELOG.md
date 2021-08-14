@@ -20,6 +20,10 @@ Cinecred Changelog
 - User-supplied auxiliary files (fonts and pictures) are recognized regardless
   of their file extension's case.
 
+#### UI Fixes
+
+- Font names are now localized in the GUI.
+
 ### Notes
 
 - Removed support for logical fonts like "SansSerif". Using them in a design

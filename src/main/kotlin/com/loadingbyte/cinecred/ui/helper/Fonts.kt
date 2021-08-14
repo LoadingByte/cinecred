@@ -26,14 +26,13 @@ class FontFamilies(fonts: Iterable<Font>) {
     fun getFamily(fontName: String): FontFamily? = fontNameToFamily[fontName]
 
     init {
-        class ComparableFont(val font: Font, val name: String, val weight: Int, val italic: Boolean) :
-            Comparable<ComparableFont> {
+        class ComparableFont(val font: Font, val weight: Int, val italic: Boolean) : Comparable<ComparableFont> {
             override fun compareTo(other: ComparableFont): Int {
                 val weightC = weight.compareTo(other.weight)
                 if (weightC != 0) return weightC
                 val italicC = italic.compareTo(other.italic)
                 if (italicC != 0) return italicC
-                return name.compareTo(other.name)
+                return font.fontName.compareTo(other.font.fontName) // compare localized font names
             }
         }
 
@@ -42,8 +41,6 @@ class FontFamilies(fonts: Iterable<Font>) {
         val familyToCFonts = TreeMap<String, TreeSet<ComparableFont>>()
 
         for (font in fonts) {
-            val name = font.getFontName(Locale.ROOT)
-
             // Find the font's family.
             var (family, _) = font.getFamily(Locale.ROOT).removeSuffixes()
             if (family == "Titillium Up")
@@ -52,6 +49,7 @@ class FontFamilies(fonts: Iterable<Font>) {
             // Find the font's weight and whether it's an italic font.
             var weight = 400
             var italic = false
+            val name = font.getFontName(Locale.ROOT)
             val cleanName = if (name.startsWith("Titillium")) name.removeSuffix("Upright") else name
             for (removedSuffix in cleanName.removeSuffixes().second) {
                 val styleInfo = SUFFIX_TO_STYLE.getValue(removedSuffix)
@@ -59,7 +57,7 @@ class FontFamilies(fonts: Iterable<Font>) {
                 italic = styleInfo.italic ?: italic
             }
 
-            familyToCFonts.getOrPut(family) { TreeSet() }.add(ComparableFont(font, name, weight, italic))
+            familyToCFonts.getOrPut(family) { TreeSet() }.add(ComparableFont(font, weight, italic))
         }
 
         list = familyToCFonts.map { (family, cFonts) ->
@@ -83,7 +81,7 @@ class FontFamilies(fonts: Iterable<Font>) {
     }
 
     private val fontNameToFamily = list
-        .flatMap { family -> family.fonts.map { font -> font.name to family } }
+        .flatMap { family -> family.fonts.map { font -> font.getFontName(Locale.ROOT) to family } }
         .toMap()
 
 

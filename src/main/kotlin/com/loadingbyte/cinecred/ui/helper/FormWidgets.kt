@@ -607,12 +607,15 @@ class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<
 
     private val familyComboBox = JComboBox<FontFamily>().apply {
         maximumRowCount = 20
+        // Note: We do not localize font family names since obtaining family names requires some manual processing
+        // (see the UI helper Fonts file) and for now it would be too much work adapting this logic to each
+        // supported language.
         keySelectionManager = CustomToStringKeySelectionManager(FontFamily::class.java) { it.familyName }
     }
 
     private val fontComboBox = JComboBox<Any>(emptyArray()).apply {
         maximumRowCount = 20
-        fun toString(value: Any) = if (value is Font) value.getFontName(Locale.ROOT) else value as String
+        fun toString(value: Any) = if (value is Font) value.fontName /* localized */ else value as String
         renderer = FontSampleListCellRenderer<Any>(::toString) { if (it is Font) it else null }
         keySelectionManager = CustomToStringKeySelectionManager(Any::class.java, ::toString)
     }

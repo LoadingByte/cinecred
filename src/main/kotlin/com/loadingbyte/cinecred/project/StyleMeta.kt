@@ -196,6 +196,7 @@ private val LETTER_STYLE_META: List<StyleMeta<LetterStyle, *>> = listOf(
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
     NumberConstr(ERROR, LetterStyle::heightPx.st(), LARGER_0),
+    EffectivitySpec(LetterStyle::backgroundWidening.st(), isAlmostEffective = { style -> style.background.alpha == 0 }),
     EffectivitySpec(LetterStyle::useUppercaseExceptions.st(), isAlmostEffective = { style -> !style.uppercase }),
     NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f)
 )

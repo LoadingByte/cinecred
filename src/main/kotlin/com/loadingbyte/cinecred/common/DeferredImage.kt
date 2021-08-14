@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.common
 
 import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.project.Widening
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
@@ -140,7 +141,20 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         attrCharIter.forEachRunOf(TextAttribute.BACKGROUND) { runEndIdx ->
             val bg = attrCharIter.getAttribute(TextAttribute.BACKGROUND) as Color?
             if (bg != null) {
-                val highlightShape = textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx)
+                val widening = attrCharIter.getAttribute(ExtTextAttribute.BACKGROUND_WIDENING) as Widening?
+                val highlightShape =
+                    if (widening == null)
+                        textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx)
+                    else {
+                        val tlBounds = textLayout.bounds
+                        val bgBounds = Rectangle2D.Double(
+                            tlBounds.x - widening.left,
+                            tlBounds.y - widening.top,
+                            tlBounds.width + widening.left + widening.right,
+                            tlBounds.height + widening.top + widening.bottom
+                        )
+                        textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx, bgBounds)
+                    }
                 bgs.add(Pair(highlightShape, bg))
             }
         }

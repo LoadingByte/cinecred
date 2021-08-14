@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.TomlWriter
-import com.loadingbyte.cinecred.project.FPS
-import com.loadingbyte.cinecred.project.Styling
-import com.loadingbyte.cinecred.project.findIneffectiveSettings
-import com.loadingbyte.cinecred.project.getStyleSettings
+import com.loadingbyte.cinecred.project.*
 import java.awt.Color
 import java.nio.file.Path
 import java.util.*
@@ -43,6 +40,7 @@ private fun convert(value: Any): Any = when (value) {
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()
     is FPS -> value.toString2()
+    is Widening -> listOf(value.left, value.right, value.top, value.bottom)
     is List<*> -> value.filterNotNull().map(::convert)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")
 }

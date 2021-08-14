@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.OptionallyEffective
 import com.loadingbyte.cinecred.project.TimecodeFormat
+import com.loadingbyte.cinecred.project.Widening
 import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.projectio.parseTimecode
 import com.loadingbyte.cinecred.projectio.toFPS
@@ -599,6 +600,46 @@ class ColorWellWidget(
                 fillRect(x * checkerSize, y * checkerSize, checkerSize, checkerSize)
             }
     }
+
+}
+
+
+class WideningWidget : Form.AbstractWidget<Widening>() {
+
+    private val spinnerLeft = makeSpinner()
+    private val spinnerRight = makeSpinner()
+    private val spinnerTop = makeSpinner()
+    private val spinnerBottom = makeSpinner()
+
+    private fun makeSpinner() =
+        JSpinner(SpinnerNumberModel(0f, null, null, 1f)).apply {
+            addChangeListener { notifyChangeListeners() }
+        }
+
+    override val components: List<JComponent> = listOf(
+        JLabel(BEARING_LEFT_ICON), spinnerLeft,
+        JLabel(BEARING_RIGHT_ICON), spinnerRight,
+        JLabel(BEARING_TOP_ICON), spinnerTop,
+        JLabel(BEARING_BOTTOM_ICON), spinnerBottom
+    )
+
+    override val constraints = listOf(
+        "split, gapx 0 3lp", "", "gapx 10lp 3lp", "", "gapx 10lp 3lp", "", "gapx 10lp 3lp", ""
+    )
+
+    override var value: Widening
+        get() = Widening(
+            spinnerLeft.value as Float,
+            spinnerRight.value as Float,
+            spinnerTop.value as Float,
+            spinnerBottom.value as Float,
+        )
+        set(value) {
+            spinnerLeft.value = value.left
+            spinnerRight.value = value.right
+            spinnerTop.value = value.top
+            spinnerBottom.value = value.bottom
+        }
 
 }
 

@@ -73,12 +73,7 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 
     val settingValues = getStyleSettings(styleClass).map { setting ->
         try {
-            val value = if (ImmutableList::class.java.isAssignableFrom(setting.type))
-                (map.getValue(setting.name) as List<*>)
-                    .map { convert(setting.genericArg!!, it.toString()) }
-                    .toImmutableList()
-            else
-                convert(setting.type, map.getValue(setting.name).toString())
+            val value = convert(setting.type, setting.genericArg, map.getValue(setting.name))
             setting.valueToPlain(value)
         } catch (_: RuntimeException) {
             // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
@@ -90,16 +85,21 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 }
 
 
-private fun convert(type: Class<*>, str: String): Any = when (type) {
-    Int::class.javaPrimitiveType, Int::class.javaObjectType -> str.toInt()
-    Float::class.javaPrimitiveType, Float::class.javaObjectType -> str.toFloat()
-    Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> str.toBoolean()
-    String::class.java -> str
-    Locale::class.java -> Locale.forLanguageTag(str)
-    Color::class.java -> str.hexToColor()
-    FPS::class.java -> str.toFPS()
+private fun convert(type: Class<*>, genericArg: Class<*>?, raw: Any): Any = when (type) {
+    Int::class.javaPrimitiveType, Int::class.javaObjectType -> raw as Int
+    Float::class.javaPrimitiveType, Float::class.javaObjectType -> raw as Float
+    Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
+    String::class.java -> raw as String
+    Locale::class.java -> Locale.forLanguageTag(raw as String)
+    Color::class.java -> (raw as String).hexToColor()
+    FPS::class.java -> (raw as String).toFPS()
+    Widening::class.java -> Widening((raw as List<*>)[0] as Float, raw[1] as Float, raw[2] as Float, raw[3] as Float)
     else -> when {
-        Enum::class.java.isAssignableFrom(type) -> str.toEnum(type)
+        Enum::class.java.isAssignableFrom(type) -> (raw as String).toEnum(type)
+        ImmutableList::class.java.isAssignableFrom(type) ->
+            (raw as List<*>)
+                .map { convert(genericArg!!, null, it!!) }
+                .toImmutableList()
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

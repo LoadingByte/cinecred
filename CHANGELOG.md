@@ -9,6 +9,7 @@ Cinecred Changelog
 - Exported PDFs render text directly instead of drawing filled outlines of text.
   This change increases render quality and speed, decreases file size, and
   improves the user experience when selecting and copying text.
+- The background of text can be widened arbitrarily.
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
 

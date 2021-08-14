@@ -10,6 +10,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
 import java.awt.image.BufferedImage
+import java.text.AttributedCharacterIterator
 import java.text.MessageFormat
 import java.util.*
 
@@ -86,4 +87,11 @@ fun Graphics2D.setHighQuality() {
     // Note that we not only activate fractional font metrics because the result obviously looks better, but also
     // because if we don't, the getStringWidth() method sometimes yields incorrect results.
     setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
+}
+
+
+class ExtTextAttribute(name: String) : AttributedCharacterIterator.Attribute(name) {
+    companion object {
+        val BACKGROUND_WIDENING = ExtTextAttribute("background_widening")
+    }
 }

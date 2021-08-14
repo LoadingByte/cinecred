@@ -72,6 +72,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true)
             FPS::class.java -> FPSWidget()
+            Widening::class.java -> WideningWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(

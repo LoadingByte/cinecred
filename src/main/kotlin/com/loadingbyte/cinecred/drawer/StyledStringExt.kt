@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.ExtTextAttribute
 import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.StyledString
@@ -148,8 +149,10 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
             }
 
         attrStr.addAttribute(TextAttribute.FOREGROUND, style.foreground, runStartIdx, runEndIdx)
-        if (style.background.alpha != 0)
+        if (style.background.alpha != 0) {
             attrStr.addAttribute(TextAttribute.BACKGROUND, style.background, runStartIdx, runEndIdx)
+            attrStr.addAttribute(ExtTextAttribute.BACKGROUND_WIDENING, style.backgroundWidening, runStartIdx, runEndIdx)
+        }
         if (style.underline)
             attrStr.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON, runStartIdx, runEndIdx)
         if (style.strikethrough)

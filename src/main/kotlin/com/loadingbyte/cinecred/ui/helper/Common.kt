@@ -176,10 +176,10 @@ class CustomToStringKeySelectionManager<E>(
             model.getElements(0, startIdx).indexOfFirst(::startsWith)
     }
 
-    private fun ComboBoxModel<*>.getElements(startIdx: Int = 0, endIdx: Int = -1): List<E> = mutableListOf<E>().apply {
+    private fun ComboBoxModel<*>.getElements(startIdx: Int = 0, endIdx: Int = -1): List<E> = mutableListOf<E>().also {
         val endIdx2 = if (endIdx == -1) size else endIdx
         for (idx in startIdx until endIdx2)
-            add(itemClass.cast(getElementAt(idx)))
+            it.add(itemClass.cast(getElementAt(idx)))
     }
 
 }

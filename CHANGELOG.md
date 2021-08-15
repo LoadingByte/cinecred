@@ -24,6 +24,7 @@ Cinecred Changelog
 #### UI Fixes
 
 - Font names are now localized in the GUI.
+- Font family names are no longer stripped of a trailing "Roman".
 - Fixed sudden crashes when typing certain characters in a combo box.
 - In the preferences, each locale are also written in that locale's language.
 

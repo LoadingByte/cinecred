@@ -122,7 +122,6 @@ class FontFamilies(fonts: Iterable<Font>) {
             "Plain" to FontStyle(weight = 400),
             "Regular" to FontStyle(weight = 400),
             "RegularItalic" to FontStyle(weight = 400, italic = true),
-            "Roman" to FontStyle(weight = 400),
             "SemBd" to FontStyle(weight = 600),
             "Semi" to FontStyle(weight = 600),
             "SemiBold" to FontStyle(weight = 600),

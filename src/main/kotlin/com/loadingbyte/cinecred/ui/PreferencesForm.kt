@@ -22,7 +22,14 @@ class PreferencesForm : EasyForm() {
         l10n("ui.preferences.uiLocale"),
         ComboBoxWidget(
             Locale::class.java, listOf(SYSTEM_LOCALE) + TRANSLATED_LOCALES, hFill = true,
-            toString = { if (it == SYSTEM_LOCALE) l10n("ui.preferences.uiLocaleSystem") else it.displayName })
+            toString = {
+                if (it == SYSTEM_LOCALE)
+                    l10n("ui.preferences.uiLocaleSystem")
+                else if (Locale.getDefault() != it)
+                    "${it.getDisplayName(it)} (${it.displayName})"
+                else
+                    it.displayName
+            })
     )
 
     private val checkForUpdatesWidget = addWidget(

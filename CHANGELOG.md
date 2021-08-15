@@ -25,6 +25,7 @@ Cinecred Changelog
 
 - Font names are now localized in the GUI.
 - Fixed sudden crashes when typing certain characters in a combo box.
+- In the preferences, each locale are also written in that locale's language.
 
 ### Notes
 

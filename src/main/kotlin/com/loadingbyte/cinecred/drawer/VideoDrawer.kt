@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -19,7 +20,7 @@ open class VideoDrawer(
     private val project: Project,
     drawnPages: List<DrawnPage>,
     private val scaling: Float = 1f,
-    private val transparentBackground: Boolean = false,
+    private val transparentGrounding: Boolean = false,
     private val previewMode: Boolean = false
 ) {
 
@@ -106,12 +107,12 @@ open class VideoDrawer(
 
     private val scaledPageDefImages = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
 
-    private val backgroundImage: BufferedImage
+    private val groundingImage: BufferedImage
     private val shiftedPageImages = Array(drawnPages.size) { HashMap<Float, BufferedImage>() }
 
     init {
-        backgroundImage = createIntermediateImage(width, height).withG2 { g2 ->
-            g2.color = project.styling.global.background
+        groundingImage = createIntermediateImage(width, height).withG2 { g2 ->
+            g2.color = project.styling.global.grounding
             g2.fillRect(0, 0, width, height)
         }
 
@@ -133,21 +134,21 @@ open class VideoDrawer(
             val scaledPageDefImg = scaledPageDefImages[pageIdx]
             // Note: We add 1 to the height to make room for the shift (which is between 0 and 1).
             // We add 2*height to make room for buffers above and below the content; they will be in frame
-            // when a scrolling page starts and ends and need to provide the correct background color.
+            // when a scrolling page starts and ends and need to provide the correct grounding color.
             val imageHeight = ceil(scaledPageDefImg.height.resolve()).toInt() + 1 + 2 * height
             createIntermediateImage(width, imageHeight).withG2 { g2 ->
                 g2.setHighQuality()
-                if (!transparentBackground) {
+                if (!transparentGrounding) {
                     // If the final image should not have an alpha channel, the intermediate images, which also don't
-                    // have alpha, have to have the proper background, as otherwise their background would be black.
-                    // Note that we can't simply use the deferred image's background layer because that doesn't extend
+                    // have alpha, have to have the proper grounding, as otherwise their grounding would be black.
+                    // Note that we can't simply use the deferred image's grounding layer because that doesn't extend
                     // to the whole height of the raster image, since the raster image is higher than the deferred
                     // image to make room for the shift and the start/end buffers.
-                    g2.color = project.styling.global.background
+                    g2.color = project.styling.global.grounding
                     g2.fillRect(0, 0, width, imageHeight)
                 }
                 g2.translate(0.0, shift.toDouble() + height)
-                scaledPageDefImg.materialize(g2, layers = listOf(FOREGROUND))
+                scaledPageDefImg.materialize(g2, layers = listOf(BACKGROUND, FOREGROUND))
             }
         }
     }
@@ -155,10 +156,10 @@ open class VideoDrawer(
     /**
      * This method can (and should be) overwritten by users of this class who exactly know onto what kind of
      * graphics object they will later draw their frames. The returned image should support alpha if and only if
-     * [transparentBackground] is true.
+     * [transparentGrounding] is true.
      */
     protected open fun createIntermediateImage(width: Int, height: Int): BufferedImage {
-        val imageType = if (transparentBackground) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
+        val imageType = if (transparentGrounding) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
         return BufferedImage(width, height, imageType)
     }
 
@@ -169,10 +170,10 @@ open class VideoDrawer(
 
         // Note: pageIdx == -1 means that the frame should be empty.
         if (insn.pageIdx == -1)
-            g2.drawImage(backgroundImage, 0, 0, null)
+            g2.drawImage(groundingImage, 0, 0, null)
         else {
             if (insn.alpha != 1f) {
-                g2.drawImage(backgroundImage, 0, 0, null)
+                g2.drawImage(groundingImage, 0, 0, null)
                 g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
             }
 

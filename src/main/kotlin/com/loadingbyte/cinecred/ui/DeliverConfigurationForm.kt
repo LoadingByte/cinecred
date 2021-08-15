@@ -80,8 +80,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(1f, 0.01f, null, 0.5f)),
         verify = ::verifyResolutionMult
     )
-    private val transparentBackgroundWidget = addWidget(
-        l10n("ui.deliverConfig.transparentBackground"),
+    private val transparentGroundingWidget = addWidget(
+        l10n("ui.deliverConfig.transparentGrounding"),
         CheckBoxWidget(),
         isEnabled = { formatWidget.value.supportsAlpha }
     )
@@ -201,17 +201,17 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundWidget.value, format,
+                    transparentGroundingWidget.value, format,
                     dir = fileOrDir, filenamePattern = seqFilenamePatternWidget.value
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
-                    transparentBackgroundWidget.value,
+                    transparentGroundingWidget.value,
                     file = fileOrDir
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
                     project!!, drawnPages,
-                    scaling, transparentBackgroundWidget.value && format.supportsAlpha, format,
+                    scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
                     fileOrDir = fileOrDir
                 )
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

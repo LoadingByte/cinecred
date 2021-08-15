@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
@@ -249,7 +249,8 @@ private fun drawPage(
         val attrCharIter = AttributedString(str, attrs).iterator
         val margin = global.widthPx / 100f
         pageImage.drawString(
-            attrCharIter, x = global.widthPx - attrCharIter.getWidth() - margin, y = y + margin, layer = GUIDES
+            attrCharIter, x = global.widthPx - attrCharIter.getWidth() - margin, y = y + margin,
+            foregroundLayer = GUIDES, backgroundLayer = GUIDES /* irrelevant, since our string has no background */
         )
     }
 
@@ -285,9 +286,9 @@ private fun drawPage(
         pageImage.drawDeferredImage(stageImage, 0f, stageLayout.y)
     }
 
-    // Fill the background of the page image.
+    // Draw the grounding of the page image.
     pageImage.drawRect(
-        global.background, 0f, 0f.toY(), pageImage.width, pageImage.height, fill = true, layer = BACKGROUND
+        global.grounding, 0f, 0f.toY(), pageImage.width, pageImage.height, fill = true, layer = GROUNDING
     )
 
     return pageImage

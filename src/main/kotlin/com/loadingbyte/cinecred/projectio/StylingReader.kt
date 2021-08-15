@@ -65,6 +65,9 @@ private fun migrate(rawStyling: RawStyling) {
         if ("hasTail" !in contentStyle)
             contentStyle["hasTail"] = contentStyle.keys.any { it.startsWith("tail") }
     }
+
+    // 1.1.0 -> 1.2.0: What has previously been called "background" is now called "grounding".
+    rawStyling.global["background"]?.let { rawStyling.global["grounding"] = it }
 }
 
 

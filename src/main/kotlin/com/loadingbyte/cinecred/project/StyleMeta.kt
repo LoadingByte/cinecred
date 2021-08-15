@@ -33,7 +33,7 @@ private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
         formats
     },
     NumberConstr(ERROR, Global::runtimeFrames.st(), LARGER_0),
-    ColorConstr(ERROR, Global::background.st(), allowAlpha = false),
+    ColorConstr(ERROR, Global::grounding.st(), allowAlpha = false),
     NumberConstr(ERROR, Global::unitVGapPx.st(), LARGER_0),
     NumberStepWidgetSpec(Global::widthPx.st(), 10),
     NumberStepWidgetSpec(Global::heightPx.st(), 10),

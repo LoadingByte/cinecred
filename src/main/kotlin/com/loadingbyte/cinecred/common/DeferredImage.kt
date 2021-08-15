@@ -93,7 +93,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
      */
     fun drawString(
         attrCharIter: AttributedCharacterIterator, x: Float, y: Y, justificationWidth: Float = Float.NaN,
-        layer: Layer = FOREGROUND
+        foregroundLayer: Layer = FOREGROUND, backgroundLayer: Layer = BACKGROUND
     ) {
         // Find the distance between y and the baseline of the tallest font in the attributed string.
         // In case there are multiple tallest fonts, take the largest distance.
@@ -137,7 +137,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
         //     acceptable in a movie context.
         // Start with the background fillings for each run with non-null background color.
-        val bgs = mutableListOf<Pair<Shape, Color>>()
         attrCharIter.forEachRunOf(TextAttribute.BACKGROUND) { runEndIdx ->
             val bg = attrCharIter.getAttribute(TextAttribute.BACKGROUND) as Color?
             if (bg != null) {
@@ -155,19 +154,18 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                         )
                         textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx, bgBounds)
                     }
-                bgs.add(Pair(highlightShape, bg))
+                addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, highlightShape, bg, fill = true))
             }
         }
-        // Then collect the foreground outline fillings for each run of different foreground color.
-        val fgs = mutableListOf<Pair<Shape, Color>>()
+        // Then collect the foreground outlines for each run of different foreground color and add a
+        // foreground drawing instruction enriched with these outlines.
+        val outl = mutableListOf<Pair<Shape, Color>>()
         attrCharIter.forEachRunOf(TextAttribute.FOREGROUND) { runEndIdx ->
             val fg = attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color? ?: throw IllegalArgumentException()
             val outline = textLayout.getOutline(attrCharIter.index, runEndIdx)
-            fgs.add(Pair(outline, fg))
+            outl.add(Pair(outline, fg))
         }
-
-        // Finally, add a drawing instruction using all prepared information.
-        addInstruction(layer, Instruction.DrawString(x, baselineY, attrCharIter, textLayout, fgs, bgs))
+        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, attrCharIter, textLayout, outl))
     }
 
     fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
@@ -216,9 +214,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
                 ), insn.color, insn.fill
             )
-            is Instruction.DrawString -> backend.materializeString(
+            is Instruction.DrawStringForeground -> backend.materializeStringForeground(
                 x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
-                insn.attrCharIter, insn.textLayout, insn.foregroundShapes, insn.backgroundShapes
+                insn.attrCharIter, insn.textLayout, insn.outlines
             )
             is Instruction.DrawPicture -> backend.materializePicture(
                 x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
@@ -240,9 +238,10 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     companion object {
 
-        // These three common layers are typically used. Additional layers may be defined by users of this class.
+        // These common layers are typically used. Additional layers may be defined by users of this class.
         val FOREGROUND = Layer()
         val BACKGROUND = Layer()
+        val GROUNDING = Layer()
         val GUIDES = Layer()
 
         private val FONT_NORMALIZATION_ATTRS = mapOf(TextAttribute.SUPERSCRIPT to null)
@@ -311,9 +310,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             val x: Float, val y: Y, val width: Float, val height: Y, val color: Color, val fill: Boolean
         ) : Instruction()
 
-        class DrawString(
+        class DrawStringForeground(
             val x: Float, val y: Y, val attrCharIter: AttributedCharacterIterator, val textLayout: TextLayout,
-            val foregroundShapes: List<Pair<Shape, Color>>, val backgroundShapes: List<Pair<Shape, Color>>
+            val outlines: List<Pair<Shape, Color>>
         ) : Instruction()
 
         class DrawPicture(
@@ -327,9 +326,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
         fun materializeShape(shape: Shape, color: Color, fill: Boolean)
 
-        fun materializeString(
+        fun materializeStringForeground(
             x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
-            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+            outlines: List<Pair<Shape, Color>>
         )
 
         fun materializePicture(x: Float, y: Float, pic: Picture)
@@ -347,16 +346,14 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 g2.draw(shape)
         }
 
-        override fun materializeString(
+        override fun materializeStringForeground(
             x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
-            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+            outlines: List<Pair<Shape, Color>>
         ) {
             g2.preserveTransform {
                 g2.translate(x, y)
                 g2.scale(scaling)
-                for ((shape, color) in backgroundShapes)
-                    materializeShape(shape, color, fill = true)
-                for ((shape, color) in foregroundShapes)
+                for ((shape, color) in outlines)
                     materializeShape(shape, color, fill = true)
             }
         }
@@ -450,9 +447,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializeString(
+        override fun materializeStringForeground(
             x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
-            foregroundShapes: List<Pair<Shape, Color>>, backgroundShapes: List<Pair<Shape, Color>>
+            outlines: List<Pair<Shape, Color>>
         ) {
             require(TextAttribute.CHAR_REPLACEMENT !in attrCharIter.allAttributeKeys)
 
@@ -466,12 +463,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             cs.saveGraphicsState()
             cs.transform(Matrix().apply { translate(x, csHeight - y); scale(scaling) })
 
-            // Fill the precomputed background shapes. Superscripting has already been applied when they were created.
-            val flipYTx = AffineTransform().apply { scale(1.0, -1.0) }
-            for ((shape, color) in backgroundShapes) {
-                setColor(color, fill = true)
-                materializeShapeWithoutTransforming(flipYTx.createTransformedShape(shape), fill = true)
-            }
 
             // Draw the text by drawing each GlyphVector.
             cs.beginText()

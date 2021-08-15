@@ -54,7 +54,7 @@ data class Global(
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
     val runtimeFrames: OptionallyEffective<Int>,
-    val background: Color,
+    val grounding: Color,
     val unitVGapPx: Float,
     val locale: Locale,
     val uppercaseExceptions: ImmutableList<String>

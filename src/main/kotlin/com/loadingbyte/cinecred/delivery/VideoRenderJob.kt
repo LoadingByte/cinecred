@@ -19,7 +19,7 @@ class VideoRenderJob(
     private val project: Project,
     private val drawnPages: List<DrawnPage>,
     private val scaling: Float,
-    private val transparentBackground: Boolean,
+    private val transparentGrounding: Boolean,
     private val format: Format,
     fileOrDir: Path
 ) : RenderJob {
@@ -41,15 +41,15 @@ class VideoRenderJob(
         // Make sure that the parent directory exists.
         fileOrPattern.parent.createDirectories()
 
-        val imageType = if (transparentBackground) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
+        val imageType = if (transparentGrounding) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
 
-        val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, transparentBackground) {
+        val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, transparentGrounding) {
             override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
         }
 
         VideoWriter(
             fileOrPattern, videoDrawer.width, videoDrawer.height, project.styling.global.fps,
-            format.codecId, if (transparentBackground) format.alphaPixelFormat!! else format.pixelFormat,
+            format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->

@@ -5,7 +5,10 @@ import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.*
+import com.loadingbyte.cinecred.ui.OpenController
+import com.loadingbyte.cinecred.ui.PreferencesController
+import com.loadingbyte.cinecred.ui.makeOpenHintTrack
+import com.loadingbyte.cinecred.ui.playIfPending
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
@@ -93,7 +96,7 @@ fun main() {
             checkForUpdates()
 
         OpenController.showOpenFrame()
-        openHintTrack.playIfPending()
+        makeOpenHintTrack(OpenController.getOpenFrame()!!).playIfPending()
     }
 }
 
@@ -124,7 +127,7 @@ private fun checkForUpdates() {
         if (latestStableVersion != null && latestStableVersion != curVersion)
             SwingUtilities.invokeLater {
                 val openHomepage = JOptionPane.showConfirmDialog(
-                    OpenFrame, l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
+                    OpenController.getOpenFrame(), l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
                     l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
                 ) == JOptionPane.YES_OPTION
                 if (openHomepage &&
@@ -142,7 +145,8 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         LOGGER.error("Uncaught exception. Will terminate the program.", e)
         SwingUtilities.invokeLater {
             sendReport(e)
-            OpenController.tryExit(force = true)
+            // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.
+            OpenController.tryCloseProjectsAndDisposeAllFrames(force = true)
         }
     }
 

@@ -12,6 +12,8 @@ Cinecred Changelog
 - The background of text can be widened arbitrarily.
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
+- After changing the interface language, the program can now restart itself to
+  apply the change.
 
 ### Fixes
 

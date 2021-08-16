@@ -13,6 +13,7 @@ import kotlin.io.path.notExists
 
 object OpenController {
 
+    private var openFrame: OpenFrame? = null
     private val projectCtrls = mutableListOf<ProjectController>()
 
     /**
@@ -23,12 +24,15 @@ object OpenController {
      */
     private var blockOpening = false
 
+    fun getOpenFrame(): OpenFrame? = openFrame
     fun getProjectCtrls(): List<ProjectController> = projectCtrls
 
     fun showOpenFrame() {
-        blockOpening = false
-        OpenPanel.onShow()
-        OpenFrame.isVisible = true
+        if (openFrame == null) {
+            blockOpening = false
+            openFrame = OpenFrame()
+        }
+        openFrame!!.isVisible = true
     }
 
     fun tryOpenProject(projectDir: Path) {
@@ -37,7 +41,7 @@ object OpenController {
 
         if (projectCtrls.any { it.projectDir == projectDir }) {
             JOptionPane.showMessageDialog(
-                OpenFrame, l10n("ui.open.alreadyOpen.msg", projectDir), l10n("ui.open.alreadyOpen.title"),
+                openFrame, l10n("ui.open.alreadyOpen.msg", projectDir), l10n("ui.open.alreadyOpen.title"),
                 JOptionPane.ERROR_MESSAGE
             )
             return
@@ -67,12 +71,13 @@ object OpenController {
 
         // Find the screen on which the OpenFrame currently occupies the most area.
         // The project will be opened on that screen.
-        val openOnScreen = OpenFrame.findMostOccupiedScreen()
+        val openOnScreen = openFrame!!.findMostOccupiedScreen()
 
         val projectCtrl = ProjectController(projectDir, openOnScreen)
         projectCtrls.add(projectCtrl)
 
-        OpenFrame.isVisible = false
+        openFrame?.dispose()
+        openFrame = null
     }
 
     // Must only be called from ProjectController.
@@ -85,18 +90,17 @@ object OpenController {
     }
 
     fun onCloseOpenFrame() {
-        if (projectCtrls.isEmpty())
-            tryExit()
-        else
-            OpenFrame.isVisible = false
+        openFrame?.dispose()
+        openFrame = null
     }
 
-    fun tryExit(force: Boolean = false) {
+    fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false) {
         for (projectCtrl in projectCtrls.toMutableList() /* copy to avoid concurrent modification */)
             if (!projectCtrl.tryCloseProject(force) && !force)
                 return
 
-        OpenFrame.dispose()
+        openFrame?.dispose()
+        openFrame = null
 
         if (force)
             for (window in Window.getWindows())

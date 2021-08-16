@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.ui.PreferencesController.LocaleWish
 import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
 import com.loadingbyte.cinecred.ui.helper.EasyForm
@@ -18,17 +19,21 @@ import javax.swing.JOptionPane
 
 class PreferencesForm : EasyForm() {
 
-    private val uiLocaleWidget = addWidget(
-        l10n("ui.preferences.uiLocale"),
+    private val uiLocaleWishWidget = addWidget(
+        l10n("ui.preferences.uiLocaleWish"),
         ComboBoxWidget(
-            Locale::class.java, listOf(SYSTEM_LOCALE) + TRANSLATED_LOCALES, hFill = true,
-            toString = {
-                if (it == SYSTEM_LOCALE)
-                    l10n("ui.preferences.uiLocaleSystem")
-                else if (Locale.getDefault() != it)
-                    "${it.getDisplayName(it)} (${it.displayName})"
-                else
-                    it.displayName
+            LocaleWish::class.java,
+            listOf(LocaleWish.System) + TRANSLATED_LOCALES.map(LocaleWish::Specific),
+            hFill = true,
+            toString = { wish ->
+                when (wish) {
+                    is LocaleWish.System -> l10n("ui.preferences.uiLocaleWishSystem")
+                    is LocaleWish.Specific ->
+                        if (Locale.getDefault() != wish.locale)
+                            "${wish.locale.getDisplayName(wish.locale)} (${wish.locale.displayName})"
+                        else
+                            wish.locale.displayName
+                }
             })
     )
 
@@ -45,19 +50,16 @@ class PreferencesForm : EasyForm() {
     }
 
 
-    class Values(val uiLocale: Locale?, val checkForUpdates: Boolean, val pendingHintTracks: Set<String>)
+    class Values(val uiLocaleWish: LocaleWish, val checkForUpdates: Boolean, val pendingHintTracks: Set<String>)
 
     companion object {
-
-        // Dummy locale object representing the system locale. Not used outside of this file.
-        private val SYSTEM_LOCALE = Locale("system")
 
         /**
          * The returned boolean signals whether the user has accepted to exit the program.
          */
-        fun showDialog(values: Values, parent: Window?, askForExit: Boolean): Pair<Values, Boolean>? {
+        fun showDialog(values: Values, parent: Window?, askForRestart: Boolean): Pair<Values, Boolean>? {
             val form = PreferencesForm().apply {
-                uiLocaleWidget.value = values.uiLocale ?: SYSTEM_LOCALE
+                uiLocaleWishWidget.value = values.uiLocaleWish
                 checkForUpdatesWidget.value = values.checkForUpdates
                 for (trackName in values.pendingHintTracks)
                     hintTrackPendingWidgets[trackName]?.value = true
@@ -96,16 +98,19 @@ class PreferencesForm : EasyForm() {
             fun onClose() {
                 if (pane.value == JOptionPane.OK_OPTION) {
                     val newValues = Values(
-                        form.uiLocaleWidget.value.let { if (it == SYSTEM_LOCALE) null else it },
+                        form.uiLocaleWishWidget.value,
                         form.checkForUpdatesWidget.value,
                         form.hintTrackPendingWidgets.filterValues(CheckBoxWidget::value).keys
                     )
                     var exit = false
-                    if (askForExit && newValues.uiLocale != values.uiLocale)
+                    if (askForRestart && newValues.uiLocaleWish != values.uiLocaleWish) {
+                        val newLocale = newValues.uiLocaleWish.resolve()
                         exit = JOptionPane.showConfirmDialog(
-                            window, l10n("ui.preferences.restart.msg"), l10n("ui.preferences.restart.title"),
+                            window, l10n("ui.preferences.restart.msg", newLocale),
+                            l10n("ui.preferences.restart.title", newLocale),
                             JOptionPane.OK_CANCEL_OPTION
                         ) == JOptionPane.OK_OPTION
+                    }
                     ret = Pair(newValues, exit)
                 }
                 // If we're using a frame, explicitly hand control back over to the primary event loop.

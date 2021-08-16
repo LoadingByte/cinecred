@@ -9,7 +9,9 @@ import java.awt.event.WindowEvent
 import javax.swing.JFrame
 
 
-object OpenFrame : JFrame("Cinecred \u2013 ${l10n("ui.open.title")}") {
+class OpenFrame : JFrame("Cinecred \u2013 ${l10n("ui.open.title")}") {
+
+    val panel = OpenPanel(this)
 
     init {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
@@ -25,7 +27,7 @@ object OpenFrame : JFrame("Cinecred \u2013 ${l10n("ui.open.title")}") {
         setSize(maxWinBounds.width * 9 / 20, maxWinBounds.height / 2)
         setLocationRelativeTo(null)  // Center
 
-        contentPane.add(OpenPanel)
+        contentPane.add(panel)
     }
 
     fun findMostOccupiedScreen(): GraphicsConfiguration {

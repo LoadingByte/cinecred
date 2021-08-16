@@ -13,16 +13,12 @@ import javax.swing.*
 import kotlin.io.path.isDirectory
 
 
-object OpenPanel : JPanel() {
+class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
 
     // ========== HINT OWNERS ==========
     val browseHintOwner: Component
     val dropHintOwner: Component
     // =================================
-
-    private val memorizedPanel = JPanel(MigLayout("center, wrap 3")).apply {
-        alignmentX = CENTER_ALIGNMENT
-    }
 
     init {
         border = BorderFactory.createCompoundBorder(
@@ -30,14 +26,28 @@ object OpenPanel : JPanel() {
             BorderFactory.createDashedBorder(Color(100, 100, 100), 10f, 4f, 4f, false)
         )
 
+        var memorizedPanel: JPanel? = null
+        val memorizedProjectDirs = PreferencesController.memorizedProjectDirs
+        if (memorizedProjectDirs.isNotEmpty()) {
+            memorizedPanel = JPanel(MigLayout("center, wrap 3")).apply { alignmentX = CENTER_ALIGNMENT }
+            for (projectDir in memorizedProjectDirs) {
+                val btn = JButton(projectDir.fileName.toString(), FOLDER_ICON).apply {
+                    toolTipText = projectDir.toString()
+                    font = font.deriveFont(font.size * 1.15f)
+                    addActionListener { OpenController.tryOpenProject(projectDir) }
+                }
+                memorizedPanel.add(btn, "sizegroup")
+            }
+        }
+
         val browseButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
             browseHintOwner = this
             font = font.deriveFont(font.size * 1.15f)
-            addActionListener { onSelectButton() }
+            addActionListener { browse() }
         }
         val preferencesButton = JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
             font = font.deriveFont(font.size * 1.15f)
-            addActionListener { PreferencesController.showPreferencesDialog(OpenFrame) }
+            addActionListener { PreferencesController.showPreferencesDialog(openFrame) }
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
@@ -47,8 +57,8 @@ object OpenPanel : JPanel() {
         }
 
         // Add the memorized project panel, buttons, and the drag-and-drop hint text.
-        layout = MigLayout("center, center, wrap 1, hidemode 3", "center")
-        add(memorizedPanel, "gapbottom 30lp")
+        layout = MigLayout("center, center, wrap 1", "center")
+        memorizedPanel?.let { add(it, "gapbottom 30lp") }
         add(browseButton)
         add(preferencesButton)
         add(dropLabel, "gaptop 60lp")
@@ -57,25 +67,12 @@ object OpenPanel : JPanel() {
         transferHandler = OpenTransferHandler
     }
 
-    private fun onSelectButton() {
+    private fun browse() {
         val fc = JFileChooser()
         fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
         PreferencesController.memorizedProjectDirs.firstOrNull()?.let { fc.selectedFile = it.toFile() }
         if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
             OpenController.tryOpenProject(fc.selectedFile.toPath())
-    }
-
-    fun onShow() {
-        memorizedPanel.removeAll()
-        for (projectDir in PreferencesController.memorizedProjectDirs) {
-            val btn = JButton(projectDir.fileName.toString(), FOLDER_ICON).apply {
-                toolTipText = projectDir.toString()
-                font = font.deriveFont(font.size * 1.15f)
-                addActionListener { OpenController.tryOpenProject(projectDir) }
-            }
-            memorizedPanel.add(btn, "sizegroup")
-        }
-        memorizedPanel.isVisible = memorizedPanel.components.isNotEmpty()
     }
 
 

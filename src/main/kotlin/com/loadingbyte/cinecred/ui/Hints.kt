@@ -24,13 +24,16 @@ const val OPEN_HINT_TRACK_NAME = "open"
 const val PROJECT_HINT_TRACK_NAME = "project"
 val HINT_TRACK_NAMES = listOf(OPEN_HINT_TRACK_NAME, PROJECT_HINT_TRACK_NAME)
 
-val openHintTrack = HintTrack(
-    OPEN_HINT_TRACK_NAME, listOf(
-        Hint(l10n("ui.hints.openTrack.welcome"), OpenPanel, Side.NONE),
-        Hint(l10n("ui.hints.openTrack.browse"), OpenPanel.browseHintOwner, Side.BOTTOM),
-        Hint(l10n("ui.hints.openTrack.drop"), OpenPanel.dropHintOwner, Side.TOP)
+fun makeOpenHintTrack(openFrame: OpenFrame): HintTrack {
+    val openPanel = openFrame.panel
+    return HintTrack(
+        OPEN_HINT_TRACK_NAME, listOf(
+            Hint(l10n("ui.hints.openTrack.welcome"), openPanel, Side.NONE),
+            Hint(l10n("ui.hints.openTrack.browse"), openPanel.browseHintOwner, Side.BOTTOM),
+            Hint(l10n("ui.hints.openTrack.drop"), openPanel.dropHintOwner, Side.TOP)
+        )
     )
-)
+}
 
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel.editPanel

@@ -233,11 +233,11 @@ class FloatConstr<S : Style>(
 ) : StyleMeta<S, Float>(setting)
 
 
-class DynChoiceConstr<S : Style, V>(
+class DynChoiceConstr<S : Style>(
     val severity: Severity,
-    vararg settings: StyleSetting<S, V>,
-    val choices: (Styling, S) -> List<V>
-) : StyleMeta<S, V>(*settings)
+    vararg settings: StyleSetting<S, Any?>,
+    val choices: (Styling, S) -> List<Any?>
+) : StyleMeta<S, Any?>(*settings)
 
 
 class ColorConstr<S : Style>(
@@ -288,10 +288,10 @@ class DontGrowWidgetSpec<S : Style>(
 ) : StyleMeta<S, Any?>(setting)
 
 
-class NumberStepWidgetSpec<S : Style, N : Number>(
-    setting: StyleSetting<S, N>,
-    val stepSize: N
-) : StyleMeta<S, N>(setting)
+class NumberStepWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Number>,
+    val stepSize: Number
+) : StyleMeta<S, Number>(setting)
 
 
 class ToggleButtonGroupWidgetSpec<S : Style>(

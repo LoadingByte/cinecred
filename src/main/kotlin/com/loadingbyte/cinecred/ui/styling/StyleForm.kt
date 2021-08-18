@@ -32,11 +32,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     private fun <V> makeSettingWidget(setting: StyleSetting<S, V>, settingMeta: List<StyleMeta<S, *>>): Widget<*> {
         val intConstr = settingMeta.oneOf<IntConstr<S>>()
         val floatConstr = settingMeta.oneOf<FloatConstr<S>>()
-        val dynChoiceConstr = settingMeta.oneOf<DynChoiceConstr<S, *>>()
+        val dynChoiceConstr = settingMeta.oneOf<DynChoiceConstr<S>>()
         val colorConstr = settingMeta.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingMeta.oneOf<FontNameConstr<S>>()
         val dontGrowWidgetSpec = settingMeta.oneOf<DontGrowWidgetSpec<S>>()
-        val numberStepWidgetSpec = settingMeta.oneOf<NumberStepWidgetSpec<S, *>>()
+        val numberStepWidgetSpec = settingMeta.oneOf<NumberStepWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<S>>()
         val toggleButtonGroupListWidgetSpec = settingMeta.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
         val timecodeWidgetSpec = settingMeta.oneOf<TimecodeWidgetSpec<S>>()

@@ -14,7 +14,7 @@ import java.util.*
 
 class TextContext(
     val locale: Locale,
-    val fonts: Map<LetterStyle, Pair<Font, Font>>,
+    val fonts: Map<LetterStyle, Font>,
     val uppercaseExceptionsRegex: Regex?
 )
 
@@ -105,16 +105,16 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
     val smallCapsed: StyledString
     var smallCapsMasks: Array<BooleanArray?>? = null
 
-    if (!uppercased.any { (_, style) -> style.smallCaps })
+    if (!uppercased.any { (_, style) -> style.smallCaps.isEffective })
         smallCapsed = uppercased
     else {
         val masks = arrayOfNulls<BooleanArray?>(uppercased.size)
         smallCapsMasks = masks
         smallCapsed = uppercased.mapRuns { runIdx, run, style, _, _ ->
-            if (!style.smallCaps)
+            if (!style.smallCaps.isEffective)
                 run
             else {
-                val smallCapsedRun = if (style.smallCaps) run.uppercase(textCtx.locale) else run
+                val smallCapsedRun = if (style.smallCaps.isEffective) run.uppercase(textCtx.locale) else run
 
                 // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
                 // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
@@ -139,13 +139,13 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
     // 3. Add attributes to the "smallCapsed" string as indicated by the letter styles.
     val attrStr = AttributedString(smallCapsed.joinToString("") { (run, _) -> run })
     smallCapsed.forEachRun { runIdx, _, style, runStartIdx, runEndIdx ->
-        val (stdFont, smallCapsFont) = textCtx.fonts.getValue(style)
-        if (!style.smallCaps)
-            attrStr.addAttribute(TextAttribute.FONT, stdFont, runStartIdx, runEndIdx)
+        val font = textCtx.fonts.getValue(style)
+        if (!style.smallCaps.isEffective)
+            attrStr.addAttribute(TextAttribute.FONT, font, runStartIdx, runEndIdx)
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
-                val font = if (isStripSmallCaps) smallCapsFont else stdFont
-                attrStr.addAttribute(TextAttribute.FONT, font, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
+                val efFont = if (isStripSmallCaps) font.deriveFont(font.size2D * style.smallCaps.value / 100f) else font
+                attrStr.addAttribute(TextAttribute.FONT, efFont, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
             }
 
         attrStr.addAttribute(TextAttribute.FOREGROUND, style.foreground, runStartIdx, runEndIdx)

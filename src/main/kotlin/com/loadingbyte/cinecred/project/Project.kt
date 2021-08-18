@@ -155,7 +155,7 @@ data class LetterStyle(
     val backgroundWidening: Widening,
     val underline: Boolean,
     val strikethrough: Boolean,
-    val smallCaps: Boolean,
+    val smallCaps: OptionallyEffective<Float>,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
     val superscript: Superscript

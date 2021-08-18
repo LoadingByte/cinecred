@@ -11,7 +11,7 @@ fun draw(project: Project): List<DrawnPage> {
     // Generate AWT fonts that realize the configured letter styles, as well as the placeholder letter style, which
     // functions as a fallback if the letter style name referenced in a content style is unknown.
     val fonts = (project.styling.letterStyles + PLACEHOLDER_LETTER_STYLE)
-        .associateWith { style -> createAWTFonts(project.fonts, style) }
+        .associateWith { style -> createAWTFont(project.fonts, style) }
 
     // Convert the list of custom uppercase exception patterns to a single regex.
     val uppercaseExceptionsRegex = createUppercaseExceptionsRegex(project.styling.global.uppercaseExceptions)
@@ -25,7 +25,7 @@ fun draw(project: Project): List<DrawnPage> {
 
 private const val LINE_METRICS_SAMPLE = "Beispiel!"
 
-private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle): Pair<Font, Font> {
+private fun createAWTFont(projectFonts: Map<String, Font>, style: LetterStyle): Font {
     val baseFont = (projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName))
         .deriveFont(100f)
 
@@ -79,9 +79,7 @@ private fun createAWTFonts(projectFonts: Map<String, Font>, style: LetterStyle):
             Superscript.SUB_2 -> -2
         }
     )
-    val stdFont = baseFont.deriveFont(fontAttrs)
-    val smallCapsFont = stdFont.deriveFont(size * 0.7f)
-    return Pair(stdFont, smallCapsFont)
+    return baseFont.deriveFont(fontAttrs)
 }
 
 

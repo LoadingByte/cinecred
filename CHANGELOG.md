@@ -10,6 +10,7 @@ Cinecred Changelog
   This change increases render quality and speed, decreases file size, and
   improves the user experience when selecting and copying text.
 - The background of text can be widened arbitrarily.
+- The relativ size of small caps can be adjusted.
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
 - After changing the interface language, the program can now restart itself to

@@ -5,19 +5,19 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
-import com.loadingbyte.cinecred.project.NumberConstr.Inequality.*
 import com.loadingbyte.cinecred.project.ToggleButtonGroupWidgetSpec.Show.*
 import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import kotlinx.collections.immutable.ImmutableList
 import java.awt.Color
+import java.text.NumberFormat
 import kotlin.math.floor
 
 
 private const val ASPECT_RATIO_LIMIT = 32
 
 private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
-    NumberConstr(ERROR, Global::widthPx.st(), LARGER_0),
-    NumberConstr(ERROR, Global::heightPx.st(), LARGER_0),
+    IntConstr(ERROR, Global::widthPx.st(), min = 1),
+    IntConstr(ERROR, Global::heightPx.st(), min = 1),
     JudgeConstr(
         ERROR, l10n("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
         Global::widthPx.st(), Global::heightPx.st(),
@@ -28,14 +28,14 @@ private val GLOBAL_META: List<StyleMeta<Global, *>> = listOf(
     ),
     FPSConstr(ERROR, Global::fps.st()),
     DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, global ->
-        val formats = TimecodeFormat.values().toMutableList().apply { }
+        val formats = TimecodeFormat.values().toMutableList()
         if (!global.fps.supportsDropFrameTimecode)
             formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
         formats
     },
-    NumberConstr(ERROR, Global::runtimeFrames.st(), LARGER_0),
+    IntConstr(ERROR, Global::runtimeFrames.st(), min = 1),
     ColorConstr(ERROR, Global::grounding.st(), allowAlpha = false),
-    NumberConstr(ERROR, Global::unitVGapPx.st(), LARGER_0),
+    FloatConstr(ERROR, Global::unitVGapPx.st(), min = 0f, minInclusive = false),
     NumberStepWidgetSpec(Global::widthPx.st(), 10),
     NumberStepWidgetSpec(Global::heightPx.st(), 10),
     TimecodeWidgetSpec(Global::runtimeFrames.st(), { _, global -> global.fps }, { _, global -> global.timecodeFormat }),
@@ -48,11 +48,11 @@ private val PAGE_STYLE_META: List<StyleMeta<PageStyle, *>> = listOf(
     JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    NumberConstr(ERROR, PageStyle::afterwardSlugFrames.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardDurationFrames.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardFadeInFrames.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::cardFadeOutFrames.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, PageStyle::scrollPxPerFrame.st(), LARGER_0),
+    IntConstr(ERROR, PageStyle::afterwardSlugFrames.st(), min = 0),
+    IntConstr(ERROR, PageStyle::cardDurationFrames.st(), min = 0),
+    IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
+    IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
+    FloatConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0f, minInclusive = false),
     JudgeConstr(WARN, l10n("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
         val value = style.scrollPxPerFrame
         floor(value) == value
@@ -97,22 +97,22 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
             }
         }
     },
-    NumberConstr(ERROR, ContentStyle::vMarginPx.st(), LARGER_OR_EQUAL_0),
+    FloatConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0f),
     DynChoiceConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(),
         choices = { styling, _ -> styling.letterStyles.map(LetterStyle::name) }
     ),
-    NumberConstr(ERROR, ContentStyle::gridRowGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::gridColGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::flowLineWidthPx.st(), LARGER_0),
-    NumberConstr(ERROR, ContentStyle::flowLineGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::flowHGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), LARGER_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::headGapPx.st(), LARGER_OR_EQUAL_0),
-    NumberConstr(ERROR, ContentStyle::tailGapPx.st(), LARGER_OR_EQUAL_0),
+    FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0f, minInclusive = false),
+    FloatConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0f, minInclusive = false),
+    FloatConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::headGapPx.st(), min = 0f),
+    FloatConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0f),
     EffectivitySpec(
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridElemBoxConform.st(),
         ContentStyle::gridElemHJustifyPerCol.st(), ContentStyle::gridElemVJustify.st(), ContentStyle::gridRowGapPx.st(),
@@ -196,7 +196,8 @@ private val LETTER_STYLE_META: List<StyleMeta<LetterStyle, *>> = listOf(
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
-    NumberConstr(ERROR, LetterStyle::heightPx.st(), LARGER_0),
+    IntConstr(ERROR, LetterStyle::heightPx.st(), min = 1),
+    FloatConstr(ERROR, LetterStyle::smallCaps.st(), min = 0f, minInclusive = false, max = 100f),
     EffectivitySpec(LetterStyle::backgroundWidening.st(), isAlmostEffective = { style -> style.background.alpha == 0 }),
     EffectivitySpec(LetterStyle::useUppercaseExceptions.st(), isAlmostEffective = { style -> !style.uppercase }),
     NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f)
@@ -213,14 +214,23 @@ sealed class StyleMeta<S : Style, V>(
 }
 
 
-class NumberConstr<S : Style>(
+class IntConstr<S : Style>(
     val severity: Severity,
-    setting: StyleSetting<S, Number>,
-    val inequality: Inequality = NONE,
-    val finite: Boolean = true
-) : StyleMeta<S, Number>(setting) {
-    enum class Inequality { NONE, LARGER_OR_EQUAL_0, LARGER_0 }
-}
+    setting: StyleSetting<S, Int>,
+    val min: Int? = null,
+    val max: Int? = null,
+) : StyleMeta<S, Int>(setting)
+
+
+class FloatConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, Float>,
+    val finite: Boolean = true,
+    val min: Float? = null,
+    val minInclusive: Boolean = true,
+    val max: Float? = null,
+    val maxInclusive: Boolean = true
+) : StyleMeta<S, Float>(setting)
 
 
 class DynChoiceConstr<S : Style, V>(
@@ -354,21 +364,30 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
 
         for (meta in getStyleMeta(style.javaClass))
             when (meta) {
-                is NumberConstr ->
+                is IntConstr ->
                     for (setting in meta.settings.filter { it !in ignoreSettings }) {
-                        val value = setting.getValue(style).toFloat()
-                        if (meta.inequality == LARGER_OR_EQUAL_0 && value < 0f ||
-                            meta.inequality == LARGER_0 && value <= 0f ||
-                            meta.finite && !value.isFinite()
+                        val value = setting.getValue(style)
+                        if (meta.min != null && value < meta.min || meta.max != null && value > meta.max) {
+                            val minRestr = meta.min?.let { "\u2265 $it" }
+                            val maxRestr = meta.max?.let { "\u2264 $it" }
+                            val restriction = combineNumberRestrictions(minRestr, maxRestr)
+                            log(style, setting, meta.severity, l10n("project.styling.constr.number", restriction))
+                        }
+                    }
+                is FloatConstr ->
+                    for (setting in meta.settings.filter { it !in ignoreSettings }) {
+                        val value = setting.getValue(style)
+                        if (meta.finite && !value.isFinite() ||
+                            meta.min != null && (if (meta.minInclusive) value < meta.min else value <= meta.min) ||
+                            meta.max != null && (if (meta.maxInclusive) value > meta.max else value >= meta.max)
                         ) {
+                            fun fmt(f: Float) = NumberFormat.getCompactNumberInstance().format(f)
+                            val minRestr = meta.min?.let { (if (meta.minInclusive) "\u2265 " else "> ") + fmt(it) }
+                            val maxRestr = meta.max?.let { (if (meta.maxInclusive) "\u2264 " else "< ") + fmt(it) }
+                            val restriction = combineNumberRestrictions(minRestr, maxRestr)
                             val key = when {
                                 meta.finite -> "project.styling.constr.finiteNumber"
                                 else -> "project.styling.constr.number"
-                            }
-                            val restriction = when (meta.inequality) {
-                                NONE -> ""
-                                LARGER_0 -> " > 0"
-                                LARGER_OR_EQUAL_0 -> " \u2265 0"
                             }
                             log(style, setting, meta.severity, l10n(key, restriction))
                         }
@@ -406,3 +425,11 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
 
     return violations
 }
+
+private fun combineNumberRestrictions(minRestr: String?, maxRestr: String?): String =
+    when {
+        minRestr != null && maxRestr != null -> " $minRestr & $maxRestr"
+        minRestr != null -> " $minRestr"
+        maxRestr != null -> " $maxRestr"
+        else -> ""
+    }

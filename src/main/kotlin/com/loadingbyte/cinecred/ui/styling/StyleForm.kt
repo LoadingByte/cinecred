@@ -3,8 +3,6 @@ package com.loadingbyte.cinecred.ui.styling
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.project.NumberConstr.Inequality.LARGER_0
-import com.loadingbyte.cinecred.project.NumberConstr.Inequality.LARGER_OR_EQUAL_0
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.ImmutableList
 import java.awt.Color
@@ -32,7 +30,8 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     private fun <V> makeSettingWidget(setting: StyleSetting<S, V>, settingMeta: List<StyleMeta<S, *>>): Widget<*> {
-        val numberConstr = settingMeta.oneOf<NumberConstr<S>>()
+        val intConstr = settingMeta.oneOf<IntConstr<S>>()
+        val floatConstr = settingMeta.oneOf<FloatConstr<S>>()
         val dynChoiceConstr = settingMeta.oneOf<DynChoiceConstr<S, *>>()
         val colorConstr = settingMeta.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingMeta.oneOf<FontNameConstr<S>>()
@@ -46,20 +45,20 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
         val settingWidget = when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
-                val inequality = numberConstr?.inequality
-                val min = if (inequality == LARGER_0) 1 else if (inequality == LARGER_OR_EQUAL_0) 0 else null
+                val min = intConstr?.min
+                val max = intConstr?.max
                 val step = numberStepWidgetSpec?.stepSize ?: 1
-                val model = SpinnerNumberModel(min ?: 0, min, null, step)
+                val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
                 if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0])
                 else
                     SpinnerWidget(Int::class.javaObjectType, model)
             }
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
-                val inequality = numberConstr?.inequality
-                val min = if (inequality == LARGER_0) 0.01f else if (inequality == LARGER_OR_EQUAL_0) 0f else null
+                val min = floatConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01f) }
+                val max = floatConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01f) }
                 val step = numberStepWidgetSpec?.stepSize ?: 1f
-                SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(min ?: 0f, min, null, step))
+                SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(min ?: max ?: 0f, min, max, step))
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {

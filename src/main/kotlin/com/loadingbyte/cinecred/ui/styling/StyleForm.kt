@@ -172,6 +172,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             widget.noticeOverride = null
     }
 
+    fun getNoticeOverride(setting: StyleSetting<*, *>): Notice? =
+        settingWidgets[setting]!!.noticeOverride
+
     fun setNoticeOverride(setting: StyleSetting<*, *>, noticeOverride: Notice) {
         settingWidgets[setting]!!.noticeOverride = noticeOverride
     }

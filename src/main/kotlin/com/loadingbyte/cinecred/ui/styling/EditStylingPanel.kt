@@ -246,9 +246,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val openedStyle = openedForm.save()
 
         openedForm.clearNoticeOverrides()
-        for (violation in constraintViolations)
-            if (violation.style == openedStyle)
-                openedForm.setNoticeOverride(violation.setting, Form.Notice(violation.severity, violation.msg))
+        // By processing the violations in reverse order, violations that stem from constraints which come earlier
+        // in the constraints list end up being shown, while later constraint violations are overwritten.
+        for (violation in constraintViolations.asReversed())
+            if (violation.style == openedStyle) {
+                val prevNotice = openedForm.getNoticeOverride(violation.setting)
+                if (prevNotice == null || violation.severity >= prevNotice.severity)
+                    openedForm.setNoticeOverride(violation.setting, Form.Notice(violation.severity, violation.msg))
+            }
 
         for (meta in getStyleMeta(openedStyle.javaClass))
             when (meta) {

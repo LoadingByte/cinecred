@@ -89,8 +89,8 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 
 
 private fun convert(type: Class<*>, genericArg: Class<*>?, raw: Any): Any = when (type) {
-    Int::class.javaPrimitiveType, Int::class.javaObjectType -> raw as Int
-    Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Double).toFloat()
+    Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
+    Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
     String::class.java -> raw as String
     Locale::class.java -> Locale.forLanguageTag(raw as String)

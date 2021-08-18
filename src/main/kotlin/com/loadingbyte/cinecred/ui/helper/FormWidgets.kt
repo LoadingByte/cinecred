@@ -476,6 +476,26 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
             }
         }
 
+        override fun getBaseline(width: Int, height: Int): Int {
+            // Since the vertical insets of this panel are 0, its baseline is equivalent to that of its components.
+            // Now, as all toggle buttons have the same baseline, just ask the first one.
+            return if (components.isEmpty()) -1 else components[0].let { c ->
+                // It turns out that using "c.minimumSize.height" here and in the manual calculation a couple of lines
+                // below alleviates some re-layouting after the first painting that looks quite ugly.
+                var baseline = c.getBaseline(c.width, c.minimumSize.height)
+                if (baseline == -1) {
+                    // If the toggle button doesn't have a baseline because it has no label, manually compute where the
+                    // baseline would be if it had one. This makes all toggle button groups along with their form labels
+                    // look more consistent. It also allows to place the form label of a toggle button group list widget
+                    // with unlabeled toggle buttons such that it matches the y position of the first row.
+                    // The baseline turns out to be the baseline position of a vertically centered string.
+                    val fm = c.getFontMetrics(c.font)
+                    baseline = (c.minimumSize.height + fm.ascent - fm.descent) / 2
+                }
+                baseline
+            }
+        }
+
     }
 
 }
@@ -485,10 +505,18 @@ class ToggleButtonGroupListWidget<E : Any /* non-null */>(
     items: List<E>,
     private val toIcon: ((E) -> Icon)? = null,
     private val toLabel: ((E) -> String)? = null,
-    private val toTooltip: ((E) -> String)? = null
+    private val toTooltip: ((E) -> String)? = null,
+    groupsPerRow: Int
 ) : Form.AbstractWidget<ImmutableList<E>>(), Form.ChoiceWidget<ImmutableList<E>, E> {
 
-    private val panel = JPanel(MigLayout("insets 0"))
+    private val panel = object : JPanel(MigLayout("insets 0, wrap $groupsPerRow")) {
+        override fun getBaseline(width: Int, height: Int): Int {
+            // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component.
+            // By selecting the first one, we let the panel's baseline be the one of the first row of button groups.
+            return if (components.isEmpty()) -1 else components[0].getBaseline(-1, -1 /* not used */)
+        }
+    }
+
     private val addBtn = JButton(ADD_ICON)
     private val delBtn = JButton(REMOVE_ICON).apply { isEnabled = false }
     private val tbgs = mutableListOf<ToggleButtonGroupWidget<E>>()
@@ -499,10 +527,7 @@ class ToggleButtonGroupListWidget<E : Any /* non-null */>(
     }
 
     override val components = listOf<JComponent>(panel, addBtn, delBtn)
-
-    // Note: We have to manually specify "aligny top" for the ComboBoxList for some reason. If we don't and a
-    // multiline verification message occurs, the ComboBoxList does for some reason align itself in the middle.
-    override val constraints = listOf("split, aligny top", "", "")
+    override val constraints = listOf("split", "aligny top", "aligny top")
 
     override var items: ImmutableList<E> = items.toImmutableList()
         set(items) {

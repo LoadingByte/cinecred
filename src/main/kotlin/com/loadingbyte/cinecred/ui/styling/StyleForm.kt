@@ -38,7 +38,8 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val fontNameConstr = settingMeta.oneOf<FontNameConstr<S>>()
         val dontGrowWidgetSpec = settingMeta.oneOf<DontGrowWidgetSpec<S>>()
         val numberStepWidgetSpec = settingMeta.oneOf<NumberStepWidgetSpec<S, *>>()
-        val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<*>>()
+        val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<S>>()
+        val toggleButtonGroupListWidgetSpec = settingMeta.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
         val timecodeWidgetSpec = settingMeta.oneOf<TimecodeWidgetSpec<S>>()
 
         val settingGenericArg = setting.genericArg
@@ -80,15 +81,18 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                         toString = { l10nEnum(it as Enum<*>) }
                     )
                     toggleButtonGroupWidgetSpec != null ->
-                        makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show, list = false)
+                        makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show)
                     else ->
                         makeEnumCBoxWidget(setting.type as Class<*>)
                 }
                 ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
                     String::class.java == settingGenericArg -> TextListWidget(grow = dontGrowWidgetSpec == null)
                     Enum::class.java.isAssignableFrom(settingGenericArg) ->
-                        if (toggleButtonGroupWidgetSpec != null)
-                            makeEnumTBGWidget(settingGenericArg, toggleButtonGroupWidgetSpec.show, list = true)
+                        if (toggleButtonGroupListWidgetSpec != null)
+                            makeEnumTBGWidget(
+                                settingGenericArg, toggleButtonGroupListWidgetSpec.show, list = true,
+                                toggleButtonGroupListWidgetSpec.groupsPerRow
+                            )
                         else
                             throw UnsupportedOperationException("Enum lists must use ToggleButtonGroupWidgetSpec.")
                     else -> throw UnsupportedOperationException(
@@ -113,7 +117,8 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     private fun <E : Any /* non-null */> makeEnumTBGWidget(
         enumClass: Class<E>,
         show: ToggleButtonGroupWidgetSpec.Show,
-        list: Boolean
+        list: Boolean = false,
+        groupsPerRow: Int = -1,
     ): Widget<*> {
         var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
         var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
@@ -127,7 +132,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
         val items = enumClass.enumConstants.asList()
         return if (list)
-            ToggleButtonGroupListWidget(items, toIcon, toLabel, toTooltip)
+            ToggleButtonGroupListWidget(items, toIcon, toLabel, toTooltip, groupsPerRow)
         else
             ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
     }

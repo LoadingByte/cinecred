@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import com.loadingbyte.cinecred.project.NumberConstr.Inequality.*
 import com.loadingbyte.cinecred.project.ToggleButtonGroupWidgetSpec.Show.*
 import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
+import kotlinx.collections.immutable.ImmutableList
 import java.awt.Color
 import kotlin.math.floor
 
@@ -169,7 +170,7 @@ private val CONTENT_STYLE_META: List<StyleMeta<ContentStyle, *>> = listOf(
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemBoxConform.st(), ICON),
-    ToggleButtonGroupWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON),
+    ToggleButtonGroupListWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON, groupsPerRow = 4),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
@@ -284,11 +285,18 @@ class NumberStepWidgetSpec<S : Style, N : Number>(
 
 
 class ToggleButtonGroupWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Any>,
+    setting: StyleSetting<S, Enum<*>>,
     val show: Show
-) : StyleMeta<S, Any>(setting) {
+) : StyleMeta<S, Enum<*>>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
 }
+
+
+class ToggleButtonGroupListWidgetSpec<S : Style>(
+    setting: StyleSetting<S, ImmutableList<Enum<*>>>,
+    val show: ToggleButtonGroupWidgetSpec.Show,
+    val groupsPerRow: Int
+) : StyleMeta<S, ImmutableList<Enum<*>>>(setting)
 
 
 class TimecodeWidgetSpec<S : Style>(

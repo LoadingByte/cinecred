@@ -536,6 +536,14 @@ class ToggleButtonGroupListWidget<E : Any /* non-null */>(
             notifyChangeListeners()
         }
 
+    override var isEnabled: Boolean
+        get() = super.isEnabled
+        set(isEnabled) {
+            super.isEnabled = isEnabled
+            if (isEnabled && tbgs.size == 1)
+                delBtn.isEnabled = false
+        }
+
 }
 
 
@@ -826,7 +834,8 @@ class OptionallyEffectiveWidget<V>(
         get() = super.isEnabled
         set(isEnabled) {
             super.isEnabled = isEnabled
-            wrapped.isEnabled = cb.isSelected
+            if (isEnabled && !cb.isSelected)
+                wrapped.isEnabled = false
         }
 
 }

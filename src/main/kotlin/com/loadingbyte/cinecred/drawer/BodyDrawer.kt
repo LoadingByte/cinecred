@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.awt.font.LineBreakMeasurer
+import java.text.BreakIterator
 import java.util.*
 import kotlin.math.max
 
@@ -365,7 +366,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
         if (bodyElem is BodyElement.Str) {
             // Employ a LineBreakMeasurer to find the best spots to insert a newline.
             val attrCharIter = bodyElem.str.toAttributedString(textCtx).iterator
-            val lineMeasurer = LineBreakMeasurer(attrCharIter, REF_FRC)
+            val lineMeasurer = LineBreakMeasurer(attrCharIter, BreakIterator.getLineInstance(textCtx.locale), REF_FRC)
             while (lineMeasurer.position < attrCharIter.endIndex) {
                 val lineStartPos = lineMeasurer.position
                 val lineEndPos = lineMeasurer.nextOffset(bodyImageWidth)

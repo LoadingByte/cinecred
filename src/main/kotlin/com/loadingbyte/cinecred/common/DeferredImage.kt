@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.common
 
 import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.Y.Companion.toY
-import com.loadingbyte.cinecred.project.Widening
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
@@ -31,9 +30,6 @@ import java.awt.geom.Line2D
 import java.awt.geom.PathIterator
 import java.awt.geom.Rectangle2D
 import java.io.DataInputStream
-import java.text.AttributedCharacterIterator
-import java.text.AttributedCharacterIterator.Attribute
-import java.text.CharacterIterator
 import java.util.*
 import kotlin.math.max
 
@@ -88,21 +84,21 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
      * Here, the coordinate doesn't point to the baseline, but to the topmost part of the largest font.
      * If [justificationWidth] is provided, the string is fully justified to fit that exact width.
      *
-     * @throws IllegalArgumentException If [attrCharIter] is not equipped with both an [TextAttribute.FONT] and a
-     *     [TextAttribute.FOREGROUND] at every character.
+     * @throws IllegalArgumentException If [fmtStr] is not equipped with both a font and a foreground color at
+     *     every character.
      */
     fun drawString(
-        attrCharIter: AttributedCharacterIterator, x: Float, y: Y, justificationWidth: Float = Float.NaN,
+        fmtStr: FormattedString, x: Float, y: Y, justificationWidth: Float = Float.NaN,
         foregroundLayer: Layer = FOREGROUND, backgroundLayer: Layer = BACKGROUND
     ) {
         // Find the distance between y and the baseline of the tallest font in the attributed string.
         // In case there are multiple tallest fonts, take the largest distance.
         var maxFontHeight = 0f
         var aboveBaseline = 0f
-        attrCharIter.forEachRunOf(TextAttribute.FONT) { runEndIdx ->
-            val font = attrCharIter.getAttribute(TextAttribute.FONT) as Font? ?: throw IllegalArgumentException()
+        fmtStr.forEachFontRun { font, runStartIdx, runEndIdx ->
+            font ?: throw IllegalArgumentException()
             val normFontLM = font.deriveFont(FONT_NORMALIZATION_ATTRS)
-                .getLineMetrics(attrCharIter, attrCharIter.index, runEndIdx, REF_FRC)
+                .getLineMetrics(fmtStr.string.substring(runStartIdx, runEndIdx), REF_FRC)
             if (normFontLM.height >= maxFontHeight) {
                 maxFontHeight = normFontLM.height
                 aboveBaseline = max(aboveBaseline, normFontLM.ascent + normFontLM.leading / 2f)
@@ -112,8 +108,11 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         // compute that now.
         val baselineY = y + aboveBaseline
 
-        // Layout the text.
-        var textLayout = TextLayout(attrCharIter, REF_FRC)
+        // Layout the text. Utilize a character iterator with both foreground and background information for this.
+        // Changes in foreground split the TextLayout's TextLineComponents, and these splits are important later on
+        // for extracting the outline shape of each section with different foreground. By also supplying the background
+        // to the TextLayout, we can later use getLogicalHighlightShape() to find background rectangles.
+        var textLayout = fmtStr.fontFgBgTextLayout
         // Fully justify the text layout if requested.
         if (!justificationWidth.isNaN())
             textLayout = textLayout.getJustifiedLayout(justificationWidth)
@@ -136,36 +135,31 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
         //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
         //     acceptable in a movie context.
-        // Start with the background fillings for each run with non-null background color.
-        attrCharIter.forEachRunOf(TextAttribute.BACKGROUND) { runEndIdx ->
-            val bg = attrCharIter.getAttribute(TextAttribute.BACKGROUND) as Color?
+        // Start with the background fillings for each run with non-null background.
+        fmtStr.forEachBackgroundRun { bg, runStartIdx, runEndIdx ->
             if (bg != null) {
-                val widening = attrCharIter.getAttribute(ExtTextAttribute.BACKGROUND_WIDENING) as Widening?
-                val highlightShape =
-                    if (widening == null)
-                        textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx)
-                    else {
-                        val tlBounds = textLayout.bounds
-                        val bgBounds = Rectangle2D.Double(
-                            tlBounds.x - widening.left,
-                            tlBounds.y - widening.top,
-                            tlBounds.width + widening.left + widening.right,
-                            tlBounds.height + widening.top + widening.bottom
-                        )
-                        textLayout.getLogicalHighlightShape(attrCharIter.index, runEndIdx, bgBounds)
-                    }
-                addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, highlightShape, bg, fill = true))
+                val tlBounds = textLayout.bounds
+                val bgBounds = Rectangle2D.Double(
+                    tlBounds.x - bg.widenLeft,
+                    tlBounds.y - bg.widenTop,
+                    tlBounds.width + bg.widenLeft + bg.widenRight,
+                    tlBounds.height + bg.widenTop + bg.widenBottom
+                )
+                val highlightShape = textLayout.getLogicalHighlightShape(runStartIdx, runEndIdx, bgBounds)
+                addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, highlightShape, bg.color, true))
             }
         }
         // Then collect the foreground outlines for each run of different foreground color and add a
         // foreground drawing instruction enriched with these outlines.
-        val outl = mutableListOf<Pair<Shape, Color>>()
-        attrCharIter.forEachRunOf(TextAttribute.FOREGROUND) { runEndIdx ->
-            val fg = attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color? ?: throw IllegalArgumentException()
-            val outline = textLayout.getOutline(attrCharIter.index, runEndIdx)
-            outl.add(Pair(outline, fg))
+        // Since the TextLayout's TextLineComponents are split where the foreground color changes, we can easily extract
+        // partial outlines for each section of different foreground color by using our custom getOutline(...) function.
+        val outlines = mutableListOf<Pair<Shape, Color>>()
+        fmtStr.forEachForegroundRun { fg, runStartIdx, runEndIdx ->
+            fg ?: throw IllegalArgumentException()
+            val outline = textLayout.getOutline(runStartIdx, runEndIdx)
+            outlines.add(Pair(outline, fg))
         }
-        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, attrCharIter, textLayout, outl))
+        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, fmtStr, textLayout, outlines))
     }
 
     fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
@@ -216,7 +210,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             )
             is Instruction.DrawStringForeground -> backend.materializeStringForeground(
                 x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
-                insn.attrCharIter, insn.textLayout, insn.outlines
+                insn.fmtStr, insn.textLayout, insn.outlines
             )
             is Instruction.DrawPicture -> backend.materializePicture(
                 x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
@@ -265,26 +259,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         private fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
         private fun Matrix.scale(s: Float) = scale(s, s)
 
-        private fun CharacterIterator.getString(): String {
-            val result = StringBuilder(endIndex - beginIndex)
-            index = beginIndex
-            var c = first()
-            while (c != AttributedCharacterIterator.DONE) {
-                result.append(c)
-                c = next()
-            }
-            return result.toString()
-        }
-
-        private inline fun AttributedCharacterIterator.forEachRunOf(attr: Attribute, block: (Int) -> Unit) {
-            index = beginIndex
-            while (index != endIndex) {
-                val runEndIdx = getRunLimit(attr)
-                block(runEndIdx)
-                index = runEndIdx
-            }
-        }
-
     }
 
 
@@ -311,7 +285,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         ) : Instruction()
 
         class DrawStringForeground(
-            val x: Float, val y: Y, val attrCharIter: AttributedCharacterIterator, val textLayout: TextLayout,
+            val x: Float, val y: Y, val fmtStr: FormattedString, val textLayout: TextLayout,
             val outlines: List<Pair<Shape, Color>>
         ) : Instruction()
 
@@ -327,7 +301,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         fun materializeShape(shape: Shape, color: Color, fill: Boolean)
 
         fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
             outlines: List<Pair<Shape, Color>>
         )
 
@@ -347,7 +321,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         }
 
         override fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
             outlines: List<Pair<Shape, Color>>
         ) {
             g2.preserveTransform {
@@ -448,33 +422,25 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         }
 
         override fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, attrCharIter: AttributedCharacterIterator, textLayout: TextLayout,
+            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
             outlines: List<Pair<Shape, Color>>
         ) {
-            require(TextAttribute.CHAR_REPLACEMENT !in attrCharIter.allAttributeKeys)
-
-            val str = attrCharIter.getString()
-
             // Note: We assume that every TextLineComponent of the TextLayout is indeed based on a GlyphVector.
-            // Since we do not use TextAttribute.CHAR_REPLACEMENT in this program, that assumption will always hold
-            // and is checked by the require() call above.
+            // Since we do not use TextAttribute.CHAR_REPLACEMENT in this program, that assumption will always hold.
             val tlGVs = textLayout.getGlyphVectors()
 
             cs.saveGraphicsState()
             cs.transform(Matrix().apply { translate(x, csHeight - y); scale(scaling) })
 
-
             // Draw the text by drawing each GlyphVector.
             cs.beginText()
             for (tlGV in tlGVs) {
-                attrCharIter.index = tlGV.startCharIdx
-
                 val font = tlGV.gv.font
                 val pdFont = getPDFont(font)
 
                 // If superscripting is enabled, find the appropriately downscaled font size.
                 val fontSize = if (font.attributes[TextAttribute.SUPERSCRIPT] == null) font.size2D else {
-                    val runStr = str.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
+                    val runStr = fmtStr.string.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
                     val slm = font.getLineMetrics(runStr, REF_FRC)
                     val nlm = font.deriveFont(FONT_NORMALIZATION_ATTRS).getLineMetrics(runStr, REF_FRC)
                     font.size2D * slm.height / nlm.height
@@ -491,7 +457,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 }
 
                 cs.setFont(pdFont, fontSize)
-                setColor(attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color, fill = true)
+                setColor(fmtStr.getForeground(tlGV.startCharIdx)!!, fill = true)
                 cs.setTextMatrix(Matrix.getTranslateInstance(tlGV.x, tlGV.y - glyphPos[1]))
                 cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
             }
@@ -499,15 +465,14 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
             // Where applicable, draw underline & strikethrough.
             for (tlGV in tlGVs) {
-                attrCharIter.index = tlGV.startCharIdx
-
-                val ul = attrCharIter.getAttribute(TextAttribute.UNDERLINE) == TextAttribute.UNDERLINE_ON
-                val st = attrCharIter.getAttribute(TextAttribute.STRIKETHROUGH) == TextAttribute.STRIKETHROUGH_ON
+                val ul = fmtStr.getUnderline(tlGV.startCharIdx)
+                val st = fmtStr.getStrikethrough(tlGV.startCharIdx)
 
                 if (ul || st) {
                     // In case of superscripting, we still retrieve the font metrics of the unscaled font since they
                     // already include all the changes made by superscripting, and scaling would distort them.
-                    val lm = tlGV.gv.font.getLineMetrics(str.substring(tlGV.startCharIdx, tlGV.stopCharIdx), REF_FRC)
+                    val runStr = fmtStr.string.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
+                    val lm = tlGV.gv.font.getLineMetrics(runStr, REF_FRC)
 
                     val numGlyphs = tlGV.gv.numGlyphs
                     val glyphPos = tlGV.gv.getGlyphPositions(0, numGlyphs + 1, null)
@@ -523,7 +488,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                         cs.stroke()
                     }
 
-                    setColor(attrCharIter.getAttribute(TextAttribute.FOREGROUND) as Color, fill = false)
+                    setColor(fmtStr.getForeground(tlGV.startCharIdx)!!, fill = false)
                     if (ul)
                         drawLine(lm.underlineOffset, lm.underlineThickness)
                     if (st)

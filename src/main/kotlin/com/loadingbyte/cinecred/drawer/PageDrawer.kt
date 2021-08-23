@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.drawer
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.common.FormattedString
 import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
@@ -10,9 +11,7 @@ import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.formatTimecode
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Font
-import java.awt.font.TextAttribute
 import java.awt.geom.Path2D
-import java.text.AttributedString
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
@@ -242,14 +241,13 @@ private fun drawPage(
 
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
-        val attrs = mapOf(
-            TextAttribute.FONT to Font(Font.MONOSPACED, Font.BOLD, global.widthPx / 80),
-            TextAttribute.FOREGROUND to STAGE_GUIDE_COLOR
-        )
-        val attrCharIter = AttributedString(str, attrs).iterator
+        val fmtStr = FormattedString(str).apply {
+            setFont(Font(Font.MONOSPACED, Font.BOLD, global.widthPx / 80), Float.NaN, 0, str.length)
+            setForeground(STAGE_GUIDE_COLOR, 0, str.length)
+        }
         val margin = global.widthPx / 100f
         pageImage.drawString(
-            attrCharIter, x = global.widthPx - attrCharIter.getWidth() - margin, y = y + margin,
+            fmtStr, x = global.widthPx - fmtStr.width - margin, y = y + margin,
             foregroundLayer = GUIDES, backgroundLayer = GUIDES /* irrelevant, since our string has no background */
         )
     }

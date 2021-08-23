@@ -1,14 +1,9 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.ExtTextAttribute
-import com.loadingbyte.cinecred.common.REF_FRC
+import com.loadingbyte.cinecred.common.FormattedString
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.StyledString
 import java.awt.Font
-import java.awt.font.TextAttribute
-import java.awt.font.TextLayout
-import java.text.AttributedCharacterIterator
-import java.text.AttributedString
 import java.util.*
 
 
@@ -16,7 +11,23 @@ class TextContext(
     val locale: Locale,
     val fonts: Map<LetterStyle, Font>,
     val uppercaseExceptionsRegex: Regex?
-)
+) {
+
+    private val fmtStrCache = HashMap<StyledString, FormattedString>()
+
+    fun formattedInternal(styledString: StyledString): FormattedString =
+        fmtStrCache.getOrPut(styledString) { styledString.generateFormattedString(this) }
+
+}
+
+
+/**
+ * Converts styled strings to formatted strings. As the conversion can be quite expensive and to leverage the
+ * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this
+ * method caches formatted strings.
+ */
+fun StyledString.formatted(textCtx: TextContext): FormattedString =
+    textCtx.formattedInternal(this)
 
 
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
@@ -50,18 +61,11 @@ fun StyledString.trim(): StyledString {
 }
 
 
-fun StyledString.getWidth(textCtx: TextContext): Float =
-    toAttributedString(textCtx).iterator.getWidth()
-
-fun AttributedCharacterIterator.getWidth(): Float =
-    TextLayout(this, REF_FRC).advance
+val StyledString.height: Int
+    get() = maxOf { it.second.heightPx }
 
 
-fun StyledString.getHeight(): Int =
-    maxOf { it.second.heightPx }
-
-
-fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
+private fun StyledString.generateFormattedString(textCtx: TextContext): FormattedString {
     // 1. Apply uppercasing to the styled string (not small caps yet!).
     var uppercased = this
 
@@ -136,29 +140,31 @@ fun StyledString.toAttributedString(textCtx: TextContext): AttributedString {
         }
     }
 
-    // 3. Add attributes to the "smallCapsed" string as indicated by the letter styles.
-    val attrStr = AttributedString(smallCapsed.joinToString("") { (run, _) -> run })
+    // 3. Build a FormattedString by adding attributes to the "smallCapsed" string as indicated by the letter styles.
+    val fmtStr = FormattedString(smallCapsed.joinToString("") { (run, _) -> run })
     smallCapsed.forEachRun { runIdx, _, style, runStartIdx, runEndIdx ->
         val font = textCtx.fonts.getValue(style)
+        val heightHint = style.heightPx.toFloat()
         if (!style.smallCaps.isEffective)
-            attrStr.addAttribute(TextAttribute.FONT, font, runStartIdx, runEndIdx)
+            fmtStr.setFont(font, heightHint, runStartIdx, runEndIdx)
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
                 val efFont = if (isStripSmallCaps) font.deriveFont(font.size2D * style.smallCaps.value / 100f) else font
-                attrStr.addAttribute(TextAttribute.FONT, efFont, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
+                fmtStr.setFont(efFont, heightHint, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
             }
 
-        attrStr.addAttribute(TextAttribute.FOREGROUND, style.foreground, runStartIdx, runEndIdx)
+        fmtStr.setForeground(style.foreground, runStartIdx, runEndIdx)
         if (style.background.alpha != 0) {
-            attrStr.addAttribute(TextAttribute.BACKGROUND, style.background, runStartIdx, runEndIdx)
-            attrStr.addAttribute(ExtTextAttribute.BACKGROUND_WIDENING, style.backgroundWidening, runStartIdx, runEndIdx)
+            val w = style.backgroundWidening
+            val bg = FormattedString.Background(style.background, w.left, w.right, w.top, w.bottom)
+            fmtStr.setBackground(bg, runStartIdx, runEndIdx)
         }
         if (style.underline)
-            attrStr.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON, runStartIdx, runEndIdx)
+            fmtStr.setUnderline(true, runStartIdx, runEndIdx)
         if (style.strikethrough)
-            attrStr.addAttribute(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON, runStartIdx, runEndIdx)
+            fmtStr.setStrikethrough(true, runStartIdx, runEndIdx)
     }
-    return attrStr
+    return fmtStr
 }
 
 private inline fun BooleanArray.forEachAlternatingStrip(block: (Boolean, Int, Int) -> Unit) {

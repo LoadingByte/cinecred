@@ -1,10 +1,10 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.FormattedString
 import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.HJustify
-import com.loadingbyte.cinecred.project.StyledString
 import com.loadingbyte.cinecred.project.VJustify
 import java.awt.Color
 
@@ -48,39 +48,27 @@ inline fun DeferredImage.drawJustified(
 }
 
 
-fun DeferredImage.drawStyledString(
-    textCtx: TextContext, styledStr: StyledString, x: Float, y: Y, justificationWidth: Float = Float.NaN
-) {
-    drawString(styledStr.toAttributedString(textCtx).iterator, x, y, justificationWidth)
-}
-
-
-fun DeferredImage.drawJustifiedStyledString(
-    textCtx: TextContext,
-    styledStr: StyledString, hJustify: HJustify,
+fun DeferredImage.drawJustifiedString(
+    fmtStr: FormattedString, hJustify: HJustify,
     areaX: Float, strY: Y, areaWidth: Float
 ) {
-    val attrCharIter = styledStr.toAttributedString(textCtx).iterator
-    val strWidth = attrCharIter.getWidth()
-    drawJustified(hJustify, areaX, areaWidth, strWidth) { strX ->
-        drawString(attrCharIter, strX, strY)
+    drawJustified(hJustify, areaX, areaWidth, fmtStr.width) { strX ->
+        drawString(fmtStr, strX, strY)
     }
 }
 
 
-fun DeferredImage.drawJustifiedStyledString(
-    textCtx: TextContext,
-    styledStr: StyledString, hJustify: HJustify, vJustify: VJustify,
+fun DeferredImage.drawJustifiedString(
+    fmtStr: FormattedString, hJustify: HJustify, vJustify: VJustify,
     areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y,
     referenceHeight: Y? = null
 ) {
-    val attrCharIter = styledStr.toAttributedString(textCtx).iterator
-    val strHeight = styledStr.getHeight().toFloat().toY()
+    val strHeight = fmtStr.height.toY()
     val diff = if (referenceHeight == null) 0f.toY() else referenceHeight - strHeight
     drawJustified(
         hJustify, vJustify, areaX, areaY + diff / 2f, areaWidth, areaHeight - diff,
-        attrCharIter.getWidth(), strHeight
+        fmtStr.width, strHeight
     ) { strX, strY ->
-        drawString(attrCharIter, strX, strY)
+        drawString(fmtStr, strX, strY)
     }
 }

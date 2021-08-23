@@ -2,15 +2,12 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.plus
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
-import java.awt.font.LineBreakMeasurer
-import java.text.BreakIterator
 import java.util.*
 import kotlin.math.max
 
@@ -174,7 +171,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     val bodyLetterStyle = textCtx.fonts.keys.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = style.flowSeparator
-    val sepStyledStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle))
+    val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle)).formatted(textCtx)
 
     // Find the maximum width resp. height over all body elements.
     val maxElemWidth = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
@@ -259,9 +256,9 @@ fun drawBodyImageWithFlowBodyLayout(
                 // Advance to the separator.
                 x += areaWidth
                 // Draw the separator.
-                if (sepStyledStr != null)
-                    bodyImage.drawJustifiedStyledString(
-                        textCtx, sepStyledStr, HJustify.CENTER, style.flowElemVJustify, x, y,
+                if (sepFmtStr != null)
+                    bodyImage.drawJustifiedString(
+                        sepFmtStr, HJustify.CENTER, style.flowElemVJustify, x, y,
                         horGap + horGlue, lineHeight.toY()
                     )
                 // Advance to the next element on the line.
@@ -364,30 +361,24 @@ fun drawBodyImageWithParagraphsBodyLayout(
     for (bodyElem in block.body) {
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
-            // Employ a LineBreakMeasurer to find the best spots to insert a newline.
-            val attrCharIter = bodyElem.str.toAttributedString(textCtx).iterator
-            val lineMeasurer = LineBreakMeasurer(attrCharIter, BreakIterator.getLineInstance(textCtx.locale), REF_FRC)
-            while (lineMeasurer.position < attrCharIter.endIndex) {
-                val lineStartPos = lineMeasurer.position
-                val lineEndPos = lineMeasurer.nextOffset(bodyImageWidth)
-                lineMeasurer.position = lineEndPos
+            val fmtStr = bodyElem.str.formatted(textCtx)
+            fmtStr.breakLines(bodyImageWidth, textCtx.locale) { lineStartPos, lineEndPos, strEndPos ->
+                val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos).trim()
 
-                val lineStyledStr = bodyElem.str.substring(lineStartPos, lineEndPos).trim()
-
-                val isLastLine = lineEndPos == attrCharIter.endIndex
+                val isLastLine = lineEndPos == strEndPos
                 val curLineHJustify = style.paragraphsLineHJustify.toSingleLineHJustify(isLastLine)
 
                 // Case 1a: Full justification.
                 if (curLineHJustify == SingleLineHJustify.FULL)
-                    bodyImage.drawStyledString(textCtx, lineStyledStr, 0f, y, justificationWidth = bodyImageWidth)
+                    bodyImage.drawString(lineFmtStr, 0f, y, justificationWidth = bodyImageWidth)
                 // Case 1b: Left, center, or right justification.
                 else {
                     val hJustify = curLineHJustify.toHJustify()
-                    bodyImage.drawJustifiedStyledString(textCtx, lineStyledStr, hJustify, 0f, y, bodyImageWidth)
+                    bodyImage.drawJustifiedString(lineFmtStr, hJustify, 0f, y, bodyImageWidth)
                 }
 
                 // Advance to the next line.
-                val lineHeight = lineStyledStr.getHeight().toFloat()
+                val lineHeight = lineFmtStr.height
                 y += lineHeight + style.paragraphsLineGapPx.toElasticY()
 
                 recordRowHeight(lineHeight)
@@ -411,7 +402,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
     // Set the height of the body image.
     bodyImage.height = y
 
-    // Draw guides that show the body's left an right edges.
+    // Draw guides that show the body's left and right edges.
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
 
@@ -420,12 +411,12 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
 
 private fun BodyElement.getWidth(textCtx: TextContext): Float = when (this) {
-    is BodyElement.Str -> str.getWidth(textCtx)
+    is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
 }
 
 private fun BodyElement.getHeight(): Float = when (this) {
-    is BodyElement.Str -> str.getHeight().toFloat()
+    is BodyElement.Str -> str.height.toFloat()
     is BodyElement.Pic -> pic.height
 }
 
@@ -436,7 +427,7 @@ private fun DeferredImage.drawJustifiedBodyElem(
     areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y
 ) = when (elem) {
     is BodyElement.Str ->
-        drawJustifiedStyledString(textCtx, elem.str, hJustify, vJustify, areaX, areaY, areaWidth, areaHeight)
+        drawJustifiedString(elem.str.formatted(textCtx), hJustify, vJustify, areaX, areaY, areaWidth, areaHeight)
     is BodyElement.Pic ->
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height.toY()

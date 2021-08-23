@@ -184,7 +184,7 @@ private fun drawHorizontalSpineBlocks(
         HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER, BODY_LEFT ->
             blocks.maxOf { block ->
                 if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.head == null) 0f
-                else block.head.getWidth(textCtx)
+                else block.head.formatted(textCtx).width
             }
         else -> null
     }
@@ -192,7 +192,7 @@ private fun drawHorizontalSpineBlocks(
         BODY_RIGHT, TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
             blocks.maxOf { block ->
                 if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.tail == null) 0f
-                else block.tail.getWidth(textCtx)
+                else block.tail.formatted(textCtx).width
             }
         else -> null
     }
@@ -203,8 +203,8 @@ private fun drawHorizontalSpineBlocks(
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = headSharedWidth ?: block.head?.getWidth(textCtx) ?: 0f
-        val tailWidth = tailSharedWidth ?: block.tail?.getWidth(textCtx) ?: 0f
+        val headWidth = headSharedWidth ?: block.head?.formatted(textCtx)?.width ?: 0f
+        val tailWidth = tailSharedWidth ?: block.tail?.formatted(textCtx)?.width ?: 0f
 
         val headStartX = 0f
         val headEndX = headStartX + headWidth
@@ -226,8 +226,8 @@ private fun drawHorizontalSpineBlocks(
         val blockImage = DeferredImage(width = tailEndX - headStartX, height = blockImageHeight)
         // Draw the block's head.
         if (block.head != null) {
-            blockImage.drawJustifiedStyledString(
-                textCtx, block.head, block.style.headHJustify, block.style.headVJustify,
+            blockImage.drawJustifiedString(
+                block.head.formatted(textCtx), block.style.headHJustify, block.style.headVJustify,
                 headStartX, 0f.toY(), headWidth, blockImageHeight, getReferenceHeight(block.style.headVJustify)
             )
             // Draw a guide that shows the edges of the head space.
@@ -239,8 +239,8 @@ private fun drawHorizontalSpineBlocks(
         blockImage.drawDeferredImage(bodyImage, bodyStartX, 0f.toY())
         // Draw the block's tail.
         if (block.tail != null) {
-            blockImage.drawJustifiedStyledString(
-                textCtx, block.tail, block.style.tailHJustify, block.style.tailVJustify,
+            blockImage.drawJustifiedString(
+                block.tail.formatted(textCtx), block.style.tailHJustify, block.style.tailVJustify,
                 tailStartX, 0f.toY(), tailWidth, blockImageHeight, getReferenceHeight(block.style.tailVJustify)
             )
             // Draw a guide that shows the edges of the tail space.
@@ -285,9 +285,9 @@ private fun drawVerticalSpineBlock(
     var y = 0f.toY()
     // Draw the block's head.
     if (block.head != null) {
-        blockImage.drawJustifiedStyledString(textCtx, block.head, block.style.headHJustify, 0f, y, blockImageWidth)
+        blockImage.drawJustifiedString(block.head.formatted(textCtx), block.style.headHJustify, 0f, y, blockImageWidth)
         // Draw guides that show the edges of the head space.
-        val headHeight = block.head.getHeight().toFloat()
+        val headHeight = block.head.height.toFloat()
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + headHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + headHeight, layer = GUIDES)
         // Advance to the body.
@@ -299,9 +299,9 @@ private fun drawVerticalSpineBlock(
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx.toElasticY()
-        blockImage.drawJustifiedStyledString(textCtx, block.tail, block.style.tailHJustify, 0f, y, blockImageWidth)
+        blockImage.drawJustifiedString(block.tail.formatted(textCtx), block.style.tailHJustify, 0f, y, blockImageWidth)
         // Draw guides that show the edges of the tail space.
-        val tailHeight = block.tail.getHeight().toFloat()
+        val tailHeight = block.tail.height.toFloat()
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + tailHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + tailHeight, layer = GUIDES)
         // Advance to below the tail.

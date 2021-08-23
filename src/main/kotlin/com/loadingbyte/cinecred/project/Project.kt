@@ -48,6 +48,9 @@ data class Styling constructor(
 }
 
 
+sealed class Style
+
+
 data class Global(
     val widthPx: Int,
     val heightPx: Int,
@@ -58,7 +61,7 @@ data class Global(
     val unitVGapPx: Float,
     val locale: Locale,
     val uppercaseExceptions: ImmutableList<String>
-)
+) : Style()
 
 
 data class FPS(val numerator: Int, val denominator: Int) {
@@ -80,7 +83,7 @@ data class PageStyle(
     val scrollMeltWithPrev: Boolean,
     val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Float
-)
+) : Style()
 
 
 enum class PageBehavior { CARD, SCROLL }
@@ -122,7 +125,7 @@ data class ContentStyle(
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Float
-)
+) : Style()
 
 
 enum class SpineOrientation { HORIZONTAL, VERTICAL }
@@ -159,7 +162,7 @@ data class LetterStyle(
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
     val superscript: Superscript
-)
+) : Style()
 
 
 data class Widening(val left: Float, val right: Float, val top: Float, val bottom: Float)

@@ -22,24 +22,29 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     init {
         for (setting in getStyleSettings(styleClass)) {
-            val settingMeta = getStyleMeta(styleClass).filter { m -> setting in m.settings }
-            if (settingMeta.oneOf<NewSectionWidgetSpec<S>>() != null)
+            val settingConstraints = getStyleConstraints(styleClass).filter { c -> setting in c.settings }
+            val settingWidgetSpecs = getStyleWidgetSpecs(styleClass).filter { s -> setting in s.settings }
+            if (settingWidgetSpecs.oneOf<NewSectionWidgetSpec<S>>() != null)
                 addSeparator()
-            addSettingWidget(setting, makeSettingWidget(setting, settingMeta))
+            addSettingWidget(setting, makeSettingWidget(setting, settingConstraints, settingWidgetSpecs))
         }
     }
 
-    private fun <V> makeSettingWidget(setting: StyleSetting<S, V>, settingMeta: List<StyleMeta<S, *>>): Widget<*> {
-        val intConstr = settingMeta.oneOf<IntConstr<S>>()
-        val floatConstr = settingMeta.oneOf<FloatConstr<S>>()
-        val dynChoiceConstr = settingMeta.oneOf<DynChoiceConstr<S>>()
-        val colorConstr = settingMeta.oneOf<ColorConstr<S>>()
-        val fontNameConstr = settingMeta.oneOf<FontNameConstr<S>>()
-        val dontGrowWidgetSpec = settingMeta.oneOf<DontGrowWidgetSpec<S>>()
-        val numberStepWidgetSpec = settingMeta.oneOf<NumberStepWidgetSpec<S>>()
-        val toggleButtonGroupWidgetSpec = settingMeta.oneOf<ToggleButtonGroupWidgetSpec<S>>()
-        val toggleButtonGroupListWidgetSpec = settingMeta.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
-        val timecodeWidgetSpec = settingMeta.oneOf<TimecodeWidgetSpec<S>>()
+    private fun <V> makeSettingWidget(
+        setting: StyleSetting<S, V>,
+        settingConstraints: List<StyleConstraint<S, *>>,
+        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+    ): Widget<*> {
+        val intConstr = settingConstraints.oneOf<IntConstr<S>>()
+        val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
+        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
+        val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
+        val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
+        val dontGrowWidgetSpec = settingWidgetSpecs.oneOf<DontGrowWidgetSpec<S>>()
+        val numberStepWidgetSpec = settingWidgetSpecs.oneOf<NumberStepWidgetSpec<S>>()
+        val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S>>()
+        val toggleButtonGroupListWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
+        val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val settingGenericArg = setting.genericArg
 

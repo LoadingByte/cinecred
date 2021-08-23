@@ -23,7 +23,7 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
 }
 
 
-private fun <S : Any> writeStyle(style: S): Map<String, Any> {
+private fun <S : Style> writeStyle(style: S): Map<String, Any> {
     // The order of the settings should be preserved, hence we use a linked map.
     val toml = LinkedHashMap<String, Any>()
     val excludedSettings = findIneffectiveSettings(style)

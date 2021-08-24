@@ -3,10 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.PreferencesController.LocaleWish
-import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
-import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
-import com.loadingbyte.cinecred.ui.helper.EasyForm
-import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
+import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.Toolkit
 import java.awt.Window
 import java.awt.event.WindowAdapter
@@ -24,7 +21,7 @@ class PreferencesForm : EasyForm() {
         ComboBoxWidget(
             LocaleWish::class.java,
             listOf(LocaleWish.System) + TRANSLATED_LOCALES.map(LocaleWish::Specific),
-            hFill = true,
+            widthSpec = WidthSpec.FILL,
             toString = { wish ->
                 when (wish) {
                     is LocaleWish.System -> l10n("ui.preferences.uiLocaleWishSystem")

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.ui.helper.WidthSpec
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
 import kotlinx.collections.immutable.ImmutableList
 
@@ -19,7 +20,7 @@ private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
     NumberStepWidgetSpec(Global::widthPx.st(), 10),
     NumberStepWidgetSpec(Global::heightPx.st(), 10),
     TimecodeWidgetSpec(Global::runtimeFrames.st(), { _, global -> global.fps }, { _, global -> global.timecodeFormat }),
-    DontGrowWidgetSpec(Global::uppercaseExceptions.st())
+    WidthWidgetSpec(Global::uppercaseExceptions.st(), WidthSpec.NARROW)
 )
 
 
@@ -42,7 +43,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::flowElemHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowElemVJustify.st(), ICON),
     NumberStepWidgetSpec(ContentStyle::flowLineWidthPx.st(), 10f),
-    DontGrowWidgetSpec(ContentStyle::flowSeparator.st()),
+    WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
     NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f),
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),
@@ -71,8 +72,9 @@ class NewSectionWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class DontGrowWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Any?>
+class WidthWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Any?>,
+    val widthSpec: WidthSpec
 ) : StyleWidgetSpec<S>(setting)
 
 

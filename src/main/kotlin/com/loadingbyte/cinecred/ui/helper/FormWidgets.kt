@@ -37,32 +37,39 @@ import kotlin.io.path.Path
 import kotlin.math.ceil
 
 
+enum class WidthSpec(val mig: String) {
+    NONE(""),
+    NARROW("width 100lp::40%"),
+    WIDE("width 40%!"),
+    FILL("width 100%!")
+}
+
+
 abstract class AbstractTextComponentWidget<V>(
     protected val tc: JTextComponent,
-    grow: Boolean = true
+    widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
     init {
         tc.addChangeListener { notifyChangeListeners() }
-        tc.setMinWidth100()
     }
 
     override val components = listOf<JComponent>(tc)
-    override val constraints = listOf(if (grow) "width 40%" else "")
+    override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig)
 
 }
 
 
 class TextWidget(
-    grow: Boolean = true
-) : AbstractTextComponentWidget<String>(JTextField(), grow) {
+    widthSpec: WidthSpec? = null
+) : AbstractTextComponentWidget<String>(JTextField(), widthSpec) {
     override var value: String by tc::text
 }
 
 
 class TextListWidget(
-    grow: Boolean = true
-) : AbstractTextComponentWidget<ImmutableList<String>>(JTextArea(), grow) {
+    widthSpec: WidthSpec? = null
+) : AbstractTextComponentWidget<ImmutableList<String>>(JTextArea(), widthSpec) {
     override var value: ImmutableList<String>
         get() = tc.text.split("\n").filter(String::isNotBlank).toImmutableList()
         set(value) {
@@ -72,8 +79,8 @@ class TextListWidget(
 
 
 abstract class AbstractFilenameWidget<V>(
-    grow: Boolean = true
-) : AbstractTextComponentWidget<V>(JTextField(), grow) {
+    widthSpec: WidthSpec? = null
+) : AbstractTextComponentWidget<V>(JTextField(), widthSpec) {
 
     init {
         // When the user leaves the text field, ensure that it ends with an admissible file extension.
@@ -100,8 +107,8 @@ abstract class AbstractFilenameWidget<V>(
 
 
 class FilenameWidget(
-    grow: Boolean = true
-) : AbstractFilenameWidget<String>(grow) {
+    widthSpec: WidthSpec? = null
+) : AbstractFilenameWidget<String>(widthSpec) {
     override var value: String
         get() = tc.text.trim()
         set(value) {
@@ -113,7 +120,8 @@ class FilenameWidget(
 enum class FileType { FILE, DIRECTORY }
 
 class FileWidget(
-    fileType: FileType
+    fileType: FileType,
+    widthSpec: WidthSpec? = null
 ) : AbstractFilenameWidget<Path>() {
 
     private val browse = JButton(l10n("ui.form.browse"), FOLDER_ICON)
@@ -148,7 +156,7 @@ class FileWidget(
     }
 
     override val components = listOf<JComponent>(tc, browse)
-    override val constraints = listOf("split, width 40%", "")
+    override val constraints = listOf("split, ${(widthSpec ?: WidthSpec.WIDE).mig}", "")
 
     override var value: Path
         get() = Path(tc.text.trim())
@@ -161,7 +169,8 @@ class FileWidget(
 
 open class SpinnerWidget<V>(
     private val valueClass: Class<V>,
-    model: SpinnerModel
+    model: SpinnerModel,
+    widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
     init {
@@ -170,11 +179,10 @@ open class SpinnerWidget<V>(
 
     protected val spinner = JSpinner(model).apply {
         addChangeListener { notifyChangeListeners() }
-        setMinWidth100()
     }
 
     override val components = listOf(spinner)
-    override val constraints = listOf("")
+    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
 
     override var value: V
         get() = valueClass.cast(spinner.value)
@@ -188,8 +196,9 @@ open class SpinnerWidget<V>(
 class TimecodeWidget(
     model: SpinnerNumberModel,
     fps: FPS,
-    timecodeFormat: TimecodeFormat
-) : SpinnerWidget<Int>(Int::class.javaObjectType, model) {
+    timecodeFormat: TimecodeFormat,
+    widthSpec: WidthSpec? = null
+) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec) {
 
     var fps: FPS = fps
         set(fps) {
@@ -256,20 +265,19 @@ open class ComboBoxWidget<E : Any /* non-null */>(
     private val itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String = { it.toString() },
-    hFill: Boolean = false,
+    widthSpec: WidthSpec? = null,
     private val scrollbar: Boolean = true,
     decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
 ) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
 
     protected val cb = JComboBox<E>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        setMinWidth100()
         renderer = decorateRenderer(CustomToStringListCellRenderer(itemClass, toString))
         keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
     }
 
     override val components = listOf(cb)
-    override val constraints = listOf(if (hFill) "width 100%" else "wmax 40%")
+    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
 
     final override var items: ImmutableList<E> = persistentListOf()
         set(items) {
@@ -304,8 +312,9 @@ open class ComboBoxWidget<E : Any /* non-null */>(
 class InconsistentComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
     items: List<E>,
-    toString: (E) -> String = { it.toString() }
-) : ComboBoxWidget<E>(itemClass, items, toString) {
+    toString: (E) -> String = { it.toString() },
+    widthSpec: WidthSpec? = null
+) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
 
     override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
         DefaultComboBoxModel(items).apply { selectedItem = oldSelectedItem }
@@ -325,8 +334,9 @@ open class EditableComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String,
-    fromString: ((String) -> E)
-) : ComboBoxWidget<E>(itemClass, items, toString) {
+    fromString: ((String) -> E),
+    widthSpec: WidthSpec? = null
+) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
 
     init {
         cb.isEditable = true
@@ -356,7 +366,9 @@ open class EditableComboBoxWidget<E : Any /* non-null */>(
 }
 
 
-class FPSWidget : EditableComboBoxWidget<FPS>(FPS::class.java, SUGGESTED_FPS, ::toDisplayString, ::fromDisplayString) {
+class FPSWidget(
+    widthSpec: WidthSpec? = null
+) : EditableComboBoxWidget<FPS>(FPS::class.java, SUGGESTED_FPS, ::toDisplayString, ::fromDisplayString, widthSpec) {
 
     companion object {
 
@@ -573,12 +585,12 @@ class ToggleButtonGroupListWidget<E : Any /* non-null */>(
 
 
 class ColorWellWidget(
-    allowAlpha: Boolean = true
+    allowAlpha: Boolean = true,
+    widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<Color>() {
 
     private val btn = object : JButton(" ") {
         init {
-            setMinWidth100()
             toolTipText = l10n("ui.form.colorChooserTooltip")
         }
 
@@ -616,7 +628,7 @@ class ColorWellWidget(
     }
 
     override val components = listOf<JComponent>(btn)
-    override val constraints = listOf("")
+    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
 
     override var value: Color = Color.BLACK
         set(value) {
@@ -677,7 +689,9 @@ class WideningWidget : Form.AbstractWidget<Widening>() {
 }
 
 
-class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<String> {
+class FontChooserWidget(
+    widthSpec: WidthSpec? = null
+) : Form.AbstractWidget<String>(), Form.FontRelatedWidget<String> {
 
     private val familyComboBox = JComboBox<FontFamily>().apply {
         maximumRowCount = 20
@@ -695,7 +709,7 @@ class FontChooserWidget : Form.AbstractWidget<String>(), Form.FontRelatedWidget<
     }
 
     override val components = listOf(familyComboBox, fontComboBox)
-    override val constraints = listOf("width 40%!", "newline, width 40%!")
+    override val constraints = (widthSpec ?: WidthSpec.WIDE).let { listOf(it.mig, "newline, ${it.mig}") }
 
     override var projectFamilies: FontFamilies = FontFamilies(emptyList())
         set(value) {
@@ -877,9 +891,6 @@ private fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boole
     return this
 }
 
-private fun <C : Component> C.setMinWidth100() {
-    minimumSize = Dimension(100, minimumSize.height)
-}
 
 private inline fun JTextComponent.addChangeListener(crossinline listener: () -> Unit) {
     document.addDocumentListener(object : DocumentListener {

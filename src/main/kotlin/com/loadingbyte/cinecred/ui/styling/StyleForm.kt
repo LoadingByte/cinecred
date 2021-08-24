@@ -40,13 +40,14 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
-        val dontGrowWidgetSpec = settingWidgetSpecs.oneOf<DontGrowWidgetSpec<S>>()
+        val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberStepWidgetSpec = settingWidgetSpecs.oneOf<NumberStepWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S>>()
         val toggleButtonGroupListWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val settingGenericArg = setting.genericArg
+        val widthSpec = widthWidgetSpec?.widthSpec
 
         val settingWidget = when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
@@ -55,42 +56,44 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                 val step = numberStepWidgetSpec?.stepSize ?: 1
                 val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
                 if (timecodeWidgetSpec != null)
-                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0])
+                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
                 else
-                    SpinnerWidget(Int::class.javaObjectType, model)
+                    SpinnerWidget(Int::class.javaObjectType, model, widthSpec)
             }
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val min = floatConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01f) }
                 val max = floatConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01f) }
                 val step = numberStepWidgetSpec?.stepSize ?: 1f
-                SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(min ?: max ?: 0f, min, max, step))
+                val model = SpinnerNumberModel(min ?: max ?: 0f, min, max, step)
+                SpinnerWidget(Float::class.javaObjectType, model, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {
-                dynChoiceConstr != null -> InconsistentComboBoxWidget(String::class.java, emptyList())
-                fontNameConstr != null -> FontChooserWidget()
-                else -> TextWidget(grow = dontGrowWidgetSpec == null)
+                dynChoiceConstr != null -> InconsistentComboBoxWidget(
+                    String::class.java, emptyList(), widthSpec = widthSpec
+                )
+                fontNameConstr != null -> FontChooserWidget(widthSpec)
+                else -> TextWidget(widthSpec)
             }
             Locale::class.java -> InconsistentComboBoxWidget(
                 Locale::class.java, Locale.getAvailableLocales().sortedBy(Locale::getDisplayName),
-                toString = Locale::getDisplayName
+                toString = Locale::getDisplayName, widthSpec
             )
-            Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true)
-            FPS::class.java -> FPSWidget()
+            Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
+            FPS::class.java -> FPSWidget(widthSpec)
             Widening::class.java -> WideningWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(
-                        setting.type as Class<*>, emptyList(),
-                        toString = { l10nEnum(it as Enum<*>) }
+                        setting.type as Class<*>, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
                     )
                     toggleButtonGroupWidgetSpec != null ->
                         makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show)
                     else ->
-                        makeEnumCBoxWidget(setting.type as Class<*>)
+                        makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
                 }
                 ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
-                    String::class.java == settingGenericArg -> TextListWidget(grow = dontGrowWidgetSpec == null)
+                    String::class.java == settingGenericArg -> TextListWidget(widthSpec)
                     Enum::class.java.isAssignableFrom(settingGenericArg) ->
                         if (toggleButtonGroupListWidgetSpec != null)
                             makeEnumTBGWidget(
@@ -113,10 +116,8 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         }
     }
 
-    private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>) =
-        ComboBoxWidget(
-            enumClass, enumClass.enumConstants.asList(),
-            toString = { l10nEnum(it as Enum<*>) })
+    private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>, widthSpec: WidthSpec?) =
+        ComboBoxWidget(enumClass, enumClass.enumConstants.asList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec)
 
     private fun <E : Any /* non-null */> makeEnumTBGWidget(
         enumClass: Class<E>,

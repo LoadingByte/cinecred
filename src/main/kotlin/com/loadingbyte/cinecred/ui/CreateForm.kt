@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
 import com.loadingbyte.cinecred.ui.helper.EasyForm
+import com.loadingbyte.cinecred.ui.helper.WidthSpec
 import java.util.*
 import javax.swing.JOptionPane
 
@@ -16,14 +17,18 @@ class CreateForm : EasyForm() {
         l10n("ui.create.locale"),
         ComboBoxWidget(
             Locale::class.java, TRANSLATED_LOCALES,
-            hFill = true, toString = { it.displayName })
+            toString = { it.displayName },
+            WidthSpec.FILL
+        )
     )
 
     private val formatWidget = addWidget(
         l10n("ui.create.format"),
         ComboBoxWidget(
             SpreadsheetFormat::class.java, SPREADSHEET_FORMATS,
-            hFill = true, toString = { l10n("ui.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" })
+            toString = { l10n("ui.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" },
+            WidthSpec.FILL
+        )
     )
 
     init {

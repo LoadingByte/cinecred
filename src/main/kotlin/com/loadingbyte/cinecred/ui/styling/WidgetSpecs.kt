@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.WidthSpec
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
 import kotlinx.collections.immutable.ImmutableList
+import javax.swing.Icon
 
 
 @Suppress("UNCHECKED_CAST")
@@ -104,3 +105,14 @@ class TimecodeWidgetSpec<S : Style>(
     val getFPS: (Styling, S) -> FPS,
     val getTimecodeFormat: (Styling, S) -> TimecodeFormat
 ) : StyleWidgetSpec<S>(setting)
+
+
+class UnionWidgetSpec<S : Style>(
+    vararg settings: StyleSetting<S, Any?>,
+    val unionName: String,
+    val settingIcons: List<Icon>
+) : StyleWidgetSpec<S>(*settings) {
+    init {
+        require(settings.size == settingIcons.size)
+    }
+}

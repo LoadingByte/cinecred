@@ -845,10 +845,11 @@ class FontChooserWidget(
 
 
 class OptionallyEffectiveWidget<V>(
-    override val wrapped: Form.Widget<V>
-) : Form.AbstractWidget<OptionallyEffective<V>>(), Form.WrapperWidget<OptionallyEffective<V>, Form.Widget<V>> {
+    private val wrapped: Form.Widget<V>
+) : Form.AbstractWidget<OptionallyEffective<V>>() {
 
     init {
+        // Forward all change events regarding the wrapped widget to this widget's change listeners.
         wrapped.changeListeners.add(::notifyChangeListeners)
     }
 
@@ -875,6 +876,47 @@ class OptionallyEffectiveWidget<V>(
             super.isEnabled = isEnabled
             if (isEnabled && !cb.isSelected)
                 wrapped.isEnabled = false
+        }
+
+}
+
+
+class UnionWidget(
+    private val wrapped: List<Form.Widget<*>>,
+    icons: List<Icon>
+) : Form.AbstractWidget<List<*>>() {
+
+    init {
+        require(wrapped.size == icons.size)
+
+        // Forward all change events regarding the wrapped widgets to this widget's change listeners.
+        for (widget in wrapped)
+            widget.changeListeners.add(::notifyChangeListeners)
+    }
+
+    override val components: List<JComponent> = mutableListOf<JComponent>().apply {
+        for ((widget, icon) in wrapped.zip(icons)) {
+            add(JLabel(icon))
+            addAll(widget.components)
+        }
+    }
+
+    override val constraints = mutableListOf<String>().apply {
+        add("split, gapx 0 3lp")
+        addAll(wrapped.first().constraints)
+        for (widget in wrapped.drop(1)) {
+            add("gapx 10lp 3lp")
+            addAll(widget.constraints)
+        }
+    }
+
+    override var value: List<*>
+        get() = wrapped.map { it.value }
+        set(value) {
+            require(wrapped.size == value.size)
+            for (idx in wrapped.indices)
+                @Suppress("UNCHECKED_CAST")
+                (wrapped[idx] as Form.Widget<Any?>).value = value[idx]
         }
 
 }

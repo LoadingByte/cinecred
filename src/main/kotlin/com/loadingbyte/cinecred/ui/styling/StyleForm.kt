@@ -15,26 +15,61 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     private var changeListener: ((StyleSetting<S, *>) -> Unit)? = null
 
-    // It is important that this map preserves insertion order.
-    private val settingWidgets = SimpleLinkedBiMap<StyleSetting<S, *>, Widget<*>>()
+    private val backingWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
+    private val valueWidgets = ArrayList<Pair<StyleSetting<S, *>, Widget<*>>>()
+    private val rootWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
+    private val relatedSettings = HashMap<Widget<*>, StyleSetting<S, *>>()
 
     private var disableRefresh = false
 
     init {
+        val widgetSpecs = getStyleWidgetSpecs(styleClass)
+        val unionSpecs = widgetSpecs.filterIsInstance<UnionWidgetSpec<S>>()
+
         for (setting in getStyleSettings(styleClass)) {
-            val settingConstraints = getStyleConstraints(styleClass).filter { c -> setting in c.settings }
-            val settingWidgetSpecs = getStyleWidgetSpecs(styleClass).filter { s -> setting in s.settings }
-            if (settingWidgetSpecs.oneOf<NewSectionWidgetSpec<S>>() != null)
-                addSeparator()
-            addSettingWidget(setting, makeSettingWidget(setting, settingConstraints, settingWidgetSpecs))
+            val unionSpec = unionSpecs.find { it.settings.first() == setting }
+            if (unionSpec != null)
+                addSettingUnionWidget(unionSpec)
+            else {
+                if (widgetSpecs.any { setting in it.settings && it is NewSectionWidgetSpec<S> })
+                    addSeparator()
+                if (!unionSpecs.any { setting in it.settings })
+                    addSingleSettingWidget(setting)
+            }
         }
     }
 
-    private fun <V> makeSettingWidget(
-        setting: StyleSetting<S, V>,
-        settingConstraints: List<StyleConstraint<S, *>>,
-        settingWidgetSpecs: List<StyleWidgetSpec<S>>
-    ): Widget<*> {
+    private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
+        val (backingWidget, valueWidget) = makeSettingWidget(setting)
+        backingWidgets[setting] = backingWidget
+        valueWidgets.add(Pair(setting, valueWidget))
+        rootWidgets[setting] = valueWidget
+        relatedSettings[backingWidget] = setting
+        relatedSettings[valueWidget] = setting
+        addRootWidget(setting.name, valueWidget)
+    }
+
+    private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
+        val wrappedWidgets = mutableListOf<Widget<*>>()
+        for (setting in spec.settings) {
+            val (backingWidget, valueWidget) = makeSettingWidget(setting)
+            wrappedWidgets.add(valueWidget)
+            backingWidgets[setting] = backingWidget
+            valueWidgets.add(Pair(setting, valueWidget))
+            relatedSettings[backingWidget] = setting
+            relatedSettings[valueWidget] = setting
+        }
+        val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
+        for (setting in spec.settings)
+            rootWidgets[setting] = unionWidget
+        addRootWidget(spec.unionName, unionWidget)
+    }
+
+    // Returns backing widget and value widget.
+    private fun <V> makeSettingWidget(setting: StyleSetting<S, V>): Pair<Widget<*>, Widget<*>> {
+        val settingConstraints = getStyleConstraints(styleClass).filter { c -> setting in c.settings }
+        val settingWidgetSpecs = getStyleWidgetSpecs(styleClass).filter { s -> setting in s.settings }
+
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
@@ -49,7 +84,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val settingGenericArg = setting.genericArg
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        val settingWidget = when (setting.type) {
+        val backingWidget = when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
@@ -110,10 +145,12 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             }
         }
 
-        return when (setting) {
-            is OptionallyEffectiveStyleSetting -> OptionallyEffectiveWidget(settingWidget)
-            else -> settingWidget
+        val valueWidget = when (setting) {
+            is OptionallyEffectiveStyleSetting -> OptionallyEffectiveWidget(backingWidget)
+            else -> backingWidget
         }
+
+        return Pair(backingWidget, valueWidget)
     }
 
     private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>, widthSpec: WidthSpec?) =
@@ -142,27 +179,22 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
     }
 
-    private fun addSettingWidget(setting: StyleSetting<S, *>, settingWidget: Widget<*>) {
-        val l10nKey = "ui.styling." +
-                styleClass.simpleName.removeSuffix("Style").lowercase() +
-                ".${setting.name}"
-
+    private fun addRootWidget(name: String, widget: Widget<*>) {
+        val l10nKey = "ui.styling." + styleClass.simpleName.removeSuffix("Style").lowercase() + ".$name"
         try {
-            settingWidget.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
+            widget.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
         } catch (_: MissingResourceException) {
         }
-
-        addWidget(l10n(l10nKey), settingWidget)
-        settingWidgets[setting] = settingWidget
+        addWidget(l10n(l10nKey), widget)
     }
 
     fun open(style: S, onChange: ((StyleSetting<S, *>) -> Unit)?) {
         changeListener = null
         disableRefresh = true
         try {
-            for ((setting, settingWidget) in settingWidgets)
+            for ((setting, widget) in valueWidgets)
                 @Suppress("UNCHECKED_CAST")
-                (settingWidget as Widget<Any?>).value = setting.getPlain(style)
+                (widget as Widget<Any?>).value = setting.getPlain(style)
         } finally {
             disableRefresh = false
         }
@@ -171,41 +203,34 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     fun save(): S =
-        newStyle(styleClass, settingWidgets.values.map(Widget<*>::value))
+        newStyle(styleClass, valueWidgets.map { (_, widget) -> widget.value })
 
     fun clearNoticeOverrides() {
-        for (widget in settingWidgets.values)
+        for (widget in rootWidgets.values)
             widget.noticeOverride = null
     }
 
     fun getNoticeOverride(setting: StyleSetting<*, *>): Notice? =
-        settingWidgets[setting]!!.noticeOverride
+        rootWidgets[setting]!!.noticeOverride
 
     fun setNoticeOverride(setting: StyleSetting<*, *>, noticeOverride: Notice) {
-        settingWidgets[setting]!!.noticeOverride = noticeOverride
+        rootWidgets[setting]!!.noticeOverride = noticeOverride
     }
 
     fun setDynChoices(setting: StyleSetting<*, *>, choices: ImmutableList<*>) {
         @Suppress("UNCHECKED_CAST")
-        (getBackingWidget(setting) as ChoiceWidget<*, Any?>).items = choices
+        (backingWidgets[setting] as ChoiceWidget<*, Any?>).items = choices
     }
 
     fun setTimecodeFPSAndFormat(setting: StyleSetting<*, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
-        val timecodeWidget = getBackingWidget(setting) as TimecodeWidget
+        val timecodeWidget = backingWidgets[setting] as TimecodeWidget
         timecodeWidget.fps = fps
         timecodeWidget.timecodeFormat = timecodeFormat
     }
 
-    private fun getBackingWidget(setting: StyleSetting<*, *>): Widget<*> {
-        var widget = settingWidgets[setting]!!
-        while (widget is WrapperWidget<*, *>)
-            widget = widget.wrapped
-        return widget
-    }
-
     override fun onChange(widget: Widget<*>) {
         refresh()
-        changeListener?.invoke(settingWidgets.getReverse(widget)!!)
+        changeListener?.invoke(relatedSettings.getValue(widget))
     }
 
     private fun refresh() {
@@ -214,10 +239,10 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
         val style = save()
         val ineffectiveSettings = findIneffectiveSettings(style)
-        for ((setting, settingWidget) in settingWidgets) {
+        for ((setting, widget) in valueWidgets) {
             val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
-            settingWidget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-            settingWidget.isEnabled = effectivity >= Effectivity.OPTIONALLY_INEFFECTIVE
+            widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
+            widget.isEnabled = effectivity >= Effectivity.OPTIONALLY_INEFFECTIVE
         }
     }
 
@@ -237,26 +262,6 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
         private fun l10nEnum(enumElem: Enum<*>) =
             l10n("project.${enumElem.javaClass.simpleName}.${enumElem.name}")
-
-    }
-
-
-    private class SimpleLinkedBiMap<K, V> : Iterable<Map.Entry<K, V>> {
-
-        private val ktv = LinkedHashMap<K, V>()
-        private val vtk = HashMap<V, K>()
-
-        val values: Collection<V> = ktv.values
-
-        override fun iterator(): Iterator<Map.Entry<K, V>> = ktv.iterator()
-
-        operator fun set(key: K, value: V) {
-            ktv[key] = value
-            vtk[value] = key
-        }
-
-        operator fun get(key: Any?): V? = ktv[key]
-        fun getReverse(value: Any?): K? = vtk[value]
 
     }
 

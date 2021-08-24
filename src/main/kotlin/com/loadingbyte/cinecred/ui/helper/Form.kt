@@ -20,7 +20,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         val noticeMsgComp: JTextArea
 
         var value: V
-        var changeListeners: MutableList<() -> Unit>
+        var changeListeners: MutableList<(Widget<*>) -> Unit>
         var isVisible: Boolean
         var isEnabled: Boolean
         var notice: Notice?
@@ -33,7 +33,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         override val noticeIconComp = JLabel()
         override val noticeMsgComp = newLabelTextArea()
 
-        override var changeListeners = mutableListOf<() -> Unit>()
+        override var changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 
         override var isVisible = true
             set(isVisible) {
@@ -80,15 +80,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 comp.putClientProperty(OUTLINE, outline)
         }
 
-        protected fun notifyChangeListeners() {
+        protected fun notifyChangeListeners(changed: Widget<*> = this) {
             for (listener in changeListeners)
-                listener()
+                listener(changed)
         }
 
-    }
-
-    interface WrapperWidget<V, W : Widget<*>> : Widget<V> {
-        val wrapped: W
     }
 
     interface ChoiceWidget<V, E> : Widget<V> {
@@ -105,7 +101,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     fun <W : Widget<*>> addWidget(label: String, widget: W): W {
         require(widget.components.size == widget.constraints.size)
 
-        widget.changeListeners.add { onChange(widget) }
+        widget.changeListeners.add(::onChange)
 
         widget.labelComp.text = label
         add(widget.labelComp, "newline")

@@ -96,7 +96,6 @@ private fun convert(type: Class<*>, genericArg: Class<*>?, raw: Any): Any = when
     Locale::class.java -> Locale.forLanguageTag(raw as String)
     Color::class.java -> (raw as String).hexToColor()
     FPS::class.java -> (raw as String).toFPS()
-    Widening::class.java -> Widening((raw as List<*>)[0] as Float, raw[1] as Float, raw[2] as Float, raw[3] as Float)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> (raw as String).toEnum(type)
         ImmutableList::class.java.isAssignableFrom(type) ->

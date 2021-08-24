@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.ui.helper.WidthSpec
+import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
 import kotlinx.collections.immutable.ImmutableList
 import javax.swing.Icon
@@ -57,7 +57,17 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f)
+    NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f),
+    WidthWidgetSpec(LetterStyle::backgroundWidenLeft.st(), WidthSpec.NONE),
+    WidthWidgetSpec(LetterStyle::backgroundWidenRight.st(), WidthSpec.NONE),
+    WidthWidgetSpec(LetterStyle::backgroundWidenTop.st(), WidthSpec.NONE),
+    WidthWidgetSpec(LetterStyle::backgroundWidenBottom.st(), WidthSpec.NONE),
+    UnionWidgetSpec(
+        LetterStyle::backgroundWidenLeft.st(), LetterStyle::backgroundWidenRight.st(),
+        LetterStyle::backgroundWidenTop.st(), LetterStyle::backgroundWidenBottom.st(),
+        unionName = "backgroundWiden",
+        settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON, BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
+    )
 )
 
 

@@ -88,7 +88,8 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
 
 private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyle>> = listOf(
     StyleEffectivitySpec(
-        LetterStyle::backgroundWidening.st(),
+        LetterStyle::backgroundWidenLeft.st(), LetterStyle::backgroundWidenRight.st(),
+        LetterStyle::backgroundWidenTop.st(), LetterStyle::backgroundWidenBottom.st(),
         isAlmostEffective = { style -> style.background.alpha == 0 }
     ),
     StyleEffectivitySpec(

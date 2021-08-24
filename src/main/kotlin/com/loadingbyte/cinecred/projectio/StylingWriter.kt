@@ -40,7 +40,6 @@ private fun convert(value: Any): Any = when (value) {
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()
     is FPS -> value.toString2()
-    is Widening -> listOf(value.left, value.right, value.top, value.bottom)
     is List<*> -> value.filterNotNull().map(::convert)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")
 }

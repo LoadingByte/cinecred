@@ -155,7 +155,10 @@ data class LetterStyle(
     val tracking: Float,
     val foreground: Color,
     val background: Color,
-    val backgroundWidening: Widening,
+    val backgroundWidenLeft: Float,
+    val backgroundWidenRight: Float,
+    val backgroundWidenTop: Float,
+    val backgroundWidenBottom: Float,
     val underline: Boolean,
     val strikethrough: Boolean,
     val smallCaps: OptionallyEffective<Float>,
@@ -163,9 +166,6 @@ data class LetterStyle(
     val useUppercaseExceptions: Boolean,
     val superscript: Superscript
 ) : Style()
-
-
-data class Widening(val left: Float, val right: Float, val top: Float, val bottom: Float)
 
 
 enum class Superscript { SUP_2, SUP_1, NONE, SUB_1, SUB_2 }

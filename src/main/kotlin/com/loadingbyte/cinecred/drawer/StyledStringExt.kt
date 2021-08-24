@@ -155,8 +155,11 @@ private fun StyledString.generateFormattedString(textCtx: TextContext): Formatte
 
         fmtStr.setForeground(style.foreground, runStartIdx, runEndIdx)
         if (style.background.alpha != 0) {
-            val w = style.backgroundWidening
-            val bg = FormattedString.Background(style.background, w.left, w.right, w.top, w.bottom)
+            val bg = FormattedString.Background(
+                style.background,
+                style.backgroundWidenLeft, style.backgroundWidenRight,
+                style.backgroundWidenTop, style.backgroundWidenBottom
+            )
             fmtStr.setBackground(bg, runStartIdx, runEndIdx)
         }
         if (style.underline)

@@ -78,7 +78,7 @@ class FormattedString private constructor(
     }
 
     private fun getAttribute(attr: AttributedCharacterIterator.Attribute, atIdx: Int): Any? {
-        val attrCharIter = attrStr.getIterator(arrayOf(attr), startLim + atIdx, startLim + atIdx)
+        val attrCharIter = attrStr.getIterator(arrayOf(attr), startLim + atIdx, startLim + atIdx + 1)
         return attrCharIter.getAttribute(attr)
     }
 

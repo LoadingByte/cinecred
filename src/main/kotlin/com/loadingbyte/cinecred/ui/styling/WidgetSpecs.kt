@@ -58,10 +58,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
     NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f),
-    WidthWidgetSpec(LetterStyle::backgroundWidenLeft.st(), WidthSpec.NONE),
-    WidthWidgetSpec(LetterStyle::backgroundWidenRight.st(), WidthSpec.NONE),
-    WidthWidgetSpec(LetterStyle::backgroundWidenTop.st(), WidthSpec.NONE),
-    WidthWidgetSpec(LetterStyle::backgroundWidenBottom.st(), WidthSpec.NONE),
+    WidthWidgetSpec(LetterStyle::backgroundWidenLeft.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenRight.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenTop.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenBottom.st(), WidthSpec.TINY),
     UnionWidgetSpec(
         LetterStyle::backgroundWidenLeft.st(), LetterStyle::backgroundWidenRight.st(),
         LetterStyle::backgroundWidenTop.st(), LetterStyle::backgroundWidenBottom.st(),

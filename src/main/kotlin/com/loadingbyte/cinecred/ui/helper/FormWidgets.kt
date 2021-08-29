@@ -40,8 +40,9 @@ import kotlin.math.ceil
 
 
 enum class WidthSpec(val mig: String) {
-    NONE(""),
-    NARROW("width 100lp::40%"),
+    TINY("width 70lp!"),
+    NARROW("width 100lp!"),
+    FIT("width 100lp::40%"),
     WIDE("width 40%!"),
     FILL("width 100%!")
 }
@@ -279,7 +280,7 @@ open class ComboBoxWidget<E : Any /* non-null */>(
     }
 
     override val components = listOf(cb)
-    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
+    override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
 
     final override var items: ImmutableList<E> = persistentListOf()
         set(items) {

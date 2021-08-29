@@ -362,9 +362,15 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                             // Block call.
                         }
                     }
-                    // PDFBox is definitely not thread-safe.
+                    // PDFBox is definitely not thread-safe. Also, we check whether the document has been closed prior
+                    // to using it and do not want it to close later while we are using it. Since the closing operation
+                    // in the Picture class is also synchronized, we avoid such a situation.
                     synchronized(pic.doc) {
-                        PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
+                        // If the project that opened this document has been closed and with it the document (which is
+                        // possible because materialization might happen in a background thread), do not render the
+                        // PDF to avoid provoking an exception.
+                        if (!pic.doc.document.isClosed)
+                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
                     }
                 }
             }
@@ -535,8 +541,11 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                         mat.translate(-pic.minBox.x, pic.minBox.maxY - origHeight)
                     }
                     val pdForm = docRes.pdForms.getOrPut(pic) {
-                        // PDFBox is not thread-safe.
+                        // PDFBox is not thread-safe. Also, we have the same closing situation as with the
+                        // Graphics2DBackend further up this file. See the comments there for details.
                         synchronized(pic.doc) {
+                            if (pic.doc.document.isClosed)
+                                return
                             docRes.layerUtil.importPageAsForm(pic.doc, 0)
                         }
                     }

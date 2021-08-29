@@ -55,7 +55,11 @@ sealed class Picture {
         fun cropped() = PDF(aDoc, scaling, isCropped = true)
 
         override fun dispose() {
-            doc.close()
+            // Synchronize the closing operation so that other threads can safely check whether a document is closed
+            // and then use it in their own synchronized block.
+            synchronized(doc) {
+                doc.close()
+            }
         }
 
         private class AugmentedDoc(val doc: PDDocument) {

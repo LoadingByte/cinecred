@@ -107,20 +107,18 @@ class FormattedString private constructor(
         }
     }
 
-    fun breakLines(
-        wrappingWidth: Float,
-        locale: Locale,
-        action: (lineStartPos: Int, lineEndPos: Int, strEndPos: Int) -> Unit
-    ) {
+    fun breakLines(wrappingWidth: Float, locale: Locale): List<Int> {
         // Employ a LineBreakMeasurer to find the best spots to insert a newline.
+        val breaks = mutableListOf(0)
         val attrCharIter = attrStr.getIterator(arrayOf(TextAttribute.FONT), startLim, endLim)
         val lineMeasurer = LineBreakMeasurer(attrCharIter, BreakIterator.getLineInstance(locale), REF_FRC)
-        while (lineMeasurer.position < attrCharIter.endIndex) {
-            val lineStartPos = lineMeasurer.position
+        while (lineMeasurer.position != attrCharIter.endIndex) {
             val lineEndPos = lineMeasurer.nextOffset(wrappingWidth)
             lineMeasurer.position = lineEndPos
-            action(lineStartPos - startLim, lineEndPos - startLim, attrCharIter.endIndex)
+            breaks.add(lineEndPos)
         }
+        return breaks
+    }
     }
 
 

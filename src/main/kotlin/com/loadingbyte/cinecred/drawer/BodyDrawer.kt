@@ -362,10 +362,12 @@ fun drawBodyImageWithParagraphsBodyLayout(
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
             val fmtStr = bodyElem.str.formatted(textCtx)
-            fmtStr.breakLines(bodyImageWidth, textCtx.locale) { lineStartPos, lineEndPos, strEndPos ->
-                val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos).trim()
+            val lineBreaks = fmtStr.breakLines(bodyImageWidth, textCtx.locale)
+            for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
+                // Note: If the line contains only whitespace, this skips to the next line.
+                val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos).trim() ?: continue
 
-                val isLastLine = lineEndPos == strEndPos
+                val isLastLine = lineEndPos == fmtStr.string.length
                 val curLineHJustify = style.paragraphsLineHJustify.toSingleLineHJustify(isLastLine)
 
                 // Case 1a: Full justification.

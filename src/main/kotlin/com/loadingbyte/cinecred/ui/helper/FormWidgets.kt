@@ -201,7 +201,7 @@ class TimecodeWidget(
     fps: FPS,
     timecodeFormat: TimecodeFormat,
     widthSpec: WidthSpec? = null
-) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec) {
+) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec ?: WidthSpec.FIT) {
 
     var fps: FPS = fps
         set(fps) {

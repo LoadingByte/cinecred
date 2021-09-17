@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.project.*
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Color
 import java.nio.file.Path
@@ -76,11 +75,20 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 
     val settingValues = getStyleSettings(styleClass).map { setting ->
         try {
-            val value = convert(setting.type, setting.genericArg, map.getValue(setting.name))
-            setting.valueToPlain(value)
+            when (setting) {
+                is DirectStyleSetting ->
+                    convert(setting.type, map.getValue(setting.name))
+                is OptStyleSetting ->
+                    Opt(true, convert(setting.type, map.getValue(setting.name)))
+                is ListStyleSetting ->
+                    (map.getValue(setting.name) as List<*>)
+                        .filterNotNull()
+                        .map { convert(setting.type, it) }
+                        .toImmutableList()
+            }
         } catch (_: RuntimeException) {
             // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
-            setting.getPlain(stylePreset)
+            setting.get(stylePreset)
         }
     }
 
@@ -88,7 +96,7 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 }
 
 
-private fun convert(type: Class<*>, genericArg: Class<*>?, raw: Any): Any = when (type) {
+private fun convert(type: Class<*>, raw: Any): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
     Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
@@ -98,10 +106,6 @@ private fun convert(type: Class<*>, genericArg: Class<*>?, raw: Any): Any = when
     FPS::class.java -> (raw as String).toFPS()
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> (raw as String).toEnum(type)
-        ImmutableList::class.java.isAssignableFrom(type) ->
-            (raw as List<*>)
-                .map { convert(genericArg!!, null, it!!) }
-                .toImmutableList()
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

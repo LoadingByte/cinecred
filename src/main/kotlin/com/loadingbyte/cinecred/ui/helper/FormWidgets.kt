@@ -7,7 +7,7 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
-import com.loadingbyte.cinecred.project.OptionallyEffective
+import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
 import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.projectio.parseTimecode
@@ -516,77 +516,6 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
 }
 
 
-class ToggleButtonGroupListWidget<E : Any /* non-null */>(
-    items: List<E>,
-    private val toIcon: ((E) -> Icon)? = null,
-    private val toLabel: ((E) -> String)? = null,
-    private val toTooltip: ((E) -> String)? = null,
-    groupsPerRow: Int
-) : Form.AbstractWidget<ImmutableList<E>>(), Form.ChoiceWidget<ImmutableList<E>, E> {
-
-    private val panel = object : JPanel(MigLayout("insets 0, wrap $groupsPerRow")) {
-        override fun getBaseline(width: Int, height: Int): Int {
-            // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component.
-            // By selecting the first one, we let the panel's baseline be the one of the first row of button groups.
-            return if (components.isEmpty()) -1 else components[0].getBaseline(-1, -1 /* not used */)
-        }
-    }
-
-    private val addBtn = JButton(ADD_ICON)
-    private val delBtn = JButton(REMOVE_ICON).apply { isEnabled = false }
-    private val tbgs = mutableListOf<ToggleButtonGroupWidget<E>>()
-
-    init {
-        addBtn.addActionListener { value = (value + value.last()).toImmutableList() }
-        delBtn.addActionListener { value = value.dropLast(1).toImmutableList() }
-    }
-
-    override val components = listOf<JComponent>(panel, addBtn, delBtn)
-    override val constraints = listOf("split", "aligny top", "aligny top")
-
-    override var items: ImmutableList<E> = items.toImmutableList()
-        set(items) {
-            field = items
-            var willNotifyChangeListeners = false
-            for (tbg in tbgs) {
-                val oldValue = tbg.value
-                tbg.items = items
-                if (tbg.value != oldValue)
-                    willNotifyChangeListeners = true
-            }
-            if (willNotifyChangeListeners)
-                notifyChangeListeners()
-        }
-
-    override var value: ImmutableList<E>
-        get() = tbgs.map { it.value }.toImmutableList()
-        set(value) {
-            while (tbgs.size < value.size) {
-                val tbg = ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
-                tbg.changeListeners.add(::notifyChangeListeners)
-                tbgs.add(tbg)
-                panel.add(tbg.components[0], tbg.constraints[0])
-            }
-            while (tbgs.size > value.size)
-                panel.remove(tbgs.removeLast().components[0])
-            for ((tbg, item) in tbgs.zip(value))
-                tbg.value = item
-            panel.revalidate()
-            delBtn.isEnabled = tbgs.size != 1
-            notifyChangeListeners()
-        }
-
-    override var isEnabled: Boolean
-        get() = super.isEnabled
-        set(isEnabled) {
-            super.isEnabled = isEnabled
-            if (isEnabled && tbgs.size == 1)
-                delBtn.isEnabled = false
-        }
-
-}
-
-
 class ColorWellWidget(
     allowAlpha: Boolean = true,
     widthSpec: WidthSpec? = null
@@ -807,13 +736,13 @@ class FontChooserWidget(
 }
 
 
-class OptionallyEffectiveWidget<V>(
+class OptWidget<V>(
     private val wrapped: Form.Widget<V>
-) : Form.AbstractWidget<OptionallyEffective<V>>() {
+) : Form.AbstractWidget<Opt<V>>() {
 
     init {
-        // Forward all change events regarding the wrapped widget to this widget's change listeners.
-        wrapped.changeListeners.add(::notifyChangeListeners)
+        // When the wrapped widget changes, notify this widget's change listeners that __this__ widget has changed.
+        wrapped.changeListeners.add { notifyChangeListeners() }
     }
 
     private val cb = JCheckBox().apply {
@@ -826,10 +755,10 @@ class OptionallyEffectiveWidget<V>(
     override val components = listOf(cb) + wrapped.components
     override val constraints = listOf("split") + wrapped.constraints
 
-    override var value: OptionallyEffective<V>
-        get() = OptionallyEffective(cb.isSelected, wrapped.value)
+    override var value: Opt<V>
+        get() = Opt(cb.isSelected, wrapped.value)
         set(value) {
-            cb.isSelected = value.isEffective
+            cb.isSelected = value.isActive
             wrapped.value = value.value
         }
 
@@ -844,6 +773,105 @@ class OptionallyEffectiveWidget<V>(
 }
 
 
+class ListWidget<V>(
+    private val groupsPerRow: Int = 1,
+    private val minSize: Int = 0,
+    private val newWidget: () -> Form.Widget<V>
+) : Form.AbstractWidget<ImmutableList<V>>() {
+
+    private val addBtn = JButton(ADD_ICON)
+
+    private val panel = object : JPanel(MigLayout("insets 0")) {
+        override fun getBaseline(width: Int, height: Int): Int {
+            // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component.
+            // By selecting the first one which has a valid baseline, we usually let the panel's baseline be the one
+            // of the first row of wrapped widgets.
+            for (comp in components) {
+                val baseline = comp.getBaseline(0, 0 /* not used */)
+                if (baseline >= 0)
+                    return baseline
+            }
+            return -1
+        }
+
+        private var isInitialized = false
+        fun ensureInitialized(numComponentsPerWidget: Int) {
+            if (!isInitialized) {
+                isInitialized = true
+                val l = layout as MigLayout
+                l.layoutConstraints = "${l.layoutConstraints}, wrap ${groupsPerRow * (1 + numComponentsPerWidget)}"
+                revalidate()
+            }
+        }
+    }
+
+    private val elemWidgets = mutableListOf<Form.Widget<V>>()
+    private val elemDelBtns = mutableListOf<JButton>()
+
+    init {
+        addBtn.addActionListener {
+            addElemWidget(copyLastValue = true)
+            notifyChangeListeners()
+        }
+    }
+
+    override val components = listOf<JComponent>(addBtn, panel)
+    override val constraints = listOf("split, aligny top", "")
+
+    override var value: ImmutableList<V>
+        get() = elemWidgets.map { it.value }.toImmutableList()
+        set(value) {
+            while (elemWidgets.size < value.size)
+                addElemWidget()
+            while (elemWidgets.size > value.size)
+                removeElemWidget(elemWidgets.lastIndex)
+            for ((widget, item) in elemWidgets.zip(value))
+                widget.value = item
+            notifyChangeListeners()
+        }
+
+    private fun addElemWidget(copyLastValue: Boolean = false) {
+        val delBtn = JButton(REMOVE_ICON)
+        delBtn.addActionListener {
+            removeElemWidget(elemDelBtns.indexOfFirst { it === delBtn })
+            notifyChangeListeners()
+        }
+        elemDelBtns.add(delBtn)
+        panel.add(delBtn, "gapx 6lp 0lp")
+
+        val widget = newWidget()
+        // If this is the first widget we have created, we now have enough information to complete the
+        // initialization of the panel.
+        panel.ensureInitialized(widget.components.size)
+        // If requested,the new widget should start out with the same value as the current last one.
+        if (copyLastValue && elemWidgets.size != 0)
+            widget.value = elemWidgets.last().value
+        // When the wrapped widget changes, notify this widget's change listeners that __this__ widget has changed.
+        widget.changeListeners.add { notifyChangeListeners() }
+        elemWidgets.add(widget)
+        for ((comp, constr) in widget.components.zip(widget.constraints))
+            panel.add(comp, constr)
+
+        panel.revalidate()
+        enableOrDisableDelBtns()
+    }
+
+    private fun removeElemWidget(idx: Int) {
+        elemWidgets.removeAt(idx).components.forEach(panel::remove)
+        panel.remove(elemDelBtns.removeAt(idx))
+        panel.revalidate()
+        enableOrDisableDelBtns()
+    }
+
+    private fun enableOrDisableDelBtns() {
+        val enabled = elemWidgets.size > minSize
+        for (delBtn in elemDelBtns)
+            delBtn.isEnabled = enabled
+    }
+
+}
+
+
 class UnionWidget(
     private val wrapped: List<Form.Widget<*>>,
     icons: List<Icon>
@@ -852,9 +880,9 @@ class UnionWidget(
     init {
         require(wrapped.size == icons.size)
 
-        // Forward all change events regarding the wrapped widgets to this widget's change listeners.
+        // When a wrapped widget changes, notify this widget's change listeners that __the wrapped__ widget has changed.
         for (widget in wrapped)
-            widget.changeListeners.add(::notifyChangeListeners)
+            widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
     override val components: List<JComponent> = mutableListOf<JComponent>().apply {

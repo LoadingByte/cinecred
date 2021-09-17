@@ -2,33 +2,8 @@ package com.loadingbyte.cinecred.project
 
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-
-
-interface StyleSetting<S : Style, V> {
-    val styleClass: Class<S>
-    val name: String
-    val type: Class<V>
-    val genericArg: Class<*>?
-
-    fun getPlain(style: S): Any?
-    fun getValue(style: S): V
-    fun valueToPlain(value: Any?): Any?
-}
-
-
-interface RegularStyleSetting<S : Style, V> : StyleSetting<S, V> {
-    override fun getPlain(style: S): V
-    override fun valueToPlain(value: Any?): Any? = value
-}
-
-
-interface OptionallyEffectiveStyleSetting<S : Style, V> : StyleSetting<S, V> {
-    override fun getPlain(style: S): OptionallyEffective<V>
-    override fun valueToPlain(value: Any?): OptionallyEffective<Any?> = OptionallyEffective(true, value)
-}
 
 
 private val settingsCache = HashMap<Class<*>, List<StyleSetting<*, *>>>()
@@ -38,10 +13,14 @@ fun <S : Style> getStyleSettings(styleClass: Class<S>): List<StyleSetting<S, *>>
     return if (cached == null)
         styleClass.declaredFields
             .map { field ->
-                if (field.type == OptionallyEffective::class.java)
-                    ReflectedOptEffStyleSetting(styleClass, field.name)
-                else
-                    ReflectedRegularStyleSetting(styleClass, field.name)
+                when {
+                    Opt::class.java == field.type ->
+                        ReflectedOptStyleSetting(styleClass, field.name)
+                    List::class.java.isAssignableFrom(field.type) ->
+                        ReflectedListStyleSetting(styleClass, field.name)
+                    else ->
+                        ReflectedDirectStyleSetting(styleClass, field.name)
+                }
             }
             .also { settingsCache[styleClass] = it }
     else
@@ -50,11 +29,14 @@ fun <S : Style> getStyleSettings(styleClass: Class<S>): List<StyleSetting<S, *>>
 }
 
 
-fun <S : Style, V> KProperty1<S, V>.st(): RegularStyleSetting<S, V> =
-    KProperty1RegularStyleSetting(this)
+fun <S : Style, V : Any> KProperty1<S, V>.st(): DirectStyleSetting<S, V> =
+    KProperty1DirectStyleSetting(this)
 
-fun <S : Style, V> KProperty1<S, OptionallyEffective<V>>.st(): OptionallyEffectiveStyleSetting<S, V> =
-    KProperty1OptEffStyleSetting(this)
+fun <S : Style, V : Any> KProperty1<S, Opt<V>>.st(): OptStyleSetting<S, V> =
+    KProperty1OptStyleSetting(this)
+
+fun <S : Style, V : Any> KProperty1<S, List<V>>.st(): ListStyleSetting<S, V> =
+    KProperty1ListStyleSetting(this)
 
 
 fun <S : Style> newStyle(styleClass: Class<S>, settingValues: List<*>): S =
@@ -63,30 +45,20 @@ fun <S : Style> newStyle(styleClass: Class<S>, settingValues: List<*>): S =
         .newInstance(*settingValues.toTypedArray())
 
 
-private abstract class AbstractStyleSetting<S : Style, V>(
-    final override val styleClass: Class<S>,
-    final override val name: String
-) : StyleSetting<S, V> {
+sealed class StyleSetting<S : Style, V : Any>(val styleClass: Class<S>, val name: String, isNested: Boolean) {
 
-    final override val type: Class<V>
-    final override val genericArg: Class<*>?
+    val type: Class<V>
 
     init {
-        val (type, genericArg) = findTypes(styleClass.getDeclaredField(name).genericType)
+        var baseType = styleClass.getDeclaredField(name).genericType
+        if (isNested)
+            baseType = (baseType as ParameterizedType).actualTypeArguments[0]
         @Suppress("UNCHECKED_CAST")
-        this.type = type as Class<V>
-        this.genericArg = genericArg
+        type = (if (baseType is ParameterizedType) baseType.rawType else baseType) as Class<V>
     }
 
-    private fun findTypes(genericType: Type): Pair<Class<*>, Class<*>?> =
-        if (genericType is ParameterizedType && genericType.rawType == OptionallyEffective::class.java) {
-            findTypes(genericType.actualTypeArguments[0])
-        } else {
-            if (genericType is ParameterizedType)
-                Pair(genericType.rawType as Class<*>, genericType.actualTypeArguments[0] as Class<*>)
-            else
-                Pair(genericType as Class<*>, null)
-        }
+    abstract fun get(style: S): Any?
+    abstract fun extractValues(style: S): List<V>
 
     override fun equals(other: Any?) =
         this === other || other is StyleSetting<*, *> && styleClass == other.styleClass && name == other.name
@@ -97,63 +69,76 @@ private abstract class AbstractStyleSetting<S : Style, V>(
         return result
     }
 
-    override fun toString(): String {
-        val genericArgStr = genericArg?.let { "<${it.simpleName}>" } ?: ""
-        return "StyleSetting(${styleClass.simpleName}.$name: ${type.simpleName}$genericArgStr)"
-    }
+    override fun toString() =
+        "StyleSetting(${styleClass.simpleName}.$name: ${type.simpleName})"
 
 }
 
 
-private class ReflectedRegularStyleSetting<S : Style>(
-    styleClass: Class<S>,
-    name: String
-) : AbstractStyleSetting<S, Any?>(styleClass, name), RegularStyleSetting<S, Any?> {
-
-    private val getter = styleClass.getDeclaredMethod("get" + name.replaceFirstChar(Char::uppercase))
-
-    override fun getPlain(style: S): Any? = getter.invoke(style)
-    override fun getValue(style: S): Any? = getPlain(style)
-
+abstract class DirectStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, V>(styleClass, name, isNested = false) {
+    abstract override fun get(style: S): V
+    override fun extractValues(style: S): List<V> = listOf(get(style))
 }
 
 
-private class ReflectedOptEffStyleSetting<S : Style>(
-    styleClass: Class<S>,
-    name: String
-) : AbstractStyleSetting<S, Any?>(styleClass, name), OptionallyEffectiveStyleSetting<S, Any?> {
-
-    private val getter = styleClass.getDeclaredMethod("get" + name.replaceFirstChar(Char::uppercase))
-
-    override fun getPlain(style: S) = getter.invoke(style) as OptionallyEffective<Any?>
-    override fun getValue(style: S): Any? = getPlain(style).value
-
+abstract class OptStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, V>(styleClass, name, isNested = true) {
+    abstract override fun get(style: S): Opt<V>
+    override fun extractValues(style: S): List<V> = get(style).run { if (isActive) listOf(value) else emptyList() }
 }
+
+
+abstract class ListStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, V>(styleClass, name, isNested = true) {
+    abstract override fun get(style: S): List<V>
+    override fun extractValues(style: S): List<V> = get(style)
+}
+
+
+private class ReflectedDirectStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
+    DirectStyleSetting<S, Any>(styleClass, name) {
+    private val getter = styleClass.getGetter(name)
+    override fun get(style: S): Any = getter.invoke(style)
+}
+
+
+private class ReflectedOptStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
+    OptStyleSetting<S, Any>(styleClass, name) {
+    private val getter = styleClass.getGetter(name)
+    override fun get(style: S): Opt<Any> = @Suppress("UNCHECKED_CAST") (getter.invoke(style) as Opt<Any>)
+}
+
+
+private class ReflectedListStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
+    ListStyleSetting<S, Any>(styleClass, name) {
+    private val getter = styleClass.getGetter(name)
+    override fun get(style: S): List<Any> = @Suppress("UNCHECKED_CAST") (getter.invoke(style) as List<Any>)
+}
+
+
+private class KProperty1DirectStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, V>) :
+    DirectStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): V = kProp.get(style)
+}
+
+
+private class KProperty1OptStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, Opt<V>>) :
+    OptStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): Opt<V> = kProp.get(style)
+}
+
+
+private class KProperty1ListStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, List<V>>) :
+    ListStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): List<V> = kProp.get(style)
+}
+
+
+private fun Class<*>.getGetter(fieldName: String) =
+    getDeclaredMethod("get" + fieldName.replaceFirstChar(Char::uppercase))
 
 
 @Suppress("UNCHECKED_CAST")
-private class KProperty1RegularStyleSetting<S : Style, V>(
-    private val kProp: KProperty1<S, V>
-) : AbstractStyleSetting<S, V>(
-    styleClass = (kProp.javaClass.getMethod("getOwner").invoke(kProp) as KClass<*>).java as Class<S>,
-    name = kProp.name
-), RegularStyleSetting<S, V> {
-
-    override fun getPlain(style: S): V = kProp.get(style)
-    override fun getValue(style: S): V = getPlain(style)
-
-}
-
-
-@Suppress("UNCHECKED_CAST")
-private class KProperty1OptEffStyleSetting<S : Style, V>(
-    private val kProp: KProperty1<S, OptionallyEffective<V>>
-) : AbstractStyleSetting<S, V>(
-    styleClass = (kProp.javaClass.getMethod("getOwner").invoke(kProp) as KClass<*>).java as Class<S>,
-    name = kProp.name
-), OptionallyEffectiveStyleSetting<S, V> {
-
-    override fun getPlain(style: S): OptionallyEffective<V> = kProp.get(style)
-    override fun getValue(style: S): V = getPlain(style).value
-
-}
+private fun <T> KProperty1<T, *>.getOwnerClass() =
+    (javaClass.getMethod("getOwner").invoke(this) as KClass<*>).java as Class<T>

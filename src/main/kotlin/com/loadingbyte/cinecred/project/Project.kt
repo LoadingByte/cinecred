@@ -56,7 +56,7 @@ data class Global(
     val heightPx: Int,
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
-    val runtimeFrames: OptionallyEffective<Int>,
+    val runtimeFrames: Opt<Int>,
     val grounding: Color,
     val unitVGapPx: Float,
     val locale: Locale,
@@ -161,7 +161,7 @@ data class LetterStyle(
     val backgroundWidenBottom: Float,
     val underline: Boolean,
     val strikethrough: Boolean,
-    val smallCaps: OptionallyEffective<Float>,
+    val smallCaps: Opt<Float>,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
     val superscript: Superscript
@@ -171,7 +171,7 @@ data class LetterStyle(
 enum class Superscript { SUP_2, SUP_1, NONE, SUB_1, SUB_2 }
 
 
-data class OptionallyEffective<out T>(val isEffective: Boolean, val value: T)
+data class Opt<out T>(val isActive: Boolean, val value: T)
 
 
 class Page(

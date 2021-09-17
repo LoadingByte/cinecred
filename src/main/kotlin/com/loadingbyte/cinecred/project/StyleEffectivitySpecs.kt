@@ -100,11 +100,11 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
 
 
 class StyleEffectivitySpec<S : Style>(
-    vararg settings: StyleSetting<S, Any?>,
+    vararg settings: StyleSetting<S, Any>,
     val isAlmostEffective: ((S) -> Boolean)? = null,
     val isTotallyIneffective: ((S) -> Boolean)? = null
 ) {
-    val settings: List<StyleSetting<S, Any?>> = settings.toList()
+    val settings: List<StyleSetting<S, Any>> = settings.toList()
 
     init {
         require(isAlmostEffective != null || isTotallyIneffective != null)
@@ -112,14 +112,10 @@ class StyleEffectivitySpec<S : Style>(
 }
 
 
-enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, OPTIONALLY_INEFFECTIVE, EFFECTIVE }
+enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, EFFECTIVE }
 
 fun <S : Style> findIneffectiveSettings(style: S): Map<StyleSetting<*, *>, Effectivity> {
     val result = HashMap<StyleSetting<*, *>, Effectivity>()
-
-    for (setting in getStyleSettings(style.javaClass))
-        if (setting is OptionallyEffectiveStyleSetting && !setting.getPlain(style).isEffective)
-            result[setting] = Effectivity.OPTIONALLY_INEFFECTIVE
 
     fun mark(settings: List<StyleSetting<*, *>>, tier: Effectivity) {
         for (setting in settings)

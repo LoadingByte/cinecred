@@ -80,7 +80,11 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 comp.putClientProperty(OUTLINE, outline)
         }
 
-        protected fun notifyChangeListeners(changed: Widget<*> = this) {
+        protected fun notifyChangeListeners() {
+            notifyChangeListenersAboutOtherWidgetChange(this)
+        }
+
+        protected fun notifyChangeListenersAboutOtherWidgetChange(changed: Widget<*>) {
             for (listener in changeListeners)
                 listener(changed)
         }

@@ -29,7 +29,20 @@ private fun <S : Style> writeStyle(style: S): Map<String, Any> {
     val excludedSettings = findIneffectiveSettings(style)
     for (setting in getStyleSettings(style.javaClass))
         if (setting !in excludedSettings)
-            setting.getValue(style)?.let { toml[setting.name] = convert(it) }
+            when (setting) {
+                is DirectStyleSetting ->
+                    toml[setting.name] = convert(setting.get(style))
+                is OptStyleSetting -> {
+                    val opt = setting.get(style)
+                    if (opt.isActive)
+                        toml[setting.name] = convert(opt.value)
+                }
+                is ListStyleSetting -> {
+                    val list = setting.get(style)
+                    if (list.isNotEmpty())
+                        toml[setting.name] = list.map(::convert)
+                }
+            }
     return toml
 }
 
@@ -40,6 +53,5 @@ private fun convert(value: Any): Any = when (value) {
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()
     is FPS -> value.toString2()
-    is List<*> -> value.filterNotNull().map(::convert)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")
 }

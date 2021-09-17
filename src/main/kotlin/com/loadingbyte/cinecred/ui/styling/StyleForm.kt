@@ -16,9 +16,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     private var changeListener: ((StyleSetting<S, *>) -> Unit)? = null
 
     private val backingWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
-    private val valueWidgets = ArrayList<Pair<StyleSetting<S, *>, Widget<*>>>()
+    private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
+    private val valueWidgetsInv = HashMap<Widget<*>, StyleSetting<S, *>>()
     private val rootWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
-    private val relatedSettings = HashMap<Widget<*>, StyleSetting<S, *>>()
 
     private var disableRefresh = false
 
@@ -41,11 +41,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val (backingWidget, valueWidget) = makeSettingWidget(setting)
-        backingWidgets[setting] = backingWidget
-        valueWidgets.add(Pair(setting, valueWidget))
+        if (backingWidget != null)
+            backingWidgets[setting] = backingWidget
+        valueWidgets[setting] = valueWidget
+        valueWidgetsInv[valueWidget] = setting
         rootWidgets[setting] = valueWidget
-        relatedSettings[backingWidget] = setting
-        relatedSettings[valueWidget] = setting
         addRootWidget(setting.name, valueWidget)
     }
 
@@ -53,11 +53,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val wrappedWidgets = mutableListOf<Widget<*>>()
         for (setting in spec.settings) {
             val (backingWidget, valueWidget) = makeSettingWidget(setting)
+            if (backingWidget != null)
+                backingWidgets[setting] = backingWidget
             wrappedWidgets.add(valueWidget)
-            backingWidgets[setting] = backingWidget
-            valueWidgets.add(Pair(setting, valueWidget))
-            relatedSettings[backingWidget] = setting
-            relatedSettings[valueWidget] = setting
+            valueWidgets[setting] = valueWidget
+            valueWidgetsInv[valueWidget] = setting
         }
         val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
         for (setting in spec.settings)
@@ -66,10 +66,41 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     // Returns backing widget and value widget.
-    private fun <V> makeSettingWidget(setting: StyleSetting<S, V>): Pair<Widget<*>, Widget<*>> {
+    private fun makeSettingWidget(setting: StyleSetting<S, *>): Pair<Widget<*>?, Widget<*>> {
         val settingConstraints = getStyleConstraints(styleClass).filter { c -> setting in c.settings }
         val settingWidgetSpecs = getStyleWidgetSpecs(styleClass).filter { s -> setting in s.settings }
 
+        return when (setting) {
+            is DirectStyleSetting -> {
+                val widget = makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
+                Pair(widget, widget)
+            }
+            is OptStyleSetting -> {
+                val backingWidget = makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
+                Pair(backingWidget, OptWidget(backingWidget))
+            }
+            is ListStyleSetting -> {
+                if (setting.type == String::class.java) {
+                    val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
+                    val widget = TextListWidget(widthWidgetSpec?.widthSpec)
+                    Pair(widget, widget)
+                } else {
+                    val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
+                    val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S>>()
+                    val valueWidget = ListWidget(listWidgetSpec?.groupsPerRow ?: 1, minSizeConstr?.minSize ?: 0) {
+                        makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
+                    }
+                    Pair(null, valueWidget)
+                }
+            }
+        }
+    }
+
+    private fun makeBackingSettingWidget(
+        setting: StyleSetting<S, *>,
+        settingConstraints: List<StyleConstraint<S, *>>,
+        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+    ): Widget<*> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
@@ -78,13 +109,11 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberStepWidgetSpec = settingWidgetSpecs.oneOf<NumberStepWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S>>()
-        val toggleButtonGroupListWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupListWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
-        val settingGenericArg = setting.genericArg
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        val backingWidget = when (setting.type) {
+        return when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
@@ -116,6 +145,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
             FPS::class.java -> FPSWidget(widthSpec)
+            TextDecoration::class.java -> TextDecorationWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(
@@ -126,30 +156,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                     else ->
                         makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
                 }
-                ImmutableList::class.java.isAssignableFrom(setting.type) && settingGenericArg != null -> when {
-                    String::class.java == settingGenericArg -> TextListWidget(widthSpec)
-                    Enum::class.java.isAssignableFrom(settingGenericArg) ->
-                        if (toggleButtonGroupListWidgetSpec != null)
-                            makeEnumTBGWidget(
-                                settingGenericArg, toggleButtonGroupListWidgetSpec.show, list = true,
-                                toggleButtonGroupListWidgetSpec.groupsPerRow
-                            )
-                        else
-                            throw UnsupportedOperationException("Enum lists must use ToggleButtonGroupWidgetSpec.")
-                    else -> throw UnsupportedOperationException(
-                        "UI unsupported for objects of type ${setting.type.name}<${settingGenericArg.name}>."
-                    )
-                }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
-
-        val valueWidget = when (setting) {
-            is OptionallyEffectiveStyleSetting -> OptionallyEffectiveWidget(backingWidget)
-            else -> backingWidget
-        }
-
-        return Pair(backingWidget, valueWidget)
     }
 
     private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>, widthSpec: WidthSpec?) =
@@ -157,9 +166,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     private fun <E : Any /* non-null */> makeEnumTBGWidget(
         enumClass: Class<E>,
-        show: ToggleButtonGroupWidgetSpec.Show,
-        list: Boolean = false,
-        groupsPerRow: Int = -1,
+        show: ToggleButtonGroupWidgetSpec.Show
     ): Widget<*> {
         var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
         var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
@@ -172,10 +179,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         }
 
         val items = enumClass.enumConstants.asList()
-        return if (list)
-            ToggleButtonGroupListWidget(items, toIcon, toLabel, toTooltip, groupsPerRow)
-        else
-            ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
+        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
     }
 
     private fun addRootWidget(name: String, widget: Widget<*>) {
@@ -193,7 +197,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         try {
             for ((setting, widget) in valueWidgets)
                 @Suppress("UNCHECKED_CAST")
-                (widget as Widget<Any?>).value = setting.getPlain(style)
+                (widget as Widget<Any?>).value = setting.get(style)
         } finally {
             disableRefresh = false
         }
@@ -229,7 +233,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
 
     override fun onChange(widget: Widget<*>) {
         refresh()
-        changeListener?.invoke(relatedSettings.getValue(widget))
+        changeListener?.invoke(valueWidgetsInv.getValue(widget))
     }
 
     private fun refresh() {
@@ -241,7 +245,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         for ((setting, widget) in valueWidgets) {
             val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
             widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-            widget.isEnabled = effectivity >= Effectivity.OPTIONALLY_INEFFECTIVE
+            widget.isEnabled = effectivity == Effectivity.EFFECTIVE
         }
     }
 

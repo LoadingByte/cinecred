@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui.styling
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
-import kotlinx.collections.immutable.ImmutableList
 import javax.swing.Icon
 
 
@@ -36,7 +35,8 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemBoxConform.st(), ICON),
-    ToggleButtonGroupListWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON, groupsPerRow = 4),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON),
+    ListWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), groupsPerRow = 3),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
@@ -79,12 +79,12 @@ sealed class StyleWidgetSpec<S : Style>(
 
 
 class NewSectionWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Any?>
+    setting: StyleSetting<S, Any>
 ) : StyleWidgetSpec<S>(setting)
 
 
 class WidthWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Any?>,
+    setting: StyleSetting<S, Any>,
     val widthSpec: WidthSpec
 ) : StyleWidgetSpec<S>(setting)
 
@@ -103,13 +103,6 @@ class ToggleButtonGroupWidgetSpec<S : Style>(
 }
 
 
-class ToggleButtonGroupListWidgetSpec<S : Style>(
-    setting: StyleSetting<S, ImmutableList<Enum<*>>>,
-    val show: ToggleButtonGroupWidgetSpec.Show,
-    val groupsPerRow: Int
-) : StyleWidgetSpec<S>(setting)
-
-
 class TimecodeWidgetSpec<S : Style>(
     setting: StyleSetting<S, Number>,
     val getFPS: (Styling, S) -> FPS,
@@ -118,7 +111,7 @@ class TimecodeWidgetSpec<S : Style>(
 
 
 class UnionWidgetSpec<S : Style>(
-    vararg settings: StyleSetting<S, Any?>,
+    vararg settings: StyleSetting<S, Any>,
     val unionName: String,
     val settingIcons: List<Icon>
 ) : StyleWidgetSpec<S>(*settings) {
@@ -126,3 +119,9 @@ class UnionWidgetSpec<S : Style>(
         require(settings.size == settingIcons.size)
     }
 }
+
+
+class ListWidgetSpec<S : Style>(
+    setting: ListStyleSetting<S, Any>,
+    val groupsPerRow: Int
+) : StyleWidgetSpec<S>(setting)

@@ -9,12 +9,12 @@ import javax.swing.Icon
 
 @Suppress("UNCHECKED_CAST")
 fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<S>> = when (styleClass) {
-    Global::class.java -> GLOBAL_WIDGET_SPECS as List<StyleWidgetSpec<S>>
-    PageStyle::class.java -> PAGE_STYLE_WIDGET_SPECS as List<StyleWidgetSpec<S>>
-    ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS as List<StyleWidgetSpec<S>>
-    LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS as List<StyleWidgetSpec<S>>
+    Global::class.java -> GLOBAL_WIDGET_SPECS
+    PageStyle::class.java -> PAGE_STYLE_WIDGET_SPECS
+    ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS
+    LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
-}
+} as List<StyleWidgetSpec<S>>
 
 
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(

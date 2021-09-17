@@ -3,12 +3,12 @@ package com.loadingbyte.cinecred.project
 
 @Suppress("UNCHECKED_CAST")
 fun <S : Style> getStyleEffectivitySpecs(styleClass: Class<S>): List<StyleEffectivitySpec<S>> = when (styleClass) {
-    Global::class.java -> GLOBAL_EFFECTIVITY_SPECS as List<StyleEffectivitySpec<S>>
-    PageStyle::class.java -> PAGE_STYLE_EFFECTIVITY_SPECS as List<StyleEffectivitySpec<S>>
-    ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS as List<StyleEffectivitySpec<S>>
-    LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS as List<StyleEffectivitySpec<S>>
+    Global::class.java -> GLOBAL_EFFECTIVITY_SPECS
+    PageStyle::class.java -> PAGE_STYLE_EFFECTIVITY_SPECS
+    ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS
+    LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
-}
+} as List<StyleEffectivitySpec<S>>
 
 
 private val GLOBAL_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Global>> = emptyList()

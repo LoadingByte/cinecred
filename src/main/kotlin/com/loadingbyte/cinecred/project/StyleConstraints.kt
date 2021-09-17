@@ -12,18 +12,18 @@ import kotlin.math.floor
 
 
 @Suppress("UNCHECKED_CAST")
-fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<S, *>> = when (styleClass) {
-    Global::class.java -> GLOBAL_META as List<StyleConstraint<S, *>>
-    PageStyle::class.java -> PAGE_STYLE_META as List<StyleConstraint<S, *>>
-    ContentStyle::class.java -> CONTENT_STYLE_META as List<StyleConstraint<S, *>>
-    LetterStyle::class.java -> LETTER_STYLE_META as List<StyleConstraint<S, *>>
+fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<S, *, *>> = when (styleClass) {
+    Global::class.java -> GLOBAL_CONSTRAINTS
+    PageStyle::class.java -> PAGE_STYLE_CONSTRAINTS
+    ContentStyle::class.java -> CONTENT_STYLE_CONSTRAINTS
+    LetterStyle::class.java -> LETTER_STYLE_CONSTRAINTS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
-}
+} as List<StyleConstraint<S, *>>
 
 
 private const val ASPECT_RATIO_LIMIT = 32
 
-private val GLOBAL_META: List<StyleConstraint<Global, *>> = listOf(
+private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     IntConstr(ERROR, Global::widthPx.st(), min = 1),
     IntConstr(ERROR, Global::heightPx.st(), min = 1),
     JudgeConstr(
@@ -47,7 +47,7 @@ private val GLOBAL_META: List<StyleConstraint<Global, *>> = listOf(
 )
 
 
-private val PAGE_STYLE_META: List<StyleConstraint<PageStyle, *>> = listOf(
+private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
     JudgeConstr(WARN, l10n("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
@@ -64,7 +64,7 @@ private val PAGE_STYLE_META: List<StyleConstraint<PageStyle, *>> = listOf(
 )
 
 
-private val CONTENT_STYLE_META: List<StyleConstraint<ContentStyle, *>> = listOf(
+private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
     JudgeConstr(WARN, l10n("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
@@ -107,7 +107,7 @@ private val CONTENT_STYLE_META: List<StyleConstraint<ContentStyle, *>> = listOf(
 )
 
 
-private val LETTER_STYLE_META: List<StyleConstraint<LetterStyle, *>> = listOf(
+private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
     JudgeConstr(WARN, l10n("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }

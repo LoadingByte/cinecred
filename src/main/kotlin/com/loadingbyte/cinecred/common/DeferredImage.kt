@@ -23,15 +23,12 @@ import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.Shape
-import java.awt.font.TextAttribute
-import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.PathIterator
 import java.awt.geom.Rectangle2D
 import java.io.DataInputStream
 import java.util.*
-import kotlin.math.max
 
 
 class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
@@ -82,84 +79,24 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     /**
      * The [y] coordinate used by this method differs from the one used by Graphics2D.
      * Here, the coordinate doesn't point to the baseline, but to the topmost part of the largest font.
-     * If [justificationWidth] is provided, the string is fully justified to fit that exact width.
      *
      * @throws IllegalArgumentException If [fmtStr] is not equipped with both a font and a foreground color at
      *     every character.
      */
     fun drawString(
-        fmtStr: FormattedString, x: Float, y: Y, justificationWidth: Float = Float.NaN,
+        fmtStr: FormattedString, x: Float, y: Y,
         foregroundLayer: Layer = FOREGROUND, backgroundLayer: Layer = BACKGROUND
     ) {
-        // Find the distance between y and the baseline of the tallest font in the attributed string.
-        // In case there are multiple tallest fonts, take the largest distance.
-        var maxFontHeight = 0f
-        var aboveBaseline = 0f
-        fmtStr.forEachFontRun { font, runStartIdx, runEndIdx ->
-            font ?: throw IllegalArgumentException()
-            val normFontLM = font.deriveFont(FONT_NORMALIZATION_ATTRS)
-                .getLineMetrics(fmtStr.string.substring(runStartIdx, runEndIdx), REF_FRC)
-            if (normFontLM.height >= maxFontHeight) {
-                maxFontHeight = normFontLM.height
-                aboveBaseline = max(aboveBaseline, normFontLM.ascent + normFontLM.leading / 2f)
-            }
-        }
-        // The drawing instruction requires a y coordinate that points to the baseline of the string, so
-        // compute that now.
-        val baselineY = y + aboveBaseline
+        // FormattedString yields results relative to the baseline, so we need the baseline's y-coordinate.
+        val baselineY = y + fmtStr.heightAboveBaseline
 
-        // Layout the text. Utilize a character iterator with both foreground and background information for this.
-        // Changes in foreground split the TextLayout's TextLineComponents, and these splits are important later on
-        // for extracting the outline shape of each section with different foreground. By also supplying the background
-        // to the TextLayout, we can later use getLogicalHighlightShape() to find background rectangles.
-        var textLayout = fmtStr.fontFgBgTextLayout
-        // Fully justify the text layout if requested.
-        if (!justificationWidth.isNaN())
-            textLayout = textLayout.getJustifiedLayout(justificationWidth)
-
-        // We render the text by first converting the string to a path via the TextLayout and then
-        // later filling that path. This has the following vital advantages:
-        //   - Native text rendering via TextLayout.draw(), which internally eventually calls
-        //     Graphics2D.drawGlyphVector(), typically ensures that each glyph is aligned at pixel
-        //     boundaries. To achieve this, glyphs are slightly shifted to the left or right. This
-        //     leads to inconsistent glyph spacing, which is acceptable for desktop purposes in
-        //     exchange for higher readability, but not acceptable in a movie context. By converting
-        //     the text layout to a path and then filling that path, we avoid calling the native text
-        //     renderer and instead call the regular vector graphics renderer, which renders the glyphs
-        //     at the exact positions where the text layouter has put them, without applying the
-        //     counterproductive glyph shifting.
-        //   - Vector-based means of imaging like SVG exactly match the raster-based means.
-        // For these advantages, we put up with the following disadvantages:
-        //   - Rendering this way is slower than natively rendering text via TextLayout.draw().
-        //   - Since the glyphs are no longer aligned at pixel boundaries, heavier antialiasing kicks
-        //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
-        //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
-        //     acceptable in a movie context.
-        // Start with the background fillings for each run with non-null background.
-        fmtStr.forEachBackgroundRun { bg, runStartIdx, runEndIdx ->
-            if (bg != null) {
-                val tlBounds = textLayout.bounds
-                val bgBounds = Rectangle2D.Double(
-                    tlBounds.x - bg.widenLeft,
-                    tlBounds.y - bg.widenTop,
-                    tlBounds.width + bg.widenLeft + bg.widenRight,
-                    tlBounds.height + bg.widenTop + bg.widenBottom
-                )
-                val highlightShape = textLayout.getLogicalHighlightShape(runStartIdx, runEndIdx, bgBounds)
-                addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, highlightShape, bg.color, true))
-            }
-        }
-        // Then collect the foreground outlines for each run of different foreground color and add a
-        // foreground drawing instruction enriched with these outlines.
-        // Since the TextLayout's TextLineComponents are split where the foreground color changes, we can easily extract
-        // partial outlines for each section of different foreground color by using our custom getOutline(...) function.
-        val outlines = mutableListOf<Pair<Shape, Color>>()
-        fmtStr.forEachForegroundRun { fg, runStartIdx, runEndIdx ->
-            fg ?: throw IllegalArgumentException()
-            val outline = textLayout.getOutline(runStartIdx, runEndIdx)
-            outlines.add(Pair(outline, fg))
-        }
-        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, fmtStr, textLayout, outlines))
+        for ((shape, color) in fmtStr.decorationsUnderlay)
+            addInstruction(foregroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
+        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, fmtStr))
+        for ((shape, color) in fmtStr.decorationsOverlay)
+            addInstruction(foregroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
+        for ((shape, color) in fmtStr.backgrounds)
+            addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
     }
 
     fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
@@ -209,8 +146,8 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 ), insn.color, insn.fill
             )
             is Instruction.DrawStringForeground -> backend.materializeStringForeground(
-                x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), universeScaling,
-                insn.fmtStr, insn.textLayout, insn.outlines
+                x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
+                universeScaling, insn.fmtStr
             )
             is Instruction.DrawPicture -> backend.materializePicture(
                 x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
@@ -238,8 +175,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         val GROUNDING = Layer()
         val GUIDES = Layer()
 
-        private val FONT_NORMALIZATION_ATTRS = mapOf(TextAttribute.SUPERSCRIPT to null)
-
         private inline fun FloatArray.indexOfFirst(
             start: Int = 0, end: Int = -1, step: Int = 1, predicate: (Float) -> Boolean
         ): Int {
@@ -251,13 +186,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
         private fun FloatArray.isFinite(start: Int = 0, end: Int = -1): Boolean =
             indexOfFirst(start, end) { !it.isFinite() } == -1
-
-        private fun AffineTransform.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
-        private fun AffineTransform.scale(s: Float) = scale(s.toDouble(), s.toDouble())
-        private fun Graphics2D.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
-        private fun Graphics2D.scale(s: Float) = scale(s.toDouble(), s.toDouble())
-        private fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
-        private fun Matrix.scale(s: Float) = scale(s, s)
 
     }
 
@@ -285,8 +213,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         ) : Instruction()
 
         class DrawStringForeground(
-            val x: Float, val y: Y, val fmtStr: FormattedString, val textLayout: TextLayout,
-            val outlines: List<Pair<Shape, Color>>
+            val x: Float, val baselineY: Y, val fmtStr: FormattedString
         ) : Instruction()
 
         class DrawPicture(
@@ -297,16 +224,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
 
     private interface MaterializationBackend {
-
         fun materializeShape(shape: Shape, color: Color, fill: Boolean)
-
-        fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
-            outlines: List<Pair<Shape, Color>>
-        )
-
+        fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString)
         fun materializePicture(x: Float, y: Float, pic: Picture)
-
     }
 
 
@@ -320,16 +240,32 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 g2.draw(shape)
         }
 
-        override fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
-            outlines: List<Pair<Shape, Color>>
-        ) {
-            g2.preserveTransform {
-                g2.translate(x, y)
-                g2.scale(scaling)
-                for ((shape, color) in outlines)
-                    materializeShape(shape, color, fill = true)
-            }
+        override fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString) {
+            // We render the text by first converting the string to a path via FormattedString and then
+            // filling that path. This has the following vital advantages:
+            //   - Native text rendering via TextLayout.draw() etc., which internally eventually calls
+            //     Graphics2D.drawGlyphVector(), typically ensures that each glyph is aligned at pixel
+            //     boundaries. To achieve this, glyphs are slightly shifted to the left or right. This
+            //     leads to inconsistent glyph spacing, which is acceptable for desktop purposes in
+            //     exchange for higher readability, but not acceptable in a movie context. By converting
+            //     the text layout to a path and then filling that path, we avoid calling the native text
+            //     renderer and instead call the regular vector graphics renderer, which renders the glyphs
+            //     at the exact positions where the text layouter has put them, without applying the
+            //     counterproductive glyph shifting.
+            //   - Vector-based means of imaging like SVG exactly match the raster-based means.
+            // For these advantages, we put up with the following disadvantages:
+            //   - Rendering this way is slower than natively rendering text via TextLayout.draw().
+            //   - Since the glyphs are no longer aligned at pixel boundaries, heavier antialiasing kicks
+            //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
+            //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
+            //     acceptable in a movie context.
+            for (segment in fmtStr.segments)
+                g2.preserveTransform {
+                    g2.translate(x, baselineY)
+                    g2.scale(scaling)
+                    g2.translate(segment.baseX, 0f)
+                    materializeShape(segment.outline, segment.font.color, fill = true)
+                }
         }
 
         override fun materializePicture(x: Float, y: Float, pic: Picture) {
@@ -427,81 +363,36 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializeStringForeground(
-            x: Float, y: Float, scaling: Float, fmtStr: FormattedString, textLayout: TextLayout,
-            outlines: List<Pair<Shape, Color>>
-        ) {
-            // Note: We assume that every TextLineComponent of the TextLayout is indeed based on a GlyphVector.
-            // Since we do not use TextAttribute.CHAR_REPLACEMENT in this program, that assumption will always hold.
-            val tlGVs = textLayout.getGlyphVectors()
-
+        override fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString) {
             cs.saveGraphicsState()
-            cs.transform(Matrix().apply { translate(x, csHeight - y); scale(scaling) })
-
-            // Draw the text by drawing each GlyphVector.
             cs.beginText()
-            for (tlGV in tlGVs) {
-                val font = tlGV.gv.font
-                val pdFont = getPDFont(font)
-
-                // If superscripting is enabled, find the appropriately downscaled font size.
-                val fontSize = if (font.attributes[TextAttribute.SUPERSCRIPT] == null) font.size2D else {
-                    val runStr = fmtStr.string.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
-                    val slm = font.getLineMetrics(runStr, REF_FRC)
-                    val nlm = font.deriveFont(FONT_NORMALIZATION_ATTRS).getLineMetrics(runStr, REF_FRC)
-                    font.size2D * slm.height / nlm.height
-                }
-
-                val numGlyphs = tlGV.gv.numGlyphs
-                val glyphs = tlGV.gv.getGlyphCodes(0, numGlyphs, null)
-                val glyphPos = tlGV.gv.getGlyphPositions(0, numGlyphs, null)
-                val xShifts = FloatArray(numGlyphs - 1)
-                for (glyphIdx in 0 until numGlyphs - 1) {
+            for (seg in fmtStr.segments) {
+                val pdFont = getPDFont(seg.font.awtFont)
+                val glyphs = seg.getGlyphCodes()
+                val xShifts = FloatArray(seg.numGlyphs - 1) { glyphIdx ->
                     val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
-                    val wantedWidth = (glyphPos[(glyphIdx + 1) * 2] - glyphPos[glyphIdx * 2]) * 1000f / fontSize
-                    xShifts[glyphIdx] = actualWidth - wantedWidth
+                    val wantedWidth = ((seg.getGlyphOffsetX(glyphIdx + 1) - seg.getGlyphOffsetX(glyphIdx))
+                            // Because we apply hScaling via the text matrix, we have to divide it out here
+                            // so that it is not applied two times.
+                            / seg.font.hScaling
+                            // Convert to the special PDF text coordinates.
+                            * 1000f / seg.font.pointSize)
+                    actualWidth - wantedWidth
                 }
 
-                cs.setFont(pdFont, fontSize)
-                setColor(fmtStr.getForeground(tlGV.startCharIdx)!!, fill = true)
-                cs.setTextMatrix(Matrix.getTranslateInstance(tlGV.x, tlGV.y - glyphPos[1]))
+                val textTx = AffineTransform().apply {
+                    translate(x, csHeight - baselineY)
+                    scale(scaling)
+                    translate(seg.baseX, 0f)
+                    concatenate(seg.font.getPostprocessingTransform(withHScaling = true, invertY = true))
+                }
+
+                cs.setFont(pdFont, seg.font.pointSize)
+                setColor(seg.font.color, fill = true)
+                cs.setTextMatrix(Matrix(textTx))
                 cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
             }
             cs.endText()
-
-            // Where applicable, draw underline & strikethrough.
-            for (tlGV in tlGVs) {
-                val ul = fmtStr.getUnderline(tlGV.startCharIdx)
-                val st = fmtStr.getStrikethrough(tlGV.startCharIdx)
-
-                if (ul || st) {
-                    // In case of superscripting, we still retrieve the font metrics of the unscaled font since they
-                    // already include all the changes made by superscripting, and scaling would distort them.
-                    val runStr = fmtStr.string.substring(tlGV.startCharIdx, tlGV.stopCharIdx)
-                    val lm = tlGV.gv.font.getLineMetrics(runStr, REF_FRC)
-
-                    val numGlyphs = tlGV.gv.numGlyphs
-                    val glyphPos = tlGV.gv.getGlyphPositions(0, numGlyphs + 1, null)
-
-                    fun drawLine(offset: Float, thickness: Float) {
-                        // Since the thickness of underlining and strikethrough usually does not depend on
-                        // superscripting in Java, we accordingly use the non-downscaled font size for computing
-                        // the fallback thickness.
-                        cs.setLineWidth(if (thickness > 0.00001f) thickness else 0.04f * tlGV.gv.font.size2D)
-                        val lineY = tlGV.y - offset
-                        cs.moveTo(tlGV.x + glyphPos[0], lineY)
-                        cs.lineTo(tlGV.x + glyphPos[numGlyphs * 2], lineY)
-                        cs.stroke()
-                    }
-
-                    setColor(fmtStr.getForeground(tlGV.startCharIdx)!!, fill = false)
-                    if (ul)
-                        drawLine(lm.underlineOffset, lm.underlineThickness)
-                    if (st)
-                        drawLine(lm.strikethroughOffset, lm.strikethroughThickness)
-                }
-            }
-
             cs.restoreGraphicsState()
         }
 

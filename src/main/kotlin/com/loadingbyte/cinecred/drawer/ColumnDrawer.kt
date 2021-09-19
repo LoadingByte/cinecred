@@ -17,6 +17,7 @@ private typealias DrawnBlock = DrawnColumn  // Just reuse the class because the 
 
 
 fun drawColumn(
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     column: Column,
     alignBodyColsGroupIds: Map<Block, Int>,
@@ -45,7 +46,7 @@ fun drawColumn(
     // Generate images for blocks whose bodies are laid out using the "flow body layout" or "paragraphs body layout".
     for (block in column.blocks)
         if (block.style.bodyLayout == BodyLayout.FLOW)
-            drawnBodies[block] = drawBodyImageWithFlowBodyLayout(textCtx, block)
+            drawnBodies[block] = drawBodyImageWithFlowBodyLayout(letterStyles, textCtx, block)
         else if (block.style.bodyLayout == BodyLayout.PARAGRAPHS)
             drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(textCtx, block)
 

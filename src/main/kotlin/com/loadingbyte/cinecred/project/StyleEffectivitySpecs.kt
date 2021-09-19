@@ -7,6 +7,7 @@ fun <S : Style> getStyleEffectivitySpecs(styleClass: Class<S>): List<StyleEffect
     PageStyle::class.java -> PAGE_STYLE_EFFECTIVITY_SPECS
     ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS
     LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS
+    TextDecoration::class.java -> TEXT_DECORATION_EFFECTIVITY_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleEffectivitySpec<S>>
 
@@ -88,13 +89,25 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
 
 private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyle>> = listOf(
     StyleEffectivitySpec(
-        LetterStyle::backgroundWidenLeft.st(), LetterStyle::backgroundWidenRight.st(),
-        LetterStyle::backgroundWidenTop.st(), LetterStyle::backgroundWidenBottom.st(),
-        isAlmostEffective = { style -> style.background.alpha == 0 }
-    ),
-    StyleEffectivitySpec(
         LetterStyle::useUppercaseExceptions.st(),
         isAlmostEffective = { style -> !style.uppercase }
+    ),
+    StyleEffectivitySpec(
+        LetterStyle::backgroundWidenLeftPx.st(), LetterStyle::backgroundWidenRightPx.st(),
+        LetterStyle::backgroundWidenTopPx.st(), LetterStyle::backgroundWidenBottomPx.st(),
+        isAlmostEffective = { style -> style.background.alpha == 0 }
+    )
+)
+
+
+private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDecoration>> = listOf(
+    StyleEffectivitySpec(
+        TextDecoration::offsetPx.st(), TextDecoration::thicknessPx.st(),
+        isAlmostEffective = { style -> style.preset != TextDecorationPreset.NONE }
+    ),
+    StyleEffectivitySpec(
+        TextDecoration::clearingJoin.st(),
+        isAlmostEffective = { style -> !style.clearingPx.isActive || style.clearingPx.value <= 0f }
     )
 )
 

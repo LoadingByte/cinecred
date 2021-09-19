@@ -6,11 +6,20 @@ Cinecred Changelog
 
 ### Additions
 
+- The capabilities of letter styles have been massively expanded, notably:
+    - Optional ligatures can be disabled.
+    - The relative size of small caps can be adjusted.
+    - Added support for mixed super and subscripts, e.g., first super then sub.
+    - Super and subscripts are positioned as defined by the font designer.
+    - Text can be scaled and offset, e.g., to manually position superscripts.
+    - Text can be horizontally scaled and sheared.
+    - Instead of only underline and strikethrough, text decorations are now
+      highly configurable; they can be colored differently, positioned manually,
+      cleared around text, and dashed with custom patterns.
+    - The background of text can be widened arbitrarily.
 - Exported PDFs render text directly instead of drawing filled outlines of text.
   This change increases render quality and speed, decreases file size, and
   improves the user experience when selecting and copying text.
-- The background of text can be widened arbitrarily.
-- The relativ size of small caps can be adjusted.
 - When adding a render job that overwrites existing files or the output of a
   previous job, the user is now confronted with a proper and reliable warning.
 - After changing the interface language, the program can now restart itself to

@@ -12,27 +12,29 @@ import com.loadingbyte.cinecred.projectio.formatTimecode
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Font
 import java.awt.geom.Path2D
+import java.util.*
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
 
 
-fun drawPages(
-    global: Global,
-    textCtx: TextContext,
-    pages: List<Page>,
-    runtimeGroups: List<RuntimeGroup>
-): List<DrawnPage> {
+fun draw(project: Project): List<DrawnPage> {
+    val global = project.styling.global
+    val pages = project.pages
+    val runtimeGroups = project.runtimeGroups
+
+    val textCtx = makeTextCtx(project.styling.global.locale, project.styling.global.uppercaseExceptions, project.fonts)
+
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     val stageImages = HashMap<Stage, DeferredImage>()
     for (page in pages)
-        stageImages.putAll(drawStages(global, textCtx, page))
+        stageImages.putAll(drawStages(global, project.styling.letterStyles, textCtx, page))
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
     val pageBotStages = pages.mapTo(HashSet()) { page -> page.stages.last() }
 
     // If requested, adjust some vertical gaps to best match a specified runtime.
-    if (runtimeGroups.isNotEmpty() || global.runtimeFrames.isEffective) {
+    if (runtimeGroups.isNotEmpty() || global.runtimeFrames.isActive) {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
         val prelimStageLayouts = HashMap<Stage, StageLayout>()
         for (page in pages)
@@ -46,7 +48,7 @@ fun drawPages(
                 activeStages = runtimeGroup.stages, passiveStages = emptyList()
             )
         // If requested, adjust all remaining stages to best achieve the desired overall runtime of the whole sequence.
-        if (global.runtimeFrames.isEffective) {
+        if (global.runtimeFrames.isActive) {
             val pauseFrames = pages.dropLast(1).sumOf { it.stages.last().style.afterwardSlugFrames }
             val runtimeStages = runtimeGroups.flatMap(RuntimeGroup::stages)
             val allStages = stageImages.keys
@@ -71,6 +73,7 @@ fun drawPages(
 
 private fun drawStages(
     global: Global,
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     page: Page
 ): Map<Stage, DeferredImage> {
@@ -84,7 +87,7 @@ private fun drawStages(
     // Also remember the x coordinate of the axis inside each generated image.
     val drawnColumns = page.stages
         .flatMap { stage -> stage.segments }.flatMap { segment -> segment.columns }
-        .associateWith { column -> drawColumn(textCtx, column, alignBodyColsGroupIds, alignHeadTailGroupIds) }
+        .associateWith { col -> drawColumn(letterStyles, textCtx, col, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
     // For each stage, combine the column images to a stage image.
     return page.stages.withIndex().associate { (stageIdx, stage) ->
@@ -241,10 +244,10 @@ private fun drawPage(
 
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
-        val fmtStr = FormattedString(str).apply {
-            setFont(Font(Font.MONOSPACED, Font.BOLD, global.widthPx / 80), Float.NaN, 0, str.length)
-            setForeground(STAGE_GUIDE_COLOR, 0, str.length)
-        }
+        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font("Monospaced.bold", Font.PLAIN, 1), global.widthPx / 80f)
+        val fmtStr = FormattedString.Builder(str, Locale.ROOT).apply {
+            append(str.length, FormattedString.Attribute(font, emptySet(), null))
+        }.build()
         val margin = global.widthPx / 100f
         pageImage.drawString(
             fmtStr, x = global.widthPx - fmtStr.width - margin, y = y + margin,

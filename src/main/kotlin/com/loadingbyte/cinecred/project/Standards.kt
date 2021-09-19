@@ -12,6 +12,7 @@ fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
     PageStyle::class.java -> PRESET_PAGE_STYLE
     ContentStyle::class.java -> PRESET_CONTENT_STYLE
     LetterStyle::class.java -> PRESET_LETTER_STYLE
+    TextDecoration::class.java -> PRESET_TEXT_DECORATION
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as S
 
@@ -90,19 +91,37 @@ val PRESET_LETTER_STYLE = LetterStyle(
     name = "???",
     fontName = "Archivo Narrow Regular",
     heightPx = 32,
-    tracking = 0f,
     foreground = Color.WHITE,
-    background = Color(0, 0, 0, 0),
-    backgroundWidenLeft = 0f,
-    backgroundWidenRight = 0f,
-    backgroundWidenTop = 0f,
-    backgroundWidenBottom = 0f,
-    underline = false,
-    strikethrough = false,
-    smallCaps = Opt(false, 70f),
+    trackingEm = 0f,
+    ligatures = true,
+    smallCapsScaling = Opt(false, 0.7f),
     uppercase = false,
     useUppercaseExceptions = true,
-    superscript = Superscript.NONE
+    superscript = Superscript.NONE,
+    hOffsetRem = 0f,
+    vOffsetRem = 0f,
+    scaling = 1f,
+    hScaling = 1f,
+    hShearing = 0f,
+    decorations = persistentListOf(),
+    background = Color(0, 0, 0, 0),
+    backgroundWidenLeftPx = 0f,
+    backgroundWidenRightPx = 0f,
+    backgroundWidenTopPx = 0f,
+    backgroundWidenBottomPx = 0f
+)
+
+
+val PRESET_TEXT_DECORATION = TextDecoration(
+    color = Opt(false, Color.WHITE),
+    preset = TextDecorationPreset.UNDERLINE,
+    offsetPx = 0f,
+    thicknessPx = 2f,
+    widenLeftPx = 0f,
+    widenRightPx = 0f,
+    clearingPx = Opt(false, 0f),
+    clearingJoin = LineJoin.MITER,
+    dashPatternPx = persistentListOf()
 )
 
 

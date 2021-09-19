@@ -1,33 +1,13 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.FormattedString
-import com.loadingbyte.cinecred.project.LetterStyle
-import com.loadingbyte.cinecred.project.StyledString
+import com.loadingbyte.cinecred.common.SuperscriptMetrics
+import com.loadingbyte.cinecred.common.getSuperscriptMetrics
+import com.loadingbyte.cinecred.common.lineMetrics
+import com.loadingbyte.cinecred.project.*
+import java.awt.BasicStroke
 import java.awt.Font
 import java.util.*
-
-
-class TextContext(
-    val locale: Locale,
-    val fonts: Map<LetterStyle, Font>,
-    val uppercaseExceptionsRegex: Regex?
-) {
-
-    private val fmtStrCache = HashMap<StyledString, FormattedString>()
-
-    fun formattedInternal(styledString: StyledString): FormattedString =
-        fmtStrCache.getOrPut(styledString) { styledString.generateFormattedString(this) }
-
-}
-
-
-/**
- * Converts styled strings to formatted strings. As the conversion can be quite expensive and to leverage the
- * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this
- * method caches formatted strings.
- */
-fun StyledString.formatted(textCtx: TextContext): FormattedString =
-    textCtx.formattedInternal(this)
 
 
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
@@ -65,20 +45,186 @@ val StyledString.height: Int
     get() = maxOf { it.second.heightPx }
 
 
-private fun StyledString.generateFormattedString(textCtx: TextContext): FormattedString {
+/**
+ * Converts styled strings to formatted strings. As the conversion can be quite expensive and to leverage the
+ * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this
+ * method caches formatted strings.
+ */
+fun StyledString.formatted(textCtx: TextContext): FormattedString =
+    (textCtx as TextContextImpl).getFmtStr(this)
+
+
+fun makeTextCtx(locale: Locale, uppercaseExceptions: List<String>, projectFonts: Map<String, Font>): TextContext =
+    TextContextImpl(locale, uppercaseExceptions, projectFonts)
+
+sealed class TextContext
+
+private class TextContextImpl(
+    val locale: Locale,
+    private val uppercaseExceptions: List<String>,
+    val projectFonts: Map<String, Font>
+) : TextContext() {
+
+    val uppercaseExceptionsRegex: Regex? by lazy { generateUppercaseExceptionsRegex(uppercaseExceptions) }
+
+    private val fmtStrAttrCache = HashMap<LetterStyle, Pair<FormattedString.Attribute, FormattedString.Attribute?>>()
+    private val fmtStrCache = HashMap<StyledString, FormattedString>()
+
+    fun getFmtStrAttrs(letterStyle: LetterStyle) =
+        fmtStrAttrCache.getOrPut(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
+
+    fun getFmtStr(styledString: StyledString) =
+        fmtStrCache.getOrPut(styledString) { generateFmtStr(styledString, this) }
+
+}
+
+
+private fun generateUppercaseExceptionsRegex(uppercaseExceptions: List<String>): Regex? = uppercaseExceptions
+    .filter { it.isNotBlank() && it != "_" && it != "#" }
+    .also { if (it.isEmpty()) return null }
+    .groupBy { charToKey(it.first(), 1, 2, 4) or charToKey(it.last(), 8, 16, 32) }
+    .map { (key, patterns) ->
+        val prefix = when {
+            key and 2 != 0 -> "(\\s|^)"
+            key and 4 != 0 -> "[\\p{Lu}\\p{Lt}]"
+            else -> ""
+        }
+        val suffix = when {
+            key and 16 != 0 -> "(\\s|$)"
+            key and 32 != 0 -> "[\\p{Lu}\\p{Lt}]"
+            else -> ""
+        }
+        val joinedPatterns = patterns
+            // Note: By sorting the patterns in descending order, we ensure that in the case of long patterns which
+            // contain shorter patterns (e.g., "_von und zu_" and "_von_"), the long pattern is matched if it applies,
+            // and the short pattern is only matched if the long pattern doesn't apply. If we don't enforce this,
+            // the shorter pattern might be matched, but the long pattern isn't even though it applies, which is
+            // highly unexpected behavior.
+            .sortedByDescending(String::length)
+            .joinToString("|") { pattern ->
+                when {
+                    key and (1 or 8) == 0 -> pattern.substring(1, pattern.length - 1)
+                    key and 1 == 0 -> pattern.drop(1)
+                    key and 8 == 0 -> pattern.dropLast(1)
+                    else -> pattern
+                }.let(Regex::escape)
+            }
+        "$prefix($joinedPatterns)$suffix"
+    }
+    .joinToString("|")
+    .toRegex()
+
+private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: Int) = when (char) {
+    '_' -> forUnderscore
+    '#' -> forHash
+    else -> forOther
+}
+
+
+private fun generateFmtStrAttrs(
+    style: LetterStyle,
+    textCtx: TextContextImpl
+): Pair<FormattedString.Attribute, FormattedString.Attribute?> {
+    val baseAWTFont =
+        textCtx.projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName)
+
+    var ssScaling = 1f
+    var ssHOffset = 0f
+    var ssVOffset = 0f
+    if (style.superscript != Superscript.NONE) {
+        val ssMetrics = baseAWTFont.getSuperscriptMetrics()
+            ?: SuperscriptMetrics(2 / 3f, 0f, 0.375f, 2 / 3f, 0f, -0.375f)
+
+        fun sup() {
+            ssHOffset += ssMetrics.supHOffsetEm * ssScaling
+            ssVOffset += ssMetrics.supVOffsetEm * ssScaling
+            ssScaling *= ssMetrics.supScaling
+        }
+
+        fun sub() {
+            ssHOffset += ssMetrics.subHOffsetEm * ssScaling
+            ssVOffset += ssMetrics.subVOffsetEm * ssScaling
+            ssScaling *= ssMetrics.subScaling
+        }
+
+        // @formatter:off
+        when (style.superscript) {
+            Superscript.NONE -> { /* can never happen */ }
+            Superscript.SUP -> sup()
+            Superscript.SUB -> sub()
+            Superscript.SUP_SUP -> { sup(); sup() }
+            Superscript.SUP_SUB -> { sup(); sub() }
+            Superscript.SUB_SUP -> { sub(); sup() }
+            Superscript.SUB_SUB -> { sub(); sub() }
+        }
+        // @formatter:on
+    }
+
+    val stdFont = FormattedString.Font(
+        style.foreground, baseAWTFont, style.heightPx.toFloat(), style.scaling * ssScaling, style.hScaling,
+        style.hShearing, style.hOffsetRem + ssHOffset, style.vOffsetRem + ssVOffset,
+        kerning = true, style.ligatures, style.trackingEm
+    )
+    val smallCapsFont = if (!style.smallCapsScaling.isActive) null else stdFont.scaled(style.smallCapsScaling.value)
+
+    val lm = baseAWTFont.deriveFont(stdFont.unscaledPointSize).lineMetrics
+    val deco = style.decorations.mapTo(HashSet()) { td ->
+        var offset = td.offsetPx
+        var thickness = td.thicknessPx
+        when (td.preset) {
+            TextDecorationPreset.NONE -> {
+            }
+            TextDecorationPreset.UNDERLINE -> {
+                offset = lm.underlineOffset
+                thickness = lm.underlineThickness
+            }
+            TextDecorationPreset.STRIKETHROUGH -> {
+                offset = lm.strikethroughOffset
+                thickness = lm.strikethroughThickness
+            }
+        }
+        FormattedString.Decoration(
+            color = if (td.color.isActive) td.color.value else style.foreground,
+            offset, thickness, td.widenLeftPx, td.widenRightPx,
+            clear = td.clearingPx.isActive,
+            clearRadiusPx = td.clearingPx.value,
+            clearJoin = when (td.clearingJoin) {
+                LineJoin.MITER -> BasicStroke.JOIN_MITER
+                LineJoin.ROUND -> BasicStroke.JOIN_ROUND
+                LineJoin.BEVEL -> BasicStroke.JOIN_BEVEL
+            },
+            dashPatternPx = if (td.dashPatternPx.isEmpty()) null else td.dashPatternPx.toFloatArray()
+        )
+    }
+
+    val bg = if (style.background.alpha == 0) null else
+        FormattedString.Background(
+            style.background,
+            style.backgroundWidenLeftPx, style.backgroundWidenRightPx,
+            style.backgroundWidenTopPx, style.backgroundWidenBottomPx
+        )
+
+    val stdAttr = FormattedString.Attribute(stdFont, deco, bg)
+    val smallCapsAttr = if (smallCapsFont == null) null else FormattedString.Attribute(smallCapsFont, deco, bg)
+    return Pair(stdAttr, smallCapsAttr)
+}
+
+
+private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): FormattedString {
     // 1. Apply uppercasing to the styled string (not small caps yet!).
-    var uppercased = this
+    var uppercased = str
 
     // Only run the algorithm if at least one run needs uppercasing.
-    if (any { (_, style) -> style.uppercase }) {
-        val joined = joinToString("") { (run, _) -> run }
+    if (str.any { (_, style) -> style.uppercase }) {
+        val joined = str.joinToString("") { (run, _) -> run }
 
         // If later needed, precompute an uppercased version of the joined string that considers the
         // uppercase exceptions.
         var joinedUppercased: String? = null
-        if (textCtx.uppercaseExceptionsRegex != null && any { (_, style) -> style.useUppercaseExceptions })
+        val uppercaseExceptionsRegex = textCtx.uppercaseExceptionsRegex
+        if (uppercaseExceptionsRegex != null && str.any { (_, style) -> style.useUppercaseExceptions })
             joinedUppercased = buildString(joined.length) {
-                for (match in textCtx.uppercaseExceptionsRegex.findAll(joined)) {
+                for (match in uppercaseExceptionsRegex.findAll(joined)) {
                     append(joined.substring(this@buildString.length, match.range.first).uppercase(textCtx.locale))
                     append(joined.substring(match.range.first, match.range.last + 1))
                 }
@@ -87,10 +233,10 @@ private fun StyledString.generateFormattedString(textCtx: TextContext): Formatte
 
         // Now compute the uppercased styled string. For the quite common single-run styled strings, we have a
         // special case to achieve better performance.
-        uppercased = if (size == 1)
-            listOf(Pair(joinedUppercased ?: joined.uppercase(textCtx.locale), single().second))
+        uppercased = if (str.size == 1)
+            listOf(Pair(joinedUppercased ?: joined.uppercase(textCtx.locale), str.single().second))
         else {
-            mapRuns { _, run, style, runStartIdx, runEndIdx ->
+            str.mapRuns { _, run, style, runStartIdx, runEndIdx ->
                 buildString(run.length) {
                     if (!style.uppercase)
                         append(run)
@@ -109,16 +255,16 @@ private fun StyledString.generateFormattedString(textCtx: TextContext): Formatte
     val smallCapsed: StyledString
     var smallCapsMasks: Array<BooleanArray?>? = null
 
-    if (!uppercased.any { (_, style) -> style.smallCaps.isEffective })
+    if (!uppercased.any { (_, style) -> style.smallCapsScaling.isActive })
         smallCapsed = uppercased
     else {
         val masks = arrayOfNulls<BooleanArray?>(uppercased.size)
         smallCapsMasks = masks
         smallCapsed = uppercased.mapRuns { runIdx, run, style, _, _ ->
-            if (!style.smallCaps.isEffective)
+            if (!style.smallCapsScaling.isActive)
                 run
             else {
-                val smallCapsedRun = if (style.smallCaps.isEffective) run.uppercase(textCtx.locale) else run
+                val smallCapsedRun = if (style.smallCapsScaling.isActive) run.uppercase(textCtx.locale) else run
 
                 // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
                 // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
@@ -141,33 +287,18 @@ private fun StyledString.generateFormattedString(textCtx: TextContext): Formatte
     }
 
     // 3. Build a FormattedString by adding attributes to the "smallCapsed" string as indicated by the letter styles.
-    val fmtStr = FormattedString(smallCapsed.joinToString("") { (run, _) -> run })
-    smallCapsed.forEachRun { runIdx, _, style, runStartIdx, runEndIdx ->
-        val font = textCtx.fonts.getValue(style)
-        val heightHint = style.heightPx.toFloat()
-        if (!style.smallCaps.isEffective)
-            fmtStr.setFont(font, heightHint, runStartIdx, runEndIdx)
+    val fmtStrBuilder = FormattedString.Builder(smallCapsed.joinToString("") { (run, _) -> run }, textCtx.locale)
+    smallCapsed.forEachRun { runIdx, run, style, _, _ ->
+        val (stdAttr, smallCapsAttr) = textCtx.getFmtStrAttrs(style)
+        if (!style.smallCapsScaling.isActive)
+            fmtStrBuilder.append(numChars = run.length, stdAttr)
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
-                val efFont = if (isStripSmallCaps) font.deriveFont(font.size2D * style.smallCaps.value / 100f) else font
-                fmtStr.setFont(efFont, heightHint, runStartIdx + stripStartIdx, runStartIdx + stripEndIdx)
+                val attr = if (isStripSmallCaps) smallCapsAttr!! else stdAttr
+                fmtStrBuilder.append(numChars = stripEndIdx - stripStartIdx, attr)
             }
-
-        fmtStr.setForeground(style.foreground, runStartIdx, runEndIdx)
-        if (style.background.alpha != 0) {
-            val bg = FormattedString.Background(
-                style.background,
-                style.backgroundWidenLeft, style.backgroundWidenRight,
-                style.backgroundWidenTop, style.backgroundWidenBottom
-            )
-            fmtStr.setBackground(bg, runStartIdx, runEndIdx)
-        }
-        if (style.underline)
-            fmtStr.setUnderline(true, runStartIdx, runEndIdx)
-        if (style.strikethrough)
-            fmtStr.setStrikethrough(true, runStartIdx, runEndIdx)
     }
-    return fmtStr
+    return fmtStrBuilder.build()
 }
 
 private inline fun BooleanArray.forEachAlternatingStrip(block: (Boolean, Int, Int) -> Unit) {

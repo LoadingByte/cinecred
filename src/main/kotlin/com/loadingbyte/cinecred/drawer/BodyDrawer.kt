@@ -160,6 +160,7 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
 
 
 fun drawBodyImageWithFlowBodyLayout(
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     block: Block
 ): DrawnBody {
@@ -169,7 +170,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     val horGap = style.flowHGapPx
 
-    val bodyLetterStyle = textCtx.fonts.keys.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+    val bodyLetterStyle = letterStyles.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = style.flowSeparator
     val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle)).formatted(textCtx)
 
@@ -362,7 +363,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
             val fmtStr = bodyElem.str.formatted(textCtx)
-            val lineBreaks = fmtStr.breakLines(bodyImageWidth, textCtx.locale)
+            val lineBreaks = fmtStr.breakLines(bodyImageWidth)
             for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
                 // Note: If the line contains only whitespace, this skips to the next line.
                 val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos).trim() ?: continue
@@ -372,7 +373,7 @@ fun drawBodyImageWithParagraphsBodyLayout(
 
                 // Case 1a: Full justification.
                 if (curLineHJustify == SingleLineHJustify.FULL)
-                    bodyImage.drawString(lineFmtStr, 0f, y, justificationWidth = bodyImageWidth)
+                    bodyImage.drawString(lineFmtStr.justify(bodyImageWidth), 0f, y)
                 // Case 1b: Left, center, or right justification.
                 else {
                     val hJustify = curLineHJustify.toHJustify()

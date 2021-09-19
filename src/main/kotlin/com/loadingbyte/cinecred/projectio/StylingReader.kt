@@ -67,6 +67,42 @@ private fun migrate(rawStyling: RawStyling) {
 
     // 1.1.0 -> 1.2.0: What has previously been called "background" is now called "grounding".
     rawStyling.global["background"]?.let { rawStyling.global["grounding"] = it }
+
+    // 1.1.0 -> 1.2.0: "tracking" is renamed to "trackingEm".
+    for (letterStyle in rawStyling.letterStyles)
+        letterStyle["tracking"]?.let { letterStyle["trackingEm"] = it }
+
+    // 1.1.0 -> 1.2.0: A custom text decoration system is replacing the simple underline & strikethrough checkboxes.
+    for (letterStyle in rawStyling.letterStyles) {
+        val ul = letterStyle["underline"] == true
+        val st = letterStyle["strikethrough"] == true
+        if (ul || st) {
+            @Suppress("UNCHECKED_CAST")
+            val deco = letterStyle.getOrPut("decorations") { mutableListOf<Any>() } as MutableList<Any>
+            if (ul)
+                deco.add(mapOf("preset" to "UNDERLINE"))
+            if (st)
+                deco.add(mapOf("preset" to "STRIKETHROUGH"))
+        }
+    }
+
+    // 1.1.0 -> 1.2.0: The scaling of fake small caps is now configurable.
+    for (letterStyle in rawStyling.letterStyles)
+        if (letterStyle["smallCaps"] == true)
+            letterStyle["smallCapsScaling"] = 0.7
+
+    // 1.1.0 -> 1.2.0: Because we now support mixed super- and subscripts, the enum names have changed.
+    for (letterStyle in rawStyling.letterStyles) {
+        val ss = letterStyle["superscript"]
+        if (ss is String && (ss.last() == '1' || ss.last() == '2'))
+            letterStyle["superscript"] = when (ss) {
+                "SUP_1" -> "SUP"
+                "SUB_1" -> "SUB"
+                "SUP_2" -> "SUP_SUP"
+                "SUB_2" -> "SUB_SUB"
+                else -> ss
+            }
+    }
 }
 
 

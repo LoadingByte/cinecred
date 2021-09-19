@@ -12,13 +12,14 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
     PageStyle::class.java -> PAGE_STYLE_WIDGET_SPECS
     ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS
     LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS
+    TextDecoration::class.java -> TEXT_DECORATION_WIDGET_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleWidgetSpec<S>>
 
 
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
-    NumberStepWidgetSpec(Global::widthPx.st(), 10),
-    NumberStepWidgetSpec(Global::heightPx.st(), 10),
+    NumberWidgetSpec(Global::widthPx.st(), step = 10),
+    NumberWidgetSpec(Global::heightPx.st(), step = 10),
     TimecodeWidgetSpec(Global::runtimeFrames.st(), { _, global -> global.fps }, { _, global -> global.timecodeFormat }),
     WidthWidgetSpec(Global::uppercaseExceptions.st(), WidthSpec.NARROW)
 )
@@ -43,10 +44,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::flowElemBoxConform.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowElemHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowElemVJustify.st(), ICON),
-    NumberStepWidgetSpec(ContentStyle::flowLineWidthPx.st(), 10f),
+    NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10f),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
-    NumberStepWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), 10f),
+    NumberWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), step = 10f),
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
@@ -57,17 +58,46 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    NumberStepWidgetSpec(LetterStyle::tracking.st(), 0.01f),
-    WidthWidgetSpec(LetterStyle::backgroundWidenLeft.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenRight.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenTop.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenBottom.st(), WidthSpec.TINY),
+    NewSectionWidgetSpec(LetterStyle::foreground.st()),
+    NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::smallCapsScaling.st(), step = 0.1f),
+    WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),
+    NumberWidgetSpec(LetterStyle::hOffsetRem.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::vOffsetRem.st(), step = 0.01f),
     UnionWidgetSpec(
-        LetterStyle::backgroundWidenLeft.st(), LetterStyle::backgroundWidenRight.st(),
-        LetterStyle::backgroundWidenTop.st(), LetterStyle::backgroundWidenBottom.st(),
-        unionName = "backgroundWiden",
+        LetterStyle::hOffsetRem.st(), LetterStyle::vOffsetRem.st(),
+        unionName = "offsetRem", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_TOP_BOTTOM_ICON)
+    ),
+    NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05f),
+    NewSectionWidgetSpec(LetterStyle::decorations.st()),
+    NewSectionWidgetSpec(LetterStyle::background.st()),
+    WidthWidgetSpec(LetterStyle::backgroundWidenLeftPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenRightPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenTopPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::backgroundWidenBottomPx.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        LetterStyle::backgroundWidenLeftPx.st(), LetterStyle::backgroundWidenRightPx.st(),
+        LetterStyle::backgroundWidenTopPx.st(), LetterStyle::backgroundWidenBottomPx.st(),
+        unionName = "backgroundWidenPx",
         settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON, BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
     )
+)
+
+
+private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> = listOf(
+    WidthWidgetSpec(TextDecoration::widenLeftPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(TextDecoration::widenRightPx.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        TextDecoration::widenLeftPx.st(), TextDecoration::widenRightPx.st(),
+        unionName = "widenPx", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+    ),
+    NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1f),
+    WidthWidgetSpec(TextDecoration::dashPatternPx.st(), WidthSpec.TINY),
+    NumberWidgetSpec(TextDecoration::dashPatternPx.st(), default = 2f),
+    ListWidgetSpec(TextDecoration::dashPatternPx.st(), groupsPerRow = 2)
 )
 
 
@@ -89,9 +119,10 @@ class WidthWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class NumberStepWidgetSpec<S : Style>(
+class NumberWidgetSpec<S : Style>(
     setting: StyleSetting<S, Number>,
-    val stepSize: Number
+    val default: Number? = null,
+    val step: Number? = null
 ) : StyleWidgetSpec<S>(setting)
 
 

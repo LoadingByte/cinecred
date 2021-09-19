@@ -152,23 +152,45 @@ data class LetterStyle(
     val name: String,
     val fontName: String,
     val heightPx: Int,
-    val tracking: Float,
     val foreground: Color,
-    val background: Color,
-    val backgroundWidenLeft: Float,
-    val backgroundWidenRight: Float,
-    val backgroundWidenTop: Float,
-    val backgroundWidenBottom: Float,
-    val underline: Boolean,
-    val strikethrough: Boolean,
-    val smallCaps: Opt<Float>,
+    val trackingEm: Float,
+    val ligatures: Boolean,
+    val smallCapsScaling: Opt<Float>,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
-    val superscript: Superscript
+    val superscript: Superscript,
+    val hOffsetRem: Float,
+    val vOffsetRem: Float,
+    val scaling: Float,
+    val hScaling: Float,
+    val hShearing: Float,
+    val decorations: ImmutableList<TextDecoration>,
+    val background: Color,
+    val backgroundWidenLeftPx: Float,
+    val backgroundWidenRightPx: Float,
+    val backgroundWidenTopPx: Float,
+    val backgroundWidenBottomPx: Float
 ) : Style()
 
 
-enum class Superscript { SUP_2, SUP_1, NONE, SUB_1, SUB_2 }
+enum class Superscript { NONE, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
+
+
+data class TextDecoration(
+    val color: Opt<Color>,
+    val preset: TextDecorationPreset,
+    val offsetPx: Float,
+    val thicknessPx: Float,
+    val widenLeftPx: Float,
+    val widenRightPx: Float,
+    val clearingPx: Opt<Float>,
+    val clearingJoin: LineJoin,
+    val dashPatternPx: ImmutableList<Float>
+) : Style()
+
+
+enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, NONE }
+enum class LineJoin { MITER, ROUND, BEVEL }
 
 
 data class Opt<out T>(val isActive: Boolean, val value: T)

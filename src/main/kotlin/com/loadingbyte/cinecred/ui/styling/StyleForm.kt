@@ -102,7 +102,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
-        val numberStepWidgetSpec = settingWidgetSpecs.oneOf<NumberStepWidgetSpec<S>>()
+        val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
@@ -112,8 +112,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
-                val step = numberStepWidgetSpec?.stepSize ?: 1
-                val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
+                val init = numberWidgetSpec?.default ?: min ?: max ?: 0
+                val step = numberWidgetSpec?.step ?: 1
+                val model = SpinnerNumberModel(init, min, max, step)
                 if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
                 else
@@ -122,8 +123,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val min = floatConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01f) }
                 val max = floatConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01f) }
-                val step = numberStepWidgetSpec?.stepSize ?: 1f
-                val model = SpinnerNumberModel(min ?: max ?: 0f, min, max, step)
+                val init = numberWidgetSpec?.default ?: min ?: max ?: 0f
+                val step = numberWidgetSpec?.step ?: 1f
+                val model = SpinnerNumberModel(init, min, max, step)
                 SpinnerWidget(Float::class.javaObjectType, model, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
@@ -140,7 +142,6 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
             FPS::class.java -> FPSWidget(widthSpec)
-            TextDecoration::class.java -> TextDecorationWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(

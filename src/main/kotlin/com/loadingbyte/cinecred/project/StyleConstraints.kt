@@ -17,6 +17,7 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
     PageStyle::class.java -> PAGE_STYLE_CONSTRAINTS
     ContentStyle::class.java -> CONTENT_STYLE_CONSTRAINTS
     LetterStyle::class.java -> LETTER_STYLE_CONSTRAINTS
+    TextDecoration::class.java -> TEXT_DECORATION_CONSTRAINTS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleConstraint<S, *>>
 
@@ -115,7 +116,18 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
     IntConstr(ERROR, LetterStyle::heightPx.st(), min = 1),
-    FloatConstr(ERROR, LetterStyle::smallCaps.st(), min = 0f, minInclusive = false, max = 100f)
+    FloatConstr(ERROR, LetterStyle::smallCapsScaling.st(), min = 0f, minInclusive = false, max = 1f),
+    FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
+    // These constraints are imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
+    FloatConstr(ERROR, LetterStyle::trackingEm.st(), min = -1f, max = 10f),
+    FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
+)
+
+
+private val TEXT_DECORATION_CONSTRAINTS: List<StyleConstraint<TextDecoration, *>> = listOf(
+    FloatConstr(ERROR, TextDecoration::thicknessPx.st(), min = 0f, minInclusive = false),
+    FloatConstr(ERROR, TextDecoration::clearingPx.st(), min = 0f),
+    FloatConstr(ERROR, TextDecoration::dashPatternPx.st(), min = 0f, minInclusive = false)
 )
 
 

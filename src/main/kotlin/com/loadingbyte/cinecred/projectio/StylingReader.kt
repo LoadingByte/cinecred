@@ -23,10 +23,10 @@ fun readStyling(stylingFile: Path): Styling {
     migrate(rawStyling)
 
     return Styling(
-        readStyle(rawStyling.global, PRESET_GLOBAL),
-        rawStyling.pageStyles.map { readStyle(it, PRESET_PAGE_STYLE) }.toImmutableList(),
-        rawStyling.contentStyles.map { readStyle(it, PRESET_CONTENT_STYLE) }.toImmutableList(),
-        rawStyling.letterStyles.map { readStyle(it, PRESET_LETTER_STYLE) }.toImmutableList()
+        readStyle(rawStyling.global, Global::class.java),
+        rawStyling.pageStyles.map { readStyle(it, PageStyle::class.java) }.toImmutableList(),
+        rawStyling.contentStyles.map { readStyle(it, ContentStyle::class.java) }.toImmutableList(),
+        rawStyling.letterStyles.map { readStyle(it, LetterStyle::class.java) }.toImmutableList()
     )
 }
 
@@ -70,9 +70,7 @@ private fun migrate(rawStyling: RawStyling) {
 }
 
 
-private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
-    val styleClass = stylePreset.javaClass
-
+private fun <S : Style> readStyle(map: Map<String, Any>, styleClass: Class<S>): S {
     val settingValues = getStyleSettings(styleClass).map { setting ->
         try {
             when (setting) {
@@ -88,7 +86,7 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
             }
         } catch (_: RuntimeException) {
             // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
-            setting.get(stylePreset)
+            setting.get(getPreset(styleClass))
         }
     }
 
@@ -96,7 +94,7 @@ private fun <S : Style> readStyle(map: Map<String, Any>, stylePreset: S): S {
 }
 
 
-private fun convert(type: Class<*>, raw: Any): Any = when (type) {
+private fun convert(type: Class<*>, raw: Any?): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
     Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
@@ -106,6 +104,9 @@ private fun convert(type: Class<*>, raw: Any): Any = when (type) {
     FPS::class.java -> (raw as String).toFPS()
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> (raw as String).toEnum(type)
+        Style::class.java.isAssignableFrom(type) ->
+            @Suppress("UNCHECKED_CAST")
+            readStyle(raw as Map<String, Any>, type as Class<Style>)
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

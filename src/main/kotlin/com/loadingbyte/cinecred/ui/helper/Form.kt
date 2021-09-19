@@ -4,10 +4,19 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
 import kotlinx.collections.immutable.ImmutableList
 import net.miginfocom.swing.MigLayout
+import java.awt.Dimension
+import java.awt.Rectangle
 import javax.swing.*
 
 
-open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
+open class Form(insets: Boolean = true) :
+    JPanel(MigLayout("hidemode 3, insets " + if (insets) "dialog" else "0", "[align right][]")),
+    Scrollable {
+
+    abstract class Storable<O>(insets: Boolean = true) : Form(insets) {
+        abstract fun open(stored: O)
+        abstract fun save(): O
+    }
 
     class Notice(val severity: Severity, val msg: String?)
 
@@ -84,9 +93,9 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
             notifyChangeListenersAboutOtherWidgetChange(this)
         }
 
-        protected fun notifyChangeListenersAboutOtherWidgetChange(changed: Widget<*>) {
+        protected fun notifyChangeListenersAboutOtherWidgetChange(widget: Widget<*>) {
             for (listener in changeListeners)
-                listener(changed)
+                listener(widget)
         }
 
     }
@@ -100,6 +109,8 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
     }
 
 
+    val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
+
     private val widgets = mutableListOf<Widget<*>>()
 
     fun <W : Widget<*>> addWidget(label: String, widget: W): W {
@@ -108,7 +119,7 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
         widget.changeListeners.add(::onChange)
 
         widget.labelComp.text = label
-        add(widget.labelComp, "newline")
+        add(widget.labelComp, if (widgets.isEmpty() /* is first widget */) "" else "newline")
 
         val endlineGroupId = "g" + System.identityHashCode(widget.labelComp)
         val endlineFieldIds = mutableListOf<String>()
@@ -149,6 +160,26 @@ open class Form : JPanel(MigLayout("hidemode 3", "[align right][grow]")) {
                 widget.projectFamilies = projectFamilies
     }
 
-    protected open fun onChange(widget: Widget<*>) {}
+    protected open fun onChange(widget: Widget<*>) {
+        for (listener in changeListeners)
+            listener(widget)
+    }
+
+    // The baseline of the whole form should be the baseline of the first widget's label.
+    override fun getBaseline(width: Int, height: Int) = when {
+        widgets.isEmpty() -> -1
+        else -> insets.top + widgets.first().labelComp.let { it.y + it.getBaseline(it.width, it.height) }
+    }
+
+    // Implementation of the Scrollable interface. The important change is made by the first function
+    // getScrollableTracksViewportWidth(). By returning true, we fix the form's width to the width of the surrounding
+    // scroll pane viewport, thereby enabling the usage of the component constraint "width 100%" or "pushx, growx"
+    // to maximally grow a component into the available horizontal space.
+    override fun getScrollableTracksViewportWidth() = true
+    override fun getScrollableTracksViewportHeight() = false
+    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = 1
+    override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) =
+        if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 
 }

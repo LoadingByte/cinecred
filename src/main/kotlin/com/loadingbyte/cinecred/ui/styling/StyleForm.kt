@@ -11,16 +11,13 @@ import javax.swing.Icon
 import javax.swing.SpinnerNumberModel
 
 
-class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
-
-    private var changeListener: ((StyleSetting<S, *>) -> Unit)? = null
+class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = true) : Form.Storable<S>(insets) {
 
     private val backingWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
-    private val valueWidgetsInv = HashMap<Widget<*>, StyleSetting<S, *>>()
     private val rootWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
 
-    private var disableRefresh = false
+    private var disableOnChange = false
 
     init {
         val widgetSpecs = getStyleWidgetSpecs(styleClass)
@@ -44,7 +41,6 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         if (backingWidget != null)
             backingWidgets[setting] = backingWidget
         valueWidgets[setting] = valueWidget
-        valueWidgetsInv[valueWidget] = setting
         rootWidgets[setting] = valueWidget
         addRootWidget(setting.name, valueWidget)
     }
@@ -57,7 +53,6 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                 backingWidgets[setting] = backingWidget
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
-            valueWidgetsInv[valueWidget] = setting
         }
         val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
         for (setting in spec.settings)
@@ -156,6 +151,10 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
                     else ->
                         makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
                 }
+                Style::class.java.isAssignableFrom(setting.type) ->
+                    @Suppress("UNCHECKED_CAST")
+                    NestedFormWidget(StyleForm(setting.type as Class<Style>, insets = false))
+                        .apply { value = getPreset(setting.type) }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
@@ -183,7 +182,9 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     private fun addRootWidget(name: String, widget: Widget<*>) {
-        val l10nKey = "ui.styling." + styleClass.simpleName.removeSuffix("Style").lowercase() + ".$name"
+        val l10nKey = "ui.styling." +
+                styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercase) +
+                ".$name"
         try {
             widget.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
         } catch (_: MissingResourceException) {
@@ -191,22 +192,34 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
         addWidget(l10n(l10nKey), widget)
     }
 
-    fun open(style: S, onChange: ((StyleSetting<S, *>) -> Unit)?) {
-        changeListener = null
-        disableRefresh = true
+    override fun open(stored /* style */: S) {
+        disableOnChange = true
         try {
             for ((setting, widget) in valueWidgets)
                 @Suppress("UNCHECKED_CAST")
-                (widget as Widget<Any?>).value = setting.get(style)
+                (widget as Widget<Any?>).value = setting.get(stored)
         } finally {
-            disableRefresh = false
+            disableOnChange = false
         }
         refresh()
-        changeListener = onChange
     }
 
-    fun save(): S =
+    override fun save(): S =
         newStyle(styleClass, valueWidgets.map { (_, widget) -> widget.value })
+
+    fun getNestedForms(): List<StyleForm<*>> {
+        val nestedForms = mutableListOf<StyleForm<*>>()
+        for (setting in getStyleSettings(styleClass))
+            if (Style::class.java.isAssignableFrom(setting.type))
+                when (setting) {
+                    is DirectStyleSetting, is OptStyleSetting ->
+                        nestedForms.add((backingWidgets[setting] as NestedFormWidget).form as StyleForm)
+                    is ListStyleSetting ->
+                        for (elementWidget in (valueWidgets[setting] as ListWidget<*>).elementWidgets)
+                            nestedForms.add((elementWidget as NestedFormWidget).form as StyleForm)
+                }
+        return nestedForms
+    }
 
     fun clearNoticeOverrides() {
         for (widget in rootWidgets.values)
@@ -232,14 +245,13 @@ class StyleForm<S : Style>(private val styleClass: Class<S>) : Form() {
     }
 
     override fun onChange(widget: Widget<*>) {
-        refresh()
-        changeListener?.invoke(valueWidgetsInv.getValue(widget))
+        if (!disableOnChange) {
+            refresh()
+            super.onChange(widget)
+        }
     }
 
     private fun refresh() {
-        if (disableRefresh)
-            return
-
         val style = save()
         val ineffectiveSettings = findIneffectiveSettings(style)
         for ((setting, widget) in valueWidgets) {

@@ -186,16 +186,22 @@ class MinSizeConstr<S : Style>(
 ) : StyleConstraint<S, ListStyleSetting<S, Any>>(setting)
 
 
-class ConstraintViolation(val style: Style, val setting: StyleSetting<*, *>, val severity: Severity, val msg: String?)
+class ConstraintViolation(
+    val rootStyle: Style,
+    val leafStyle: Style,
+    val leafSetting: StyleSetting<*, *>,
+    val severity: Severity,
+    val msg: String?
+)
 
 fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<ConstraintViolation> {
     val violations = mutableListOf<ConstraintViolation>()
 
-    fun log(style: Style, setting: StyleSetting<*, *>, severity: Severity, msg: String?) {
-        violations.add(ConstraintViolation(style, setting, severity, msg))
+    fun log(rootStyle: Style, leafStyle: Style, leafSetting: StyleSetting<*, *>, severity: Severity, msg: String?) {
+        violations.add(ConstraintViolation(rootStyle, leafStyle, leafSetting, severity, msg))
     }
 
-    fun <S : Style> verifyStyle(style: S) {
+    fun <S : Style> verifyStyle(rootStyle: Style, style: S) {
         val ignoreSettings = findIneffectiveSettings(style)
 
         for (cst in getStyleConstraints(style.javaClass))
@@ -205,8 +211,8 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                         if (cst.min != null && value < cst.min || cst.max != null && value > cst.max) {
                             val minRestr = cst.min?.let { "\u2265 $it" }
                             val maxRestr = cst.max?.let { "\u2264 $it" }
-                            val restriction = combineNumberRestrictions(minRestr, maxRestr)
-                            log(style, setting, cst.severity, l10n("project.styling.constr.number", restriction))
+                            val restr = combineNumberRestrictions(minRestr, maxRestr)
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.number", restr))
                         }
                     }
                 is FloatConstr ->
@@ -218,53 +224,63 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                             fun fmt(f: Float) = NumberFormat.getCompactNumberInstance().format(f)
                             val minRestr = cst.min?.let { (if (cst.minInclusive) "\u2265 " else "> ") + fmt(it) }
                             val maxRestr = cst.max?.let { (if (cst.maxInclusive) "\u2264 " else "< ") + fmt(it) }
-                            val restriction = combineNumberRestrictions(minRestr, maxRestr)
+                            val restr = combineNumberRestrictions(minRestr, maxRestr)
                             val key = when {
                                 cst.finite -> "project.styling.constr.finiteNumber"
                                 else -> "project.styling.constr.number"
                             }
-                            log(style, setting, cst.severity, l10n(key, restriction))
+                            log(rootStyle, style, setting, cst.severity, l10n(key, restr))
                         }
                     }
                 is DynChoiceConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
                         if (value !in cst.choices(styling, style))
-                            log(style, setting, cst.severity, l10n("project.styling.constr.dynChoice"))
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.dynChoice"))
                     }
                 is ColorConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
                         if (!cst.allowAlpha && value.alpha != 255)
-                            log(style, setting, cst.severity, l10n("project.styling.constr.colorAlpha"))
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.colorAlpha"))
                     }
                 is FPSConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
                         if (value.run { numerator <= 0 || denominator <= 0 || !frac.isFinite() })
-                            log(style, setting, cst.severity, l10n("project.styling.constr.fps"))
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.fps"))
                     }
                 is FontNameConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
                         if (!isFontName(value))
-                            log(style, setting, cst.severity, l10n("project.styling.constr.font"))
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.font"))
                     }
                 is JudgeConstr ->
                     if (!cst.judge(styling, style)) {
                         val settings = cst.settings.filter { it !in ignoreSettings }
-                        log(style, settings[0], cst.severity, cst.msg)
+                        log(rootStyle, style, settings[0], cst.severity, cst.msg)
                         for (setting in settings.drop(1))
-                            log(style, setting, cst.severity, null)
+                            log(rootStyle, style, setting, cst.severity, null)
                     }
                 is MinSizeConstr ->
                     for (setting in cst.settings)
                         if (setting !in ignoreSettings)
-                            if (setting.extractValues(style).size < cst.minSize)
-                                log(style, setting, cst.severity, l10n("project.styling.constr.minSize", cst.minSize))
+                            if (setting.extractValues(style).size < cst.minSize) {
+                                val msg = l10n("project.styling.constr.minSize", cst.minSize)
+                                log(rootStyle, style, setting, cst.severity, msg)
+                            }
             }
+
+        for (setting in getStyleSettings(style.javaClass))
+            if (Style::class.java.isAssignableFrom(setting.type) && setting !in ignoreSettings)
+                for (value in setting.extractValues(style))
+                    verifyStyle(rootStyle, value as Style)
     }
 
-    verifyStyle(styling.global)
-    styling.pageStyles.forEach(::verifyStyle)
-    styling.contentStyles.forEach(::verifyStyle)
-    styling.letterStyles.forEach(::verifyStyle)
+    verifyStyle(styling.global, styling.global)
+    for (style in styling.pageStyles)
+        verifyStyle(style, style)
+    for (style in styling.contentStyles)
+        verifyStyle(style, style)
+    for (style in styling.letterStyles)
+        verifyStyle(style, style)
 
     return violations
 }

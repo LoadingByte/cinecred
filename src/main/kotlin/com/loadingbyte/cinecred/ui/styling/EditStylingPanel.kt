@@ -126,59 +126,68 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         add(splitPane, BorderLayout.CENTER)
     }
 
+    init {
+        globalForm.changeListeners += { widget ->
+            stylingTree.setSingleton(globalForm.save())
+            onChange(widget)
+        }
+        pageStyleForm.changeListeners += { widget ->
+            stylingTree.updateSelectedListElement(pageStyleForm.save())
+            onChange(widget)
+        }
+        contentStyleForm.changeListeners += { widget ->
+            stylingTree.updateSelectedListElement(contentStyleForm.save())
+            onChange(widget)
+        }
+    }
+
     private fun openBlank() {
         openedForm = null
         rightPanelCards.show(rightPanel, "Blank")
     }
 
     private fun openGlobal(global: Global) {
-        globalForm.open(
-            global,
-            onChange = { changed -> stylingTree.setSingleton(globalForm.save()); onChange(changed) })
+        globalForm.open(global)
         postOpenForm("Global", globalForm)
     }
 
     private fun openPageStyle(style: PageStyle) {
-        pageStyleForm.open(
-            style,
-            onChange = { changed -> stylingTree.updateSelectedListElement(pageStyleForm.save()); onChange(changed) })
+        pageStyleForm.open(style)
         postOpenForm("PageStyle", pageStyleForm)
     }
 
     private fun openContentStyle(style: ContentStyle) {
-        contentStyleForm.open(
-            style,
-            onChange = { changed -> stylingTree.updateSelectedListElement(contentStyleForm.save()); onChange(changed) })
+        contentStyleForm.open(style)
         postOpenForm("ContentStyle", contentStyleForm)
     }
 
     private fun openLetterStyle(style: LetterStyle) {
         var oldName = style.name
-        letterStyleForm.open(
-            style,
-            onChange = { changed ->
-                val newStyle = letterStyleForm.save()
-                stylingTree.updateSelectedListElement(newStyle)
+        letterStyleForm.open(style)
+        letterStyleForm.changeListeners.clear()
+        letterStyleForm.changeListeners += { widget ->
+            val newStyle = letterStyleForm.save()
+            stylingTree.updateSelectedListElement(newStyle)
 
-                // If the letter style changed its name, update all occurrences of that name in all content styles.
-                val newName = newStyle.name
-                if (oldName != newName)
-                    for (oldContentStyle in stylingTree.getList(ContentStyle::class.java)) {
-                        var newContentStyle = oldContentStyle
-                        if (newContentStyle.bodyLetterStyleName == oldName)
-                            newContentStyle = newContentStyle.copy(bodyLetterStyleName = newName)
-                        if (newContentStyle.headLetterStyleName == oldName)
-                            newContentStyle = newContentStyle.copy(headLetterStyleName = newName)
-                        if (newContentStyle.tailLetterStyleName == oldName)
-                            newContentStyle = newContentStyle.copy(tailLetterStyleName = newName)
-                        // Can use identity equals here to make the check quicker.
-                        if (oldContentStyle !== newContentStyle)
-                            stylingTree.updateListElement(oldContentStyle, newContentStyle)
-                    }
-                oldName = newName
+            // If the letter style changed its name, update all occurrences of that name in all content styles.
+            val newName = newStyle.name
+            if (oldName != newName)
+                for (oldContentStyle in stylingTree.getList(ContentStyle::class.java)) {
+                    var newContentStyle = oldContentStyle
+                    if (newContentStyle.bodyLetterStyleName == oldName)
+                        newContentStyle = newContentStyle.copy(bodyLetterStyleName = newName)
+                    if (newContentStyle.headLetterStyleName == oldName)
+                        newContentStyle = newContentStyle.copy(headLetterStyleName = newName)
+                    if (newContentStyle.tailLetterStyleName == oldName)
+                        newContentStyle = newContentStyle.copy(tailLetterStyleName = newName)
+                    // Can use identity equals here to make the check quicker.
+                    if (oldContentStyle !== newContentStyle)
+                        stylingTree.updateListElement(oldContentStyle, newContentStyle)
+                }
+            oldName = newName
 
-                onChange(changed)
-            })
+            onChange(widget)
+        }
         postOpenForm("LetterStyle", letterStyleForm)
     }
 
@@ -208,7 +217,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         letterStyleForm.updateProjectFontFamilies(projectFamilies)
     }
 
-    private fun onChange(changed: StyleSetting<*, *>? = null) {
+    private fun onChange(widget: Form.Widget<*>? = null) {
         val styling = Styling(
             stylingTree.getSingleton(Global::class.java),
             stylingTree.getList(PageStyle::class.java).toImmutableList(),
@@ -219,7 +228,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         refreshConstraintViolations()
         adjustOpenedForm()
-        ctrl.stylingHistory.editedAndRedraw(styling, changed)
+        ctrl.stylingHistory.editedAndRedraw(styling, widget)
     }
 
     fun updateProject(project: Project?) {
@@ -231,8 +240,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         val severityPerStyle = HashMap<Style, Severity>()
         for (violation in constraintViolations)
-            severityPerStyle[violation.style] =
-                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.style, Severity.values()[0]))
+            severityPerStyle[violation.rootStyle] =
+                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.values()[0]))
+
         stylingTree.adjustAppearance(getExtraIcons = { style ->
             val severity = severityPerStyle[style]
             if (severity == null) emptyList() else listOf(severity.icon)
@@ -240,35 +250,41 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun adjustOpenedForm() {
+        adjustForm(openedForm ?: return)
+    }
+
+    private fun adjustForm(curForm: StyleForm<*>) {
         val styling = this.styling ?: return
-        val openedForm = this.openedForm ?: return
 
-        val openedStyle = openedForm.save()
+        val curStyle = curForm.save()
 
-        openedForm.clearNoticeOverrides()
+        curForm.clearNoticeOverrides()
         // By processing the violations in reverse order, violations that stem from constraints which come earlier
         // in the constraints list end up being shown, while later constraint violations are overwritten.
         for (violation in constraintViolations.asReversed())
-            if (violation.style == openedStyle) {
-                val prevNotice = openedForm.getNoticeOverride(violation.setting)
+            if (violation.leafStyle == curStyle) {
+                val prevNotice = curForm.getNoticeOverride(violation.leafSetting)
                 if (prevNotice == null || violation.severity >= prevNotice.severity)
-                    openedForm.setNoticeOverride(violation.setting, Form.Notice(violation.severity, violation.msg))
+                    curForm.setNoticeOverride(violation.leafSetting, Form.Notice(violation.severity, violation.msg))
             }
 
-        for (constr in getStyleConstraints(openedStyle.javaClass))
+        for (constr in getStyleConstraints(curStyle.javaClass))
             if (constr is DynChoiceConstr) {
-                val choices = constr.choices(styling, openedStyle).toImmutableList()
+                val choices = constr.choices(styling, curStyle).toImmutableList()
                 for (setting in constr.settings)
-                    openedForm.setDynChoices(setting, choices)
+                    curForm.setDynChoices(setting, choices)
             }
 
-        for (spec in getStyleWidgetSpecs(openedStyle.javaClass))
+        for (spec in getStyleWidgetSpecs(curStyle.javaClass))
             if (spec is TimecodeWidgetSpec) {
-                val fps = spec.getFPS(styling, openedStyle)
-                val timecodeFormat = spec.getTimecodeFormat(styling, openedStyle)
+                val fps = spec.getFPS(styling, curStyle)
+                val timecodeFormat = spec.getTimecodeFormat(styling, curStyle)
                 for (setting in spec.settings)
-                    openedForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
+                    curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }
+
+        for (nestedForm in curForm.getNestedForms())
+            adjustForm(nestedForm)
     }
 
     private fun updateUnusedStyles(project: Project?) {

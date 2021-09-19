@@ -6,6 +6,16 @@ import java.awt.Color
 import java.util.*
 
 
+@Suppress("UNCHECKED_CAST")
+fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
+    Global::class.java -> PRESET_GLOBAL
+    PageStyle::class.java -> PRESET_PAGE_STYLE
+    ContentStyle::class.java -> PRESET_CONTENT_STYLE
+    LetterStyle::class.java -> PRESET_LETTER_STYLE
+    else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
+} as S
+
+
 val PRESET_GLOBAL = Global(
     widthPx = 1920,
     heightPx = 1080,

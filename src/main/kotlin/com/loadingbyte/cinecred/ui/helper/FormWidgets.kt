@@ -741,8 +741,8 @@ class OptWidget<V>(
 ) : Form.AbstractWidget<Opt<V>>() {
 
     init {
-        // When the wrapped widget changes, notify this widget's change listeners that __this__ widget has changed.
-        wrapped.changeListeners.add { notifyChangeListeners() }
+        // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        wrapped.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
     private val cb = JCheckBox().apply {
@@ -776,37 +776,39 @@ class OptWidget<V>(
 class ListWidget<V>(
     private val groupsPerRow: Int = 1,
     private val minSize: Int = 0,
-    private val newWidget: () -> Form.Widget<V>
+    private val newElemWidget: () -> Form.Widget<V>
 ) : Form.AbstractWidget<ImmutableList<V>>() {
+
+    private val numCompsPerElemWidget: Int
+    private val isElemWidgetFilling: Boolean
+
+    init {
+        val sampleElemWidget = newElemWidget()
+        numCompsPerElemWidget = sampleElemWidget.components.size
+        isElemWidgetFilling = sampleElemWidget.constraints.any { WidthSpec.FILL.mig in it }
+    }
 
     private val addBtn = JButton(ADD_ICON)
 
-    private val panel = object : JPanel(MigLayout("insets 0")) {
+    private val panel = object : JPanel(MigLayout("insets 0, wrap ${groupsPerRow * (1 + numCompsPerElemWidget)}")) {
         override fun getBaseline(width: Int, height: Int): Int {
             // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component.
             // By selecting the first one which has a valid baseline, we usually let the panel's baseline be the one
             // of the first row of wrapped widgets.
             for (comp in components) {
-                val baseline = comp.getBaseline(0, 0 /* not used */)
+                val baseline = comp.getBaseline(comp.width, comp.height)
                 if (baseline >= 0)
                     return baseline
             }
             return -1
         }
-
-        private var isInitialized = false
-        fun ensureInitialized(numComponentsPerWidget: Int) {
-            if (!isInitialized) {
-                isInitialized = true
-                val l = layout as MigLayout
-                l.layoutConstraints = "${l.layoutConstraints}, wrap ${groupsPerRow * (1 + numComponentsPerWidget)}"
-                revalidate()
-            }
-        }
     }
 
     private val elemWidgets = mutableListOf<Form.Widget<V>>()
     private val elemDelBtns = mutableListOf<JButton>()
+
+    val elementWidgets: List<Form.Widget<V>>
+        get() = elemWidgets
 
     init {
         addBtn.addActionListener {
@@ -816,7 +818,7 @@ class ListWidget<V>(
     }
 
     override val components = listOf<JComponent>(addBtn, panel)
-    override val constraints = listOf("split, aligny top", "")
+    override val constraints = listOf("split, aligny top", if (isElemWidgetFilling) WidthSpec.FILL.mig else "")
 
     override var value: ImmutableList<V>
         get() = elemWidgets.map { it.value }.toImmutableList()
@@ -837,17 +839,14 @@ class ListWidget<V>(
             notifyChangeListeners()
         }
         elemDelBtns.add(delBtn)
-        panel.add(delBtn, "gapx 6lp 0lp")
+        panel.add(delBtn, "aligny top, gapx 6lp 0lp")
 
-        val widget = newWidget()
-        // If this is the first widget we have created, we now have enough information to complete the
-        // initialization of the panel.
-        panel.ensureInitialized(widget.components.size)
+        val widget = newElemWidget()
         // If requested,the new widget should start out with the same value as the current last one.
         if (copyLastValue && elemWidgets.size != 0)
             widget.value = elemWidgets.last().value
-        // When the wrapped widget changes, notify this widget's change listeners that __this__ widget has changed.
-        widget.changeListeners.add { notifyChangeListeners() }
+        // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         elemWidgets.add(widget)
         for ((comp, constr) in widget.components.zip(widget.constraints))
             panel.add(comp, constr)
@@ -880,7 +879,7 @@ class UnionWidget(
     init {
         require(wrapped.size == icons.size)
 
-        // When a wrapped widget changes, notify this widget's change listeners that __the wrapped__ widget has changed.
+        // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
         for (widget in wrapped)
             widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
@@ -908,6 +907,27 @@ class UnionWidget(
             for (idx in wrapped.indices)
                 @Suppress("UNCHECKED_CAST")
                 (wrapped[idx] as Form.Widget<Any?>).value = value[idx]
+        }
+
+}
+
+
+class NestedFormWidget<O>(
+    val form: Form.Storable<O>
+) : Form.AbstractWidget<O>() {
+
+    init {
+        // When the wrapped form changes, notify this widget's change listeners that a widget in that form has changed.
+        form.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+    }
+
+    override val components = listOf(form)
+    override val constraints = listOf(WidthSpec.FILL.mig)
+
+    override var value: O
+        get() = form.save()
+        set(value) {
+            form.open(value)
         }
 
 }

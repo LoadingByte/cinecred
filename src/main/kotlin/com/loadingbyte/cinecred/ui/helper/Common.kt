@@ -17,11 +17,14 @@ val PALETTE_RED: Color = Color.decode("#C75450")
 val PALETTE_GREEN: Color = Color.decode("#499C54")
 
 
-fun newLabelTextArea() = JTextArea().apply {
+fun newLabelTextArea(insets: Boolean = true) = JTextArea().apply {
     background = null
     isEditable = false
     lineWrap = true
     wrapStyleWord = true
+    // If requested, set insets to 0, since JLabels also have insets of 0 and the text area should behave like a label.
+    if (!insets)
+        border = null
     // Without setting an explicit minimum width, the component would never ever again shrink once it has grown.
     // This would of course lead to trouble when first enlarging and then shrinking a container which contains
     // a label text area. By setting an explicit minimum width, we turn off this undesired behavior.

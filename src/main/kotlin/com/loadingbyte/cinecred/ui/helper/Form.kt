@@ -40,7 +40,7 @@ open class Form(insets: Boolean = true) :
 
         override val labelComp = JLabel()
         override val noticeIconComp = JLabel()
-        override val noticeMsgComp = newLabelTextArea()
+        override val noticeMsgComp = newLabelTextArea(insets = false)
 
         override var changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 
@@ -119,7 +119,8 @@ open class Form(insets: Boolean = true) :
         widget.changeListeners.add(::onChange)
 
         widget.labelComp.text = label
-        add(widget.labelComp, if (widgets.isEmpty() /* is first widget */) "" else "newline")
+        val labelId = "l" + System.identityHashCode(widget.labelComp)
+        add(widget.labelComp, "id $labelId, " + if (widgets.isEmpty() /* is first widget */) "" else "newline")
 
         val endlineGroupId = "g" + System.identityHashCode(widget.labelComp)
         val endlineFieldIds = mutableListOf<String>()
@@ -140,11 +141,11 @@ open class Form(insets: Boolean = true) :
             add(field, fieldConstraints.joinToString())
         }
 
-        // Position the notice components using coordinates relative to the fields that are at the line ends.
-        val iconLabelId = "c${System.identityHashCode(widget.noticeIconComp)}"
-        val startYExpr = "${endlineFieldIds[0]}.y"
-        add(widget.noticeIconComp, "id $iconLabelId, pos ($endlineGroupId.x2 + 3*rel) ($startYExpr + 3)")
-        add(widget.noticeMsgComp, "pos $iconLabelId.x2 $startYExpr visual.x2 null")
+        // Position the notice components using x coordinates relative to the fields that are at the line ends
+        // and y coordinates relative to the widget's label.
+        val noticeIconId = "c" + System.identityHashCode(widget.noticeIconComp)
+        add(widget.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
+        add(widget.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
 
         widgets.add(widget)
         return widget

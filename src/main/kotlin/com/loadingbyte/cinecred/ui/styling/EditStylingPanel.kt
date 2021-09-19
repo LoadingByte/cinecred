@@ -46,6 +46,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
 
+    // We increase this counter each time a new form is opened. It is used to tell apart multiple edits
+    // of the same widget but in different styles.
+    private var openCounter = 0
+
     init {
         stylingTreeHintOwner = stylingTree
         stylingTree.onDeselect = ::openBlank
@@ -193,6 +197,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun postOpenForm(cardName: String, form: StyleForm<*>) {
         openedForm = form
+        openCounter++
         adjustOpenedForm()
         rightPanelCards.show(rightPanel, cardName)
         // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
@@ -228,7 +233,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         refreshConstraintViolations()
         adjustOpenedForm()
-        ctrl.stylingHistory.editedAndRedraw(styling, widget)
+        ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
     fun updateProject(project: Project?) {

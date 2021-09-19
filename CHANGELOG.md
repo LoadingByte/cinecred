@@ -31,6 +31,8 @@ Cinecred Changelog
 - Fixed sudden crashes when typing certain characters in a combo box.
 - In the preferences, each locale are also written in that locale's language.
 - A long list of grid columns no longer overflows, but instead wraps early.
+- Editing the same setting in two different styles in rapid succession is no
+  longer considered a single undo/redo step.
 
 ### Notes
 

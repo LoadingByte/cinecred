@@ -3,7 +3,7 @@ package com.loadingbyte.cinecred.ui.helper
 import javax.swing.JButton
 
 
-open class EasyForm : Form() {
+open class EasyForm(insets: Boolean = true) : Form(insets) {
 
     private class WidgetInfo(
         val isVisibleFunc: (() -> Boolean)?,

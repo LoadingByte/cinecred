@@ -14,7 +14,7 @@ import javax.swing.JFrame
 import javax.swing.JOptionPane
 
 
-class PreferencesForm : EasyForm() {
+class PreferencesForm : EasyForm(insets = false) {
 
     private val uiLocaleWishWidget = addWidget(
         l10n("ui.preferences.uiLocaleWish"),

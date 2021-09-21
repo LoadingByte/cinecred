@@ -103,7 +103,7 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
 private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDecoration>> = listOf(
     StyleEffectivitySpec(
         TextDecoration::offsetPx.st(), TextDecoration::thicknessPx.st(),
-        isAlmostEffective = { style -> style.preset != TextDecorationPreset.NONE }
+        isAlmostEffective = { style -> style.preset != TextDecorationPreset.OFF }
     ),
     StyleEffectivitySpec(
         TextDecoration::clearingJoin.st(),

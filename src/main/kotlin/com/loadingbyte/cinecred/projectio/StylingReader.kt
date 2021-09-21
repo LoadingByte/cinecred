@@ -96,6 +96,7 @@ private fun migrate(rawStyling: RawStyling) {
         val ss = letterStyle["superscript"]
         if (ss is String && (ss.last() == '1' || ss.last() == '2'))
             letterStyle["superscript"] = when (ss) {
+                "NONE" -> "OFF"
                 "SUP_1" -> "SUP"
                 "SUB_1" -> "SUB"
                 "SUP_2" -> "SUP_SUP"

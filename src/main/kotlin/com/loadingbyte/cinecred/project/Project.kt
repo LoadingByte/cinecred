@@ -173,7 +173,7 @@ data class LetterStyle(
 ) : Style()
 
 
-enum class Superscript { NONE, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
+enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
 
 
 data class TextDecoration(
@@ -189,7 +189,7 @@ data class TextDecoration(
 ) : Style()
 
 
-enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, NONE }
+enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, OFF }
 enum class LineJoin { MITER, ROUND, BEVEL }
 
 

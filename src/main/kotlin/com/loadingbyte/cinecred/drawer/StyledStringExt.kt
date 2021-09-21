@@ -131,7 +131,7 @@ private fun generateFmtStrAttrs(
     var ssScaling = 1f
     var ssHOffset = 0f
     var ssVOffset = 0f
-    if (style.superscript != Superscript.NONE) {
+    if (style.superscript != Superscript.OFF) {
         val ssMetrics = baseAWTFont.getSuperscriptMetrics()
             ?: SuperscriptMetrics(2 / 3f, 0f, 0.375f, 2 / 3f, 0f, -0.375f)
 
@@ -149,7 +149,7 @@ private fun generateFmtStrAttrs(
 
         // @formatter:off
         when (style.superscript) {
-            Superscript.NONE -> { /* can never happen */ }
+            Superscript.OFF -> { /* can never happen */ }
             Superscript.SUP -> sup()
             Superscript.SUB -> sub()
             Superscript.SUP_SUP -> { sup(); sup() }
@@ -172,7 +172,7 @@ private fun generateFmtStrAttrs(
         var offset = td.offsetPx
         var thickness = td.thicknessPx
         when (td.preset) {
-            TextDecorationPreset.NONE -> {
+            TextDecorationPreset.OFF -> {
             }
             TextDecorationPreset.UNDERLINE -> {
                 offset = lm.underlineOffset

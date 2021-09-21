@@ -287,15 +287,15 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
     }
 
     // 3. Build a FormattedString by adding attributes to the "smallCapsed" string as indicated by the letter styles.
-    val fmtStrBuilder = FormattedString.Builder(smallCapsed.joinToString("") { (run, _) -> run }, textCtx.locale)
+    val fmtStrBuilder = FormattedString.Builder(textCtx.locale)
     smallCapsed.forEachRun { runIdx, run, style, _, _ ->
         val (stdAttr, smallCapsAttr) = textCtx.getFmtStrAttrs(style)
         if (!style.smallCapsScaling.isActive)
-            fmtStrBuilder.append(numChars = run.length, stdAttr)
+            fmtStrBuilder.append(run, stdAttr)
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
                 val attr = if (isStripSmallCaps) smallCapsAttr!! else stdAttr
-                fmtStrBuilder.append(numChars = stripEndIdx - stripStartIdx, attr)
+                fmtStrBuilder.append(run.substring(stripStartIdx, stripEndIdx), attr)
             }
     }
     return fmtStrBuilder.build()

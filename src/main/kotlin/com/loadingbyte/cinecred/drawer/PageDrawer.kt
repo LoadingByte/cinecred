@@ -245,8 +245,8 @@ private fun drawPage(
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
         val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font("Monospaced.bold", Font.PLAIN, 1), global.widthPx / 80f)
-        val fmtStr = FormattedString.Builder(str, Locale.ROOT).apply {
-            append(str.length, FormattedString.Attribute(font, emptySet(), null))
+        val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
+            append(str, FormattedString.Attribute(font, emptySet(), null))
         }.build()
         val margin = global.widthPx / 100f
         pageImage.drawString(

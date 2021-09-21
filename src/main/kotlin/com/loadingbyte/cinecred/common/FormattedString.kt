@@ -611,15 +611,18 @@ class FormattedString private constructor(
     }
 
 
-    class Builder(private val string: String, private val locale: Locale) {
+    class Builder(private val locale: Locale) {
 
+        private val stringBuilder = StringBuilder()
         private var numRuns = 0
         private var runAttrs = arrayOfNulls<Attribute?>(1)
         private var runEnds = IntArray(1)
 
-        fun append(numChars: Int, attribute: Attribute) {
-            val runEnd = (if (numRuns == 0) 0 else runEnds[numRuns - 1]) + numChars
-            require(numChars >= 1 && runEnd <= string.length)
+        fun append(string: String, attribute: Attribute) {
+            if (string.isEmpty())
+                return
+            stringBuilder.append(string)
+            val runEnd = (if (numRuns == 0) 0 else runEnds[numRuns - 1]) + string.length
             if (runAttrs.size == numRuns) {
                 runAttrs = runAttrs.copyOf(numRuns * 4)
                 runEnds = runEnds.copyOf(numRuns * 4)
@@ -629,15 +632,11 @@ class FormattedString private constructor(
             numRuns++
         }
 
-        fun build(): FormattedString {
-            // We ensure that information over the entire length of the string.
-            check(numRuns >= 1 && runEnds[numRuns - 1] == string.length)
-
-            return FormattedString(
-                string, Attributes(numRuns, runAttrs, runEnds, 0, string.length),
+        fun build(): FormattedString =
+            FormattedString(
+                stringBuilder.toString(), Attributes(numRuns, runAttrs, runEnds, 0, stringBuilder.length),
                 locale, justificationWidth = Float.NaN
             )
-        }
 
     }
 

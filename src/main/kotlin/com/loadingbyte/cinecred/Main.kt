@@ -28,11 +28,14 @@ import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.FileSystems
+import java.nio.file.Path
 import java.util.logging.*
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
 import javax.swing.UIManager
+import kotlin.io.path.*
 
 
 private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
@@ -56,6 +59,25 @@ fun main() {
     rootLogger.addHandler(ConsoleHandler().apply { level = Level.WARNING; formatter = JULFormatter })
     rootLogger.addHandler(JULBuilderHandler)
 
+    // Load all natives from the system-specific directory in the natives/ resource folder.
+    val nativesExDir = System.getProperty("java.io.tmpdir") + "/cinecred-natives-" + System.getProperty("user.name")
+    val nativesDir = "/natives/" + Loader.Detector.getPlatform()
+    val nativesURI = (object {}.javaClass).getResource(nativesDir)!!.toURI()
+    if (nativesURI.scheme == "jar") {
+        Path(nativesExDir).createDirectories()
+        FileSystems.newFileSystem(nativesURI, emptyMap<String, Any>()).use { fs ->
+            for (file in fs.getPath(nativesDir).listDirectoryEntries()) {
+                val exFile = Path(nativesExDir, file.name)
+                file.copyTo(exFile, overwrite = true)
+                System.load(exFile.toString())
+            }
+        }
+    } else
+        for (file in Path.of(nativesURI).listDirectoryEntries())
+            System.load(file.toString())
+
+    // Let JavaCPP extract its natives into the temp dir, so that they don't clutter the user's filesystem.
+    System.setProperty("org.bytedeco.javacpp.cachedir", nativesExDir)
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
     // Load FFmpeg.

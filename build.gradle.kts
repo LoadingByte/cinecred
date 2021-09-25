@@ -108,6 +108,7 @@ configurations.all {
 
 tasks.withType<JavaCompile> {
     options.release.set(17)
+    options.compilerArgs = listOf("--add-modules", "jdk.incubator.foreign")
 }
 
 tasks.withType<KotlinCompile> {
@@ -135,8 +136,8 @@ jar.apply {
 }
 
 
-// Cinecred implements reflective code which accesses these two packages.
-val addOpens = listOf("java.desktop/java.awt.font", "java.desktop/sun.font")
+// Cinecred implements reflective code which accesses these packages.
+val addOpens = listOf("java.base/java.lang", "java.desktop/java.awt.font", "java.desktop/sun.font")
 
 // Build the universal JAR containing natives for all supported platforms.
 val buildUniversalJar by tasks.registering(Jar::class) {
@@ -171,7 +172,8 @@ val preparePackagingTasks = Platform.values().map { platform ->
             val tokens = mapOf(
                 "VERSION" to version,
                 "MAIN_JAR" to platformJar.archiveFileName.get(),
-                "JAVA_OPTIONS" to addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
+                "JAVA_OPTIONS" to "--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED " +
+                        addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
                 "DESCRIPTION" to "Create film credits---without pain",
                 "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
             )
@@ -236,6 +238,10 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
     )
 
     val excludePlatforms = Platform.values().filter { it !in includePlatforms }
+
+    for (platform in excludePlatforms)
+        exclude("natives/${platform.slug}")
+
     for (dep in configurations.runtimeClasspath.get()) {
         // Exclude all natives that haven't been explicitly included.
         if (excludePlatforms.any { it.slug in dep.name })

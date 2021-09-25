@@ -8,7 +8,8 @@ Cinecred Changelog
 
 - The capabilities of letter styles have been massively expanded, notably:
     - Optional ligatures can be disabled.
-    - The relative size of small caps can be adjusted.
+    - If available, native small caps and petite caps provided by fonts are
+      used. Also, the fallback fake small caps are sized more appropriately.
     - Added support for mixed super and subscripts, e.g., first super then sub.
     - Super and subscripts are positioned as defined by the font designer.
     - Text can be scaled and offset, e.g., to manually position superscripts.

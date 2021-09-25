@@ -155,9 +155,9 @@ data class LetterStyle(
     val foreground: Color,
     val trackingEm: Float,
     val ligatures: Boolean,
-    val smallCapsScaling: Opt<Float>,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
+    val smallCaps: SmallCaps,
     val superscript: Superscript,
     val hOffsetRem: Float,
     val vOffsetRem: Float,
@@ -173,6 +173,7 @@ data class LetterStyle(
 ) : Style()
 
 
+enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }
 enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
 
 

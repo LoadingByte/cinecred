@@ -86,10 +86,10 @@ private fun migrate(rawStyling: RawStyling) {
         }
     }
 
-    // 1.1.0 -> 1.2.0: The scaling of fake small caps is now configurable.
+    // 1.1.0 -> 1.2.0: We now support multiple variants of small caps.
     for (letterStyle in rawStyling.letterStyles)
         if (letterStyle["smallCaps"] == true)
-            letterStyle["smallCapsScaling"] = 0.7
+            letterStyle["smallCaps"] = "SMALL_CAPS"
 
     // 1.1.0 -> 1.2.0: Because we now support mixed super- and subscripts, the enum names have changed.
     for (letterStyle in rawStyling.letterStyles) {

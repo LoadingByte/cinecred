@@ -106,6 +106,8 @@ class FormattedString private constructor(
         if (!_width.isNaN())
             return
 
+        CustomGlyphLayoutEngine.begin(customGlyphLayoutEngineConfigSource)
+
         val textLayout = TextLayout(textLayoutAttrStr.iterator, REF_FRC).let {
             if (justificationWidth.isNaN()) it else it.getJustifiedLayout(justificationWidth)
         }
@@ -261,6 +263,8 @@ class FormattedString private constructor(
                 backgrounds.add(Pair(rect, bg.color))
             })
         _backgrounds = backgrounds
+
+        CustomGlyphLayoutEngine.end()
     }
 
     private inline fun <T> forEachStretch(
@@ -370,6 +374,7 @@ class FormattedString private constructor(
     fun breakLines(wrappingWidth: Float): List<Int> {
         // Employ a LineBreakMeasurer to find the best spots to insert a newline.
         val breaks = mutableListOf(0)
+        CustomGlyphLayoutEngine.begin(customGlyphLayoutEngineConfigSource)
         val tlAttrCharIter = textLayoutAttrStr.iterator
         val lineMeasurer = LineBreakMeasurer(tlAttrCharIter, BreakIterator.getLineInstance(locale), REF_FRC)
         while (lineMeasurer.position != tlAttrCharIter.endIndex) {
@@ -377,6 +382,7 @@ class FormattedString private constructor(
             lineMeasurer.position = lineEndPos
             breaks.add(lineEndPos)
         }
+        CustomGlyphLayoutEngine.end()
         return breaks
     }
 
@@ -403,6 +409,11 @@ class FormattedString private constructor(
         tlAttrStr
     }
 
+    private val customGlyphLayoutEngineConfigSource = { charIdx: Int ->
+        val attr = attrs.getAttr(charIdx)
+        CustomGlyphLayoutEngine.ExtConfig(locale, attr.font.features)
+    }
+
 
     class Attribute(
         val font: Font,
@@ -422,6 +433,7 @@ class FormattedString private constructor(
         private val vOffsetRem: Float = 0f,
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
+        val features: List<String> = emptyList(),
         private val trackingEm: Float = 0f
     ) {
 
@@ -468,7 +480,7 @@ class FormattedString private constructor(
 
         fun scaled(extraScaling: Float) = Font(
             color, baseAWTFont, heightPx, scaling * extraScaling, hScaling, hShearing, hOffsetRem, vOffsetRem,
-            kerning, ligatures, trackingEm
+            kerning, ligatures, features, trackingEm
         )
 
         companion object {

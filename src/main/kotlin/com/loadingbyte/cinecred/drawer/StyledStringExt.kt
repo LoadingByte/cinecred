@@ -1,9 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.FormattedString
-import com.loadingbyte.cinecred.common.SuperscriptMetrics
-import com.loadingbyte.cinecred.common.getSuperscriptMetrics
-import com.loadingbyte.cinecred.common.lineMetrics
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
 import java.awt.Font
@@ -67,14 +64,19 @@ private class TextContextImpl(
 
     val uppercaseExceptionsRegex: Regex? by lazy { generateUppercaseExceptionsRegex(uppercaseExceptions) }
 
-    private val fmtStrAttrCache = HashMap<LetterStyle, Pair<FormattedString.Attribute, FormattedString.Attribute?>>()
+    private val fmtStrAttrsCache = HashMap<LetterStyle, Attrs>()
     private val fmtStrCache = HashMap<StyledString, FormattedString>()
 
     fun getFmtStrAttrs(letterStyle: LetterStyle) =
-        fmtStrAttrCache.getOrPut(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
+        fmtStrAttrsCache.getOrPut(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
 
     fun getFmtStr(styledString: StyledString) =
         fmtStrCache.getOrPut(styledString) { generateFmtStr(styledString, this) }
+
+    class Attrs(
+        val std: FormattedString.Attribute,
+        val smallCaps: FormattedString.Attribute?
+    )
 
 }
 
@@ -124,7 +126,7 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 private fun generateFmtStrAttrs(
     style: LetterStyle,
     textCtx: TextContextImpl
-): Pair<FormattedString.Attribute, FormattedString.Attribute?> {
+): TextContextImpl.Attrs {
     val baseAWTFont =
         textCtx.projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName)
 
@@ -160,12 +162,25 @@ private fun generateFmtStrAttrs(
         // @formatter:on
     }
 
+    var features = emptyList<String>()
+    var fakeSCScaling = Float.NaN
+    when (style.smallCaps) {
+        SmallCaps.OFF -> {
+        }
+        SmallCaps.SMALL_CAPS ->
+            if (baseAWTFont.supportsFeature("smcp")) features = listOf("smcp") else
+                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1f, 0.8f)
+        SmallCaps.PETITE_CAPS ->
+            if (baseAWTFont.supportsFeature("pcap")) features = listOf("pcap") else
+                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1f, 0.725f)
+    }
+
     val stdFont = FormattedString.Font(
         style.foreground, baseAWTFont, style.heightPx.toFloat(), style.scaling * ssScaling, style.hScaling,
         style.hShearing, style.hOffsetRem + ssHOffset, style.vOffsetRem + ssVOffset,
-        kerning = true, style.ligatures, style.trackingEm
+        kerning = true, style.ligatures, features, style.trackingEm
     )
-    val smallCapsFont = if (!style.smallCapsScaling.isActive) null else stdFont.scaled(style.smallCapsScaling.value)
+    val smallCapsFont = if (fakeSCScaling.isNaN()) null else stdFont.scaled(fakeSCScaling)
 
     val lm = baseAWTFont.deriveFont(stdFont.unscaledPointSize).lineMetrics
     val deco = style.decorations.mapTo(HashSet()) { td ->
@@ -206,7 +221,12 @@ private fun generateFmtStrAttrs(
 
     val stdAttr = FormattedString.Attribute(stdFont, deco, bg)
     val smallCapsAttr = if (smallCapsFont == null) null else FormattedString.Attribute(smallCapsFont, deco, bg)
-    return Pair(stdAttr, smallCapsAttr)
+    return TextContextImpl.Attrs(stdAttr, smallCapsAttr)
+}
+
+private fun getSmallCapsScaling(font: Font, multiplier: Float, fallback: Float): Float {
+    val extraLM = font.getExtraLineMetrics()
+    return if (extraLM == null) fallback else extraLM.xHeightEm / extraLM.capHeightEm * multiplier
 }
 
 
@@ -255,16 +275,16 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
     val smallCapsed: StyledString
     var smallCapsMasks: Array<BooleanArray?>? = null
 
-    if (!uppercased.any { (_, style) -> style.smallCapsScaling.isActive })
+    if (uppercased.all { (_, style) -> textCtx.getFmtStrAttrs(style).smallCaps == null })
         smallCapsed = uppercased
     else {
         val masks = arrayOfNulls<BooleanArray?>(uppercased.size)
         smallCapsMasks = masks
         smallCapsed = uppercased.mapRuns { runIdx, run, style, _, _ ->
-            if (!style.smallCapsScaling.isActive)
+            if (textCtx.getFmtStrAttrs(style).smallCaps == null)
                 run
             else {
-                val smallCapsedRun = if (style.smallCapsScaling.isActive) run.uppercase(textCtx.locale) else run
+                val smallCapsedRun = run.uppercase(textCtx.locale)
 
                 // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
                 // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
@@ -289,12 +309,12 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
     // 3. Build a FormattedString by adding attributes to the "smallCapsed" string as indicated by the letter styles.
     val fmtStrBuilder = FormattedString.Builder(textCtx.locale)
     smallCapsed.forEachRun { runIdx, run, style, _, _ ->
-        val (stdAttr, smallCapsAttr) = textCtx.getFmtStrAttrs(style)
-        if (!style.smallCapsScaling.isActive)
-            fmtStrBuilder.append(run, stdAttr)
+        val attrs = textCtx.getFmtStrAttrs(style)
+        if (attrs.smallCaps == null)
+            fmtStrBuilder.append(run, attrs.std)
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
-                val attr = if (isStripSmallCaps) smallCapsAttr!! else stdAttr
+                val attr = if (isStripSmallCaps) attrs.smallCaps else attrs.std
                 fmtStrBuilder.append(run.substring(stripStartIdx, stripEndIdx), attr)
             }
     }

@@ -7,6 +7,8 @@ Visit the website at https://loadingbyte.com/cinecred/ for further information a
 
 ## Running
 
+This software requires JDK 17. Make sure you are using that version when building and manually running it.
+
 To run the main class at `com.loadingbyte.cinecred.Main`, the following VM arguments are required:
 
     --add-opens java.desktop/java.awt.font=ALL-UNNAMED

@@ -30,7 +30,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.5.20"
+    kotlin("jvm") version "1.5.30"
 }
 
 group = "com.loadingbyte"
@@ -104,6 +104,10 @@ configurations.all {
     exclude("xml-apis", "xml-apis")
     // Batik functions well without the big xalan dependency.
     exclude("xalan", "xalan")
+}
+
+tasks.withType<JavaCompile> {
+    options.release.set(17)
 }
 
 tasks.withType<KotlinCompile> {

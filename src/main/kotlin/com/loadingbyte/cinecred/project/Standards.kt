@@ -93,6 +93,7 @@ val PRESET_LETTER_STYLE = LetterStyle(
     heightPx = 32,
     foreground = Color.WHITE,
     trackingEm = 0f,
+    kerning = true,
     ligatures = true,
     uppercase = false,
     useUppercaseExceptions = true,

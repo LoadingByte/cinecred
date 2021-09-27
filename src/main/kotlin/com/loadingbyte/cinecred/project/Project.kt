@@ -154,6 +154,7 @@ data class LetterStyle(
     val heightPx: Int,
     val foreground: Color,
     val trackingEm: Float,
+    val kerning: Boolean,
     val ligatures: Boolean,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,

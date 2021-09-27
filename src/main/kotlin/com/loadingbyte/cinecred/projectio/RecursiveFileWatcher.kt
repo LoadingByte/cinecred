@@ -7,13 +7,13 @@ import kotlin.io.path.isDirectory
 
 object RecursiveFileWatcher {
 
-    private class Order(val listener: (Path, WatchEvent.Kind<*>) -> Unit, val watchKeys: MutableSet<WatchKey>)
+    private class Order(val listener: (Path, List<WatchEvent.Kind<*>>) -> Unit, val watchKeys: MutableSet<WatchKey>)
 
     private val watcher = FileSystems.getDefault().newWatchService()
     private val orders = HashMap<Path, Order>()
     private val lock = Any()
 
-    fun watch(rootDir: Path, listener: (Path, WatchEvent.Kind<*>) -> Unit) {
+    fun watch(rootDir: Path, listener: (Path, List<WatchEvent.Kind<*>>) -> Unit) {
         synchronized(lock) {
             val watchKeys = HashSet<WatchKey>()
             for (file in Files.walk(rootDir))
@@ -35,7 +35,9 @@ object RecursiveFileWatcher {
                 val watchKey = watcher.take()
                 val order = orders.values.first { order -> watchKey in order.watchKeys }
                 synchronized(lock) {
-                    for (event in watchKey.pollEvents())
+                    var prevFile: Path? = null
+                    var kinds: MutableList<WatchEvent.Kind<*>>? = null
+                    for (event in watchKey.pollEvents()) {
                         if (event.kind() != OVERFLOW) {
                             val file = (watchKey.watchable() as Path).resolve(event.context() as Path)
 
@@ -47,8 +49,18 @@ object RecursiveFileWatcher {
                                 } else if (event.kind() == ENTRY_DELETE)
                                     order.watchKeys.find { it.watchable() == file }?.cancel()
 
-                            order.listener(file, event.kind())
+                            if (file == prevFile)
+                                kinds!!.add(event.kind())
+                            else {
+                                if (prevFile != null)
+                                    order.listener(prevFile, kinds!!)
+                                prevFile = file
+                                kinds = mutableListOf(event.kind())
+                            }
                         }
+                    }
+                    if (prevFile != null)
+                        order.listener(prevFile, kinds!!)
                     watchKey.reset()
                 }
             }

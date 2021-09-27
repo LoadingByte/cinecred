@@ -78,7 +78,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         tryReadCreditsAndRedraw()
 
         // Watch for future changes in the new project dir.
-        RecursiveFileWatcher.watch(projectDir) { file: Path, kind: WatchEvent.Kind<*> ->
+        RecursiveFileWatcher.watch(projectDir) { file: Path, kinds: List<WatchEvent.Kind<*>> ->
             val creditsFile = this.creditsFile  // capture
             when {
                 hasCreditsFileName(file) -> {
@@ -92,7 +92,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                     } else
                         pushStateIntoUI()  // Update the log entry regarding multiple credits files.
                 }
-                kind == ENTRY_DELETE ->
+                kinds.last() == ENTRY_DELETE ->
                     SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw() }
                 else ->
                     SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw() }

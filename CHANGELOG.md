@@ -35,6 +35,7 @@ Cinecred Changelog
 - User-supplied font collections (ttc/otc) are now supported.
 - User-supplied auxiliary files (fonts and pictures) are recognized regardless
   of their file extension's case.
+- When saving the credits file, the preview is no longer re-rendered two times.
 
 #### UI Fixes
 

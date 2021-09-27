@@ -9,6 +9,7 @@ Cinecred Changelog
 - The capabilities of letter styles have been massively expanded, notably:
     - Kerning can be disabled.
     - Optional ligatures can be disabled.
+    - If supported by the font, all-caps text spacing can be used.
     - If available, native small caps and petite caps provided by fonts are
       used. Also, the fallback fake small caps are sized more appropriately.
     - Added support for mixed super and subscripts, e.g., first super then sub.

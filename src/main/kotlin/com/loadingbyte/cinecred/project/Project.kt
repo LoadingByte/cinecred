@@ -158,6 +158,7 @@ data class LetterStyle(
     val ligatures: Boolean,
     val uppercase: Boolean,
     val useUppercaseExceptions: Boolean,
+    val useUppercaseSpacing: Boolean,
     val smallCaps: SmallCaps,
     val superscript: Superscript,
     val hOffsetRem: Float,

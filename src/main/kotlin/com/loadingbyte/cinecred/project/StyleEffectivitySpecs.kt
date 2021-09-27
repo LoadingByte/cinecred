@@ -89,7 +89,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
 
 private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyle>> = listOf(
     StyleEffectivitySpec(
-        LetterStyle::useUppercaseExceptions.st(),
+        LetterStyle::useUppercaseExceptions.st(), LetterStyle::useUppercaseSpacing.st(),
         isAlmostEffective = { style -> !style.uppercase }
     ),
     StyleEffectivitySpec(

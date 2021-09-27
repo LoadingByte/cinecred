@@ -97,6 +97,7 @@ val PRESET_LETTER_STYLE = LetterStyle(
     ligatures = true,
     uppercase = false,
     useUppercaseExceptions = true,
+    useUppercaseSpacing = true,
     smallCaps = SmallCaps.OFF,
     superscript = Superscript.OFF,
     hOffsetRem = 0f,

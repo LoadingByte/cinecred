@@ -162,16 +162,20 @@ private fun generateFmtStrAttrs(
         // @formatter:on
     }
 
-    var features = emptyList<String>()
+    val features = mutableListOf<String>()
+
+    if (style.uppercase && style.useUppercaseSpacing)
+        features.add("cpsp")
+
     var fakeSCScaling = Float.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {
         }
         SmallCaps.SMALL_CAPS ->
-            if (baseAWTFont.supportsFeature("smcp")) features = listOf("smcp") else
+            if (baseAWTFont.supportsFeature("smcp")) features.add("smcp") else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1f, 0.8f)
         SmallCaps.PETITE_CAPS ->
-            if (baseAWTFont.supportsFeature("pcap")) features = listOf("pcap") else
+            if (baseAWTFont.supportsFeature("pcap")) features.add("pcap") else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1f, 0.725f)
     }
 

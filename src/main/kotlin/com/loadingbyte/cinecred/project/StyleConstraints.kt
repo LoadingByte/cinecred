@@ -117,8 +117,7 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
     FontNameConstr(WARN, LetterStyle::fontName.st()),
     IntConstr(ERROR, LetterStyle::heightPx.st(), min = 1),
     FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
-    // These constraints are imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
-    FloatConstr(ERROR, LetterStyle::trackingEm.st(), min = -1f, max = 10f),
+    // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
 )
 

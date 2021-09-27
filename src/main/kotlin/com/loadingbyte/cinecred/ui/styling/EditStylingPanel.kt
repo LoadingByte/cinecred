@@ -250,7 +250,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         stylingTree.adjustAppearance(getExtraIcons = { style ->
             val severity = severityPerStyle[style]
-            if (severity == null) emptyList() else listOf(severity.icon)
+            if (severity == null || severity == Severity.INFO) emptyList() else listOf(severity.icon)
         })
     }
 

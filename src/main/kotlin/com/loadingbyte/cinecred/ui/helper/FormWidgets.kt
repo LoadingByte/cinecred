@@ -796,7 +796,10 @@ class ListWidget<V>(
             // By selecting the first one which has a valid baseline, we usually let the panel's baseline be the one
             // of the first row of wrapped widgets.
             for (comp in components) {
-                val baseline = comp.getBaseline(comp.width, comp.height)
+                // If the component layout hasn't been done yet, approximate the component's height using its
+                // preferred height. This alleviates "jumping" when adding certain components like JComboBoxes.
+                val cHeight = if (comp.height != 0) comp.height else comp.preferredSize.height
+                val baseline = comp.getBaseline(comp.width, cHeight)
                 if (baseline >= 0)
                     return baseline
             }

@@ -24,14 +24,14 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
         val unionSpecs = widgetSpecs.filterIsInstance<UnionWidgetSpec<S>>()
 
         for (setting in getStyleSettings(styleClass)) {
-            val unionSpec = unionSpecs.find { it.settings.first() == setting }
-            if (unionSpec != null)
-                addSettingUnionWidget(unionSpec)
-            else {
+            val unionSpec = unionSpecs.find { setting in it.settings }
+            if (unionSpec == null || unionSpec.settings.first() == setting) {
                 if (widgetSpecs.any { setting in it.settings && it is NewSectionWidgetSpec<S> })
                     addSeparator()
-                if (!unionSpecs.any { setting in it.settings })
+                if (unionSpec == null)
                     addSingleSettingWidget(setting)
+                else
+                    addSettingUnionWidget(unionSpec)
             }
         }
     }

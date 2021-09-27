@@ -28,7 +28,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     IntConstr(ERROR, Global::widthPx.st(), min = 1),
     IntConstr(ERROR, Global::heightPx.st(), min = 1),
     JudgeConstr(
-        ERROR, l10n("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
+        ERROR, msg("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
         Global::widthPx.st(), Global::heightPx.st(),
         judge = { _, global ->
             val aspectRatio = global.widthPx.toFloat() / global.heightPx
@@ -49,8 +49,8 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
 
 
 private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     IntConstr(ERROR, PageStyle::afterwardSlugFrames.st(), min = 0),
@@ -58,7 +58,7 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
     FloatConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0f, minInclusive = false),
-    JudgeConstr(WARN, l10n("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
         val value = style.scrollPxPerFrame
         floor(value) == value
     }
@@ -66,8 +66,8 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
 
 
 private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, style ->
@@ -110,8 +110,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
 
 
 private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
-    JudgeConstr(WARN, l10n("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, l10n("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
@@ -184,7 +184,7 @@ class FontNameConstr<S : Style>(
 
 class JudgeConstr<S : Style>(
     val severity: Severity,
-    val msg: String,
+    val getMsg: () -> String,
     vararg settings: StyleSetting<S, Any>,
     val judge: (Styling, S) -> Boolean
 ) : StyleConstraint<S, StyleSetting<S, Any>>(*settings)
@@ -266,7 +266,7 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                 is JudgeConstr ->
                     if (!cst.judge(styling, style)) {
                         val settings = cst.settings.filter { it !in ignoreSettings }
-                        log(rootStyle, style, settings[0], cst.severity, cst.msg)
+                        log(rootStyle, style, settings[0], cst.severity, cst.getMsg())
                         for (setting in settings.drop(1))
                             log(rootStyle, style, setting, cst.severity, null)
                     }
@@ -314,3 +314,7 @@ private fun combineNumberRestrictions(minRestr: String?, maxRestr: String?): Str
         maxRestr != null -> " $maxRestr"
         else -> ""
     }
+
+
+private fun msg(key: String): () -> String = { l10n(key) }
+private fun msg(key: String, vararg args: Any?): () -> String = { l10n(key, *args) }

@@ -10,6 +10,7 @@ import java.awt.font.TextAttribute
 import java.awt.font.TextLayout
 import java.awt.geom.*
 import java.text.AttributedString
+import java.text.Bidi
 import java.text.BreakIterator
 import java.util.*
 import kotlin.math.abs
@@ -106,15 +107,18 @@ class FormattedString private constructor(
         if (!_width.isNaN())
             return
 
-        CustomGlyphLayoutEngine.begin(customGlyphLayoutEngineConfigSource)
-
+        CustomGlyphLayoutEngine.begin(makeCustomGlyphLayoutEngineConfigSource())
         val textLayout = TextLayout(textLayoutAttrStr.iterator, REF_FRC).let {
             if (justificationWidth.isNaN()) it else it.getJustifiedLayout(justificationWidth)
         }
+        CustomGlyphLayoutEngine.end()
+
         // The current Java implementation always uses the roman baseline everywhere. We take advantage of this
         // implementation detail and do not implement code for different baselines. In case this behavior
         // changes with a future Java version, we do not want out code to silently fail, hence we check here.
         check(textLayout.baseline.toInt() == java.awt.Font.ROMAN_BASELINE)
+
+        _width = textLayout.advance
 
         // Get all GlyphVectors which layout the string. They are ordered such that the first GlyphVector realizes
         // the first chars of the string, the next one realizes the chars immediately after that and so on. In case
@@ -131,33 +135,14 @@ class FormattedString private constructor(
             charCtr += textLayout.getGlyphVectorNumChars(gvIdx)
         }
 
-        // For each glyph vector apart from the visually leftmost one, find the gap between that glyph vector and
-        // the glyph vector left to it. This gap is defined as the maximum tracking of those two glyph vectors.
-        val gvLeftHandGaps = FloatArray(gvs.size)
-        for (visualGvIdx in 1 until gvs.size) {
-            val leftGvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx - 1)
-            val rightGvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx)
-            val leftFont = attrs.getAttr(gvStartCharIndices[leftGvIdx]).font
-            val rightFont = attrs.getAttr(gvStartCharIndices[rightGvIdx]).font
-            gvLeftHandGaps[rightGvIdx] = max(leftFont.trackingPx, rightFont.trackingPx)
-        }
-
-        // Create a "Segment" from each glyph vector. Also collect the added extra gaps and find the overall width
-        // of the FormattedString.
-        val segments = arrayOfNulls<Segment>(gvs.size)
-        var gapAccumulator = 0f
-        for (visualGvIdx in gvs.indices) {
-            val gvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx)
-            val gv = gvs[gvIdx]
+        // Create a "Segment" from each glyph vector.
+        val segments = Array(gvs.size) { gvIdx ->
             val gvStartCharIdx = gvStartCharIndices[gvIdx]
             val font = attrs.getAttr(gvStartCharIdx).font
-            gapAccumulator += gvLeftHandGaps[gvIdx]
-            val baseX = textLayout.getGlyphVectorX(gvIdx) + gapAccumulator
-            segments[gvIdx] = Segment(font, baseX, gv)
-            gapAccumulator -= font.trackingPx
+            val baseX = textLayout.getGlyphVectorX(gvIdx)
+            Segment(font, baseX, gvs[gvIdx])
         }
-        _width = textLayout.advance + gapAccumulator
-        _segments = segments.requireNoNulls().asList()
+        _segments = segments.asList()
 
         // Now that we have obtained information about rendering the glyphs themselves, the following code will
         // concern itself with retrieving information about the text decorations and background.
@@ -167,7 +152,6 @@ class FormattedString private constructor(
 
         /**
          * Returns the x-coordinate of the left edge of the GlyphVector at the given visual and logical index.
-         * If there is a gap at the left-hand side of the GV, returns an x-coordinate in the middle of that gap.
          */
         fun getLeftEdge(visualGvIdx: Int): Float {
             // First, we check for two conditions upon which we can return early.
@@ -181,9 +165,8 @@ class FormattedString private constructor(
             // Find the logical index of the GlyphVector, which is compatible with our other arrays.
             val gvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx)
             // Now we have found the GlyphVector whose leftmost coordinate is the left edge of the char in question.
-            // Get that leftmost coordinate ("baseX"). Also subtract half of the gap left of the GlyphVector
-            // such that we return the middle of that gap.
-            return segments[gvIdx]!!.baseX - gvLeftHandGaps[gvIdx] / 2f
+            // Get that leftmost coordinate ("baseX").
+            return segments[gvIdx].baseX
         }
 
         // Find shapes with respective filling colors that realize the text decorations.
@@ -225,7 +208,7 @@ class FormattedString private constructor(
                     val dilStroke = BasicStroke(deco.clearRadiusPx * 2f, dilStrokeCap, deco.clearJoin)
                     for (visualGvIdx in startVisualGvIdx until endVisualGvIdx) {
                         val gvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx)
-                        val segment = segments[gvIdx]!!
+                        val segment = segments[gvIdx]
                         val outlineTx = AffineTransform().apply { translate(segment.baseX, 0f) }
                         for (glyphIdx in 0 until segment.numGlyphs) {
                             // Note: Glyph outlines turn out to be float paths, and hence, the following
@@ -263,8 +246,6 @@ class FormattedString private constructor(
                 backgrounds.add(Pair(rect, bg.color))
             })
         _backgrounds = backgrounds
-
-        CustomGlyphLayoutEngine.end()
     }
 
     private inline fun <T> forEachStretch(
@@ -374,7 +355,7 @@ class FormattedString private constructor(
     fun breakLines(wrappingWidth: Float): List<Int> {
         // Employ a LineBreakMeasurer to find the best spots to insert a newline.
         val breaks = mutableListOf(0)
-        CustomGlyphLayoutEngine.begin(customGlyphLayoutEngineConfigSource)
+        CustomGlyphLayoutEngine.begin(makeCustomGlyphLayoutEngineConfigSource())
         val tlAttrCharIter = textLayoutAttrStr.iterator
         val lineMeasurer = LineBreakMeasurer(tlAttrCharIter, BreakIterator.getLineInstance(locale), REF_FRC)
         while (lineMeasurer.position != tlAttrCharIter.endIndex) {
@@ -409,9 +390,44 @@ class FormattedString private constructor(
         tlAttrStr
     }
 
-    private val customGlyphLayoutEngineConfigSource = { charIdx: Int ->
-        val attr = attrs.getAttr(charIdx)
-        CustomGlyphLayoutEngine.ExtConfig(locale, attr.font.features)
+    private fun makeCustomGlyphLayoutEngineConfigSource(): CustomGlyphLayoutEngine.ExtConfigSource {
+        // If the string doesn't uniformly flow from left to right, prepare a mapping from visual to logical chars.
+        var logToVis: IntArray? = null
+        var visToLog: IntArray? = null
+        val chars = string.toCharArray()
+        if (Bidi.requiresBidi(chars, 0, chars.size)) {
+            val bidi = Bidi(chars, 0, null, 0, chars.size, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
+            if (!bidi.isLeftToRight) {
+                visToLog = bidi.visualToLogicalMap()
+                logToVis = visToLog.inverseMap()
+            }
+        }
+
+        return CustomGlyphLayoutEngine.ExtConfigSource { startCharIdx: Int, endCharIdx: Int ->
+            val attr = attrs.getAttr(startCharIdx)
+            val trackingEm = attr.font.trackingEm
+            // Get the attributes of the segment to the left and right of the current segment.
+            val leftAttr: Attribute?
+            val rightAttr: Attribute?
+            if (visToLog == null || logToVis == null) {
+                leftAttr = if (startCharIdx == 0) null else attrs.getAttr(startCharIdx - 1)
+                rightAttr = if (endCharIdx == string.length) null else attrs.getAttr(endCharIdx)
+            } else {
+                var leftVisIdx = logToVis[startCharIdx]
+                var rightVisIdx = logToVis[endCharIdx - 1]
+                if (leftVisIdx > rightVisIdx)
+                    leftVisIdx = rightVisIdx.also { rightVisIdx = leftVisIdx }
+                leftAttr = if (leftVisIdx == 0) null else attrs.getAttr(visToLog[leftVisIdx - 1])
+                rightAttr = if (rightVisIdx == string.lastIndex) null else attrs.getAttr(visToLog[rightVisIdx + 1])
+            }
+            // Find the inter-segment tracking to the left and the right. Each one is defined as the maximal tracking
+            // of the current or the respective neighboring segment. Then add half of those inter-segment trackings
+            // to this segment; the neighboring segments will also receive the same half trackings, so in the end,
+            // they sum up to the whole inter-segment trackings.
+            val bearingLeftEm = if (leftAttr == null) 0f else max(trackingEm, leftAttr.font.trackingEm) / 2f
+            val bearingRightEm = if (rightAttr == null) 0f else max(trackingEm, rightAttr.font.trackingEm) / 2f
+            CustomGlyphLayoutEngine.ExtConfig(locale, trackingEm, bearingLeftEm, bearingRightEm, attr.font.features)
+        }
     }
 
 
@@ -434,7 +450,7 @@ class FormattedString private constructor(
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
         val features: List<String> = emptyList(),
-        private val trackingEm: Float = 0f
+        val trackingEm: Float = 0f
     ) {
 
         init {
@@ -447,7 +463,6 @@ class FormattedString private constructor(
 
         private val hOffsetPx get() = hOffsetRem * unscaledPointSize
         private val vOffsetPx get() = vOffsetRem * unscaledPointSize
-        val trackingPx: Float get() = trackingEm * pointSize
 
         val awtFont: java.awt.Font = run {
             val fontAttrs = HashMap<TextAttribute, Any>()
@@ -458,8 +473,6 @@ class FormattedString private constructor(
                 fontAttrs[TextAttribute.KERNING] = TextAttribute.KERNING_ON
             if (ligatures)
                 fontAttrs[TextAttribute.LIGATURES] = TextAttribute.LIGATURES_ON
-            if (trackingEm != 0f)
-                fontAttrs[TextAttribute.TRACKING] = trackingEm
             baseAWTFont.deriveFont(fontAttrs)
         }
 
@@ -605,9 +618,6 @@ class FormattedString private constructor(
 
         fun getGlyphOffsetX(glyphIdx: Int): Float =
             glyphPos[2 * glyphIdx]
-
-        val width: Float
-            get() = glyphPos[2 * numGlyphs] - font.trackingPx
 
         fun getGlyphOutline(glyphIdx: Int): Shape =
             glyphOutlines[glyphIdx]

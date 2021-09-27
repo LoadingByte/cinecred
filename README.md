@@ -73,7 +73,7 @@ Next, regenerate the Java bindings using the following command, and then replace
         --include-function hb_font_set_scale \
         --include-function hb_language_from_string \
         --include-function hb_shape \
-        --include-macro HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS \
+        --include-macro HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES \
         --include-macro HB_DIRECTION_LTR \
         --include-macro HB_DIRECTION_RTL \
         --include-macro HB_MEMORY_MODE_WRITABLE \

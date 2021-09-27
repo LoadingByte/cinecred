@@ -306,8 +306,8 @@ public class hb_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static int HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS() {
-        return (int)1L;
+    public static int HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES() {
+        return (int)0L;
     }
     public static MethodHandle hb_buffer_set_cluster_level$MH() {
         return RuntimeHelper.requireNonNull(constants$2.hb_buffer_set_cluster_level$MH,"hb_buffer_set_cluster_level");

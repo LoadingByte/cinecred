@@ -21,7 +21,7 @@ import java.util.*
 
 class CustomGlyphLayoutEngine private constructor(
     private val key: GlyphLayout.LayoutEngineKey,
-    private val configSource: (Int) -> ExtConfig
+    private val configSource: ExtConfigSource
 ) : GlyphLayout.LayoutEngine {
 
     override fun layout(
@@ -37,7 +37,7 @@ class CustomGlyphLayoutEngine private constructor(
     ) {
         val font = key.getFont()
         val script = key.getScript()
-        val config = configSource(tr.start)
+        val config = configSource.get(tr.start, tr.limit)
 
         val hbFace = getHBFace(font)
 
@@ -45,6 +45,9 @@ class CustomGlyphLayoutEngine private constructor(
         val liga = typoFlags and 0x00000002 != 0
         val rtl = typoFlags and 0x80000000.toInt() != 0
         val lang = config.locale.toLanguageTag()
+        val trackingPx = config.trackingEm * ptSize
+        val bearingLeftPx = config.bearingLeftEm * ptSize
+        val bearingRightPx = config.bearingRightEm * ptSize
         val userFeats = config.features
 
         // Note: Whenever we allocate memory here, we do not have to check for allocation errors in the form of a NULL
@@ -61,7 +64,8 @@ class CustomGlyphLayoutEngine private constructor(
             hb_buffer_set_script(hbBuffer, icuToHBScriptCode(script))
             hb_buffer_set_language(hbBuffer, hb_language_from_string(toCString(lang, scope), -1))
             hb_buffer_set_direction(hbBuffer, if (rtl) HB_DIRECTION_RTL() else HB_DIRECTION_LTR())
-            hb_buffer_set_cluster_level(hbBuffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS())
+            // Note: We need this cluster level for correctly identifying graphemes, which tracking shouldn't break.
+            hb_buffer_set_cluster_level(hbBuffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES())
             val chars = ofScope(scope).allocateArray(JAVA_CHAR, tr.text)
             hb_buffer_add_utf16(hbBuffer, chars, tr.text.size, tr.start, tr.limit - tr.start)
 
@@ -93,14 +97,16 @@ class CustomGlyphLayoutEngine private constructor(
                 gvData.grow(delta)
 
             // Transfer the shaping result into those arrays.
-            var x = startPt.x
+            var x = startPt.x + bearingLeftPx
             var y = startPt.y
             for (getIdx in 0L until glyphCount.toLong()) {
                 val setIdx = gvData._count++
                 glyphs[setIdx] = hb_glyph_info_t.`codepoint$get`(glyphInfo, getIdx) or gmask
+                indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start
+                if (setIdx != 0 && indices[setIdx] != indices[setIdx - 1])
+                    x += trackingPx
                 positions[setIdx * 2] = x + hb_glyph_position_t.`x_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 positions[setIdx * 2 + 1] = y - hb_glyph_position_t.`y_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
-                indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start
                 x += hb_glyph_position_t.`x_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 y += hb_glyph_position_t.`y_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
             }
@@ -108,6 +114,7 @@ class CustomGlyphLayoutEngine private constructor(
             // Now, x respectively y hold the start point plus the advance of the string. Move the start point there
             // in preparation for the next layout step, and also store it in the positions array since the calling code
             // expects that.
+            x += bearingRightPx
             startPt.x = x
             startPt.y = y
             positions[gvData._count * 2] = x
@@ -122,7 +129,7 @@ class CustomGlyphLayoutEngine private constructor(
 
     companion object {
 
-        private val configSource = ThreadLocal<((Int) -> ExtConfig)?>()
+        private val configSource = ThreadLocal<ExtConfigSource?>()
 
         // Get the original factory before we change it a couple of lines below.
         private val SUN_LAYOUT_ENGINE_FACTORY = SunLayoutEngine.instance()
@@ -139,7 +146,7 @@ class CustomGlyphLayoutEngine private constructor(
             SunLayoutEngine::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, factory)
         }
 
-        fun begin(configSource: (charIdx: Int) -> ExtConfig) {
+        fun begin(configSource: ExtConfigSource) {
             this.configSource.set(configSource)
         }
 
@@ -243,6 +250,16 @@ class CustomGlyphLayoutEngine private constructor(
     }
 
 
-    class ExtConfig(val locale: Locale, val features: List<String>)
+    fun interface ExtConfigSource {
+        fun get(startCharIdx: Int, endCharIdx: Int): ExtConfig
+    }
+
+    class ExtConfig(
+        val locale: Locale,
+        val trackingEm: Float,
+        val bearingLeftEm: Float,
+        val bearingRightEm: Float,
+        val features: List<String>
+    )
 
 }

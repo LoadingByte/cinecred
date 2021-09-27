@@ -15,7 +15,12 @@ import java.lang.invoke.MethodType
 import java.lang.invoke.MethodType.methodType
 import java.nio.ByteBuffer
 import java.nio.file.Path
+import java.text.Bidi
 import kotlin.io.path.Path
+
+
+fun Bidi.visualToLogicalMap(): IntArray = BidiUtils.createVisualToLogicalMap(BidiUtils.getLevels(this))
+fun IntArray.inverseMap(): IntArray = BidiUtils.createInverseMap(this)
 
 
 fun Font.getFontFile(): Path {

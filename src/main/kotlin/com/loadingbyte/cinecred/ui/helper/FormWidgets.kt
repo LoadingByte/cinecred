@@ -76,7 +76,7 @@ class TextListWidget(
     override var value: ImmutableList<String>
         get() = tc.text.split("\n").filter(String::isNotBlank).toImmutableList()
         set(value) {
-            tc.text = value.joinToString("\n")
+            tc.text = value.filter(String::isNotBlank).joinToString("\n")
         }
 }
 

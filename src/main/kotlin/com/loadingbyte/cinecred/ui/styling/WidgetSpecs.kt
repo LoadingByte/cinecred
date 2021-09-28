@@ -68,7 +68,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    NewSectionWidgetSpec(LetterStyle::foreground.st()),
+    NewSectionWidgetSpec(LetterStyle::trackingEm.st()),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01f),
     WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),

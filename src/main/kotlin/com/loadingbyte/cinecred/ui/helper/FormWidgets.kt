@@ -42,8 +42,8 @@ import kotlin.math.ceil
 enum class WidthSpec(val mig: String) {
     TINY("width 70lp:70lp:"),
     NARROW("width 100lp:100lp:"),
-    FIT("width 100lp::300lp"),
-    WIDE("width 100lp:300lp:"),
+    FIT("width 100lp::max(300lp,40%)"),
+    WIDE("width 100lp:max(300lp,40%):"),
     FILL("width 100lp:100%:")
 }
 

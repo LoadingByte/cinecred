@@ -166,6 +166,7 @@ data class LetterStyle(
     val scaling: Float,
     val hScaling: Float,
     val hShearing: Float,
+    val features: ImmutableList<String>,
     val decorations: ImmutableList<TextDecoration>,
     val background: Color,
     val backgroundWidenLeftPx: Float,

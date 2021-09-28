@@ -105,6 +105,7 @@ val PRESET_LETTER_STYLE = LetterStyle(
     scaling = 1f,
     hScaling = 1f,
     hShearing = 0f,
+    features = persistentListOf(),
     decorations = persistentListOf(),
     background = Color(0, 0, 0, 0),
     backgroundWidenLeftPx = 0f,

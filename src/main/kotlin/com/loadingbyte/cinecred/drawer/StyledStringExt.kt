@@ -166,7 +166,7 @@ private fun generateFmtStrAttrs(
         // @formatter:on
     }
 
-    val features = mutableListOf<String>()
+    val features = style.features.toMutableList() // copy
 
     if (style.uppercase && style.useUppercaseSpacing)
         features.add(CAPITAL_SPACING_FONT_FEAT)

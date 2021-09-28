@@ -123,6 +123,9 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         }
     },
     FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
+    DynChoiceConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
+        ctx.resolveFont(style.fontName)?.getSupportedFeatures() ?: emptySet()
+    },
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
 )

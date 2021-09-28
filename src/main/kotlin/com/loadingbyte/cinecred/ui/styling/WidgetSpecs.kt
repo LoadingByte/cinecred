@@ -75,6 +75,8 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01f),
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01f),
     NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05f),
+    WidthWidgetSpec(LetterStyle::features.st(), WidthSpec.TINY),
+    ListWidgetSpec(LetterStyle::features.st(), groupsPerRow = 3),
     NewSectionWidgetSpec(LetterStyle::decorations.st()),
     NewSectionWidgetSpec(LetterStyle::background.st()),
     WidthWidgetSpec(LetterStyle::backgroundWidenLeftPx.st(), WidthSpec.TINY),

@@ -16,6 +16,7 @@ Cinecred Changelog
     - Super and subscripts are positioned as defined by the font designer.
     - Text can be scaled and offset, e.g., to manually position superscripts.
     - Text can be horizontally scaled and sheared.
+    - Any OpenType feature can be manually enabled.
     - Instead of only underline and strikethrough, text decorations are now
       highly configurable; they can be colored differently, positioned manually,
       cleared around text, and dashed with custom patterns.

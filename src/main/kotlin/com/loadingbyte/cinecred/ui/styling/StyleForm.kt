@@ -11,7 +11,11 @@ import javax.swing.Icon
 import javax.swing.SpinnerNumberModel
 
 
-class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = true) : Form.Storable<S>(insets) {
+class StyleForm<S : Style>(
+    private val ctx: StylingContext,
+    private val styleClass: Class<S>,
+    insets: Boolean = true
+) : Form.Storable<S>(insets) {
 
     private val backingWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
@@ -154,7 +158,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
                 }
                 Style::class.java.isAssignableFrom(setting.type) ->
                     @Suppress("UNCHECKED_CAST")
-                    NestedFormWidget(StyleForm(setting.type as Class<Style>, insets = false))
+                    NestedFormWidget(StyleForm(ctx, setting.type as Class<Style>, insets = false))
                         .apply { value = getPreset(setting.type) }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
@@ -254,7 +258,7 @@ class StyleForm<S : Style>(private val styleClass: Class<S>, insets: Boolean = t
 
     private fun refresh() {
         val style = save()
-        val ineffectiveSettings = findIneffectiveSettings(style)
+        val ineffectiveSettings = findIneffectiveSettings(ctx, style)
         for ((setting, widget) in valueWidgets) {
             val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
             widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE

@@ -43,7 +43,5 @@ private val nameToSystemFont = SYSTEM_FONTS
 fun getBundledFont(name: String): Font? =
     nameToBundledFont[name]
 
-// Note: If the font map doesn't contain a font with the specified name, we create a font object to find a font
-// that (hopefully) best matches the specified font.
-fun getSystemFont(name: String): Font =
-    nameToSystemFont[name] ?: Font(name, 0, 1)
+fun getSystemFont(name: String): Font? =
+    nameToSystemFont[name]

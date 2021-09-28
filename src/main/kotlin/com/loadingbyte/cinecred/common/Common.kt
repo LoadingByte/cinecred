@@ -99,5 +99,12 @@ fun Graphics2D.setHighQuality() {
 }
 
 
+const val KERNING_FONT_FEAT = "kern"
+const val LIGATURES_FONT_FEAT = "liga"
+const val SMALL_CAPS_FONT_FEAT = "smcp"
+const val PETITE_CAPS_FONT_FEAT = "pcap"
+const val CAPITAL_SPACING_FONT_FEAT = "cpsp"
+
+
 val Font.lineMetrics: LineMetrics
     get() = getLineMetrics("Beispiel!", REF_FRC)

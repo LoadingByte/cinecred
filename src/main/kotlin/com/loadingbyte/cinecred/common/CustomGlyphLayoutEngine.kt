@@ -73,8 +73,10 @@ class CustomGlyphLayoutEngine private constructor(
             val numFeatures = 2 + userFeats.size
             val hbFeatures = hb_feature_t.allocateArray(numFeatures, scope)
             val hbFeatSize = hb_feature_t.sizeof()
-            hb_feature_from_string(toCString(if (kern) "kern" else "-kern", scope), -1, hbFeatures)
-            hb_feature_from_string(toCString(if (liga) "liga" else "-liga", scope), -1, hbFeatures.asSlice(hbFeatSize))
+            val kernStr = if (kern) KERNING_FONT_FEAT else "-$KERNING_FONT_FEAT"
+            val ligaStr = if (liga) LIGATURES_FONT_FEAT else "-$LIGATURES_FONT_FEAT"
+            hb_feature_from_string(toCString(kernStr, scope), -1, hbFeatures)
+            hb_feature_from_string(toCString(ligaStr, scope), -1, hbFeatures.asSlice(hbFeatSize))
             for (idx in userFeats.indices)
                 hb_feature_from_string(toCString(userFeats[idx], scope), -1, hbFeatures.asSlice((2 + idx) * hbFeatSize))
 

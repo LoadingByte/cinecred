@@ -16,6 +16,7 @@ import java.lang.invoke.MethodType.methodType
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.text.Bidi
+import java.util.*
 import kotlin.io.path.Path
 
 
@@ -73,27 +74,28 @@ fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
 }
 
 
-fun Font.supportsFeature(feat: String): Boolean {
-    require(feat.length == 4)
-    val featCode = ((feat[0].code and 0xff) shl 24) or ((feat[1].code and 0xff) shl 16) or
-            ((feat[2].code and 0xff) shl 8) or (feat[3].code and 0xff)
+private val supportedFeaturesCache = WeakHashMap<Font, Set<String>>()
+
+fun Font.getSupportedFeatures(): Set<String> = supportedFeaturesCache.getOrPut(this) {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
-        return false
-    return containsFeature(getTableBuffer(font2D, TrueTypeFont.GPOSTag) as ByteBuffer?, featCode) ||
-            containsFeature(getTableBuffer(font2D, TrueTypeFont.GSUBTag) as ByteBuffer?, featCode)
+        return emptySet()
+    val feats = TreeSet<String>() // ordered alphabetically
+    extractFeatures(getTableBuffer(font2D, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
+    extractFeatures(getTableBuffer(font2D, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)
+    feats
 }
 
 // Works for the GPOS and GSUB tables.
-private fun containsFeature(table: ByteBuffer?, featCode: Int): Boolean {
+private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {
     if (table != null && table.capacity() >= 8) {
         val featListOffset = table.getShort(6).toUShort().toInt()
         val featCount = table.getShort(featListOffset).toUShort().toInt()
-        for (idx in 0 until featCount)
-            if (table.getInt(featListOffset + 2 + idx * 6) == featCode)
-                return true
+        for (idx in 0 until featCount) {
+            val c = table.getInt(featListOffset + 2 + idx * 6)
+            out.add(String(intArrayOf(c ushr 24, (c ushr 16) and 0xff, (c ushr 8) and 0xff, c and 0xff), 0, 4))
+        }
     }
-    return false
 }
 
 

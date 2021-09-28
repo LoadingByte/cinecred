@@ -20,7 +20,11 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
     NumberWidgetSpec(Global::widthPx.st(), step = 10),
     NumberWidgetSpec(Global::heightPx.st(), step = 10),
-    TimecodeWidgetSpec(Global::runtimeFrames.st(), { _, global -> global.fps }, { _, global -> global.timecodeFormat }),
+    TimecodeWidgetSpec(
+        Global::runtimeFrames.st(),
+        getFPS = { _, _, global -> global.fps },
+        getTimecodeFormat = { _, _, global -> global.timecodeFormat }
+    ),
     WidthWidgetSpec(Global::uppercaseExceptions.st(), WidthSpec.NARROW)
 )
 
@@ -134,10 +138,10 @@ class ToggleButtonGroupWidgetSpec<S : Style>(
 
 
 class TimecodeWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Number>,
-    val getFPS: (Styling, S) -> FPS,
-    val getTimecodeFormat: (Styling, S) -> TimecodeFormat
-) : StyleWidgetSpec<S>(setting)
+    vararg settings: StyleSetting<S, Number>,
+    val getFPS: (StylingContext, Styling, S) -> FPS,
+    val getTimecodeFormat: (StylingContext, Styling, S) -> TimecodeFormat
+) : StyleWidgetSpec<S>(*settings)
 
 
 class UnionWidgetSpec<S : Style>(

@@ -1,9 +1,7 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import java.awt.Color
@@ -30,13 +28,13 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     JudgeConstr(
         ERROR, msg("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
         Global::widthPx.st(), Global::heightPx.st(),
-        judge = { _, global ->
+        judge = { _, _, global ->
             val aspectRatio = global.widthPx.toFloat() / global.heightPx
             aspectRatio in 1f / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1f
         }
     ),
     FPSConstr(ERROR, Global::fps.st()),
-    DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, global ->
+    DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
         val formats = TimecodeFormat.values().toMutableList()
         if (!global.fps.supportsDropFrameTimecode)
             formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
@@ -49,8 +47,8 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
 
 
 private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { _, styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     IntConstr(ERROR, PageStyle::afterwardSlugFrames.st(), min = 0),
@@ -58,19 +56,19 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
     FloatConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0f, minInclusive = false),
-    JudgeConstr(WARN, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
-        val value = style.scrollPxPerFrame
+    JudgeConstr(WARN, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
+        val value = sty.scrollPxPerFrame
         floor(value) == value
     }
 )
 
 
 private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { _, styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, style ->
+    DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, _, style ->
         when (style.spineOrientation) {
             SpineOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             SpineOrientation.HORIZONTAL -> when {
@@ -93,7 +91,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DynChoiceConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(),
-        choices = { styling, _ -> styling.letterStyles.map(LetterStyle::name) }
+        choices = { _, styling, _ -> styling.letterStyles.map(LetterStyle::name) }
     ),
     MinSizeConstr(ERROR, ContentStyle::gridElemHJustifyPerCol.st(), 1),
     FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
@@ -110,12 +108,20 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
 
 
 private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
+    JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
+    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { _, styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
     IntConstr(ERROR, LetterStyle::heightPx.st(), min = 1),
+    JudgeConstr(INFO, msg("project.styling.constr.fakeSmallCaps"), LetterStyle::smallCaps.st()) { ctx, _, style ->
+        val font = ctx.resolveFont(style.fontName) ?: return@JudgeConstr true
+        when (style.smallCaps) {
+            SmallCaps.OFF -> true
+            SmallCaps.SMALL_CAPS -> SMALL_CAPS_FONT_FEAT in font.getSupportedFeatures()
+            SmallCaps.PETITE_CAPS -> PETITE_CAPS_FONT_FEAT in font.getSupportedFeatures()
+        }
+    },
     FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
@@ -158,7 +164,7 @@ class FloatConstr<S : Style>(
 class DynChoiceConstr<S : Style>(
     val severity: Severity,
     vararg settings: StyleSetting<S, Any>,
-    val choices: (Styling, S) -> List<Any?>
+    val choices: (StylingContext, Styling, S) -> Collection<Any>
 ) : StyleConstraint<S, StyleSetting<S, Any>>(*settings)
 
 
@@ -185,7 +191,7 @@ class JudgeConstr<S : Style>(
     val severity: Severity,
     val getMsg: () -> String,
     vararg settings: StyleSetting<S, Any>,
-    val judge: (Styling, S) -> Boolean
+    val judge: (StylingContext, Styling, S) -> Boolean
 ) : StyleConstraint<S, StyleSetting<S, Any>>(*settings)
 
 
@@ -204,7 +210,7 @@ class ConstraintViolation(
     val msg: String?
 )
 
-fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<ConstraintViolation> {
+fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintViolation> {
     val violations = mutableListOf<ConstraintViolation>()
 
     fun log(rootStyle: Style, leafStyle: Style, leafSetting: StyleSetting<*, *>, severity: Severity, msg: String?) {
@@ -212,7 +218,7 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
     }
 
     fun <S : Style> verifyStyle(rootStyle: Style, style: S) {
-        val ignoreSettings = findIneffectiveSettings(style)
+        val ignoreSettings = findIneffectiveSettings(ctx, style)
 
         for (cst in getStyleConstraints(style.javaClass))
             when (cst) {
@@ -244,7 +250,7 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                     }
                 is DynChoiceConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
-                        if (value !in cst.choices(styling, style))
+                        if (value !in cst.choices(ctx, styling, style))
                             log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.dynChoice"))
                     }
                 is ColorConstr ->
@@ -259,11 +265,11 @@ fun verifyConstraints(styling: Styling, isFontName: (String) -> Boolean): List<C
                     }
                 is FontNameConstr ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
-                        if (!isFontName(value))
+                        if (ctx.resolveFont(value) == null)
                             log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.font"))
                     }
                 is JudgeConstr ->
-                    if (!cst.judge(styling, style)) {
+                    if (!cst.judge(ctx, styling, style)) {
                         val settings = cst.settings.filter { it !in ignoreSettings }
                         log(rootStyle, style, settings[0], cst.severity, cst.getMsg())
                         for (setting in settings.drop(1))

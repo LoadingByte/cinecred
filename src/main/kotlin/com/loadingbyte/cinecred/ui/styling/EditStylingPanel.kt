@@ -21,10 +21,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     val stylingTreeHintOwner: Component
     // =================================
 
-    private val globalForm = StyleForm(Global::class.java)
-    private val pageStyleForm = StyleForm(PageStyle::class.java)
-    private val contentStyleForm = StyleForm(ContentStyle::class.java)
-    private val letterStyleForm = StyleForm(LetterStyle::class.java)
+    private val globalForm = StyleForm(ctrl.stylingCtx, Global::class.java)
+    private val pageStyleForm = StyleForm(ctrl.stylingCtx, PageStyle::class.java)
+    private val contentStyleForm = StyleForm(ctrl.stylingCtx, ContentStyle::class.java)
+    private val letterStyleForm = StyleForm(ctrl.stylingCtx, LetterStyle::class.java)
 
     // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
@@ -241,7 +241,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun refreshConstraintViolations() {
-        constraintViolations = ctrl.verifyStylingConstraints(styling ?: return)
+        constraintViolations = verifyConstraints(ctrl.stylingCtx, styling ?: return)
 
         val severityPerStyle = HashMap<Style, Severity>()
         for (violation in constraintViolations)
@@ -275,15 +275,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for (constr in getStyleConstraints(curStyle.javaClass))
             if (constr is DynChoiceConstr) {
-                val choices = constr.choices(styling, curStyle).toImmutableList()
+                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle).toImmutableList()
                 for (setting in constr.settings)
                     curForm.setDynChoices(setting, choices)
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))
             if (spec is TimecodeWidgetSpec) {
-                val fps = spec.getFPS(styling, curStyle)
-                val timecodeFormat = spec.getTimecodeFormat(styling, curStyle)
+                val fps = spec.getFPS(ctrl.stylingCtx, styling, curStyle)
+                val timecodeFormat = spec.getTimecodeFormat(ctrl.stylingCtx, styling, curStyle)
                 for (setting in spec.settings)
                     curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }

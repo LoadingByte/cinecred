@@ -3,15 +3,12 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.drawer.draw
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.Project
-import com.loadingbyte.cinecred.project.Styling
-import com.loadingbyte.cinecred.project.verifyConstraints
+import com.loadingbyte.cinecred.drawer.getBundledFont
+import com.loadingbyte.cinecred.drawer.getSystemFont
+import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
-import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
-import com.loadingbyte.cinecred.ui.helper.SYSTEM_FAMILIES
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -32,6 +29,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
 
     val projectName: String = projectDir.fileName.toString()
 
+    val stylingCtx: StylingContext = StylingContextImpl()
     val stylingHistory: StylingHistory
 
     val projectFrame = ProjectFrame(this)
@@ -183,7 +181,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         readCreditsAndRedrawJobSlot.submit {
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
-            if (verifyStylingConstraints(styling).any { it.severity == ERROR })
+            if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
 
             // We only now build these maps because it is expensive to build them and we don't want to do it
@@ -252,16 +250,6 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         projectFrame.panel.editPanel.onSetEditStylingDialogVisible(isVisible)
     }
 
-    /**
-     * Note: In contrast to most methods in this class, this method has no side-effects.
-     */
-    fun verifyStylingConstraints(styling: Styling) =
-        verifyConstraints(styling, isFontName = { fontName ->
-            fonts.values.any { it.any { font -> fontName == font.getFontName(Locale.ROOT) } } ||
-                    BUNDLED_FAMILIES.getFamily(fontName) != null ||
-                    SYSTEM_FAMILIES.getFamily(fontName) != null
-        })
-
 
     companion object {
 
@@ -274,6 +262,17 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
                 false
             }
 
+    }
+
+
+    private inner class StylingContextImpl : StylingContext {
+        override fun resolveFont(name: String): Font? {
+            for (fontList in fonts.values)
+                for (font in fontList)
+                    if (font.getFontName(Locale.ROOT) == name)
+                        return font
+            return getBundledFont(name) ?: getSystemFont(name)
+        }
     }
 
 
@@ -350,7 +349,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         }
 
         fun save() {
-            writeStyling(stylingFile, current)
+            writeStyling(stylingFile, stylingCtx, current)
             saved = current
             lastEditedId = null  // Saving should always create a new undo state.
             projectFrame.panel.editPanel.onStylingSave()

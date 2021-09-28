@@ -127,8 +127,12 @@ private fun generateFmtStrAttrs(
     style: LetterStyle,
     textCtx: TextContextImpl
 ): TextContextImpl.Attrs {
-    val baseAWTFont =
-        textCtx.projectFonts[style.fontName] ?: getBundledFont(style.fontName) ?: getSystemFont(style.fontName)
+    val baseAWTFont = textCtx.projectFonts[style.fontName]
+        ?: getBundledFont(style.fontName)
+        ?: getSystemFont(style.fontName)
+        // If the font map doesn't contain a font with the specified name, we create a font object to find a font
+        // that (hopefully) best matches the specified font.
+        ?: Font(style.fontName, 0, 1)
 
     var ssScaling = 1f
     var ssHOffset = 0f
@@ -165,17 +169,17 @@ private fun generateFmtStrAttrs(
     val features = mutableListOf<String>()
 
     if (style.uppercase && style.useUppercaseSpacing)
-        features.add("cpsp")
+        features.add(CAPITAL_SPACING_FONT_FEAT)
 
     var fakeSCScaling = Float.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {
         }
         SmallCaps.SMALL_CAPS ->
-            if (baseAWTFont.supportsFeature("smcp")) features.add("smcp") else
+            if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures()) features.add(SMALL_CAPS_FONT_FEAT) else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1f, 0.8f)
         SmallCaps.PETITE_CAPS ->
-            if (baseAWTFont.supportsFeature("pcap")) features.add("pcap") else
+            if (PETITE_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures()) features.add(PETITE_CAPS_FONT_FEAT) else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1f, 0.725f)
     }
 

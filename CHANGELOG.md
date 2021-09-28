@@ -20,6 +20,8 @@ Cinecred Changelog
       highly configurable; they can be colored differently, positioned manually,
       cleared around text, and dashed with custom patterns.
     - The background of text can be widened arbitrarily.
+- If some font setting is not supported or only emulated (e.g., small caps), the
+  respective form setting is either disabled or accompanied by an info notice.
 - Exported PDFs render text directly instead of drawing filled outlines of text.
   This change increases render quality and speed, decreases file size, and
   improves the user experience when selecting and copying text.

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.LOGGER
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -70,6 +71,8 @@ object RenderQueue {
                         // Note that this catch also catches InterruptedExceptions,
                         // which occurs when a job is cancelled while it is running.
                         pollJobLock.withLock { runningJob = null }
+                        if (e !is InterruptedException)
+                            LOGGER.error("Error while rendering", e)
                         job.invokeLater { job.finishCallback(e) }
                     }
                 }

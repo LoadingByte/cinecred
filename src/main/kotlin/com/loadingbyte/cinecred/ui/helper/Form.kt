@@ -112,6 +112,7 @@ open class Form(insets: Boolean = true) :
 
     fun <W : Widget<*>> addWidget(label: String, widget: W): W {
         require(widget.components.size == widget.constraints.size)
+        require(widget.constraints.all { "wrap" !in it }) // we only allow "newline"
 
         widget.changeListeners.add(::onChange)
 

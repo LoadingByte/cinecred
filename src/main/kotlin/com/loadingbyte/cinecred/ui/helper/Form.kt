@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
-import kotlinx.collections.immutable.ImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.Dimension
 import java.awt.Rectangle
@@ -34,6 +33,8 @@ open class Form(insets: Boolean = true) :
         var isEnabled: Boolean
         var notice: Notice?
         var noticeOverride: Notice?
+
+        fun applyConfigurator(configurator: (Widget<*>) -> Unit) = configurator(this)
     }
 
     abstract class AbstractWidget<V> : Widget<V> {
@@ -101,11 +102,7 @@ open class Form(insets: Boolean = true) :
     }
 
     interface ChoiceWidget<V, E> : Widget<V> {
-        var items: ImmutableList<E>
-    }
-
-    interface FontRelatedWidget<V> : Widget<V> {
-        var projectFamilies: FontFamilies
+        fun updateItems(items: Collection<E>)
     }
 
 
@@ -153,12 +150,6 @@ open class Form(insets: Boolean = true) :
 
     fun addSeparator() {
         add(JSeparator(), "newline, span, growx")
-    }
-
-    fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        for (widget in widgets)
-            if (widget is FontRelatedWidget)
-                widget.projectFamilies = projectFamilies
     }
 
     protected open fun onChange(widget: Widget<*>) {

@@ -17,7 +17,6 @@ class StyleForm<S : Style>(
     insets: Boolean = true
 ) : Form.Storable<S>(insets) {
 
-    private val backingWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
     private val rootWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
 
@@ -41,9 +40,7 @@ class StyleForm<S : Style>(
     }
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
-        val (backingWidget, valueWidget) = makeSettingWidget(setting)
-        if (backingWidget != null)
-            backingWidgets[setting] = backingWidget
+        val valueWidget = makeSettingWidget(setting)
         valueWidgets[setting] = valueWidget
         rootWidgets[setting] = valueWidget
         addRootWidget(setting.name, valueWidget)
@@ -52,9 +49,7 @@ class StyleForm<S : Style>(
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
         val wrappedWidgets = mutableListOf<Widget<*>>()
         for (setting in spec.settings) {
-            val (backingWidget, valueWidget) = makeSettingWidget(setting)
-            if (backingWidget != null)
-                backingWidgets[setting] = backingWidget
+            val valueWidget = makeSettingWidget(setting)
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
         }
@@ -64,32 +59,27 @@ class StyleForm<S : Style>(
         addRootWidget(spec.unionName, unionWidget)
     }
 
-    // Returns backing widget and value widget.
-    private fun makeSettingWidget(setting: StyleSetting<S, *>): Pair<Widget<*>?, Widget<*>> {
+    private fun makeSettingWidget(setting: StyleSetting<S, *>): Widget<*> {
         val settingConstraints = getStyleConstraints(styleClass).filter { c -> setting in c.settings }
         val settingWidgetSpecs = getStyleWidgetSpecs(styleClass).filter { s -> setting in s.settings }
 
         return when (setting) {
             is DirectStyleSetting -> {
-                val widget = makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
-                Pair(widget, widget)
+                makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
             }
             is OptStyleSetting -> {
-                val backingWidget = makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
-                Pair(backingWidget, OptWidget(backingWidget))
+                OptWidget(makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs))
             }
             is ListStyleSetting -> {
                 if (setting.type == String::class.java) {
                     val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
-                    val widget = TextListWidget(widthWidgetSpec?.widthSpec)
-                    Pair(widget, widget)
+                    TextListWidget(widthWidgetSpec?.widthSpec)
                 } else {
                     val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
                     val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S>>()
-                    val valueWidget = ListWidget(listWidgetSpec?.groupsPerRow ?: 1, minSizeConstr?.minSize ?: 0) {
+                    ListWidget(listWidgetSpec?.groupsPerRow ?: 1, minSizeConstr?.minSize ?: 0) {
                         makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
                     }
-                    Pair(null, valueWidget)
                 }
             }
         }
@@ -217,8 +207,12 @@ class StyleForm<S : Style>(
         for (setting in getStyleSettings(styleClass))
             if (Style::class.java.isAssignableFrom(setting.type))
                 when (setting) {
-                    is DirectStyleSetting, is OptStyleSetting ->
-                        nestedForms.add((backingWidgets[setting] as NestedFormWidget).form as StyleForm)
+                    is DirectStyleSetting ->
+                        nestedForms.add((valueWidgets[setting] as NestedFormWidget).form as StyleForm)
+                    is OptStyleSetting -> {
+                        val formWidget = (valueWidgets[setting] as OptWidget<*>).wrapped as NestedFormWidget
+                        nestedForms.add(formWidget.form as StyleForm)
+                    }
                     is ListStyleSetting ->
                         for (elementWidget in (valueWidgets[setting] as ListWidget<*>).elementWidgets)
                             nestedForms.add((elementWidget as NestedFormWidget).form as StyleForm)
@@ -238,15 +232,27 @@ class StyleForm<S : Style>(
         rootWidgets[setting]!!.noticeOverride = noticeOverride
     }
 
+    fun setProjectFontFamilies(projectFamilies: FontFamilies) {
+        val configurator = { w: Widget<*> -> if (w is FontChooserWidget) w.projectFamilies = projectFamilies }
+        for (widget in valueWidgets.values)
+            widget.applyConfigurator(configurator)
+    }
+
     fun setDynChoices(setting: StyleSetting<*, *>, choices: ImmutableList<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (backingWidgets[setting] as ChoiceWidget<*, Any?>).items = choices
+        valueWidgets[setting]!!.applyConfigurator { widget ->
+            if (widget is ChoiceWidget<*, *>)
+                @Suppress("UNCHECKED_CAST")
+                (widget as ChoiceWidget<*, Any?>).updateItems(choices)
+        }
     }
 
     fun setTimecodeFPSAndFormat(setting: StyleSetting<*, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
-        val timecodeWidget = backingWidgets[setting] as TimecodeWidget
-        timecodeWidget.fps = fps
-        timecodeWidget.timecodeFormat = timecodeFormat
+        valueWidgets[setting]!!.applyConfigurator { widget ->
+            if (widget is TimecodeWidget) {
+                widget.fps = fps
+                widget.timecodeFormat = timecodeFormat
+            }
+        }
     }
 
     override fun onChange(widget: Widget<*>) {

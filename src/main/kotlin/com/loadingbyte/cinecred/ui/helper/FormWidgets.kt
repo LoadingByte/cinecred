@@ -266,7 +266,7 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 
 open class ComboBoxWidget<E : Any /* non-null */>(
     private val itemClass: Class<E>,
-    items: List<E>,
+    items: Collection<E>,
     toString: (E) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
     private val scrollbar: Boolean = true,
@@ -282,7 +282,7 @@ open class ComboBoxWidget<E : Any /* non-null */>(
     override val components = listOf(cb)
     override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
 
-    final override var items: ImmutableList<E> = persistentListOf()
+    protected var items: Collection<E> = emptyList()
         set(items) {
             field = items
             val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
@@ -305,8 +305,12 @@ open class ComboBoxWidget<E : Any /* non-null */>(
             cb.selectedItem = value
         }
 
+    final override fun updateItems(items: Collection<E>) {
+        this.items = items
+    }
+
     init {
-        this.items = items.toImmutableList()
+        updateItems(items)
     }
 
 }
@@ -314,7 +318,7 @@ open class ComboBoxWidget<E : Any /* non-null */>(
 
 class InconsistentComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
-    items: List<E>,
+    items: Collection<E>,
     toString: (E) -> String = { it.toString() },
     widthSpec: WidthSpec? = null
 ) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
@@ -335,7 +339,7 @@ class InconsistentComboBoxWidget<E : Any /* non-null */>(
 
 open class EditableComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
-    items: List<E>,
+    items: Collection<E>,
     toString: (E) -> String,
     fromString: ((String) -> E),
     widthSpec: WidthSpec? = null
@@ -414,7 +418,7 @@ class FPSWidget(
 
 
 class ToggleButtonGroupWidget<E : Any /* non-null */>(
-    items: List<E>,
+    items: Collection<E>,
     private val toIcon: ((E) -> Icon)? = null,
     private val toLabel: ((E) -> String)? = null,
     private val toTooltip: ((E) -> String)? = null
@@ -426,7 +430,7 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("")
 
-    override var items: ImmutableList<E> = persistentListOf()
+    private var items: List<E> = emptyList()
         set(items) {
             field = items
             panel.removeAll()
@@ -460,8 +464,12 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
                 btn.isEnabled = isEnabled
         }
 
+    override fun updateItems(items: Collection<E>) {
+        this.items = if (items is List<E>) items else items.toList()
+    }
+
     init {
-        this.items = items.toImmutableList()
+        updateItems(items)
     }
 
 
@@ -583,7 +591,7 @@ class ColorWellWidget(
 
 class FontChooserWidget(
     widthSpec: WidthSpec? = null
-) : Form.AbstractWidget<String>(), Form.FontRelatedWidget<String> {
+) : Form.AbstractWidget<String>() {
 
     private val familyComboBox = JComboBox<FontFamily>().apply {
         maximumRowCount = 20
@@ -603,7 +611,7 @@ class FontChooserWidget(
     override val components = listOf(familyComboBox, fontComboBox)
     override val constraints = (widthSpec ?: WidthSpec.WIDE).let { listOf(it.mig, "newline, ${it.mig}") }
 
-    override var projectFamilies: FontFamilies = FontFamilies(emptyList())
+    var projectFamilies: FontFamilies = FontFamilies(emptyList())
         set(value) {
             field = value
             populateFamilyComboBox()
@@ -737,7 +745,7 @@ class FontChooserWidget(
 
 
 class OptWidget<V>(
-    private val wrapped: Form.Widget<V>
+    val wrapped: Form.Widget<V>
 ) : Form.AbstractWidget<Opt<V>>() {
 
     init {
@@ -769,6 +777,11 @@ class OptWidget<V>(
             if (isEnabled && !cb.isSelected)
                 wrapped.isEnabled = false
         }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        configurator(this)
+        wrapped.applyConfigurator(configurator)
+    }
 
 }
 
@@ -820,6 +833,8 @@ class ListWidget<V>(
         }
     }
 
+    private var configurator: ((Form.Widget<*>) -> Unit)? = null
+
     override val components = listOf<JComponent>(addBtn, panel)
     override val constraints = listOf("split, aligny top", if (isElemWidgetFilling) WidthSpec.FILL.mig else "")
 
@@ -845,6 +860,7 @@ class ListWidget<V>(
         panel.add(delBtn, "aligny top, gapx 6lp 0lp")
 
         val widget = newElemWidget()
+        configurator?.let(widget::applyConfigurator)
         // If requested,the new widget should start out with the same value as the current last one.
         if (copyLastValue && elemWidgets.size != 0)
             widget.value = elemWidgets.last().value
@@ -869,6 +885,13 @@ class ListWidget<V>(
         val enabled = elemWidgets.size > minSize
         for (delBtn in elemDelBtns)
             delBtn.isEnabled = enabled
+    }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        this.configurator = configurator
+        configurator(this)
+        for (widget in elemWidgets)
+            widget.applyConfigurator(configurator)
     }
 
 }
@@ -911,6 +934,12 @@ class UnionWidget(
                 @Suppress("UNCHECKED_CAST")
                 (wrapped[idx] as Form.Widget<Any?>).value = value[idx]
         }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        configurator(this)
+        for (widget in wrapped)
+            widget.applyConfigurator(configurator)
+    }
 
 }
 

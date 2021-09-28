@@ -219,7 +219,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        letterStyleForm.updateProjectFontFamilies(projectFamilies)
+        letterStyleForm.setProjectFontFamilies(projectFamilies)
     }
 
     private fun onChange(widget: Form.Widget<*>? = null) {

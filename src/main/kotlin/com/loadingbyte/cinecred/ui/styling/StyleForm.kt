@@ -71,7 +71,8 @@ class StyleForm<S : Style>(
                 OptWidget(makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs))
             }
             is ListStyleSetting -> {
-                if (setting.type == String::class.java) {
+                val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
+                if (setting.type == String::class.java && dynChoiceConstr == null) {
                     val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
                     TextListWidget(widthWidgetSpec?.widthSpec)
                 } else {

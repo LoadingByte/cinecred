@@ -324,7 +324,10 @@ class InconsistentComboBoxWidget<E : Any /* non-null */>(
 ) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
 
     override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
-        DefaultComboBoxModel(items).apply { selectedItem = oldSelectedItem }
+        DefaultComboBoxModel(items).apply {
+            if (oldSelectedItem != null)
+                selectedItem = oldSelectedItem
+        }
 
     override var value: E
         get() = super.value
@@ -368,7 +371,10 @@ open class EditableComboBoxWidget<E : Any /* non-null */>(
     }
 
     override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
-        DefaultComboBoxModel(items).apply { selectedItem = oldSelectedItem }
+        DefaultComboBoxModel(items).apply {
+            if (oldSelectedItem != null)
+                selectedItem = oldSelectedItem
+        }
 
 }
 

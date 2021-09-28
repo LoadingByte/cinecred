@@ -22,6 +22,7 @@ fun newLabelTextArea(insets: Boolean = true) = JTextArea().apply {
     isEditable = false
     lineWrap = true
     wrapStyleWord = true
+    isFocusable = false
     // If requested, set insets to 0, since JLabels also have insets of 0 and the text area should behave like a label.
     if (!insets)
         border = null

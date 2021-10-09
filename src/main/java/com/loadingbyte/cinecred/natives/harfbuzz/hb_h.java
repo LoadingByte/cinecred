@@ -13,6 +13,9 @@ public class hb_h  {
     }
 
     static final SymbolLookup LIBRARIES = RuntimeHelper.lookup();    /* package-private */ hb_h() {}
+    public static int HB_FEATURE_GLOBAL_START() {
+        return (int)0L;
+    }
     public static int HB_DIRECTION_LTR() {
         return (int)4L;
     }
@@ -374,6 +377,9 @@ public class hb_h  {
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
+    }
+    public static int HB_FEATURE_GLOBAL_END() {
+        return (int)4294967295L;
     }
 }
 

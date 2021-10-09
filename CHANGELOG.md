@@ -35,6 +35,7 @@ Cinecred Changelog
 
 - Text is sized and positioned more precisely by employing floating point
   instead of integer precision.
+- Disabling ligatures now also disables the `clig` OpenType feature.
 - User-supplied font collections (ttc/otc) are now supported.
 - User-supplied auxiliary files (fonts and pictures) are recognized regardless
   of their file extension's case.

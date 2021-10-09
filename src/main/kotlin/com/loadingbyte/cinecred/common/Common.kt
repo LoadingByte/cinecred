@@ -100,7 +100,7 @@ fun Graphics2D.setHighQuality() {
 
 
 const val KERNING_FONT_FEAT = "kern"
-const val LIGATURES_FONT_FEAT = "liga"
+val LIGATURES_FONT_FEATS = listOf("liga", "clig")
 const val SMALL_CAPS_FONT_FEAT = "smcp"
 const val PETITE_CAPS_FONT_FEAT = "pcap"
 const val CAPITAL_SPACING_FONT_FEAT = "cpsp"

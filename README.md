@@ -76,6 +76,8 @@ Next, regenerate the Java bindings using the following command, and then replace
         --include-macro HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES \
         --include-macro HB_DIRECTION_LTR \
         --include-macro HB_DIRECTION_RTL \
+        --include-macro HB_FEATURE_GLOBAL_END \
+        --include-macro HB_FEATURE_GLOBAL_START \
         --include-macro HB_MEMORY_MODE_WRITABLE \
         --include-macro HB_SCRIPT_ARABIC \
         --include-macro HB_SCRIPT_ARMENIAN \

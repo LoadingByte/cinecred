@@ -9,6 +9,7 @@ import jdk.incubator.foreign.MemoryAddress
 import jdk.incubator.foreign.MemoryAddress.NULL
 import jdk.incubator.foreign.MemoryLayouts.JAVA_BYTE
 import jdk.incubator.foreign.MemoryLayouts.JAVA_CHAR
+import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemorySegment.globalNativeSegment
 import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.ResourceScope.newConfinedScope
@@ -70,15 +71,14 @@ class CustomGlyphLayoutEngine private constructor(
             hb_buffer_add_utf16(hbBuffer, chars, tr.text.size, tr.start, tr.limit - tr.start)
 
             // Create an HB feature array and fill it.
-            val numFeatures = 2 + userFeats.size
+            val numFeatures = 1 + LIGATURES_FONT_FEATS.size + userFeats.size
             val hbFeatures = hb_feature_t.allocateArray(numFeatures, scope)
-            val hbFeatSize = hb_feature_t.sizeof()
-            val kernStr = if (kern) KERNING_FONT_FEAT else "-$KERNING_FONT_FEAT"
-            val ligaStr = if (liga) LIGATURES_FONT_FEAT else "-$LIGATURES_FONT_FEAT"
-            hb_feature_from_string(toCString(kernStr, scope), -1, hbFeatures)
-            hb_feature_from_string(toCString(ligaStr, scope), -1, hbFeatures.asSlice(hbFeatSize))
-            for (idx in userFeats.indices)
-                hb_feature_from_string(toCString(userFeats[idx], scope), -1, hbFeatures.asSlice((2 + idx) * hbFeatSize))
+            var featureIdx = 0L
+            configureFeature(hbFeatures, featureIdx++, KERNING_FONT_FEAT, if (kern) 1 else 0)
+            for (tag in LIGATURES_FONT_FEATS)
+                configureFeature(hbFeatures, featureIdx++, tag, if (liga) 1 else 0)
+            for (tag in userFeats)
+                configureFeature(hbFeatures, featureIdx++, tag, 1)
 
             // Run the HB shaping algorithm.
             hb_shape(hbFont, hbBuffer, hbFeatures, numFeatures)
@@ -248,6 +248,18 @@ class CustomGlyphLayoutEngine private constructor(
             HB_SCRIPT_BUHID(),            /* 44 */
             HB_SCRIPT_TAGBANWA(),         /* 45 */
         )
+
+
+        private fun configureFeature(seg: MemorySegment, idx: Long, tag: String, value: Int) {
+            if (tag.length == 4 && tag.all { it.code in 0..255 }) {
+                val tagCode = (tag[0].code shl 24) or (tag[1].code shl 16) or (tag[2].code shl 8) or tag[3].code
+                hb_feature_t.`tag$set`(seg, idx, tagCode)
+            }
+            if (value > 0)
+                hb_feature_t.`value$set`(seg, idx, value)
+            hb_feature_t.`start$set`(seg, idx, HB_FEATURE_GLOBAL_START())
+            hb_feature_t.`end$set`(seg, idx, HB_FEATURE_GLOBAL_END())
+        }
 
     }
 

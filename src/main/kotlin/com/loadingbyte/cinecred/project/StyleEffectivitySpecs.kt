@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.CAPITAL_SPACING_FONT_FEAT
 import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
-import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEAT
+import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
 import com.loadingbyte.cinecred.common.getSupportedFeatures
 
 
@@ -99,7 +99,7 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
     ),
     StyleEffectivitySpec(
         LetterStyle::ligatures.st(),
-        isAlmostEffective = { ctx, style -> supportsNot(ctx, style, LIGATURES_FONT_FEAT) }
+        isAlmostEffective = { ctx, style -> LIGATURES_FONT_FEATS.all { supportsNot(ctx, style, it) } }
     ),
     StyleEffectivitySpec(
         LetterStyle::useUppercaseSpacing.st(),

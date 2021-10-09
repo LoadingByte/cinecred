@@ -136,6 +136,10 @@ open class Form(insets: Boolean = true) :
             // If this field starts a new line, add a skip constraint to skip the label column.
             if ("newline" in fieldConstraints[0])
                 fieldConstraints.add("skip 1")
+            // If this field starts the first or a later line, add a split constraint to make sure all components
+            // are located in the same cell horizontally.
+            if (fieldIdx == 0 || "newline" in fieldConstraints[0])
+                fieldConstraints.add("split")
             add(field, fieldConstraints.joinToString())
         }
 

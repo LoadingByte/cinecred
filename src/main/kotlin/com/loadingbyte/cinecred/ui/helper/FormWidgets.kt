@@ -159,7 +159,7 @@ class FileWidget(
     }
 
     override val components = listOf<JComponent>(tc, browse)
-    override val constraints = listOf("split, ${(widthSpec ?: WidthSpec.WIDE).mig}", "")
+    override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig, "")
 
     override var value: Path
         get() = Path(tc.text.trim())
@@ -767,7 +767,7 @@ class OptWidget<V>(
     }
 
     override val components = listOf(cb) + wrapped.components
-    override val constraints = listOf("split") + wrapped.constraints
+    override val constraints = listOf("") + wrapped.constraints
 
     override var value: Opt<V>
         get() = Opt(cb.isSelected, wrapped.value)
@@ -842,7 +842,7 @@ class ListWidget<V>(
     private var configurator: ((Form.Widget<*>) -> Unit)? = null
 
     override val components = listOf<JComponent>(addBtn, panel)
-    override val constraints = listOf("split, aligny top", if (isElemWidgetFilling) WidthSpec.FILL.mig else "")
+    override val constraints = listOf("aligny top", if (isElemWidgetFilling) WidthSpec.FILL.mig else "")
 
     override var value: ImmutableList<V>
         get() = elemWidgets.map { it.value }.toImmutableList()
@@ -924,7 +924,7 @@ class UnionWidget(
     }
 
     override val constraints = mutableListOf<String>().apply {
-        add("split, gapx 0 3lp")
+        add("gapx 0 3lp")
         addAll(wrapped.first().constraints)
         for (widget in wrapped.drop(1)) {
             add("gapx 10lp 3lp")

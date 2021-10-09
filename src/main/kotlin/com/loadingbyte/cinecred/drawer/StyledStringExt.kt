@@ -166,20 +166,24 @@ private fun generateFmtStrAttrs(
         // @formatter:on
     }
 
-    val features = style.features.toMutableList() // copy
+    val features = style.features.mapTo(mutableListOf()) { FormattedString.Font.Feature(it.tag, it.value) }
 
     if (style.uppercase && style.useUppercaseSpacing)
-        features.add(CAPITAL_SPACING_FONT_FEAT)
+        features.add(FormattedString.Font.Feature(CAPITAL_SPACING_FONT_FEAT, 1))
 
     var fakeSCScaling = Float.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {
         }
         SmallCaps.SMALL_CAPS ->
-            if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures()) features.add(SMALL_CAPS_FONT_FEAT) else
+            if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
+                features.add(FormattedString.Font.Feature(SMALL_CAPS_FONT_FEAT, 1))
+            else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1f, 0.8f)
         SmallCaps.PETITE_CAPS ->
-            if (PETITE_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures()) features.add(PETITE_CAPS_FONT_FEAT) else
+            if (PETITE_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
+                features.add(FormattedString.Font.Feature(PETITE_CAPS_FONT_FEAT, 1))
+            else
                 fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1f, 0.725f)
     }
 

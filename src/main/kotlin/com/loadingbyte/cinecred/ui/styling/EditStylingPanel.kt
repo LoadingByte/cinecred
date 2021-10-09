@@ -278,6 +278,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 val choices = constr.choices(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)
+            } else if (constr is FontFeatureConstr) {
+                val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle)
+                for (setting in constr.settings)
+                    curForm.setChoices(setting, availableTags)
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))

@@ -166,7 +166,7 @@ data class LetterStyle(
     val scaling: Float,
     val hScaling: Float,
     val hShearing: Float,
-    val features: ImmutableList<String>,
+    val features: ImmutableList<FontFeature>,
     val decorations: ImmutableList<TextDecoration>,
     val background: Color,
     val backgroundWidenLeftPx: Float,
@@ -178,6 +178,12 @@ data class LetterStyle(
 
 enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }
 enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
+
+
+data class FontFeature(
+    val tag: String,
+    val value: Int
+)
 
 
 data class TextDecoration(

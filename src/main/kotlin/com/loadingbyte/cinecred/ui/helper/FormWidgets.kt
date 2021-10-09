@@ -7,6 +7,7 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
 import com.loadingbyte.cinecred.projectio.formatTimecode
@@ -40,6 +41,7 @@ import kotlin.math.ceil
 
 
 enum class WidthSpec(val mig: String) {
+    TINIER("width 50lp:50lp:"),
     TINY("width 70lp:70lp:"),
     NARROW("width 100lp:100lp:"),
     FIT("width 100lp::max(300lp,40%)"),
@@ -745,6 +747,38 @@ class FontChooserWidget(
             return panel
         }
 
+    }
+
+}
+
+
+class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
+
+    private val tagWidget = InconsistentComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.TINY)
+    private val valWidget = SpinnerWidget(
+        Int::class.javaObjectType, SpinnerNumberModel(1, 0, null, 1), WidthSpec.TINIER
+    )
+
+    init {
+        // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        tagWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+        valWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+    }
+
+    override val components: List<JComponent> = tagWidget.components + listOf(JLabel("=")) + valWidget.components
+    override val constraints = tagWidget.constraints + listOf("") + valWidget.constraints
+
+    override var value: FontFeature
+        get() = FontFeature(tagWidget.value, valWidget.value)
+        set(value) {
+            tagWidget.value = value.tag
+            valWidget.value = value.value
+        }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        configurator(this)
+        tagWidget.applyConfigurator(configurator)
+        valWidget.applyConfigurator(configurator)
     }
 
 }

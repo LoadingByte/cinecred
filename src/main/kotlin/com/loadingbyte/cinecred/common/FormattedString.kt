@@ -449,7 +449,7 @@ class FormattedString private constructor(
         private val vOffsetRem: Float = 0f,
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
-        val features: List<String> = emptyList(),
+        val features: List<Feature> = emptyList(),
         val trackingEm: Float = 0f
     ) {
 
@@ -495,6 +495,8 @@ class FormattedString private constructor(
             color, baseAWTFont, heightPx, scaling * extraScaling, hScaling, hShearing, hOffsetRem, vOffsetRem,
             kerning, ligatures, features, trackingEm
         )
+
+        class Feature(val tag: String, val value: Int)
 
         companion object {
 

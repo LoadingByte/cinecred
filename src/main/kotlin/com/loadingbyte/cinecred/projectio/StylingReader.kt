@@ -139,6 +139,7 @@ private fun convert(type: Class<*>, raw: Any?): Any = when (type) {
     Locale::class.java -> Locale.forLanguageTag(raw as String)
     Color::class.java -> (raw as String).hexToColor()
     FPS::class.java -> (raw as String).toFPS()
+    FontFeature::class.java -> (raw as String).toFontFeature()
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> (raw as String).toEnum(type)
         Style::class.java.isAssignableFrom(type) ->

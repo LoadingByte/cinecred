@@ -136,6 +136,7 @@ class StyleForm<S : Style>(
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
             FPS::class.java -> FPSWidget(widthSpec)
+            FontFeature::class.java -> FontFeatureWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(

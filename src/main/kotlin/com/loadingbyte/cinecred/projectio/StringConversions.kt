@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.project.FontFeature
 import java.awt.Color
 
 
@@ -35,3 +36,12 @@ fun String.toFPS(): FPS {
 }
 
 fun FPS.toString2() = "$numerator/$denominator"
+
+
+fun String.toFontFeature(): FontFeature {
+    val parts = split("=")
+    require(parts.size == 2)
+    return FontFeature(parts[0], parts[1].toInt())
+}
+
+fun FontFeature.toString2() = "$tag=$value"

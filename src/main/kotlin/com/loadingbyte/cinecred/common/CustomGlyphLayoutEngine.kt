@@ -77,8 +77,8 @@ class CustomGlyphLayoutEngine private constructor(
             configureFeature(hbFeatures, featureIdx++, KERNING_FONT_FEAT, if (kern) 1 else 0)
             for (tag in LIGATURES_FONT_FEATS)
                 configureFeature(hbFeatures, featureIdx++, tag, if (liga) 1 else 0)
-            for (tag in userFeats)
-                configureFeature(hbFeatures, featureIdx++, tag, 1)
+            for (feat in userFeats)
+                configureFeature(hbFeatures, featureIdx++, feat.tag, feat.value)
 
             // Run the HB shaping algorithm.
             hb_shape(hbFont, hbBuffer, hbFeatures, numFeatures)
@@ -273,7 +273,7 @@ class CustomGlyphLayoutEngine private constructor(
         val trackingEm: Float,
         val bearingLeftEm: Float,
         val bearingRightEm: Float,
-        val features: List<String>
+        val features: List<FormattedString.Font.Feature>
     )
 
 }

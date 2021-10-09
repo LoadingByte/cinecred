@@ -123,7 +123,7 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         }
     },
     FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
-    DynChoiceConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
+    FontFeatureConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
         ctx.resolveFont(style.fontName)?.getSupportedFeatures() ?: emptySet()
     },
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
@@ -188,6 +188,13 @@ class FontNameConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, String>
 ) : StyleConstraint<S, StyleSetting<S, String>>(setting)
+
+
+class FontFeatureConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, FontFeature>,
+    val getAvailableTags: (StylingContext, Styling, S) -> Collection<String>
+) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 
 class JudgeConstr<S : Style>(
@@ -270,6 +277,13 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
                         if (ctx.resolveFont(value) == null)
                             log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.font"))
+                    }
+                is FontFeatureConstr ->
+                    style.forEachRelevantValue(cst, ignoreSettings.keys) { setting, value ->
+                        if (value.tag !in cst.getAvailableTags(ctx, styling, style))
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.fontFeatTag"))
+                        if (value.value < 0)
+                            log(rootStyle, style, setting, cst.severity, l10n("project.styling.constr.fontFeatValue"))
                     }
                 is JudgeConstr ->
                     if (!cst.judge(ctx, styling, style)) {

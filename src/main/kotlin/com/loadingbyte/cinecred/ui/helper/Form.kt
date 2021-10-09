@@ -117,10 +117,10 @@ open class Form(insets: Boolean = true) :
         widget.changeListeners.add(::onChange)
 
         widget.labelComp.text = label
-        val labelId = "l" + System.identityHashCode(widget.labelComp)
+        val labelId = "l_${widgets.size}"
         add(widget.labelComp, "id $labelId, " + if (widgets.isEmpty() /* is first widget */) "" else "newline")
 
-        val endlineGroupId = "g" + System.identityHashCode(widget.labelComp)
+        val endlineGroupId = "g_${widgets.size}"
         val endlineFieldIds = mutableListOf<String>()
         for ((fieldIdx, field) in widget.components.withIndex()) {
             val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
@@ -129,7 +129,7 @@ open class Form(insets: Boolean = true) :
             if (fieldIdx == widget.components.lastIndex ||
                 "newline" in widget.constraints.getOrElse(fieldIdx + 1) { "" }
             ) {
-                val id = "f" + System.identityHashCode(field).toString()
+                val id = "f_${widgets.size}_$fieldIdx"
                 fieldConstraints.add("id $endlineGroupId.$id")
                 endlineFieldIds.add(id)
             }
@@ -141,7 +141,7 @@ open class Form(insets: Boolean = true) :
 
         // Position the notice components using x coordinates relative to the fields that are at the line ends
         // and y coordinates relative to the widget's label.
-        val noticeIconId = "c" + System.identityHashCode(widget.noticeIconComp)
+        val noticeIconId = "n_${widgets.size}"
         add(widget.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
         add(widget.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
 

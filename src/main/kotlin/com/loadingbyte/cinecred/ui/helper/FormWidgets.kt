@@ -305,12 +305,12 @@ open class ComboBoxWidget<E : Any /* non-null */>(
             cb.selectedItem = value
         }
 
-    final override fun updateItems(items: Collection<E>) {
-        this.items = items
+    final override fun updateChoices(choices: Collection<E>) {
+        this.items = choices
     }
 
     init {
-        updateItems(items)
+        updateChoices(items)
     }
 
 }
@@ -470,12 +470,12 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
                 btn.isEnabled = isEnabled
         }
 
-    override fun updateItems(items: Collection<E>) {
-        this.items = if (items is List<E>) items else items.toList()
+    override fun updateChoices(choices: Collection<E>) {
+        this.items = if (choices is List<E>) choices else choices.toList()
     }
 
     init {
-        updateItems(items)
+        updateChoices(items)
     }
 
 

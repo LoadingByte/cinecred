@@ -102,7 +102,7 @@ open class Form(insets: Boolean = true) :
     }
 
     interface ChoiceWidget<V, E> : Widget<V> {
-        fun updateItems(items: Collection<E>)
+        fun updateChoices(choices: Collection<E>)
     }
 
 

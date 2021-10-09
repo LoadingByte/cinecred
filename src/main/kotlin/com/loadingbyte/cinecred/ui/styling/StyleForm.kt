@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.ImmutableList
 import java.awt.Color
 import java.util.*
 import javax.swing.Icon
@@ -239,11 +238,11 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setDynChoices(setting: StyleSetting<*, *>, choices: ImmutableList<*>) {
+    fun setChoices(setting: StyleSetting<*, *>, choices: Collection<*>) {
         valueWidgets[setting]!!.applyConfigurator { widget ->
             if (widget is ChoiceWidget<*, *>)
                 @Suppress("UNCHECKED_CAST")
-                (widget as ChoiceWidget<*, Any?>).updateItems(choices)
+                (widget as ChoiceWidget<*, Any?>).updateChoices(choices)
         }
     }
 

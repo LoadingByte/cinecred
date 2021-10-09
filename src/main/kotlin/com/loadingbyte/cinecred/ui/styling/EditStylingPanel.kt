@@ -275,9 +275,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for (constr in getStyleConstraints(curStyle.javaClass))
             if (constr is DynChoiceConstr) {
-                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle).toImmutableList()
+                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)
-                    curForm.setDynChoices(setting, choices)
+                    curForm.setChoices(setting, choices)
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))

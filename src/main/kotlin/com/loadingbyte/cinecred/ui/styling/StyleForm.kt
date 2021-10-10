@@ -17,7 +17,7 @@ class StyleForm<S : Style>(
 ) : Form.Storable<S>(insets) {
 
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
-    private val rootWidgets = HashMap<StyleSetting<S, *>, Widget<*>>()
+    private val rootFormRows = HashMap<StyleSetting<S, *>, FormRow>()
 
     private var disableOnChange = false
 
@@ -40,9 +40,10 @@ class StyleForm<S : Style>(
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val valueWidget = makeSettingWidget(setting)
+        val formRow = makeFormRow(setting.name, valueWidget)
         valueWidgets[setting] = valueWidget
-        rootWidgets[setting] = valueWidget
-        addRootWidget(setting.name, valueWidget)
+        rootFormRows[setting] = formRow
+        addFormRow(formRow)
     }
 
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
@@ -53,9 +54,10 @@ class StyleForm<S : Style>(
             valueWidgets[setting] = valueWidget
         }
         val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
+        val formRow = makeFormRow(spec.unionName, unionWidget)
         for (setting in spec.settings)
-            rootWidgets[setting] = unionWidget
-        addRootWidget(spec.unionName, unionWidget)
+            rootFormRows[setting] = formRow
+        addFormRow(formRow)
     }
 
     private fun makeSettingWidget(setting: StyleSetting<S, *>): Widget<*> {
@@ -177,15 +179,16 @@ class StyleForm<S : Style>(
         return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
     }
 
-    private fun addRootWidget(name: String, widget: Widget<*>) {
+    private fun makeFormRow(name: String, widget: Widget<*>): FormRow {
         val l10nKey = "ui.styling." +
                 styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercase) +
                 ".$name"
+        val formRow = FormRow(l10n(l10nKey), widget)
         try {
-            widget.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
+            formRow.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
         } catch (_: MissingResourceException) {
         }
-        addWidget(l10n(l10nKey), widget)
+        return formRow
     }
 
     override fun open(stored /* style */: S) {
@@ -221,16 +224,20 @@ class StyleForm<S : Style>(
         return nestedForms
     }
 
-    fun clearNoticeOverrides() {
-        for (widget in rootWidgets.values)
-            widget.noticeOverride = null
+    fun clearIssues() {
+        for (formRow in rootFormRows.values) {
+            formRow.noticeOverride = null
+            formRow.widget.applySeverity(-1, null)
+        }
     }
 
-    fun getNoticeOverride(setting: StyleSetting<*, *>): Notice? =
-        rootWidgets[setting]!!.noticeOverride
-
-    fun setNoticeOverride(setting: StyleSetting<*, *>, noticeOverride: Notice) {
-        rootWidgets[setting]!!.noticeOverride = noticeOverride
+    fun showIssue(setting: StyleSetting<*, *>, index: Int, issue: Notice) {
+        val formRow = rootFormRows[setting]!!
+        val prevNoticeOverride = formRow.noticeOverride
+        // Only show the notice message if there isn't already a notice with the same or a higher severity.
+        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
+            formRow.noticeOverride = issue
+        valueWidgets[setting]!!.applySeverity(index, issue.severity)
     }
 
     fun setProjectFontFamilies(projectFamilies: FontFamilies) {
@@ -266,10 +273,10 @@ class StyleForm<S : Style>(
     private fun refresh() {
         val style = save()
         val ineffectiveSettings = findIneffectiveSettings(ctx, style)
-        for ((setting, widget) in valueWidgets) {
+        for ((setting, formRow) in rootFormRows) {
             val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
-            widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-            widget.isEnabled = effectivity == Effectivity.EFFECTIVE
+            formRow.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
+            formRow.isEnabled = effectivity == Effectivity.EFFECTIVE
         }
     }
 

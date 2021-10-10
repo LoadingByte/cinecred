@@ -17,42 +17,30 @@ open class Form(insets: Boolean = true) :
         abstract fun save(): O
     }
 
-    class Notice(val severity: Severity, val msg: String?)
-
     interface Widget<V> {
         val components: List<JComponent>
         val constraints: List<String>
-
-        val labelComp: JLabel
-        val noticeIconComp: JLabel
-        val noticeMsgComp: JTextArea
-
+        val changeListeners: MutableList<(Widget<*>) -> Unit>
         var value: V
-        var changeListeners: MutableList<(Widget<*>) -> Unit>
         var isVisible: Boolean
         var isEnabled: Boolean
-        var notice: Notice?
-        var noticeOverride: Notice?
+        fun applyConfigurator(configurator: (Widget<*>) -> Unit)
+        fun applySeverity(index: Int, severity: Severity?)
+    }
 
-        fun applyConfigurator(configurator: (Widget<*>) -> Unit) = configurator(this)
+    interface ChoiceWidget<V, E> : Widget<V> {
+        fun updateChoices(choices: Collection<E>)
     }
 
     abstract class AbstractWidget<V> : Widget<V> {
 
-        override val labelComp = JLabel()
-        override val noticeIconComp = JLabel()
-        override val noticeMsgComp = newLabelTextArea(insets = false)
-
-        override var changeListeners = mutableListOf<(Widget<*>) -> Unit>()
+        override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 
         override var isVisible = true
             set(isVisible) {
                 field = isVisible
                 for (comp in components)
                     comp.isVisible = isVisible
-                labelComp.isVisible = isVisible
-                noticeIconComp.isVisible = isVisible
-                noticeMsgComp.isVisible = isVisible
             }
 
         override var isEnabled = true
@@ -60,28 +48,15 @@ open class Form(insets: Boolean = true) :
                 field = isEnabled
                 for (comp in components)
                     comp.isEnabled = isEnabled
-                labelComp.isEnabled = isEnabled
-                applyEffectiveNotice()
             }
 
-        override var notice: Notice? = null
-            set(notice) {
-                field = notice
-                applyEffectiveNotice()
-            }
+        override fun applyConfigurator(configurator: (Widget<*>) -> Unit) {
+            configurator(this)
+        }
 
-        override var noticeOverride: Notice? = null
-            set(noticeOverride) {
-                field = noticeOverride
-                applyEffectiveNotice()
-            }
-
-        private fun applyEffectiveNotice() {
-            val effectiveNotice = if (isEnabled) noticeOverride ?: notice else null
-            noticeIconComp.icon = effectiveNotice?.severity?.icon
-            noticeMsgComp.text = effectiveNotice?.msg
+        override fun applySeverity(index: Int, severity: Severity?) {
             // Adjust FlatLaf outlines.
-            val outline = when (effectiveNotice?.severity) {
+            val outline = when (severity) {
                 Severity.WARN -> OUTLINE_WARNING
                 Severity.ERROR -> OUTLINE_ERROR
                 else -> null
@@ -101,26 +76,67 @@ open class Form(insets: Boolean = true) :
 
     }
 
-    interface ChoiceWidget<V, E> : Widget<V> {
-        fun updateChoices(choices: Collection<E>)
+    class Notice(val severity: Severity, val msg: String?)
+
+    class FormRow(label: String, val widget: Widget<*>) {
+
+        val labelComp = JLabel(label)
+        val noticeIconComp = JLabel()
+        val noticeMsgComp = newLabelTextArea(insets = false)
+
+        var isVisible: Boolean
+            get() = widget.isVisible
+            set(isVisible) {
+                widget.isVisible = isVisible
+                labelComp.isVisible = isVisible
+                noticeIconComp.isVisible = isVisible
+                noticeMsgComp.isVisible = isVisible
+            }
+
+        var isEnabled: Boolean
+            get() = widget.isEnabled
+            set(isEnabled) {
+                widget.isEnabled = isEnabled
+                labelComp.isEnabled = isEnabled
+            }
+
+        var notice: Notice? = null
+            set(notice) {
+                field = notice
+                applyEffectiveNotice()
+            }
+
+        var noticeOverride: Notice? = null
+            set(noticeOverride) {
+                field = noticeOverride
+                applyEffectiveNotice()
+            }
+
+        private fun applyEffectiveNotice() {
+            val effectiveNotice = noticeOverride ?: notice
+            noticeIconComp.icon = effectiveNotice?.severity?.icon
+            noticeMsgComp.text = effectiveNotice?.msg
+        }
+
     }
 
 
     val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 
-    private val widgets = mutableListOf<Widget<*>>()
+    private val formRows = mutableListOf<FormRow>()
 
-    fun <W : Widget<*>> addWidget(label: String, widget: W): W {
+    protected fun addFormRow(formRow: FormRow) {
+        val widget = formRow.widget
+
         require(widget.components.size == widget.constraints.size)
         require(widget.constraints.all { "wrap" !in it }) // we only allow "newline"
 
         widget.changeListeners.add(::onChange)
 
-        widget.labelComp.text = label
-        val labelId = "l_${widgets.size}"
-        add(widget.labelComp, "id $labelId, " + if (widgets.isEmpty() /* is first widget */) "" else "newline")
+        val labelId = "l_${formRows.size}"
+        add(formRow.labelComp, "id $labelId, " + if (formRows.isEmpty() /* is first widget */) "" else "newline")
 
-        val endlineGroupId = "g_${widgets.size}"
+        val endlineGroupId = "g_${formRows.size}"
         val endlineFieldIds = mutableListOf<String>()
         for ((fieldIdx, field) in widget.components.withIndex()) {
             val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
@@ -129,7 +145,7 @@ open class Form(insets: Boolean = true) :
             if (fieldIdx == widget.components.lastIndex ||
                 "newline" in widget.constraints.getOrElse(fieldIdx + 1) { "" }
             ) {
-                val id = "f_${widgets.size}_$fieldIdx"
+                val id = "f_${formRows.size}_$fieldIdx"
                 fieldConstraints.add("id $endlineGroupId.$id")
                 endlineFieldIds.add(id)
             }
@@ -145,12 +161,11 @@ open class Form(insets: Boolean = true) :
 
         // Position the notice components using x coordinates relative to the fields that are at the line ends
         // and y coordinates relative to the widget's label.
-        val noticeIconId = "n_${widgets.size}"
-        add(widget.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
-        add(widget.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
+        val noticeIconId = "n_${formRows.size}"
+        add(formRow.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
+        add(formRow.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
 
-        widgets.add(widget)
-        return widget
+        formRows.add(formRow)
     }
 
     fun addSeparator() {
@@ -164,8 +179,8 @@ open class Form(insets: Boolean = true) :
 
     // The baseline of the whole form should be the baseline of the first widget's label.
     override fun getBaseline(width: Int, height: Int) = when {
-        widgets.isEmpty() -> -1
-        else -> insets.top + widgets.first().labelComp.let { it.y + it.getBaseline(it.width, it.height) }
+        formRows.isEmpty() -> -1
+        else -> insets.top + formRows.first().labelComp.let { it.y + it.getBaseline(it.width, it.height) }
     }
 
     // Implementation of the Scrollable interface. The important change is made by the first function

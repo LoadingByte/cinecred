@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
 import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_BORDERLESS
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.project.FPS
@@ -932,6 +933,15 @@ class ListWidget<V>(
         configurator(this)
         for (widget in elemWidgets)
             widget.applyConfigurator(configurator)
+    }
+
+    override fun applySeverity(index: Int, severity: Severity?) {
+        if (index == -1) {
+            super.applySeverity(-1, severity)
+            for (widget in elemWidgets)
+                widget.applySeverity(-1, severity)
+        } else
+            elemWidgets.getOrNull(index)?.applySeverity(-1, severity)
     }
 
 }

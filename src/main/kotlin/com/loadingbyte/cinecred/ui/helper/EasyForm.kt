@@ -5,7 +5,8 @@ import javax.swing.JButton
 
 open class EasyForm(insets: Boolean = true) : Form(insets) {
 
-    private class WidgetInfo(
+    private class ExtFormRow(
+        val formRow: FormRow,
         val isVisibleFunc: (() -> Boolean)?,
         val isEnabledFunc: (() -> Boolean)?,
         val verify: (() -> Notice?)? = null
@@ -16,7 +17,7 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
     }
 
 
-    private val widgetInfo = HashMap<Widget<*>, WidgetInfo>()
+    private val extFormRows = mutableListOf<ExtFormRow>()
     private var submitButton: JButton? = null
 
     fun <W : Widget<V>, V> addWidget(
@@ -26,9 +27,10 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
         isEnabled: (() -> Boolean)? = null,
         verify: ((V) -> Notice?)? = null
     ): W {
-        super.addWidget(label, widget)
+        val formRow = FormRow(label, widget)
+        super.addFormRow(formRow)
         val doVerify = verify?.let { { it(widget.value) } }
-        widgetInfo[widget] = WidgetInfo(isVisible, isEnabled, doVerify)
+        extFormRows.add(ExtFormRow(formRow, isVisible, isEnabled, doVerify))
         return widget
     }
 
@@ -40,16 +42,20 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
     }
 
     override fun onChange(widget: Widget<*>) {
-        for ((w, info) in widgetInfo) {
-            info.isVisibleFunc?.let { w.isVisible = it() }
-            info.isEnabledFunc?.let { w.isEnabled = it() }
-            info.verify?.let { w.noticeOverride = it() }
+        for (efr in extFormRows) {
+            efr.isVisibleFunc?.let { efr.formRow.isVisible = it() }
+            efr.isEnabledFunc?.let { efr.formRow.isEnabled = it() }
+            efr.verify?.let {
+                val notice = it()
+                efr.formRow.noticeOverride = notice
+                efr.formRow.widget.applySeverity(-1, notice?.severity)
+            }
         }
         // Disable the submit button if there are errors in the form.
         submitButton?.isEnabled = isErrorFree
     }
 
     private val isErrorFree: Boolean
-        get() = widgetInfo.all { (widget, info) -> !widget.isVisible || !widget.isEnabled || !info.isErroneous }
+        get() = extFormRows.all { efr -> !efr.formRow.isVisible || !efr.formRow.isEnabled || !efr.isErroneous }
 
 }

@@ -31,8 +31,8 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             addTab(l10n("ui.project.video"), PLAY_ICON, videoPanel)
             addTab(l10n("ui.project.deliver"), DELIVER_ICON, deliverPanel)
             addChangeListener {
-                ctrl.onChangeTab(leftPanel = prevSelectedTab, enteredPanel = selectedComponent as JPanel)
-                prevSelectedTab = selectedComponent as JPanel
+                ctrl.onChangeTab(leftPanel = prevSelectedTab, enteredPanel = selectedTab)
+                prevSelectedTab = selectedTab
             }
         }
 
@@ -59,8 +59,10 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
         tabPaneTrailingPanel.add(component, "growy, pushy")
     }
 
-    fun selectTab(panel: JPanel) {
-        tabPane.selectedComponent = panel
-    }
+    var selectedTab: JPanel
+        get() = tabPane.selectedComponent as JPanel
+        set(selectedTab) {
+            tabPane.selectedComponent = selectedTab
+        }
 
 }

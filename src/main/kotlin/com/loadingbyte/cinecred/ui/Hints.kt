@@ -38,7 +38,7 @@ fun makeOpenHintTrack(openFrame: OpenFrame): HintTrack {
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel.editPanel
     val stylingPanel = ctrl.editStylingDialog.panel
-    val goEditPnl = fun() { ctrl.projectFrame.panel.selectTab(editPanel) }
+    val goEditPnl = fun() { ctrl.projectFrame.panel.selectedTab = editPanel }
     return HintTrack(
         PROJECT_HINT_TRACK_NAME, listOf(
             Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),

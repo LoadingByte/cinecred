@@ -14,6 +14,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import java.awt.Font
 import java.awt.GraphicsConfiguration
+import java.awt.event.KeyEvent
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -248,6 +249,13 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         isEditStylingDialogVisible = isVisible
         editStylingDialog.isVisible = isEditTabActive && isVisible
         projectFrame.panel.editPanel.onSetEditStylingDialogVisible(isVisible)
+    }
+
+    fun onGlobalKeyEvent(event: KeyEvent): Boolean {
+        val window = SwingUtilities.getRoot(event.component)
+        if ((window == projectFrame || window == editStylingDialog) && isEditTabActive)
+            return projectFrame.panel.editPanel.onKeyEvent(event)
+        return false
     }
 
 

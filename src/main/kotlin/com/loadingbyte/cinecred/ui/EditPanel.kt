@@ -19,7 +19,7 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
 import java.awt.Font
-import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*
 import javax.swing.JOptionPane.*
@@ -41,6 +41,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     val pageTabsHintOwner: Component
     val creditsLogHintOwner: Component
     // =================================
+
+    private val keyListeners = mutableListOf<(KeyEvent) -> Boolean>()
+
+    fun onKeyEvent(event: KeyEvent) =
+        keyListeners.any { it(event) }
 
     private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
         toggleStylingHintOwner = this
@@ -153,30 +158,22 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     private fun makeActToolBtn(
         name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
     ): JButton {
-        val action = object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent) {
-                listener()
+        if (shortcutKeyCode != -1)
+            keyListeners.add { e ->
+                val match = e.id == KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
+                if (match)
+                    listener()
+                match
             }
-        }
 
         var tooltip = l10n("ui.edit.$name")
-        if (shortcutKeyCode != -1) {
+        if (shortcutKeyCode != -1)
             tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
-            // ctrl.projectFrame is not available yet because the ProjectFrame hasn't been fully constructed yet.
-            // To circumvent this, we slightly postpone adding the keyboard shortcuts.
-            SwingUtilities.invokeLater {
-                for (w in arrayOf(ctrl.projectFrame, ctrl.editStylingDialog)) {
-                    val c = w.contentPane as JComponent
-                    c.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-                        .put(KeyStroke.getKeyStroke(shortcutKeyCode, shortcutModifiers), name)
-                    c.actionMap.put(name, action)
-                }
-            }
+        return JButton(icon).apply {
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            toolTipText = tooltip
+            addActionListener { listener() }
         }
-        action.putValue(Action.SMALL_ICON, icon)
-        action.putValue(Action.SHORT_DESCRIPTION, tooltip)
-
-        return JButton(action).apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
     }
 
     init {

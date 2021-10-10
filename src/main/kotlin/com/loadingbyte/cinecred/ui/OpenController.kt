@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.projectio.copyTemplate
 import com.loadingbyte.cinecred.projectio.locateCreditsFile
 import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
 import java.awt.Window
+import java.awt.event.KeyEvent
 import java.nio.file.Path
 import javax.swing.JOptionPane
 import kotlin.io.path.isRegularFile
@@ -106,5 +107,8 @@ object OpenController {
             for (window in Window.getWindows())
                 window.dispose()
     }
+
+    fun onGlobalKeyEvent(event: KeyEvent) =
+        projectCtrls.any { it.onGlobalKeyEvent(event) }
 
 }

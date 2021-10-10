@@ -22,6 +22,7 @@ import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Desktop
+import java.awt.KeyboardFocusManager
 import java.io.StringReader
 import java.net.URI
 import java.net.URLEncoder
@@ -113,6 +114,9 @@ fun mainSwing() {
     // Enable alternated coloring of table rows.
     val uiDefaults = UIManager.getLookAndFeelDefaults()
     uiDefaults["Table.alternateRowColor"] = HSLColor(uiDefaults["Table.background"] as Color).adjustTone(10f)
+
+    // Globally listen to all key events.
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(OpenController::onGlobalKeyEvent)
 
     // Load the preferences, show a form if they have not yet been set, and terminate if the user cancels the form.
     if (!PreferencesController.onStartup())

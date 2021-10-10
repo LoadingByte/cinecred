@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.loadingbyte.cinecred.common.Severity
 import javax.swing.JButton
 
 
@@ -49,6 +50,7 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
                 val notice = it()
                 efr.formRow.noticeOverride = notice
                 efr.formRow.widget.applySeverity(-1, notice?.severity)
+                efr.isErroneous = notice?.severity == Severity.ERROR
             }
         }
         // Disable the submit button if there are errors in the form.

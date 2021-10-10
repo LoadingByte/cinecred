@@ -50,6 +50,7 @@ Cinecred Changelog
 - A long list of grid columns no longer overflows, but instead wraps early.
 - Editing the same setting in two different styles in rapid succession is no
   longer considered a single undo/redo step.
+- A regression bug allowed erroneous forms to be submitted; this has been fixed.
 
 ### Notes
 

@@ -94,6 +94,11 @@ fun main() {
         LOGGER.error("Failed to load FFmpeg", t)
     }
 
+    SwingUtilities.invokeLater(::mainSwing)
+}
+
+
+fun mainSwing() {
     // Tooltips should not disappear on their own after some time.
     // To achieve this, we set the dismiss delay to one hour.
     ToolTipManager.sharedInstance().dismissDelay = 60 * 60 * 1000
@@ -109,17 +114,17 @@ fun main() {
     val uiDefaults = UIManager.getLookAndFeelDefaults()
     uiDefaults["Table.alternateRowColor"] = HSLColor(uiDefaults["Table.background"] as Color).adjustTone(10f)
 
-    // Open the main window.
-    SwingUtilities.invokeLater {
-        if (!PreferencesController.onStartup())
-            return@invokeLater
+    // Load the preferences, show a form if they have not yet been set, and terminate if the user cancels the form.
+    if (!PreferencesController.onStartup())
+        return
 
-        if (PreferencesController.checkForUpdates)
-            checkForUpdates()
+    // If configured accordingly, check for updates in the background and show a dialog if an update is available.
+    if (PreferencesController.checkForUpdates)
+        checkForUpdates()
 
-        OpenController.showOpenFrame()
-        makeOpenHintTrack(OpenController.getOpenFrame()!!).playIfPending()
-    }
+    // Show the project overview window ("OpenFrame").
+    OpenController.showOpenFrame()
+    makeOpenHintTrack(OpenController.getOpenFrame()!!).playIfPending()
 }
 
 

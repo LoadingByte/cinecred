@@ -64,6 +64,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         verify = {
             if (!it.contains(Regex("%0\\d+d")))
                 Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
+            else if (it.count { c -> c == '%' } > 1)
+                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternTooManyPercents"))
             else null
         }
     ).apply { value = "page-%02d" }

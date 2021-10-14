@@ -6,6 +6,8 @@ Cinecred Changelog
 
 ### Additions
 
+- Template credits spreadsheets have been augmented with documentation for each
+  column. Also, the header is now formatted.
 - The capabilities of letter styles have been massively expanded, notably:
     - Kerning can be disabled.
     - Optional ligatures can be disabled.
@@ -40,6 +42,7 @@ Cinecred Changelog
 - User-supplied auxiliary files (fonts and pictures) are recognized regardless
   of their file extension's case.
 - When saving the credits file, the preview is no longer re-rendered two times.
+- Column widths in template credits files are now consistent across formats.
 
 #### UI Fixes
 

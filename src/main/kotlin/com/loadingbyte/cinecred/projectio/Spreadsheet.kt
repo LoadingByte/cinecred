@@ -1,11 +1,17 @@
 package com.loadingbyte.cinecred.projectio
 
+import ch.rabanti.nanoxlsx4j.styles.CellXf
+import com.github.miachm.sods.Borders
 import com.github.miachm.sods.Sheet
 import com.github.miachm.sods.SpreadSheet
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
+import jxl.CellView
+import jxl.format.BorderLineStyle
 import jxl.write.Label
+import jxl.write.WritableCellFormat
+import jxl.write.WritableFont
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVRecord
 import java.io.StringReader
@@ -33,7 +39,16 @@ interface SpreadsheetFormat {
     /**
      * @param colWidths Width of some of the columns, in characters.
      */
-    fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>)
+    fun write(file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, RowLook>, colWidths: List<Int>)
+
+    class RowLook(
+        val height: Int = -1,
+        val fontSize: Int = -1,
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+        val wrap: Boolean = false,
+        val borderBottom: Boolean = false
+    )
 
 }
 
@@ -58,18 +73,39 @@ object XlsxFormat : SpreadsheetFormat {
         }
     )
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>) {
+    override fun write(
+        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
+    ) {
         val workbook = ch.rabanti.nanoxlsx4j.Workbook(false)
         workbook.addWorksheet(file.nameWithoutExtension)
         val sheet = workbook.worksheets[0]
 
-        for (record in spreadsheet)
-            record.cells.forEachIndexed { col, cell ->
-                sheet.addCell(cell.autoCast(), col, record.recordNo)
+        for (record in spreadsheet) {
+            val row = record.recordNo
+            val style = ch.rabanti.nanoxlsx4j.styles.Style()
+            style.font.size = 10
+            rowLooks[row]?.let { look ->
+                if (look.fontSize != -1)
+                    style.font.size = look.fontSize
+                style.font.isBold = look.bold
+                style.font.isItalic = look.italic
+                if (look.wrap)
+                    style.cellXf.alignment = CellXf.TextBreakValue.wrapText
+                if (look.borderBottom) {
+                    style.border.bottomStyle = ch.rabanti.nanoxlsx4j.styles.Border.StyleValue.thin
+                    style.border.bottomColor = "black"
+                }
             }
+            record.cells.forEachIndexed { col, cell ->
+                sheet.addCell(cell.autoCast(), col, row, style)
+            }
+        }
 
-        for ((col, width) in colWidths)
-            sheet.setColumnWidth(col, width * 0.8f)
+        for ((row, look) in rowLooks)
+            if (look.height != -1)
+                sheet.setRowHeight(row, look.height * 2.85f)
+        for ((col, width) in colWidths.withIndex())
+            sheet.setColumnWidth(col, width * 0.4f)
 
         workbook.saveAs(file.toString())
     }
@@ -99,21 +135,37 @@ object XlsFormat : SpreadsheetFormat {
         }
     )
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>) {
+    override fun write(
+        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
+    ) {
         val workbook = jxl.Workbook.createWorkbook(file.toFile())
         val sheet = workbook.createSheet(file.nameWithoutExtension, 0)
 
-        for (record in spreadsheet)
+        for (record in spreadsheet) {
+            val row = record.recordNo
+            val fmt = WritableCellFormat()
+            rowLooks[row]?.let { look ->
+                val pointSize = if (look.fontSize != -1) look.fontSize else WritableFont.DEFAULT_POINT_SIZE
+                val boldStyle = if (look.bold) WritableFont.BOLD else WritableFont.NO_BOLD
+                fmt.setFont(WritableFont(WritableFont.ARIAL, pointSize, boldStyle, look.italic))
+                fmt.wrap = look.wrap
+                if (look.borderBottom)
+                    fmt.setBorder(jxl.format.Border.BOTTOM, BorderLineStyle.THIN)
+            }
             record.cells.forEachIndexed { col, cell ->
                 val castedCell = cell.autoCast()
                 sheet.addCell(
-                    if (castedCell is Double) jxl.write.Number(col, record.recordNo, castedCell)
-                    else Label(col, record.recordNo, cell)
+                    if (castedCell is Double) jxl.write.Number(col, row, castedCell, fmt)
+                    else Label(col, row, cell, fmt)
                 )
             }
+        }
 
-        for ((col, width) in colWidths)
-            sheet.setColumnView(col, width)
+        for ((row, look) in rowLooks)
+            if (look.height != -1)
+                sheet.setRowView(row, CellView().apply { size = look.height * 56 })
+        for ((col, width) in colWidths.withIndex())
+            sheet.setColumnView(col, CellView().apply { size = width * 130 })
 
         workbook.write()
         workbook.close()
@@ -138,7 +190,9 @@ object OdsFormat : SpreadsheetFormat {
         }
     )
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>) {
+    override fun write(
+        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
+    ) {
         val numRows = spreadsheet.size
         val numCols = spreadsheet[0].cells.size
 
@@ -146,8 +200,27 @@ object OdsFormat : SpreadsheetFormat {
         val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row].cells[col].autoCast() } }
         sheet.dataRange.values = cellMatrix
 
-        for ((col, width) in colWidths)
-            sheet.setColumnWidth(col, width * 2.0)
+        for (record in spreadsheet) {
+            val row = record.recordNo
+            val style = com.github.miachm.sods.Style()
+            rowLooks[row]?.let { look ->
+                if (look.fontSize != -1)
+                    style.fontSize = look.fontSize
+                style.isBold = look.bold
+                style.isItalic = look.italic
+                style.isWrap = look.wrap
+                if (look.borderBottom)
+                    style.borders = Borders(false, null, true, "0.75pt solid #000000", false, null, false, null)
+            }
+            for (col in record.cells.indices)
+                sheet.getRange(row, col).style = style
+        }
+
+        for ((row, look) in rowLooks)
+            if (look.height != -1)
+                sheet.setRowHeight(row, look.height.toDouble())
+        for ((col, width) in colWidths.withIndex())
+            sheet.setColumnWidth(col, width.toDouble())
 
         val workbook = SpreadSheet()
         workbook.appendSheet(sheet)
@@ -177,7 +250,9 @@ object CsvFormat : SpreadsheetFormat {
         return csvRecords.map { SpreadsheetRecord(it.recordNumber.toInt() - 1, it.efficientToList()) }
     }
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, colWidths: Map<Int, Int>) {
+    override fun write(
+        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
+    ) {
         CSVFormat.DEFAULT.print(file, Charset.forName("UTF-8")).use { printer ->
             for (record in spreadsheet)
                 printer.printRecord(record.cells)

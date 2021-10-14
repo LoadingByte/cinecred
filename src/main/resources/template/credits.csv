@@ -1,3 +1,4 @@
+{projectIO.credits.table.headDesc},{projectIO.credits.table.bodyDesc},{projectIO.credits.table.tailDesc},{projectIO.credits.table.vGapDesc},{projectIO.credits.table.contentStyleDesc},{projectIO.credits.table.breakAlignDesc},{projectIO.credits.table.columnPosDesc},{projectIO.credits.table.pageStyleDesc},{projectIO.credits.table.pageRuntimeDesc}
 @{projectIO.credits.table.head},@{projectIO.credits.table.body},@{projectIO.credits.table.tail},@{projectIO.credits.table.vGap},@{projectIO.credits.table.contentStyle},@{projectIO.credits.table.breakAlign},@{projectIO.credits.table.columnPos},@{projectIO.credits.table.pageStyle},@{projectIO.credits.table.pageRuntime}
 ,,,,,,,,
 ,,,,,,,,

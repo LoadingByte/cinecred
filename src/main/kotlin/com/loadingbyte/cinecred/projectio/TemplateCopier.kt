@@ -21,16 +21,23 @@ fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyS
 
 
 private fun copyStylingTemplate(destDir: Path, locale: Locale) {
-    val text = readFillingPlaceholders("/template/styling.toml", locale)
+    val text = readResource("/template/styling.toml").fillPlaceholders(locale)
     destDir.resolve("Styling.toml").writeText(text)
 }
 
 
 private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
-    val csv = readFillingPlaceholders("/template/credits.csv", locale)
+    val csv = readResource("/template/credits.csv")
     val spreadsheet = CsvFormat.read(csv)
-    val colWidths = mapOf(0 to 24, 1 to 24, 2 to 16, 3 to 4, 4 to 14, 5 to 4)
-    format.write(destDir.resolve("Credits.${format.fileExt}"), spreadsheet, colWidths)
+        .map { record -> SpreadsheetRecord(record.recordNo, record.cells.map { it.fillPlaceholders(locale) }) }
+    format.write(
+        destDir.resolve("Credits.${format.fileExt}"), spreadsheet,
+        rowLooks = mapOf(
+            0 to SpreadsheetFormat.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
+            1 to SpreadsheetFormat.RowLook(bold = true, borderBottom = true)
+        ),
+        colWidths = listOf(48, 48, 32, 16, 28, 16, 24, 24, 32)
+    )
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {
@@ -40,15 +47,18 @@ private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: Spreadshe
 }
 
 
-private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")
-
-private fun readFillingPlaceholders(resourceName: String, locale: Locale): String =
+private fun readResource(resourceName: String): String =
     Dummy.javaClass.getResourceAsStream(resourceName)!!.use { stream ->
         stream.bufferedReader().readText()
-    }.replace(PLACEHOLDER_REGEX) { match ->
+    }
+
+private object Dummy
+
+
+private fun String.fillPlaceholders(locale: Locale): String =
+    replace(PLACEHOLDER_REGEX) { match ->
         val key = match.groups[1]!!.value
         if (key == "locale") locale.toLanguageTag() else l10n(key, locale)
     }
 
-
-private object Dummy
+private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")

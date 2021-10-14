@@ -417,6 +417,16 @@ private class CreditsReader(
             columnPosOffsetPx = posOffsetPx
         }
 
+        // If the break alignment cell is non-empty, mark the specified previous alignment group as well as the
+        // previous block for conclusion (if there were any).
+        table.getEnum<BreakAlign>(row, "breakAlign")?.let { breakAlign ->
+            when (breakAlign) {
+                BreakAlign.BODY_COLUMNS -> isBodyColsGroupConclusionMarked = true
+                BreakAlign.HEAD_AND_TAIL -> isHeadTailGroupConclusionMarked = true
+            }
+            isBlockConclusionMarked = true
+        }
+
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
         // Use the new content style from now on until the next explicit content style declaration.
         table.getLookup(row, "contentStyle", contentStyleMap)?.let { newContentStyle ->
@@ -479,15 +489,6 @@ private class CreditsReader(
         // mark the previous block for conclusion (if there was any).
         else if (newHead == null && newTail == null)
             isBlockConclusionMarked = true
-
-        // If the break alignment cell is non-empty, mark the specified previous alignment group for conclusion.
-        // We cannot conclude it right now because we have to wait for the current block to be concluded.
-        table.getEnum<BreakAlign>(row, "breakAlign")?.let { breakAlign ->
-            when (breakAlign) {
-                BreakAlign.BODY_COLUMNS -> isBodyColsGroupConclusionMarked = true
-                BreakAlign.HEAD_AND_TAIL -> isHeadTailGroupConclusionMarked = true
-            }
-        }
     }
 
     fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {

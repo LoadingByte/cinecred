@@ -56,6 +56,9 @@ Cinecred Changelog
 
 ### Notes
 
+- Breaking alignment in the credits file has been made more intuitive. It now
+  starts a new block in the specified row with the new alignment from that block
+  onwards.
 - Removed support for logical fonts like "SansSerif". Using them in a design
   program like Cinecred does not make any sense as they are highly
   system-dependent.

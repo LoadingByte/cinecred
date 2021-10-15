@@ -202,11 +202,11 @@ private fun generateFmtStrAttrs(
             TextDecorationPreset.OFF -> {
             }
             TextDecorationPreset.UNDERLINE -> {
-                offset = lm.underlineOffset
+                offset = lm.underlineOffset + lm.underlineThickness / 2f
                 thickness = lm.underlineThickness
             }
             TextDecorationPreset.STRIKETHROUGH -> {
-                offset = lm.strikethroughOffset
+                offset = lm.strikethroughOffset + lm.strikethroughThickness / 2f
                 thickness = lm.strikethroughThickness
             }
         }

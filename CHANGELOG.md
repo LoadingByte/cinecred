@@ -9,6 +9,8 @@ Cinecred Changelog
 - Template credits spreadsheets have been augmented with documentation for each
   column. Also, the header is now formatted.
 - The capabilities of letter styles have been massively expanded, notably:
+    - Leading above and below can be adjusted. This is especially useful for
+      fixing fonts which have uneven leading built into the ascent and descent.
     - Kerning can be disabled.
     - Optional ligatures can be disabled.
     - If supported by the font, all-caps text spacing can be used.

@@ -153,6 +153,8 @@ data class LetterStyle(
     val fontName: String,
     val heightPx: Int,
     val foreground: Color,
+    val leadingTopRem: Float,
+    val leadingBottomRem: Float,
     val trackingEm: Float,
     val kerning: Boolean,
     val ligatures: Boolean,

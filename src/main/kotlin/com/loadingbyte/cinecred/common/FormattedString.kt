@@ -67,14 +67,14 @@ class FormattedString private constructor(
         var aboveBaseline = 0f
 
         for (font in attrs.distinctFonts) {
-            val lm = font.awtFont.lineMetrics
+            val lm = font.unscaledAWTFont.lineMetrics
             // The current Java implementation always uses the roman baseline everywhere. We take advantage of this
             // implementation detail and do not implement code for different baselines. In case this behavior
             // changes with a future Java version, we do not want out code to silently fail, hence we check here.
             check(lm.baselineIndex == java.awt.Font.ROMAN_BASELINE)
             if (font.heightPx >= maxFontHeight) {
                 maxFontHeight = font.heightPx
-                aboveBaseline = max(aboveBaseline, (lm.ascent + lm.leading / 2f) / font.scaling /* ignore scaling */)
+                aboveBaseline = max(aboveBaseline, lm.ascent + lm.leading / 2f + font.leadingTopPx)
             }
         }
         _height = maxFontHeight
@@ -442,7 +442,7 @@ class FormattedString private constructor(
         val color: Color,
         private val baseAWTFont: java.awt.Font,
         val heightPx: Float,
-        val scaling: Float = 1f,
+        private val scaling: Float = 1f,
         val hScaling: Float = 1f,
         private val hShearing: Float = 0f,
         private val hOffsetRem: Float = 0f,
@@ -450,7 +450,9 @@ class FormattedString private constructor(
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
         val features: List<Feature> = emptyList(),
-        val trackingEm: Float = 0f
+        val trackingEm: Float = 0f,
+        private val leadingTopRem: Float = 0f,
+        private val leadingBottomRem: Float = 0f
     ) {
 
         init {
@@ -458,9 +460,10 @@ class FormattedString private constructor(
                 require(value == null || key in ALLOWED_FONT_ATTRS) { "Disallowed font attribute: $key" }
         }
 
-        val unscaledPointSize = findSize(baseAWTFont, heightPx)
+        private val unscaledPointSize = findSize(baseAWTFont, leadingTopRem + leadingBottomRem, heightPx)
         val pointSize = unscaledPointSize * scaling
 
+        val leadingTopPx get() = leadingTopRem * unscaledPointSize
         private val hOffsetPx get() = hOffsetRem * unscaledPointSize
         private val vOffsetPx get() = vOffsetRem * unscaledPointSize
 
@@ -475,6 +478,9 @@ class FormattedString private constructor(
                 fontAttrs[TextAttribute.LIGATURES] = TextAttribute.LIGATURES_ON
             baseAWTFont.deriveFont(fontAttrs)
         }
+
+        val unscaledAWTFont: java.awt.Font =
+            awtFont.deriveFont(mapOf(TextAttribute.SIZE to unscaledPointSize))
 
         fun getPostprocessingTransform(withHScaling: Boolean, invertY: Boolean = false): AffineTransform {
             val lm = awtFont.lineMetrics
@@ -493,7 +499,7 @@ class FormattedString private constructor(
 
         fun scaled(extraScaling: Float) = Font(
             color, baseAWTFont, heightPx, scaling * extraScaling, hScaling, hShearing, hOffsetRem, vOffsetRem,
-            kerning, ligatures, features, trackingEm
+            kerning, ligatures, features, trackingEm, leadingTopRem, leadingBottomRem
         )
 
         class Feature(val tag: String, val value: Int)
@@ -510,15 +516,15 @@ class FormattedString private constructor(
              * However, tests have shown that the above method is not reliable with all fonts (e.g., not with
              * Open Sans). Therefore, this method uses a numerical search to find the font size.
              */
-            private fun findSize(awtFont: java.awt.Font, targetHeight: Float): Float {
+            private fun findSize(awtFont: java.awt.Font, extraLeadingEm: Float, targetHeightPx: Float): Float {
                 // Step 1: Exponential search to determine the rough range of the font size we're looking for.
                 var size = 2f
                 // Upper-bound the number of repetitions to avoid:
                 //   - Accidental infinite looping.
                 //   - Too large fonts, as they cause the Java font rendering engine to destroy its own fonts.
                 for (i in 0 until 10) {
-                    val height = awtFont.deriveFont(size * 2f).lineMetrics.height
-                    if (height >= targetHeight)
+                    val height = awtFont.deriveFont(size * 2f).lineMetrics.height + extraLeadingEm * (size * 2f)
+                    if (height >= targetHeightPx)
                         break
                     size *= 2f
                 }
@@ -533,11 +539,11 @@ class FormattedString private constructor(
                 // Upper-bound the number of repetitions to avoid accidental infinite looping.
                 for (i in 0 until 20) {
                     intervalLength /= 2f
-                    val height = awtFont.deriveFont(size).lineMetrics.height
+                    val height = awtFont.deriveFont(size).lineMetrics.height + extraLeadingEm * size
                     when {
-                        abs(height - targetHeight) < 0.001f -> break
-                        height > targetHeight -> size -= intervalLength
-                        height < targetHeight -> size += intervalLength
+                        abs(height - targetHeightPx) < 0.001f -> break
+                        height > targetHeightPx -> size -= intervalLength
+                        height < targetHeightPx -> size += intervalLength
                     }
                 }
 

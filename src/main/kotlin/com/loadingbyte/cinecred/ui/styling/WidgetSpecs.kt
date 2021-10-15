@@ -68,7 +68,15 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    NewSectionWidgetSpec(LetterStyle::trackingEm.st()),
+    NewSectionWidgetSpec(LetterStyle::leadingTopRem.st()),
+    WidthWidgetSpec(LetterStyle::leadingTopRem.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::leadingBottomRem.st(), WidthSpec.TINY),
+    NumberWidgetSpec(LetterStyle::leadingTopRem.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::leadingBottomRem.st(), step = 0.01f),
+    UnionWidgetSpec(
+        LetterStyle::leadingTopRem.st(), LetterStyle::leadingBottomRem.st(),
+        unionName = "leadingRem", settingIcons = listOf(BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
+    ),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01f),
     WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),

@@ -190,11 +190,11 @@ private fun generateFmtStrAttrs(
     val stdFont = FormattedString.Font(
         style.foreground, baseAWTFont, style.heightPx.toFloat(), style.scaling * ssScaling, style.hScaling,
         style.hShearing, style.hOffsetRem + ssHOffset, style.vOffsetRem + ssVOffset,
-        style.kerning, style.ligatures, features, style.trackingEm
+        style.kerning, style.ligatures, features, style.trackingEm, style.leadingTopRem, style.leadingBottomRem
     )
     val smallCapsFont = if (fakeSCScaling.isNaN()) null else stdFont.scaled(fakeSCScaling)
 
-    val lm = baseAWTFont.deriveFont(stdFont.unscaledPointSize).lineMetrics
+    val lm = stdFont.unscaledAWTFont.lineMetrics
     val deco = style.decorations.mapTo(HashSet()) { td ->
         var offset = td.offsetPx
         var thickness = td.thicknessPx

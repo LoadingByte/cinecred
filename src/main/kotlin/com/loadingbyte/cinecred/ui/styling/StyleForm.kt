@@ -168,12 +168,13 @@ class StyleForm<S : Style>(
         var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
         var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
         var toTooltip: ((E) -> String)? = toLabel
-        if (show == ToggleButtonGroupWidgetSpec.Show.ICON)
-            toLabel = null
-        else if (show == ToggleButtonGroupWidgetSpec.Show.LABEL) {
-            toIcon = null
-            toTooltip = null
+        // @formatter:off
+        when (show) {
+            ToggleButtonGroupWidgetSpec.Show.LABEL -> { toIcon = null; toTooltip = null }
+            ToggleButtonGroupWidgetSpec.Show.ICON -> toLabel = null
+            ToggleButtonGroupWidgetSpec.Show.ICON_AND_LABEL -> toTooltip = null
         }
+        // @formatter:on
 
         val items = enumClass.enumConstants.asList()
         return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)

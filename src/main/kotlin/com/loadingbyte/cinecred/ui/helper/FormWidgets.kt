@@ -29,11 +29,13 @@ import java.awt.event.ItemEvent
 import java.io.File
 import java.nio.file.Path
 import java.text.NumberFormat
+import java.text.ParseException
 import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
+import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.DefaultFormatter
 import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
@@ -185,6 +187,7 @@ open class SpinnerWidget<V>(
 
     protected val spinner = JSpinner(model).apply {
         addChangeListener { notifyChangeListeners() }
+        ((editor as JSpinner.DefaultEditor).textField.formatter as DefaultFormatter).makeSafe()
     }
 
     override val components = listOf(spinner)
@@ -237,13 +240,15 @@ class TimecodeWidget(
         private val fps: FPS,
         private val timecodeFormat: TimecodeFormat
     ) : DefaultFormatter() {
+        init {
+            makeSafe()
+        }
 
-        override fun valueToString(value: Any?): String? =
-            runCatching { formatTimecode(fps, timecodeFormat, value as Int) }.getOrNull()
+        override fun valueToString(value: Any?): String =
+            value?.let { formatTimecode(fps, timecodeFormat, it as Int) } ?: ""
 
-        override fun stringToValue(string: String?): Int? =
-            runCatching { parseTimecode(fps, timecodeFormat, string!!) }.getOrNull()
-
+        override fun stringToValue(string: String?): Int =
+            runCatching { parseTimecode(fps, timecodeFormat, string!!) }.getOrElse { throw ParseException("", 0) }
     }
 
 }
@@ -268,7 +273,7 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 
 
 open class ComboBoxWidget<E : Any /* non-null */>(
-    private val itemClass: Class<E>,
+    protected val itemClass: Class<E>,
     items: Collection<E>,
     toString: (E) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
@@ -346,31 +351,14 @@ class InconsistentComboBoxWidget<E : Any /* non-null */>(
 open class EditableComboBoxWidget<E : Any /* non-null */>(
     itemClass: Class<E>,
     items: Collection<E>,
-    toString: (E) -> String,
-    fromString: ((String) -> E),
+    private val toString: (E) -> String,
+    private val fromString: ((String) -> E),
     widthSpec: WidthSpec? = null
 ) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
 
     init {
         cb.isEditable = true
-
-        val wrappedEditor = cb.editor
-        cb.editor = object : ComboBoxEditor by wrappedEditor {
-            private var prevItem: Any? = null
-
-            override fun getItem(): Any? =
-                try {
-                    fromString(wrappedEditor.item as String)
-                } catch (_: IllegalArgumentException) {
-                    item = prevItem
-                    prevItem
-                }
-
-            override fun setItem(item: Any?) {
-                prevItem = item
-                wrappedEditor.item = item?.let { toString(itemClass.cast(it)) }
-            }
-        }
+        cb.editor = CustomComboBoxEditor()
     }
 
     override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
@@ -378,6 +366,33 @@ open class EditableComboBoxWidget<E : Any /* non-null */>(
             if (oldSelectedItem != null)
                 selectedItem = oldSelectedItem
         }
+
+
+    private inner class CustomComboBoxEditor : BasicComboBoxEditor() {
+        override fun createEditorComponent(): JTextField =
+            JFormattedTextField().apply {
+                border = null
+                formatterFactory = DefaultFormatterFactory(CustomFormatter())
+                addPropertyChangeListener("value") { e -> cb.selectedItem = e.newValue }
+            }
+
+        override fun getItem(): Any = (editor as JFormattedTextField).value
+        override fun setItem(item: Any) = run { (editor as JFormattedTextField).value = item }
+    }
+
+
+    private inner class CustomFormatter : DefaultFormatter() {
+        init {
+            makeSafe()
+            overwriteMode = false
+        }
+
+        override fun valueToString(value: Any?): String =
+            value?.let { toString(itemClass.cast(it)) } ?: ""
+
+        override fun stringToValue(string: String?): Any =
+            runCatching { fromString(string!!) }.getOrElse { throw ParseException("", 0) }
+    }
 
 }
 
@@ -1033,4 +1048,17 @@ private inline fun JTextComponent.addChangeListener(crossinline listener: () -> 
         override fun removeUpdate(e: DocumentEvent) = listener()
         override fun changedUpdate(e: DocumentEvent) = listener()
     })
+}
+
+
+/**
+ * When editing a [JFormattedTextField] field in a StyleForm and leaving it with a valid value, then clicking in the
+ * style tree to open another style, that style will first be opened, and only after that's done the change to the
+ * [JFormattedTextField] will be committed. Hence, the change will be applied to the wrong style or, even worse, the
+ * application might crash if the user opened another style type. Fixing this directly seems difficult, and there's a
+ * better solution: we let the text field commit whenever its text is a valid value. Thereby, the situation described
+ * above can't ever occur. It is of course vital that the formatter of each [JFormattedTextField] is made safe this way.
+ */
+private fun DefaultFormatter.makeSafe() {
+    commitsOnValidEdit = true
 }

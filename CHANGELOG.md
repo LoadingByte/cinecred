@@ -51,6 +51,9 @@ Cinecred Changelog
 - Font names are now localized in the GUI.
 - Font family names are no longer stripped of a trailing "Roman".
 - Fixed sudden crashes when typing certain characters in a combo box.
+- Fixed crashes respectively changes being applied to the wrong style when
+  editing a spinner or combo box manually and then switching styles before
+  applying the change via an action key or a focus change.
 - In the preferences, each locale are also written in that locale's language.
 - A long list of grid columns no longer overflows, but instead wraps early.
 - Editing the same setting in two different styles in rapid succession is no

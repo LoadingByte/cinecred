@@ -469,6 +469,10 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
                 panel.add(btn)
                 btnGroup.add(btn)
             }
+            // Select the first button. This is important since no selection is an invalid state
+            // and the value getter wouldn't know what to return.
+            if (items.isNotEmpty())
+                btnGroup.elements.nextElement().isSelected = true
         }
 
     override var value: E

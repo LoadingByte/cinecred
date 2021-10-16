@@ -36,7 +36,7 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
                     font = font.deriveFont(font.size * 1.15f)
                     addActionListener { OpenController.tryOpenProject(projectDir) }
                 }
-                memorizedPanel.add(btn, "sizegroup")
+                memorizedPanel.add(btn, "grow")
             }
         }
 

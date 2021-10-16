@@ -79,9 +79,11 @@ class StyleForm<S : Style>(
                 } else {
                     val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
                     val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S>>()
-                    ListWidget(listWidgetSpec?.groupsPerRow ?: 1, minSizeConstr?.minSize ?: 0) {
-                        makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
-                    }
+                    ListWidget(
+                        listWidgetSpec?.elemsPerRow ?: 1,
+                        listWidgetSpec?.rowSeparators ?: false,
+                        minSizeConstr?.minSize ?: 0
+                    ) { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) }
                 }
             }
         }

@@ -848,6 +848,7 @@ class OptWidget<V>(
 
 class ListWidget<V>(
     private val elemsPerRow: Int = 1,
+    private val rowSeparators: Boolean = false,
     private val minSize: Int = 0,
     private val newElemWidget: () -> Form.Widget<V>
 ) : Form.AbstractWidget<ImmutableList<V>>() {
@@ -874,6 +875,7 @@ class ListWidget<V>(
     private var listSize = 0
     private val allElemWidgets = mutableListOf<Form.Widget<V>>()
     private val allElemDelBtns = mutableListOf<JButton>()
+    private val allSeparators = mutableListOf<JSeparator>()
 
     val elementWidgets: List<Form.Widget<V>>
         get() = allElemWidgets.subList(0, listSize)
@@ -914,6 +916,8 @@ class ListWidget<V>(
             // If there are still unused components at the back of the list, just reactivate them.
             allElemWidgets[listSize - 1].isVisible = true
             allElemDelBtns[listSize - 1].isVisible = true
+            if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
+                allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = true
         } else {
             // Otherwise, really create and add totally new components.
             addElemWidgetAndDelBtn(isVisible = true)
@@ -932,12 +936,21 @@ class ListWidget<V>(
         allElemWidgets[listSize - 1].isVisible = false
         allElemDelBtns[listSize - 1].isVisible = false
         allElemWidgets[listSize - 1].changeListeners.clear()
+        if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
+            allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = false
         listSize--
         enableOrDisableDelBtns()
     }
 
     private fun addElemWidgetAndDelBtn(isVisible: Boolean) {
         val newline = allElemDelBtns.size != 0 && allElemDelBtns.size % elemsPerRow == 0
+
+        if (rowSeparators && newline) {
+            val sep = JSeparator()
+            sep.isVisible = isVisible
+            allSeparators.add(sep)
+            panel.add(sep, "newline, span, growx")
+        }
 
         val delBtn = JButton(REMOVE_ICON)
         delBtn.isVisible = isVisible

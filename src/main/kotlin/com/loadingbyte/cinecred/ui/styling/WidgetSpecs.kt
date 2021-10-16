@@ -47,7 +47,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemBoxConform.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), ICON),
-    ListWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), groupsPerRow = 3),
+    ListWidgetSpec(ContentStyle::gridElemHJustifyPerCol.st(), elemsPerRow = 3),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridElemVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
@@ -91,8 +91,9 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01f),
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01f),
     NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05f),
-    ListWidgetSpec(LetterStyle::features.st(), groupsPerRow = 2),
+    ListWidgetSpec(LetterStyle::features.st(), elemsPerRow = 2),
     NewSectionWidgetSpec(LetterStyle::decorations.st()),
+    ListWidgetSpec(LetterStyle::decorations.st(), elemsPerRow = 1, rowSeparators = true),
     NewSectionWidgetSpec(LetterStyle::background.st()),
     WidthWidgetSpec(LetterStyle::backgroundWidenLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::backgroundWidenRightPx.st(), WidthSpec.TINY),
@@ -118,7 +119,7 @@ private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> 
     NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1f),
     WidthWidgetSpec(TextDecoration::dashPatternPx.st(), WidthSpec.TINY),
     NumberWidgetSpec(TextDecoration::dashPatternPx.st(), default = 2f),
-    ListWidgetSpec(TextDecoration::dashPatternPx.st(), groupsPerRow = 2)
+    ListWidgetSpec(TextDecoration::dashPatternPx.st(), elemsPerRow = 2)
 )
 
 
@@ -175,5 +176,6 @@ class UnionWidgetSpec<S : Style>(
 
 class ListWidgetSpec<S : Style>(
     setting: ListStyleSetting<S, Any>,
-    val groupsPerRow: Int
+    val elemsPerRow: Int = 1,
+    val rowSeparators: Boolean = false
 ) : StyleWidgetSpec<S>(setting)

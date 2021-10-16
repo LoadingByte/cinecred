@@ -847,48 +847,43 @@ class OptWidget<V>(
 
 
 class ListWidget<V>(
-    private val groupsPerRow: Int = 1,
+    private val elemsPerRow: Int = 1,
     private val minSize: Int = 0,
     private val newElemWidget: () -> Form.Widget<V>
 ) : Form.AbstractWidget<ImmutableList<V>>() {
 
-    private val numCompsPerElemWidget: Int
-    private val isElemWidgetFilling: Boolean
-
-    init {
-        val sampleElemWidget = newElemWidget()
-        numCompsPerElemWidget = sampleElemWidget.components.size
-        isElemWidgetFilling = sampleElemWidget.constraints.any { WidthSpec.FILL.mig in it }
-    }
-
     private val addBtn = JButton(ADD_ICON)
 
-    private val panel = object : JPanel(MigLayout("insets 0, wrap ${groupsPerRow * (1 + numCompsPerElemWidget)}")) {
+    private val panel = object : JPanel(MigLayout("hidemode 3, insets 0")) {
         override fun getBaseline(width: Int, height: Int): Int {
-            // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component.
-            // By selecting the first one which has a valid baseline, we usually let the panel's baseline be the one
-            // of the first row of wrapped widgets.
-            for (comp in components) {
-                // If the component layout hasn't been done yet, approximate the component's height using its
-                // preferred height. This alleviates "jumping" when adding certain components like JComboBoxes.
-                val cHeight = if (comp.height != 0) comp.height else comp.preferredSize.height
-                val baseline = comp.getBaseline(comp.width, cHeight)
-                if (baseline >= 0)
-                    return baseline
-            }
+            // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component
+            // in the first row. We choose the first one which has a valid baseline.
+            for (idx in 0 until elemsPerRow.coerceAtMost(listSize))
+                for (comp in allElemWidgets[idx].components) {
+                    // If the component layout hasn't been done yet, approximate the component's height using its
+                    // preferred height. This alleviates "jumping" when adding certain components like JComboBoxes.
+                    val cHeight = if (comp.height != 0) comp.height else comp.preferredSize.height
+                    val baseline = comp.getBaseline(comp.width, cHeight)
+                    if (baseline >= 0)
+                        return baseline
+                }
             return -1
         }
     }
 
-    private val elemWidgets = mutableListOf<Form.Widget<V>>()
-    private val elemDelBtns = mutableListOf<JButton>()
+    private var listSize = 0
+    private val allElemWidgets = mutableListOf<Form.Widget<V>>()
+    private val allElemDelBtns = mutableListOf<JButton>()
 
     val elementWidgets: List<Form.Widget<V>>
-        get() = elemWidgets
+        get() = allElemWidgets.subList(0, listSize)
 
     init {
+        // Create and add some widgets and buttons during initialization so that user interaction will appear quicker.
+        repeat(4) { addElemWidgetAndDelBtn(isVisible = false) }
+
         addBtn.addActionListener {
-            addElemWidget(copyLastValue = true)
+            userPlus(copyLastValue = true)
             notifyChangeListeners()
         }
     }
@@ -896,71 +891,91 @@ class ListWidget<V>(
     private var configurator: ((Form.Widget<*>) -> Unit)? = null
 
     override val components = listOf<JComponent>(addBtn, panel)
-    override val constraints = listOf("aligny top", if (isElemWidgetFilling) WidthSpec.FILL.mig else "")
+    override val constraints = listOf(
+        "aligny top",
+        if (allElemWidgets[0].constraints.any { WidthSpec.FILL.mig in it }) WidthSpec.FILL.mig else ""
+    )
 
     override var value: ImmutableList<V>
-        get() = elemWidgets.map { it.value }.toImmutableList()
+        get() = elementWidgets.map { it.value }.toImmutableList()
         set(value) {
-            while (elemWidgets.size < value.size)
-                addElemWidget()
-            while (elemWidgets.size > value.size)
-                removeElemWidget(elemWidgets.lastIndex)
-            for ((widget, item) in elemWidgets.zip(value))
+            while (listSize < value.size)
+                userPlus()
+            while (listSize > value.size)
+                userMinus(listSize - 1)
+            for ((widget, item) in elementWidgets.zip(value))
                 widget.value = item
             notifyChangeListeners()
         }
 
-    private fun addElemWidget(copyLastValue: Boolean = false) {
-        val delBtn = JButton(REMOVE_ICON)
-        delBtn.addActionListener {
-            removeElemWidget(elemDelBtns.indexOfFirst { it === delBtn })
-            notifyChangeListeners()
+    private fun userPlus(copyLastValue: Boolean = false) {
+        listSize++
+        if (listSize <= allElemWidgets.size) {
+            // If there are still unused components at the back of the list, just reactivate them.
+            allElemWidgets[listSize - 1].isVisible = true
+            allElemDelBtns[listSize - 1].isVisible = true
+        } else {
+            // Otherwise, really create and add totally new components.
+            addElemWidgetAndDelBtn(isVisible = true)
         }
-        elemDelBtns.add(delBtn)
-        panel.add(delBtn, "aligny top, gapx 6lp 0lp")
-
-        val widget = newElemWidget()
-        configurator?.let(widget::applyConfigurator)
         // If requested,the new widget should start out with the same value as the current last one.
-        if (copyLastValue && elemWidgets.size != 0)
-            widget.value = elemWidgets.last().value
-        // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
-        widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
-        elemWidgets.add(widget)
-        for ((comp, constr) in widget.components.zip(widget.constraints))
-            panel.add(comp, constr)
-
-        panel.revalidate()
+        if (copyLastValue && listSize > 1)
+            allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
+        // When the new widget changes, notify this widget's change listeners that that widget has changed.
+        allElemWidgets[listSize - 1].changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         enableOrDisableDelBtns()
     }
 
-    private fun removeElemWidget(idx: Int) {
-        elemWidgets.removeAt(idx).components.forEach(panel::remove)
-        panel.remove(elemDelBtns.removeAt(idx))
-        panel.revalidate()
+    private fun userMinus(idx: Int) {
+        for (i in idx + 1 until listSize)
+            allElemWidgets[i - 1].value = allElemWidgets[i].value
+        allElemWidgets[listSize - 1].isVisible = false
+        allElemDelBtns[listSize - 1].isVisible = false
+        allElemWidgets[listSize - 1].changeListeners.clear()
+        listSize--
         enableOrDisableDelBtns()
+    }
+
+    private fun addElemWidgetAndDelBtn(isVisible: Boolean) {
+        val newline = allElemDelBtns.size != 0 && allElemDelBtns.size % elemsPerRow == 0
+
+        val delBtn = JButton(REMOVE_ICON)
+        delBtn.isVisible = isVisible
+        delBtn.addActionListener {
+            userMinus(allElemDelBtns.indexOfFirst { it === delBtn })
+            notifyChangeListeners()
+        }
+        allElemDelBtns.add(delBtn)
+        panel.add(delBtn, "aligny top, gapx 6lp 0lp" + if (newline) ", newline" else "")
+
+        val widget = newElemWidget()
+        widget.isVisible = isVisible
+        configurator?.let(widget::applyConfigurator)
+        allElemWidgets.add(widget)
+        for ((comp, constr) in widget.components.zip(widget.constraints))
+            panel.add(comp, constr)
     }
 
     private fun enableOrDisableDelBtns() {
-        val enabled = elemWidgets.size > minSize
-        for (delBtn in elemDelBtns)
+        val enabled = listSize > minSize
+        for (delBtn in allElemDelBtns)
             delBtn.isEnabled = enabled
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         this.configurator = configurator
         configurator(this)
-        for (widget in elemWidgets)
+        for (widget in allElemWidgets)
             widget.applyConfigurator(configurator)
     }
 
     override fun applySeverity(index: Int, severity: Severity?) {
         if (index == -1) {
             super.applySeverity(-1, severity)
-            for (widget in elemWidgets)
+            for (widget in allElemWidgets)
                 widget.applySeverity(-1, severity)
-        } else
-            elemWidgets.getOrNull(index)?.applySeverity(-1, severity)
+        } else if (index in 0 until listSize)
+            allElemWidgets[index].applySeverity(-1, severity)
     }
 
 }

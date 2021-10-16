@@ -12,6 +12,9 @@ import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
+import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent.VK_DELETE
+import java.awt.event.KeyEvent.getKeyText
 import javax.swing.*
 
 
@@ -109,6 +112,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             if (stylingTree.removeSelectedListElement())
                 onChange()
         }
+
+        // Add a keyboard shortcut for the style removal button.
+        removeStyleButton.toolTipText += " (${getKeyText(VK_DELETE)})"
+        stylingTree.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(VK_DELETE, 0), "remove")
+        stylingTree.actionMap.put("remove", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                removeStyleButton.actionListeners[0].actionPerformed(null)
+            }
+        })
 
         // Layout the tree and the buttons.
         val leftPanel = JPanel(MigLayout()).apply {

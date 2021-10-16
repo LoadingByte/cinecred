@@ -47,6 +47,7 @@ val ERROR_ICON = SVGIcon.load("/icons/error.svg")
 val EYE_ICON = SVGIcon.load("/icons/eye.svg")
 val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
 val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")
+val GEAR_ICON = SVGIcon.load("/icons/gear.svg")
 val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
 val INFO_ICON = SVGIcon.load("/icons/info.svg")
 val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
@@ -181,6 +182,49 @@ val FlowDirection.icon
     }
 
 
+private val SMALL_CAPS_OFF = SVGIcon.load("/icons/smallCaps/off.svg")
+private val SMALL_CAPS_SMALL_CAPS = SVGIcon.load("/icons/smallCaps/smallCaps.svg")
+private val SMALL_CAPS_PETITE_CAPS = SVGIcon.load("/icons/smallCaps/petiteCaps.svg")
+
+val SmallCaps.icon
+    get() = when (this) {
+        SmallCaps.OFF -> SMALL_CAPS_OFF
+        SmallCaps.SMALL_CAPS -> SMALL_CAPS_SMALL_CAPS
+        SmallCaps.PETITE_CAPS -> SMALL_CAPS_PETITE_CAPS
+    }
+
+
+private val SUPERSCRIPT_OFF = SVGIcon.load("/icons/superscript/off.svg")
+private val SUPERSCRIPT_SUP = SVGIcon.load("/icons/superscript/sup.svg")
+private val SUPERSCRIPT_SUB = SVGIcon.load("/icons/superscript/sub.svg")
+private val SUPERSCRIPT_SUP_SUP = SVGIcon.load("/icons/superscript/sup_sup.svg")
+private val SUPERSCRIPT_SUP_SUB = SVGIcon.load("/icons/superscript/sup_sub.svg")
+private val SUPERSCRIPT_SUB_SUP = SVGIcon.load("/icons/superscript/sub_sup.svg")
+private val SUPERSCRIPT_SUB_SUB = SVGIcon.load("/icons/superscript/sub_sub.svg")
+
+val Superscript.icon
+    get() = when (this) {
+        Superscript.OFF -> SUPERSCRIPT_OFF
+        Superscript.SUP -> SUPERSCRIPT_SUP
+        Superscript.SUB -> SUPERSCRIPT_SUB
+        Superscript.SUP_SUP -> SUPERSCRIPT_SUP_SUP
+        Superscript.SUP_SUB -> SUPERSCRIPT_SUP_SUB
+        Superscript.SUB_SUP -> SUPERSCRIPT_SUB_SUP
+        Superscript.SUB_SUB -> SUPERSCRIPT_SUB_SUB
+    }
+
+
+private val TEXT_DECORATION_PRESET_UNDERLINE = SVGIcon.load("/icons/textDecorationPreset/underline.svg")
+private val TEXT_DECORATION_PRESET_STRIKETHROUGH = SVGIcon.load("/icons/textDecorationPreset/strikethrough.svg")
+
+val TextDecorationPreset.icon
+    get() = when (this) {
+        TextDecorationPreset.UNDERLINE -> TEXT_DECORATION_PRESET_UNDERLINE
+        TextDecorationPreset.STRIKETHROUGH -> TEXT_DECORATION_PRESET_STRIKETHROUGH
+        TextDecorationPreset.OFF -> GEAR_ICON
+    }
+
+
 val Enum<*>.icon
     get() = when (this) {
         is Severity -> icon
@@ -192,6 +236,9 @@ val Enum<*>.icon
         is BodyElementBoxConform -> icon
         is GridFillingOrder -> icon
         is FlowDirection -> icon
+        is SmallCaps -> icon
+        is Superscript -> icon
+        is TextDecorationPreset -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }
 

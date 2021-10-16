@@ -78,6 +78,8 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
         unionName = "leadingRem", settingIcons = listOf(BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
     ),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01f),
+    ToggleButtonGroupWidgetSpec(LetterStyle::smallCaps.st(), ICON),
+    ToggleButtonGroupWidgetSpec(LetterStyle::superscript.st(), ICON),
     WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),
     NumberWidgetSpec(LetterStyle::hOffsetRem.st(), step = 0.01f),
@@ -106,6 +108,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
 
 
 private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> = listOf(
+    ToggleButtonGroupWidgetSpec(TextDecoration::preset.st(), ICON),
     WidthWidgetSpec(TextDecoration::widenLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(TextDecoration::widenRightPx.st(), WidthSpec.TINY),
     UnionWidgetSpec(

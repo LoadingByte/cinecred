@@ -41,7 +41,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.security.PrivilegedAction;
-import java.security.AccessController;
 import java.security.SecureRandom;
 
 /*
@@ -144,9 +143,6 @@ public class Singleton {
 
             siApp = null;
 
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
                     Socket socket = null;
                     PrintStream out = null;
                     OutputStream os = null;
@@ -179,9 +175,6 @@ public class Singleton {
                             trace(ioe);
                         }
                     }
-                    return null;
-                }
-            });
         }
     }
 
@@ -417,9 +410,6 @@ public class Singleton {
             String filename = getSiFilename(id, port);
             final File siFile = new File(filename);
             final File siDir = new File(SI_FILEDIR);
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
                     siDir.mkdirs();
                     String[] fList = siDir.list();
                     if (fList != null) {
@@ -448,17 +438,11 @@ public class Singleton {
                             out.close();
                         }
                     }
-                    return null;
-                }
-            });
         }
 
         @Override
         public void run() {
             // handle all the incoming request from server port 
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
                     List<String> recvArgs = new ArrayList<>();
                     while (true) {
                         recvArgs.clear();
@@ -482,7 +466,7 @@ public class Singleton {
                                 charset = ENCODING_UNICODE_NAME;
                             } else {
                                 trace("Unknown encoding: " + encoding);
-                                return null;
+                                return;
                             }
                             isr = new InputStreamReader(is, charset);
                             in = new BufferedReader(isr);
@@ -498,7 +482,7 @@ public class Singleton {
                                 serverStarted = false;
                                 trace("Unexpected Error, "
                                         + "Singleton disabled");
-                                return null;
+                                return;
                             } else {
                                 line = in.readLine();
                                 // no need to continue reading if MAGICWORD
@@ -578,9 +562,6 @@ public class Singleton {
                             }
                         }
                     }
-                    return null;
-                }
-            });
         }
     }
 

@@ -76,17 +76,26 @@ class StyleForm<S : Style>(
                 if (setting.type == String::class.java && dynChoiceConstr == null) {
                     val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
                     TextListWidget(widthWidgetSpec?.widthSpec)
-                } else {
-                    val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
-                    val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S>>()
-                    ListWidget(
-                        listWidgetSpec?.elemsPerRow ?: 1,
-                        listWidgetSpec?.rowSeparators ?: false,
-                        minSizeConstr?.minSize ?: 0
-                    ) { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) }
-                }
+                } else
+                    makeListWidget(setting, settingConstraints, settingWidgetSpecs)
             }
         }
+    }
+
+    private fun <V : Any /* non-null */> makeListWidget(
+        setting: ListStyleSetting<S, V>,
+        settingConstraints: List<StyleConstraint<S, *>>,
+        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+    ): ListWidget<*> {
+        val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
+        val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, V>>()
+        @Suppress("UNCHECKED_CAST")
+        return ListWidget(
+            newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) as Widget<V> },
+            listWidgetSpec?.newElem, listWidgetSpec?.newElemIsLastElem ?: false,
+            listWidgetSpec?.elemsPerRow ?: 1, listWidgetSpec?.rowSeparators ?: false,
+            minSizeConstr?.minSize ?: 0
+        )
     }
 
     private fun makeBackingSettingWidget(
@@ -110,9 +119,8 @@ class StyleForm<S : Style>(
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
-                val init = numberWidgetSpec?.default ?: min ?: max ?: 0
                 val step = numberWidgetSpec?.step ?: 1
-                val model = SpinnerNumberModel(init, min, max, step)
+                val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
                 if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
                 else
@@ -121,9 +129,8 @@ class StyleForm<S : Style>(
             Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
                 val min = floatConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01f) }
                 val max = floatConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01f) }
-                val init = numberWidgetSpec?.default ?: min ?: max ?: 0f
                 val step = numberWidgetSpec?.step ?: 1f
-                val model = SpinnerNumberModel(init, min, max, step)
+                val model = SpinnerNumberModel(min ?: max ?: 0f, min, max, step)
                 SpinnerWidget(Float::class.javaObjectType, model, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
@@ -154,7 +161,6 @@ class StyleForm<S : Style>(
                 Style::class.java.isAssignableFrom(setting.type) ->
                     @Suppress("UNCHECKED_CAST")
                     NestedFormWidget(StyleForm(ctx, setting.type as Class<Style>, insets = false))
-                        .apply { value = getPreset(setting.type) }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }

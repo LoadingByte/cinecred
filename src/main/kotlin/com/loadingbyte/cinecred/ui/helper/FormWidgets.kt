@@ -847,10 +847,12 @@ class OptWidget<V>(
 
 
 class ListWidget<V>(
+    private val newElemWidget: () -> Form.Widget<V>,
+    private val newElem: V? = null,
+    private val newElemIsLastElem: Boolean = false,
     private val elemsPerRow: Int = 1,
     private val rowSeparators: Boolean = false,
-    private val minSize: Int = 0,
-    private val newElemWidget: () -> Form.Widget<V>
+    private val minSize: Int = 0
 ) : Form.AbstractWidget<ImmutableList<V>>() {
 
     private val addBtn = JButton(ADD_ICON)
@@ -886,7 +888,7 @@ class ListWidget<V>(
         repeat(4) { addElemWidgetAndDelBtn(isVisible = false) }
 
         addBtn.addActionListener {
-            userPlus(copyLastValue = true)
+            userPlus(setValue = true)
             notifyChangeListeners()
         }
     }
@@ -911,7 +913,7 @@ class ListWidget<V>(
             notifyChangeListeners()
         }
 
-    private fun userPlus(copyLastValue: Boolean = false) {
+    private fun userPlus(setValue: Boolean = false) {
         listSize++
         if (listSize <= allElemWidgets.size) {
             // If there are still unused components at the back of the list, just reactivate them.
@@ -923,10 +925,15 @@ class ListWidget<V>(
             // Otherwise, really create and add totally new components.
             addElemWidgetAndDelBtn(isVisible = true)
         }
-        // If requested,the new widget should start out with the same value as the current last one.
-        if (copyLastValue && listSize > 1)
+        // If requested, the new widget should start out with a reasonable value.
+        if (setValue)
             withDisabledChangeForwarding {
-                allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
+                if (newElemIsLastElem && listSize > 1)
+                    allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
+                else if (newElem != null)
+                    allElemWidgets[listSize - 1].value = newElem
+                else
+                    throw IllegalStateException("No way to choose value of new ListWidget element.")
             }
         enableOrDisableDelBtns()
     }

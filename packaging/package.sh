@@ -2,7 +2,7 @@
 
 source settings/general
 
-jdk_dir="jdk-$JDK_MAJOR.$JDK_MINOR+$JDK_PATCH"
+jdk_dir="jdk-$JDK_MAJOR+$JDK_PATCH"
 
 usage='Usage: <mac|linux>'
 if [[ $# -ne 1 ]]; then
@@ -22,7 +22,7 @@ else
 fi
 
 echo "Downloading and extracting AdoptOpenJDK..."
-curl -L "https://github.com/AdoptOpenJDK/openjdk$JDK_MAJOR-binaries/releases/download/jdk-$JDK_MAJOR.$JDK_MINOR+$JDK_PATCH/OpenJDK${JDK_MAJOR}U-jdk_x64_${os}_hotspot_$JDK_MAJOR.${JDK_MINOR}_$JDK_PATCH.tar.gz" | tar -xzf -
+curl -L "https://github.com/adoptium/temurin$JDK_MAJOR-binaries/releases/download/jdk-$JDK_MAJOR+$JDK_PATCH/OpenJDK$JDK_MAJOR-jdk_x64_${os}_hotspot_${JDK_MAJOR}_$JDK_PATCH.tar.gz" | tar -xzf -
 
 echo "Running jlink..."
 "$jdk_bin/jlink" @settings/jlink

@@ -4,9 +4,9 @@ REM Read the settings file
 FOR /F "tokens=1,2 delims==" %%G IN (settings\general) DO (set %%G=%%H)
 
 echo Downloading and extracting AdoptOpenJDK...
-set jdk_zip=OpenJDK%JDK_MAJOR%U-jdk_x64_windows_hotspot_%JDK_MAJOR%.%JDK_MINOR%_%JDK_PATCH%.zip
-set jdk_dir=jdk-%JDK_MAJOR%.%JDK_MINOR%+%JDK_PATCH%
-powershell (new-object System.Net.WebClient).DownloadFile('https://github.com/AdoptOpenJDK/openjdk%JDK_MAJOR%-binaries/releases/download/jdk-%JDK_MAJOR%.%JDK_MINOR%+%JDK_PATCH%/%jdk_zip%', '%jdk_zip%')
+set jdk_zip=OpenJDK%JDK_MAJOR%-jdk_x64_windows_hotspot_%JDK_MAJOR%_%JDK_PATCH%.zip
+set jdk_dir=jdk-%JDK_MAJOR%+%JDK_PATCH%
+powershell (new-object System.Net.WebClient).DownloadFile('https://github.com/adoptium/temurin%JDK_MAJOR%-binaries/releases/download/jdk-%JDK_MAJOR%+%JDK_PATCH%/%jdk_zip%', '%jdk_zip%')
 powershell Expand-Archive %jdk_zip% -DestinationPath .
 del %jdk_zip%
 

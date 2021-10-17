@@ -79,7 +79,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
         )
 
-        fun JButton.makeToolbarButton() = apply { putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON) }
+        fun JButton.makeToolbarButton() = apply {
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
+        }
 
         // Add buttons for adding and removing page and content style nodes.
         val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))

@@ -51,6 +51,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         toggleStylingHintOwner = this
         isSelected = true
         toolTipText = l10n("ui.edit.toggleStyling")
+        isFocusable = false
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener {
             ctrl.setEditStylingDialogVisible(isSelected)
@@ -92,6 +93,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }.apply {
         preferredSize = preferredSize.apply { width = 50 }
         toolTipText = l10n("ui.edit.zoom")
+        isFocusable = false
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
 
@@ -103,20 +105,24 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             BODY_ELEM_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
         )
+        isFocusable = false
         addActionListener { previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) } }
     }
     private val uniformSafeAreasToggleButton = JToggleButton(UNIFORM_SAFE_AREAS_ICON, false).apply {
         toolTipText = l10n("ui.edit.uniformSafeAreasTooltip")
+        isFocusable = false
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) } }
     }
     private val cutSafeArea16to9ToggleButton = JToggleButton(X_16_TO_9_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "16:9")
+        isFocusable = false
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) } }
     }
     private val cutSafeArea4to3ToggleButton = JToggleButton(X_4_TO_3_ICON, false).apply {
         toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
+        isFocusable = false
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
         addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) } }
     }
@@ -171,6 +177,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
         return JButton(icon).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
             toolTipText = tooltip
             addActionListener { listener() }
         }

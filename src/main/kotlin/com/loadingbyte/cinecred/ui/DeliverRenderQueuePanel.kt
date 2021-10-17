@@ -233,6 +233,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
         private val button = JButton(CANCEL_ICON).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
             toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
         }
 
@@ -247,6 +248,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
         private val button = JButton(CANCEL_ICON).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
             toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
         }
 

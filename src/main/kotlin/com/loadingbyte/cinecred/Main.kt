@@ -20,7 +20,6 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import java.awt.Color
 import java.awt.Desktop
 import java.awt.KeyboardFocusManager
 import java.io.StringReader
@@ -112,8 +111,7 @@ fun mainSwing() {
     // Set the Swing Look & Feel.
     FlatDarkLaf.setup()
     // Enable alternated coloring of table rows.
-    val uiDefaults = UIManager.getLookAndFeelDefaults()
-    uiDefaults["Table.alternateRowColor"] = HSLColor(uiDefaults["Table.background"] as Color).adjustTone(10f)
+    UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
 
     // Globally listen to all key events.
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(OpenController::onGlobalKeyEvent)

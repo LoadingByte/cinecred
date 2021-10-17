@@ -313,12 +313,12 @@ open class ComboBoxWidget<E : Any /* non-null */>(
             cb.selectedItem = value
         }
 
-    final override fun updateChoices(choices: Collection<E>) {
-        this.items = choices
+    override fun updateChoices(choices: Collection<E>) {
+        items = choices
     }
 
     init {
-        updateChoices(items)
+        this.items = items
     }
 
 }
@@ -458,7 +458,8 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
         set(items) {
             field = items
             panel.removeAll()
-            btnGroup.elements.toList().forEach(btnGroup::remove)
+            for (elem in btnGroup.elements)
+                btnGroup.remove(elem)
             for (item in items) {
                 val btn = JToggleButton()
                 toIcon?.let { btn.icon = it(item) }

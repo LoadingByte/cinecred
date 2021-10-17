@@ -224,9 +224,9 @@ private fun generateFmtStrAttrs(
         )
     }
 
-    val bg = if (style.background.alpha == 0) null else
+    val bg = if (!style.background.isActive || style.background.value.alpha == 0) null else
         FormattedString.Background(
-            style.background,
+            style.background.value,
             style.backgroundWidenLeftPx, style.backgroundWidenRightPx,
             style.backgroundWidenTopPx, style.backgroundWidenBottomPx
         )

@@ -112,7 +112,7 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
     StyleEffectivitySpec(
         LetterStyle::backgroundWidenLeftPx.st(), LetterStyle::backgroundWidenRightPx.st(),
         LetterStyle::backgroundWidenTopPx.st(), LetterStyle::backgroundWidenBottomPx.st(),
-        isAlmostEffective = { _, style -> style.background.alpha == 0 }
+        isAlmostEffective = { _, style -> style.background.isActive }
     )
 )
 

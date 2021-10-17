@@ -170,7 +170,7 @@ data class LetterStyle(
     val hShearing: Float,
     val features: ImmutableList<FontFeature>,
     val decorations: ImmutableList<TextDecoration>,
-    val background: Color,
+    val background: Opt<Color>,
     val backgroundWidenLeftPx: Float,
     val backgroundWidenRightPx: Float,
     val backgroundWidenTopPx: Float,

@@ -109,7 +109,7 @@ val PRESET_LETTER_STYLE = LetterStyle(
     hShearing = 0f,
     features = persistentListOf(),
     decorations = persistentListOf(),
-    background = Color(0, 0, 0, 0),
+    background = Opt(false, Color.WHITE),
     backgroundWidenLeftPx = 0f,
     backgroundWidenRightPx = 0f,
     backgroundWidenTopPx = 0f,
@@ -143,5 +143,5 @@ val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
 val PLACEHOLDER_LETTER_STYLE = PRESET_LETTER_STYLE.copy(
     name = l10n("project.placeholder"),
     foreground = Color.BLACK,
-    background = Color.ORANGE
+    background = Opt(true, Color.ORANGE)
 )

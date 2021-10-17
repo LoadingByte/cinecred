@@ -104,6 +104,11 @@ private fun migrate(rawStyling: RawStyling) {
                 else -> ss
             }
     }
+
+    // 1.1.0 -> 1.2.0: The absence of a background is no longer just represented by an alpha value of 0.
+    for (letterStyle in rawStyling.letterStyles)
+        if (letterStyle["background"].let { it is String && it.startsWith("#00") })
+            letterStyle.remove("background")
 }
 
 

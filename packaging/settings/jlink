@@ -1,5 +1,5 @@
 --output runtime/
---add-modules java.desktop,java.logging,java.net.http,java.xml,jdk.localedata,jdk.xml.dom,jdk.zipfs
+--add-modules java.desktop,java.logging,java.net.http,java.xml,jdk.incubator.foreign,jdk.localedata,jdk.xml.dom,jdk.zipfs
 --include-locales=en,de
 --compress=2
 --no-header-files

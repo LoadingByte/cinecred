@@ -36,10 +36,10 @@ plugins {
 group = "com.loadingbyte"
 version = "1.2.0-SNAPSHOT"
 
-val slf4jVersion = "1.7.31"
+val slf4jVersion = "1.7.32"
 val batikVersion = "1.14"
-val javacppVersion = "1.5.5"
-val ffmpegVersion = "4.3.2-$javacppVersion"
+val javacppVersion = "1.5.6"
+val ffmpegVersion = "4.4-$javacppVersion"
 
 enum class Platform(val label: String, val slug: String) {
     WINDOWS("Windows", "windows-x86_64"),
@@ -64,8 +64,8 @@ dependencies {
     // Spreadsheet Reading and Writing
     implementation("ch.rabanti", "nanoxlsx4j", "1.2.8")
     implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
-    implementation("com.github.miachm.sods", "SODS", "1.3.0")
-    implementation("org.apache.commons", "commons-csv", "1.8")
+    implementation("com.github.miachm.sods", "SODS", "1.4.0")
+    implementation("org.apache.commons", "commons-csv", "1.9.0")
 
     // SVG Reading and Writing
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
@@ -75,7 +75,7 @@ dependencies {
 
     // PDF Reading and Writing
     implementation("org.apache.pdfbox", "pdfbox", "2.0.24")
-    implementation("de.rototor.pdfbox", "graphics2d", "0.32")
+    implementation("de.rototor.pdfbox", "graphics2d", "0.33")
 
     // Video Encoding
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -87,10 +87,10 @@ dependencies {
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
-    implementation("com.formdev", "flatlaf", "1.2")
+    implementation("com.formdev", "flatlaf", "1.6.1")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.7.2")
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.8.1")
 }
 
 configurations.all {

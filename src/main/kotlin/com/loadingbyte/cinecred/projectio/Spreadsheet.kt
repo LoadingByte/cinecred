@@ -145,9 +145,14 @@ object XlsFormat : SpreadsheetFormat {
             val row = record.recordNo
             val fmt = WritableCellFormat()
             rowLooks[row]?.let { look ->
-                val pointSize = if (look.fontSize != -1) look.fontSize else WritableFont.DEFAULT_POINT_SIZE
-                val boldStyle = if (look.bold) WritableFont.BOLD else WritableFont.NO_BOLD
-                fmt.setFont(WritableFont(WritableFont.ARIAL, pointSize, boldStyle, look.italic))
+                val font = WritableFont(
+                    WritableFont.ARIAL,
+                    if (look.fontSize != -1) look.fontSize else WritableFont.DEFAULT_POINT_SIZE,
+                    @Suppress("INACCESSIBLE_TYPE")
+                    if (look.bold) WritableFont.BOLD else WritableFont.NO_BOLD,
+                    look.italic
+                )
+                fmt.setFont(font)
                 fmt.wrap = look.wrap
                 if (look.borderBottom)
                     fmt.setBorder(jxl.format.Border.BOTTOM, BorderLineStyle.THIN)

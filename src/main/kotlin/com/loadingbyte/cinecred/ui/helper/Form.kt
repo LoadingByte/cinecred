@@ -28,8 +28,8 @@ open class Form(insets: Boolean = true) :
         fun applySeverity(index: Int, severity: Severity?)
     }
 
-    interface ChoiceWidget<V, E> : Widget<V> {
-        fun updateChoices(choices: Collection<E>)
+    interface ChoiceWidget<V> : Widget<V> {
+        fun updateChoices(choices: Collection<V>)
     }
 
     abstract class AbstractWidget<V> : Widget<V> {

@@ -279,7 +279,7 @@ open class ComboBoxWidget<E : Any /* non-null */>(
     widthSpec: WidthSpec? = null,
     private val scrollbar: Boolean = true,
     decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
-) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
+) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E> {
 
     protected val cb = JComboBox<E>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
@@ -446,7 +446,7 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
     private val toIcon: ((E) -> Icon)? = null,
     private val toLabel: ((E) -> String)? = null,
     private val toTooltip: ((E) -> String)? = null
-) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E, E> {
+) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E> {
 
     private val panel = GroupPanel()
     private val btnGroup = ButtonGroup()

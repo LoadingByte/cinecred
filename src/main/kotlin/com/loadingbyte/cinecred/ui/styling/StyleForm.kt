@@ -257,9 +257,9 @@ class StyleForm<S : Style>(
 
     fun setChoices(setting: StyleSetting<*, *>, choices: Collection<*>) {
         valueWidgets[setting]!!.applyConfigurator { widget ->
-            if (widget is ChoiceWidget<*, *>)
+            if (widget is ChoiceWidget)
                 @Suppress("UNCHECKED_CAST")
-                (widget as ChoiceWidget<*, Any?>).updateChoices(choices)
+                (widget as ChoiceWidget<Any?>).updateChoices(choices)
         }
     }
 

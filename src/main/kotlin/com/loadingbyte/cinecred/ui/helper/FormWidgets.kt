@@ -876,6 +876,7 @@ class ListWidget<V>(
     private val allElemWidgets = mutableListOf<Form.Widget<V>>()
     private val allElemDelBtns = mutableListOf<JButton>()
     private val allSeparators = mutableListOf<JSeparator>()
+    private var disableChangeForwarding = false
 
     val elementWidgets: List<Form.Widget<V>>
         get() = allElemWidgets.subList(0, listSize)
@@ -924,18 +925,19 @@ class ListWidget<V>(
         }
         // If requested,the new widget should start out with the same value as the current last one.
         if (copyLastValue && listSize > 1)
-            allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
-        // When the new widget changes, notify this widget's change listeners that that widget has changed.
-        allElemWidgets[listSize - 1].changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+            withDisabledChangeForwarding {
+                allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
+            }
         enableOrDisableDelBtns()
     }
 
     private fun userMinus(idx: Int) {
-        for (i in idx + 1 until listSize)
-            allElemWidgets[i - 1].value = allElemWidgets[i].value
+        withDisabledChangeForwarding {
+            for (i in idx + 1 until listSize)
+                allElemWidgets[i - 1].value = allElemWidgets[i].value
+        }
         allElemWidgets[listSize - 1].isVisible = false
         allElemDelBtns[listSize - 1].isVisible = false
-        allElemWidgets[listSize - 1].changeListeners.clear()
         if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
             allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = false
         listSize--
@@ -964,6 +966,8 @@ class ListWidget<V>(
         val widget = newElemWidget()
         widget.isVisible = isVisible
         configurator?.let(widget::applyConfigurator)
+        // When the new widget changes, notify this widget's change listeners that that widget has changed.
+        widget.changeListeners.add { if (!disableChangeForwarding) notifyChangeListenersAboutOtherWidgetChange(it) }
         allElemWidgets.add(widget)
         for ((comp, constr) in widget.components.zip(widget.constraints))
             panel.add(comp, constr)
@@ -973,6 +977,15 @@ class ListWidget<V>(
         val enabled = listSize > minSize
         for (delBtn in allElemDelBtns)
             delBtn.isEnabled = enabled
+    }
+
+    private inline fun withDisabledChangeForwarding(block: () -> Unit) {
+        disableChangeForwarding = true
+        try {
+            block()
+        } finally {
+            disableChangeForwarding = false
+        }
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {

@@ -9,7 +9,7 @@ import javax.swing.*
 
 
 open class Form(insets: Boolean = true) :
-    JPanel(MigLayout("hidemode 3, insets " + if (insets) "dialog" else "0", "[align right][]")),
+    JPanel(MigLayout("hidemode 3, insets " + if (insets) "dialog" else "0", "[align right][grow]")),
     Scrollable {
 
     abstract class Storable<O>(insets: Boolean = true) : Form(insets) {

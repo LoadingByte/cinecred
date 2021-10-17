@@ -55,7 +55,7 @@ Cinecred Changelog
 - Fixed crashes respectively changes being applied to the wrong style when
   editing a spinner or combo box manually and then switching styles before
   applying the change via an action key or a focus change.
-- In the preferences, each locale are also written in that locale's language.
+- In the preferences, each locale is also written in that locale's language.
 - A long list of grid columns no longer overflows, but instead wraps early.
 - Editing the same setting in two different styles in rapid succession is no
   longer considered a single undo/redo step.

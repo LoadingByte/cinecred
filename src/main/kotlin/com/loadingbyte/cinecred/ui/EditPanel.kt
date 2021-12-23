@@ -184,7 +184,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     init {
-        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]30lp[][]push[]")).apply {
+        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]push[][]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
             add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton)

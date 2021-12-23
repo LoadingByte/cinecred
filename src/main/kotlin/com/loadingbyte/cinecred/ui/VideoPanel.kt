@@ -1,7 +1,10 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.scale
+import com.loadingbyte.cinecred.common.translate
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
@@ -27,9 +30,11 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
             videoDrawer?.let { videoDrawer ->
-                g.translate((width - videoDrawer.width) / 2, 0)
+                g as Graphics2D
+                g.translate((width - videoDrawer.width / systemScaling) / 2f, 0f)
+                g.scale(1f / systemScaling)
                 g.clipRect(0, 0, videoDrawer.width, videoDrawer.height)
-                videoDrawer.drawFrame(g as Graphics2D, frameSlider.value)
+                videoDrawer.drawFrame(g, frameSlider.value)
             }
         }
     }
@@ -79,6 +84,7 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
 
     private val makeVideoDrawerJobSlot = JobSlot()
     private var videoDrawer: VideoDrawer? = null
+    private var systemScaling = 1f
 
     init {
         layout = MigLayout("insets 12lp n n n, gapy 10lp", "[]push[][][]push[]")
@@ -118,10 +124,12 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
 
     private fun restartDrawing() {
         val project = this.project ?: return
+
+        systemScaling = UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D).toFloat()
         val scaling = min(
             canvas.width.toFloat() / project.styling.global.widthPx,
             canvas.height.toFloat() / project.styling.global.heightPx
-        )
+        ) * systemScaling
 
         makeVideoDrawerJobSlot.submit {
             val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, previewMode = true) {

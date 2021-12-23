@@ -4,6 +4,13 @@ Cinecred Changelog
 1.3.0-SNAPSHOT
 --------------
 
+### Fixes
+
+#### UI Fixes
+
+- UHD (aka 4K) monitors with a scaled UI no longer break the edit and video
+  previews.
+
 
 1.2.0
 -----

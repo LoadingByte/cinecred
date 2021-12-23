@@ -1,14 +1,12 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.DeferredImage.Layer
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import net.miginfocom.swing.MigLayout
-import java.awt.Cursor
-import java.awt.Graphics
-import java.awt.Point
-import java.awt.RenderingHints
+import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
@@ -175,7 +173,13 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
     private val minViewportCenterY get() = viewportHeight / 2f
     private val maxViewportCenterY get() = image!!.height.resolve() - minViewportCenterY
 
-    private val imageScaling get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
+    // The image scaling maps from deferred image coordinates to canvas coordinates as they are used by Swing.
+    // These canvas coordinates are however fake if system scaling is enabled in a HiDPI context. Hence, to find out
+    // how large the materialized image should be, we need to compensate for that using the physical image scaling.
+    private val imageScaling
+        get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
+    private val physicalImageScaling
+        get() = imageScaling * UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D).toFloat()
 
     private fun coerceViewportAndCalibrateScrollbars() {
         val image = this.image
@@ -214,7 +218,7 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
             materialized = null
             canvas.repaint()
         } else {
-            submitMaterializeJob(materializingJobSlot, image, imageScaling, layers, onFinish = { mat ->
+            submitMaterializeJob(materializingJobSlot, image, physicalImageScaling, layers, onFinish = { mat ->
                 SwingUtilities.invokeLater {
                     materialized = mat
                     // This is a bit hacky. When materialization has finished, we want to repaint the canvas.
@@ -254,17 +258,17 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
         // We use this external static method to absolutely ensure all variables have been captured.
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
-            jobSlot: JobSlot, image: DeferredImage, imageScaling: Float,
+            jobSlot: JobSlot, image: DeferredImage, physicalImageScaling: Float,
             layers: List<Layer>, onFinish: (BufferedImage) -> Unit
         ) {
             jobSlot.submit {
                 // Use max(1, ...) to ensure that the raster image width doesn't drop to 0.
-                val matWidth = max(1, (imageScaling * image.width).roundToInt())
-                val matHeight = max(1, (imageScaling * image.height.resolve()).roundToInt())
+                val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
+                val matHeight = max(1, (physicalImageScaling * image.height.resolve()).roundToInt())
                 val materialized = gCfg.createCompatibleImage(matWidth, matHeight).withG2 { g2 ->
                     g2.setHighQuality()
                     // Paint a scaled version of the deferred image onto the raster image.
-                    val scaledImage = image.copy(universeScaling = imageScaling)
+                    val scaledImage = image.copy(universeScaling = physicalImageScaling)
                     scaledImage.materialize(g2, layers)
                 }
 
@@ -297,10 +301,18 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
                         -((viewportCenterY - minViewportCenterY) * imageScaling).toDouble()
                     )
                     if (abs(extraScaling - 1) > 0.001) {
-                        // If we have a materialized image, but its size doesn't match the currently requested size (for
-                        // a variety of reasons), for now paint a very poorly (but fastly) scaled version of the old
-                        // materialized image onto the canvas. When the background thread has finished re-materializing
-                        // the image for the current size, another repaint will be triggered and that will be painted.
+                        // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel
+                        // width of the viewport in the materialized image, this can have one of two reasons:
+                        //  - Either we are in a HiDPI environment where system scaling is enabled, which we have
+                        //    already considered when creating the materialized image, hence the materialized has the
+                        //    right width while the canvas' width is "fake".
+                        //  - Or the user resized the viewport but the image hasn't been re-materialized yet to match
+                        //    the new viewport size.
+                        // In either case, paint a nearest-neighbor interpolated scaled version of the materialized
+                        // image onto the canvas. In the first case, this is exactly what is required to paint the full
+                        // resolution image. In the second case, the scaled version will look bad, but scaling is fast,
+                        // and the quality will improve again once the background thread has finished re-materializing
+                        // the image for the current size; another call to this painting method will then be triggered.
                         g2.setRenderingHint(
                             RenderingHints.KEY_INTERPOLATION,
                             RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR

@@ -11,6 +11,8 @@ Cinecred Changelog
 - UHD (aka 4K) monitors with a scaled UI no longer break the edit and video
   previews.
 - The project selection window now remembers its position and size.
+- Use generic text antialiasing in the UI even if the OS has it disabled or
+  cannot be queried.
 
 
 1.2.0

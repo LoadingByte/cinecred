@@ -22,6 +22,7 @@ import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.awt.KeyboardFocusManager
+import java.awt.RenderingHints
 import java.io.StringReader
 import java.net.URI
 import java.net.URLEncoder
@@ -110,6 +111,11 @@ fun mainSwing() {
 
     // Set the Swing Look & Feel.
     FlatDarkLaf.setup()
+    // If text antialiasing is not enabled by the OS (which may choose a specific variant like subpixel rendering)
+    // or we cannot detect it, enable its most generic variant now.
+    val h = UIManager.get(RenderingHints.KEY_TEXT_ANTIALIASING)
+    if (h == null || h == RenderingHints.VALUE_TEXT_ANTIALIAS_OFF || h == RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT)
+        UIManager.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
 

@@ -13,6 +13,8 @@ Cinecred Changelog
 - The project selection window now remembers its position and size.
 - Use generic text antialiasing in the UI even if the OS has it disabled or
   cannot be queried.
+- On KDE, fallback onto Gnome or directly use KDE's default font if the desired
+  font cannot be determined.
 
 
 1.2.0

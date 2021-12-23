@@ -3,8 +3,10 @@ package com.loadingbyte.cinecred
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.resolveGnomeFont
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
 import com.loadingbyte.cinecred.ui.makeOpenHintTrack
@@ -21,6 +23,7 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
+import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.RenderingHints
 import java.io.StringReader
@@ -31,7 +34,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.util.*
 import java.util.logging.*
+import java.util.logging.Formatter
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
@@ -116,6 +121,18 @@ fun mainSwing() {
     val h = UIManager.get(RenderingHints.KEY_TEXT_ANTIALIASING)
     if (h == null || h == RenderingHints.VALUE_TEXT_ANTIALIAS_OFF || h == RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT)
         UIManager.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+    // If FlatLaf cannot find a font on KDE, that's because no one has been explicitly configured. First try to find
+    // the default font via Gnome mechanisms since some distros expose the font that way as well. If even that fails,
+    // try to use the hardcoded default KDE font then, which is Noto Sans.
+    if (SystemInfo.isKDE) {
+        val defaultFont = UIManager.getFont("defaultFont")
+        if (defaultFont.getFamily(Locale.ROOT).equals(Font.SANS_SERIF, ignoreCase = true)) {
+            var replFont = resolveGnomeFont()
+            if (replFont.getFamily(Locale.ROOT).equals(Font.SANS_SERIF, ignoreCase = true))
+                replFont = Font("Noto Sans", Font.PLAIN, 1).deriveFont(defaultFont.size2D)
+            UIManager.put("defaultFont", replFont)
+        }
+    }
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
 

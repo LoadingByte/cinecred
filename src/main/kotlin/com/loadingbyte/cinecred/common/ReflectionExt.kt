@@ -157,8 +157,17 @@ fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: Floa
 }
 
 
+fun resolveGnomeFont(): Font {
+    return getGnomeFont() as Font
+}
+
+
 private val TextLine = Class.forName("java.awt.font.TextLine")
 private val ExtendedTextSourceLabel = Class.forName("sun.font.ExtendedTextSourceLabel")
+private val LinuxFontPolicy = Class.forName("com.formdev.flatlaf.LinuxFontPolicy")
+
+private val getGnomeFont = LinuxFontPolicy
+    .findStatic("getGnomeFont", methodType(Font::class.java))
 
 private val getTableBytes = Font2D::class.java
     .findVirtual("getTableBytes", methodType(ByteArray::class.java, Int::class.java))
@@ -185,6 +194,9 @@ private val get_fComponents = TextLine.findGetter("fComponents", TextLineCompone
 private val get_locs = TextLine.findGetter("locs", FloatArray::class.java)
 private val get_output = PDPageContentStream::class.java.findGetter("output", OutputStream::class.java)
 
+
+private fun Class<*>.findStatic(name: String, type: MethodType) =
+    MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findStatic(this, name, type)
 
 private fun Class<*>.findVirtual(name: String, type: MethodType) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findVirtual(this, name, type)

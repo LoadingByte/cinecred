@@ -4,6 +4,8 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.copyTemplate
 import com.loadingbyte.cinecred.projectio.locateCreditsFile
 import com.loadingbyte.cinecred.ui.ProjectController.Companion.STYLING_FILE_NAME
+import java.awt.GraphicsEnvironment
+import java.awt.Rectangle
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.nio.file.Path
@@ -15,6 +17,7 @@ import kotlin.io.path.notExists
 object OpenController {
 
     private var openFrame: OpenFrame? = null
+    private var openFrameBounds: Rectangle? = null
     private val projectCtrls = mutableListOf<ProjectController>()
 
     /**
@@ -33,6 +36,17 @@ object OpenController {
             blockOpening = false
             openFrame = OpenFrame()
         }
+        if (openFrameBounds == null) {
+            val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+            val openFrameWidth = maxWinBounds.width * 9 / 20
+            val openFrameHeight = maxWinBounds.height / 2
+            openFrameBounds = Rectangle(
+                (maxWinBounds.width - openFrameWidth) / 2,
+                (maxWinBounds.height - openFrameHeight) / 2,
+                openFrameWidth, openFrameHeight
+            )
+        }
+        openFrame!!.bounds = openFrameBounds
         openFrame!!.isVisible = true
     }
 
@@ -77,8 +91,7 @@ object OpenController {
         val projectCtrl = ProjectController(projectDir, openOnScreen)
         projectCtrls.add(projectCtrl)
 
-        openFrame?.dispose()
-        openFrame = null
+        onCloseOpenFrame()
     }
 
     // Must only be called from ProjectController.
@@ -91,7 +104,8 @@ object OpenController {
     }
 
     fun onCloseOpenFrame() {
-        openFrame?.dispose()
+        openFrameBounds = openFrame!!.bounds
+        openFrame!!.dispose()
         openFrame = null
     }
 
@@ -100,8 +114,7 @@ object OpenController {
             if (!projectCtrl.tryCloseProject(force) && !force)
                 return
 
-        openFrame?.dispose()
-        openFrame = null
+        onCloseOpenFrame()
 
         if (force)
             for (window in Window.getWindows())

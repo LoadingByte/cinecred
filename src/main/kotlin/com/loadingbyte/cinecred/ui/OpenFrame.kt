@@ -23,10 +23,6 @@ class OpenFrame : JFrame("Cinecred \u2013 ${l10n("ui.open.title")}") {
 
         iconImages = WINDOW_ICON_IMAGES
 
-        val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-        setSize(maxWinBounds.width * 9 / 20, maxWinBounds.height / 2)
-        setLocationRelativeTo(null)  // Center
-
         contentPane.add(panel)
     }
 

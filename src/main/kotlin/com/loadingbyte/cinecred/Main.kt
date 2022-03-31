@@ -24,6 +24,7 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
+import java.awt.Desktop
 import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.RenderingHints
@@ -38,10 +39,7 @@ import java.nio.file.Path
 import java.util.*
 import java.util.logging.*
 import java.util.logging.Formatter
-import javax.swing.JOptionPane
-import javax.swing.SwingUtilities
-import javax.swing.ToolTipManager
-import javax.swing.UIManager
+import javax.swing.*
 import kotlin.io.path.*
 
 
@@ -147,6 +145,21 @@ fun mainSwing() {
     // If configured accordingly, check for updates in the background and show a dialog if an update is available.
     if (PreferencesController.checkForUpdates)
         checkForUpdates()
+
+    // On MacOS, allow the user to open the preferences via the OS.
+    if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
+        Desktop.getDesktop().setPreferencesHandler {
+            val activeScreen = FocusManager.getCurrentManager().activeWindow.graphicsConfiguration
+            PreferencesController.showPreferencesDialog(activeScreen)
+        }
+
+    // On MacOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
+    // all windows, which in turn triggers all "unsaved changes" dialogs.
+    if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
+        Desktop.getDesktop().setQuitHandler { _, response ->
+            OpenController.tryCloseProjectsAndDisposeAllFrames()
+            response.performQuit()
+        }
 
     // Show the project overview window ("OpenFrame").
     OpenController.showOpenFrame()

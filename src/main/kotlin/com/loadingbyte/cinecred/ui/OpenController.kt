@@ -86,7 +86,7 @@ object OpenController {
 
         // Find the screen on which the OpenFrame currently occupies the most area.
         // The project will be opened on that screen.
-        val openOnScreen = openFrame!!.findMostOccupiedScreen()
+        val openOnScreen = openFrame!!.graphicsConfiguration
 
         val projectCtrl = ProjectController(projectDir, openOnScreen)
         projectCtrls.add(projectCtrl)

@@ -244,8 +244,10 @@ class TimecodeWidget(
             makeSafe()
         }
 
+        // We need to catch exceptions here because formatTimecode() throws some when using non-fractional FPS together
+        // with a drop-frame timecode.
         override fun valueToString(value: Any?): String =
-            value?.let { formatTimecode(fps, timecodeFormat, it as Int) } ?: ""
+            runCatching { formatTimecode(fps, timecodeFormat, value as Int) }.getOrDefault("")
 
         override fun stringToValue(string: String?): Int =
             runCatching { parseTimecode(fps, timecodeFormat, string!!) }.getOrElse { throw ParseException("", 0) }

@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
-import java.awt.Window
+import java.awt.GraphicsConfiguration
 import java.nio.file.Path
 import java.util.*
 import java.util.prefs.Preferences
@@ -37,15 +37,18 @@ object PreferencesController {
      */
     fun onStartup(): Boolean {
         val havePreferencesBeenSet = UI_LOCALE_KEY in prefs.keys() && CHECK_FOR_UPDATES_KEY in prefs.keys()
-        if (!havePreferencesBeenSet)
-            prefFormValues = (PreferencesForm.showDialog(prefFormValues, null, false) ?: return false).first
+        if (!havePreferencesBeenSet) {
+            val p = PreferencesForm.showDialog(prefFormValues, onScreen = null, useFrame = true, askForRestart = false)
+                ?: return false
+            prefFormValues = p.first
+        }
         applyUILocaleWish()
         return true
     }
 
-    fun showPreferencesDialog(parent: Window) {
+    fun showPreferencesDialog(onScreen: GraphicsConfiguration?) {
         val old = prefFormValues
-        val (new, restart) = PreferencesForm.showDialog(old, parent, true) ?: return
+        val (new, restart) = PreferencesForm.showDialog(old, onScreen, useFrame = false, askForRestart = true) ?: return
         prefFormValues = new
 
         applyUILocaleWish()

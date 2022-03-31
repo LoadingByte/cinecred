@@ -42,7 +42,9 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             })
         addTabPaneTrailingComponent(
             JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
-                addActionListener { PreferencesController.showPreferencesDialog(ctrl.projectFrame) }
+                addActionListener {
+                    PreferencesController.showPreferencesDialog(ctrl.projectFrame.graphicsConfiguration)
+                }
             })
 
         layout = BorderLayout()

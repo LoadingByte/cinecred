@@ -47,7 +47,7 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
         }
         val preferencesButton = JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
             font = font.deriveFont(font.size * 1.15f)
-            addActionListener { PreferencesController.showPreferencesDialog(openFrame) }
+            addActionListener { PreferencesController.showPreferencesDialog(openFrame.graphicsConfiguration) }
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {

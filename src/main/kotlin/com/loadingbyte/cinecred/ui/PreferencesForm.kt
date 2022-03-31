@@ -1,9 +1,11 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
+import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.PreferencesController.LocaleWish
 import com.loadingbyte.cinecred.ui.helper.*
+import java.awt.GraphicsConfiguration
 import java.awt.Toolkit
 import java.awt.Window
 import java.awt.event.WindowAdapter
@@ -54,7 +56,12 @@ class PreferencesForm : EasyForm(insets = false) {
         /**
          * The returned boolean signals whether the user has accepted to exit the program.
          */
-        fun showDialog(values: Values, parent: Window?, askForRestart: Boolean): Pair<Values, Boolean>? {
+        fun showDialog(
+            values: Values,
+            onScreen: GraphicsConfiguration?,
+            useFrame: Boolean,
+            askForRestart: Boolean
+        ): Pair<Values, Boolean>? {
             val form = PreferencesForm().apply {
                 uiLocaleWishWidget.value = values.uiLocaleWish
                 checkForUpdatesWidget.value = values.checkForUpdates
@@ -68,17 +75,16 @@ class PreferencesForm : EasyForm(insets = false) {
                 JOptionPane.QUESTION_MESSAGE, JOptionPane.OK_CANCEL_OPTION
             )
 
-            // Create the frame or modal dialog, depending on whether there's a parent.
-            val useFrame = parent == null
+            // Create the frame or modal dialog.
             val window: Window = if (useFrame)
                 JFrame(title).apply { isResizable = false }
             else
-                JDialog(parent, title, JDialog.DEFAULT_MODALITY_TYPE).apply { isResizable = false }
+                JDialog(null, title, JDialog.DEFAULT_MODALITY_TYPE).apply { isResizable = false }
             // Configure the window and add the JOptionPane.
             window.apply {
                 add(pane)
                 pack()
-                setLocationRelativeTo(null)  // Center
+                center(onScreen ?: gCfg)
                 iconImages = WINDOW_ICON_IMAGES
             }
 

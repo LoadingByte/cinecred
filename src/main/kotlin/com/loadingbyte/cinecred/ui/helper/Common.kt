@@ -191,6 +191,14 @@ class CustomToStringKeySelectionManager<E>(
 }
 
 
+fun Window.center(onScreen: GraphicsConfiguration) {
+    val screenBounds = onScreen.usableBounds
+    setLocation(
+        screenBounds.x + (screenBounds.width - width) / 2,
+        screenBounds.y + (screenBounds.height - height) / 2
+    )
+}
+
 fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
     val winBounds = onScreen.usableBounds
     winBounds.width /= 2

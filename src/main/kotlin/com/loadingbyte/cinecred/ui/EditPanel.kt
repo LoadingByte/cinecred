@@ -18,7 +18,6 @@ import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
-import java.awt.Font
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*
@@ -81,7 +80,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }.also { resetStylingHintOwner = it }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
-        font = font.deriveFont(font.size * 0.8f)
+        putClientProperty(STYLE_CLASS, "small")
     }
 
     private val zoomSlider = object : JSlider(0, 100, 0) {
@@ -131,7 +130,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         text = l10n("ui.edit.runtime")
     }
     private val runtimeLabel2 = JLabel().apply {
-        font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
+        putClientProperty(STYLE_CLASS, "monospaced")
     }
 
     private val pageTabs = JTabbedPane().apply {
@@ -141,8 +140,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
     private val pageErrorLabel = JLabel().apply {
-        foreground = PALETTE_RED
-        font = font.deriveFont(font.size * 2f).deriveFont(Font.BOLD)
+        putClientProperty(STYLE, "font: bold \$h0.font; foreground: $PALETTE_RED")
     }
     private val pagePanelCards = CardLayout()
     private val pagePanel = JPanel(pagePanelCards).apply {
@@ -185,7 +183,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     init {
         val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]push[][]")).apply {
-            add(JLabel(l10n("ui.edit.autoReloadActive")).apply { font = font.deriveFont(font.size * 0.8f) })
+            add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") })
             add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton)
             add(undoStylingButton)

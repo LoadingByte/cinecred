@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_BORDERLESS
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.Severity
@@ -226,7 +225,7 @@ class TimecodeWidget(
     }
 
     init {
-        spinner.font = Font(Font.MONOSPACED, Font.PLAIN, spinner.font.size)
+        spinner.putClientProperty(STYLE_CLASS, "monospaced")
         spinner.editor = editor
         updateFormatter()
     }

@@ -13,6 +13,7 @@ import kotlinx.collections.immutable.toImmutableList
 import java.awt.Font
 import java.awt.geom.Path2D
 import java.util.*
+import javax.swing.UIManager
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
@@ -244,7 +245,10 @@ private fun drawPage(
 
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
-        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font("Monospaced.bold", Font.PLAIN, 1), global.widthPx / 80f)
+        // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
+        // not contain a font weight attribute, or else the FormattedString would complain.
+        val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
+        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), global.widthPx / 80f)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, emptySet(), null))
         }.build()

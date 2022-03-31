@@ -1,12 +1,13 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.FlatClientProperties.STYLE
+import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
 import com.loadingbyte.cinecred.ui.helper.PREFERENCES_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.awt.Component
-import java.awt.Font
 import java.awt.datatransfer.DataFlavor
 import java.io.File
 import javax.swing.*
@@ -33,7 +34,7 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
             for (projectDir in memorizedProjectDirs) {
                 val btn = JButton(projectDir.fileName.toString(), FOLDER_ICON).apply {
                     toolTipText = projectDir.toString()
-                    font = font.deriveFont(font.size * 1.15f)
+                    putClientProperty(STYLE_CLASS, "large")
                     addActionListener { OpenController.tryOpenProject(projectDir) }
                 }
                 memorizedPanel.add(btn, "grow")
@@ -42,18 +43,17 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
 
         val browseButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
             browseHintOwner = this
-            font = font.deriveFont(font.size * 1.15f)
+            putClientProperty(STYLE_CLASS, "large")
             addActionListener { browse() }
         }
         val preferencesButton = JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
-            font = font.deriveFont(font.size * 1.15f)
+            putClientProperty(STYLE_CLASS, "large")
             addActionListener { PreferencesController.showPreferencesDialog(openFrame.graphicsConfiguration) }
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
             dropHintOwner = this
-            foreground = Color(150, 150, 150)
-            font = font.deriveFont(font.size * 2.5f).deriveFont(Font.BOLD)
+            putClientProperty(STYLE, "font: bold \$h0.font; foreground: #969696")
         }
 
         // Add the memorized project panel, buttons, and the drag-and-drop hint text.

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
@@ -14,7 +15,6 @@ import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
 import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
 import com.loadingbyte.cinecred.ui.helper.WARN_ICON
 import net.miginfocom.swing.MigLayout
-import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.event.ComponentAdapter
@@ -76,7 +76,7 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
     }
 
     private val timecodeLabel = JLabel().apply {
-        font = Font(Font.MONOSPACED, Font.PLAIN, font.size)
+        putClientProperty(STYLE_CLASS, "monospaced")
     }
 
     private var project: Project? = null

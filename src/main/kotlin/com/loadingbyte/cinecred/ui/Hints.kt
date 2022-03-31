@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.OUTLINE
+import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
@@ -100,12 +100,14 @@ private fun showHint(track: HintTrack, idx: Int) {
             shadowWidth = UIScale.scale(12f), shadowColor = Color.BLACK, shadowPasses = 16
         )
 
-        val textColor = Color(15, 15, 15)
-        fun JLabel.style() = apply { foreground = textColor }
+        fun JLabel.style() = apply {
+            putClientProperty(STYLE, "foreground: #0F0F0F")
+        }
+
         fun JButton.style() = apply {
-            foreground = textColor
-            background = Color(255, 204, 140)
-            putClientProperty(OUTLINE, arrayOf(Color(173, 111, 33), Color(196, 127, 44)))
+            val style = "foreground: #0F0F0F; background: #FFCC8C; borderColor: #C47F2C; " +
+                    "hoverBorderColor: #AD6F21; focusedBorderColor: #AD6F21; focusColor: lighten(#AD6F21,10%)"
+            putClientProperty(STYLE, style)
         }
 
         layout = MigLayout("insets dialog", "[:300lp:]", "[]para[]")

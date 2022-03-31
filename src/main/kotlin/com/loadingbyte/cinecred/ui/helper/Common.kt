@@ -15,8 +15,8 @@ import javax.swing.border.CompoundBorder
 import javax.swing.table.TableCellRenderer
 
 
-val PALETTE_RED: Color = Color.decode("#C75450")
-val PALETTE_GREEN: Color = Color.decode("#499C54")
+val PALETTE_RED: String = "#C75450"
+val PALETTE_GREEN: String = "#499C54"
 
 
 fun newLabelTextArea(insets: Boolean = true) = JTextArea().apply {

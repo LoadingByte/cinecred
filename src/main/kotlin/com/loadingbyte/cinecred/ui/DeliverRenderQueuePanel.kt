@@ -186,7 +186,6 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
     private class ProgressCellRenderer : TableCellRenderer {
 
         private val progressBar = JProgressBar().apply { putClientProperty(PROGRESS_BAR_SQUARE, true) }
-        private val defaultProgressBarForeground = progressBar.foreground
         private val wordWrapCellRenderer = WordWrapCellRenderer()
 
         override fun getTableCellRendererComponent(
@@ -195,7 +194,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
             is Float -> progressBar.apply {
                 val percentage = progress.toPercent()
                 model.value = percentage
-                foreground = defaultProgressBarForeground
+                putClientProperty(STYLE, null)  // Unset explicit foreground color.
                 setTableCellBackground(table, rowIdx)
                 if (row.startTime != null) {
                     isStringPainted = true
@@ -215,14 +214,14 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
             }
             FINISHED -> progressBar.apply {
                 model.value = 100
-                foreground = PALETTE_GREEN
+                putClientProperty(STYLE, "foreground: $PALETTE_GREEN")
                 setTableCellBackground(table, rowIdx)
                 isStringPainted = false
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
                 table, "${progress.javaClass.simpleName}: ${progress.localizedMessage ?: ""}",
                 isSelected, hasFocus, rowIdx, colIdx
-            ).apply { foreground = PALETTE_RED }
+            ).apply { putClientProperty(STYLE, "foreground: $PALETTE_RED") }
             else -> throw IllegalArgumentException()
         }
 

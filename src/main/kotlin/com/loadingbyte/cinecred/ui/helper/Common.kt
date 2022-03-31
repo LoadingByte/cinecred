@@ -189,20 +189,9 @@ class CustomToStringKeySelectionManager<E>(
 }
 
 
-fun Window.setupToSnapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
-    val screenBounds = onScreen.bounds
-    val screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(onScreen)
-
-    // We want to determine the bounds of the window.
-    // Start with the bounds of the screen on which it should reside.
-    // Subtract the screen's insets (mainly caused by the taskbar) from the bounds.
-    // Also, the window should only occupy half of the screen horizontally.
-    val winBounds = Rectangle(
-        screenBounds.x + screenInsets.left,
-        screenBounds.y + screenInsets.top,
-        (screenBounds.width - screenInsets.left - screenInsets.right) / 2,
-        screenBounds.height - screenInsets.top - screenInsets.bottom
-    )
+fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
+    val winBounds = onScreen.usableBounds
+    winBounds.width /= 2
 
     // If the window should snap to the right side, move its x coordinate.
     if (rightSide)
@@ -230,6 +219,18 @@ fun Window.setupToSnapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean
             }
         })
 }
+
+private val GraphicsConfiguration.usableBounds: Rectangle
+    get() {
+        val bounds = bounds
+        val insets = Toolkit.getDefaultToolkit().getScreenInsets(this)
+        return Rectangle(
+            bounds.x + insets.left,
+            bounds.y + insets.top,
+            bounds.width - insets.left - insets.right,
+            bounds.height - insets.top - insets.bottom
+        )
+    }
 
 
 fun trySetTaskbarIconBadge(badge: Int) {

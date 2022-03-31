@@ -135,7 +135,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val pageTabs = JTabbedPane().apply {
         pageTabsHintOwner = this
+        isFocusable = false
         tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
+        putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
         putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }

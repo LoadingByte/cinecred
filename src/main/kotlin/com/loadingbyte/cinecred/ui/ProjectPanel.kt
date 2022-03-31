@@ -25,6 +25,8 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
 
     init {
         tabPane.apply {
+            isFocusable = false
+            putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
             putClientProperty(TABBED_PANE_SHOW_TAB_SEPARATORS, true)
             putClientProperty(TABBED_PANE_TRAILING_COMPONENT, tabPaneTrailingPanel)
             addTab(l10n("ui.project.edit"), EYE_ICON, editPanel)

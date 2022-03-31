@@ -525,8 +525,10 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
             super.paintChildren(g)
             g.withNewG2 { g2 ->
                 FlatUIUtils.setRenderingHints(g2)
-                g2.color = if (isEnabled) borderColor else disabledBorderColor
-                FlatUIUtils.paintComponentBorder(g2, 0, 0, width, height, 0f, UIScale.scale(1f), UIScale.scale(arc))
+                val color = if (isEnabled) borderColor else disabledBorderColor
+                FlatUIUtils.paintOutlinedComponent(
+                    g2, 0, 0, width, height, 0f, 0f, 0f, UIScale.scale(1f), UIScale.scale(arc), null, color, null
+                )
             }
         }
 

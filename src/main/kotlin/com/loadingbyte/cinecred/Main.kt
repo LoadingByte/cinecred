@@ -122,15 +122,21 @@ fun mainSwing() {
         UIManager.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
     // If FlatLaf cannot find a font on KDE, that's because no one has been explicitly configured. First try to find
     // the default font via Gnome mechanisms since some distros expose the font that way as well. If even that fails,
-    // try to use the hardcoded default KDE font then, which is Noto Sans.
+    // try to use the hardcoded default KDE font, which is Noto Sans, or just Dialog if even that doesn't exist.
     if (SystemInfo.isKDE) {
         val defaultFont = UIManager.getFont("defaultFont")
         if (defaultFont.getFamily(Locale.ROOT).equals(Font.SANS_SERIF, ignoreCase = true)) {
             var replFont = resolveGnomeFont()
             if (replFont.getFamily(Locale.ROOT).equals(Font.SANS_SERIF, ignoreCase = true))
-                replFont = Font("Noto Sans", Font.PLAIN, 1).deriveFont(defaultFont.size2D)
-            UIManager.put("defaultFont", replFont)
+                replFont = Font("Noto Sans", Font.PLAIN, 1)  // Falls back to Dialog if Noto Sans is not found.
+            UIManager.put("defaultFont", replFont.deriveFont(defaultFont.size2D))
         }
+    }
+    // On Linux, FlatLaf often fractionally scales the fonts a bit too large compared to what the OS does. Additionally,
+    // this often results in weird looking fonts. As a quick fix, just remove the fractional part from the font size.
+    if (SystemInfo.isLinux) {
+        val defaultFont = UIManager.getFont("defaultFont")
+        UIManager.put("defaultFont", defaultFont.deriveFont(defaultFont.size.toFloat()))
     }
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))

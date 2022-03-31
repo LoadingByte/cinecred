@@ -7,6 +7,8 @@ import java.awt.*
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Rectangle2D
+import java.io.IOException
+import java.net.URI
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
@@ -231,6 +233,34 @@ private val GraphicsConfiguration.usableBounds: Rectangle
             bounds.height - insets.top - insets.bottom
         )
     }
+
+
+fun tryBrowse(uri: URI) {
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))
+        Desktop.getDesktop().browse(uri)
+    else
+        openFallback(uri)
+}
+
+fun tryMail(uri: URI) {
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.MAIL))
+        Desktop.getDesktop().mail(uri)
+    else
+        openFallback(uri)
+}
+
+// This fallback is required by, e.g., KDE, which is not supported by Desktop.browse()/mail() at the moment.
+private fun openFallback(uri: URI) {
+    fun tryExec(cmd: Array<String>) = try {
+        Runtime.getRuntime().exec(cmd)
+        true
+    } catch (e: IOException) {
+        false
+    }
+
+    if (!SystemInfo.isKDE || !tryExec(arrayOf("kde-open", uri.toString())))
+        tryExec(arrayOf("xdg-open", uri.toString()))
+}
 
 
 fun trySetTaskbarIconBadge(badge: Int) {

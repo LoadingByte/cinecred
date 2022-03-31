@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.*
@@ -10,7 +11,6 @@ import org.apache.batik.bridge.svg12.SVG12BridgeContext
 import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.slf4j.LoggerFactory
-import java.awt.Desktop
 import java.awt.Font
 import java.awt.FontFormatException
 import java.io.IOException
@@ -136,10 +136,8 @@ private val GS_EXECUTABLE: Path? by lazy {
     val linkMac = "https://pages.uoregon.edu/koch/"
     val ep = JEditorPane("text/html", l10n("projectIO.ghostscriptMissing.msg", linkWinLinux, linkMac))
     ep.addHyperlinkListener { e ->
-        if (e.eventType == HyperlinkEvent.EventType.ACTIVATED &&
-            Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
-        )
-            Desktop.getDesktop().browse(e.url.toURI())
+        if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)
+            tryBrowse(e.url.toURI())
     }
     ep.isEditable = false
     JOptionPane.showMessageDialog(null, ep, l10n("projectIO.ghostscriptMissing.title"), JOptionPane.ERROR_MESSAGE)

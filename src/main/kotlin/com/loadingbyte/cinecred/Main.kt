@@ -9,6 +9,8 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.resolveGnomeFont
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
+import com.loadingbyte.cinecred.ui.helper.tryBrowse
+import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.loadingbyte.cinecred.ui.makeOpenHintTrack
 import com.loadingbyte.cinecred.ui.playIfPending
 import com.oracle.si.Singleton
@@ -22,7 +24,6 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import java.awt.Desktop
 import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.RenderingHints
@@ -182,10 +183,8 @@ private fun checkForUpdates() {
                     OpenController.getOpenFrame(), l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
                     l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
                 ) == JOptionPane.YES_OPTION
-                if (openHomepage &&
-                    Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
-                )
-                    Desktop.getDesktop().browse(URI(HOMEPAGE_URL))
+                if (openHomepage)
+                    tryBrowse(URI(HOMEPAGE_URL))
             }
     }
 }
@@ -206,12 +205,12 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         val send = JOptionPane.showConfirmDialog(
             null, l10n("ui.crash.msg", e), l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
         ) == JOptionPane.YES_OPTION
-        if (send && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.MAIL)) {
+        if (send) {
             val address = encodeMailURIComponent("cinecred-crash-report@loadingbyte.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
             // We replace tabs by four dots because some email programs trim leading tabs and spaces.
             val body = encodeMailURIComponent(JULBuilderHandler.log.toString().replace("\t", "...."))
-            Desktop.getDesktop().mail(URI("mailto:$address?Subject=$subject&Body=$body"))
+            tryMail(URI("mailto:$address?Subject=$subject&Body=$body"))
         }
     }
 

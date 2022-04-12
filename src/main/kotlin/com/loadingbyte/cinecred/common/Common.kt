@@ -10,6 +10,8 @@ import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.nio.file.FileSystems
+import java.nio.file.Path
 import java.text.MessageFormat
 import java.util.*
 
@@ -18,6 +20,17 @@ val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 
 
 enum class Severity { INFO, WARN, ERROR }
+
+
+inline fun <R> withResource(path: String, action: (Path) -> R): R {
+    val uri = (Severity::class.java).getResource(path)!!.toURI()
+    return if (uri.scheme == "jar")
+        FileSystems.newFileSystem(uri, emptyMap<String, Any>()).use { fs ->
+            action(fs.getPath(path))
+        }
+    else
+        action(Path.of(uri))
+}
 
 
 val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN)

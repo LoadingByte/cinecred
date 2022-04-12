@@ -7,6 +7,7 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.resolveGnomeFont
+import com.loadingbyte.cinecred.common.withResource
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -34,8 +35,6 @@ import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.FileSystems
-import java.nio.file.Path
 import java.util.*
 import java.util.logging.*
 import java.util.logging.Formatter
@@ -66,20 +65,17 @@ fun main() {
 
     // Load all natives from the system-specific directory in the natives/ resource folder.
     val nativesExDir = System.getProperty("java.io.tmpdir") + "/cinecred-natives-" + System.getProperty("user.name")
-    val nativesDir = "/natives/" + Loader.Detector.getPlatform()
-    val nativesURI = (object {}.javaClass).getResource(nativesDir)!!.toURI()
-    if (nativesURI.scheme == "jar") {
-        Path(nativesExDir).createDirectories()
-        FileSystems.newFileSystem(nativesURI, emptyMap<String, Any>()).use { fs ->
-            for (file in fs.getPath(nativesDir).listDirectoryEntries()) {
+    withResource("/natives/" + Loader.Detector.getPlatform()) { nativesDir ->
+        for (file in nativesDir.listDirectoryEntries())
+            if (file.fileSystem.provider().scheme == "file")
+                System.load(file.toString())
+            else {
+                Path(nativesExDir).createDirectories()
                 val exFile = Path(nativesExDir, file.name)
                 file.copyTo(exFile, overwrite = true)
                 System.load(exFile.toString())
             }
-        }
-    } else
-        for (file in Path.of(nativesURI).listDirectoryEntries())
-            System.load(file.toString())
+    }
 
     // Let JavaCPP extract its natives into the temp dir, so that they don't clutter the user's filesystem.
     System.setProperty("org.bytedeco.javacpp.cachedir", nativesExDir)

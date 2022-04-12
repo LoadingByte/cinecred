@@ -64,6 +64,10 @@ sealed class Picture {
 
         private class AugmentedDoc(val doc: PDDocument) {
             val minBox: Rectangle2D by lazy {
+                // If the document has already been closed, the responsible project has just been closed. In that case,
+                // just return a dummy rectangle here to let the project closing finish regularly.
+                if (doc.document.isClosed)
+                    return@lazy Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
                 val raw = BoundingBoxFinder(doc.pages[0]).apply { processPage(doc.pages[0]) }.boundingBox
                 // The raw bounding box y coordinate is actually relative to the bottom of the crop box, so we need
                 // to convert it such that it is relative to the top because the rest of our program works like that.

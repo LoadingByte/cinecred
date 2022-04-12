@@ -125,7 +125,11 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
     private fun restartDrawing() {
         val project = this.project ?: return
 
-        systemScaling = UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D).toFloat()
+        // Only access the graphics object if it's actually non-null. It can be null when the user closes a window
+        // immediately after it has been opened.
+        canvas.graphics?.let {
+            systemScaling = UIScale.getSystemScaleFactor(it as Graphics2D).toFloat()
+        }
         val scaling = min(
             canvas.width.toFloat() / project.styling.global.widthPx,
             canvas.height.toFloat() / project.styling.global.heightPx

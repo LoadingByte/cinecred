@@ -19,7 +19,7 @@ val PALETTE_RED: String = "#C75450"
 val PALETTE_GREEN: String = "#499C54"
 
 
-fun newLabelTextArea(insets: Boolean = true) = JTextArea().apply {
+fun newLabelTextArea(insets: Boolean = false) = JTextArea().apply {
     background = null
     isEditable = false
     lineWrap = true
@@ -43,7 +43,7 @@ fun JComponent.setTableCellBackground(table: JTable, rowIdx: Int) {
 class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
 
     private val comp = when (allowHtml) {
-        false -> newLabelTextArea()
+        false -> newLabelTextArea(insets = true)
         true -> JEditorPane().apply {
             contentType = "text/html"
             isEditable = false

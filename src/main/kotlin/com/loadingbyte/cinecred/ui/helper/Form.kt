@@ -82,7 +82,7 @@ open class Form(insets: Boolean = true) :
 
         val labelComp = JLabel(label)
         val noticeIconComp = JLabel()
-        val noticeMsgComp = newLabelTextArea(insets = false)
+        val noticeMsgComp = newLabelTextArea()
 
         var isVisible: Boolean
             get() = widget.isVisible

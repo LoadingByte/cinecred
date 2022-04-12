@@ -85,11 +85,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         // Add buttons for adding and removing page and content style nodes.
-        val addPageStyleButton = JButton(DualSVGIcon(ADD_ICON, FILMSTRIP_ICON))
+        val addPageStyleButton = JButton(SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON))
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
-        val addContentStyleButton = JButton(DualSVGIcon(ADD_ICON, LAYOUT_ICON))
+        val addContentStyleButton = JButton(SVGIcon.Dual(ADD_ICON, LAYOUT_ICON))
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
-        val addLetterStyleButton = JButton(DualSVGIcon(ADD_ICON, LETTERS_ICON))
+        val addLetterStyleButton = JButton(SVGIcon.Dual(ADD_ICON, LETTERS_ICON))
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addLetterStyleTooltip") }
         val duplicateStyleButton = JButton(DUPLICATE_ICON)
             .makeToolbarButton().apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }

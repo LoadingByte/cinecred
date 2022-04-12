@@ -251,61 +251,76 @@ private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
 }
 
 
-class SVGIcon private constructor(val svg: GraphicsNode, val width: Int, val height: Int, val isDisabled: Boolean) :
-    FlatAbstractIcon(width, height, null), FlatLaf.DisabledIconProvider {
+class SVGIcon private constructor(
+    private val svg: GraphicsNode,
+    private val svgWidth: Float,
+    private val svgHeight: Float,
+    private val scaling: Float,
+    private val isDisabled: Boolean
+) : FlatAbstractIcon((svgWidth * scaling).roundToInt(), (svgHeight * scaling).roundToInt(), null),
+    FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         if (!isDisabled)
-            svg.paint(g2)
+            if (scaling == 1f)
+                svg.paint(g2)
+            else
+                g2.preserveTransform {
+                    g2.scale(scaling)
+                    svg.paint(g2)
+                }
         else {
             // Note: Custom composites are not universally supported. Once they are, we can also use the gray filter
             // from inside a custom composite. For now, we first render the icon to an image, then apply the gray
             // filter to that image, and finally draw the filtered image.
             val filter = UIManager.get("Component.grayFilter") as ImageFilter
             // We assume that scaleX and scaleY are always identical.
-            val scaling = g2.transform.scaleX
+            val g2Scaling = g2.transform.scaleX
             // Draw the icon to an image.
             val img = gCfg.createCompatibleImage(
-                (scaling * width).roundToInt(), (scaling * height).roundToInt(), Transparency.TRANSLUCENT
+                (svgWidth * scaling * g2Scaling).roundToInt(),
+                (svgHeight * scaling * g2Scaling).roundToInt(),
+                Transparency.TRANSLUCENT
             ).withG2 { g2i ->
                 g2i.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2i.scale(scaling, scaling)
+                g2i.scale(scaling * g2Scaling, scaling * g2Scaling)
                 svg.paint(g2i)
             }
             // Filter the image to make it gray.
             val grayImg = Toolkit.getDefaultToolkit().createImage(FilteredImageSource(img.source, filter))
             // Draw the image into the original graphics object.
             g2.preserveTransform {
-                g2.scale(1.0 / scaling, 1.0 / scaling)
+                g2.scale(1.0 / g2Scaling, 1.0 / g2Scaling)
                 g2.drawImage(grayImg, 0, 0, null)
             }
         }
     }
 
-    override fun getDisabledIcon() = SVGIcon(svg, width, height, true)
+    override fun getDisabledIcon() = SVGIcon(svg, svgWidth, svgHeight, scaling, isDisabled = true)
+    fun getScaledIcon(scaling: Float) = SVGIcon(svg, svgWidth, svgHeight, this.scaling * scaling, isDisabled)
 
     companion object {
         fun load(name: String): SVGIcon {
             val (svg, ctx) = loadSVGResource(name)
-            return SVGIcon(svg, ctx.documentSize.width.roundToInt(), ctx.documentSize.height.roundToInt(), false)
+            return SVGIcon(svg, ctx.documentSize.width.toFloat(), ctx.documentSize.height.toFloat(), 1f, false)
         }
     }
 
-}
 
+    class Dual constructor(private val left: SVGIcon, private val right: SVGIcon) :
+        FlatAbstractIcon(left.width + ICON_ICON_GAP + right.width, max(left.height, right.height), null),
+        FlatLaf.DisabledIconProvider {
 
-class DualSVGIcon constructor(private val left: SVGIcon, private val right: SVGIcon) :
-    FlatAbstractIcon(left.width + ICON_ICON_GAP + right.width, max(left.height, right.height), null),
-    FlatLaf.DisabledIconProvider {
-
-    override fun paintIcon(c: Component, g2: Graphics2D) {
-        g2.preserveTransform {
-            left.svg.paint(g2)
-            g2.translate(left.width + ICON_ICON_GAP, 0)
-            right.svg.paint(g2)
+        override fun paintIcon(c: Component, g2: Graphics2D) {
+            g2.preserveTransform {
+                left.paintIcon(c, g2)
+                g2.translate(left.width + ICON_ICON_GAP, 0)
+                right.paintIcon(c, g2)
+            }
         }
-    }
 
-    override fun getDisabledIcon() = DualSVGIcon(left.disabledIcon, right.disabledIcon)
+        override fun getDisabledIcon() = Dual(left.disabledIcon, right.disabledIcon)
+
+    }
 
 }

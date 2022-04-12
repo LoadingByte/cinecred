@@ -16,6 +16,7 @@ import java.text.MessageFormat
 import java.util.*
 
 
+val VERSION = Severity::class.java.getResourceAsStream("/version")!!.bufferedReader().readText().trim()
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 
 

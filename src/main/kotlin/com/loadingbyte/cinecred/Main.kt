@@ -4,10 +4,7 @@ import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.resolveGnomeFont
-import com.loadingbyte.cinecred.common.withResource
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.OpenController
 import com.loadingbyte.cinecred.ui.PreferencesController
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -173,8 +170,6 @@ private const val DL_API_URL = "https://loadingbyte.com/cinecred/dl/api/v1/compo
 private const val HOMEPAGE_URL = "https://loadingbyte.com/cinecred/"
 
 private fun checkForUpdates() {
-    val curVersion = UncaughtHandler::class.java.getResourceAsStream("/version")!!.bufferedReader().readText().trim()
-
     val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
     client.sendAsync(
         HttpRequest.newBuilder(URI.create(DL_API_URL)).build(),
@@ -192,10 +187,10 @@ private fun checkForUpdates() {
             .firstOrNull { it["qualifier"] == "Release" }
             ?.getValue("version")
 
-        if (latestStableVersion != null && latestStableVersion != curVersion)
+        if (latestStableVersion != null && latestStableVersion != VERSION)
             SwingUtilities.invokeLater {
                 val openHomepage = JOptionPane.showConfirmDialog(
-                    OpenController.getOpenFrame(), l10n("ui.updateAvailable.msg", curVersion, latestStableVersion),
+                    OpenController.getOpenFrame(), l10n("ui.updateAvailable.msg", VERSION, latestStableVersion),
                     l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
                 ) == JOptionPane.YES_OPTION
                 if (openHomepage)

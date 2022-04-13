@@ -4,17 +4,34 @@ Cinecred Changelog
 1.3.0-SNAPSHOT
 --------------
 
+### Additions
+
+- Unified project opening, preferences, and update notification into one
+  integrated welcome window, thereby alleviating the need for various popup
+  dialogs.
+- Added a Cinecred and dependency license viewer to the welcome window.
+- On macOS, the preferences can now be opened via the corresponding menu entry.
+
 ### Fixes
 
 #### UI Fixes
 
 - UHD (aka 4K) monitors with a scaled UI no longer break the edit and video
   previews.
-- The project selection window now remembers its position and size.
+- The welcome window now remembers its position and size.
 - Use generic text antialiasing in the UI even if the OS has it disabled or
   cannot be queried.
+- On Linux, the font size now more closely mirrors the OS.
 - On KDE, fallback onto Gnome or directly use KDE's default font if the desired
   font cannot be determined.
+- On KDE and other X11 desktops not directly supported by Java, links and mail
+  templates can still be opened.
+- When quitting the application on macOS, it now asks to save projects.
+- A regression bug caused a crash instead of just an error message when choosing
+  an invalid combination of FPS and timecode format; this has been fixed.
+- Fixed crashes when closing a project immediately after opening it.
+- The missing Ghostscript dialog now only displays installation instructions for
+  the current OS and no longer shows a broken link for the Windows download.
 
 
 1.2.0

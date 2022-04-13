@@ -24,13 +24,16 @@ const val OPEN_HINT_TRACK_NAME = "open"
 const val PROJECT_HINT_TRACK_NAME = "project"
 val HINT_TRACK_NAMES = listOf(OPEN_HINT_TRACK_NAME, PROJECT_HINT_TRACK_NAME)
 
-fun makeOpenHintTrack(openFrame: OpenFrame): HintTrack {
-    val openPanel = openFrame.panel
+fun makeOpenHintTrack(ctrl: WelcomeController): HintTrack {
+    val welcomePanel = ctrl.welcomeFrame.panel
+    val openPanel = welcomePanel.openPanel
+    val goOpenPnl = fun() { welcomePanel.selectedTab = openPanel }
+    val goPrefPnl = fun() { welcomePanel.selectedTab = welcomePanel.preferencesPanel }
     return HintTrack(
         OPEN_HINT_TRACK_NAME, listOf(
-            Hint(l10n("ui.hints.openTrack.welcome"), openPanel, Side.NONE),
-            Hint(l10n("ui.hints.openTrack.browse"), openPanel.browseHintOwner, Side.BOTTOM),
-            Hint(l10n("ui.hints.openTrack.drop"), openPanel.dropHintOwner, Side.TOP)
+            Hint(l10n("ui.hints.openTrack.welcome"), welcomePanel, Side.NONE, goPrefPnl),
+            Hint(l10n("ui.hints.openTrack.browse"), openPanel.browseHintOwner, Side.BOTTOM, goOpenPnl),
+            Hint(l10n("ui.hints.openTrack.drop"), openPanel.dropHintOwner, Side.TOP, goOpenPnl)
         )
     )
 }
@@ -57,7 +60,7 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
 
 
 fun HintTrack.playIfPending() {
-    if (PreferencesController.isHintTrackPending(name)) {
+    if (PreferencesStorage.isHintTrackPending(name)) {
         // Often, when this function is called, the window where the first hint appears hasn't been validated yet.
         // To circumvent the hint briefly appearing at a strange position and then moving to its proper position,
         // we delay the appearance of the first hint for one time step.
@@ -117,7 +120,7 @@ private fun showHint(track: HintTrack, idx: Int) {
                 addActionListener { removePopup() }
             }, "newline, right, split 2")
             add(JButton(l10n("ui.hints.passed")).style().apply {
-                addActionListener { removePopup(); PreferencesController.setHintTrackPending(track.name, false) }
+                addActionListener { removePopup(); PreferencesStorage.setHintTrackPending(track.name, false) }
             })
         } else
             add(JButton(l10n("ui.hints.next")).style().apply {

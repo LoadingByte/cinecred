@@ -2,29 +2,26 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
-import java.awt.GraphicsConfiguration
 import java.nio.file.Path
 import java.util.*
 import java.util.prefs.Preferences
-import javax.swing.JComponent
-import javax.swing.UIManager
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
 
-object PreferencesController {
+object PreferencesStorage {
 
     private const val UI_LOCALE_KEY = "ui_locale"
     private const val CHECK_FOR_UPDATES_KEY = "check_for_updates"
 
     /**
-     * This is the translated locale which is closest to the system's default locale.
-     * We have to define it as a non-static constant in this singleton object as opposed to a static constant somewhere
-     * since it necessarily has to be computed before the first call to [applyUILocaleWish], as the computation utilizes
-     * the default locale and [applyUILocaleWish], which is a method of this singleton, changes that.
+     * This is the translated locale which is closest to the system's default locale. It necessarily has to be computed
+     * before [MasterController.applyUILocaleWish] changes the default locale for the first time and thereby destroys
+     * the information. Because applyUILocaleWish() first needs to obtain the configured locale wish via [uiLocaleWish],
+     * that necessity is fulfilled.
      */
-    val SYSTEM_LOCALE: Locale =
+    private val SYSTEM_LOCALE: Locale =
         Locale.lookup(
             listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), TRANSLATED_LOCALES
         ) ?: FALLBACK_TRANSLATED_LOCALE
@@ -32,63 +29,9 @@ object PreferencesController {
     private val prefs = Preferences.userRoot().node("com/loadingbyte/cinecred")
     private val prefsProjectDirs = prefs.node("projectdirs")
 
-    /**
-     * Returns whether the startup process should be aborted (false) or continued (true).
-     */
-    fun onStartup(): Boolean {
-        val havePreferencesBeenSet = UI_LOCALE_KEY in prefs.keys() && CHECK_FOR_UPDATES_KEY in prefs.keys()
-        if (!havePreferencesBeenSet) {
-            val p = PreferencesForm.showDialog(prefFormValues, onScreen = null, useFrame = true, askForRestart = false)
-                ?: return false
-            prefFormValues = p.first
-        }
-        applyUILocaleWish()
-        return true
-    }
+    fun havePreferencesBeenSet() = UI_LOCALE_KEY in prefs.keys() && CHECK_FOR_UPDATES_KEY in prefs.keys()
 
-    fun showPreferencesDialog(onScreen: GraphicsConfiguration?) {
-        val old = prefFormValues
-        val (new, restart) = PreferencesForm.showDialog(old, onScreen, useFrame = false, askForRestart = true) ?: return
-        prefFormValues = new
-
-        applyUILocaleWish()
-
-        if (OPEN_HINT_TRACK_NAME in new.pendingHintTracks && OPEN_HINT_TRACK_NAME !in old.pendingHintTracks)
-            OpenController.getOpenFrame()?.let(::makeOpenHintTrack)?.playIfPending()
-        if (PROJECT_HINT_TRACK_NAME in new.pendingHintTracks && PROJECT_HINT_TRACK_NAME !in old.pendingHintTracks)
-            OpenController.getProjectCtrls().firstOrNull()?.let(::makeProjectHintTrack)?.playIfPending()
-
-        if (restart) {
-            OpenController.tryCloseProjectsAndDisposeAllFrames()
-            OpenController.showOpenFrame()
-        }
-    }
-
-    private fun applyUILocaleWish() {
-        val locale = uiLocaleWish.resolve()
-        Locale.setDefault(locale)
-        UIManager.getDefaults().defaultLocale = locale
-        UIManager.getLookAndFeelDefaults().defaultLocale = locale
-        JComponent.setDefaultLocale(locale)
-    }
-
-    /**
-     * Shortcut to quickly create or apply this value object.
-     */
-    private var prefFormValues: PreferencesForm.Values
-        get() = PreferencesForm.Values(
-            uiLocaleWish,
-            checkForUpdates,
-            HINT_TRACK_NAMES.filterTo(HashSet(), ::isHintTrackPending)
-        )
-        set(values) {
-            uiLocaleWish = values.uiLocaleWish
-            checkForUpdates = values.checkForUpdates
-            for (trackName in HINT_TRACK_NAMES)
-                setHintTrackPending(trackName, trackName in values.pendingHintTracks)
-        }
-
-    private var uiLocaleWish: LocaleWish
+    var uiLocaleWish: LocaleWish
         get() = when (val str = prefs.get(UI_LOCALE_KEY, null)) {
             null, "system" -> LocaleWish.System
             else -> LocaleWish.Specific(Locale.forLanguageTag(str))
@@ -103,7 +46,7 @@ object PreferencesController {
 
     var checkForUpdates: Boolean
         get() = prefs.getBoolean(CHECK_FOR_UPDATES_KEY, true)
-        private set(value) {
+        set(value) {
             prefs.putBoolean(CHECK_FOR_UPDATES_KEY, value)
         }
 

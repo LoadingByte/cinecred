@@ -19,7 +19,7 @@ val PALETTE_RED: String = "#C75450"
 val PALETTE_GREEN: String = "#499C54"
 
 
-fun newLabelTextArea(insets: Boolean = false) = JTextArea().apply {
+fun newLabelTextArea(text: String? = null, insets: Boolean = false) = JTextArea(text).apply {
     background = null
     isEditable = false
     lineWrap = true

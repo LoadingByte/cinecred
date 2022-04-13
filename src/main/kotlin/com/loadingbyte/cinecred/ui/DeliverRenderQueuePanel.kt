@@ -64,7 +64,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
         get() = jobTableModel.rows.count { !it.isFinished }
 
     private fun getNumPendingJobsOfAllProjects(): Int =
-        OpenController.getProjectCtrls().sumOf { ctrl ->
+        MasterController.projectCtrls.sumOf { ctrl ->
             ctrl.projectFrame.panel.deliverPanel.renderQueuePanel.numPendingJobs
         }
 

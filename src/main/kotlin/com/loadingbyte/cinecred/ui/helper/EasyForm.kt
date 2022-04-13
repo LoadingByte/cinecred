@@ -42,6 +42,11 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
         add(button, "newline, skip 1, span, align left")
     }
 
+    fun removeSubmitButton() {
+        remove(submitButton)
+        submitButton = null
+    }
+
     override fun onChange(widget: Widget<*>) {
         for (efr in extFormRows) {
             efr.isVisibleFunc?.let { efr.formRow.isVisible = it() }

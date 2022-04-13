@@ -132,7 +132,10 @@ sourceSets.main.get().output.dir(mapOf("builtBy" to generateResources), generate
 
 val jar: Jar by tasks
 jar.apply {
-    from("LICENSE")
+    into("licenses") {
+        from("LICENSE")
+        rename("LICENSE", "Cinecred-LICENSE")
+    }
 }
 
 

@@ -1,16 +1,14 @@
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf
-import com.formdev.flatlaf.json.Json
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.ui.OpenController
-import com.loadingbyte.cinecred.ui.PreferencesController
-import com.loadingbyte.cinecred.ui.helper.tryBrowse
+import com.loadingbyte.cinecred.common.LOGGER
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.resolveGnomeFont
+import com.loadingbyte.cinecred.common.withResource
+import com.loadingbyte.cinecred.ui.MasterController
 import com.loadingbyte.cinecred.ui.helper.tryMail
-import com.loadingbyte.cinecred.ui.makeOpenHintTrack
-import com.loadingbyte.cinecred.ui.playIfPending
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import org.bytedeco.ffmpeg.avutil.LogCallback
@@ -26,16 +24,15 @@ import java.awt.Desktop
 import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.RenderingHints
-import java.io.StringReader
 import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.util.*
 import java.util.logging.*
 import java.util.logging.Formatter
-import javax.swing.*
+import javax.swing.JOptionPane
+import javax.swing.SwingUtilities
+import javax.swing.ToolTipManager
+import javax.swing.UIManager
 import kotlin.io.path.*
 
 
@@ -46,7 +43,7 @@ fun main() {
     // a second application instance in the same VM.
     if (Singleton.invoke(SINGLETON_APP_ID, emptyArray()))
         return
-    Singleton.start({ OpenController.showOpenFrame() }, SINGLETON_APP_ID)
+    Singleton.start({ MasterController.showWelcomeFrame() }, SINGLETON_APP_ID)
 
     // If an unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
     // controlled fashion and inform the user. We also ask whether to send a crash report.
@@ -135,68 +132,27 @@ fun mainSwing() {
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
 
     // Globally listen to all key events.
-    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(OpenController::onGlobalKeyEvent)
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(MasterController::onGlobalKeyEvent)
 
-    // Load the preferences, show a form if they have not yet been set, and terminate if the user cancels the form.
-    if (!PreferencesController.onStartup())
-        return
-
-    // If configured accordingly, check for updates in the background and show a dialog if an update is available.
-    if (PreferencesController.checkForUpdates)
-        checkForUpdates()
+    // Apply the locale configured by the user, if any.
+    MasterController.applyUILocaleWish()
 
     // On MacOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
         Desktop.getDesktop().setPreferencesHandler {
-            val activeScreen = FocusManager.getCurrentManager().activeWindow.graphicsConfiguration
-            PreferencesController.showPreferencesDialog(activeScreen)
+            MasterController.showWelcomeFrame().welcomeFrame.panel.apply { selectedTab = preferencesPanel }
         }
 
     // On MacOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
     // all windows, which in turn triggers all "unsaved changes" dialogs.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
         Desktop.getDesktop().setQuitHandler { _, response ->
-            OpenController.tryCloseProjectsAndDisposeAllFrames()
+            MasterController.tryCloseProjectsAndDisposeAllFrames()
             response.performQuit()
         }
 
-    // Show the project overview window ("OpenFrame").
-    OpenController.showOpenFrame()
-    makeOpenHintTrack(OpenController.getOpenFrame()!!).playIfPending()
-}
-
-
-private const val DL_API_URL = "https://loadingbyte.com/cinecred/dl/api/v1/components"
-private const val HOMEPAGE_URL = "https://loadingbyte.com/cinecred/"
-
-private fun checkForUpdates() {
-    val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
-    client.sendAsync(
-        HttpRequest.newBuilder(URI.create(DL_API_URL)).build(),
-        HttpResponse.BodyHandlers.ofString()
-    ).thenAccept { resp ->
-        if (resp.statusCode() != 200)
-            return@thenAccept
-
-        // Note: If the following processing fails for some reason, the thrown exception is just swallowed by the
-        // CompletableFuture context. Since we do not need to react to a failed update check, this is finde.
-        @Suppress("UNCHECKED_CAST")
-        val root = Json.parse(StringReader(resp.body())) as Map<String, List<Map<String, String>>>
-        val latestStableVersion = root
-            .getValue("components")
-            .firstOrNull { it["qualifier"] == "Release" }
-            ?.getValue("version")
-
-        if (latestStableVersion != null && latestStableVersion != VERSION)
-            SwingUtilities.invokeLater {
-                val openHomepage = JOptionPane.showConfirmDialog(
-                    OpenController.getOpenFrame(), l10n("ui.updateAvailable.msg", VERSION, latestStableVersion),
-                    l10n("ui.updateAvailable.title"), JOptionPane.YES_NO_OPTION
-                ) == JOptionPane.YES_OPTION
-                if (openHomepage)
-                    tryBrowse(URI(HOMEPAGE_URL))
-            }
-    }
+    // Show the WelcomeFrame.
+    MasterController.showWelcomeFrame()
 }
 
 
@@ -207,7 +163,7 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         SwingUtilities.invokeLater {
             sendReport(e)
             // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.
-            OpenController.tryCloseProjectsAndDisposeAllFrames(force = true)
+            MasterController.tryCloseProjectsAndDisposeAllFrames(force = true)
         }
     }
 

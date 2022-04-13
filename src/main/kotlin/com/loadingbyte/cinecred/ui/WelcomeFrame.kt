@@ -7,15 +7,15 @@ import java.awt.event.WindowEvent
 import javax.swing.JFrame
 
 
-class OpenFrame : JFrame("Cinecred \u2013 ${l10n("ui.open.title")}") {
+class WelcomeFrame(ctrl: WelcomeController) : JFrame(l10n("ui.welcome.title")) {
 
-    val panel = OpenPanel(this)
+    val panel = WelcomePanel(ctrl)
 
     init {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
-                OpenController.onCloseOpenFrame()
+                ctrl.close()
             }
         })
 

@@ -26,7 +26,11 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
 
-class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfiguration) {
+class ProjectController(
+    val projectDir: Path,
+    val openOnScreen: GraphicsConfiguration,
+    private val onClose: () -> Unit
+) {
 
     val projectName: String = projectDir.fileName.toString()
 
@@ -221,7 +225,7 @@ class ProjectController(val projectDir: Path, val openOnScreen: GraphicsConfigur
         )
             return false
 
-        OpenController.onCloseProject(this)
+        onClose()
 
         projectFrame.dispose()
         editStylingDialog.dispose()

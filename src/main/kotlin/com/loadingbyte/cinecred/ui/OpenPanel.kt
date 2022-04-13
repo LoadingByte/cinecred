@@ -1,10 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.STYLE
-import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
-import com.loadingbyte.cinecred.ui.helper.PREFERENCES_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.awt.Component
@@ -14,7 +12,7 @@ import javax.swing.*
 import kotlin.io.path.isDirectory
 
 
-class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
+class OpenPanel(private val ctrl: WelcomeController) : JPanel() {
 
     // ========== HINT OWNERS ==========
     val browseHintOwner: Component
@@ -22,61 +20,57 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
     // =================================
 
     init {
-        border = BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(10, 10, 10, 10),
-            BorderFactory.createDashedBorder(Color(100, 100, 100), 10f, 4f, 4f, false)
-        )
+        val browseButton = makeOpenButton(l10n("ui.open.browse")).apply { addActionListener { browse() } }
+        browseHintOwner = browseButton
 
-        var memorizedPanel: JPanel? = null
-        val memorizedProjectDirs = PreferencesController.memorizedProjectDirs
-        if (memorizedProjectDirs.isNotEmpty()) {
-            memorizedPanel = JPanel(MigLayout("center, wrap 3")).apply { alignmentX = CENTER_ALIGNMENT }
-            for (projectDir in memorizedProjectDirs) {
-                val btn = JButton(projectDir.fileName.toString(), FOLDER_ICON).apply {
-                    toolTipText = projectDir.toString()
-                    putClientProperty(STYLE_CLASS, "large")
-                    addActionListener { OpenController.tryOpenProject(projectDir) }
-                }
-                memorizedPanel.add(btn, "grow")
-            }
+        val memorizedPanel = JPanel(MigLayout("insets 0, wrap", "[grow,fill]")).apply { background = null }
+        for (projectDir in PreferencesStorage.memorizedProjectDirs) {
+            val btn = makeOpenButton("<html>${projectDir.fileName}<br><font color=#888>$projectDir</font></html>")
+            btn.addActionListener { ctrl.tryOpenProject(projectDir) }
+            memorizedPanel.add(btn)
         }
-
-        val browseButton = JButton(l10n("ui.open.browse"), FOLDER_ICON).apply {
-            browseHintOwner = this
-            putClientProperty(STYLE_CLASS, "large")
-            addActionListener { browse() }
-        }
-        val preferencesButton = JButton(l10n("ui.preferences.open"), PREFERENCES_ICON).apply {
-            putClientProperty(STYLE_CLASS, "large")
-            addActionListener { PreferencesController.showPreferencesDialog(openFrame.graphicsConfiguration) }
+        val memorizedScrollPane = JScrollPane(memorizedPanel).apply {
+            border = null
+            background = null
+            viewport.background = null
         }
 
         val dropLabel = JLabel(l10n("ui.open.drop")).apply {
             dropHintOwner = this
-            putClientProperty(STYLE, "font: bold \$h0.font; foreground: #969696")
+            putClientProperty(STYLE, "font: bold \$h0.font; foreground: #666")
         }
 
-        // Add the memorized project panel, buttons, and the drag-and-drop hint text.
-        layout = MigLayout("center, center, wrap 1", "center")
-        memorizedPanel?.let { add(it, "gapbottom 30lp") }
-        add(browseButton)
-        add(preferencesButton)
-        add(dropLabel, "gaptop 60lp")
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(10, 10, 10, 10),
+            BorderFactory.createDashedBorder(Color(80, 80, 80), 5f, 4f, 4f, false)
+        )
+        layout = MigLayout("insets 15lp, wrap")
+        add(browseButton, "growx")
+        add(JSeparator(), "growx")
+        add(memorizedScrollPane, "grow, push")
+        add(dropLabel, "center, gaptop 40lp, gapbottom 20lp")
 
         // Add the drag-and-drop handler.
-        transferHandler = OpenTransferHandler
+        transferHandler = OpenTransferHandler()
+    }
+
+    private fun makeOpenButton(text: String) = JButton(text, FOLDER_ICON).apply {
+        horizontalAlignment = SwingConstants.LEFT
+        iconTextGap = 8
+        putClientProperty(STYLE, "arc: 0")
+        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
     }
 
     private fun browse() {
         val fc = JFileChooser()
         fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-        PreferencesController.memorizedProjectDirs.firstOrNull()?.let { fc.selectedFile = it.toFile() }
+        PreferencesStorage.memorizedProjectDirs.firstOrNull()?.let { fc.selectedFile = it.toFile() }
         if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
-            OpenController.tryOpenProject(fc.selectedFile.toPath())
+            ctrl.tryOpenProject(fc.selectedFile.toPath())
     }
 
 
-    private object OpenTransferHandler : TransferHandler() {
+    private inner class OpenTransferHandler : TransferHandler() {
 
         override fun canImport(support: TransferSupport) =
             support.dataFlavors.any { it.isFlavorJavaFileListType }
@@ -93,9 +87,9 @@ class OpenPanel(private val openFrame: OpenFrame) : JPanel() {
             // to make sure all action happens in the EDT thread.
             val file = (transferData[0] as File).toPath()
             if (file.isDirectory())
-                SwingUtilities.invokeLater { OpenController.tryOpenProject(file) }
+                SwingUtilities.invokeLater { ctrl.tryOpenProject(file) }
             else if (file.parent != null)
-                SwingUtilities.invokeLater { OpenController.tryOpenProject(file.parent) }
+                SwingUtilities.invokeLater { ctrl.tryOpenProject(file.parent) }
 
             return true
         }

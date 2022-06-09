@@ -246,8 +246,9 @@ val Enum<*>.icon
 
 
 private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
-    val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-        .createDocument(null, SVGIcon::class.java.getResourceAsStream(name)) as SVGOMDocument
+    val doc = useResourceStream(name) {
+        SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName()).createDocument(null, it) as SVGOMDocument
+    }
     val ctx = BridgeContext(UserAgentAdapter())
     return Pair(GVTBuilder().build(ctx, doc), ctx)
 }

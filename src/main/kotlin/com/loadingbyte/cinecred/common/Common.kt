@@ -10,20 +10,24 @@ import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.io.InputStream
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.text.MessageFormat
 import java.util.*
 
 
-val VERSION = Severity::class.java.getResourceAsStream("/version")!!.bufferedReader().readText().trim()
+val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 
 
 enum class Severity { INFO, WARN, ERROR }
 
 
-inline fun <R> withResource(path: String, action: (Path) -> R): R {
+inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =
+    Severity::class.java.getResourceAsStream(path)!!.use(action)
+
+inline fun <R> useResourcePath(path: String, action: (Path) -> R): R {
     val uri = (Severity::class.java).getResource(path)!!.toURI()
     return if (uri.scheme == "jar")
         FileSystems.newFileSystem(uri, emptyMap<String, Any>()).use { fs ->

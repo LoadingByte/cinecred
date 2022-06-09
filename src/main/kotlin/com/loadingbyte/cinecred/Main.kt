@@ -6,7 +6,7 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.resolveGnomeFont
-import com.loadingbyte.cinecred.common.withResource
+import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.ui.MasterController
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
@@ -59,7 +59,7 @@ fun main() {
 
     // Load all natives from the system-specific directory in the natives/ resource folder.
     val nativesExDir = System.getProperty("java.io.tmpdir") + "/cinecred-natives-" + System.getProperty("user.name")
-    withResource("/natives/" + Loader.Detector.getPlatform()) { nativesDir ->
+    useResourcePath("/natives/" + Loader.Detector.getPlatform()) { nativesDir ->
         for (file in nativesDir.listDirectoryEntries())
             if (file.fileSystem.provider().scheme == "file")
                 System.load(file.toString())

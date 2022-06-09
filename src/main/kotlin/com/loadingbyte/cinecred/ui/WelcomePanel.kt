@@ -3,7 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.withResource
+import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
@@ -119,7 +119,7 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
         private val H1 = UIManager.getFont("h1.font").size2D
         private val H2 = UIManager.getFont("h2.font").size2D
 
-        private val LICENSES = withResource("/licenses") { licensesDir ->
+        private val LICENSES = useResourcePath("/licenses") { licensesDir ->
             Files.walk(licensesDir).filter(Files::isRegularFile).map { file ->
                 Pair(licensesDir.relativize(file).toString(), file.readText())
             }.sorted(compareBy { it.first }).toList()

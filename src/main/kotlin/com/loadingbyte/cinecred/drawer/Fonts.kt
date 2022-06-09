@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.withResource
+import com.loadingbyte.cinecred.common.useResourcePath
 import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.util.*
@@ -9,7 +9,7 @@ import kotlin.io.path.listDirectoryEntries
 
 
 // Load the fonts that are bundled with this program.
-val BUNDLED_FONTS: List<Font> = withResource("/fonts") { fontsDir ->
+val BUNDLED_FONTS: List<Font> = useResourcePath("/fonts") { fontsDir ->
     fontsDir.listDirectoryEntries().flatMap { file ->
         if (file.fileSystem.provider().scheme == "file")
             Font.createFonts(file.toFile()).asList()

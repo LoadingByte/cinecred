@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.useResourceStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -21,13 +22,13 @@ fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyS
 
 
 private fun copyStylingTemplate(destDir: Path, locale: Locale) {
-    val text = readResource("/template/styling.toml").fillPlaceholders(locale)
+    val text = useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }.fillPlaceholders(locale)
     destDir.resolve("Styling.toml").writeText(text)
 }
 
 
 private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
-    val csv = readResource("/template/credits.csv")
+    val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
     val spreadsheet = CsvFormat.read(csv)
         .map { record -> SpreadsheetRecord(record.recordNo, record.cells.map { it.fillPlaceholders(locale) }) }
     format.write(
@@ -42,17 +43,9 @@ private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: Spreadshe
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {
         logoFile.parent.createDirectories()
-        Dummy.javaClass.getResourceAsStream("/logo.svg")!!.use { stream -> Files.copy(stream, logoFile) }
+        useResourceStream("/logo.svg") { Files.copy(it, logoFile) }
     }
 }
-
-
-private fun readResource(resourceName: String): String =
-    Dummy.javaClass.getResourceAsStream(resourceName)!!.use { stream ->
-        stream.bufferedReader().readText()
-    }
-
-private object Dummy
 
 
 private fun String.fillPlaceholders(locale: Locale): String =

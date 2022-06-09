@@ -9,6 +9,7 @@ Cinecred Changelog
 - Unified project opening, preferences, and update notification into one
   integrated welcome window, thereby alleviating the need for various popup
   dialogs.
+- Added a changelog viewer to the welcome window.
 - Added a Cinecred and dependency license viewer to the welcome window.
 - On macOS, the preferences can now be opened via the corresponding menu entry.
 

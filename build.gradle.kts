@@ -88,6 +88,7 @@ dependencies {
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
     implementation("com.formdev", "flatlaf", "2.1")
+    implementation("org.commonmark", "commonmark", "0.19.0")
 
     // Testing
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.8.1")
@@ -117,6 +118,10 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.processResources {
+    from("CHANGELOG.md")
 }
 
 // Generate a resource file storing the project version.

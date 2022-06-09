@@ -4,9 +4,13 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourcePath
+import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.AttributeProvider
+import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.BorderLayout
 import java.awt.Insets
 import java.awt.event.ItemEvent
@@ -35,6 +39,22 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
 
         openPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
         preferencesPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
+
+        val changelogEditorPane = JEditorPane("text/html", CHANGELOG_HTML).apply {
+            isEditable = false
+            background = null
+        }
+        val changelogScrollPane = JScrollPane(changelogEditorPane).apply {
+            border = null
+            background = null
+            viewport.background = null
+        }
+        // For some reason, we have to explicitly reset the scroll bar, and we have to wait before we do that.
+        SwingUtilities.invokeLater { changelogScrollPane.verticalScrollBar.value = 0 }
+        val changelogPanel = JPanel(MigLayout("insets 20lp")).apply {
+            putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
+            add(changelogScrollPane)
+        }
 
         val licenseTextArea = JTextArea(LICENSES[0].second).apply {
             isEditable = false
@@ -69,6 +89,7 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
             putClientProperty(TABBED_PANE_LEADING_COMPONENT, brandPanel)
             addTab(l10n("ui.welcome.open"), FOLDER_ICON, openPanel)
             addTab(l10n("ui.welcome.preferences"), PREFERENCES_ICON, preferencesPanel)
+            addTab(l10n("ui.welcome.changelog"), GIFT_ICON, changelogPanel)
             addTab(l10n("ui.welcome.licenses"), PAGE_ICON, licensesPanel)
             addChangeListener { ctrl.onChangeTab(enteredPanel = selectedTab) }
         }
@@ -118,6 +139,30 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
         private val H0 = UIManager.getFont("h0.font").size2D
         private val H1 = UIManager.getFont("h1.font").size2D
         private val H2 = UIManager.getFont("h2.font").size2D
+
+        private val CHANGELOG_HTML = useResourceStream("/CHANGELOG.md") { it.bufferedReader().readText() }.let { src ->
+            val doc = Parser.builder().build().parse(src)
+            // Remove the first heading which just says "Changelog".
+            doc.firstChild.unlink()
+            // The first version number heading should not have a top margin.
+            val attrProvider = AttributeProvider { node, tagName, attrs ->
+                if (tagName == "h2" && node.previous == null)
+                    attrs["style"] = "margin-top: 0"
+            }
+            val mdHtml = HtmlRenderer.builder().attributeProviderFactory { attrProvider }.build().render(doc)
+            """
+                <html>
+                    <head><style>
+                        h2 { margin-top: 30; margin-bottom: 5; font-size: 20pt; text-decoration: underline }
+                        h3 { margin-top: 15; margin-bottom: 5; font-size: 15pt }
+                        h4 { margin-top: 15; margin-bottom: 4; font-size: 13pt }
+                        ul { margin-top: 0; margin-bottom: 0; margin-left: 25 }
+                        li { margin-top: 3 }
+                    </style></head>
+                    <body>$mdHtml</body>
+                </html>
+            """
+        }
 
         private val LICENSES = useResourcePath("/licenses") { licensesDir ->
             Files.walk(licensesDir).filter(Files::isRegularFile).map { file ->

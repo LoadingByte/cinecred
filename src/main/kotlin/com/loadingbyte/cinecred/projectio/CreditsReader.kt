@@ -496,8 +496,8 @@ private class CreditsReader(
             l10n("projectIO.credits.unknownLetterStyle", name, letterStyleMap.keys.joinToString(" | "))
 
         fun unknownTagMsg(tagKey: String) = l10n(
-            "projectIO.credits.unknownTagKeyword",
-            tagKey, "${STYLE_KW.msgPrimary} | ${PIC_KW.msgPrimary}", "${STYLE_KW.msgAlt} || ${PIC_KW.msgAlt}"
+            "projectIO.credits.unknownTagKeyword", tagKey,
+            "{{${STYLE_KW.msgPrimary}}} | {{${PIC_KW.msgPrimary}}}", "{{${STYLE_KW.msgAlt}}} || {{${PIC_KW.msgAlt}}}"
         )
 
         val str = table.getString(row, l10nColName) ?: return null
@@ -524,7 +524,7 @@ private class CreditsReader(
                     in PIC_KW -> when {
                         noPic -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureDisallowed"))
                         else -> when (picture) {
-                            null -> picture = getPicture(l10nColName, tagVal)
+                            null -> picture = getPicture(l10nColName, tagKey, tagVal)
                             else -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureNotLone"))
                         }
                     }
@@ -544,8 +544,8 @@ private class CreditsReader(
         }
     }
 
-    fun getPicture(l10nColName: String, tagVal: String?): Picture? {
-        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.msgPrimary, CROP_KW.msgAlt)
+    fun getPicture(l10nColName: String, tagKy: String, tagVal: String?): Picture? {
+        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.msgPrimary, CROP_KW.msgAlt, tagKy)
         fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.msgPrimary, CROP_KW.msgAlt)
         fun hintsUnknownMsg(hints: List<String>) =
             l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(" "), illFormattedMsg())

@@ -49,4 +49,4 @@ Extras,Leoni Cash,,,{project.template.contentStyleBullets},,{projectIO.credits.t
 ,"Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua.",,,{project.template.contentStyleBlurb},,,,
 ,"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat.",,,,,,,
 ,,,17,,,,,
-,Copyright 2021 {{{projectIO.credits.table.style} {project.template.letterStyleBigBold}}}Thomas Cash,,,,,,{project.template.pageStyleCard},
+,Copyright 2022 {{{projectIO.credits.table.style} {project.template.letterStyleBigBold}}}Thomas Cash,,,,,,{project.template.pageStyleCard},

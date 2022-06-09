@@ -186,9 +186,6 @@ val preparePackagingTasks = Platform.values().map { platform ->
             from(platformJar)
             from(sourceSets.main.get().output.resourcesDir!!.resolve("splash.png"))
         }
-        into("misc") {
-            from("LICENSE")
-        }
     }
     // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
     // For Mac OS, additionally create an installer background image from the logo.

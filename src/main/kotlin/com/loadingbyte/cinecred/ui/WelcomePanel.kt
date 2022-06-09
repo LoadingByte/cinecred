@@ -15,12 +15,13 @@ import java.awt.BorderLayout
 import java.awt.Insets
 import java.awt.event.ItemEvent
 import java.net.URI
+import java.nio.file.FileVisitOption.FOLLOW_LINKS
 import java.nio.file.Files
 import java.util.*
 import javax.swing.*
 import javax.swing.SwingConstants.LEFT
 import javax.swing.SwingConstants.TOP
-import kotlin.io.path.readText
+import kotlin.io.path.*
 
 
 class WelcomePanel(ctrl: WelcomeController) : JPanel() {
@@ -61,7 +62,7 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
             lineWrap = true
             wrapStyleWord = true
             background = null
-            putClientProperty(STYLE, "font: monospaced")
+            putClientProperty(STYLE_CLASS, "monospaced")
         }
         val licenseScrollPane = JScrollPane(licenseTextArea).apply {
             border = null
@@ -79,7 +80,7 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
         val licensesPanel = JPanel(MigLayout("insets 20lp")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
             add(licenseComboBox, "growx")
-            add(licenseScrollPane, "newline, grow, push")
+            add(licenseScrollPane, "newline, grow, push, gaptop 10lp")
         }
 
         tabPane = JTabbedPane(LEFT).apply {
@@ -164,10 +165,33 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
             """
         }
 
-        private val LICENSES = useResourcePath("/licenses") { licensesDir ->
-            Files.walk(licensesDir).filter(Files::isRegularFile).map { file ->
-                Pair(licensesDir.relativize(file).toString(), file.readText())
-            }.sorted(compareBy { it.first }).toList()
+        private val LICENSES = run {
+            val rawAppLicenses = useResourcePath("/licenses") { appLicensesDir ->
+                Files.walk(appLicensesDir).toList().filter(Files::isRegularFile).map { file ->
+                    val relPath = appLicensesDir.relativize(file).toString()
+                    val splitIdx = relPath.indexOfAny(listOf("LICENSE", "NOTICE", "COPYING", "COPYRIGHT", "README"))
+                    Triple(relPath.substring(0, splitIdx - 1), relPath.substring(splitIdx), file.readText())
+                }
+            }
+            val appLicenses = rawAppLicenses.map { (lib, clf, text) ->
+                val fancyLib = lib.replace("/", " \u2192 ").replaceFirstChar(Char::uppercase)
+                val fancyClf = if (rawAppLicenses.count { (o, _, _) -> o == lib } > 1) "  [${clf.lowercase()}]" else ""
+                val fancyText = text.trim('\n')
+                Pair(fancyLib + fancyClf, fancyText)
+            }
+
+            val jdkLicensesDir = Path(System.getProperty("java.home")).resolve("legal")
+            val jdkLicenses = if (jdkLicensesDir.notExists()) emptyList() else
+                Files.walk(jdkLicensesDir, FOLLOW_LINKS).toList().filter(Files::isRegularFile).mapNotNull { file ->
+                    val relFile = jdkLicensesDir.relativize(file)
+                    when {
+                        file.name.endsWith(".md") -> " \u2192 " + file.nameWithoutExtension
+                        relFile.startsWith("java.base") -> "  [${file.name.lowercase().replace('_', ' ')}]"
+                        else -> null
+                    }?.let { suffix -> Pair("OpenJDK$suffix", file.readText()) }
+                }
+
+            (appLicenses + jdkLicenses).sortedBy { it.first }
         }
 
     }

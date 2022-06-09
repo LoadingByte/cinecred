@@ -235,27 +235,20 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
     for (platform in excludePlatforms)
         exclude("natives/${platform.slug}")
 
-    for (dep in configurations.runtimeClasspath.get()) {
+    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts) {
         // Exclude all natives that haven't been explicitly included.
-        if (excludePlatforms.any { it.slug in dep.name })
+        if (excludePlatforms.any { it.slug in (dep.classifier ?: "") })
             continue
         // Put the files from the dependency into the fat JAR.
-        from(if (dep.isDirectory) dep else zipTree(dep)) {
+        from(zipTree(dep.file)) {
             // Put all licenses and related files into a central "licenses/" directory and rename
             // them such that each file also carries the name of the JAR it originates from.
-            eachFile {
-                val filename = file.name
-                when {
-                    "DEPENDENCIES" in filename -> path = "licenses/libs/${dep.name}-${filename}"
-                    "COPYRIGHT" in filename -> path = "licenses/libs/${dep.name}-${filename}"
-                    "LICENSE" in filename -> path = "licenses/libs/${dep.name}-${filename}"
-                    "NOTICE" in filename -> path = "licenses/libs/${dep.name}-${filename}"
-                    "README" in filename -> path = "licenses/libs/${dep.name}-${filename}"
-                }
+            filesMatching(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" }) {
+                path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}"
             }
             // Note: The "license/" directory is excluded only if the eachFile instruction has completely emptied it
             // (which we hope it does, but let's better be sure).
-            exclude("**/module-info.class", "checkstyle/**", "findbugs/**", "license", "META-INF/maven/**", "pmd/**")
+            exclude("**/module-info.class", "checkstyle/**", "findbugs/**", "license", "META-INF/maven/**", "pmd/**", "**/DEPENDENCIES")
         }
     }
 }

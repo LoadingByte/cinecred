@@ -122,24 +122,12 @@ tasks.withType<Test> {
 
 tasks.processResources {
     from("CHANGELOG.md")
-}
-
-// Generate a resource file storing the project version.
-val generatedResourcesDir = buildDir.resolve("generated").resolve("resources")
-val generateResources by tasks.registering {
-    group = "Build"
-    doLast {
-        generatedResourcesDir.mkdirs()
-        generatedResourcesDir.resolve("version").writeText(version.toString())
-    }
-}
-sourceSets.main.get().output.dir(mapOf("builtBy" to generateResources), generatedResourcesDir)
-
-val jar: Jar by tasks
-jar.apply {
     into("licenses") {
         from("LICENSE")
         rename("LICENSE", "Cinecred-LICENSE")
+    }
+    doLast {
+        destinationDir.resolve("version").writeText(version.toString())
     }
 }
 
@@ -234,7 +222,7 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
     // Depend on the build task so that tests must run beforehand.
     dependsOn("build")
 
-    with(jar)
+    with(tasks.jar.get())
 
     manifest.attributes(
         "Main-Class" to "com.loadingbyte.cinecred.MainKt",

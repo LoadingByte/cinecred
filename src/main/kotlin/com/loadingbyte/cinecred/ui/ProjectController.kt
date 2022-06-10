@@ -43,7 +43,7 @@ class ProjectController(
     private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
     private var creditsFile: Path? = null
 
-    private var creditsSpreadsheet: Spreadsheet = emptyList()
+    private var creditsSpreadsheet = Spreadsheet(emptyList())
     private val fonts = ConcurrentHashMap<Path, List<Font>>()
     private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
@@ -152,7 +152,7 @@ class ProjectController(
     }
 
     private fun tryReloadCreditsFile() {
-        creditsSpreadsheet = emptyList()
+        creditsSpreadsheet = Spreadsheet(emptyList())
         creditsFileLoadingLog = emptyList()
 
         creditsFile?.let { creditsFile ->

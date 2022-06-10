@@ -29,15 +29,14 @@ private fun copyStylingTemplate(destDir: Path, locale: Locale) {
 
 private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
     val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
-    val spreadsheet = CsvFormat.read(csv)
-        .map { record -> SpreadsheetRecord(record.recordNo, record.cells.map { it.fillPlaceholders(locale) }) }
+    val spreadsheet = CsvFormat.read(csv).map { it.fillPlaceholders(locale) }
     format.write(
         destDir.resolve("Credits.${format.fileExt}"), spreadsheet,
         rowLooks = mapOf(
             0 to SpreadsheetFormat.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
             1 to SpreadsheetFormat.RowLook(bold = true, borderBottom = true)
         ),
-        colWidths = listOf(48, 48, 32, 16, 28, 16, 24, 24, 32)
+        colWidths = listOf(48, 48, 32, 16, 28, 16, 24, 24, 36)
     )
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")

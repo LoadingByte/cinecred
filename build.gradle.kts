@@ -37,6 +37,7 @@ group = "com.loadingbyte"
 version = "1.3.0-SNAPSHOT"
 
 val slf4jVersion = "1.7.32"
+val poiVersion = "5.2.2"
 val batikVersion = "1.14"
 val javacppVersion = "1.5.6"
 val ffmpegVersion = "4.4-$javacppVersion"
@@ -57,13 +58,13 @@ dependencies {
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
     // Redirect other logging frameworks to slf4j.
-    // Batik & PDFBox use Jakarta Commons Logging. JExcelApi uses log4j.
+    // Batik & PDFBox use Jakarta Commons Logging. POI uses log4j2.
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
-    implementation("org.slf4j", "log4j-over-slf4j", slf4jVersion)
+    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.17.2")
 
     // Spreadsheet Reading and Writing
-    implementation("ch.rabanti", "nanoxlsx4j", "1.2.8")
-    implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
+    implementation("org.apache.poi", "poi", poiVersion)
+    implementation("org.apache.poi", "poi-ooxml", poiVersion)
     implementation("com.github.miachm.sods", "SODS", "1.4.0")
     implementation("org.apache.commons", "commons-csv", "1.9.0")
 
@@ -95,10 +96,14 @@ dependencies {
 }
 
 configurations.all {
+    // POI:
+    // We don't re-evaluate formulas, and as only that code calls Commons Math, we can omit the dependency.
+    exclude("org.apache.commons", "commons-math3")
+    // This is only required for adding pictures to workbooks via code, which we don't do.
+    exclude("commons-codec", "commons-codec")
+
     // Batik & PDFBox: We replace this commons-logging dependency by the slf4j bridge.
     exclude("commons-logging", "commons-logging")
-    // JExcelApi: We replace this log4j dependency by the slf4j bridge.
-    exclude("log4j", "log4j")
 
     // Batik:
     // The Java XML APIs are part of the JDK itself since Java 5.
@@ -241,6 +246,8 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
             continue
         // Put the files from the dependency into the fat JAR.
         from(zipTree(dep.file)) {
+            // Exclude service files for now as they will be merged and included by some custom logic below.
+            exclude("META-INF/services/*")
             // Put all licenses and related files into a central "licenses/" directory and rename
             // them such that each file also carries the name of the JAR it originates from.
             filesMatching(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" }) {
@@ -250,6 +257,19 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
             // (which we hope it does, but let's better be sure).
             exclude("**/module-info.class", "checkstyle/**", "findbugs/**", "license", "META-INF/maven/**", "pmd/**", "**/DEPENDENCIES")
         }
+    }
+
+    // Add all service files to the fat JAR, merging them if necessary. This is necessary for POI.
+    val tmpServicesDir = temporaryDir.resolve("services")
+    into("META-INF/services") {
+        from(tmpServicesDir)
+    }
+    doFirst {
+        tmpServicesDir.deleteRecursively()
+        tmpServicesDir.mkdirs()
+        for (depFile in configurations.runtimeClasspath.get())
+            for (serviceFile in zipTree(depFile).matching { include("META-INF/services/*") })
+                tmpServicesDir.resolve(serviceFile.name).appendText(serviceFile.readText())
     }
 }
 

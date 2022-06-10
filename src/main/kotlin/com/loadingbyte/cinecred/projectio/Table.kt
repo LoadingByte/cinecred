@@ -27,7 +27,7 @@ class Table(
 
     val numRows: Int
     private val headerRecord: List<String>
-    private val bodyRecords: List<SpreadsheetRecord>
+    private val bodyRecords: List<Spreadsheet.Record>
     private val colMap: Map<String, Int>
 
     init {
@@ -45,12 +45,11 @@ class Table(
             headerRecord = spreadsheet[headerRecordNo].cells.map { it.trim() }
 
             // Determine the records which make up the data rows of the table.
-            fun isRecordNotEmpty(record: SpreadsheetRecord) = record.cells.any { cell -> cell.isNotEmpty() }
             val rawBodyRecords = spreadsheet.drop(headerRecordNo + 1)
             bodyRecords =
                 rawBodyRecords.subList(
-                    rawBodyRecords.indexOfFirst(::isRecordNotEmpty),
-                    rawBodyRecords.indexOfLast(::isRecordNotEmpty) + 1
+                    rawBodyRecords.indexOfFirst(Spreadsheet.Record::isNotEmpty),
+                    rawBodyRecords.indexOfLast(Spreadsheet.Record::isNotEmpty) + 1
                 )
             numRows = bodyRecords.size
 

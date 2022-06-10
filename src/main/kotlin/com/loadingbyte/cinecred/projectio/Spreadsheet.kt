@@ -1,33 +1,44 @@
 package com.loadingbyte.cinecred.projectio
 
-import ch.rabanti.nanoxlsx4j.styles.CellXf
 import com.github.miachm.sods.Borders
-import com.github.miachm.sods.Sheet
-import com.github.miachm.sods.SpreadSheet
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
-import jxl.CellView
-import jxl.format.BorderLineStyle
-import jxl.write.Label
-import jxl.write.WritableCellFormat
-import jxl.write.WritableFont
 import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVRecord
+import org.apache.poi.ss.usermodel.BorderStyle
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.FormulaError
+import org.apache.poi.ss.usermodel.IndexedColors
 import java.io.StringReader
-import java.nio.charset.Charset
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 
 
-typealias Spreadsheet = List<SpreadsheetRecord>
+class Spreadsheet(matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
 
-class SpreadsheetRecord(val recordNo: Int, val cells: List<String>)
+    private val records: List<Record> = matrix.mapIndexed(::Record)
+
+    val numRecords: Int get() = records.size
+    val numColumns: Int get() = records.maxOf { it.cells.size }
+
+    operator fun get(recordNo: Int): Record = records[recordNo]
+    operator fun get(recordNo: Int, columnNo: Int): String = records[recordNo].cells[columnNo]
+
+    fun map(transform: (String) -> String): Spreadsheet = Spreadsheet(records.map { it.cells.map(transform) })
+
+    override fun iterator(): Iterator<Record> = records.iterator()
+
+    class Record(val recordNo: Int, val cells: List<String>) {
+        fun isNotEmpty() = cells.any { it.isNotEmpty() }
+    }
+
+}
 
 
 // The formats are ordered according to decreasing preference.
-val SPREADSHEET_FORMATS = listOf(XlsxFormat, XlsFormat, OdsFormat, CsvFormat)
+val SPREADSHEET_FORMATS = listOf(ExcelFormat("xlsx"), ExcelFormat("xls"), OdsFormat, CsvFormat)
 
 
 interface SpreadsheetFormat {
@@ -53,127 +64,110 @@ interface SpreadsheetFormat {
 }
 
 
-object XlsxFormat : SpreadsheetFormat {
-
-    override val fileExt = "xlsx"
+class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
 
     override fun read(file: Path) = readOfficeDocument(
         file,
-        open = { ch.rabanti.nanoxlsx4j.Workbook.load(file.toString()) },
-        getNumSheets = { workbook -> workbook.worksheets.size },
-        read = { workbook ->
-            val sheet = workbook.worksheets[0]
-            val numRows = sheet.lastRowNumber + 1
-            val numCols = sheet.lastColumnNumber + 1
-
-            val cellMatrix = Array(numRows) { Array(numCols) { "" } }
-            for (cell in sheet.cells.values)
-                cellMatrix[cell.rowNumber][cell.columnNumber] = cell.value.toString()
-            cellMatrix.mapIndexed { idx, cells -> SpreadsheetRecord(idx, cells.asList()) }
-        }
-    )
-
-    override fun write(
-        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
-    ) {
-        val workbook = ch.rabanti.nanoxlsx4j.Workbook(false)
-        workbook.addWorksheet(file.nameWithoutExtension)
-        val sheet = workbook.worksheets[0]
-
-        for (record in spreadsheet) {
-            val row = record.recordNo
-            val style = ch.rabanti.nanoxlsx4j.styles.Style()
-            style.font.size = 10
-            rowLooks[row]?.let { look ->
-                if (look.fontSize != -1)
-                    style.font.size = look.fontSize
-                style.font.isBold = look.bold
-                style.font.isItalic = look.italic
-                if (look.wrap)
-                    style.cellXf.alignment = CellXf.TextBreakValue.wrapText
-                if (look.borderBottom) {
-                    style.border.bottomStyle = ch.rabanti.nanoxlsx4j.styles.Border.StyleValue.thin
-                    style.border.bottomColor = "black"
-                }
-            }
-            record.cells.forEachIndexed { col, cell ->
-                sheet.addCell(cell.autoCast(), col, row, style)
-            }
-        }
-
-        for ((row, look) in rowLooks)
-            if (look.height != -1)
-                sheet.setRowHeight(row, look.height * 2.85f)
-        for ((col, width) in colWidths.withIndex())
-            sheet.setColumnWidth(col, width * 0.4f)
-
-        workbook.saveAs(file.toString())
-    }
-
-}
-
-
-object XlsFormat : SpreadsheetFormat {
-
-    override val fileExt = "xls"
-
-    override fun read(file: Path) = readOfficeDocument(
-        file,
-        open = { jxl.Workbook.getWorkbook(file.toFile()) },
+        open = { org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile(), null, true) },
         getNumSheets = { workbook -> workbook.numberOfSheets },
         read = { workbook ->
-            val records = mutableListOf<SpreadsheetRecord>()
-            val sheet = workbook.getSheet(0)
-            for (row in 0 until sheet.rows) {
-                val cells = ArrayList<String>(sheet.columns)
-                for (col in 0 until sheet.columns)
-                    cells.add(sheet.getCell(col, row).contents)
-                records.add(SpreadsheetRecord(row, cells))
-            }
-            workbook.close()
-            records
-        }
+            val sheet = workbook.getSheetAt(0)
+            val numRows = sheet.lastRowNum + 1
+            val numCols = sheet.maxOf { row -> row.lastCellNum } + 1
+
+            val matrix = MutableList(numRows) { MutableList(numCols) { "" } }
+            for (row in sheet)
+                for (cell in row) {
+                    var cellType = cell.cellType!!
+                    if (cellType == CellType.FORMULA)
+                        cellType = cell.cachedFormulaResultType
+                    matrix[row.rowNum][cell.columnIndex] = when (cellType) {
+                        CellType.NUMERIC -> cell.numericCellValue.toString()
+                        CellType.STRING -> cell.stringCellValue
+                        CellType.BOOLEAN -> cell.booleanCellValue.toString()
+                        CellType.BLANK -> ""
+                        CellType.ERROR -> FormulaError.forInt(cell.errorCellValue).string
+                        CellType.FORMULA, CellType._NONE -> throw IllegalStateException()
+                    }
+                }
+            Spreadsheet(matrix)
+        },
+        close = { workbook -> workbook.close() }
     )
 
     override fun write(
         file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
     ) {
-        val workbook = jxl.Workbook.createWorkbook(file.toFile())
-        val sheet = workbook.createSheet(file.nameWithoutExtension, 0)
+        val xlsx = fileExt == "xlsx"
+        val workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(xlsx)
+        val sheet = workbook.createSheet(file.nameWithoutExtension)
+        val rowStyles = createDeduplicatedRowStyles(workbook, rowLooks)
 
         for (record in spreadsheet) {
-            val row = record.recordNo
-            val fmt = WritableCellFormat()
-            rowLooks[row]?.let { look ->
-                val font = WritableFont(
-                    WritableFont.ARIAL,
-                    if (look.fontSize != -1) look.fontSize else WritableFont.DEFAULT_POINT_SIZE,
-                    @Suppress("INACCESSIBLE_TYPE")
-                    if (look.bold) WritableFont.BOLD else WritableFont.NO_BOLD,
-                    look.italic
-                )
-                fmt.setFont(font)
-                fmt.wrap = look.wrap
-                if (look.borderBottom)
-                    fmt.setBorder(jxl.format.Border.BOTTOM, BorderLineStyle.THIN)
+            val rowIdx = record.recordNo
+            val row = sheet.createRow(rowIdx)
+            val rowStyle = rowStyles[rowIdx]
+
+            for ((colIdx, cellValue) in record.cells.withIndex()) {
+                val cell = row.createCell(colIdx)
+                try {
+                    cell.setCellValue(cellValue.toDouble())
+                } catch (_: NumberFormatException) {
+                    cell.setCellValue(cellValue)
+                }
+                rowStyle?.let(cell::setCellStyle)
             }
-            record.cells.forEachIndexed { col, cell ->
-                val castedCell = cell.autoCast()
-                sheet.addCell(
-                    if (castedCell is Double) jxl.write.Number(col, row, castedCell, fmt)
-                    else Label(col, row, cell, fmt)
-                )
+
+            rowLooks[rowIdx]?.let { look ->
+                if (look.height != -1)
+                    row.height = (look.height * 56).toShort()
             }
         }
 
-        for ((row, look) in rowLooks)
-            if (look.height != -1)
-                sheet.setRowView(row, CellView().apply { size = look.height * 56 })
         for ((col, width) in colWidths.withIndex())
-            sheet.setColumnView(col, CellView().apply { size = width * 130 })
+            sheet.setColumnWidth(col, width * 138)
 
-        workbook.write()
-        workbook.close()
+        file.outputStream().use(workbook::write)
+    }
+
+    private fun createDeduplicatedRowStyles(
+        workbook: org.apache.poi.ss.usermodel.Workbook,
+        rowLooks: Map<Int, SpreadsheetFormat.RowLook>
+    ): Map<Int, org.apache.poi.ss.usermodel.CellStyle> {
+        data class FontKey(val size: Int, val bold: Boolean, val italic: Boolean)
+        data class StyleKey(val font: FontKey, val wrap: Boolean, val borderBottom: Boolean)
+
+        val fontsByKey = HashMap<FontKey, org.apache.poi.ss.usermodel.Font>()
+        val stylesByKey = HashMap<StyleKey, org.apache.poi.ss.usermodel.CellStyle>()
+        val stylesByRowIdx = HashMap<Int, org.apache.poi.ss.usermodel.CellStyle>()
+        for ((rowIdx, look) in rowLooks) {
+            val fontKey = FontKey(look.fontSize, look.bold, look.italic)
+            val styleKey = StyleKey(fontKey, look.wrap, look.borderBottom)
+            val font = fontsByKey.getOrPut(fontKey) {
+                workbook.createFont().apply {
+                    if (fontKey.size != -1)
+                        fontHeightInPoints = fontKey.size.toShort()
+                    if (fontKey.bold)
+                        bold = true
+                    if (fontKey.italic)
+                        italic = true
+                }
+            }
+            val style = stylesByKey.getOrPut(styleKey) {
+                workbook.createCellStyle().apply {
+                    setFont(font)
+                    if (styleKey.wrap)
+                        wrapText = true
+                    if (styleKey.borderBottom) {
+                        borderBottom = BorderStyle.THIN
+                        bottomBorderColor = IndexedColors.BLACK.index
+                    }
+                }
+            }
+            stylesByRowIdx[rowIdx] = style
+        }
+
+        return stylesByRowIdx
     }
 
 }
@@ -185,24 +179,23 @@ object OdsFormat : SpreadsheetFormat {
 
     override fun read(file: Path) = readOfficeDocument(
         file,
-        open = { SpreadSheet(file.toFile()) },
+        open = { com.github.miachm.sods.SpreadSheet(file.toFile()) },
         getNumSheets = { workbook -> workbook.numSheets },
         read = { workbook ->
             val sheet = workbook.getSheet(0)
-            sheet.dataRange.values.mapIndexed { idx, cells ->
-                SpreadsheetRecord(idx, cells.map { it?.toString() ?: "" })
-            }
-        }
+            Spreadsheet(sheet.dataRange.values.map { cells -> cells.map { it?.toString() ?: "" } })
+        },
+        close = { }
     )
 
     override fun write(
         file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
     ) {
-        val numRows = spreadsheet.size
-        val numCols = spreadsheet[0].cells.size
+        val numRows = spreadsheet.numRecords
+        val numCols = spreadsheet.numColumns
 
-        val sheet = Sheet(file.nameWithoutExtension, numRows, numCols)
-        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row].cells[col].autoCast() } }
+        val sheet = com.github.miachm.sods.Sheet(file.nameWithoutExtension, numRows, numCols)
+        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].tryToDouble() } }
         sheet.dataRange.values = cellMatrix
 
         for (record in spreadsheet) {
@@ -227,10 +220,17 @@ object OdsFormat : SpreadsheetFormat {
         for ((col, width) in colWidths.withIndex())
             sheet.setColumnWidth(col, width.toDouble())
 
-        val workbook = SpreadSheet()
+        val workbook = com.github.miachm.sods.SpreadSheet()
         workbook.appendSheet(sheet)
         workbook.save(file.toFile())
     }
+
+    private fun String.tryToDouble(): Any =
+        try {
+            toDouble()
+        } catch (_: NumberFormatException) {
+            this
+        }
 
 }
 
@@ -250,15 +250,14 @@ object CsvFormat : SpreadsheetFormat {
         // Parse the CSV file into a list of CSV records.
         val csvRecords = CSVFormat.DEFAULT.parse(StringReader(trimmed)).records
 
-        // Convert the CSV records to our record type.
-        fun CSVRecord.efficientToList() = ArrayList<String>(size()).also { it.addAll(this) }
-        return csvRecords.map { SpreadsheetRecord(it.recordNumber.toInt() - 1, it.efficientToList()) }
+        // Convert the CSV records to a string matrix and then create a spreadsheet.
+        return Spreadsheet(csvRecords.map { rec -> ArrayList<String>(rec.size()).apply { addAll(rec) } })
     }
 
     override fun write(
         file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
     ) {
-        CSVFormat.DEFAULT.print(file, Charset.forName("UTF-8")).use { printer ->
+        CSVFormat.DEFAULT.print(file, Charsets.UTF_8).use { printer ->
             for (record in spreadsheet)
                 printer.printRecord(record.cells)
         }
@@ -267,30 +266,27 @@ object CsvFormat : SpreadsheetFormat {
 }
 
 
-private fun String.autoCast(): Any =
-    try {
-        toDouble()
-    } catch (_: NumberFormatException) {
-        this
-    }
-
-
 // Helper function to avoid duplicate code.
 private inline fun <W> readOfficeDocument(
     file: Path,
     open: () -> W,
     getNumSheets: (W) -> Int,
-    read: (W) -> Spreadsheet
+    read: (W) -> Spreadsheet,
+    close: (W) -> Unit
 ): Pair<Spreadsheet, List<ParserMsg>> {
     val log = mutableListOf<ParserMsg>()
 
     val workbook = open()
-    val numSheets = getNumSheets(workbook)
+    try {
+        val numSheets = getNumSheets(workbook)
 
-    if (numSheets == 0)
-        log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
-    else if (numSheets > 1)
-        log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.spreadsheet.multipleSheets", file)))
+        if (numSheets == 0)
+            log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
+        else if (numSheets > 1)
+            log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.spreadsheet.multipleSheets", file)))
 
-    return Pair(if (numSheets == 0) emptyList() else read(workbook), log)
+        return Pair(if (numSheets == 0) Spreadsheet(emptyList()) else read(workbook), log)
+    } finally {
+        close(workbook)
+    }
 }

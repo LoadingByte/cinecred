@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Color

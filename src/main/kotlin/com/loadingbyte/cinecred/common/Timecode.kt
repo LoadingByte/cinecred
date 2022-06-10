@@ -1,6 +1,5 @@
-package com.loadingbyte.cinecred.projectio
+package com.loadingbyte.cinecred.common
 
-import com.loadingbyte.cinecred.project.FPS
 import com.loadingbyte.cinecred.project.TimecodeFormat
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

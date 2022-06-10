@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.project
 
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Picture
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -62,12 +63,6 @@ data class Global(
     val locale: Locale,
     val uppercaseExceptions: ImmutableList<String>
 ) : Style()
-
-
-data class FPS(val numerator: Int, val denominator: Int) {
-    val frac: Float
-        get() = numerator.toFloat() / denominator
-}
 
 
 enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, CLOCK, FRAMES }

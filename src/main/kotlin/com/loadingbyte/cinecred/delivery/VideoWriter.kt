@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.common.FPS
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_CONSTRAINED_BASELINE

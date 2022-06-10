@@ -6,7 +6,7 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
-import com.loadingbyte.cinecred.project.FPS
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat

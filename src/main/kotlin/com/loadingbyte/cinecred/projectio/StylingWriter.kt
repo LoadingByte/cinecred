@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.TomlWriter
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.project.*
 import java.awt.Color
 import java.nio.file.Path

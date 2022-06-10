@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*

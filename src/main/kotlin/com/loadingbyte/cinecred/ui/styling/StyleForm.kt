@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*

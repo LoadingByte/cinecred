@@ -24,6 +24,12 @@ val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 enum class Severity { INFO, WARN, ERROR }
 
 
+data class FPS(val numerator: Int, val denominator: Int) {
+    val frac: Float
+        get() = numerator.toFloat() / denominator
+}
+
+
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =
     Severity::class.java.getResourceAsStream(path)!!.use(action)
 

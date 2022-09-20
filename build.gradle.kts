@@ -175,7 +175,7 @@ val preparePackagingTasks = Platform.values().map { platform ->
                 "MAIN_JAR" to platformJar.archiveFileName.get(),
                 "JAVA_OPTIONS" to "--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
-                "DESCRIPTION" to "Create film credits---without pain",
+                "DESCRIPTION" to "Create film credits -- without pain",
                 "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
             )
             filter<ReplaceTokens>("tokens" to tokens)

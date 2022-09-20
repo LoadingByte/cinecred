@@ -24,7 +24,7 @@ buildscript {
         classpath("org.apache.xmlgraphics", "batik-codec", batikVersion)
         // For writing Windows ICO icon files:
         classpath("com.twelvemonkeys.imageio", "imageio-bmp", twelveMonkeysVersion)
-        // For writing Mac OS ICNS icon files:
+        // For writing macOS ICNS icon files:
         classpath("com.twelvemonkeys.imageio", "imageio-icns", twelveMonkeysVersion)
     }
 }
@@ -186,7 +186,7 @@ val preparePackagingTasks = Platform.values().map { platform ->
         }
     }
     // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
-    // For Mac OS, additionally create an installer background image from the logo.
+    // For macOS, additionally create an installer background image from the logo.
     val transcodeLogo = task("transcodeLogo${platform.label}") {
         group = "Packaging Preparation"
         dependsOn("processResources")
@@ -196,7 +196,7 @@ val preparePackagingTasks = Platform.values().map { platform ->
                     transcodeLogo(pkgDir.resolve("misc/icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
                 Platform.MAC_OS -> {
                     // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
-                    // properly parsed by Mac OS. We have to leave out those sizes to avoid glitches.
+                    // properly parsed by macOS. We have to leave out those sizes to avoid glitches.
                     transcodeLogo(pkgDir.resolve("misc/icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
                     val bgFile1 = pkgDir.resolve("resources/Cinecred-background.png")
                     val bgFile2 = pkgDir.resolve("resources/Cinecred-background-darkAqua.png")

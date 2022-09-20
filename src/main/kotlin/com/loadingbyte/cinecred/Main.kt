@@ -137,13 +137,13 @@ fun mainSwing() {
     // Apply the locale configured by the user, if any.
     MasterController.applyUILocaleWish()
 
-    // On MacOS, allow the user to open the preferences via the OS.
+    // On macOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
         Desktop.getDesktop().setPreferencesHandler {
             MasterController.showWelcomeFrame().welcomeFrame.panel.apply { selectedTab = preferencesPanel }
         }
 
-    // On MacOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
+    // On macOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
     // all windows, which in turn triggers all "unsaved changes" dialogs.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
         Desktop.getDesktop().setQuitHandler { _, response ->

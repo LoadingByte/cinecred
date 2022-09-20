@@ -28,7 +28,7 @@ Compile it on each supported platform using the following commands, which have p
     Windows x86_64 (using MSVC):
     cl /LD /O2s /GL /GR- /D"HB_EXTERN=__declspec(dllexport)" <MACROS> <HB_DIR>\src\harfbuzz.cc
 
-    MacOS x86_64:
+    macOS x86_64:
     clang -dynamiclib -std=c++11 -Os -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
 
     Linux x86_64:
@@ -40,12 +40,12 @@ Define the following `<MACROS>`, which, among other things, disable unnecessary 
     Windows:
     /DHB_DISABLE_DEPRECATED /DHB_NDEBUG /DHB_NO_ATEXIT /DHB_NO_ERRNO /DHB_NO_GETENV /DHB_NO_MMAP /DHB_NO_OPEN /DHB_NO_SETLOCALE
 
-    MacOS/Linux:
+    macOS/Linux:
     -DHB_DISABLE_DEPRECATED -DHB_NDEBUG -DHB_NO_ATEXIT -DHB_NO_ERRNO -DHB_NO_GETENV -DHB_NO_MMAP -DHB_NO_OPEN -DHB_NO_SETLOCALE
 
 Side note 1: We don't use `-DHB_LEAN` since that disables a lot of advanced shaping functionality (like automatic fractions) which we actually wish to support.
 
-Side note 2: The following macros could be enabled on MacOS and Linux, however, they are only needed in case we create non-writable blobs, which we don't do at the moment.
+Side note 2: The following macros could be enabled on macOS and Linux, however, they are only needed in case we create non-writable blobs, which we don't do at the moment.
 So for the time being, we omit these options to maximize portability.
 
     -DGETPAGESIZE -DHAVE_MPROTECT -DHAVE_SYSCONF -DHAVE_SYS_MMAN_H -DHAVE_UNISTD_H
@@ -141,11 +141,11 @@ The following information is only relevant for building binaries of a new versio
 1. Run `gradle clean preparePackaging`.
    This will create three folders in `build/packaging/`, one for each OS.
 2. Now copy the Windows folder onto a Windows machine and run the `package.bat` script there to build a Windows installer.
-   Analogously proceed with MacOS and Linux, but use the `package.sh` script for these.
+   Analogously proceed with macOS and Linux, but use the `package.sh` script for these.
    * Note: On Linux, you will need tools for building DEB and RPM packages, or the script won't work.
    * Note: On Linux, you will need the `repo.loadingbyte.com` PGP key to sign the RPM package.
 3. Collect the resulting packaged files into the `publishing/` folder in this repository.
-   There is 1 file for Windows and 1 file for MacOS. There are 4 files for Linux.
+   There is 1 file for Windows and 1 file for macOS. There are 4 files for Linux.
 4. Run the `publish-nexus.sh` script to upload all binaries to `repo.loadingbyte.com`.
 5. Run the `publish-aur.sh` script to prepare an update of the PKGBUILD script hosted on AUR.
    This script does not push to AUR for safety reasons.

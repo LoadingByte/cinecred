@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
-import com.loadingbyte.cinecred.projectio.supportsDropFrameTimecode
 import java.awt.Color
 import java.text.NumberFormat
 import kotlin.math.floor

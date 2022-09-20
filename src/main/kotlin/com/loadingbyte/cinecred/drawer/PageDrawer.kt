@@ -7,8 +7,8 @@ import com.loadingbyte.cinecred.common.FormattedString
 import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.projectio.formatTimecode
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Font
 import java.awt.geom.Path2D

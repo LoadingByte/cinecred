@@ -3,15 +3,10 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.withNewG2
-import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
-import com.loadingbyte.cinecred.projectio.formatTimecode
-import com.loadingbyte.cinecred.projectio.parseTimecode
 import com.loadingbyte.cinecred.projectio.toFPS
 import com.loadingbyte.cinecred.projectio.toString2
 import kotlinx.collections.immutable.ImmutableList

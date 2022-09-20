@@ -2,14 +2,10 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.gCfg
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.scale
-import com.loadingbyte.cinecred.common.translate
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
-import com.loadingbyte.cinecred.projectio.formatTimecode
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
 import com.loadingbyte.cinecred.ui.helper.PLAY_ICON

@@ -1,10 +1,8 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

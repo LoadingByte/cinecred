@@ -30,6 +30,36 @@ data class FPS(val numerator: Int, val denominator: Int) {
 }
 
 
+fun String.toFiniteFloat(nonNeg: Boolean = false, non0: Boolean = false): Float {
+    val f = replace(',', '.').toFloat()
+    if (!f.isFinite() || nonNeg && f < 0f || non0 && f == 0f)
+        throw NumberFormatException()
+    return f
+}
+
+fun <T> enumFromName(name: String, enumClass: Class<T>): T =
+    enumClass.enumConstants.first { (it as Enum<*>).name.equals(name, ignoreCase = true) }
+
+fun Color.toHex24() = "#%06x".format(rgb and 0x00FFFFFF)
+fun Color.toHex32() = "#%08x".format(rgb)
+
+// Note: We first have to convert to long and then to int because String.toInt() throws an exception when an
+// overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is then 1,
+// which is interpreted as a negative sign, so this is an overflow).
+fun colorFromHex(hex: String): Color {
+    require(hex.length == 7 || hex.length == 9 && hex[0] == '#')
+    return Color(hex.drop(1).toLong(16).toInt(), hex.length == 9)
+}
+
+fun FPS.toFraction() = "$numerator/$denominator"
+
+fun fpsFromFraction(fraction: String): FPS {
+    val parts = fraction.split("/")
+    require(parts.size == 2)
+    return FPS(parts[0].toInt(), parts[1].toInt())
+}
+
+
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =
     Severity::class.java.getResourceAsStream(path)!!.use(action)
 

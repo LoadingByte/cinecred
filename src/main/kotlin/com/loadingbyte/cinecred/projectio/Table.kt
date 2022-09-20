@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nAll
+import com.loadingbyte.cinecred.common.toFiniteFloat
 import java.util.*
 
 

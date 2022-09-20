@@ -5,11 +5,11 @@ import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.toHex24
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.projectio.ParserMsg
-import com.loadingbyte.cinecred.projectio.toHex24
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_AREAS

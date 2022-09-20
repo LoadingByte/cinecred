@@ -2,6 +2,8 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.TomlWriter
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.toFraction
+import com.loadingbyte.cinecred.common.toHex32
 import com.loadingbyte.cinecred.project.*
 import java.awt.Color
 import java.nio.file.Path
@@ -53,8 +55,8 @@ private fun convert(ctx: StylingContext, value: Any): Any = when (value) {
     is Enum<*> -> value.name
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()
-    is FPS -> value.toString2()
-    is FontFeature -> value.toString2()
+    is FPS -> value.toFraction()
+    is FontFeature -> "${value.tag}=${value.value}"
     is Style -> writeStyle(ctx, value)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")
 }

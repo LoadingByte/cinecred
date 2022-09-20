@@ -7,8 +7,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
-import com.loadingbyte.cinecred.projectio.toFPS
-import com.loadingbyte.cinecred.projectio.toString2
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -420,7 +418,7 @@ class FPSWidget(
             return when {
                 frac != null -> NumberFormat.getNumberInstance().format(frac)
                 fps.denominator == 1 -> fps.numerator.toString()
-                else -> fps.toString2()
+                else -> fps.toFraction()
             }
         }
 
@@ -429,7 +427,7 @@ class FPSWidget(
                 SUGGESTED_FRAC_FPS.find { it.first == frac }?.let { return it.second }
             }
             runCatching(str::toInt).onSuccess { return FPS(it, 1) }
-            return str.toFPS()
+            return fpsFromFraction(str)
         }
 
     }

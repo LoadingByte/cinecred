@@ -34,8 +34,14 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
     init {
         val brandPanel = JPanel(MigLayout("center, wrap", "[center]", "15lp[][]-3lp[]20lp")).apply {
             add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.25f)))
-            add(JLabel("Cinecred").apply { font = TITILLIUM_SEMI.deriveFont(H2) })
-            add(JLabel(VERSION).apply { font = TITILLIUM_REGU.deriveFont(font.size2D) })
+            add(JLabel("Cinecred").apply {
+                font = TITILLIUM_SEMI.deriveFont(H2)
+                putClientProperty(STYLE, "foreground: #FFF")
+            })
+            add(JLabel(VERSION).apply {
+                font = TITILLIUM_REGU.deriveFont(font.size2D)
+                putClientProperty(STYLE, "foreground: #FFF")
+            })
         }
 
         openPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
@@ -120,8 +126,14 @@ class WelcomePanel(ctrl: WelcomeController) : JPanel() {
         val updatePanel = JPanel(MigLayout("insets 60lp", "[grow 1]15lp[grow 1]", "[]30lp[]25lp[]")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
             add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.4f)), "right")
-            add(JLabel("Cinecred").apply { font = TITILLIUM_SEMI.deriveFont(H1) }, "split 2, flowy, left, gaptop 10lp")
-            add(JLabel(newVersion).apply { font = TITILLIUM_BOLD.deriveFont(H0) })
+            add(JLabel("Cinecred").apply {
+                font = TITILLIUM_SEMI.deriveFont(H1)
+                putClientProperty(STYLE, "foreground: #FFF")
+            }, "split 2, flowy, left, gaptop 10lp")
+            add(JLabel(newVersion).apply {
+                font = TITILLIUM_BOLD.deriveFont(H0)
+                putClientProperty(STYLE, "foreground: #FFF")
+            })
             add(JLabel("<html><center>${l10n("ui.update.msg", newVersion)}</center></html>"), "newline, span 2, center")
             add(browseButton, "newline, span 2, center")
         }

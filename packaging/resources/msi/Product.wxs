@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?define UpgradeCode = "d3f4499f-c56c-4f7d-b051-1f8eade3fc9c" ?>
+
+  <Product Id="*" Name="Cinecred" Version="@VERSION@" Language="!(loc.LanguageCode)" Manufacturer="@VENDOR@" UpgradeCode="$(var.UpgradeCode)">
+    <Package Platform="x64" Description="@DESCRIPTION@" Languages="!(loc.LanguageCode)" Manufacturer="@VENDOR@" InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
+    <MediaTemplate EmbedCab="yes"/>
+
+    <!-- Installed files -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="Cinecred"/>
+      </Directory>
+    </Directory>
+    <Feature Id="DefaultFeature" Title="Cinecred" Level="1">
+      <ComponentGroupRef Id="Shortcuts"/>
+      <ComponentGroupRef Id="Files"/>
+    </Feature>
+
+    <!-- Upgrade/Downgrade -->
+    <!--
+      Note: We do not use <MajorUpgrade /> because that tag does not allow to schedule the removal of the previous
+      installation before CostInitialize. That we in turn require to ensure that all new EXEs and DLLs are installed
+      even if their metadata version does not increase in the upgrade or downgrade, which for upgrades could happen
+      due to human oversight, and is the usual case for downgrades.
+    -->
+    <Upgrade Id="$(var.UpgradeCode)">
+      <UpgradeVersion OnlyDetect="no" Property="FOUND_OLDER" Maximum="@VERSION@" IncludeMaximum="no"/>
+      <UpgradeVersion OnlyDetect="no" Property="FOUND_NEWER" Minimum="@VERSION@" IncludeMinimum="no"/>
+    </Upgrade>
+    <InstallExecuteSequence>
+      <RemoveExistingProducts Before="CostInitialize"/>
+    </InstallExecuteSequence>
+
+    <!-- Add/Remove Programs screen -->
+    <Property Id="ARPCOMMENTS" Value="@DESCRIPTION@"/>
+    <Property Id="ARPCONTACT" Value="@VENDOR@"/>
+    <Property Id="ARPHELPLINK" Value="@URL@"/>
+    <Property Id="ARPURLINFOABOUT" Value="@URL@"/>
+    <Property Id="ARPURLUPDATEINFO" Value="@URL@"/>
+    <Icon Id="CinecredIcon" SourceFile="images\icon.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="CinecredIcon"/>
+    <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLDIR]" After="CostFinalize"/>
+
+    <!-- UI -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR"/>
+    <Property Id="DESKTOP_SHORTCUT" Value="1"/>
+    <Property Id="STARTMENU_SHORTCUT" Value="1"/>
+    <WixVariable Id="WixUIBannerBmp" Value="images\banner.bmp"/>
+    <WixVariable Id="WixUIDialogBmp" Value="images\sidebar.bmp"/>
+    <UI>
+      <UIRef Id="WixUI_InstallDir"/>
+      <UIRef Id="WixUI_ErrorProgressText"/>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="5">NOT Installed</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="5">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="ShortcutDlg" Order="5">1</Publish>
+      <Publish Dialog="ShortcutDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg"/>
+      <Publish Dialog="ShortcutDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg"/>
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutDlg" Order="5">NOT Installed</Publish>
+    </UI>
+  </Product>
+</Wix>

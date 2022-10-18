@@ -2,9 +2,8 @@
 Name=Cinecred
 Comment=@DESCRIPTION@
 Comment[de]=@DESCRIPTION_DE@
-Exec=/opt/cinecred/bin/Cinecred
-Icon=/opt/cinecred/lib/Cinecred.png
+Exec=/opt/cinecred/bin/cinecred
+Icon=cinecred
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;
-MimeType=

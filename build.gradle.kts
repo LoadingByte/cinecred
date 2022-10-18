@@ -6,6 +6,9 @@ import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.imageio.IIOImage
@@ -176,35 +179,70 @@ val preparePackagingTasks = Platform.values().map { platform ->
                 "JAVA_OPTIONS" to "--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
                 "DESCRIPTION" to "Create film credits -- without pain",
-                "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen"
+                "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen",
+                "URL" to "https://loadingbyte.com/cinecred/",
+                "VENDOR" to "Felix Mujkanovic",
+                "EMAIL" to "hello@loadingbyte.com",
+                "LEGAL_PATH_RUNTIME" to mapOf(
+                    Platform.WINDOWS to "runtime\\legal",
+                    Platform.MAC_OS to "runtime/Contents/Home/legal",
+                    Platform.LINUX to "lib/runtime/legal"
+                )[platform],
+                "LEGAL_PATH_APP" to mapOf(
+                    Platform.WINDOWS to "app\\${platformJar.archiveFileName.get()}",
+                    Platform.MAC_OS to "app/${platformJar.archiveFileName.get()}",
+                    Platform.LINUX to "lib/app/${platformJar.archiveFileName.get()}"
+                )[platform]
             )
             filter<ReplaceTokens>("tokens" to tokens)
         }
-        into("input") {
+        into("app") {
             from(platformJar)
             from(sourceSets.main.get().output.resourcesDir!!.resolve("splash.png"))
         }
     }
     // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
-    // For macOS, additionally create an installer background image from the logo.
-    val transcodeLogo = task("transcodeLogo${platform.label}") {
+    // For Windows and macOS, additionally create the appropriate installer background images.
+    val drawImages = task("drawImages${platform.label}") {
         group = "Packaging Preparation"
         dependsOn("processResources")
         doLast {
             when (platform) {
-                Platform.WINDOWS ->
-                    transcodeLogo(pkgDir.resolve("misc/icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
+                Platform.WINDOWS -> {
+                    transcodeLogo(pkgDir.resolve("images/icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
+                    buildImage(pkgDir.resolve("images/banner.bmp"), 493, 58, BufferedImage.TYPE_INT_RGB) { g2 ->
+                        g2.color = Color.WHITE
+                        g2.fillRect(0, 0, 493, 58)
+                        g2.drawImage(rasterizeLogo(48), 438, 5, null)
+                    }
+                    buildImage(pkgDir.resolve("images/sidebar.bmp"), 493, 312, BufferedImage.TYPE_INT_RGB) { g2 ->
+                        g2.color = Color.WHITE
+                        g2.fillRect(165, 0, 493, 312)
+                        g2.drawImage(rasterizeLogo(100), 32, 28, null)
+                        g2.font = titilliumSemi.deriveFont(32f)
+                        g2.drawString("Cinecred", 28, 176)
+                        g2.font = titilliumBold.deriveFont(20f)
+                        g2.drawString(version.toString(), 60, 204)
+                    }
+                }
                 Platform.MAC_OS -> {
                     // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
                     // properly parsed by macOS. We have to leave out those sizes to avoid glitches.
-                    transcodeLogo(pkgDir.resolve("misc/icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
-                    val bgFile1 = pkgDir.resolve("resources/Cinecred-background.png")
-                    val bgFile2 = pkgDir.resolve("resources/Cinecred-background-darkAqua.png")
-                    transcodeLogo(bgFile1, intArrayOf(180), margin = 0.13)
-                    bgFile1.copyTo(bgFile2, overwrite = true)
+                    transcodeLogo(pkgDir.resolve("images/icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
+                    buildImage(pkgDir.resolve("images/background.png"), 182, 180, BufferedImage.TYPE_INT_ARGB) { g2 ->
+                        g2.drawImage(rasterizeLogo(80), 51, 0, null)
+                        g2.color = Color.WHITE
+                        g2.font = titilliumSemi.deriveFont(24f)
+                        g2.drawString("Cinecred", 50, 110)
+                        g2.font = titilliumBold.deriveFont(16f)
+                        g2.drawString(version.toString(), 73, 130)
+                    }
                 }
-                Platform.LINUX ->
-                    transcodeLogo(pkgDir.resolve("misc/icon.png"), intArrayOf(48))
+                Platform.LINUX -> {
+                    val logoFile = sourceSets.main.get().output.resourcesDir!!.resolve("logo.svg")
+                    logoFile.copyTo(pkgDir.resolve("images/cinecred.svg"), overwrite = true)
+                    transcodeLogo(pkgDir.resolve("images/cinecred.png"), intArrayOf(48))
+                }
             }
         }
     }
@@ -212,7 +250,11 @@ val preparePackagingTasks = Platform.values().map { platform ->
     task("prepare${platform.label}Packaging") {
         group = "Packaging Preparation"
         dependsOn(copyFiles)
-        dependsOn(transcodeLogo)
+        dependsOn(drawImages)
+        doFirst {
+            if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
+                throw GradleException("Non-release versions cannot be packaged.")
+        }
     }
 }
 
@@ -274,28 +316,24 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
 }
 
 
-fun transcodeLogo(to: File, sizes: IntArray, margin: Double = 0.0) {
-    val (logo, logoWidth) = logoAndWidth
-    val fileExt = to.name.substringAfterLast('.')
-    val imageType = if (fileExt == "ico") BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_INT_ARGB
+fun buildImage(to: File, width: Int, height: Int, imageType: Int, block: (Graphics2D) -> Unit) {
+    val image = BufferedImage(width, height, imageType)
+    val g2 = image.createGraphics()
+    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    block(g2)
+    g2.dispose()
+    to.parentFile.mkdirs()
+    ImageIO.write(image, to.extension, to)
+}
 
-    val images = sizes.map { size ->
-        val img = BufferedImage(size, size, imageType)
-        val g2 = GraphicsUtil.createGraphics(img)
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        val transl = margin * size
-        val scaling = (size * (1 - 2 * margin)) / logoWidth
-        g2.translate(transl, transl)
-        g2.scale(scaling, scaling)
-        logo.paint(g2)
-        g2.dispose()
-        img
-    }
+fun transcodeLogo(to: File, sizes: IntArray, margin: Double = 0.0) {
+    val imageType = if (to.extension == "ico") BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_INT_ARGB
+    val images = sizes.map { size -> rasterizeLogo(size, margin, imageType) }
 
     to.delete()
     to.parentFile.mkdirs()
     FileImageOutputStream(to).use { stream ->
-        val writer = ImageIO.getImageWritersBySuffix(fileExt).next()
+        val writer = ImageIO.getImageWritersBySuffix(to.extension).next()
         writer.output = stream
         if (images.size == 1)
             writer.write(images[0])
@@ -308,6 +346,20 @@ fun transcodeLogo(to: File, sizes: IntArray, margin: Double = 0.0) {
     }
 }
 
+fun rasterizeLogo(size: Int, margin: Double = 0.0, imageType: Int = BufferedImage.TYPE_INT_ARGB): BufferedImage {
+    val (logo, logoWidth) = logoAndWidth
+    val img = BufferedImage(size, size, imageType)
+    val g2 = GraphicsUtil.createGraphics(img)
+    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+    val transl = margin * size
+    val scaling = (size * (1 - 2 * margin)) / logoWidth
+    g2.translate(transl, transl)
+    g2.scale(scaling, scaling)
+    logo.paint(g2)
+    g2.dispose()
+    return img
+}
+
 val logoAndWidth by lazy {
     val logoFile = sourceSets.main.get().output.resourcesDir!!.resolve("logo.svg")
     val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
@@ -316,4 +368,11 @@ val logoAndWidth by lazy {
     val logo = GVTBuilder().build(ctx, doc)
     val logoWidth = ctx.documentSize.width
     Pair(logo, logoWidth)
+}
+
+val titilliumSemi by lazy {
+    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-SemiboldUpright.otf"))[0]
+}
+val titilliumBold by lazy {
+    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-BoldUpright.otf"))[0]
 }

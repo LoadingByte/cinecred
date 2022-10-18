@@ -142,9 +142,9 @@ The following information is only relevant for building binaries of a new versio
    This will create three folders in `build/packaging/`, one for each OS.
 2. Now copy the Windows folder onto a Windows machine and run the `package.bat` script there to build a Windows installer.
    Analogously proceed with macOS and Linux, but use the `package.sh` script for these.
-   * Note: On Linux, you will need tools for building DEB and RPM packages, or the script won't work.
-   * Note: On Linux, you will need the `repo.loadingbyte.com` PGP key to sign the RPM package.
-3. Collect the resulting packaged files into the `publishing/` folder in this repository.
+   * On Linux, you need the following tools to build DEB and RPM packages: `dpkg-deb`, `rpmbuild`, `rpmsign`
+   * To sign the RPM, you need the `repo.loadingbyte.com` PGP key and the following two lines in your `~/.rpmmacros` file: `%_signature gpg`, `%_gpg_name repo.loadingbyte.com`
+3. Collect the resulting packaged files from the respective `out/` folders into the `publishing/` folder in this repository.
    There is 1 file for Windows and 1 file for macOS. There are 4 files for Linux.
 4. Run the `publish-nexus.sh` script to upload all binaries to `repo.loadingbyte.com`.
 5. Run the `publish-aur.sh` script to prepare an update of the PKGBUILD script hosted on AUR.

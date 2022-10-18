@@ -1,9 +1,7 @@
---input input/
+--type app-image
 --main-jar @MAIN_JAR@
---runtime-image runtime/
 --java-options "-splash:$APPDIR/splash.png @JAVA_OPTIONS@"
---name Cinecred
 --app-version @VERSION@
 --description "@DESCRIPTION@"
---vendor "Felix Mujkanovic"
---copyright "Copyright (c) 2021 Felix Mujkanovic, licensed under the GPLv3"
+--vendor "@VENDOR"
+--copyright "Copyright (C) 2022 @VENDOR@, licensed under the GPLv3"

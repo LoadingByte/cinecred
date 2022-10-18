@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="TARGETDIR">
+      <!-- Desktop shortcut -->
+      <Directory Id="DesktopFolder">
+        <Component Id="DesktopShortcutComponent" Guid="*">
+          <Condition>DESKTOP_SHORTCUT</Condition>
+          <RegistryValue Root="HKMU" Key="Software\Cinecred" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes"/>
+          <Shortcut Id="DesktopShortcut" Name="Cinecred" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
+        </Component>
+      </Directory>
+
+      <!-- Start menu shortcut -->
+      <Directory Id="ProgramMenuFolder">
+        <Component Id="StartMenuShortcutComponent" Guid="*">
+          <Condition>STARTMENU_SHORTCUT</Condition>
+          <RegistryValue Root="HKMU" Key="Software\Cinecred" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes"/>
+          <Shortcut Id="StartMenuShortcut" Name="Cinecred" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
+        </Component>
+      </Directory>
+    </DirectoryRef>
+
+    <!-- Shortcut group -->
+    <ComponentGroup Id="Shortcuts">
+      <ComponentRef Id="DesktopShortcutComponent"/>
+      <ComponentRef Id="StartMenuShortcutComponent"/>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

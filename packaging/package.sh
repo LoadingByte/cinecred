@@ -2,61 +2,84 @@
 
 source settings/general
 
-jdk_dir="jdk-$JDK_MAJOR+$JDK_PATCH"
+jdk_dir="work/jdk-$JDK_MAJOR+$JDK_PATCH"
 
-usage='Usage: <mac|linux>'
+usage="Usage: <mac|linux>"
 if [[ $# -ne 1 ]]; then
   echo "$0 $usage"
   exit 1
 fi
 os="$1"
 if [[ "$os" == mac ]]; then
-  types=(pkg)
   jdk_bin="$jdk_dir/Contents/Home/bin"
+  jpackage_args="--name Cinecred --icon images/icon.icns @settings/jpackage-mac"
 elif [[ "$os" == linux ]]; then
-  types=(deb rpm)
   jdk_bin="$jdk_dir/bin"
+  jpackage_args="--name cinecred"
+  for cmd in tar fakeroot dpkg-deb rpmbuild rpmsign; do
+    if ! command -v $cmd > /dev/null; then
+      missing_cmds+=($cmd)
+    fi
+  done
+  if [[ ! -z "$missing_cmds" ]]; then
+    echo "The following required programs are not installed: ${missing_cmds[@]}"
+    exit 1
+  fi
 else
   echo "$usage"
   exit 1
 fi
 
+mkdir work/ out/
+
 echo "Downloading and extracting AdoptOpenJDK..."
-curl -L "https://github.com/adoptium/temurin$JDK_MAJOR-binaries/releases/download/jdk-$JDK_MAJOR+$JDK_PATCH/OpenJDK$JDK_MAJOR-jdk_x64_${os}_hotspot_${JDK_MAJOR}_$JDK_PATCH.tar.gz" | tar -xzf -
+curl -L "https://github.com/adoptium/temurin$JDK_MAJOR-binaries/releases/download/jdk-$JDK_MAJOR+$JDK_PATCH/OpenJDK$JDK_MAJOR-jdk_x64_${os}_hotspot_${JDK_MAJOR}_$JDK_PATCH.tar.gz" | tar -xzf - -C work/
 
-echo "Running jlink..."
-"$jdk_bin/jlink" @settings/jlink
+echo "Collecting minimized JRE..."
+"$jdk_bin/jlink" @settings/jlink --output work/runtime/
 
-for type in "${types[@]}"; do
-  echo "Running jpackage to build a $type package..."
-  while true; do
-    "$jdk_bin/jpackage" @settings/jpackage "@settings/jpackage-$os" --type "$type"
-    if [[ $? -eq 0 ]]; then break; fi
-    read -n 1 -r -p "jpackage failed to build a $type package for the reason listed above. Maybe build tools are missing on your system. Try again? (y/n) "
-    echo
-    if [[ ! "$REPLY" =~ ^[yY]$ ]]; then break; fi
-  done
-done
-
-echo "Cleaning up..."
-rm -rf runtime/
-rm -rf "$jdk_dir"
+echo "Collecting installation image..."
+"$jdk_bin/jpackage" @settings/jpackage $jpackage_args --input app/ --runtime-image work/runtime/ --dest work/image/
 
 if [[ "$os" == mac ]]; then
-  echo "Renaming pkg package..."
-  mv ./*.pkg "$(basename ./*.pkg .pkg)-x86_64.pkg"
+  cp resources/universal/LEGAL work/image/Cinecred.app/Contents/
+
+  echo "Assembling PKG package..."
+  pkgbuild --root work/image/ --component-plist resources/pkg/component.plist --identifier Cinecred --install-location /Applications work/Cinecred.pkg
+  productbuild --distribution resources/pkg/distribution.dist --package-path work/ --resources images/ out/cinecred-@VERSION@-x86_64.pkg
 elif [[ "$os" == linux ]]; then
-  echo "Signing rpm package..."
-  rpm --addsign ./*.rpm
+  cp resources/universal/LEGAL work/image/cinecred/
+  rm work/image/cinecred/lib/cinecred.png
 
-  echo "Building tar.gz package..."
-  tar_gz=cinecred-@VERSION@-linux-x86_64.tar.gz
-  mkdir -p tree/
-  ar -p ./*.deb data.tar.xz | tar -xJC tree/ --strip-components=2
-  mv tree/cinecred/lib/cinecred-Cinecred.desktop tree/cinecred/cinecred.desktop
-  tar -czf "$tar_gz" -C tree/ cinecred/
-  rm -rf tree/
+  echo "Assembling TAR.GZ archive..."
+  mkdir -p work/targz/cinecred/
+  cp -r work/image/cinecred/* resources/linux/cinecred.desktop images/* "$_"
+  tar -czf out/cinecred-@VERSION@-linux-x86_64.tar.gz -C work/targz/ cinecred/
 
-  echo "Generating PKGBUILD..."
-  sed "s/{{SHA_256_HASH}}/$(sha256sum "$tar_gz" | cut -d ' ' -f 1)/g" misc/PKGBUILD-template > PKGBUILD
+  echo "Assembling AUR PKGBUILD script..."
+  sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/aur/PKGBUILD > out/PKGBUILD
+
+  echo "Collecting DEB/RPM package tree..."
+  mkdir -p work/tree/opt/cinecred/
+  cp -r work/image/cinecred/* "$_"
+  mkdir -p work/tree/usr/share/applications/
+  cp resources/linux/cinecred.desktop "$_"
+  mkdir -p work/tree/usr/share/icons/hicolor/scalable/apps/
+  cp images/cinecred.svg "$_"
+  mkdir -p work/tree/usr/share/icons/hicolor/48x48/apps/
+  cp images/cinecred.png "$_"
+
+  echo "Assembling DEB package..."
+  cp -r work/tree/ work/deb/
+  mkdir -p work/deb/DEBIAN/
+  cp resources/deb/control "$_"
+  echo "Installed-Size: $(du -s work/deb/opt/ | cut -f1)" >> work/deb/DEBIAN/control
+  fakeroot dpkg-deb --build work/deb out/cinecred_@VERSION@-1_amd64.deb
+
+  echo "Assembling and signing RPM package..."
+  rpmbuild --quiet -bb resources/rpm/cinecred.spec --define "%_sourcedir $(pwd)/work/tree" --define "%_topdir $(pwd)/work/rpm" --define "%_rpmdir $(pwd)/out" --define "%_rpmfilename cinecred-@VERSION@-1.x86_64.rpm"
+  rpmsign --addsign out/*.rpm
 fi
+
+echo "Cleaning up..."
+rm -rf work/

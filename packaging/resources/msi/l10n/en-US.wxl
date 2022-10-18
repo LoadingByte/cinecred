@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="en-US" Codepage="1252">
+  <String Id="LanguageCode">1033</String>
+  <String Id="ShortcutDlg_Title">[ProductName] Setup</String>
+  <String Id="ShortcutDlgTitle">{\WixUI_Font_Title}Shortcuts</String>
+  <String Id="ShortcutDlgDescription">Select shortcuts to create.</String>
+  <String Id="ShortcutDlgDesktop">Create desktop shortcut(s)</String>
+  <String Id="ShortcutDlgStartMenu">Create start menu shortcut(s)</String>
+</WixLocalization>

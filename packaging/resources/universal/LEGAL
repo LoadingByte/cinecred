@@ -1,0 +1,4 @@
+Legal information on the bundled JRE is provided in @LEGAL_PATH_RUNTIME@.
+
+Legal information on Cinecred and 3rd party libraries is provided in the
+licenses/ folder inside @LEGAL_PATH_APP@.

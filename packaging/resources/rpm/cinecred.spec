@@ -1,0 +1,24 @@
+Name: cinecred
+Version: @VERSION@
+Release: 1
+License: GPLv3
+Group: Applications/Multimedia
+Summary: @DESCRIPTION@
+URL: @URL@
+Vendor: @VENDOR@
+
+# Do not automatically populate Requires: and Provides:.
+AutoReqProv: no
+# Do not touch JARs.
+%define __jar_repack %{nil}
+# Do not strip binaries.
+%global __os_install_post %{nil}
+
+%description
+@DESCRIPTION@
+
+%install
+cp -r %{_sourcedir}/* %{buildroot}/
+
+%files
+/

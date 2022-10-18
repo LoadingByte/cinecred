@@ -1,5 +1,0 @@
---icon misc/icon.png
---resource-dir resources/
---linux-deb-maintainer hello@loadingbyte.com
---linux-rpm-license-type GPLv3
---linux-app-category video

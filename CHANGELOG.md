@@ -18,6 +18,7 @@ Cinecred Changelog
 ### Fixes
 
 - Resolved rare parsing errors caused by obscure features in Excel spreadsheets.
+- Characters larger than 16 bit no longer disrupt small caps.
 
 #### UI Fixes
 

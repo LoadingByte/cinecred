@@ -301,17 +301,27 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
                 // Generate a boolean mask indicating which characters of the "smallCapsedRun" should be rendered
                 // as small caps. This mask is especially interesting in the rare cases where the uppercasing operation
                 // in the previous line yields a string with more characters than were in the original.
-                masks[runIdx] = if (run.length == smallCapsedRun.length)
-                    BooleanArray(run.length) { idx -> run[idx].isLowerCase() }
-                else
-                    BooleanArray(smallCapsedRun.length).also { mask ->
-                        var prevEndFillIdx = 0
-                        for (idxInRun in run.indices) {
-                            val endFillIdx = run.substring(0, idxInRun + 1).uppercase(textCtx.locale).length
-                            mask.fill(run[idxInRun].isLowerCase(), prevEndFillIdx, endFillIdx)
-                            prevEndFillIdx = endFillIdx
-                        }
+                val mask = BooleanArray(smallCapsedRun.length)
+                masks[runIdx] = mask
+                if (run.length == smallCapsedRun.length) {
+                    var idxInRun = 0
+                    while (idxInRun < run.length) {
+                        val code = run.codePointAt(idxInRun)
+                        val skip = Character.charCount(code)
+                        mask.fill(Character.isLowerCase(code), idxInRun, idxInRun + skip)
+                        idxInRun += skip
                     }
+                } else {
+                    var idxInRun = 0
+                    var prevEndFillIdx = 0
+                    while (idxInRun < run.length) {
+                        val code = run.codePointAt(idxInRun)
+                        val endFillIdx = run.substring(0, idxInRun + 1).uppercase(textCtx.locale).length
+                        mask.fill(Character.isLowerCase(code), prevEndFillIdx, endFillIdx)
+                        idxInRun += Character.charCount(code)
+                        prevEndFillIdx = endFillIdx
+                    }
+                }
 
                 smallCapsedRun
             }

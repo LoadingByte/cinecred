@@ -33,6 +33,8 @@ Cinecred Changelog
 - On KDE and other X11 desktops not directly supported by Java, links and mail
   templates can still be opened.
 - When quitting the application on macOS, it now asks to save projects.
+- On macOS, the window title bars now respect the system theme.
+- On macOS, the application menu now uses the correct program name everywhere.
 - A regression bug caused a crash instead of just an error message when choosing
   an invalid combination of FPS and timecode format; this has been fixed.
 - Fixed crashes when closing a project immediately after opening it.

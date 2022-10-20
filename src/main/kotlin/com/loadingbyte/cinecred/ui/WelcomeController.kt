@@ -28,6 +28,14 @@ class WelcomeController(
     private val onOpenProject: (projectDir: Path, openOnScreen: GraphicsConfiguration) -> Unit
 ) {
 
+    // Remove all memorized directories which are no longer project directories.
+    init {
+        val memProjectDirs = PreferencesStorage.memorizedProjectDirs.toMutableList()
+        val modified = memProjectDirs.removeAll { dir -> !ProjectController.isProjectDir(dir) }
+        if (modified)
+            PreferencesStorage.memorizedProjectDirs = memProjectDirs
+    }
+
     val welcomeFrame = WelcomeFrame(this)
 
     /**

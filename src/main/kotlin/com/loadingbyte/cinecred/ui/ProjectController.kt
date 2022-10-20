@@ -300,6 +300,7 @@ class ProjectController(
         private var lastEditedMillis = 0L
 
         init {
+            projectFrame.onStylingChange(isUnsaved = false)
             projectFrame.panel.editPanel.onStylingChange(isUnsaved = false, isUndoable = false, isRedoable = false)
             editStylingDialog.panel.setStyling(saved)
         }
@@ -368,8 +369,10 @@ class ProjectController(
         }
 
         private fun onStylingChange() {
+            val isUnsaved = current != saved
+            projectFrame.onStylingChange(isUnsaved)
             projectFrame.panel.editPanel.onStylingChange(
-                isUnsaved = current != saved,
+                isUnsaved,
                 isUndoable = currentIdx != 0,
                 isRedoable = currentIdx != history.lastIndex
             )

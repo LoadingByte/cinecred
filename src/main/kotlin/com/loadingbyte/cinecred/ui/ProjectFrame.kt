@@ -23,8 +23,15 @@ class ProjectFrame(ctrl: ProjectController) : JFrame("${ctrl.projectName} \u2013
         snapToSide(ctrl.openOnScreen, rightSide = false)
 
         iconImages = WINDOW_ICON_IMAGES
+        // On macOS, show the opened project folder in the window title bar.
+        rootPane.putClientProperty("Window.documentFile", ctrl.projectDir.toFile())
 
         contentPane.add(panel)
+    }
+
+    fun onStylingChange(isUnsaved: Boolean) {
+        // On macOS, show an unsaved indicator inside the "close window" button.
+        rootPane.putClientProperty("Window.documentModified", isUnsaved)
     }
 
 }

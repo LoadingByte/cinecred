@@ -12,6 +12,8 @@ Cinecred Changelog
 - Added a changelog viewer to the welcome window.
 - Added a Cinecred and dependency license viewer to the welcome window.
 - On macOS, the preferences can now be opened via the corresponding menu entry.
+- On macOS, the window title bar now shows the project folder and utilizes the
+  unsaved indicator in the close button.
 - Improved installer branding and added localization to the Windows installer.
 - Added scalable SVG icons to the Linux packages.
 

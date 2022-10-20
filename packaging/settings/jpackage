@@ -1,6 +1,6 @@
 --type app-image
 --main-jar @MAIN_JAR@
---java-options "-splash:$APPDIR/splash.png @JAVA_OPTIONS@"
+--java-options "@JAVA_OPTIONS@"
 --app-version @VERSION@
 --description "@DESCRIPTION@"
 --vendor "@VENDOR"

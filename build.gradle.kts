@@ -11,6 +11,7 @@ import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import java.util.*
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.stream.FileImageOutputStream
@@ -44,6 +45,12 @@ val poiVersion = "5.2.2"
 val batikVersion = "1.14"
 val javacppVersion = "1.5.6"
 val ffmpegVersion = "4.4-$javacppVersion"
+
+val javaProperties = Properties().apply { file("java.properties").reader().use { load(it) } }
+val javaOptions = javaProperties.getProperty("javaOptions")!!
+val addModules = javaProperties.getProperty("addModules").split(' ')
+val addOpens = javaProperties.getProperty("addOpens").split(' ')
+val splashScreen = javaProperties.getProperty("splashScreen")!!
 
 enum class Platform(val label: String, val slug: String) {
     WINDOWS("Windows", "windows-x86_64"),
@@ -117,7 +124,7 @@ configurations.all {
 
 tasks.withType<JavaCompile> {
     options.release.set(17)
-    options.compilerArgs = listOf("--add-modules", "jdk.incubator.foreign")
+    options.compilerArgs = listOf("--add-modules") + addModules
 }
 
 tasks.withType<KotlinCompile> {
@@ -139,9 +146,6 @@ tasks.processResources {
     }
 }
 
-
-// Cinecred implements reflective code which accesses these packages.
-val addOpens = listOf("java.base/java.lang", "java.desktop/java.awt.font", "java.desktop/sun.font")
 
 // Build the universal JAR containing natives for all supported platforms.
 val buildUniversalJar by tasks.registering(Jar::class) {
@@ -176,8 +180,9 @@ val preparePackagingTasks = Platform.values().map { platform ->
             val tokens = mapOf(
                 "VERSION" to version,
                 "MAIN_JAR" to platformJar.archiveFileName.get(),
-                "JAVA_OPTIONS" to "--add-modules jdk.incubator.foreign --enable-native-access=ALL-UNNAMED " +
-                        addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" },
+                "JAVA_OPTIONS" to "--add-modules ${addModules.joinToString(",")} " +
+                        addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" } +
+                        " -splash:\$APPDIR/$splashScreen $javaOptions",
                 "DESCRIPTION" to "Create film credits -- without pain",
                 "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen",
                 "URL" to "https://loadingbyte.com/cinecred/",
@@ -198,7 +203,7 @@ val preparePackagingTasks = Platform.values().map { platform ->
         }
         into("app") {
             from(platformJar)
-            from(sourceSets.main.get().output.resourcesDir!!.resolve("splash.png"))
+            from(sourceSets.main.get().output.resourcesDir!!.resolve(splashScreen))
         }
     }
     // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
@@ -273,7 +278,7 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
 
     manifest.attributes(
         "Main-Class" to "com.loadingbyte.cinecred.Main",
-        "SplashScreen-Image" to "splash.png",
+        "SplashScreen-Image" to splashScreen,
         "Add-Opens" to addOpens.joinToString(" ")
     )
 

@@ -1,3 +1,5 @@
+@file:JvmName("Main")
+
 package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatDarkLaf

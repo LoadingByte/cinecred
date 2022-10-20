@@ -272,7 +272,7 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
     with(tasks.jar.get())
 
     manifest.attributes(
-        "Main-Class" to "com.loadingbyte.cinecred.MainKt",
+        "Main-Class" to "com.loadingbyte.cinecred.Main",
         "SplashScreen-Image" to "splash.png",
         "Add-Opens" to addOpens.joinToString(" ")
     )

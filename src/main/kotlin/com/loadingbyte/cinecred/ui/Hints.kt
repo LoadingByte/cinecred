@@ -5,6 +5,7 @@ import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
+import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.MouseAdapter
@@ -42,12 +43,13 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel.editPanel
     val stylingPanel = ctrl.editStylingDialog.panel
     val goEditPnl = fun() { ctrl.projectFrame.panel.selectedTab = editPanel }
+    val sfn = STYLING_FILE_NAME
     return HintTrack(
         PROJECT_HINT_TRACK_NAME, listOf(
             Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),
             Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP, goEditPnl),
             Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.stylingTree"), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
+            Hint(l10n("ui.hints.projectTrack.stylingTree", sfn), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
                 goEditPnl()
                 ctrl.setEditStylingDialogVisible(true)
             },

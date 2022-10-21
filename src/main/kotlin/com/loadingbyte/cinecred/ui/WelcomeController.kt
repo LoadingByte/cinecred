@@ -5,6 +5,8 @@ import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.copyTemplate
 import com.loadingbyte.cinecred.projectio.locateCreditsFile
+import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
+import com.loadingbyte.cinecred.projectio.isProjectDir
 import com.loadingbyte.cinecred.ui.PreferencesStorage.LocaleWish
 import java.awt.GraphicsConfiguration
 import java.awt.GraphicsEnvironment
@@ -31,7 +33,7 @@ class WelcomeController(
     // Remove all memorized directories which are no longer project directories.
     init {
         val memProjectDirs = PreferencesStorage.memorizedProjectDirs.toMutableList()
-        val modified = memProjectDirs.removeAll { dir -> !ProjectController.isProjectDir(dir) }
+        val modified = memProjectDirs.removeAll { dir -> !isProjectDir(dir) }
         if (modified)
             PreferencesStorage.memorizedProjectDirs = memProjectDirs
     }
@@ -158,7 +160,7 @@ class WelcomeController(
         }
 
         // If the two required project files don't exist yet, create them.
-        val stylingFile = projectDir.resolve(ProjectController.STYLING_FILE_NAME)
+        val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
         if (projectDir.notExists() || stylingFile.notExists() || locateCreditsFile(projectDir).first == null) {
             // If the user cancels the dialog, cancel opening the project directory.
             val (locale, format) = CreateForm.showDialog() ?: return

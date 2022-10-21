@@ -24,8 +24,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
 
 
 class ProjectController(
@@ -266,14 +264,6 @@ class ProjectController(
 
 
     companion object {
-
-        const val STYLING_FILE_NAME = "Styling.toml"
-
-        // Do not base the decision on whether a dir is a project dir on the existence of a credits file because that
-        // file might just be moved around a little by the user at the same time as this function is called.
-        fun isProjectDir(path: Path): Boolean {
-            return path.isDirectory() && path.resolve(STYLING_FILE_NAME).exists()
-        }
 
         private fun safeIsSameFile(p1: Path, p2: Path) =
             try {

@@ -23,7 +23,7 @@ fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyS
 
 private fun copyStylingTemplate(destDir: Path, locale: Locale) {
     val text = useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }.fillPlaceholders(locale)
-    destDir.resolve("Styling.toml").writeText(text)
+    destDir.resolve(STYLING_FILE_NAME).writeText(text)
 }
 
 

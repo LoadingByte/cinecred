@@ -51,8 +51,8 @@ class WelcomeController(
     init {
         welcomeFrame.bounds = rememberedBounds ?: run {
             val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-            val welcomeFrameWidth = maxWinBounds.width * 8 / 20
-            val welcomeFrameHeight = maxWinBounds.height * 11 / 20
+            val welcomeFrameWidth = (maxWinBounds.width * 8 / 20).coerceAtLeast(welcomeFrame.minimumSize.width)
+            val welcomeFrameHeight = (maxWinBounds.height * 11 / 20).coerceAtLeast(welcomeFrame.minimumSize.height)
             Rectangle(
                 (maxWinBounds.width - welcomeFrameWidth) / 2,
                 (maxWinBounds.height - welcomeFrameHeight) / 2,

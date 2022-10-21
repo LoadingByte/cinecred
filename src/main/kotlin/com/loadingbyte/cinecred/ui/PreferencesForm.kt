@@ -40,29 +40,29 @@ class PreferencesForm(private val ctrl: WelcomeController) : EasyForm(insets = f
         )
     }
 
-    var liveSaving = true
+    var liveSavingViaCtrl = true
 
     fun loadAllPreferences() {
-        liveSaving = false
+        liveSavingViaCtrl = false
         try {
             uiLocaleWishWidget.value = PreferencesStorage.uiLocaleWish
             checkForUpdatesWidget.value = PreferencesStorage.checkForUpdates
             for ((trackName, widget) in hintTrackPendingWidgets.entries)
                 widget.value = PreferencesStorage.isHintTrackPending(trackName)
         } finally {
-            liveSaving = true
+            liveSavingViaCtrl = true
         }
     }
 
     fun saveAllPreferences() {
-        ctrl.configureUILocaleWish(uiLocaleWishWidget.value)
-        ctrl.configureCheckForUpdates(checkForUpdatesWidget.value)
+        PreferencesStorage.uiLocaleWish = uiLocaleWishWidget.value
+        PreferencesStorage.checkForUpdates = checkForUpdatesWidget.value
         for ((trackName, widget) in hintTrackPendingWidgets.entries)
-            ctrl.configureHintTrackPending(trackName, widget.value)
+            PreferencesStorage.setHintTrackPending(trackName, widget.value)
     }
 
     override fun onChange(widget: Widget<*>) {
-        if (!liveSaving)
+        if (!liveSavingViaCtrl)
             return
         when (widget) {
             uiLocaleWishWidget -> ctrl.configureUILocaleWish(uiLocaleWishWidget.value)

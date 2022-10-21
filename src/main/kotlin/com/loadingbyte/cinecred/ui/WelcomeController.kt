@@ -61,13 +61,21 @@ class WelcomeController(
         }
         welcomeFrame.isVisible = true
 
-        fun finishInit() {
-            makeOpenHintTrack(this).playIfPending()
+        fun finishInit(initConfigChangedUILocaleWish: Boolean) {
+            // If the program was started for the first time and the user changed the locale during the initial
+            // configuration, reopen the welcome window so that the change applies.
+            if (initConfigChangedUILocaleWish) {
+                MasterController.tryCloseProjectsAndDisposeAllFrames()
+                MasterController.showWelcomeFrame()
+                return
+            }
+            // Otherwise, finish the regular initialization of the welcome window.
             doCheckForUpdates()
+            makeOpenHintTrack(this).playIfPending()
         }
 
         if (PreferencesStorage.havePreferencesBeenSet())
-            finishInit()
+            finishInit(false)
         else {
             // If we are here, the program is started for the first time as no preferences have been saved previously.
             // Lock all other tabs and let the user initially configure all preferences. This lets him specify whether
@@ -76,13 +84,15 @@ class WelcomeController(
             val form = welcomeFrame.panel.preferencesPanel.preferencesForm
             welcomeFrame.panel.selectedTab = welcomeFrame.panel.preferencesPanel
             welcomeFrame.panel.setTabsLocked(true)
-            form.liveSaving = false
+            val defaultUILocaleWish = PreferencesStorage.uiLocaleWish
+            form.liveSavingViaCtrl = false
             form.addSubmitButton(l10n("ui.preferences.finishInitialSetup"), actionListener = {
-                form.liveSaving = true
+                form.liveSavingViaCtrl = true
                 form.removeSubmitButton()
                 form.saveAllPreferences()
+                MasterController.applyUILocaleWish()
                 welcomeFrame.panel.setTabsLocked(false)
-                finishInit()
+                finishInit(initConfigChangedUILocaleWish = defaultUILocaleWish != PreferencesStorage.uiLocaleWish)
             })
         }
     }

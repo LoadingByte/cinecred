@@ -7,6 +7,8 @@ import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
+import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
+import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
@@ -27,6 +29,7 @@ import javax.swing.SwingUtilities
 
 
 class ProjectController(
+    val masterCtrl: MasterCtrlComms,
     val projectDir: Path,
     val openOnScreen: GraphicsConfiguration,
     private val onClose: () -> Unit
@@ -64,7 +67,8 @@ class ProjectController(
         projectFrame.isVisible = true
         editStylingDialog.isVisible = true
 
-        makeProjectHintTrack(this).playIfPending()
+        if (PersistentStorage.projectHintTrackPending)
+            makeProjectHintTrack(this).play(onPass = { PersistentStorage.projectHintTrackPending = false })
 
         // Load the initially present auxiliary files (project fonts and pictures).
         for (projectFile in Files.walk(projectDir))

@@ -6,11 +6,13 @@ Cinecred Changelog
 
 ### Additions
 
-- Unified project opening, preferences, and update notification into one
-  integrated welcome window, thereby alleviating the need for various popup
-  dialogs.
+- Unified project opening, project creation, preferences, and update
+  notification in one integrated welcome window, thereby alleviating the need
+  for various popup dialogs.
+- Introduced separate UI path for project creation.
 - Added a changelog viewer to the welcome window.
 - Added a Cinecred and dependency license viewer to the welcome window.
+- Enabled opening project folders by dragging them onto the app launcher.
 - On macOS, the preferences can now be opened via the corresponding menu entry.
 - On macOS, the window title bar now shows the project folder and utilizes the
   unsaved indicator in the close button.

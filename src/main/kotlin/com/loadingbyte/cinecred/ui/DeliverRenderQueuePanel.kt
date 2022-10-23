@@ -60,13 +60,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
     val renderJobs: Sequence<RenderJob>
         get() = jobTableModel.rows.asSequence().map { it.job }
 
-    private val numPendingJobs: Int
+    val numPendingJobs: Int
         get() = jobTableModel.rows.count { !it.isFinished }
-
-    private fun getNumPendingJobsOfAllProjects(): Int =
-        MasterController.projectCtrls.sumOf { ctrl ->
-            ctrl.projectFrame.panel.deliverPanel.renderQueuePanel.numPendingJobs
-        }
 
     fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
         val row = JobTableModel.Row(job, formatLabel, destination)
@@ -123,7 +118,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun tryUpdateTaskbarBadge() {
-        trySetTaskbarIconBadge(getNumPendingJobsOfAllProjects())
+        trySetTaskbarIconBadge(ctrl.masterCtrl.getNumPendingJobsOfAllProjects())
     }
 
     fun onTryCloseProject(): Boolean =

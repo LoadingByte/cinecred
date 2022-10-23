@@ -43,7 +43,8 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
     }
 
     fun removeSubmitButton() {
-        remove(submitButton)
+        if (submitButton != null)
+            remove(submitButton)
         submitButton = null
     }
 

@@ -10,24 +10,27 @@ import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 
-fun copyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, copyStyling: Boolean, copyCredits: Boolean) {
+fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
     if (destDir.notExists())
         destDir.createDirectories()
 
-    if (copyStyling)
-        copyStylingTemplate(destDir, locale)
-    if (copyCredits)
-        copyCreditsTemplate(destDir, locale, format)
+    tryCopyStylingTemplate(destDir, locale)
+    tryCopyCreditsTemplate(destDir, locale, format)
 }
 
 
-private fun copyStylingTemplate(destDir: Path, locale: Locale) {
+private fun tryCopyStylingTemplate(destDir: Path, locale: Locale) {
     val text = useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }.fillPlaceholders(locale)
-    destDir.resolve(STYLING_FILE_NAME).writeText(text)
+    val file = destDir.resolve(STYLING_FILE_NAME)
+    if (file.notExists())
+        file.writeText(text)
 }
 
 
-private fun copyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
+private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
+    if (locateCreditsFile(destDir).first != null)
+        return
+
     val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
     val spreadsheet = CsvFormat.read(csv).map { it.fillPlaceholders(locale) }
     format.write(

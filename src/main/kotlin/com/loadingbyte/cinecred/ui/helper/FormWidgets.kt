@@ -24,8 +24,6 @@ import java.text.NumberFormat
 import java.text.ParseException
 import java.util.*
 import javax.swing.*
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.DefaultFormatter
@@ -51,7 +49,7 @@ abstract class AbstractTextComponentWidget<V>(
 ) : Form.AbstractWidget<V>() {
 
     init {
-        tc.addChangeListener { notifyChangeListeners() }
+        tc.document.addDocumentListener { notifyChangeListeners() }
     }
 
     override val components = listOf<JComponent>(tc)
@@ -1088,15 +1086,6 @@ private fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boole
         if (endsWith(suffix, ignoreCase))
             return dropLast(suffix.length)
     return this
-}
-
-
-private inline fun JTextComponent.addChangeListener(crossinline listener: () -> Unit) {
-    document.addDocumentListener(object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = listener()
-        override fun removeUpdate(e: DocumentEvent) = listener()
-        override fun changedUpdate(e: DocumentEvent) = listener()
-    })
 }
 
 

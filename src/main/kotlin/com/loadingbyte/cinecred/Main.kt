@@ -9,7 +9,8 @@ import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.resolveGnomeFont
 import com.loadingbyte.cinecred.common.useResourcePath
-import com.loadingbyte.cinecred.ui.MasterController
+import com.loadingbyte.cinecred.ui.UIFactory
+import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
@@ -40,12 +41,15 @@ import kotlin.io.path.*
 
 private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
 
-fun main() {
+private lateinit var masterCtrl: MasterCtrlComms
+
+
+fun main(args: Array<String>) {
     // Cinecred is a singleton application. When the application is launched a second time, we just simulate
     // a second application instance in the same VM.
-    if (Singleton.invoke(SINGLETON_APP_ID, emptyArray()))
+    if (Singleton.invoke(SINGLETON_APP_ID, args))
         return
-    Singleton.start({ MasterController.showWelcomeFrame() }, SINGLETON_APP_ID)
+    Singleton.start({ otherArgs -> SwingUtilities.invokeLater { openUI(otherArgs) } }, SINGLETON_APP_ID)
 
     // If an unexpected exception reaches the top of a thread's stack, we want to terminate the program in a
     // controlled fashion and inform the user. We also ask whether to send a crash report.
@@ -91,11 +95,11 @@ fun main() {
         LOGGER.error("Failed to load FFmpeg", t)
     }
 
-    SwingUtilities.invokeLater(::mainSwing)
+    SwingUtilities.invokeLater { mainSwing(args) }
 }
 
 
-fun mainSwing() {
+private fun mainSwing(args: Array<String>) {
     // Tooltips should not disappear on their own after some time.
     // To achieve this, we set the dismiss delay to one hour.
     ToolTipManager.sharedInstance().dismissDelay = 60 * 60 * 1000
@@ -133,28 +137,36 @@ fun mainSwing() {
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
 
+    masterCtrl = UIFactory().master()
+
     // Globally listen to all key events.
-    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(MasterController::onGlobalKeyEvent)
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::onGlobalKeyEvent)
 
     // Apply the locale configured by the user, if any.
-    MasterController.applyUILocaleWish()
+    masterCtrl.applyUILocaleWish()
 
     // On macOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
         Desktop.getDesktop().setPreferencesHandler {
-            MasterController.showWelcomeFrame().welcomeFrame.panel.apply { selectedTab = preferencesPanel }
+            masterCtrl.showPreferences()
         }
 
     // On macOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
     // all windows, which in turn triggers all "unsaved changes" dialogs.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
         Desktop.getDesktop().setQuitHandler { _, response ->
-            MasterController.tryCloseProjectsAndDisposeAllFrames()
+            masterCtrl.tryCloseProjectsAndDisposeAllFrames()
             response.performQuit()
         }
 
-    // Show the WelcomeFrame.
-    MasterController.showWelcomeFrame()
+    // Finally open the UI.
+    openUI(args)
+}
+
+
+private fun openUI(args: Array<String>) {
+    // If the user dragged a folder onto the program, try opening that, otherwise show the regular welcome window.
+    masterCtrl.showWelcomeFrame(if (args.isEmpty()) null else Path(args[0]))
 }
 
 
@@ -165,7 +177,8 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         SwingUtilities.invokeLater {
             sendReport(e)
             // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.
-            MasterController.tryCloseProjectsAndDisposeAllFrames(force = true)
+            if (::masterCtrl.isInitialized)
+                masterCtrl.tryCloseProjectsAndDisposeAllFrames(force = true)
         }
     }
 

@@ -12,7 +12,10 @@ import java.net.URI
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.TableCellRenderer
+import javax.swing.text.Document
 
 
 val PALETTE_RED: String = "#C75450"
@@ -37,6 +40,15 @@ fun newLabelTextArea(text: String? = null, insets: Boolean = false) = JTextArea(
 
 fun JComponent.setTableCellBackground(table: JTable, rowIdx: Int) {
     background = if (rowIdx % 2 == 0) table.background else UIManager.getColor("Table.alternateRowColor")
+}
+
+
+fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
+    addDocumentListener(object : DocumentListener {
+        override fun insertUpdate(e: DocumentEvent) = listener(e)
+        override fun removeUpdate(e: DocumentEvent) = listener(e)
+        override fun changedUpdate(e: DocumentEvent) = listener(e)
+    })
 }
 
 

@@ -6,6 +6,9 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
+import com.loadingbyte.cinecred.ui.comms.ProjectsCard
+import com.loadingbyte.cinecred.ui.comms.WelcomeTab
+import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.MouseAdapter
@@ -18,24 +21,19 @@ import kotlin.math.roundToInt
 
 enum class Side { TOP, LEFT, BOTTOM, RIGHT, NONE }
 class Hint(val message: String, val owner: Component, val side: Side, val preShow: (() -> Unit)? = null)
-class HintTrack(val name: String, val hints: List<Hint>)
+typealias HintTrack = List<Hint>
 
 
-const val OPEN_HINT_TRACK_NAME = "open"
-const val PROJECT_HINT_TRACK_NAME = "project"
-val HINT_TRACK_NAMES = listOf(OPEN_HINT_TRACK_NAME, PROJECT_HINT_TRACK_NAME)
-
-fun makeOpenHintTrack(ctrl: WelcomeController): HintTrack {
-    val welcomePanel = ctrl.welcomeFrame.panel
-    val openPanel = welcomePanel.openPanel
-    val goOpenPnl = fun() { welcomePanel.selectedTab = openPanel }
-    val goPrefPnl = fun() { welcomePanel.selectedTab = welcomePanel.preferencesPanel }
-    return HintTrack(
-        OPEN_HINT_TRACK_NAME, listOf(
-            Hint(l10n("ui.hints.openTrack.welcome"), welcomePanel, Side.NONE, goPrefPnl),
-            Hint(l10n("ui.hints.openTrack.browse"), openPanel.browseHintOwner, Side.BOTTOM, goOpenPnl),
-            Hint(l10n("ui.hints.openTrack.drop"), openPanel.dropHintOwner, Side.TOP, goOpenPnl)
-        )
+fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
+    val welcPanel = welcomeFrame.panel
+    val projPanel = welcPanel.projectsPanel
+    val goProjStartPnl = fun() { welcPanel.setTab(WelcomeTab.PROJECTS); projPanel.projects_setCard(ProjectsCard.START) }
+    val goPrefsPnl = fun() { welcPanel.setTab(WelcomeTab.PREFERENCES) }
+    return listOf(
+        Hint(l10n("ui.hints.welcomeTrack.welcome"), welcPanel, Side.NONE, goPrefsPnl),
+        Hint(l10n("ui.hints.welcomeTrack.create"), projPanel.createHintOwner, Side.BOTTOM, goProjStartPnl),
+        Hint(l10n("ui.hints.welcomeTrack.open"), projPanel.openHintOwner, Side.BOTTOM, goProjStartPnl),
+        Hint(l10n("ui.hints.welcomeTrack.drop"), projPanel.dropHintOwner, Side.TOP, goProjStartPnl)
     )
 }
 
@@ -44,36 +42,32 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val stylingPanel = ctrl.editStylingDialog.panel
     val goEditPnl = fun() { ctrl.projectFrame.panel.selectedTab = editPanel }
     val sfn = STYLING_FILE_NAME
-    return HintTrack(
-        PROJECT_HINT_TRACK_NAME, listOf(
-            Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.stylingTree", sfn), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
-                goEditPnl()
-                ctrl.setEditStylingDialogVisible(true)
-            },
-            Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.resetStylingHintOwner, Side.BOTTOM, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.layoutGuidesHintOwner, Side.BOTTOM, goEditPnl),
-            Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE, goEditPnl)
-        )
+    return listOf(
+        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.stylingTree", sfn), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
+            goEditPnl()
+            ctrl.setEditStylingDialogVisible(true)
+        },
+        Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.resetStylingHintOwner, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.layoutGuidesHintOwner, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE, goEditPnl)
     )
 }
 
 
-fun HintTrack.playIfPending() {
-    if (PreferencesStorage.isHintTrackPending(name)) {
-        // Often, when this function is called, the window where the first hint appears hasn't been validated yet.
-        // To circumvent the hint briefly appearing at a strange position and then moving to its proper position,
-        // we delay the appearance of the first hint for one time step.
-        SwingUtilities.invokeLater { showHint(this, 0) }
-    }
+fun HintTrack.play(onPass: () -> Unit) {
+    // Often, when this function is called, the window where the first hint appears hasn't been validated yet.
+    // To circumvent the hint briefly appearing at a strange position and then moving to its proper position,
+    // we delay the appearance of the first hint for one time step.
+    SwingUtilities.invokeLater { showHint(this, 0, onPass) }
 }
 
 // Inspired from here:
 // https://github.com/JFormDesigner/FlatLaf/blob/main/flatlaf-demo/src/main/java/com/formdev/flatlaf/demo/HintManager.java
-private fun showHint(track: HintTrack, idx: Int) {
-    val hint = track.hints[idx]
+private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
+    val hint = track[idx]
     hint.preShow?.invoke()
 
     val layeredPane = SwingUtilities.getRootPane(hint.owner).layeredPane
@@ -117,16 +111,16 @@ private fun showHint(track: HintTrack, idx: Int) {
 
         layout = MigLayout("insets dialog", "[:300lp:]", "[]para[]")
         add(JLabel("<html>${hint.message}</html>").style(), "growx")
-        if (idx == track.hints.lastIndex) {
+        if (idx == track.lastIndex) {
             add(JButton(l10n("ui.hints.notPassed")).style().apply {
                 addActionListener { removePopup() }
             }, "newline, right, split 2")
             add(JButton(l10n("ui.hints.passed")).style().apply {
-                addActionListener { removePopup(); PreferencesStorage.setHintTrackPending(track.name, false) }
+                addActionListener { removePopup(); onPass() }
             })
         } else
             add(JButton(l10n("ui.hints.next")).style().apply {
-                addActionListener { removePopup(); showHint(track, idx + 1) }
+                addActionListener { removePopup(); showHint(track, idx + 1, onPass) }
             }, "newline, right")
     }
 

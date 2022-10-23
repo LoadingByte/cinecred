@@ -77,6 +77,15 @@ inline fun <R> useResourcePath(path: String, action: (Path) -> R): R {
 val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN)
 val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
+/**
+ * This is the translated locale which is closest to the system's default locale. It necessarily has to be computed
+ * the default locale is changed for the first time, which is fulfilled by doing it here.
+ */
+val SYSTEM_LOCALE: Locale =
+    Locale.lookup(
+        listOf(Locale.LanguageRange(Locale.getDefault().toLanguageTag())), TRANSLATED_LOCALES
+    ) ?: FALLBACK_TRANSLATED_LOCALE
+
 private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT)
 private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
 

@@ -30,7 +30,7 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             background = null
             putClientProperty(STYLE, "arc: 0")
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
-            addActionListener { MasterController.showWelcomeFrame() }
+            addActionListener { ctrl.masterCtrl.showWelcomeFrame() }
         }
         tabPaneTrailingPanel.add(homeButton, "growy, pushy")
 

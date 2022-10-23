@@ -34,7 +34,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.5.30"
+    kotlin("jvm") version "1.7.20"
 }
 
 group = "com.loadingbyte"
@@ -98,7 +98,7 @@ dependencies {
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
-    implementation("com.formdev", "flatlaf", "2.1")
+    implementation("com.formdev", "flatlaf", "2.6")
     implementation("org.commonmark", "commonmark", "0.19.0")
 
     // Testing
@@ -128,7 +128,7 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "16"
+    kotlinOptions.jvmTarget = "17"
 }
 
 tasks.withType<Test> {

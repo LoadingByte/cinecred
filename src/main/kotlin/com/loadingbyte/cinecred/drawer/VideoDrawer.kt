@@ -125,7 +125,7 @@ open class VideoDrawer(
 
     private fun getShiftedPageImage(pageIdx: Int, shift: Float): BufferedImage {
         val cache = shiftedPageImages[pageIdx]
-        return cache.getOrPut(shift) {
+        return cache.computeIfAbsent(shift) {
             // If the cache is full, remove one cached image (doesn't matter which one we remove).
             if (cache.size >= MAX_SHIFTED_PAGE_IMAGES)
                 cache.iterator().run { next(); remove() }

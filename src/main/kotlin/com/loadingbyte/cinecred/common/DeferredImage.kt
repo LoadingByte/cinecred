@@ -36,7 +36,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     private val instructions = HashMap<Layer, MutableList<Instruction>>()
 
     private fun addInstruction(layer: Layer, insn: Instruction) {
-        instructions.getOrPut(layer) { ArrayList() }.add(insn)
+        instructions.computeIfAbsent(layer) { ArrayList() }.add(insn)
     }
 
     fun copy(universeScaling: Float = 1f, elasticScaling: Float = 1f): DeferredImage {
@@ -321,7 +321,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         private val csHeight: Float
     ) : MaterializationBackend {
 
-        private val docRes = docResMap.getOrPut(doc) { DocRes(doc) }
+        private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }
 
         private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
             val pi = shape.getPathIterator(AffineTransform())
@@ -404,11 +404,11 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                     mat.scale(pic.width, pic.height)
                     // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
                     // images to produce smaller files.
-                    val pdImg = docRes.pdImages.getOrPut(pic) { JPEGFactory.createFromImage(doc, pic.img) }
+                    val pdImg = docRes.pdImages.computeIfAbsent(pic) { JPEGFactory.createFromImage(doc, pic.img) }
                     cs.drawImage(pdImg, mat)
                 }
                 is Picture.SVG -> {
-                    val pdForm = docRes.pdForms.getOrPut(pic) {
+                    val pdForm = docRes.pdForms.computeIfAbsent(pic) {
                         val g2 = PdfBoxGraphics2D(doc, pic.width, pic.height)
                         g2.scale(pic.scaling)
                         // Batik might not be thread-safe, even though we haven't tested that.
@@ -454,7 +454,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             else
                 cs.setStrokingColor(color)
 
-            cs.setGraphicsStateParameters(docRes.extGStates.getOrPut(color.alpha) {
+            cs.setGraphicsStateParameters(docRes.extGStates.computeIfAbsent(color.alpha) {
                 PDExtendedGraphicsState().apply {
                     if (fill)
                         nonStrokingAlphaConstant = color.alpha / 255f

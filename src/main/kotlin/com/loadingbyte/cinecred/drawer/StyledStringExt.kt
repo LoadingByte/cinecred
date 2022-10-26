@@ -68,10 +68,10 @@ private class TextContextImpl(
     private val fmtStrCache = HashMap<StyledString, FormattedString>()
 
     fun getFmtStrAttrs(letterStyle: LetterStyle) =
-        fmtStrAttrsCache.getOrPut(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
+        fmtStrAttrsCache.computeIfAbsent(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
 
     fun getFmtStr(styledString: StyledString) =
-        fmtStrCache.getOrPut(styledString) { generateFmtStr(styledString, this) }
+        fmtStrCache.computeIfAbsent(styledString) { generateFmtStr(styledString, this) }
 
     class Attrs(
         val std: FormattedString.Attribute,

@@ -110,7 +110,7 @@ object RenderQueue {
         progressCallback: (Float) -> Unit,
         finishCallback: (Exception?) -> Unit
     ) {
-        val queue = queuedJobs.getOrPut(category) { ConcurrentLinkedQueue() }
+        val queue = queuedJobs.computeIfAbsent(category) { ConcurrentLinkedQueue() }
         queue.add(SubmittedJob(category, job, invokeLater, progressCallback, finishCallback))
     }
 

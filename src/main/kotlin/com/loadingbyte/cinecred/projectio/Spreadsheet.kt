@@ -143,7 +143,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
         for ((rowIdx, look) in rowLooks) {
             val fontKey = FontKey(look.fontSize, look.bold, look.italic)
             val styleKey = StyleKey(fontKey, look.wrap, look.borderBottom)
-            val font = fontsByKey.getOrPut(fontKey) {
+            val font = fontsByKey.computeIfAbsent(fontKey) {
                 workbook.createFont().apply {
                     if (fontKey.size != -1)
                         fontHeightInPoints = fontKey.size.toShort()
@@ -153,7 +153,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
                         italic = true
                 }
             }
-            val style = stylesByKey.getOrPut(styleKey) {
+            val style = stylesByKey.computeIfAbsent(styleKey) {
                 workbook.createCellStyle().apply {
                     setFont(font)
                     if (styleKey.wrap)

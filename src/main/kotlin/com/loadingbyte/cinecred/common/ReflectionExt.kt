@@ -76,10 +76,10 @@ fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
 
 private val supportedFeaturesCache = WeakHashMap<Font, Set<String>>()
 
-fun Font.getSupportedFeatures(): Set<String> = supportedFeaturesCache.getOrPut(this) {
+fun Font.getSupportedFeatures(): Set<String> = supportedFeaturesCache.computeIfAbsent(this) {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
-        return emptySet()
+        return@computeIfAbsent emptySet()
     val feats = TreeSet<String>() // ordered alphabetically
     extractFeatures(getTableBuffer(font2D, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
     extractFeatures(getTableBuffer(font2D, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)

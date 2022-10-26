@@ -162,7 +162,7 @@ class CustomGlyphLayoutEngine private constructor(
 
         private fun getHBFace(font: Font2D) =
             synchronized(hbFaces) {
-                hbFaces.getOrPut(font) {
+                hbFaces.computeIfAbsent(font) {
                     val faceScope = newConfinedScope()
                     val tableFunc = hb_reference_table_func_t.allocate({ _: MemoryAddress, tag: Int, _: MemoryAddress ->
                         try {

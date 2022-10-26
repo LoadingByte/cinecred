@@ -618,15 +618,18 @@ class FontChooserWidget(
 
     private val familyComboBox = JComboBox<FontFamily>().apply {
         maximumRowCount = 20
-        // Note: We do not localize font family names since obtaining family names requires some manual processing
-        // (see the UI helper Fonts file) and for now it would be too much work adapting this logic to each
-        // supported language.
-        keySelectionManager = CustomToStringKeySelectionManager(FontFamily::class.java) { it.familyName }
+        keySelectionManager = CustomToStringKeySelectionManager(FontFamily::class.java) { family ->
+            family.getFamily(Locale.getDefault())
+        }
     }
 
     private val fontComboBox = JComboBox<Any>(emptyArray()).apply {
         maximumRowCount = 20
-        fun toString(value: Any) = if (value is Font) value.fontName /* localized */ else value as String
+        fun toString(value: Any) = when (value) {
+            // Retrieve the subfamily name from the font's family object. The fallback should never be needed.
+            is Font -> getFamilyOf(value)?.getSubfamilyOf(value, Locale.getDefault()) ?: value.fontName
+            else -> value as String
+        }
         renderer = FontSampleListCellRenderer<Any>(::toString) { if (it is Font) it else null }
         keySelectionManager = CustomToStringKeySelectionManager(Any::class.java, ::toString)
     }
@@ -665,7 +668,7 @@ class FontChooserWidget(
 
     init {
         // Equip the family combo box with a custom renderer that shows category headers.
-        val baseRenderer = FontSampleListCellRenderer(FontFamily::familyName, FontFamily::canonicalFont)
+        val baseRenderer = FontSampleListCellRenderer({ it.getFamily(Locale.getDefault()) }, FontFamily::canonicalFont)
         familyComboBox.renderer = LabeledListCellRenderer(baseRenderer, groupSpacing = 8) { index: Int ->
             mutableListOf<String>().apply {
                 val projectHeaderIdx = 0
@@ -714,14 +717,17 @@ class FontChooserWidget(
         }
     }
 
+    private fun getFamilyOf(font: Font) =
+        projectFamilies.getFamily(font) ?: BUNDLED_FAMILIES.getFamily(font) ?: SYSTEM_FAMILIES.getFamily(font)
 
-    private class FontSampleListCellRenderer<E>(
+
+    private inner class FontSampleListCellRenderer<E>(
         private val toString: (E) -> String,
         private val toFont: (E) -> Font?
     ) : ListCellRenderer<E> {
 
         private val label1 = JLabel()
-        private val label2 = JLabel(l10n("ui.form.fontSample"))
+        private val label2 = JLabel()
         private val panel = JPanel(MigLayout("insets 0", "[]40lp:::push[]")).apply {
             add(label1)
             add(label2, "width 100lp!")
@@ -756,6 +762,8 @@ class FontChooserWidget(
                 value?.let(toFont)?.let { sampleFont ->
                     label2.isVisible = true
                     label2.font = sampleFont.deriveFont(list.font.size2D * 1.25f)
+                    label2.text = getFamilyOf(sampleFont)?.getSampleTextOf(sampleFont, Locale.getDefault())
+                        ?: l10n("ui.form.fontSample")
                 }
             }
 

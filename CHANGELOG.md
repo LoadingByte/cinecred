@@ -16,6 +16,12 @@ Cinecred Changelog
 - On macOS, the preferences can now be opened via the corresponding menu entry.
 - On macOS, the window title bar now shows the project folder and utilizes the
   unsaved indicator in the close button.
+- Improved font cataloging, which now better detects font variants by exploiting
+  font metadata, respects typographic and legacy (sub)family names, properly
+  handels localization, considers different width variants as part of the same
+  font family, and no longer duplicates the family name in both dropdowns.
+- Enabled the font preview to show the sample text provided by the font instead
+  of a generic latin one if available.
 - Improved installer branding and added localization to the Windows installer.
 - Added scalable SVG icons to the Linux packages.
 

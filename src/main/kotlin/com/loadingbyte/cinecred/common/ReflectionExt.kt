@@ -5,6 +5,7 @@ package com.loadingbyte.cinecred.common
 import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.pdfwriter.COSWriter
 import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.poi.util.LocaleID
 import sun.font.*
 import java.awt.Font
 import java.awt.font.GlyphVector
@@ -30,6 +31,71 @@ fun Font.getFontFile(): Path {
         throw IllegalArgumentException("A non-physical font has no font file.")
     return Path(get_platName(font2D) as String)
 }
+
+
+class FontStrings(
+    val family: Map<Locale, String>,
+    val subfamily: Map<Locale, String>,
+    val fullName: Map<Locale, String>,
+    val typographicFamily: Map<Locale, String>,
+    val typographicSubfamily: Map<Locale, String>,
+    val sampleText: Map<Locale, String>
+)
+
+fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
+    val font2D = FontUtilities.getFont2D(this)
+    if (font2D !is TrueTypeFont)
+        return@computeIfAbsent EMPTY_FONT_STRINGS
+    val nameTable = getTableBuffer(font2D, TrueTypeFont.nameTag) as ByteBuffer?
+    if (nameTable == null || nameTable.capacity() < 6)
+        return@computeIfAbsent EMPTY_FONT_STRINGS
+    val nameCount = nameTable.getShort(2).toUShort().toInt()
+    val stringAreaOffset = nameTable.getShort(4).toUShort().toInt()
+
+    // These numbers are the name IDs associated with all the fields of "FontStrings" in the same order.
+    val nameMaps = shortArrayOf(1, 2, 4, 16, 17, 19).associateWithTo(LinkedHashMap()) { HashMap<Locale, String>() }
+    for (idx in 0 until nameCount) {
+        val recordOffset = 6 + idx * 12
+        val platformId = nameTable.getShort(recordOffset)
+        if (platformId != WIN_PLATFORM && platformId != MAC_PLATFORM)
+            continue
+        val encodingId = nameTable.getShort(recordOffset + 2)
+        val languageId = nameTable.getShort(recordOffset + 4)
+        if (platformId == MAC_PLATFORM && (encodingId != MAC_ROMAN_ENCODING || languageId != MAC_ENGLISH_LANG))
+            continue
+        val nameId = nameTable.getShort(recordOffset + 6)
+        val stringLength = nameTable.getShort(recordOffset + 8).toUShort().toInt()
+        val stringOffset = stringAreaOffset + nameTable.getShort(recordOffset + 10).toUShort().toInt()
+
+        val targetMap = nameMaps[nameId] ?: continue
+        val stringBytes = ByteArray(stringLength)
+        nameTable.get(stringOffset, stringBytes)
+        val string = makeString(font2D, stringBytes, stringLength, platformId, encodingId) as String
+        val locale = if (platformId == MAC_PLATFORM) Locale.US else LCID_TO_LOCALE[languageId] ?: continue
+        targetMap[locale] = string.trim()
+    }
+
+    val iter = nameMaps.values.iterator()
+    FontStrings(iter.next(), iter.next(), iter.next(), iter.next(), iter.next(), iter.next())
+}
+
+private val fontStringsCache = WeakHashMap<Font, FontStrings>()
+
+private val EMPTY_FONT_STRINGS = FontStrings(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
+private const val WIN_PLATFORM = TrueTypeFont.MS_PLATFORM_ID.toShort()
+private const val MAC_PLATFORM = TrueTypeFont.MAC_PLATFORM_ID.toShort()
+private const val MAC_ROMAN_ENCODING = TrueTypeFont.MACROMAN_SPECIFIC_ID.toShort()
+private const val MAC_ENGLISH_LANG = TrueTypeFont.MACROMAN_ENGLISH_LANG.toShort()
+
+private val LCID_TO_LOCALE: Map<Short, Locale> = HashMap<Short, Locale>().apply {
+    for (id in LocaleID.values())
+        put(id.lcid.toShort(), Locale.forLanguageTag(id.languageTag))
+}
+
+
+fun Font.getWeight(): Int = getWeight(FontUtilities.getFont2D(this)) as Int
+fun Font.getWidth(): Int = getWidth(FontUtilities.getFont2D(this)) as Int
+fun Font.isItalic2D(): Boolean = (FontUtilities.getFont2D(this) as Font2D).style and Font.ITALIC != 0
 
 
 class SuperscriptMetrics(
@@ -169,12 +235,22 @@ private val LinuxFontPolicy = Class.forName("com.formdev.flatlaf.LinuxFontPolicy
 private val getGnomeFont = LinuxFontPolicy
     .findStatic("getGnomeFont", methodType(Font::class.java))
 
+private val getWeight = Font2D::class.java
+    .findVirtual("getWeight", methodType(Int::class.java))
+private val getWidth = Font2D::class.java
+    .findVirtual("getWidth", methodType(Int::class.java))
 private val getTableBytes = Font2D::class.java
     .findVirtual("getTableBytes", methodType(ByteArray::class.java, Int::class.java))
 private val getUnitsPerEm = Font2D::class.java
     .findVirtual("getUnitsPerEm", methodType(Long::class.java))
 private val getTableBuffer = TrueTypeFont::class.java
     .findVirtual("getTableBuffer", methodType(ByteBuffer::class.java, Int::class.java))
+private val makeString = TrueTypeFont::class.java
+    .findVirtual(
+        "makeString", methodType(
+            String::class.java, ByteArray::class.java, Int::class.java, Short::class.java, Short::class.java
+        )
+    )
 private val getComponentLogicalIndex = TextLine
     .findVirtual("getComponentLogicalIndex", methodType(Int::class.java, Int::class.java))
 private val getComponentVisualIndex = TextLine

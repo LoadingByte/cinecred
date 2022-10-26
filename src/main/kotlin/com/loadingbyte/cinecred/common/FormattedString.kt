@@ -192,10 +192,15 @@ class FormattedString private constructor(
 
                 val line = if (deco.dashPatternPx == null || deco.dashPatternPx.isEmpty())
                     Rectangle2D.Float(leftX, deco.offsetPx - deco.thicknessPx / 2f, rightX - leftX, deco.thicknessPx)
-                else
+                else {
+                    val phase = if (leftX >= 0) leftX else {
+                        val period = deco.dashPatternPx.sum() * (deco.dashPatternPx.size % 2 + 1)
+                        leftX.mod(period)  // Using mod() instead of % ensures that the result is positive.
+                    }
                     BasicStroke(
-                        deco.thicknessPx, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, deco.dashPatternPx, leftX
+                        deco.thicknessPx, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, deco.dashPatternPx, phase
                     ).createStrokedShape(Line2D.Float(leftX, deco.offsetPx, rightX, deco.offsetPx))
+                }
 
                 if (!deco.clear)
                     decorationsOverlay.add(Pair(line, deco.color))

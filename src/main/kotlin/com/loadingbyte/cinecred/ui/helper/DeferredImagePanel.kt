@@ -93,6 +93,11 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
             }
         })
 
+        // When the user clicks on the scrollbar, the viewport should page. The default increment of 10 however is way
+        // too small. We set it to this value, which scrolls 500 pixels each time.
+        xScrollbar.blockIncrement = 500 * SCROLLBAR_MULT.toInt()
+        yScrollbar.blockIncrement = 500 * SCROLLBAR_MULT.toInt()
+
         // When the user scrolls, adjust the viewport center and repaint the viewport.
         // Note: Because the scrollbars discretize their values to integers, we store the viewport centers
         // multiplied by a factor of SCROLLBAR_MULT to increase the precision.

@@ -187,10 +187,15 @@ open class Form(insets: Boolean = true) :
     // getScrollableTracksViewportWidth(). By returning true, we fix the form's width to the width of the surrounding
     // scroll pane viewport, thereby enabling the usage of the component constraint "width 100%" or "pushx, growx"
     // to maximally grow a component into the available horizontal space.
+    // The increment functions are adopted from JTextComponent's implementation.
+
     override fun getScrollableTracksViewportWidth() = true
     override fun getScrollableTracksViewportHeight() = false
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-    override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = 1
+
+    override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) =
+        if (orientation == SwingConstants.VERTICAL) visibleRect.height / 10 else visibleRect.width / 10
+
     override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) =
         if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 

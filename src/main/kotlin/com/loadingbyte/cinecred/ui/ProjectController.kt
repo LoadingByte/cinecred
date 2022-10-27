@@ -20,8 +20,6 @@ import java.awt.event.KeyEvent
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import java.nio.file.WatchEvent
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.JPanel
@@ -85,24 +83,26 @@ class ProjectController(
         tryReadCreditsAndRedraw()
 
         // Watch for future changes in the new project dir.
-        RecursiveFileWatcher.watch(projectDir) { file: Path, kinds: List<WatchEvent.Kind<*>> ->
-            val creditsFile = this.creditsFile  // capture
-            when {
-                hasCreditsFileName(file) -> {
-                    tryLocateCreditsFile()
-                    val newCreditsFile = this.creditsFile
-                    if (file == newCreditsFile || newCreditsFile == null ||
-                        (creditsFile != null && !safeIsSameFile(creditsFile, newCreditsFile))
-                    ) {
-                        tryReloadCreditsFile()
-                        tryReadCreditsAndRedraw()
-                    } else
-                        pushStateIntoUI()  // Update the log entry regarding multiple credits files.
+        RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
+            SwingUtilities.invokeLater {
+                when {
+                    hasCreditsFileName(file) -> {
+                        val creditsFile = this.creditsFile
+                        tryLocateCreditsFile()
+                        val newCreditsFile = this.creditsFile
+                        if (file == newCreditsFile || newCreditsFile == null ||
+                            (creditsFile != null && !safeIsSameFile(creditsFile, newCreditsFile))
+                        ) {
+                            tryReloadCreditsFile()
+                            tryReadCreditsAndRedraw()
+                        } else
+                            pushStateIntoUI()  // Update the log entry regarding multiple credits files.
+                    }
+                    event == RecursiveFileWatcher.Event.MODIFY ->
+                        if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw()
+                    event == RecursiveFileWatcher.Event.DELETE ->
+                        if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw()
                 }
-                kinds.last() == ENTRY_DELETE ->
-                    SwingUtilities.invokeLater { if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw() }
-                else ->
-                    SwingUtilities.invokeLater { if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw() }
             }
         }
     }

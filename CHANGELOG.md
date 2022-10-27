@@ -28,6 +28,10 @@ Cinecred Changelog
 ### Fixes
 
 - Resolved rare parsing errors caused by obscure features in Excel spreadsheets.
+- Implemented auto reloading on file systems which do not support it natively,
+  like network shares.
+- Copying a full directory into or moving one from the project folder is now
+  correctly detected by auto reloading.
 - Characters larger than 16 bit no longer disrupt small caps.
 - Left widening a dashed text decoration no longer crashes the program.
 

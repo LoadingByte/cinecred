@@ -32,6 +32,8 @@ Cinecred Changelog
   like network shares.
 - Copying a full directory into or moving one from the project folder is now
   correctly detected by auto reloading.
+- On macOS, system fonts are now fully supported: their metrics are properly
+  utilized and exported PDFs correctly embed them.
 - Characters larger than 16 bit no longer disrupt small caps.
 - Left widening a dashed text decoration no longer crashes the program.
 

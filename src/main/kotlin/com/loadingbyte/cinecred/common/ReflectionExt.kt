@@ -25,6 +25,10 @@ fun Bidi.visualToLogicalMap(): IntArray = BidiUtils.createVisualToLogicalMap(Bid
 fun IntArray.inverseMap(): IntArray = BidiUtils.createInverseMap(this)
 
 
+fun Font.isTTFOrOTF() =
+    FontUtilities.getFont2D(this) is TrueTypeFont
+
+
 fun Font.getFontFile(): Path {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is PhysicalFont)

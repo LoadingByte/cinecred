@@ -91,6 +91,8 @@ abstract class AbstractFilenameWidget<V>(
 
     var fileExts: ImmutableList<String> = persistentListOf()
         set(newFileExts) {
+            if (field == newFileExts)
+                return
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
@@ -201,12 +203,16 @@ class TimecodeWidget(
 
     var fps: FPS = fps
         set(fps) {
+            if (field == fps)
+                return
             field = fps
             updateFormatter()
         }
 
     var timecodeFormat: TimecodeFormat = timecodeFormat
         set(timecodeFormat) {
+            if (field == timecodeFormat)
+                return
             field = timecodeFormat
             updateFormatter()
         }
@@ -284,6 +290,8 @@ open class ComboBoxWidget<E : Any /* non-null */>(
 
     protected var items: Collection<E> = emptyList()
         set(items) {
+            if (field == items)
+                return
             field = items
             val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
             cb.model = makeModel(Vector(items), oldSelectedItem)
@@ -448,6 +456,8 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
 
     private var items: List<E> = emptyList()
         set(items) {
+            if (field == items)
+                return
             field = items
             panel.removeAll()
             for (elem in btnGroup.elements)
@@ -639,6 +649,8 @@ class FontChooserWidget(
 
     var projectFamilies: FontFamilies = FontFamilies(emptyList())
         set(value) {
+            if (field == value)
+                return
             field = value
             populateFamilyComboBox()
         }

@@ -53,6 +53,7 @@ Cinecred Changelog
 - On macOS, the window title bars now respect the system theme.
 - On macOS, the application menu now uses the correct program name everywhere.
 - Increased the style form's scrolling speed and the preview's paging speed.
+- Timecode spinners are now properly adjustable when the format is "clock".
 - Text background widening is no longer grayed out when a background is enabled.
 - A regression bug caused a crash instead of just an error message when choosing
   an invalid combination of FPS and timecode format; this has been fixed.

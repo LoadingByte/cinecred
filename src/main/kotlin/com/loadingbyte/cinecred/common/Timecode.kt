@@ -73,12 +73,15 @@ fun parseTimecode(fps: FPS, format: TimecodeFormat, timecode: String): Int = whe
         try {
             val nanos = LocalTime.from(CLOCK_FORMATTER.parse(timecode)).toNanoOfDay()
             // frames = nanos * (1/NANOS_PER_SECOND) * fps; reordered for maximum accuracy.
-            (nanos * fps.numerator / (fps.denominator * 1000_000_000L)).toInt()
+            roundingDiv(nanos * fps.numerator, fps.denominator * 1000_000_000L).toInt()
         } catch (e: DateTimeParseException) {
             throw IllegalArgumentException(e)
         }
     TimecodeFormat.FRAMES -> timecode.toInt()
 }
+
+/** Integer division that does not round towards zero, but towards the closest integer (from 0.5 onward upwards). */
+private fun roundingDiv(a: Long, b: Long): Long = (a + b / 2) / b
 
 private val SMPTE_REGEX_COLON = Regex("(\\d+):(\\d+):(\\d+):(\\d+)")
 private val SMPTE_REGEX_SEMICOLON = Regex("(\\d+):(\\d+):(\\d+);(\\d+)")

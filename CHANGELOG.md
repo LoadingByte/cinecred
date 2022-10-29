@@ -57,6 +57,7 @@ Cinecred Changelog
 - Text background widening is no longer grayed out when a background is enabled.
 - A regression bug caused a crash instead of just an error message when choosing
   an invalid combination of FPS and timecode format; this has been fixed.
+- Preview playback and frame navigation shortcuts now work regardless of focus.
 - Fixed crashes when closing a project immediately after opening it.
 - The missing Ghostscript dialog now only displays installation instructions for
   the current OS and no longer shows a broken link for the Windows download.

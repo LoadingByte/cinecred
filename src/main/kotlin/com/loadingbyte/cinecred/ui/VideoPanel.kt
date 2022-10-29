@@ -15,6 +15,8 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import javax.swing.*
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -95,6 +97,22 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
                 restartDrawing()
             }
         })
+    }
+
+    fun onKeyEvent(event: KeyEvent): Boolean {
+        if (event.id != KEY_PRESSED || event.modifiersEx != 0)
+            return false
+        when (event.keyCode) {
+            VK_SPACE, VK_K -> playButton.doClick()
+            VK_LEFT, VK_KP_LEFT, VK_UP, VK_KP_UP -> frameSlider.value--
+            VK_RIGHT, VK_KP_RIGHT, VK_DOWN, VK_KP_DOWN -> frameSlider.value++
+            VK_PAGE_UP -> project?.let { frameSlider.value -= it.styling.global.fps.frac.roundToInt() }
+            VK_PAGE_DOWN -> project?.let { frameSlider.value += it.styling.global.fps.frac.roundToInt() }
+            VK_HOME -> frameSlider.value = 0
+            VK_END -> frameSlider.value = frameSlider.maximum
+            else -> return false
+        }
+        return true
     }
 
     fun onLeaveTab() {

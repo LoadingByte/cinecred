@@ -59,6 +59,7 @@ class ProjectController(
     private val readCreditsAndRedrawJobSlot = JobSlot()
 
     private var isEditTabActive = true
+    private var isVideoTabActive = false
     private var isEditStylingDialogVisible = true
 
     init {
@@ -248,6 +249,7 @@ class ProjectController(
     fun onChangeTab(leftPanel: JPanel, enteredPanel: JPanel) {
         val enteredEdit = enteredPanel is EditPanel
         isEditTabActive = enteredEdit
+        isVideoTabActive = enteredPanel is VideoPanel
         editStylingDialog.isVisible = enteredEdit && isEditStylingDialogVisible
         if (leftPanel is VideoPanel)
             projectFrame.panel.videoPanel.onLeaveTab()
@@ -263,6 +265,8 @@ class ProjectController(
         val window = SwingUtilities.getRoot(event.component)
         if ((window == projectFrame || window == editStylingDialog) && isEditTabActive)
             return projectFrame.panel.editPanel.onKeyEvent(event)
+        else if (window == projectFrame && isVideoTabActive)
+            return projectFrame.panel.videoPanel.onKeyEvent(event)
         return false
     }
 

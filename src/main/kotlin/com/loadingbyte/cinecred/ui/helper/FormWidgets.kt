@@ -217,8 +217,19 @@ class TimecodeWidget(
             updateFormatter()
         }
 
-    private val editor = JSpinner.DefaultEditor(spinner).apply {
-        textField.isEditable = true
+    private val editor = object : JSpinner.DefaultEditor(spinner) {
+        init {
+            textField.isEditable = true
+        }
+
+        // There is a subtle bug in the JDK which causes JTextField and its subclasses to not utilize a one pixel wide
+        // column at the right for drawing; instead, it is always empty. However, this column is needed to draw the
+        // caret at the rightmost position when the text field has the preferred size that exactly matches the text
+        // width (which happens to this spinner when the width spec is kept as FIT). Hence, when the user positions the
+        // caret at the rightmost location, the text scrolls one pixel to the left to accommodate the caret. We did not
+        // manage to localize the source of this bug, but as a workaround, we just add one more pixel to the preferred
+        // width, thereby providing the required space for the caret when it is at the rightmost position.
+        override fun getPreferredSize() = super.getPreferredSize().apply { if (!isPreferredSizeSet) width += 1 }
     }
 
     init {

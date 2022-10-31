@@ -67,6 +67,7 @@ Cinecred Changelog
 
 # Notes
 
+- The grid layout no longer reserves space for unused columns.
 - Horizontal font scaling is now applied to the whole text as opposed to
   individual glyphs to mirror the behavior of uniform scaling.
 

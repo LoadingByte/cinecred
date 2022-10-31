@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.util.*
 import kotlin.math.max
+import kotlin.math.min
 
 
 class DrawnBody(val defImage: DeferredImage, val firstRowHeight: Float, val lastRowHeight: Float)
@@ -34,10 +35,10 @@ fun drawBodyImagesWithGridBodyLayout(
     //                 Extras
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
-    val numCols = style.gridElemHJustifyPerCol.size
     val bodyPartitions = blocks.associateWith { block ->
-        partitionIntoCols(block.body, numCols, style.gridFillingOrder)
+        partitionIntoCols(block.body, numCols = style.gridElemHJustifyPerCol.size, style.gridFillingOrder)
     }
+    val numCols = bodyPartitions.values.maxOf { cols -> cols.size }
     val numRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
 
     fun independentColWidths() = List(numCols) { colIdx ->
@@ -135,14 +136,13 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
     // First fill the columns irrespective of left-to-right / right-to-left.
     val cols = when (order) {
         GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
-            val cols = (0 until numCols).map { ArrayList<E>() }
-            for ((idx, elem) in list.withIndex())
-                cols[idx % cols.size].add(elem)
+            val cols = List(min(numCols, list.size)) { ArrayList<E>() }
+            list.forEachIndexed { idx, elem -> cols[idx % numCols].add(elem) }
             cols
         }
         GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
             val numRows = (list.size + (numCols - 1)) / numCols  // equivalent to "ceil(list.size / numCols)"
-            List(numCols) { colIdx ->
+            List(min(numCols, list.size)) { colIdx ->
                 list.subList(
                     (colIdx * numRows).coerceAtMost(list.size),
                     ((colIdx + 1) * numRows).coerceAtMost(list.size)

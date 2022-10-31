@@ -46,6 +46,7 @@ class CustomGlyphLayoutEngine private constructor(
         val liga = typoFlags and 0x00000002 != 0
         val rtl = typoFlags and 0x80000000.toInt() != 0
         val lang = config.locale.toLanguageTag()
+        val s = config.hScaling
 
         // Note: Whenever we allocate memory here, we do not have to check for allocation errors in the form of a NULL
         // pointer since (a) Java throws an OutOfMemoryError whenever some allocation we directly request fails and (b)
@@ -103,9 +104,9 @@ class CustomGlyphLayoutEngine private constructor(
                 indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start
                 if (setIdx != 0 && indices[setIdx] != indices[setIdx - 1])
                     x += config.trackingPx
-                positions[setIdx * 2] = x + hb_glyph_position_t.`x_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
+                positions[setIdx * 2] = x + s * hb_glyph_position_t.`x_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 positions[setIdx * 2 + 1] = y - hb_glyph_position_t.`y_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
-                x += hb_glyph_position_t.`x_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
+                x += s * hb_glyph_position_t.`x_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 y += hb_glyph_position_t.`y_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
             }
 
@@ -266,6 +267,7 @@ class CustomGlyphLayoutEngine private constructor(
 
     class ExtConfig(
         val locale: Locale,
+        val hScaling: Float,
         val trackingPx: Float,
         val bearingLeftPx: Float,
         val bearingRightPx: Float,

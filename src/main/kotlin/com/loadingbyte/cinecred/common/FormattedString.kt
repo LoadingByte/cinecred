@@ -430,7 +430,10 @@ class FormattedString private constructor(
             // they sum up to the whole inter-segment trackings.
             val bearingLeftPx = if (leftAttr == null) 0f else max(font.trackingPx, leftAttr.font.trackingPx) / 2f
             val bearingRightPx = if (rightAttr == null) 0f else max(font.trackingPx, rightAttr.font.trackingPx) / 2f
-            CustomGlyphLayoutEngine.ExtConfig(locale, font.trackingPx, bearingLeftPx, bearingRightPx, font.features)
+            // Assemble the extended configuration data object.
+            CustomGlyphLayoutEngine.ExtConfig(
+                locale, font.hScaling, font.trackingPx, bearingLeftPx, bearingRightPx, font.features
+            )
         }
     }
 
@@ -467,7 +470,7 @@ class FormattedString private constructor(
         private val unscaledPointSize = findSize(baseAWTFont, leadingTopRem + leadingBottomRem, heightPx)
         val pointSize = unscaledPointSize * scaling
 
-        val trackingPx get() = trackingEm * pointSize
+        val trackingPx get() = trackingEm * pointSize * hScaling
         val leadingTopPx get() = leadingTopRem * unscaledPointSize
         private val hOffsetPx get() = hOffsetRem * unscaledPointSize
         private val vOffsetPx get() = vOffsetRem * unscaledPointSize

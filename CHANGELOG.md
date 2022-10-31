@@ -65,6 +65,11 @@ Cinecred Changelog
 - The missing Ghostscript dialog now only displays installation instructions for
   the current OS and no longer shows a broken link for the Windows download.
 
+# Notes
+
+- Horizontal font scaling is now applied to the whole text as opposed to
+  individual glyphs to mirror the behavior of uniform scaling.
+
 
 1.2.0
 -----

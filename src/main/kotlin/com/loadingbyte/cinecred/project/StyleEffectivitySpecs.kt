@@ -82,6 +82,15 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.gridElemHJustifyPerCol.size < 2 }
     ),
     StyleEffectivitySpec(
+        ContentStyle::flowElemHJustify.st(),
+        isAlmostEffective = { _, style ->
+            style.flowElemBoxConform.let {
+                it != BodyElementBoxConform.WIDTH && it != BodyElementBoxConform.WIDTH_AND_HEIGHT &&
+                        it != BodyElementBoxConform.SQUARE
+            }
+        }
+    ),
+    StyleEffectivitySpec(
         ContentStyle::headVJustify.st(),
         isAlmostEffective = { _, style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
     ),

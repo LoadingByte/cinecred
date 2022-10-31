@@ -242,13 +242,14 @@ class StyleForm<S : Style>(
         }
     }
 
-    fun showIssue(setting: StyleSetting<*, *>, index: Int, issue: Notice) {
+    fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, index: Int, issue: Notice) {
         val formRow = rootFormRows[setting]!!
         val prevNoticeOverride = formRow.noticeOverride
         // Only show the notice message if there isn't already a notice with the same or a higher severity.
-        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
+        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity) {
             formRow.noticeOverride = issue
-        valueWidgets[setting]!!.applySeverity(index, issue.severity)
+            valueWidgets[setting]!!.applySeverity(index, issue.severity)
+        }
     }
 
     fun setProjectFontFamilies(projectFamilies: FontFamilies) {

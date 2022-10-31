@@ -279,16 +279,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val curStyle = curForm.save()
 
         curForm.clearIssues()
-        val worstSeverity = HashMap<Pair<StyleSetting<*, *>, Int>, Severity>()
         for (violation in constraintViolations)
             if (violation.leafStyle == curStyle) {
-                val key = Pair(violation.leafSetting, violation.leafIndex)
-                val prevSeverity = worstSeverity[key]
-                if (prevSeverity == null || violation.severity > prevSeverity) {
-                    worstSeverity[key] = violation.severity
-                    val issue = Form.Notice(violation.severity, violation.msg)
-                    curForm.showIssue(violation.leafSetting, violation.leafIndex, issue)
-                }
+                val issue = Form.Notice(violation.severity, violation.msg)
+                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafIndex, issue)
             }
 
         for (constr in getStyleConstraints(curStyle.javaClass))

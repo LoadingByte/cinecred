@@ -43,16 +43,18 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         welcomeCtrl!!.setTab(WelcomeTab.PREFERENCES)
     }
 
-    override fun tryCloseProjectsAndDisposeAllFrames(force: Boolean) {
+    override fun tryCloseProjectsAndDisposeAllFrames(force: Boolean): Boolean {
         for (projectCtrl in projectCtrls.toMutableList() /* copy to avoid concurrent modification */)
             if (!projectCtrl.tryCloseProject(force) && !force)
-                return
+                return false
 
         welcomeCtrl?.close()
 
         if (force)
             for (window in Window.getWindows())
                 window.dispose()
+
+        return true
     }
 
     override fun getNumPendingJobsOfAllProjects(): Int =

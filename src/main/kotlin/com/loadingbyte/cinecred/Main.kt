@@ -155,8 +155,10 @@ private fun mainSwing(args: Array<String>) {
     // all windows, which in turn triggers all "unsaved changes" dialogs.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
         Desktop.getDesktop().setQuitHandler { _, response ->
-            masterCtrl.tryCloseProjectsAndDisposeAllFrames()
-            response.performQuit()
+            if (masterCtrl.tryCloseProjectsAndDisposeAllFrames())
+                response.performQuit()
+            else
+                response.cancelQuit()
         }
 
     // Finally open the UI.

@@ -11,7 +11,7 @@ interface MasterCtrlComms {
     fun applyUILocaleWish()
     fun showWelcomeFrame(openProjectDir: Path? = null)
     fun showPreferences()
-    fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false)
+    fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false): Boolean
     fun getNumPendingJobsOfAllProjects(): Int
 
     // ========== FOR WELCOME CTRL ==========

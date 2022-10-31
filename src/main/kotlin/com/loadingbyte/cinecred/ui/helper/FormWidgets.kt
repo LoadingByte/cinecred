@@ -518,10 +518,19 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
     private class GroupPanel : JPanel(MigLayout("insets 0 1lp 0 1lp, gap 0")) {
 
         val arc = UIManager.getInt("Button.arc").toFloat()
+        val focusWidth = UIManager.getInt("Component.focusWidth")
+        val borderWidth = (UIManager.get("Component.borderWidth") as Number).toFloat()
+        val innerOutlineWidth = (UIManager.get("Component.innerOutlineWidth") as Number).toFloat()
         val backgroundColor: Color = UIManager.getColor("ComboBox.background")
         val disabledBackgroundColor: Color = UIManager.getColor("ComboBox.disabledBackground")
         val borderColor: Color = UIManager.getColor("Component.borderColor")
         val disabledBorderColor: Color = UIManager.getColor("Component.disabledBorderColor")
+        val errorBorderColor: Color = UIManager.getColor("Component.error.borderColor")
+        val warningBorderColor: Color = UIManager.getColor("Component.warning.borderColor")
+
+        init {
+            addPropertyChangeListener(OUTLINE) { repaint() }
+        }
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
@@ -536,9 +545,17 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
             super.paintChildren(g)
             g.withNewG2 { g2 ->
                 FlatUIUtils.setRenderingHints(g2)
-                val color = if (isEnabled) borderColor else disabledBorderColor
+                val outlineColor = when (getClientProperty(OUTLINE)) {
+                    OUTLINE_ERROR -> errorBorderColor
+                    OUTLINE_WARNING -> warningBorderColor
+                    null -> null
+                    else -> throw IllegalStateException()
+                }
+                val bordColor = outlineColor ?: if (isEnabled) borderColor else disabledBorderColor
                 FlatUIUtils.paintOutlinedComponent(
-                    g2, 0, 0, width, height, 0f, 0f, 0f, UIScale.scale(1f), UIScale.scale(arc), null, color, null
+                    g2, 0, 0, width, height, UIScale.scale(focusWidth.toFloat()), 1f,
+                    UIScale.scale(borderWidth + innerOutlineWidth), UIScale.scale(borderWidth), UIScale.scale(arc),
+                    outlineColor, bordColor, null
                 )
             }
         }

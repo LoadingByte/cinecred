@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.project.AlignWithAxis.*
+import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import java.awt.Color
 import java.text.NumberFormat
 import kotlin.math.floor
@@ -92,6 +93,10 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         ContentStyle::tailLetterStyleName.st(),
         choices = { _, styling, _ -> styling.letterStyles.map(LetterStyle::name) }
     ),
+    DynChoiceConstr(WARN, ContentStyle::gridElemBoxConform.st()) { _, _, style ->
+        if (style.gridElemHJustifyPerCol.size < 2) listOf(NOTHING, HEIGHT, SQUARE)
+        else BodyElementBoxConform.values().asList()
+    },
     MinSizeConstr(ERROR, ContentStyle::gridElemHJustifyPerCol.st(), 1),
     FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0f),

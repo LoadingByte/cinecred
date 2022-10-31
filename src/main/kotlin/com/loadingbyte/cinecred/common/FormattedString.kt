@@ -409,8 +409,7 @@ class FormattedString private constructor(
         }
 
         return CustomGlyphLayoutEngine.ExtConfigSource { startCharIdx: Int, endCharIdx: Int ->
-            val attr = attrs.getAttr(startCharIdx)
-            val trackingEm = attr.font.trackingEm
+            val font = attrs.getAttr(startCharIdx).font
             // Get the attributes of the segment to the left and right of the current segment.
             val leftAttr: Attribute?
             val rightAttr: Attribute?
@@ -429,9 +428,9 @@ class FormattedString private constructor(
             // of the current or the respective neighboring segment. Then add half of those inter-segment trackings
             // to this segment; the neighboring segments will also receive the same half trackings, so in the end,
             // they sum up to the whole inter-segment trackings.
-            val bearingLeftEm = if (leftAttr == null) 0f else max(trackingEm, leftAttr.font.trackingEm) / 2f
-            val bearingRightEm = if (rightAttr == null) 0f else max(trackingEm, rightAttr.font.trackingEm) / 2f
-            CustomGlyphLayoutEngine.ExtConfig(locale, trackingEm, bearingLeftEm, bearingRightEm, attr.font.features)
+            val bearingLeftPx = if (leftAttr == null) 0f else max(font.trackingPx, leftAttr.font.trackingPx) / 2f
+            val bearingRightPx = if (rightAttr == null) 0f else max(font.trackingPx, rightAttr.font.trackingPx) / 2f
+            CustomGlyphLayoutEngine.ExtConfig(locale, font.trackingPx, bearingLeftPx, bearingRightPx, font.features)
         }
     }
 
@@ -455,7 +454,7 @@ class FormattedString private constructor(
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
         val features: List<Feature> = emptyList(),
-        val trackingEm: Float = 0f,
+        private val trackingEm: Float = 0f,
         private val leadingTopRem: Float = 0f,
         private val leadingBottomRem: Float = 0f
     ) {
@@ -468,6 +467,7 @@ class FormattedString private constructor(
         private val unscaledPointSize = findSize(baseAWTFont, leadingTopRem + leadingBottomRem, heightPx)
         val pointSize = unscaledPointSize * scaling
 
+        val trackingPx get() = trackingEm * pointSize
         val leadingTopPx get() = leadingTopRem * unscaledPointSize
         private val hOffsetPx get() = hOffsetRem * unscaledPointSize
         private val vOffsetPx get() = vOffsetRem * unscaledPointSize

@@ -34,6 +34,7 @@ Cinecred Changelog
   correctly detected by auto reloading.
 - On macOS, system fonts are now fully supported: their metrics are properly
   utilized and exported PDFs correctly embed them.
+- Rectified the tracking between segments of differing font sizes.
 - Characters larger than 16 bit no longer disrupt small caps.
 - Left widening a dashed text decoration no longer crashes the program.
 

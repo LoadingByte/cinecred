@@ -46,10 +46,6 @@ class CustomGlyphLayoutEngine private constructor(
         val liga = typoFlags and 0x00000002 != 0
         val rtl = typoFlags and 0x80000000.toInt() != 0
         val lang = config.locale.toLanguageTag()
-        val trackingPx = config.trackingEm * ptSize
-        val bearingLeftPx = config.bearingLeftEm * ptSize
-        val bearingRightPx = config.bearingRightEm * ptSize
-        val userFeats = config.features
 
         // Note: Whenever we allocate memory here, we do not have to check for allocation errors in the form of a NULL
         // pointer since (a) Java throws an OutOfMemoryError whenever some allocation we directly request fails and (b)
@@ -71,13 +67,13 @@ class CustomGlyphLayoutEngine private constructor(
             hb_buffer_add_utf16(hbBuffer, chars, tr.text.size, tr.start, tr.limit - tr.start)
 
             // Create an HB feature array and fill it.
-            val numFeatures = 1 + LIGATURES_FONT_FEATS.size + userFeats.size
+            val numFeatures = 1 + LIGATURES_FONT_FEATS.size + config.features.size
             val hbFeatures = hb_feature_t.allocateArray(numFeatures, scope)
             var featureIdx = 0L
             configureFeature(hbFeatures, featureIdx++, KERNING_FONT_FEAT, if (kern) 1 else 0)
             for (tag in LIGATURES_FONT_FEATS)
                 configureFeature(hbFeatures, featureIdx++, tag, if (liga) 1 else 0)
-            for (feat in userFeats)
+            for (feat in config.features)
                 configureFeature(hbFeatures, featureIdx++, feat.tag, feat.value)
 
             // Run the HB shaping algorithm.
@@ -99,14 +95,14 @@ class CustomGlyphLayoutEngine private constructor(
                 gvData.grow(delta)
 
             // Transfer the shaping result into those arrays.
-            var x = startPt.x + bearingLeftPx
+            var x = startPt.x + config.bearingLeftPx
             var y = startPt.y
             for (getIdx in 0L until glyphCount.toLong()) {
                 val setIdx = gvData._count++
                 glyphs[setIdx] = hb_glyph_info_t.`codepoint$get`(glyphInfo, getIdx) or gmask
                 indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start
                 if (setIdx != 0 && indices[setIdx] != indices[setIdx - 1])
-                    x += trackingPx
+                    x += config.trackingPx
                 positions[setIdx * 2] = x + hb_glyph_position_t.`x_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 positions[setIdx * 2 + 1] = y - hb_glyph_position_t.`y_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
                 x += hb_glyph_position_t.`x_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
@@ -116,7 +112,7 @@ class CustomGlyphLayoutEngine private constructor(
             // Now, x respectively y hold the start point plus the advance of the string. Move the start point there
             // in preparation for the next layout step, and also store it in the positions array since the calling code
             // expects that.
-            x += bearingRightPx
+            x += config.bearingRightPx
             startPt.x = x
             startPt.y = y
             positions[gvData._count * 2] = x
@@ -270,9 +266,9 @@ class CustomGlyphLayoutEngine private constructor(
 
     class ExtConfig(
         val locale: Locale,
-        val trackingEm: Float,
-        val bearingLeftEm: Float,
-        val bearingRightEm: Float,
+        val trackingPx: Float,
+        val bearingLeftPx: Float,
+        val bearingRightPx: Float,
         val features: List<FormattedString.Font.Feature>
     )
 

@@ -51,11 +51,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         projectsPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
         preferencesPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
 
-        changelogEditorPane = JEditorPane("text/html", "").apply {
-            background = null
-            isEditable = false
-            isFocusable = false
-        }
+        changelogEditorPane = newLabelEditorPane("text/html")
         changelogScrollPane = JScrollPane(changelogEditorPane).apply {
             border = null
             background = null
@@ -80,8 +76,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         licenseComboBox.addItemListener { e ->
             if (e.stateChange == ItemEvent.SELECTED) {
                 licenseTextArea.text = (licenseComboBox.selectedItem as License).body
-                // We have to delay this change because for some reason; if we don't, the change has no effect.
-                SwingUtilities.invokeLater { licenseScrollPane.verticalScrollBar.value = 0 }
+                licenseScrollPane.verticalScrollBar.value = 0
             }
         }
         val licensesPanel = JPanel(MigLayout("insets 20lp")).apply {
@@ -90,11 +85,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(licenseScrollPane, "newline, grow, push, gaptop 10lp")
         }
 
-        updateMessageTextPane = JTextPane().apply {
-            background = null
-            isEditable = false
-            isFocusable = false
-        }
+        updateMessageTextPane = newLabelTextPane()
         val updateBrowseButton = JButton(l10n("ui.update.browse"), BEARING_BOTTOM_ICON.getScaledIcon(2f)).apply {
             iconTextGap = 10
             putClientProperty(STYLE_CLASS, "h2")
@@ -148,8 +139,6 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     fun setChangelog(changelog: String) {
         changelogEditorPane.text = changelog
-        // We have to delay this change because for some reason; if we don't, the change has no effect.
-        SwingUtilities.invokeLater { changelogScrollPane.verticalScrollBar.value = 0 }
     }
 
     fun setLicenses(licenses: List<License>) {

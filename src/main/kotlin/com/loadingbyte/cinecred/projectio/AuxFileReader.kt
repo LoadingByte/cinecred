@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
@@ -17,7 +18,6 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import javax.imageio.ImageIO
-import javax.swing.JEditorPane
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
 import kotlin.io.path.*
@@ -139,12 +139,11 @@ private val GS_EXECUTABLE: Path? by lazy {
         else -> l10n("projectIO.ghostscriptMissing.msg.linux")
     }
     val msg = l10n("projectIO.ghostscriptMissing.msg", osSpecific)
-    val ep = JEditorPane("text/html", msg)
+    val ep = newLabelEditorPane("text/html", msg)
     ep.addHyperlinkListener { e ->
         if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)
             tryBrowse(e.url.toURI())
     }
-    ep.isEditable = false
     JOptionPane.showMessageDialog(null, ep, l10n("projectIO.ghostscriptMissing.title"), JOptionPane.WARNING_MESSAGE)
     null
 }

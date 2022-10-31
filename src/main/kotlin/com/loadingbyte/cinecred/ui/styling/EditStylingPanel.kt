@@ -216,8 +216,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         adjustOpenedForm()
         rightPanelCards.show(rightPanel, cardName)
         // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
-        // Note that we have to delay this change because for some reason, if we don't, the change has no effect.
-        SwingUtilities.invokeLater { (form.parent.parent as JScrollPane).verticalScrollBar.value = 0 }
+        (form.parent.parent as JScrollPane).verticalScrollBar.value = 0
     }
 
     fun setStyling(styling: Styling) {

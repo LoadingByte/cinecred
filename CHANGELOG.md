@@ -54,6 +54,7 @@ Cinecred Changelog
 - On macOS, the window title bars now respect the system theme.
 - On macOS, the application menu now uses the correct program name everywhere.
 - Increased the style form's scrolling speed and the preview's paging speed.
+- The style form no longer jumps to notices and issues while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".
 - Font preview samples stay inside their allotted height and no longer show
   missing characters.

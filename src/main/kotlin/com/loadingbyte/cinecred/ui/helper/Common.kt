@@ -22,19 +22,50 @@ val PALETTE_RED: String = "#C75450"
 val PALETTE_GREEN: String = "#499C54"
 
 
-fun newLabelTextArea(text: String? = null, insets: Boolean = false) = JTextArea(text).apply {
-    background = null
-    isEditable = false
-    lineWrap = true
-    wrapStyleWord = true
-    isFocusable = false
-    // If requested, set insets to 0, since JLabels also have insets of 0 and the text area should behave like a label.
-    if (!insets)
-        border = null
-    // Without setting an explicit minimum width, the component would never ever again shrink once it has grown.
-    // This would of course lead to trouble when first enlarging and then shrinking a container which contains
-    // a label text area. By setting an explicit minimum width, we turn off this undesired behavior.
-    minimumSize = Dimension(0, 0)
+fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : JTextArea(text) {
+    init {
+        background = null
+        isEditable = false
+        isFocusable = false
+        lineWrap = true
+        wrapStyleWord = true
+        // If requested, set insets to 0, as JLabels also have insets of 0 and the text area should behave like a label.
+        if (!insets)
+            border = null
+        // Without setting an explicit minimum width, the component would never ever again shrink once it has grown.
+        // This would of course lead to trouble when first enlarging and then shrinking a container which contains
+        // a label text area. By setting an explicit minimum width, we turn off this undesired behavior.
+        minimumSize = Dimension(0, 0)
+
+    }
+
+    // Disable the capability of the text area to scroll any ancestor scroll pane. Text areas usually scroll to
+    // themselves whenever their text changes. We do not want this behavior for label text areas.
+    override fun scrollRectToVisible(aRect: Rectangle) {}
+}
+
+
+fun newLabelTextPane() = object : JTextPane() {
+    init {
+        background = null
+        isEditable = false
+        isFocusable = false
+    }
+
+    // Disable the ability to scroll for the same reason as explained above.
+    override fun scrollRectToVisible(aRect: Rectangle) {}
+}
+
+
+fun newLabelEditorPane(type: String, text: String? = null) = object : JEditorPane(type, text) {
+    init {
+        background = null
+        isEditable = false
+        isFocusable = false
+    }
+
+    // Disable the ability to scroll for the same reason as explained above.
+    override fun scrollRectToVisible(aRect: Rectangle) {}
 }
 
 
@@ -56,10 +87,7 @@ class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
 
     private val comp = when (allowHtml) {
         false -> newLabelTextArea(insets = true)
-        true -> JEditorPane().apply {
-            contentType = "text/html"
-            isEditable = false
-        }
+        true -> newLabelEditorPane("text/html")
     }
 
     override fun getTableCellRendererComponent(

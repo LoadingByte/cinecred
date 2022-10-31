@@ -456,11 +456,14 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
     items: Collection<E>,
     private val toIcon: ((E) -> Icon)? = null,
     private val toLabel: ((E) -> String)? = null,
-    private val toTooltip: ((E) -> String)? = null
+    private val toTooltip: ((E) -> String)? = null,
+    private val inconsistent: Boolean = false
 ) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E> {
 
     private val panel = GroupPanel()
     private val btnGroup = ButtonGroup()
+
+    private var overflowItem: E? = null
 
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("")
@@ -469,33 +472,45 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
         set(items) {
             if (field == items)
                 return
+            val oldSelItem = if (field.isNotEmpty() || overflowItem != null) value else null
             field = items
+            // Remove the previous buttons.
             panel.removeAll()
-            for (elem in btnGroup.elements)
+            for (elem in btnGroup.elements.toList() /* copy for concurrent modification */)
                 btnGroup.remove(elem)
-            for (item in items) {
-                val btn = JToggleButton()
-                toIcon?.let { btn.icon = it(item) }
-                toLabel?.let { btn.text = it(item) }
-                toTooltip?.let { btn.toolTipText = it(item) }
-                btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
-                btn.model.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-                panel.add(btn)
-                btnGroup.add(btn)
+            // Add buttons for the new items.
+            for (item in items)
+                addButton(item)
+            // If the overflow item is now available in the actual items, discard it.
+            if (overflowItem != null && overflowItem in items)
+                overflowItem = null
+            // In inconsistent mode, if the previously selected item is no longer available, make it the overflow item.
+            if (inconsistent && oldSelItem != null && oldSelItem !in items)
+                overflowItem = oldSelItem
+            // Select the adequate button or add the overflow item if that's set.
+            if (overflowItem != null)
+                addButton(overflowItem!!).isSelected = true
+            else {
+                // We default to selecting the first button because the absence of a selection is an invalid state and
+                // the value getter wouldn't know what to return.
+                val idx = if (oldSelItem == null) 0 else items.indexOf(oldSelItem).coerceAtLeast(0)
+                btnGroup.elements.asSequence().drop(idx).first().isSelected = true
             }
-            // Select the first button. This is important since no selection is an invalid state
-            // and the value getter wouldn't know what to return.
-            if (items.isNotEmpty())
-                btnGroup.elements.nextElement().isSelected = true
         }
 
     override var value: E
-        get() = items[btnGroup.elements.asSequence().indexOfFirst { it.model == btnGroup.selection }]
+        get() = overflowItem ?: items[btnGroup.elements.asSequence().indexOfFirst { it.isSelected }]
         set(value) {
-            val idx = items.indexOf(value)
-            if (idx == -1)
-                throw IllegalArgumentException()
-            btnGroup.setSelected(btnGroup.elements.asSequence().drop(idx).first().model, true)
+            if (this.value == value)
+                return
+            if (overflowItem != null)
+                removeOverflow()
+            if (value !in items) {
+                require(inconsistent)
+                overflowItem = value
+                btnGroup.setSelected(addButton(value).model, true)
+            } else
+                btnGroup.setSelected(btnGroup.elements.asSequence().drop(items.indexOf(value)).first().model, true)
         }
 
     override var isEnabled: Boolean
@@ -512,6 +527,29 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
 
     init {
         updateChoices(items)
+    }
+
+    private fun addButton(item: E) = JToggleButton().also { btn ->
+        toIcon?.let { btn.icon = it(item) }
+        toLabel?.let { btn.text = it(item) }
+        toTooltip?.let { btn.toolTipText = it(item) }
+        btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
+        btn.model.addItemListener { e ->
+            if (e.stateChange == ItemEvent.SELECTED) {
+                if (overflowItem != null && !btnGroup.elements.asSequence().last().isSelected)
+                    removeOverflow()
+                notifyChangeListeners()
+            }
+        }
+        panel.add(btn)
+        btnGroup.add(btn)
+    }
+
+    private fun removeOverflow() {
+        overflowItem = null
+        val overflowBtn = btnGroup.elements.asSequence().last()
+        panel.remove(overflowBtn)
+        btnGroup.remove(overflowBtn)
     }
 
 

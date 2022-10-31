@@ -151,13 +151,13 @@ class StyleForm<S : Style>(
             FontFeature::class.java -> FontFeatureWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
+                    toggleButtonGroupWidgetSpec != null -> makeEnumTBGWidget(
+                        setting.type as Class<*>, toggleButtonGroupWidgetSpec.show, incons = dynChoiceConstr != null
+                    )
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type as Class<*>, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
                     )
-                    toggleButtonGroupWidgetSpec != null ->
-                        makeEnumTBGWidget(setting.type as Class<*>, toggleButtonGroupWidgetSpec.show)
-                    else ->
-                        makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
+                    else -> makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
                 }
                 Style::class.java.isAssignableFrom(setting.type) ->
                     @Suppress("UNCHECKED_CAST")
@@ -172,7 +172,8 @@ class StyleForm<S : Style>(
 
     private fun <E : Any /* non-null */> makeEnumTBGWidget(
         enumClass: Class<E>,
-        show: ToggleButtonGroupWidgetSpec.Show
+        show: ToggleButtonGroupWidgetSpec.Show,
+        incons: Boolean
     ): Widget<*> {
         var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
         var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
@@ -186,7 +187,7 @@ class StyleForm<S : Style>(
         // @formatter:on
 
         val items = enumClass.enumConstants.asList()
-        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip)
+        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip, incons)
     }
 
     private fun makeFormRow(name: String, widget: Widget<*>): FormRow {

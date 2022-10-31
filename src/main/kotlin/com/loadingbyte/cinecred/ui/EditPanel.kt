@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
 class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     companion object {
-        private const val MAX_ZOOM = 2f
+        private const val MAX_ZOOM = 3f
     }
 
     // ========== HINT OWNERS ==========

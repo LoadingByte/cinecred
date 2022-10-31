@@ -747,7 +747,7 @@ class FontChooserWidget(
     init {
         // Equip the family combo box with a custom renderer that shows category headers.
         val baseRenderer = FontSampleListCellRenderer({ it.getFamily(Locale.getDefault()) }, FontFamily::canonicalFont)
-        familyComboBox.renderer = LabeledListCellRenderer(baseRenderer, groupSpacing = 8) { index: Int ->
+        familyComboBox.renderer = LabeledListCellRenderer(baseRenderer, groupSpacing = 10) { index: Int ->
             mutableListOf<String>().apply {
                 val projectHeaderIdx = 0
                 val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
@@ -808,7 +808,7 @@ class FontChooserWidget(
         private val label2 = JLabel()
         private val panel = JPanel(MigLayout("insets 0", "[]40lp:::push[]")).apply {
             add(label1)
-            add(label2, "width 100lp!")
+            add(label2, "width 100lp!, height ::22lp")
         }
 
         override fun getListCellRendererComponent(
@@ -836,12 +836,20 @@ class FontChooserWidget(
             label2.isVisible = false
             label2.font = list.font
             if (index != -1) {
-                label1.border = BorderFactory.createEmptyBorder(4, 0, 4, 0)
+                label1.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
                 value?.let(toFont)?.let { sampleFont ->
-                    label2.isVisible = true
-                    label2.font = sampleFont.deriveFont(list.font.size2D * 1.25f)
-                    label2.text = getFamilyOf(sampleFont)?.getSampleTextOf(sampleFont, Locale.getDefault())
+                    val effSampleFont = sampleFont.deriveFont(list.font.size2D * 1.25f)
+                    // Try to get the sample text from the font, and if none is specified, use a standard one.
+                    val effSampleText = getFamilyOf(sampleFont)?.getSampleTextOf(sampleFont, Locale.getDefault())
                         ?: l10n("ui.form.fontSample")
+                    // Only display the sample when there is at least one glyph is not the missing glyph placeholder.
+                    val gv = effSampleFont.createGlyphVector(REF_FRC, effSampleText)
+                    val missGlyph = effSampleFont.missingGlyphCode
+                    if (gv.getGlyphCodes(0, gv.numGlyphs, null).any { it != missGlyph }) {
+                        label2.isVisible = true
+                        label2.font = effSampleFont
+                        label2.text = effSampleText
+                    }
                 }
             }
 

@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
+import java.awt.BorderLayout
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -31,6 +32,11 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
     init {
         val jobTable = JTable(jobTableModel).apply {
+            // We disable focusing the table for two reasons:
+            //   - When it gains focus, it for some reason cannot lose it via tabbing.
+            //   - If it were focusable, clicking a cancel button would require two clicks: the first focuses the table,
+            //     the second actually clicks the button. By disabling focus, the user only has to click once.
+            isFocusable = false
             // Disable cell selection because it looks weird with the custom cell renderers.
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
@@ -40,13 +46,13 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
                 getColumn(1).cellRenderer = WordWrapCellRenderer()
                 getColumn(2).cellRenderer = ProgressCellRenderer()
                 getColumn(3).apply {
-                    cellRenderer = CancelButtonCellRenderer()
-                    cellEditor = CancelButtonCellEditor(::removeRowFromQueue)
+                    cellRenderer = CancelButtonCell()
+                    cellEditor = CancelButtonCell(::removeRowFromQueue)
                 }
                 // Set some sensible default column widths for all but the progress columns.
                 getColumn(0).width = 200
                 getColumn(1).width = 400
-                getColumn(3).maxWidth = 24
+                getColumn(3).apply { minWidth = 24; maxWidth = 24 }
             }
             // The progress column should be the one that receives all remaining width.
             tableHeader.resizingColumn = columnModel.getColumn(2)
@@ -218,38 +224,35 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
     }
 
 
-    private class CancelButtonCellRenderer : TableCellRenderer {
+    private class CancelButtonCell(private val callback: ((Int) -> Unit)? = null) :
+        TableCellRenderer, AbstractCellEditor(), TableCellEditor {
 
-        private val button = JButton(CANCEL_ICON).apply {
-            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-            isFocusable = false
-            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
+        private val panel: JPanel
+        private var curRowIdx = 0
+
+        init {
+            val button = JButton(CANCEL_ICON).apply {
+                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
+                isFocusable = false
+                isRolloverEnabled = false
+                toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
+                addActionListener { callback!!(curRowIdx) }
+            }
+            panel = JPanel(BorderLayout()).apply {
+                add(button, BorderLayout.CENTER)
+            }
         }
 
         override fun getTableCellRendererComponent(
             table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-        ) = button
-
-    }
-
-
-    private class CancelButtonCellEditor(private val callback: (Int) -> Unit) : AbstractCellEditor(), TableCellEditor {
-
-        private val button = JButton(CANCEL_ICON).apply {
-            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-            isFocusable = false
-            toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
-        }
+        ) = panel.apply { setTableCellBackground(table, rowIdx) }
 
         override fun getCellEditorValue() = null
         override fun shouldSelectCell(anEvent: EventObject) = false
 
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
-        ) = button.apply {
-            actionListeners.forEach(::removeActionListener)
-            addActionListener { callback(rowIdx) }
-        }
+        ) = panel.apply { setTableCellBackground(table, rowIdx) }.also { curRowIdx = rowIdx }
 
     }
 

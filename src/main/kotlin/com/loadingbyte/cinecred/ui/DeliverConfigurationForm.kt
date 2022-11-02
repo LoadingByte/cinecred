@@ -151,9 +151,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     }
 
     private fun onFormatChange() {
-        val newFileExts = formatWidget.value.fileExts.toImmutableList()
-        seqFilenamePatternWidget.fileExts = newFileExts
-        singleFileWidget.fileExts = newFileExts
+        val format = formatWidget.value
+        val fileExtAssortment = FileExtAssortment(format.fileExts.sorted().toImmutableList(), format.defaultFileExt)
+        seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
+        singleFileWidget.fileExtAssortment = fileExtAssortment
     }
 
     private fun addRenderJobToQueue() {

@@ -8,7 +8,6 @@ import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
@@ -76,6 +75,12 @@ class TextListWidget(
 }
 
 
+class FileExtAssortment(val choices: ImmutableList<String>, val default: String) {
+    init {
+        require(default in choices)
+    }
+}
+
 abstract class AbstractFilenameWidget<V>(
     widthSpec: WidthSpec? = null
 ) : AbstractTextComponentWidget<V>(JTextField(), widthSpec) {
@@ -84,23 +89,25 @@ abstract class AbstractFilenameWidget<V>(
         // When the user leaves the text field, ensure that it ends with an admissible file extension.
         tc.addFocusListener(object : FocusAdapter() {
             override fun focusLost(e: FocusEvent) {
-                tc.text = tc.text.ensureEndsWith(fileExts.map { ".$it" })
+                val ass = fileExtAssortment
+                if (ass != null && ass.choices.none { tc.text.endsWith(".$it", ignoreCase = true) })
+                    tc.text += ".${ass.default}"
             }
         })
     }
 
-    var fileExts: ImmutableList<String> = persistentListOf()
-        set(newFileExts) {
-            if (field == newFileExts)
+    var fileExtAssortment: FileExtAssortment? = null
+        set(newAssortment) {
+            if (field == newAssortment)
                 return
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
-            if (!newFileExts.any { tc.text.endsWith(".$it") }) {
-                tc.text = tc.text.ensureDoesntEndWith(fileExts.map { ".$it" })
-                tc.text = tc.text.ensureEndsWith(newFileExts.map { ".$it" })
+            if (newAssortment != null && newAssortment.choices.none { tc.text.endsWith(".$it", ignoreCase = true) }) {
+                field?.let { old -> tc.text = tc.text.removeAnySuffix(old.choices.map { ".$it" }, ignoreCase = true) }
+                tc.text += ".${newAssortment.default}"
             }
-            field = newFileExts
+            field = newAssortment
         }
 
 }
@@ -128,16 +135,18 @@ class FileWidget(
 
     init {
         browse.addActionListener {
+            val ass = fileExtAssortment
+
             val fc = JFileChooser()
             fc.fileSelectionMode = when (fileType) {
                 FileType.FILE -> JFileChooser.FILES_ONLY
                 FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
             }
-            fc.selectedFile = File(tc.text.ensureDoesntEndWith(fileExts.map { ".$it" }))
+            fc.selectedFile = File(tc.text.removeAnySuffix(ass?.choices.orEmpty().map { ".$it" }))
 
-            if (fileExts.isNotEmpty()) {
+            if (ass != null && ass.choices.isNotEmpty()) {
                 fc.isAcceptAllFileFilterUsed = false
-                for (fileExt in fileExts) {
+                for (fileExt in ass.choices) {
                     val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
                     fc.addChoosableFileFilter(filter)
                     if (tc.text.endsWith(".$fileExt"))
@@ -147,9 +156,9 @@ class FileWidget(
 
             if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                 tc.text = fc.selectedFile.absolutePath
-                if (fileExts.isNotEmpty()) {
-                    val selectedFileExts = (fc.fileFilter as FileNameExtensionFilter).extensions
-                    tc.text = tc.text.ensureEndsWith(selectedFileExts.map { ".$it" })
+                if (ass != null && ass.choices.isNotEmpty()) {
+                    val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
+                    tc.text += ".$selectedFileExt"
                 }
             }
         }
@@ -1171,11 +1180,7 @@ class NestedFormWidget<O>(
 }
 
 
-private fun String.ensureEndsWith(suffixes: List<String>, ignoreCase: Boolean = true) =
-    if (suffixes.isEmpty() || suffixes.any { endsWith(it, ignoreCase) }) this else this + suffixes[0]
-
-
-private fun String.ensureDoesntEndWith(suffixes: List<String>, ignoreCase: Boolean = true): String {
+private fun String.removeAnySuffix(suffixes: List<String>, ignoreCase: Boolean = false): String {
     for (suffix in suffixes)
         if (endsWith(suffix, ignoreCase))
             return dropLast(suffix.length)

@@ -25,7 +25,7 @@ class VideoRenderJob(
 ) : RenderJob {
 
     val fileOrPattern: Path = when {
-        format.fileSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts[0]}")
+        format.fileSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts.single()}")
         else -> fileOrDir
     }
 
@@ -78,7 +78,8 @@ class VideoRenderJob(
     class Format private constructor(
         label: String,
         fileSeq: Boolean,
-        fileExts: List<String>,
+        fileExts: Set<String>,
+        defaultFileExt: String,
         val codecId: Int,
         val pixelFormat: Int,
         val alphaPixelFormat: Int? = null,
@@ -87,37 +88,34 @@ class VideoRenderJob(
         val heightMod2: Boolean = false,
         val minWidth: Int? = null,
         val minHeight: Int? = null
-    ) : RenderFormat(label, fileSeq, fileExts, supportsAlpha = alphaPixelFormat != null) {
+    ) : RenderFormat(label, fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaPixelFormat != null) {
 
         companion object {
 
-            private fun muxerFileExts(codecId: Int, defaultFileExt: String) =
-                listOf(defaultFileExt) +
-                        MuxerFormat.ALL
-                            .filter { codecId in it.supportedCodecIds }
-                            .flatMap { it.extensions }
-                            .filter { it != defaultFileExt }
-                            .toSortedSet()
+            private fun muxerFileExts(codecId: Int) =
+                MuxerFormat.ALL
+                    .filter { codecId in it.supportedCodecIds }
+                    .flatMapTo(HashSet()) { it.extensions }
 
             private fun prores(label: String, profile: String) = Format(
-                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_PRORES, "mov"), AV_CODEC_ID_PRORES,
+                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_PRORES), defaultFileExt = "mov", AV_CODEC_ID_PRORES,
                 AV_PIX_FMT_YUV422P10LE, codecOptions = mapOf("profile" to profile), widthMod2 = true
             )
 
             private fun dnxhr(label: String, pixelFormat: Int, profile: String) = Format(
-                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_DNXHD, "mxf"), AV_CODEC_ID_DNXHD,
+                label, fileSeq = false, muxerFileExts(AV_CODEC_ID_DNXHD), defaultFileExt = "mxf", AV_CODEC_ID_DNXHD,
                 pixelFormat, codecOptions = mapOf("profile" to profile), minWidth = 256, minHeight = 120
             )
 
             private fun rgbSeqWithOptionalAlpha(
                 label: String, fileExt: String, codecId: Int, codecOptions: Map<String, String> = emptyMap()
             ) = Format(
-                label, fileSeq = true, listOf(fileExt), codecId, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA, codecOptions
+                label, fileSeq = true, setOf(fileExt), fileExt, codecId, AV_PIX_FMT_RGB24, AV_PIX_FMT_RGBA, codecOptions
             )
 
             val ALL = listOf(
                 Format(
-                    "H.264", fileSeq = false, muxerFileExts(AV_CODEC_ID_H264, "mp4"), AV_CODEC_ID_H264,
+                    "H.264", fileSeq = false, muxerFileExts(AV_CODEC_ID_H264), defaultFileExt = "mp4", AV_CODEC_ID_H264,
                     AV_PIX_FMT_YUV420P, widthMod2 = true, heightMod2 = true
                 ),
                 prores("ProRes 422 Proxy", "0"),

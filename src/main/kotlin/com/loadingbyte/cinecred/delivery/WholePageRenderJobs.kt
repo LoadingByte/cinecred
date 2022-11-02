@@ -70,7 +70,7 @@ class WholePageSequenceRenderJob(
                     //   - ImageIO.write() eventually uses the com.sun class FileImageOutputStreamSpi,
                     //     which swallows IO exceptions. Eventually, another exception for the same error
                     //     will be thrown, but the error message is lost.
-                    val writer = ImageIO.getImageWritersBySuffix(format.fileExts[0]).next()
+                    val writer = ImageIO.getImageWritersBySuffix(format.fileExts.single()).next()
                     try {
                         pageFile.deleteIfExists()
                         FileImageOutputStream(pageFile.toFile()).use { stream ->
@@ -107,7 +107,7 @@ class WholePageSequenceRenderJob(
 
 
     class Format private constructor(label: String, fileExt: String) :
-        RenderFormat(label, fileSeq = true, listOf(fileExt), supportsAlpha = true) {
+        RenderFormat(label, fileSeq = true, setOf(fileExt), fileExt, supportsAlpha = true) {
         companion object {
             val PNG = Format("PNG", "png")
             val TIFF_PACK_BITS = Format(l10n("delivery.packBits", "TIFF"), "tiff")
@@ -158,7 +158,7 @@ class WholePagePDFRenderJob(
 
 
     companion object {
-        val FORMAT = RenderFormat("PDF", fileSeq = false, listOf("pdf"), supportsAlpha = true)
+        val FORMAT = RenderFormat("PDF", fileSeq = false, setOf("pdf"), "pdf", supportsAlpha = true)
     }
 
 }

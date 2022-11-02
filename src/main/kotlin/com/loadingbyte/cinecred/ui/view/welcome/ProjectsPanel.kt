@@ -81,8 +81,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
 
         openBrowseFileChooser = makeProjectDirChooser()
-        val openBrowseBackButton = JButton(l10n("back"), ARROW_LEFT_ICON).apply {
-            addActionListener { welcomeCtrl.projects_openBrowse_onClickBack() }
+        val openBrowseCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.projects_openBrowse_onClickCancel() }
         }
         openBrowseDoneButton = JButton(l10n("ui.projects.open"), FOLDER_ICON).apply {
             addActionListener { welcomeCtrl.projects_openBrowse_onClickDone() }
@@ -117,13 +117,13 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val openBrowsePanel = JPanel(MigLayout("insets 20lp, gapy 15lp, wrap")).apply {
             background = null
             add(openBrowseFileChooser, "grow, push")
-            add(openBrowseBackButton, "split 2, right")
+            add(openBrowseCancelButton, "split 2, right")
             add(openBrowseDoneButton)
         }
 
         createBrowseFileChooser = makeProjectDirChooser()
-        val createBrowseBackButton = JButton(l10n("back"), ARROW_LEFT_ICON).apply {
-            addActionListener { welcomeCtrl.projects_createBrowse_onClickBack() }
+        val createBrowseCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.projects_createBrowse_onClickCancel() }
         }
         createBrowseNextButton = JButton(l10n("next"), ARROW_RIGHT_ICON).apply {
             addActionListener { welcomeCtrl.projects_createBrowse_onClickNext() }
@@ -136,7 +136,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val createBrowsePanel = JPanel(MigLayout("insets 20lp, gapy 15lp, wrap")).apply {
             background = null
             add(createBrowseFileChooser, "grow, push")
-            add(createBrowseBackButton, "split 2, right")
+            add(createBrowseCancelButton, "split 2, right")
             add(createBrowseNextButton)
         }
 

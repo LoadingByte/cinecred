@@ -30,11 +30,11 @@ interface WelcomeCtrlComms {
     fun projects_openBrowse_shouldShowAppIcon(dir: Path): Boolean
     fun projects_openBrowse_onChangeSelection(dir: Path?)
     fun projects_openBrowse_onDoubleClickDir(dir: Path): Boolean // Returns whether to cancel the double click.
-    fun projects_openBrowse_onClickBack()
+    fun projects_openBrowse_onClickCancel()
     fun projects_openBrowse_onClickDone()
 
     fun projects_createBrowse_onChangeSelection(dir: Path?)
-    fun projects_createBrowse_onClickBack()
+    fun projects_createBrowse_onClickCancel()
     fun projects_createBrowse_onClickNext()
 
     fun projects_createConfigure_onClickBack()

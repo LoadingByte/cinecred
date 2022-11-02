@@ -215,8 +215,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_start_onClickOpen() = welcomeView.projects_setCard(ProjectsCard.OPEN_BROWSE)
     override fun projects_start_onClickCreate() = welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
-    override fun projects_openBrowse_onClickBack() = welcomeView.projects_setCard(ProjectsCard.START)
-    override fun projects_createBrowse_onClickBack() = welcomeView.projects_setCard(ProjectsCard.START)
+    override fun projects_openBrowse_onClickCancel() = welcomeView.projects_setCard(ProjectsCard.START)
+    override fun projects_createBrowse_onClickCancel() = welcomeView.projects_setCard(ProjectsCard.START)
     override fun projects_createConfigure_onClickBack() = welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
 
     override fun projects_start_onClickOpenMemorized(projectDir: Path) {

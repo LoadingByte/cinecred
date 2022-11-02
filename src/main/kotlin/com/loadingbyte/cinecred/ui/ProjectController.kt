@@ -375,7 +375,7 @@ class ProjectController(
         }
 
         private fun onStylingChange() {
-            val isUnsaved = current != saved
+            val isUnsaved = !current.equalsIgnoreStyleOrderAndIneffectiveSettings(stylingCtx, saved)
             projectFrame.onStylingChange(isUnsaved)
             projectFrame.panel.editPanel.onStylingChange(
                 isUnsaved,

@@ -120,21 +120,20 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
         trySetTaskbarIconBadge(ctrl.masterCtrl.getNumPendingJobsOfAllProjects())
     }
 
-    fun onTryCloseProject(): Boolean =
-        if (startButton.isSelected && jobTableModel.rows.any { row -> row.progress.let { it is Float && it != 1f } }) {
+    fun onTryCloseProject(): Boolean {
+        if (startButton.isSelected && jobTableModel.rows.any { row -> !row.isFinished }) {
             val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
                 l10n("ui.deliverRenderQueue.runningWarning.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )
-            if (selectedOption == 0) {
-                RenderQueue.cancelAllJobs(ctrl.projectDir)
-                true
-            } else
-                false
-        } else
-            true
+            if (selectedOption == 1)
+                return false
+        }
+        RenderQueue.cancelAllJobs(ctrl.projectDir)
+        return true
+    }
 
     companion object {
         private val FINISHED = Any()

@@ -127,6 +127,9 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
        ********** COMMS **********
        *************************** */
 
+    fun getTab() =
+        WelcomeTab.values()[tabPane.selectedIndex]
+
     fun setTab(tab: WelcomeTab) {
         tabPane.selectedIndex = tab.ordinal
     }

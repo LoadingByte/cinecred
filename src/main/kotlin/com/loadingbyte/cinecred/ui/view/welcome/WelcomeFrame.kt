@@ -9,12 +9,14 @@ import com.loadingbyte.cinecred.ui.play
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
+import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.nio.file.Path
 import java.util.*
 import javax.swing.JFrame
 import javax.swing.JOptionPane
+import javax.swing.SwingUtilities
 
 
 class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.welcome.title")), WelcomeViewComms {
@@ -54,6 +56,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     // @formatter:off
     override fun display() { isVisible = true }
     override fun close() { rememberedBounds = bounds; dispose() }
+    override fun isFromWelcomeWindow(event: KeyEvent): Boolean = SwingUtilities.getRoot(event.component) == this
     // @formatter:on
 
     override fun getMostOccupiedScreen() =
@@ -71,6 +74,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         makeWelcomeHintTrack(this).play(onPass = welcomeCtrl::onPassHintTrack)
     }
 
+    override fun getTab() = panel.getTab()
     override fun setTab(tab: WelcomeTab) = panel.setTab(tab)
     override fun setTabsLocked(locked: Boolean) = panel.setTabsLocked(locked)
 

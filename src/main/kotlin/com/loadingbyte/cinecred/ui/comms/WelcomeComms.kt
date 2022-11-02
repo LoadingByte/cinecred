@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.comms
 import com.loadingbyte.cinecred.common.SYSTEM_LOCALE
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import java.awt.GraphicsConfiguration
+import java.awt.event.KeyEvent
 import java.nio.file.Path
 import java.util.*
 import kotlin.reflect.KMutableProperty1
@@ -14,6 +15,7 @@ interface WelcomeCtrlComms {
 
     // ========== FOR MASTER CTRL ==========
 
+    fun onGlobalKeyEvent(event: KeyEvent): Boolean
     fun commence(openProjectDir: Path? = null)
     fun setTab(tab: WelcomeTab)
 
@@ -49,9 +51,11 @@ interface WelcomeViewComms {
 
     fun display()
     fun close()
+    fun isFromWelcomeWindow(event: KeyEvent): Boolean
     fun getMostOccupiedScreen(): GraphicsConfiguration
 
     fun playHintTrack()
+    fun getTab(): WelcomeTab
     fun setTab(tab: WelcomeTab)
     fun setTabsLocked(locked: Boolean)
 

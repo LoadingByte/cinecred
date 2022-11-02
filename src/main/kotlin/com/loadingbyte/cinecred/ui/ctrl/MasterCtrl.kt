@@ -22,7 +22,7 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
     private val projectCtrls = mutableListOf<ProjectController>()
 
     override fun onGlobalKeyEvent(event: KeyEvent) =
-        projectCtrls.any { it.onGlobalKeyEvent(event) }
+        welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }
 
     override fun applyUILocaleWish() {
         val locale = PersistentStorage.uiLocaleWish.locale

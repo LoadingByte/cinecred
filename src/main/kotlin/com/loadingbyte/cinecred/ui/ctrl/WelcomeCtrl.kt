@@ -11,6 +11,8 @@ import com.loadingbyte.cinecred.ui.comms.*
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
+import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import java.io.StringReader
 import java.net.URI
 import java.net.http.HttpClient
@@ -151,6 +153,16 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     /* ***************************
        ********** COMMS **********
        *************************** */
+
+    override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
+        if (welcomeView.isFromWelcomeWindow(event) && welcomeView.getTab() == WelcomeTab.PROJECTS &&
+            event.id == KEY_PRESSED && event.modifiersEx == 0 && event.keyCode == VK_ESCAPE
+        ) {
+            welcomeView.projects_setCard(ProjectsCard.START)
+            return true
+        }
+        return false
+    }
 
     override fun commence(openProjectDir: Path?) {
         fun finishInit(initConfigChangedUILocaleWish: Boolean) {

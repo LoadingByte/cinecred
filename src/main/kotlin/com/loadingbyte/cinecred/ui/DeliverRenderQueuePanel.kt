@@ -103,9 +103,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
 
         RenderQueue.submitJob(
             ctrl.projectDir, job,
-            invokeLater = { SwingUtilities.invokeLater(it) },
-            progressCallback = ::setProgress,
-            finishCallback = ::onFinish
+            progressCallback = { SwingUtilities.invokeLater { setProgress(it) } },
+            finishCallback = { SwingUtilities.invokeLater { onFinish(it) } }
         )
     }
 

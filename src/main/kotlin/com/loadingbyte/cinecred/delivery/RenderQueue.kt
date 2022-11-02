@@ -20,7 +20,6 @@ object RenderQueue {
     private class SubmittedJob(
         val category: Any,
         val job: RenderJob,
-        val invokeLater: (() -> Unit) -> Unit,
         val progressCallback: (Float) -> Unit,
         val finishCallback: (Exception?) -> Unit
     )
@@ -62,18 +61,18 @@ object RenderQueue {
 
                     try {
                         // Start rendering.
-                        job.invokeLater { job.progressCallback(0f) }
-                        job.job.render { progress -> job.invokeLater { job.progressCallback(progress) } }
+                        job.progressCallback(0f)
+                        job.job.render(job.progressCallback)
                         pollJobLock.withLock { runningJob = null }
-                        job.invokeLater { job.progressCallback(1f) }
-                        job.invokeLater { job.finishCallback(null) }
+                        job.progressCallback(1f)
+                        job.finishCallback(null)
                     } catch (e: Exception) {
                         // Note that this catch also catches InterruptedExceptions,
                         // which occurs when a job is cancelled while it is running.
                         pollJobLock.withLock { runningJob = null }
                         if (e !is InterruptedException)
                             LOGGER.error("Error while rendering", e)
-                        job.invokeLater { job.finishCallback(e) }
+                        job.finishCallback(e)
                     }
                 }
             }
@@ -106,12 +105,11 @@ object RenderQueue {
     fun submitJob(
         category: Any,
         job: RenderJob,
-        invokeLater: (() -> Unit) -> Unit,
         progressCallback: (Float) -> Unit,
         finishCallback: (Exception?) -> Unit
     ) {
         val queue = queuedJobs.computeIfAbsent(category) { ConcurrentLinkedQueue() }
-        queue.add(SubmittedJob(category, job, invokeLater, progressCallback, finishCallback))
+        queue.add(SubmittedJob(category, job, progressCallback, finishCallback))
     }
 
     fun cancelJob(category: Any, job: RenderJob) {
@@ -120,7 +118,7 @@ object RenderQueue {
             queuedJobs[category]?.let { queue ->
                 queue.find { it.job == job }?.let { subJob ->
                     queue.remove(subJob)
-                    subJob.invokeLater { subJob.finishCallback(null) }
+                    subJob.finishCallback(null)
                 }
             }
             // If the job is currently running, immediately interrupt the rendering thread.
@@ -133,7 +131,7 @@ object RenderQueue {
         pollJobLock.withLock {
             queuedJobs[category]?.let { queue ->
                 for (subJob in queue)
-                    subJob.invokeLater { subJob.finishCallback(null) }
+                    subJob.finishCallback(null)
                 queue.clear()
             }
             if (runningJob?.category == category)

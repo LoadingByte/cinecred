@@ -12,7 +12,6 @@ interface MasterCtrlComms {
     fun showWelcomeFrame(openProjectDir: Path? = null)
     fun showPreferences()
     fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false): Boolean
-    fun getNumPendingJobsOfAllProjects(): Int
 
     // ========== FOR WELCOME CTRL ==========
 

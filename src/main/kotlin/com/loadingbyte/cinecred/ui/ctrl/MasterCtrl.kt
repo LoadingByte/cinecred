@@ -57,11 +57,6 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         return true
     }
 
-    override fun getNumPendingJobsOfAllProjects(): Int =
-        projectCtrls.sumOf { ctrl ->
-            ctrl.projectFrame.panel.deliverPanel.renderQueuePanel.numPendingJobs
-        }
-
     override fun onCloseWelcomeFrame() {
         welcomeCtrl = null
     }

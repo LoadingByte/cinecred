@@ -32,7 +32,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
-            RenderFormat::class.java, ALL_FORMATS, scrollbar = false,
+            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDE, scrollbar = false,
             toString = {
                 val key =
                     if (it in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"

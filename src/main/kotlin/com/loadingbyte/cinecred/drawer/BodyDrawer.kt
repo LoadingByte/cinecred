@@ -43,7 +43,9 @@ fun drawBodyImagesWithGridBodyLayout(
 
     fun independentColWidths() = List(numCols) { colIdx ->
         bodyPartitions.values.maxOf { cols ->
-            cols[colIdx].maxOfOrNull { bodyElem -> bodyElem.getWidth(textCtx) } ?: 0f
+            if (colIdx < cols.size && cols[colIdx].isNotEmpty())
+                cols[colIdx].maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+            else 0f
         }
     }
 

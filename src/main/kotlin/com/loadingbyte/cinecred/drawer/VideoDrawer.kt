@@ -24,9 +24,9 @@ open class VideoDrawer(
     private val previewMode: Boolean = false
 ) {
 
-    /* **************************************
-       ************ INITIALIZATION **********
-       ************************************** */
+    /* ************************************
+       ********** INITIALIZATION **********
+       ************************************ */
 
     // Note: A pageIdx of -1 indicates an empty frame.
     private class Insn(val pageIdx: Int, val imgTopY: Float, val alpha: Float)
@@ -101,9 +101,9 @@ open class VideoDrawer(
     val height = (scaling * project.styling.global.heightPx).roundToInt()
 
 
-    /* **************************************
-       ************ RASTER DRAWING **********
-       ************************************** */
+    /* ************************************
+       ********** RASTER DRAWING **********
+       ************************************ */
 
     private val scaledPageDefImages = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
 

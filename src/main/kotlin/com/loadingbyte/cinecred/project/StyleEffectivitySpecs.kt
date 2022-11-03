@@ -4,6 +4,12 @@ import com.loadingbyte.cinecred.common.CAPITAL_SPACING_FONT_FEAT
 import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
 import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
 import com.loadingbyte.cinecred.common.getSupportedFeatures
+import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
+import com.loadingbyte.cinecred.project.BodyLayout.*
+import com.loadingbyte.cinecred.project.PageBehavior.CARD
+import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
+import com.loadingbyte.cinecred.project.SpineOrientation.HORIZONTAL
+import com.loadingbyte.cinecred.project.TextDecorationPreset.OFF
 
 
 @Suppress("UNCHECKED_CAST")
@@ -23,15 +29,15 @@ private val GLOBAL_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Global>> = empty
 private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> = listOf(
     StyleEffectivitySpec(
         PageStyle::cardDurationFrames.st(), PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
-        isTotallyIneffective = { _, style -> style.behavior != PageBehavior.CARD }
+        isTotallyIneffective = { _, style -> style.behavior != CARD }
     ),
     StyleEffectivitySpec(
         PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st(), PageStyle::scrollPxPerFrame.st(),
-        isTotallyIneffective = { _, style -> style.behavior != PageBehavior.SCROLL }
+        isTotallyIneffective = { _, style -> style.behavior != SCROLL }
     ),
     StyleEffectivitySpec(
         PageStyle::afterwardSlugFrames.st(),
-        isAlmostEffective = { _, style -> style.behavior == PageBehavior.SCROLL && style.scrollMeltWithNext }
+        isAlmostEffective = { _, style -> style.behavior == SCROLL && style.scrollMeltWithNext }
     )
 )
 
@@ -41,18 +47,18 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridElemBoxConform.st(),
         ContentStyle::gridElemHJustifyPerCol.st(), ContentStyle::gridElemVJustify.st(), ContentStyle::gridRowGapPx.st(),
         ContentStyle::gridColGapPx.st(),
-        isTotallyIneffective = { _, style -> style.bodyLayout != BodyLayout.GRID }
+        isTotallyIneffective = { _, style -> style.bodyLayout != GRID }
     ),
     StyleEffectivitySpec(
         ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowElemBoxConform.st(),
         ContentStyle::flowElemHJustify.st(), ContentStyle::flowElemVJustify.st(), ContentStyle::flowLineWidthPx.st(),
         ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),
-        isTotallyIneffective = { _, style -> style.bodyLayout != BodyLayout.FLOW }
+        isTotallyIneffective = { _, style -> style.bodyLayout != FLOW }
     ),
     StyleEffectivitySpec(
         ContentStyle::paragraphsLineHJustify.st(), ContentStyle::paragraphsLineWidthPx.st(),
         ContentStyle::paragraphsParaGapPx.st(), ContentStyle::paragraphsLineGapPx.st(),
-        isTotallyIneffective = { _, style -> style.bodyLayout != BodyLayout.PARAGRAPHS }
+        isTotallyIneffective = { _, style -> style.bodyLayout != PARAGRAPHS }
     ),
     StyleEffectivitySpec(
         ContentStyle::headLetterStyleName.st(), ContentStyle::headHJustify.st(), ContentStyle::headVJustify.st(),
@@ -71,10 +77,8 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::gridElemVJustify.st(),
         isAlmostEffective = { _, style ->
-            style.gridElemHJustifyPerCol.size < 2 && style.gridElemBoxConform.let {
-                it != BodyElementBoxConform.HEIGHT && it != BodyElementBoxConform.WIDTH_AND_HEIGHT &&
-                        it != BodyElementBoxConform.SQUARE
-            }
+            style.gridElemHJustifyPerCol.size < 2 &&
+                    style.gridElemBoxConform.let { it != HEIGHT && it != WIDTH_AND_HEIGHT && it != SQUARE }
         }
     ),
     StyleEffectivitySpec(
@@ -84,19 +88,16 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::flowElemHJustify.st(),
         isAlmostEffective = { _, style ->
-            style.flowElemBoxConform.let {
-                it != BodyElementBoxConform.WIDTH && it != BodyElementBoxConform.WIDTH_AND_HEIGHT &&
-                        it != BodyElementBoxConform.SQUARE
-            }
+            style.flowElemBoxConform.let { it != WIDTH && it != WIDTH_AND_HEIGHT && it != SQUARE }
         }
     ),
     StyleEffectivitySpec(
         ContentStyle::headVJustify.st(),
-        isAlmostEffective = { _, style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
+        isAlmostEffective = { _, style -> style.spineOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
         ContentStyle::tailVJustify.st(),
-        isAlmostEffective = { _, style -> style.spineOrientation != SpineOrientation.HORIZONTAL }
+        isAlmostEffective = { _, style -> style.spineOrientation != HORIZONTAL }
     )
 )
 
@@ -134,7 +135,7 @@ private fun supportsNot(ctx: StylingContext, style: LetterStyle, feat: String): 
 private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDecoration>> = listOf(
     StyleEffectivitySpec(
         TextDecoration::offsetPx.st(), TextDecoration::thicknessPx.st(),
-        isAlmostEffective = { _, style -> style.preset != TextDecorationPreset.OFF }
+        isAlmostEffective = { _, style -> style.preset != OFF }
     ),
     StyleEffectivitySpec(
         TextDecoration::clearingJoin.st(),
@@ -158,7 +159,7 @@ class StyleEffectivitySpec<S : Style>(
 
 enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, EFFECTIVE }
 
-fun <S : Style> findIneffectiveSettings(ctx: StylingContext, style: S): Map<StyleSetting<*, *>, Effectivity> {
+fun findIneffectiveSettings(ctx: StylingContext, style: Style): Map<StyleSetting<*, *>, Effectivity> {
     val result = HashMap<StyleSetting<*, *>, Effectivity>()
 
     fun mark(settings: List<StyleSetting<*, *>>, tier: Effectivity) {

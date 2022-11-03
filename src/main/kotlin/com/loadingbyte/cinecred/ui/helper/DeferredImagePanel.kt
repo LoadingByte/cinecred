@@ -308,11 +308,11 @@ class DeferredImagePanel(private val maxZoom: Float) : JPanel(MigLayout("gap 0, 
                     if (abs(extraScaling - 1) > 0.001) {
                         // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel
                         // width of the viewport in the materialized image, this can have one of two reasons:
-                        //  - Either we are in a HiDPI environment where system scaling is enabled, which we have
-                        //    already considered when creating the materialized image, hence the materialized has the
-                        //    right width while the canvas' width is "fake".
-                        //  - Or the user resized the viewport but the image hasn't been re-materialized yet to match
-                        //    the new viewport size.
+                        //   - Either we are in a HiDPI environment where system scaling is enabled, which we have
+                        //     already considered when creating the materialized image, hence the materialized has the
+                        //     right width while the canvas' width is "fake".
+                        //   - Or the user resized the viewport but the image hasn't been re-materialized yet to match
+                        //     the new viewport size.
                         // In either case, paint a nearest-neighbor interpolated scaled version of the materialized
                         // image onto the canvas. In the first case, this is exactly what is required to paint the full
                         // resolution image. In the second case, the scaled version will look bad, but scaling is fast,

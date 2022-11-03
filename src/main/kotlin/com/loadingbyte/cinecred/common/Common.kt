@@ -87,7 +87,7 @@ val SYSTEM_LOCALE: Locale = run {
     TRANSLATED_LOCALES.find { it.language == Locale.getDefault().language } ?: FALLBACK_TRANSLATED_LOCALE
 }
 
-private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT)
+private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
 private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
 
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)

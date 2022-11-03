@@ -18,8 +18,8 @@ import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
 
 
-val PALETTE_RED: String = "#C75450"
-val PALETTE_GREEN: String = "#499C54"
+const val PALETTE_RED: String = "#C75450"
+const val PALETTE_GREEN: String = "#499C54"
 
 
 fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : JTextArea(text) {

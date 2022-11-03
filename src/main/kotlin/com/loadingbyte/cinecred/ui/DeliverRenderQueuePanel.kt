@@ -195,7 +195,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
                 if (row.startTime != null) {
                     isStringPainted = true
                     string = if (percentage == 0)
-                        "$percentage %"
+                        "0 %"
                     else {
                         val d = Duration.between(row.startTime, Instant.now())
                             .multipliedBy(100L - percentage).dividedBy(percentage.toLong())

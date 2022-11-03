@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.l10n
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_CONSTRAINED_BASELINE
@@ -42,7 +42,7 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
                     supportedCodecIds = codecIds.filter { codecId ->
                         avformat_query_codec(avMuxerFormat, codecId, FF_COMPLIANCE_STRICT) == 1
                     }.toSet(),
-                    extensions = avMuxerFormat.extensions()?.string?.split(',') ?: emptyList()
+                    extensions = avMuxerFormat.extensions()?.string?.split(',').orEmpty()
                 )
             }
         }
@@ -355,6 +355,6 @@ class VideoWriter(
         ByteArray(AV_ERROR_MAX_STRING_SIZE).also { av_make_error_string(it, AV_ERROR_MAX_STRING_SIZE.toLong(), errnum) }
     )
 
-    class AVException(message: String) : RuntimeException(message)
+    private class AVException(message: String) : RuntimeException(message)
 
 }

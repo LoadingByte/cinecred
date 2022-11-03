@@ -48,7 +48,7 @@ interface SpreadsheetFormat {
     fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>>
 
     /**
-     * @param colWidths Width of some of the columns, in characters.
+     * @param colWidths Width of some columns, in characters.
      */
     fun write(file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, RowLook>, colWidths: List<Int>)
 
@@ -244,7 +244,7 @@ object CsvFormat : SpreadsheetFormat {
     }
 
     fun read(text: String): Spreadsheet {
-        // We trim the unicode character "ZERO WIDTH NO-BREAK SPACE" which is added by Excel for some reason.
+        // Trim the character which results from the byte order mark (BOM) added by Excel.
         val trimmed = text.trimStart(0xFEFF.toChar())
 
         // Parse the CSV file into a list of CSV records.

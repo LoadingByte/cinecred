@@ -18,7 +18,6 @@ import org.bytedeco.ffmpeg.avutil.LogCallback
 import org.bytedeco.ffmpeg.global.avcodec
 import org.bytedeco.ffmpeg.global.avformat
 import org.bytedeco.ffmpeg.global.avutil
-import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
@@ -90,7 +89,7 @@ fun main(args: Array<String>) {
         Loader.load(swscale::class.java)
         avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
         // Redirect FFmpeg's logging output to slf4j.
-        setLogCallback(FFmpegLogCallback)
+        avutil.setLogCallback(FFmpegLogCallback)
     } catch (t: Throwable) {
         LOGGER.error("Failed to load FFmpeg", t)
     }
@@ -261,11 +260,11 @@ private object FFmpegLogCallback : LogCallback() {
         // FFmpeg's log messages end with a newline character, which we have to remove.
         val message = msg.string.trim()
         when (level) {
-            AV_LOG_PANIC, AV_LOG_FATAL, AV_LOG_ERROR -> logger.error(message)
-            AV_LOG_WARNING -> logger.warn(message)
-            AV_LOG_INFO -> logger.info(message)
-            AV_LOG_VERBOSE, AV_LOG_DEBUG -> logger.debug(message)
-            AV_LOG_TRACE -> logger.trace(message)
+            avutil.AV_LOG_PANIC, avutil.AV_LOG_FATAL, avutil.AV_LOG_ERROR -> logger.error(message)
+            avutil.AV_LOG_WARNING -> logger.warn(message)
+            avutil.AV_LOG_INFO -> logger.info(message)
+            avutil.AV_LOG_VERBOSE, avutil.AV_LOG_DEBUG -> logger.debug(message)
+            avutil.AV_LOG_TRACE -> logger.trace(message)
         }
     }
 }

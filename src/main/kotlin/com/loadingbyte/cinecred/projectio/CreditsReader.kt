@@ -18,7 +18,7 @@ import kotlin.io.path.nameWithoutExtension
 
 
 fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString(" | ") { io -> io.fileExt }
+    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString(" | ") { fmt -> fmt.fileExt }
 
     var creditsFile: Path? = null
     val log = mutableListOf<ParserMsg>()
@@ -43,19 +43,19 @@ private fun getCreditsFileCandidates(projectDir: Path): List<Path> =
         .filter { file -> file.isRegularFile() && hasCreditsFileName(file) }
         .sortedBy { file ->
             val fileExt = file.extension
-            SPREADSHEET_FORMATS.indexOfFirst { io -> io.fileExt.equals(fileExt, ignoreCase = true) }
+            SPREADSHEET_FORMATS.indexOfFirst { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
         }
 
 fun hasCreditsFileName(file: Path): Boolean {
     val fileExt = file.extension
     return file.nameWithoutExtension.equals("Credits", ignoreCase = true) &&
-            SPREADSHEET_FORMATS.any { io -> io.fileExt.equals(fileExt, ignoreCase = true) }
+            SPREADSHEET_FORMATS.any { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
 }
 
 fun loadCreditsFile(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
     val fileExt = file.extension
-    val io = SPREADSHEET_FORMATS.first { it.fileExt.equals(fileExt, ignoreCase = true) }
-    return io.read(file)
+    val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
+    return fmt.read(file)
 }
 
 
@@ -83,9 +83,9 @@ private class CreditsReader(
     pictureLoaders: Map<Path, Lazy<Picture?>>
 ) {
 
-    /* **************************************
-       ************ CREATE LOOKUPS **********
-       ************************************** */
+    /* ************************************
+       ********** CREATE LOOKUPS **********
+       ************************************ */
 
     // Note: We use maps whose keys are case-insensitive here because style references should be case-insensitive.
     val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
@@ -109,9 +109,9 @@ private class CreditsReader(
     }.toMap(TreeMap(String.CASE_INSENSITIVE_ORDER))
 
 
-    /* *******************************************
-       ************ STATE + CONCLUSIONS **********
-       ******************************************* */
+    /* *****************************************
+       ********** STATE + CONCLUSIONS **********
+       ***************************************** */
 
     // The row that is currently being read.
     var row = 0
@@ -288,9 +288,9 @@ private class CreditsReader(
     }
 
 
-    /* **************************************
-       ************ ACTUAL PARSING **********
-       ************************************** */
+    /* ************************************
+       ********** ACTUAL PARSING **********
+       ************************************ */
 
     fun read(): Pair<List<Page>, List<RuntimeGroup>> {
         for (row in 0 until table.numRows) {
@@ -613,9 +613,9 @@ private class CreditsReader(
     }
 
 
-    /* *************************************
-       ************ MISCELLANEOUS **********
-       ************************************* */
+    /* ***********************************
+       ********** MISCELLANEOUS **********
+       *********************************** */
 
     enum class BreakAlign { BODY_COLUMNS, HEAD_AND_TAIL }
 

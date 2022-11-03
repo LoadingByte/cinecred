@@ -36,6 +36,7 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
     }
 
     fun addSubmitButton(label: String, actionListener: () -> Unit) {
+        check(submitButton == null)
         val button = JButton(label)
         button.addActionListener { actionListener() }
         submitButton = button
@@ -61,6 +62,7 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
         }
         // Disable the submit button if there are errors in the form.
         submitButton?.isEnabled = isErrorFree
+        super.onChange(widget)
     }
 
     private val isErrorFree: Boolean

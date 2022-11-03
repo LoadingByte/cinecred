@@ -99,7 +99,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
         seqDirWidget.value = outputLoc
         singleFileWidget.value = outputLoc
-        // This ensure that file extensions are sensible.
+        // This ensures that file extensions are sensible.
         onFormatChange()
     }
 
@@ -184,12 +184,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
                 } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))
                         return
-                } else if (fileOrDir.isDirectory() && fileOrDir.useDirectoryEntries { seq -> seq.iterator().hasNext() })
+                } else if (fileOrDir.isDirectory() && fileOrDir.useDirectoryEntries { seq -> seq.any() })
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", fileOrDir)))
                         return
             } else {
                 if (fileOrDir.isDirectory()) {
-                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.folder", fileOrDir))
+                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.dir", fileOrDir))
                     return
                 } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", fileOrDir)))

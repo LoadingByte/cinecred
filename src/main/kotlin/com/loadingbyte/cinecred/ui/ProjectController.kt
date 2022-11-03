@@ -108,6 +108,13 @@ class ProjectController(
         }
     }
 
+    private fun safeIsSameFile(p1: Path, p2: Path) =
+        try {
+            Files.isSameFile(p1, p2)
+        } catch (_: IOException) {
+            false
+        }
+
     private fun pushStateIntoUI() {
         val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
         projectFrame.panel.editPanel.updateProject(project, drawnPages, stylingError, log)
@@ -194,7 +201,7 @@ class ProjectController(
             if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
 
-            // We only now build these maps because it is expensive to build them and we don't want to do it
+            // We only now build these maps because it is expensive to build them, and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
             // (which is quite a lot less because the function is often called multiple times in rapid succession).
             val fontsByName = fonts.values.flatten().associateBy { font -> font.getFontName(Locale.ROOT) }
@@ -268,18 +275,6 @@ class ProjectController(
         else if (window == projectFrame && isVideoTabActive)
             return projectFrame.panel.videoPanel.onKeyEvent(event)
         return false
-    }
-
-
-    companion object {
-
-        private fun safeIsSameFile(p1: Path, p2: Path) =
-            try {
-                Files.isSameFile(p1, p2)
-            } catch (_: IOException) {
-                false
-            }
-
     }
 
 

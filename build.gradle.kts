@@ -274,8 +274,10 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
     // Depend on the build task so that tests must run beforehand.
     dependsOn("build")
 
+    // Include Cinecred itself.
     with(tasks.jar.get())
 
+    // Add a manifest.
     manifest.attributes(
         "Main-Class" to "com.loadingbyte.cinecred.Main",
         "SplashScreen-Image" to splashScreen,
@@ -284,25 +286,30 @@ fun Jar.makeFatJar(vararg includePlatforms: Platform) {
 
     val excludePlatforms = Platform.values().filter { it !in includePlatforms }
 
+    // Exclude all Cinecred natives which haven't been explicitly included.
     for (platform in excludePlatforms)
         exclude("natives/${platform.slug}")
 
+    // Include all dependencies in the fat JAR.
     for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts) {
-        // Exclude all natives that haven't been explicitly included.
+        // Exclude all dependency natives which haven't been explicitly included.
         if (excludePlatforms.any { it.slug in (dep.classifier ?: "") })
             continue
         // Put the files from the dependency into the fat JAR.
         from(zipTree(dep.file)) {
             // Exclude service files for now as they will be merged and included by some custom logic below.
             exclude("META-INF/services/*")
+            // Exclude JAR-specific files as they are no longer valid in a fat JAR.
+            exclude("**/module-info.class", "META-INF/INDEX.LIST", "META-INF/maven/**")
+            // Exclude various other unneeded files to tidy up the fat JAR.
+            exclude("checkstyle/**", "findbugs/**", "pmd/**", "**/DEPENDENCIES")
             // Put all licenses and related files into a central "licenses/" directory and rename
             // them such that each file also carries the name of the JAR it originates from.
             filesMatching(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" }) {
                 path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}"
             }
-            // Note: The "license/" directory is excluded only if the eachFile instruction has completely emptied it
-            // (which we hope it does, but let's better be sure).
-            exclude("**/module-info.class", "checkstyle/**", "findbugs/**", "license", "META-INF/maven/**", "pmd/**", "**/DEPENDENCIES")
+            // Exclude the "license/" directory if it is empty (which we expect after relocating all licenses).
+            exclude("license")
         }
     }
 
@@ -376,8 +383,8 @@ val logoAndWidth by lazy {
 }
 
 val titilliumSemi by lazy {
-    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-SemiboldUpright.otf"))[0]
+    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-SemiboldUpright.otf"))[0]!!
 }
 val titilliumBold by lazy {
-    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-BoldUpright.otf"))[0]
+    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-BoldUpright.otf"))[0]!!
 }

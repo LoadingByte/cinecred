@@ -275,7 +275,7 @@ fun drawBodyImageWithFlowBodyLayout(
     // Set the height of the body image.
     bodyImage.height = y
 
-    // Draw guides that show the body's left an right edges.
+    // Draw guides that show the body's left and right edges.
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
 

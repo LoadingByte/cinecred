@@ -286,7 +286,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 }
                 // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
                 // and sometimes even makes it totally unusable.
-                is Picture.PDF -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
+                is Picture.PDF -> g2.withNewG2 { g2 ->
                     g2.translate(x, y)
                     if (pic.isCropped)
                         g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
@@ -471,6 +471,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 try {
                     val fontFile = font.getFontFile().toFile()
                     when (DataInputStream(fontFile.inputStream()).use { it.readInt() }) {
+                        // TrueType Collection
                         0x74746366 -> {
                             TrueTypeCollection(fontFile).processAllFonts { ttf ->
                                 docRes.pdFonts[ttf.name] = PDType0Font.load(doc, ttf, ttf !is OpenTypeFont)
@@ -483,8 +484,10 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                                 docRes.pdFonts[psName] = PDType1Font.HELVETICA
                             }
                         }
+                        // OpenType Font
                         0x4f54544f ->
                             docRes.pdFonts[psName] = PDType0Font.load(doc, OTFParser().parse(fontFile), false)
+                        // TrueType Font
                         else ->
                             // Here, one could theoretically enable embedSubset. However, our string writing logic
                             // directly writes font-specific glyphs (in contrast to unicode codepoints) since this is

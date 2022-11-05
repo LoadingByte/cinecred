@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
+import com.loadingbyte.cinecred.common.SYSTEM_LOCALE
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.UIFactoryComms
@@ -25,6 +26,7 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }
 
     override fun applyUILocaleWish() {
+        SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.
         val locale = PersistentStorage.uiLocaleWish.locale
         Locale.setDefault(locale)
         UIManager.getDefaults().defaultLocale = locale

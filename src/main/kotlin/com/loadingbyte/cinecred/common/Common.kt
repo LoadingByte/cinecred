@@ -79,7 +79,7 @@ val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
 /**
  * This is the translated locale which is closest to the system's default locale. It necessarily has to be computed
- * the default locale is changed for the first time, which is fulfilled by doing it here.
+ * before the default locale is changed for the first time, which is fulfilled by a read prior to that action.
  */
 val SYSTEM_LOCALE: Locale = run {
     // Our detection algorithm is very primitive, so ensure that all translated locales solely specify a language.

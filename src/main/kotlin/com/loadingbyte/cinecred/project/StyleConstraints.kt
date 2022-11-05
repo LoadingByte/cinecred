@@ -69,9 +69,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, _, style ->
-        when (style.spineOrientation) {
-            SpineOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
-            SpineOrientation.HORIZONTAL -> when {
+        when (style.blockOrientation) {
+            BlockOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+            BlockOrientation.HORIZONTAL -> when {
                 !style.hasHead && !style.hasTail -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
                 style.hasHead && !style.hasTail -> listOf(
                     OVERALL_CENTER,

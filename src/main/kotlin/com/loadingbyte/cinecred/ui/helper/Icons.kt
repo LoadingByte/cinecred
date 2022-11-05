@@ -93,13 +93,13 @@ val Severity.icon
     }
 
 
-private val SPINE_ORIENTATION_HORIZONTAL_ICON = SVGIcon.load("/icons/spineOrientation/horizontal.svg")
-private val SPINE_ORIENTATION_VERTICAL_ICON = SVGIcon.load("/icons/spineOrientation/vertical.svg")
+private val BLOCK_ORIENTATION_HORIZONTAL_ICON = SVGIcon.load("/icons/blockOrientation/horizontal.svg")
+private val BLOCK_ORIENTATION_VERTICAL_ICON = SVGIcon.load("/icons/blockOrientation/vertical.svg")
 
-val SpineOrientation.icon
+val BlockOrientation.icon
     get() = when (this) {
-        SpineOrientation.HORIZONTAL -> SPINE_ORIENTATION_HORIZONTAL_ICON
-        SpineOrientation.VERTICAL -> SPINE_ORIENTATION_VERTICAL_ICON
+        BlockOrientation.HORIZONTAL -> BLOCK_ORIENTATION_HORIZONTAL_ICON
+        BlockOrientation.VERTICAL -> BLOCK_ORIENTATION_VERTICAL_ICON
     }
 
 
@@ -234,7 +234,7 @@ val TextDecorationPreset.icon
 val Enum<*>.icon
     get() = when (this) {
         is Severity -> icon
-        is SpineOrientation -> icon
+        is BlockOrientation -> icon
         is BodyLayout -> icon
         is HJustify -> icon
         is VJustify -> icon

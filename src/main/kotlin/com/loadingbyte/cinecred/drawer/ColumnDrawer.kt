@@ -55,19 +55,19 @@ fun drawColumn(
     val drawnBlocks = HashMap<Block, DrawnBlock>()
 
     // Step 3:
-    // We start with the blocks that have a horizontal spine. Here, heads/tails that either share a common edge
+    // We start with the blocks that have horizontal orientation. Here, heads/tails that either share a common edge
     // position or are part of blocks which are centered on the head/tail are combined into shared "head/tail columns".
     // Such a "column" is as wide as the largest head/tail it contains. This, for example, allows the user to justify
     // all heads "left" in a meaningful way.
-    // First, partition the horizontal spine blocks into two partitions that will be processed separately.
-    val (horSpineBlocks1, horSpineBlocks2) = column.blocks
-        .filter { block -> block.style.spineOrientation == SpineOrientation.HORIZONTAL }
+    // First, partition the horizontal blocks into two partitions that will be processed separately.
+    val (horBlocks1, horBlocks2) = column.blocks
+        .filter { block -> block.style.blockOrientation == BlockOrientation.HORIZONTAL }
         .partition { block ->
             val c = block.style.alignWithAxis
             !(c == HEAD_GAP_CENTER || c == BODY_LEFT || c == BODY_RIGHT || c == TAIL_GAP_CENTER)
         }
     // Divide the first partition such that only blocks whose heads or tails should be aligned are in the same group.
-    val headOrTailAlignBlockGroups1 = horSpineBlocks1
+    val headOrTailAlignBlockGroups1 = horBlocks1
         .groupBy { block ->
             when (block.style.alignWithAxis) {
                 HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
@@ -79,7 +79,7 @@ fun drawColumn(
             }
         }.values
     // Now process the second partition.
-    val headOrTailAlignBlockGroups2 = horSpineBlocks2
+    val headOrTailAlignBlockGroups2 = horBlocks2
         // Divide into "left"-centered and "right"-centered blocks. Also divide by head/tail aligning group.
         .groupBy { block ->
             val c = block.style.alignWithAxis
@@ -99,12 +99,12 @@ fun drawColumn(
         }
     // Finally, generate block images for all horizontal blocks. The images for grouped blocks are generated in unison.
     for (blockGroup in headOrTailAlignBlockGroups1 + headOrTailAlignBlockGroups2)
-        drawnBlocks.putAll(drawHorizontalSpineBlocks(textCtx, blockGroup, drawnBodies))
+        drawnBlocks.putAll(drawHorizontalBlocks(textCtx, blockGroup, drawnBodies))
 
-    // Step 4: Now generate block images for the blocks which have a vertical spine.
+    // Step 4: Now generate block images for the blocks which have vertical orientation.
     for (block in column.blocks)
-        if (block.style.spineOrientation == SpineOrientation.VERTICAL)
-            drawnBlocks[block] = drawVerticalSpineBlock(textCtx, block, drawnBodies.getValue(block))
+        if (block.style.blockOrientation == BlockOrientation.VERTICAL)
+            drawnBlocks[block] = drawVerticalBlock(textCtx, block, drawnBodies.getValue(block))
 
     // Step 5:
     // Combine the block images for the blocks inside the column to a column image.
@@ -168,7 +168,7 @@ private inline fun <E> List<E>.fuzzyGroupBy(keySelector: (E) -> Float): List<Lis
 }
 
 
-private fun drawHorizontalSpineBlocks(
+private fun drawHorizontalBlocks(
     textCtx: TextContext,
     blocks: List<Block>,
     drawnBodies: Map<Block, DrawnBody>,
@@ -184,7 +184,7 @@ private fun drawHorizontalSpineBlocks(
     val headSharedWidth = when (blocks[0].style.alignWithAxis) {
         HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER, BODY_LEFT ->
             blocks.maxOf { block ->
-                if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.head == null) 0f
+                if (block.style.blockOrientation == BlockOrientation.VERTICAL || block.head == null) 0f
                 else block.head.formatted(textCtx).width
             }
         else -> null
@@ -192,7 +192,7 @@ private fun drawHorizontalSpineBlocks(
     val tailSharedWidth = when (blocks[0].style.alignWithAxis) {
         BODY_RIGHT, TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT ->
             blocks.maxOf { block ->
-                if (block.style.spineOrientation == SpineOrientation.VERTICAL || block.tail == null) 0f
+                if (block.style.blockOrientation == BlockOrientation.VERTICAL || block.tail == null) 0f
                 else block.tail.formatted(textCtx).width
             }
         else -> null
@@ -273,7 +273,7 @@ private fun drawHorizontalSpineBlocks(
 }
 
 
-private fun drawVerticalSpineBlock(
+private fun drawVerticalBlock(
     textCtx: TextContext,
     block: Block,
     drawnBody: DrawnBody

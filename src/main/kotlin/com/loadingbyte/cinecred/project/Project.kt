@@ -62,7 +62,7 @@ enum class PageBehavior { CARD, SCROLL }
 
 data class ContentStyle(
     val name: String,
-    val spineOrientation: SpineOrientation,
+    val blockOrientation: BlockOrientation,
     val alignWithAxis: AlignWithAxis,
     val vMarginPx: Float,
     val bodyLetterStyleName: String,
@@ -99,7 +99,7 @@ data class ContentStyle(
 ) : Style()
 
 
-enum class SpineOrientation { HORIZONTAL, VERTICAL }
+enum class BlockOrientation { HORIZONTAL, VERTICAL }
 
 enum class AlignWithAxis {
     OVERALL_CENTER,

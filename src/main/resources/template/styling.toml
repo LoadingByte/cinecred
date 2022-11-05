@@ -22,7 +22,7 @@ bodyLayout = "GRID"
 
 [[contentStyle]]
 name = "{project.template.contentStyleGutter}"
-spineOrientation = "HORIZONTAL"
+blockOrientation = "HORIZONTAL"
 alignWithAxis = "HEAD_GAP_CENTER"
 bodyLetterStyleName = "{project.template.letterStyleBigBold}"
 bodyLayout = "GRID"

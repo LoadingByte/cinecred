@@ -113,6 +113,10 @@ private fun migrate(rawStyling: RawStyling) {
     for (letterStyle in rawStyling.letterStyles)
         if (letterStyle["background"].let { it is String && it.startsWith("#00") })
             letterStyle.remove("background")
+
+    // 1.2.0 -> 1.3.0: "spineOrientation" is renamed to "blockOrientation".
+    for (contentStyle in rawStyling.contentStyles)
+        contentStyle["spineOrientation"]?.let { contentStyle["blockOrientation"] = it }
 }
 
 

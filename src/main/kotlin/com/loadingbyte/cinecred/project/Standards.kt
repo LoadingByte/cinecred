@@ -51,7 +51,7 @@ val PRESET_PAGE_STYLE = PageStyle(
 
 val PRESET_CONTENT_STYLE = ContentStyle(
     name = "???",
-    spineOrientation = SpineOrientation.VERTICAL,
+    blockOrientation = BlockOrientation.VERTICAL,
     alignWithAxis = AlignWithAxis.BODY_CENTER,
     vMarginPx = 0f,
     bodyLayout = BodyLayout.GRID,

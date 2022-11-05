@@ -4,11 +4,11 @@ import com.loadingbyte.cinecred.common.CAPITAL_SPACING_FONT_FEAT
 import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
 import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
 import com.loadingbyte.cinecred.common.getSupportedFeatures
+import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
-import com.loadingbyte.cinecred.project.SpineOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.TextDecorationPreset.OFF
 
 
@@ -71,7 +71,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isTotallyIneffective = { _, style -> !style.hasTail }
     ),
     StyleEffectivitySpec(
-        ContentStyle::spineOrientation.st(),
+        ContentStyle::blockOrientation.st(),
         isAlmostEffective = { _, style -> !style.hasHead && !style.hasTail }
     ),
     StyleEffectivitySpec(
@@ -93,11 +93,11 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     ),
     StyleEffectivitySpec(
         ContentStyle::headVJustify.st(),
-        isAlmostEffective = { _, style -> style.spineOrientation != HORIZONTAL }
+        isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
         ContentStyle::tailVJustify.st(),
-        isAlmostEffective = { _, style -> style.spineOrientation != HORIZONTAL }
+        isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL }
     )
 )
 

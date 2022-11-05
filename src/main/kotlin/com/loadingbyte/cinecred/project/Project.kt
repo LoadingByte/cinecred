@@ -63,7 +63,7 @@ enum class PageBehavior { CARD, SCROLL }
 data class ContentStyle(
     val name: String,
     val blockOrientation: BlockOrientation,
-    val alignWithAxis: AlignWithAxis,
+    val spineAttachment: SpineAttachment,
     val vMarginPx: Float,
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
@@ -101,7 +101,7 @@ data class ContentStyle(
 
 enum class BlockOrientation { HORIZONTAL, VERTICAL }
 
-enum class AlignWithAxis {
+enum class SpineAttachment {
     OVERALL_CENTER,
     HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT,
     HEAD_GAP_CENTER,
@@ -194,12 +194,12 @@ class Stage(
 
 
 class Segment(
-    val columns: ImmutableList<Column>,
+    val spines: ImmutableList<Spine>,
     val vGapAfterPx: Float
 )
 
 
-class Column(
+class Spine(
     val posOffsetPx: Float,
     val blocks: ImmutableList<Block>
 )

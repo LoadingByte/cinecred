@@ -84,24 +84,24 @@ private fun drawStages(
     val alignHeadTailGroupIds = page.alignHeadTailGroups
         .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
 
-    // Generate an image for each column.
-    // Also remember the x coordinate of the axis inside each generated image.
-    val drawnColumns = page.stages
-        .flatMap { stage -> stage.segments }.flatMap { segment -> segment.columns }
-        .associateWith { col -> drawColumn(letterStyles, textCtx, col, alignBodyColsGroupIds, alignHeadTailGroupIds) }
+    // Generate an image for each spine.
+    // Also remember the x coordinate of the spine inside each generated image.
+    val drawnSpines = page.stages
+        .flatMap { stage -> stage.segments }.flatMap { segment -> segment.spines }
+        .associateWith { spin -> drawSpine(letterStyles, textCtx, spin, alignBodyColsGroupIds, alignHeadTailGroupIds) }
 
-    // For each stage, combine the column images to a stage image.
+    // For each stage, combine the spine images to a stage image.
     return page.stages.withIndex().associate { (stageIdx, stage) ->
         val prevStage = page.stages.getOrNull(stageIdx - 1)
         val nextStage = page.stages.getOrNull(stageIdx + 1)
-        stage to drawStage(global, drawnColumns, stage, prevStage, nextStage)
+        stage to drawStage(global, drawnSpines, stage, prevStage, nextStage)
     }
 }
 
 
 private fun drawStage(
     global: Global,
-    columnImages: Map<Column, DrawnColumn>,
+    drawnSpines: Map<Spine, DrawnSpine>,
     stage: Stage,
     prevStage: Stage?,
     nextStage: Stage?
@@ -120,12 +120,12 @@ private fun drawStage(
 
     for (segment in stage.segments) {
         var maxHeight = 0f.toY()
-        for (column in segment.columns) {
-            val axisXInPageImage = global.widthPx / 2f + column.posOffsetPx
-            val drawnColumn = columnImages.getValue(column)
-            val x = axisXInPageImage - drawnColumn.axisXInImage
-            stageImage.drawDeferredImage(drawnColumn.defImage, x, y)
-            maxHeight = maxHeight.max(drawnColumn.defImage.height)
+        for (spine in segment.spines) {
+            val spineXInPageImage = global.widthPx / 2f + spine.posOffsetPx
+            val drawnSpine = drawnSpines.getValue(spine)
+            val x = spineXInPageImage - drawnSpine.spineXInImage
+            stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
+            maxHeight = maxHeight.max(drawnSpine.defImage.height)
         }
         y += maxHeight + segment.vGapAfterPx.toElasticY()
     }

@@ -67,7 +67,10 @@ fun readCredits(
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
-            "head", "body", "tail", "vGap", "contentStyle", "breakAlign", "columnPos", "pageStyle", "pageRuntime"
+            "head", "body", "tail", "vGap", "contentStyle", "breakAlign", "spinePos", "pageStyle", "pageRuntime"
+        ), legacyColNames = mapOf(
+            // 1.2.0 -> 1.3.0: The column position is renamed to spine position.
+            "spinePos" to listOf("Column Pos.", "Spaltenposition")
         )
     )
 
@@ -123,7 +126,7 @@ private class CreditsReader(
     // These variables keep track of the vertical gap that should be inserted AFTER the next CONCLUDED credits element.
     // If the gap is not specified explicitly in the vGap table column, it will be implicitly inferred from the number
     // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
-    // (e.g., a block, a column, and a segment), the most significant credits element will receive the gap
+    // (e.g., a block, a spine, and a segment), the most significant credits element will receive the gap
     // (in our example, that would be the segment).
     var explicitVGapInUnits: Float? = null
     var implicitVGapInUnits: Int = 0
@@ -162,11 +165,11 @@ private class CreditsReader(
     var stageRuntimeGroupName: String? = null
 
     // Current segment
-    val segmentColumns = mutableListOf<Column>()
+    val segmentSpines = mutableListOf<Spine>()
 
-    // Current column
-    var columnPosOffsetPx = 0f
-    val columnBlocks = mutableListOf<Block>()
+    // Current spine
+    var spinePosOffsetPx = 0f
+    val spineBlocks = mutableListOf<Block>()
 
     // Current block
     var blockStyle: ContentStyle? = null
@@ -250,22 +253,22 @@ private class CreditsReader(
     }
 
     fun concludeSegment(vGapAfter: Float) {
-        if (segmentColumns.isNotEmpty())
-            stageSegments.add(Segment(segmentColumns.toImmutableList(), vGapAfter))
-        segmentColumns.clear()
+        if (segmentSpines.isNotEmpty())
+            stageSegments.add(Segment(segmentSpines.toImmutableList(), vGapAfter))
+        segmentSpines.clear()
     }
 
-    fun concludeColumn() {
-        if (columnBlocks.isNotEmpty())
-            segmentColumns.add(Column(columnPosOffsetPx, columnBlocks.toImmutableList()))
-        columnPosOffsetPx = 0f
-        columnBlocks.clear()
+    fun concludeSpine() {
+        if (spineBlocks.isNotEmpty())
+            segmentSpines.add(Spine(spinePosOffsetPx, spineBlocks.toImmutableList()))
+        spinePosOffsetPx = 0f
+        spineBlocks.clear()
     }
 
     fun concludeBlock(vGapAfter: Float) {
         if (blockBody.isNotEmpty()) {
             val block = Block(blockStyle!!, blockHead, blockBody.toImmutableList(), blockTail, vGapAfter)
-            columnBlocks.add(block)
+            spineBlocks.add(block)
             alignBodyColsGroupsGroup.add(block)
             alignHeadTailGroupsGroup.add(block)
         } else {
@@ -300,7 +303,7 @@ private class CreditsReader(
 
         // Conclude all open credits elements that haven't been concluded yet.
         concludeBlock(0f)
-        concludeColumn()
+        concludeSpine()
         concludeSegment(0f)
         concludeAlignBodyColsGroupsGroup()
         concludeAlignHeadTailGroupsGroup()
@@ -331,7 +334,7 @@ private class CreditsReader(
         // If the page style cell is non-empty, conclude the previous stage (if there was any) and start a new one.
         table.getLookup(row, "pageStyle", pageStyleMap)?.let { newPageStyle ->
             concludeBlock(0f)
-            concludeColumn()
+            concludeSpine()
             concludeSegment(0f)
             concludeStage(pullVGap(), newPageStyle)
             isBlockConclusionMarked = false
@@ -383,10 +386,10 @@ private class CreditsReader(
                 table.log(row, null, WARN, l10n("projectIO.credits.noPageStyleSpecified"))
         }
 
-        // If the column cell is non-empty, conclude the previous column (if there was any) and start a new one.
-        // If the column cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
+        // If the spine cell is non-empty, conclude the previous spine (if there was any) and start a new one.
+        // If the spine cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
         // previous segment and start a new one.
-        table.getString(row, "columnPos")?.let { str ->
+        table.getString(row, "spinePos")?.let { str ->
             var wrap = false
             var posOffsetPx = 0f
             var erroneous = false
@@ -402,17 +405,17 @@ private class CreditsReader(
                 }
 
             if (erroneous) {
-                val msg = l10n("projectIO.credits.illFormattedColumnPos", WRAP_KW.msgPrimary, WRAP_KW.msgAlt)
-                table.log(row, "columnPos", WARN, msg)
+                val msg = l10n("projectIO.credits.illFormattedSpinePos", WRAP_KW.msgPrimary, WRAP_KW.msgAlt)
+                table.log(row, "spinePos", WARN, msg)
             }
 
             concludeBlock(0f)
-            concludeColumn()
+            concludeSpine()
             val vGap = pullVGap()  // Reset the vGap even if we don't use it.
             if (wrap)
                 concludeSegment(vGap)
             isBlockConclusionMarked = false
-            columnPosOffsetPx = posOffsetPx
+            spinePosOffsetPx = posOffsetPx
         }
 
         // If the break alignment cell is non-empty, mark the specified previous alignment group as well as the

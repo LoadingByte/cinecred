@@ -334,8 +334,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                     // Remove the stage's page style.
                     unusedStyles -= stage.style
                     for (segment in stage.segments)
-                        for (column in segment.columns)
-                            for (block in column.blocks) {
+                        for (spine in segment.spines)
+                            for (block in spine.blocks) {
                                 // Remove the block's content style.
                                 unusedStyles -= block.style
                                 // Remove the head's letter styles.

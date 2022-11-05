@@ -10,7 +10,7 @@ import java.awt.Color
 
 
 val STAGE_GUIDE_COLOR = Color(182, 70, 250)
-val AXIS_GUIDE_COLOR = Color(0, 200, 200)
+val SPINE_GUIDE_COLOR = Color(0, 200, 200)
 val BODY_ELEM_GUIDE_COLOR = Color(130, 50, 0)
 val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0)
 val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)

@@ -21,7 +21,8 @@ class ParserMsg(
 class Table(
     spreadsheet: Spreadsheet,
     val l10nPrefix: String,
-    l10nColNames: List<String>
+    l10nColNames: List<String>,
+    legacyColNames: Map<String, List<String>>
 ) {
 
     val log = mutableListOf<ParserMsg>()
@@ -54,7 +55,7 @@ class Table(
                 )
             numRows = bodyRecords.size
 
-            // 1. Find the index of each expected column name. Emit warnings for missing columns.
+            // 1. Find the index of each expected column name. Emit warnings for legacy and missing columns.
             colMap = TreeMap(String.CASE_INSENSITIVE_ORDER)
             outer@
             for (l10nColName in l10nColNames) {
@@ -67,11 +68,23 @@ class Table(
                         continue@outer
                     }
                 }
-                // The column is missing. Emit a warning.
+                // Prepare the column names which will be shown in a warning message.
                 val primaryColName = "@${l10n(key)}"
                 val alternativeColNames = possibleColNames.toMutableSet()
                     .apply { remove(primaryColName) }
                     .joinToString(" | ")
+                // The column might be missing, but first look for a legacy column name. Emit a warning if we find one.
+                val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList()).map { "@$it" }
+                for (legacyColName in possibleLegacyColNames) {
+                    val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
+                    if (col != -1) {
+                        colMap[l10nColName] = col
+                        val msg = l10n("projectIO.table.legacyColumnName", primaryColName, alternativeColNames)
+                        log.add(ParserMsg(headerRecordNo, legacyColName, null, WARN, msg))
+                        continue@outer
+                    }
+                }
+                // The column is missing. Emit a warning.
                 val msg = l10n("projectIO.table.missingExpectedColumn", alternativeColNames)
                 log.add(ParserMsg(headerRecordNo, primaryColName, null, WARN, msg))
             }

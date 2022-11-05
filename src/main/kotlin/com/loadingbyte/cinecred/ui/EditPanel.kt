@@ -100,7 +100,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         layoutGuidesHintOwner = this
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
-            STAGE_GUIDE_COLOR.toHex24(), AXIS_GUIDE_COLOR.toHex24(),
+            STAGE_GUIDE_COLOR.toHex24(), SPINE_GUIDE_COLOR.toHex24(),
             BODY_ELEM_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
         )

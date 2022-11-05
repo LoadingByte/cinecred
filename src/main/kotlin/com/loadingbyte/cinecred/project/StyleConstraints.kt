@@ -2,8 +2,8 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
-import com.loadingbyte.cinecred.project.AlignWithAxis.*
 import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
+import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
 import java.text.NumberFormat
 import kotlin.math.floor
@@ -68,7 +68,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { _, styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    DynChoiceConstr(WARN, ContentStyle::alignWithAxis.st()) { _, _, style ->
+    DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
         when (style.blockOrientation) {
             BlockOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             BlockOrientation.HORIZONTAL -> when {
@@ -83,7 +83,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT,
                     TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
                 )
-                else -> AlignWithAxis.values().asList()
+                else -> SpineAttachment.values().asList()
             }
         }
     },

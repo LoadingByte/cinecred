@@ -144,17 +144,17 @@ fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
 }
 
 
-fun Font.getSupportedFeatures(): Set<String> = supportedFeaturesCache.computeIfAbsent(this) {
+fun Font.getSupportedFeatures(): SortedSet<String> = supportedFeaturesCache.computeIfAbsent(this) {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
-        return@computeIfAbsent emptySet()
+        return@computeIfAbsent Collections.emptySortedSet()
     val feats = TreeSet<String>() // ordered alphabetically
     extractFeatures(getTableBuffer(font2D, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
     extractFeatures(getTableBuffer(font2D, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)
     feats
 }
 
-private val supportedFeaturesCache = WeakHashMap<Font, Set<String>>()
+private val supportedFeaturesCache = WeakHashMap<Font, SortedSet<String>>()
 
 // Works for the GPOS and GSUB tables.
 private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {

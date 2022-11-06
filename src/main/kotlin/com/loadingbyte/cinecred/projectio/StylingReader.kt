@@ -122,16 +122,16 @@ private fun migrate(rawStyling: RawStyling) {
 }
 
 
-private fun <S : Style> readStyle(map: Map<String, Any>, styleClass: Class<S>): S {
+private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
     val settingValues = getStyleSettings(styleClass).map { setting ->
         try {
             when (setting) {
                 is DirectStyleSetting ->
-                    convert(setting.type, map.getValue(setting.name))
+                    convert(setting.type, map[setting.name]!!)
                 is OptStyleSetting ->
-                    Opt(true, convert(setting.type, map.getValue(setting.name)))
+                    Opt(true, convert(setting.type, map[setting.name]!!))
                 is ListStyleSetting ->
-                    (map.getValue(setting.name) as List<*>)
+                    (map[setting.name] as List<*>)
                         .filterNotNull()
                         .map { convert(setting.type, it) }
                         .toImmutableList()
@@ -146,7 +146,7 @@ private fun <S : Style> readStyle(map: Map<String, Any>, styleClass: Class<S>): 
 }
 
 
-private fun convert(type: Class<*>, raw: Any?): Any = when (type) {
+private fun convert(type: Class<*>, raw: Any): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
     Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
@@ -157,9 +157,7 @@ private fun convert(type: Class<*>, raw: Any?): Any = when (type) {
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)
-        Style::class.java.isAssignableFrom(type) ->
-            @Suppress("UNCHECKED_CAST")
-            readStyle(raw as Map<String, Any>, type as Class<Style>)
+        Style::class.java.isAssignableFrom(type) -> readStyle(raw as Map<*, *>, type.asSubclass(Style::class.java))
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

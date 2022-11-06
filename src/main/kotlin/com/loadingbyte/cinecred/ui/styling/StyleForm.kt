@@ -73,7 +73,7 @@ class StyleForm<S : Style>(
                 OptWidget(makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs))
             }
             is ListStyleSetting -> {
-                val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
+                val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
                 if (setting.type == String::class.java && dynChoiceConstr == null) {
                     val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
                     TextListWidget(widthWidgetSpec?.widthSpec)
@@ -87,26 +87,25 @@ class StyleForm<S : Style>(
         setting: ListStyleSetting<S, V>,
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
-    ): ListWidget<*> {
+    ): ListWidget<V> {
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
         val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, V>>()
-        @Suppress("UNCHECKED_CAST")
         return ListWidget(
-            newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) as Widget<V> },
+            newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
             listWidgetSpec?.newElem, listWidgetSpec?.newElemIsLastElem ?: false,
             listWidgetSpec?.elemsPerRow ?: 1, listWidgetSpec?.rowSeparators ?: false,
             minSizeConstr?.minSize ?: 0
         )
     }
 
-    private fun makeBackingSettingWidget(
-        setting: StyleSetting<S, *>,
+    private fun <V : Any /* non-null */> makeBackingSettingWidget(
+        setting: StyleSetting<S, V>,
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
-    ): Widget<*> {
+    ): Widget<V> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
-        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S>>()
+        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, V>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
@@ -116,7 +115,7 @@ class StyleForm<S : Style>(
 
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        return when (setting.type) {
+        val widget = when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
@@ -151,32 +150,35 @@ class StyleForm<S : Style>(
             FontFeature::class.java -> FontFeatureWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
-                    toggleButtonGroupWidgetSpec != null -> makeEnumTBGWidget(
-                        setting.type as Class<*>, toggleButtonGroupWidgetSpec.show, incons = dynChoiceConstr != null
+                    toggleButtonGroupWidgetSpec != null -> makeEnumToggleButtonGroupWidget(
+                        setting.type.asSubclass(Enum::class.java), toggleButtonGroupWidgetSpec.show,
+                        inconsistent = dynChoiceConstr != null
                     )
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(
-                        setting.type as Class<*>, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
+                        setting.type, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
                     )
-                    else -> makeEnumCBoxWidget(setting.type as Class<*>, widthSpec)
+                    else -> ComboBoxWidget(
+                        setting.type, setting.type.enumConstants.asList(), toString = { l10nEnum(it as Enum<*>) },
+                        widthSpec
+                    )
                 }
                 Style::class.java.isAssignableFrom(setting.type) ->
-                    @Suppress("UNCHECKED_CAST")
-                    NestedFormWidget(StyleForm(ctx, setting.type as Class<Style>, insets = false))
+                    NestedFormWidget(StyleForm(ctx, setting.type.asSubclass(Style::class.java), insets = false))
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
+
+        @Suppress("UNCHECKED_CAST")
+        return widget as Widget<V>
     }
 
-    private fun <E : Any /* non-null */> makeEnumCBoxWidget(enumClass: Class<E>, widthSpec: WidthSpec?) =
-        ComboBoxWidget(enumClass, enumClass.enumConstants.asList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec)
-
-    private fun <E : Any /* non-null */> makeEnumTBGWidget(
+    private fun <E : Enum<*>> makeEnumToggleButtonGroupWidget(
         enumClass: Class<E>,
         show: ToggleButtonGroupWidgetSpec.Show,
-        incons: Boolean
-    ): Widget<*> {
-        var toIcon: ((E) -> Icon)? = fun(item: E) = (item as Enum<*>).icon
-        var toLabel: ((E) -> String)? = fun(item: E) = l10nEnum(item as Enum<*>)
+        inconsistent: Boolean
+    ): Widget<E> {
+        var toIcon: ((E) -> Icon)? = Enum<*>::icon
+        var toLabel: ((E) -> String)? = ::l10nEnum
         var toTooltip: ((E) -> String)? = toLabel
         // @formatter:off
         when (show) {
@@ -186,8 +188,8 @@ class StyleForm<S : Style>(
         }
         // @formatter:on
 
-        val items = enumClass.enumConstants.asList()
-        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip, incons)
+        val items = if (inconsistent) emptyList() else enumClass.enumConstants.asList()
+        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip, inconsistent)
     }
 
     private fun makeFormRow(name: String, widget: Widget<*>): FormRow {
@@ -207,7 +209,7 @@ class StyleForm<S : Style>(
         try {
             for ((setting, widget) in valueWidgets)
                 @Suppress("UNCHECKED_CAST")
-                (widget as Widget<Any?>).value = setting.get(stored)
+                (widget as Widget<Any>).value = setting.get(stored)
         } finally {
             disableOnChange = false
         }
@@ -258,11 +260,11 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setChoices(setting: StyleSetting<*, *>, choices: Collection<*>) {
+    fun setChoices(setting: StyleSetting<*, *>, choices: List<Any>) {
         valueWidgets[setting]!!.applyConfigurator { widget ->
             if (widget is ChoiceWidget)
                 @Suppress("UNCHECKED_CAST")
-                (widget as ChoiceWidget<Any?>).updateChoices(choices)
+                (widget as ChoiceWidget<Any>).updateChoices(choices)
         }
     }
 

@@ -12,12 +12,12 @@ open class Form(insets: Boolean = true) :
     JPanel(MigLayout("hidemode 3, insets " + if (insets) "dialog" else "0", "[align right][grow]")),
     Scrollable {
 
-    abstract class Storable<O>(insets: Boolean = true) : Form(insets) {
+    abstract class Storable<O : Any /* non-null */>(insets: Boolean = true) : Form(insets) {
         abstract fun open(stored: O)
         abstract fun save(): O
     }
 
-    interface Widget<V> {
+    interface Widget<V : Any /* non-null */> {
         val components: List<JComponent>
         val constraints: List<String>
         val changeListeners: MutableList<(Widget<*>) -> Unit>
@@ -28,11 +28,11 @@ open class Form(insets: Boolean = true) :
         fun applySeverity(index: Int, severity: Severity?)
     }
 
-    interface ChoiceWidget<V> : Widget<V> {
-        fun updateChoices(choices: Collection<V>)
+    interface ChoiceWidget<V : Any> : Widget<V> {
+        fun updateChoices(choices: List<V>)
     }
 
-    abstract class AbstractWidget<V> : Widget<V> {
+    abstract class AbstractWidget<V : Any> : Widget<V> {
 
         override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 

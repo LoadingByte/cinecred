@@ -57,7 +57,7 @@ sealed class StyleSetting<S : Style, V : Any>(val styleClass: Class<S>, val name
         type = (if (baseType is ParameterizedType) baseType.rawType else baseType) as Class<V>
     }
 
-    abstract fun get(style: S): Any?
+    abstract fun get(style: S): Any
     abstract fun extractValues(style: S): List<V>
 
     override fun equals(other: Any?) =
@@ -106,14 +106,14 @@ private class ReflectedDirectStyleSetting<S : Style>(styleClass: Class<S>, name:
 private class ReflectedOptStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
     OptStyleSetting<S, Any>(styleClass, name) {
     private val getter = styleClass.getGetter(name)
-    override fun get(style: S): Opt<Any> = @Suppress("UNCHECKED_CAST") (getter.invoke(style) as Opt<Any>)
+    override fun get(style: S): Opt<Any> = getter.invoke(style) as Opt<Any>
 }
 
 
 private class ReflectedListStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
     ListStyleSetting<S, Any>(styleClass, name) {
     private val getter = styleClass.getGetter(name)
-    override fun get(style: S): List<Any> = @Suppress("UNCHECKED_CAST") (getter.invoke(style) as List<Any>)
+    override fun get(style: S): List<Any> = (getter.invoke(style) as List<*>).requireNoNulls()
 }
 
 

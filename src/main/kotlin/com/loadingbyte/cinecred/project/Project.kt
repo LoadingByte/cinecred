@@ -176,7 +176,7 @@ enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, OFF }
 enum class LineJoin { MITER, ROUND, BEVEL }
 
 
-data class Opt<out T>(val isActive: Boolean, val value: T)
+data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 
 class Page(

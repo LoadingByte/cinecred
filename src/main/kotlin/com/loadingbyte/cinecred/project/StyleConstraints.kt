@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
 import java.text.NumberFormat
+import java.util.*
 import kotlin.math.floor
 
 
@@ -128,7 +129,7 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
     },
     FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
     FontFeatureConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
-        ctx.resolveFont(style.fontName)?.getSupportedFeatures().orEmpty()
+        ctx.resolveFont(style.fontName)?.getSupportedFeatures() ?: Collections.emptySortedSet()
     },
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
@@ -168,11 +169,11 @@ class FloatConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Float>>(setting)
 
 
-class DynChoiceConstr<S : Style>(
+class DynChoiceConstr<S : Style, V : Any>(
     val severity: Severity,
-    vararg settings: StyleSetting<S, Any>,
-    val choices: (StylingContext, Styling, S) -> Collection<Any>
-) : StyleConstraint<S, StyleSetting<S, Any>>(*settings)
+    vararg settings: StyleSetting<S, V>,
+    val choices: (StylingContext, Styling, S) -> List<V>
+) : StyleConstraint<S, StyleSetting<S, V>>(*settings)
 
 
 class ColorConstr<S : Style>(
@@ -197,7 +198,7 @@ class FontNameConstr<S : Style>(
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
-    val getAvailableTags: (StylingContext, Styling, S) -> Collection<String>
+    val getAvailableTags: (StylingContext, Styling, S) -> SortedSet<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 
@@ -267,7 +268,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, idx, cst.severity, l10n(key, restr))
                         }
                     }
-                is DynChoiceConstr ->
+                is DynChoiceConstr<S, *> ->
                     style.forEachRelevantValue(cst, ignoreSettings.keys) { st, idx, value ->
                         if (value !in cst.choices(ctx, styling, style))
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.dynChoice"))

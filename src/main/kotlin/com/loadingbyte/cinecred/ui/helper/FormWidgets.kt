@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.Color
@@ -42,7 +43,7 @@ enum class WidthSpec(val mig: String) {
 }
 
 
-abstract class AbstractTextComponentWidget<V>(
+abstract class AbstractTextComponentWidget<V : Any>(
     protected val tc: JTextComponent,
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
@@ -81,7 +82,7 @@ class FileExtAssortment(val choices: ImmutableList<String>, val default: String)
     }
 }
 
-abstract class AbstractFilenameWidget<V>(
+abstract class AbstractFilenameWidget<V : Any>(
     widthSpec: WidthSpec? = null
 ) : AbstractTextComponentWidget<V>(JTextField(), widthSpec) {
 
@@ -176,7 +177,7 @@ class FileWidget(
 }
 
 
-open class SpinnerWidget<V>(
+open class SpinnerWidget<V : Number>(
     private val valueClass: Class<V>,
     model: SpinnerModel,
     widthSpec: WidthSpec? = null
@@ -290,30 +291,30 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 }
 
 
-open class ComboBoxWidget<E : Any /* non-null */>(
-    protected val itemClass: Class<E>,
-    items: Collection<E>,
-    toString: (E) -> String = { it.toString() },
+open class ComboBoxWidget<V : Any>(
+    protected val valueClass: Class<V>,
+    items: List<V>,
+    toString: (V) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
     private val scrollbar: Boolean = true,
-    decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
-) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E> {
+    decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
+) : Form.AbstractWidget<V>(), Form.ChoiceWidget<V> {
 
-    protected val cb = JComboBox<E>().apply {
+    protected val cb = JComboBox<V>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        renderer = decorateRenderer(CustomToStringListCellRenderer(itemClass, toString))
-        keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
+        renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass, toString))
+        keySelectionManager = CustomToStringKeySelectionManager(valueClass, toString)
     }
 
     override val components = listOf(cb)
     override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
 
-    protected var items: Collection<E> = emptyList()
+    protected var items: ImmutableList<V> = persistentListOf()
         set(items) {
             if (field == items)
                 return
             field = items
-            val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
+            val oldSelectedItem = cb.selectedItem?.let(valueClass::cast)
             cb.model = makeModel(Vector(items), oldSelectedItem)
             if (cb.selectedItem != oldSelectedItem)
                 notifyChangeListeners()
@@ -321,43 +322,43 @@ open class ComboBoxWidget<E : Any /* non-null */>(
                 cb.maximumRowCount = items.size
         }
 
-    protected open fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+    protected open fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
         DefaultComboBoxModel(items).apply {
             if (oldSelectedItem in items)
                 selectedItem = oldSelectedItem
         }
 
-    override var value: E
-        get() = itemClass.cast(cb.selectedItem!!)
+    override var value: V
+        get() = valueClass.cast(cb.selectedItem!!)
         set(value) {
             cb.selectedItem = value
         }
 
-    override fun updateChoices(choices: Collection<E>) {
-        items = choices
+    override fun updateChoices(choices: List<V>) {
+        items = choices.toImmutableList()
     }
 
     init {
-        this.items = items
+        this.items = items.toImmutableList()
     }
 
 }
 
 
-class InconsistentComboBoxWidget<E : Any /* non-null */>(
-    itemClass: Class<E>,
-    items: Collection<E>,
-    toString: (E) -> String = { it.toString() },
+class InconsistentComboBoxWidget<V : Any>(
+    valueClass: Class<V>,
+    items: List<V>,
+    toString: (V) -> String = { it.toString() },
     widthSpec: WidthSpec? = null
-) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
+) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
 
-    override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+    override fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
         DefaultComboBoxModel(items).apply {
             if (oldSelectedItem != null)
                 selectedItem = oldSelectedItem
         }
 
-    override var value: E
+    override var value: V
         get() = super.value
         set(value) {
             cb.isEditable = value !in items
@@ -368,20 +369,20 @@ class InconsistentComboBoxWidget<E : Any /* non-null */>(
 }
 
 
-open class EditableComboBoxWidget<E : Any /* non-null */>(
-    itemClass: Class<E>,
-    items: Collection<E>,
-    private val toString: (E) -> String,
-    private val fromString: ((String) -> E),
+open class EditableComboBoxWidget<V : Any>(
+    valueClass: Class<V>,
+    items: List<V>,
+    private val toString: (V) -> String,
+    private val fromString: ((String) -> V),
     widthSpec: WidthSpec? = null
-) : ComboBoxWidget<E>(itemClass, items, toString, widthSpec) {
+) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
 
     init {
         cb.isEditable = true
         cb.editor = CustomComboBoxEditor()
     }
 
-    override fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
+    override fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
         DefaultComboBoxModel(items).apply {
             if (oldSelectedItem != null)
                 selectedItem = oldSelectedItem
@@ -408,7 +409,7 @@ open class EditableComboBoxWidget<E : Any /* non-null */>(
         }
 
         override fun valueToString(value: Any?): String =
-            value?.let { toString(itemClass.cast(it)) } ?: ""
+            value?.let { toString(this@EditableComboBoxWidget.valueClass.cast(it)) } ?: ""
 
         override fun stringToValue(string: String?): Any =
             runCatching { fromString(string!!) }.getOrElse { throw ParseException("", 0) }
@@ -461,23 +462,23 @@ class FPSWidget(
 }
 
 
-class ToggleButtonGroupWidget<E : Any /* non-null */>(
-    items: Collection<E>,
-    private val toIcon: ((E) -> Icon)? = null,
-    private val toLabel: ((E) -> String)? = null,
-    private val toTooltip: ((E) -> String)? = null,
+class ToggleButtonGroupWidget<V : Any>(
+    items: List<V>,
+    private val toIcon: ((V) -> Icon)? = null,
+    private val toLabel: ((V) -> String)? = null,
+    private val toTooltip: ((V) -> String)? = null,
     private val inconsistent: Boolean = false
-) : Form.AbstractWidget<E>(), Form.ChoiceWidget<E> {
+) : Form.AbstractWidget<V>(), Form.ChoiceWidget<V> {
 
     private val panel = GroupPanel()
     private val btnGroup = ButtonGroup()
 
-    private var overflowItem: E? = null
+    private var overflowItem: V? = null
 
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("")
 
-    private var items: List<E> = emptyList()
+    private var items: ImmutableList<V> = persistentListOf()
         set(items) {
             if (field == items)
                 return
@@ -507,10 +508,10 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
             }
         }
 
-    override var value: E
+    override var value: V
         get() = overflowItem ?: items[btnGroup.elements.asSequence().indexOfFirst { it.isSelected }]
         set(value) {
-            if (this.value == value)
+            if ((items.isNotEmpty() || overflowItem != null) && this.value == value)
                 return
             if (overflowItem != null)
                 removeOverflow()
@@ -530,15 +531,15 @@ class ToggleButtonGroupWidget<E : Any /* non-null */>(
                 btn.isEnabled = isEnabled
         }
 
-    override fun updateChoices(choices: Collection<E>) {
-        this.items = if (choices is List<E>) choices else choices.toList()
+    override fun updateChoices(choices: List<V>) {
+        items = choices.toImmutableList()
     }
 
     init {
-        updateChoices(items)
+        this.items = items.toImmutableList()
     }
 
-    private fun addButton(item: E) = JToggleButton().also { btn ->
+    private fun addButton(item: V) = JToggleButton().also { btn ->
         toIcon?.let { btn.icon = it(item) }
         toLabel?.let { btn.text = it(item) }
         toTooltip?.let { btn.toolTipText = it(item) }
@@ -902,9 +903,9 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
 }
 
 
-class OptWidget<V>(
-    val wrapped: Form.Widget<V>
-) : Form.AbstractWidget<Opt<V>>() {
+class OptWidget<E : Any>(
+    val wrapped: Form.Widget<E>
+) : Form.AbstractWidget<Opt<E>>() {
 
     init {
         // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
@@ -921,7 +922,7 @@ class OptWidget<V>(
     override val components = listOf(cb) + wrapped.components
     override val constraints = listOf("") + wrapped.constraints
 
-    override var value: Opt<V>
+    override var value: Opt<E>
         get() = Opt(cb.isSelected, wrapped.value)
         set(value) {
             cb.isSelected = value.isActive
@@ -944,14 +945,14 @@ class OptWidget<V>(
 }
 
 
-class ListWidget<V>(
-    private val newElemWidget: () -> Form.Widget<V>,
-    private val newElem: V? = null,
+class ListWidget<E : Any>(
+    private val newElemWidget: () -> Form.Widget<E>,
+    private val newElem: E? = null,
     private val newElemIsLastElem: Boolean = false,
     private val elemsPerRow: Int = 1,
     private val rowSeparators: Boolean = false,
     private val minSize: Int = 0
-) : Form.AbstractWidget<ImmutableList<V>>() {
+) : Form.AbstractWidget<ImmutableList<E>>() {
 
     private val addBtn = JButton(ADD_ICON)
 
@@ -973,12 +974,12 @@ class ListWidget<V>(
     }
 
     private var listSize = 0
-    private val allElemWidgets = mutableListOf<Form.Widget<V>>()
+    private val allElemWidgets = mutableListOf<Form.Widget<E>>()
     private val allElemDelBtns = mutableListOf<JButton>()
     private val allSeparators = mutableListOf<JSeparator>()
     private var disableChangeForwarding = false
 
-    val elementWidgets: List<Form.Widget<V>>
+    val elementWidgets: List<Form.Widget<E>>
         get() = allElemWidgets.subList(0, listSize)
 
     init {
@@ -999,7 +1000,7 @@ class ListWidget<V>(
         if (allElemWidgets[0].constraints.any { WidthSpec.FILL.mig in it }) WidthSpec.FILL.mig else ""
     )
 
-    override var value: ImmutableList<V>
+    override var value: ImmutableList<E>
         get() = elementWidgets.map { it.value }.toImmutableList()
         set(value) {
             while (listSize < value.size)
@@ -1113,9 +1114,11 @@ class ListWidget<V>(
 
 
 class UnionWidget(
-    private val wrapped: List<Form.Widget<*>>,
+    wrapped: List<Form.Widget<*>>,
     icons: List<Icon>
-) : Form.AbstractWidget<List<*>>() {
+) : Form.AbstractWidget<ImmutableList<Any>>() {
+
+    private val wrapped = wrapped.toImmutableList()
 
     init {
         require(wrapped.size == icons.size)
@@ -1125,7 +1128,7 @@ class UnionWidget(
             widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
-    override val components: List<JComponent> = mutableListOf<JComponent>().apply {
+    override val components = buildList {
         for ((widget, icon) in wrapped.zip(icons)) {
             add(JLabel(icon))
             addAll(widget.components)
@@ -1141,13 +1144,13 @@ class UnionWidget(
         }
     }
 
-    override var value: List<*>
-        get() = wrapped.map { it.value }
+    override var value: ImmutableList<Any>
+        get() = wrapped.map { it.value }.toImmutableList()
         set(value) {
             require(wrapped.size == value.size)
             for (idx in wrapped.indices)
                 @Suppress("UNCHECKED_CAST")
-                (wrapped[idx] as Form.Widget<Any?>).value = value[idx]
+                (wrapped[idx] as Form.Widget<Any>).value = value[idx]
         }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
@@ -1159,9 +1162,9 @@ class UnionWidget(
 }
 
 
-class NestedFormWidget<O>(
-    val form: Form.Storable<O>
-) : Form.AbstractWidget<O>() {
+class NestedFormWidget<V : Any>(
+    val form: Form.Storable<V>
+) : Form.AbstractWidget<V>() {
 
     init {
         // When the wrapped form changes, notify this widget's change listeners that a widget in that form has changed.
@@ -1171,7 +1174,7 @@ class NestedFormWidget<O>(
     override val components = listOf(form)
     override val constraints = listOf(WidthSpec.FILL.mig)
 
-    override var value: O
+    override var value: V
         get() = form.save()
         set(value) {
             form.open(value)

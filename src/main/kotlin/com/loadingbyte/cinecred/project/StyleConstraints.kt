@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
-import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
+import com.loadingbyte.cinecred.project.BodyCellConform.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
 import java.text.NumberFormat
@@ -94,11 +94,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         ContentStyle::tailLetterStyleName.st(),
         choices = { _, styling, _ -> styling.letterStyles.map(LetterStyle::name) }
     ),
-    DynChoiceConstr(WARN, ContentStyle::gridElemBoxConform.st()) { _, _, style ->
-        if (style.gridElemHJustifyPerCol.size < 2) listOf(NOTHING, HEIGHT, SQUARE)
-        else BodyElementBoxConform.values().asList()
+    DynChoiceConstr(WARN, ContentStyle::gridCellConform.st()) { _, _, style ->
+        if (style.gridCellHJustifyPerCol.size < 2) listOf(NOTHING, HEIGHT, SQUARE)
+        else BodyCellConform.values().asList()
     },
-    MinSizeConstr(ERROR, ContentStyle::gridElemHJustifyPerCol.st(), 1),
+    MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
     FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0f, minInclusive = false),

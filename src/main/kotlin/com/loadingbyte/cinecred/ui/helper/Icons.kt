@@ -153,19 +153,19 @@ val LineHJustify.icon
     }
 
 
-private val BODY_ELEMENT_BOX_CONFORM_NOTHING_ICON = SVGIcon.load("/icons/bodyElementBoxConform/nothing.svg")
-private val BODY_ELEMENT_BOX_CONFORM_WIDTH_ICON = SVGIcon.load("/icons/bodyElementBoxConform/width.svg")
-private val BODY_ELEMENT_BOX_CONFORM_HEIGHT_ICON = SVGIcon.load("/icons/bodyElementBoxConform/height.svg")
-private val BODY_ELEMENT_BOX_CONFORM_WAH_ICON = SVGIcon.load("/icons/bodyElementBoxConform/widthAndHeight.svg")
-private val BODY_ELEMENT_BOX_CONFORM_SQUARE_ICON = SVGIcon.load("/icons/bodyElementBoxConform/square.svg")
+private val BODY_CELL_CONFORM_NOTHING_ICON = SVGIcon.load("/icons/bodyCellConform/nothing.svg")
+private val BODY_CELL_CONFORM_WIDTH_ICON = SVGIcon.load("/icons/bodyCellConform/width.svg")
+private val BODY_CELL_CONFORM_HEIGHT_ICON = SVGIcon.load("/icons/bodyCellConform/height.svg")
+private val BODY_CELL_CONFORM_WAH_ICON = SVGIcon.load("/icons/bodyCellConform/widthAndHeight.svg")
+private val BODY_CELL_CONFORM_SQUARE_ICON = SVGIcon.load("/icons/bodyCellConform/square.svg")
 
-val BodyElementBoxConform.icon
+val BodyCellConform.icon
     get() = when (this) {
-        BodyElementBoxConform.NOTHING -> BODY_ELEMENT_BOX_CONFORM_NOTHING_ICON
-        BodyElementBoxConform.WIDTH -> BODY_ELEMENT_BOX_CONFORM_WIDTH_ICON
-        BodyElementBoxConform.HEIGHT -> BODY_ELEMENT_BOX_CONFORM_HEIGHT_ICON
-        BodyElementBoxConform.WIDTH_AND_HEIGHT -> BODY_ELEMENT_BOX_CONFORM_WAH_ICON
-        BodyElementBoxConform.SQUARE -> BODY_ELEMENT_BOX_CONFORM_SQUARE_ICON
+        BodyCellConform.NOTHING -> BODY_CELL_CONFORM_NOTHING_ICON
+        BodyCellConform.WIDTH -> BODY_CELL_CONFORM_WIDTH_ICON
+        BodyCellConform.HEIGHT -> BODY_CELL_CONFORM_HEIGHT_ICON
+        BodyCellConform.WIDTH_AND_HEIGHT -> BODY_CELL_CONFORM_WAH_ICON
+        BodyCellConform.SQUARE -> BODY_CELL_CONFORM_SQUARE_ICON
     }
 
 
@@ -241,7 +241,7 @@ val Enum<*>.icon
         is HJustify -> icon
         is VJustify -> icon
         is LineHJustify -> icon
-        is BodyElementBoxConform -> icon
+        is BodyCellConform -> icon
         is GridFillingOrder -> icon
         is FlowDirection -> icon
         is SmallCaps -> icon

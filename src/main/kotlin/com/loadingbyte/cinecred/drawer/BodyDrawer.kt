@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.common.Y.Companion.plus
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
+import com.loadingbyte.cinecred.project.BodyCellConform.*
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -28,7 +28,7 @@ fun drawBodyImagesWithGridBodyLayout(
 
     // Step 1:
     // Determine the width of each grid column (these widths are shared across blocks). Also determine the height of
-    // each row of each block (these heights are of course not shared across blocks). Depending on what "body element
+    // each row of each block (these heights are of course not shared across blocks). Depending on what "body cell
     // conform" the user has configured, there may be only one width resp. height that is shared across all columns
     // resp. across all rows in all blocks. For example, the user might have chosen to share column widths in order
     // to obtain a layout like the following, where the head line (in the example 'Extras') is nice and centered:
@@ -36,7 +36,7 @@ fun drawBodyImagesWithGridBodyLayout(
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
     val bodyPartitions = blocks.associateWith { block ->
-        partitionIntoCols(block.body, numCols = style.gridElemHJustifyPerCol.size, style.gridFillingOrder)
+        partitionIntoCols(block.body, numCols = style.gridCellHJustifyPerCol.size, style.gridFillingOrder)
     }
     val numCols = bodyPartitions.values.maxOf { cols -> cols.size }
     val numRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
@@ -72,7 +72,7 @@ fun drawBodyImagesWithGridBodyLayout(
 
     val colWidths: List<Float>
     val rowHeights: Map<Block, List<Float>>
-    when (style.gridElemBoxConform) {
+    when (style.gridCellConform) {
         NOTHING -> {
             colWidths = independentColWidths()
             rowHeights = independentRowHeights()
@@ -114,14 +114,14 @@ fun drawBodyImagesWithGridBodyLayout(
         )
 
         var x = 0f
-        for ((col, justifyCol, colWidth) in zip(blockCols, style.gridElemHJustifyPerCol, colWidths)) {
+        for ((col, justifyCol, colWidth) in zip(blockCols, style.gridCellHJustifyPerCol, colWidths)) {
             var y = 0f.toY()
             for ((bodyElem, rowHeight) in col.zip(blockRowHeights)) {
                 bodyImage.drawJustifiedBodyElem(
-                    textCtx, bodyElem, justifyCol, style.gridElemVJustify, x, y, colWidth, rowHeight.toY()
+                    textCtx, bodyElem, justifyCol, style.gridCellVJustify, x, y, colWidth, rowHeight.toY()
                 )
-                // Draw a guide that shows the edges of the body element space.
-                bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, colWidth, rowHeight.toY(), layer = GUIDES)
+                // Draw a guide that shows the edges of the body cell.
+                bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, colWidth, rowHeight.toY(), layer = GUIDES)
                 // Advance to the next line in the current column.
                 y += rowHeight + style.gridRowGapPx.toElasticY()
             }
@@ -184,12 +184,12 @@ fun drawBodyImageWithFlowBodyLayout(
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
     val bodyImageWidth = style.flowLineWidthPx
-        .coerceAtLeast(if (style.flowElemBoxConform == SQUARE) maxElemSideLength else maxElemWidth)
+        .coerceAtLeast(if (style.flowCellConform == SQUARE) maxElemSideLength else maxElemWidth)
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
     val lines = partitionIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
-        when (style.flowElemBoxConform) {
+        when (style.flowCellConform) {
             NOTHING, HEIGHT -> bodyElem.getWidth(textCtx)
             WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
             SQUARE -> maxElemSideLength
@@ -198,7 +198,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
     // We will later use this function to find the height of a specific line.
     fun getLineHeight(line: List<BodyElement>) =
-        when (style.flowElemBoxConform) {
+        when (style.flowCellConform) {
             NOTHING, WIDTH -> line.maxOf { bodyElem -> bodyElem.getHeight() }
             HEIGHT, WIDTH_AND_HEIGHT -> maxElemHeight
             SQUARE -> maxElemSideLength
@@ -214,7 +214,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Determine the width of all rigid elements in the line, that is, the total width of all body elements
         // and separator strings.
-        val totalRigidWidth = when (style.flowElemBoxConform) {
+        val totalRigidWidth = when (style.flowCellConform) {
             NOTHING, HEIGHT -> line.sumOf { bodyElem -> bodyElem.getWidth(textCtx) }
             WIDTH, WIDTH_AND_HEIGHT -> line.size * maxElemWidth
             SQUARE -> line.size * maxElemSideLength
@@ -240,7 +240,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Actually draw the line using the measurements from above.
         for ((bodyElemIdx, bodyElem) in line.withIndex()) {
-            val areaWidth = when (style.flowElemBoxConform) {
+            val areaWidth = when (style.flowCellConform) {
                 NOTHING, HEIGHT -> bodyElem.getWidth(textCtx)
                 WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
                 SQUARE -> maxElemSideLength
@@ -248,12 +248,12 @@ fun drawBodyImageWithFlowBodyLayout(
 
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
-                textCtx, bodyElem, style.flowElemHJustify, style.flowElemVJustify, x, y,
+                textCtx, bodyElem, style.flowCellHJustify, style.flowCellVJustify, x, y,
                 areaWidth, lineHeight.toY(),
             )
 
-            // Draw a guide that shows the edges of the current body element space.
-            bodyImage.drawRect(BODY_ELEM_GUIDE_COLOR, x, y, areaWidth, lineHeight.toY(), layer = GUIDES)
+            // Draw a guide that shows the edges of the current body cell.
+            bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, areaWidth, lineHeight.toY(), layer = GUIDES)
 
             if (bodyElemIdx != line.lastIndex) {
                 // Advance to the separator.
@@ -261,7 +261,7 @@ fun drawBodyImageWithFlowBodyLayout(
                 // Draw the separator.
                 if (sepFmtStr != null)
                     bodyImage.drawJustifiedString(
-                        sepFmtStr, HJustify.CENTER, style.flowElemVJustify, x, y,
+                        sepFmtStr, HJustify.CENTER, style.flowCellVJustify, x, y,
                         horGap + horGlue, lineHeight.toY()
                     )
                 // Advance to the next element on the line.

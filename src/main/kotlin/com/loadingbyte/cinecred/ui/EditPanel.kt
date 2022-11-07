@@ -101,7 +101,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         toolTipText = l10n(
             "ui.edit.layoutGuidesTooltip",
             STAGE_GUIDE_COLOR.toHex24(), SPINE_GUIDE_COLOR.toHex24(),
-            BODY_ELEM_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
+            BODY_CELL_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
         )
         isFocusable = false
@@ -347,7 +347,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             0 -> ""
             1 -> l10n("ui.edit.record")
             2 -> l10n("ui.edit.column")
-            3 -> l10n("ui.edit.cell")
+            3 -> l10n("ui.edit.value")
             4 -> l10n("ui.edit.message")
             else -> throw IllegalArgumentException()
         }

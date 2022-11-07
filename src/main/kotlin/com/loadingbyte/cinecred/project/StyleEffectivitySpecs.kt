@@ -5,7 +5,7 @@ import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
 import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
 import com.loadingbyte.cinecred.common.getSupportedFeatures
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
-import com.loadingbyte.cinecred.project.BodyElementBoxConform.*
+import com.loadingbyte.cinecred.project.BodyCellConform.*
 import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
@@ -44,14 +44,14 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
 
 private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentStyle>> = listOf(
     StyleEffectivitySpec(
-        ContentStyle::gridFillingOrder.st(), ContentStyle::gridElemBoxConform.st(),
-        ContentStyle::gridElemHJustifyPerCol.st(), ContentStyle::gridElemVJustify.st(), ContentStyle::gridRowGapPx.st(),
+        ContentStyle::gridFillingOrder.st(), ContentStyle::gridCellConform.st(),
+        ContentStyle::gridCellHJustifyPerCol.st(), ContentStyle::gridCellVJustify.st(), ContentStyle::gridRowGapPx.st(),
         ContentStyle::gridColGapPx.st(),
         isTotallyIneffective = { _, style -> style.bodyLayout != GRID }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowElemBoxConform.st(),
-        ContentStyle::flowElemHJustify.st(), ContentStyle::flowElemVJustify.st(), ContentStyle::flowLineWidthPx.st(),
+        ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowCellConform.st(),
+        ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(), ContentStyle::flowLineWidthPx.st(),
         ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),
         isTotallyIneffective = { _, style -> style.bodyLayout != FLOW }
     ),
@@ -75,20 +75,20 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> !style.hasHead && !style.hasTail }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridElemVJustify.st(),
+        ContentStyle::gridCellVJustify.st(),
         isAlmostEffective = { _, style ->
-            style.gridElemHJustifyPerCol.size < 2 &&
-                    style.gridElemBoxConform.let { it != HEIGHT && it != WIDTH_AND_HEIGHT && it != SQUARE }
+            style.gridCellHJustifyPerCol.size < 2 &&
+                    style.gridCellConform.let { it != HEIGHT && it != WIDTH_AND_HEIGHT && it != SQUARE }
         }
     ),
     StyleEffectivitySpec(
         ContentStyle::gridColGapPx.st(),
-        isAlmostEffective = { _, style -> style.gridElemHJustifyPerCol.size < 2 }
+        isAlmostEffective = { _, style -> style.gridCellHJustifyPerCol.size < 2 }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowElemHJustify.st(),
+        ContentStyle::flowCellHJustify.st(),
         isAlmostEffective = { _, style ->
-            style.flowElemBoxConform.let { it != WIDTH && it != WIDTH_AND_HEIGHT && it != SQUARE }
+            style.flowCellConform.let { it != WIDTH && it != WIDTH_AND_HEIGHT && it != SQUARE }
         }
     ),
     StyleEffectivitySpec(

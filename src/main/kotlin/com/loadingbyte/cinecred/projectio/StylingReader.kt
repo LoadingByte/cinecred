@@ -119,6 +119,16 @@ private fun migrate(rawStyling: RawStyling) {
         contentStyle["spineOrientation"]?.let { contentStyle["blockOrientation"] = it }
         contentStyle["alignWithAxis"]?.let { contentStyle["spineAttachment"] = it }
     }
+
+    // 1.2.0 -> 1.3.0: Body elements and element boxes are renamed to cells.
+    for (contentStyle in rawStyling.contentStyles) {
+        contentStyle["gridElemBoxConform"]?.let { contentStyle["gridCellConform"] = it }
+        contentStyle["gridElemHJustifyPerCol"]?.let { contentStyle["gridCellHJustifyPerCol"] = it }
+        contentStyle["gridElemVJustify"]?.let { contentStyle["gridCellVJustify"] = it }
+        contentStyle["flowElemBoxConform"]?.let { contentStyle["flowCellConform"] = it }
+        contentStyle["flowElemHJustify"]?.let { contentStyle["flowCellHJustify"] = it }
+        contentStyle["flowElemVJustify"]?.let { contentStyle["flowCellVJustify"] = it }
+    }
 }
 
 

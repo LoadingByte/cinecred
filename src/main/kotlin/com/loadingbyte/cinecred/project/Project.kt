@@ -68,16 +68,16 @@ data class ContentStyle(
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
     val gridFillingOrder: GridFillingOrder,
-    val gridElemBoxConform: BodyElementBoxConform,
-    val gridElemHJustifyPerCol: ImmutableList<HJustify>,
-    val gridElemVJustify: VJustify,
+    val gridCellConform: BodyCellConform,
+    val gridCellHJustifyPerCol: ImmutableList<HJustify>,
+    val gridCellVJustify: VJustify,
     val gridRowGapPx: Float,
     val gridColGapPx: Float,
     val flowDirection: FlowDirection,
     val flowLineHJustify: LineHJustify,
-    val flowElemBoxConform: BodyElementBoxConform,
-    val flowElemHJustify: HJustify,
-    val flowElemVJustify: VJustify,
+    val flowCellConform: BodyCellConform,
+    val flowCellHJustify: HJustify,
+    val flowCellVJustify: VJustify,
     val flowLineWidthPx: Float,
     val flowLineGapPx: Float,
     val flowHGapPx: Float,
@@ -114,7 +114,7 @@ enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
-enum class BodyElementBoxConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
+enum class BodyCellConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
 enum class FlowDirection { L2R, R2L }
 

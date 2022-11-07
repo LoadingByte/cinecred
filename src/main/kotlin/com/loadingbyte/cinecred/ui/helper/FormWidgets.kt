@@ -464,7 +464,7 @@ class FPSWidget(
 
 class ToggleButtonGroupWidget<V : Any>(
     items: List<V>,
-    private val toIcon: ((V) -> Icon)? = null,
+    toIcon: ((V) -> Icon)? = null,
     private val toLabel: ((V) -> String)? = null,
     private val toTooltip: ((V) -> String)? = null,
     private val inconsistent: Boolean = false
@@ -505,6 +505,14 @@ class ToggleButtonGroupWidget<V : Any>(
                 // the value getter wouldn't know what to return.
                 val idx = if (oldSelItem == null) 0 else items.indexOf(oldSelItem).coerceAtLeast(0)
                 btnGroup.elements.asSequence().drop(idx).first().isSelected = true
+            }
+        }
+
+    var toIcon: ((V) -> Icon)? = toIcon
+        set(toIcon) {
+            field = toIcon
+            btnGroup.elements.asSequence().forEachIndexed { idx, btn ->
+                btn.icon = toIcon?.invoke(items.getOrElse(idx) { overflowItem!! })
             }
         }
 

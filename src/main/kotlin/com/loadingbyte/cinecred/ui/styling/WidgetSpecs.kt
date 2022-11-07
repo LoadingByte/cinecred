@@ -43,6 +43,10 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
 
 private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = listOf(
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),
+    ToggleButtonGroupWidgetSpec(
+        ContentStyle::spineAttachment.st(), ICON,
+        getIcon = { _, _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
+    ),
     NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
@@ -150,11 +154,17 @@ class NumberWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class ToggleButtonGroupWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Enum<*>>,
-    val show: Show
+class ToggleButtonGroupWidgetSpec<S : Style, V : Enum<*>>(
+    setting: StyleSetting<S, V>,
+    val show: Show,
+    val getIcon: ((StylingContext, Styling, S, V) -> Icon)? = null
 ) : StyleWidgetSpec<S>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
+
+    init {
+        if (getIcon != null)
+            require(show == ICON || show == ICON_AND_LABEL)
+    }
 }
 
 

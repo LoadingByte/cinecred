@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.SpineAttachment.*
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -16,6 +17,7 @@ import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.awt.image.FilteredImageSource
 import java.awt.image.ImageFilter
+import javax.swing.Icon
 import javax.swing.UIManager
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -247,6 +249,113 @@ val Enum<*>.icon
         is TextDecorationPreset -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }
+
+
+fun SpineAttachment.icon(
+    blockOrientation: BlockOrientation,
+    hasHead: Boolean,
+    hasTail: Boolean
+): Icon {
+    // Shared across all icons of the same set, including invalid combinations (see next comment).
+    val margin = if (blockOrientation == BlockOrientation.VERTICAL) 7 else if (hasHead && hasTail) 3 else 5
+
+    // If an invalid combination is requested (i.e., vertical orientation + head left attachment), minimally change the
+    // combination to make it valid. This is for drawing icons of temporarily invalid spine attachment choices.
+    val orient = when (this) {
+        BODY_LEFT, BODY_CENTER, BODY_RIGHT -> blockOrientation
+        else -> BlockOrientation.HORIZONTAL
+    }
+    val head = when (this) {
+        HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER -> true
+        else -> hasHead
+    }
+    val tail = when (this) {
+        TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT -> true
+        else -> hasTail
+    }
+
+    val gap = 3
+    val width: Int
+    val headX: Int
+    val headY: Int
+    val headW = 5
+    val bodyX: Int
+    val bodyY: Int
+    val bodyW: Int
+    val tailX: Int
+    val tailY: Int
+    val tailW = 5
+    if (orient == BlockOrientation.HORIZONTAL) {
+        headX = margin
+        headY = 6
+        bodyX = if (head) headX + headW + gap else margin
+        bodyY = 6
+        bodyW = if (head || tail) 7 else 9
+        tailX = bodyX + bodyW + gap
+        tailY = 6
+        width = (if (tail) tailX + tailW else bodyX + bodyW) + margin
+    } else {
+        headX = margin + 2
+        headY = if (tail) 2 else 3
+        bodyX = margin
+        bodyY = if (head) headY + 4 else if (tail) 4 else 6
+        bodyW = 9
+        tailX = margin + 2
+        tailY = bodyY + 7
+        width = bodyX + bodyW + margin
+    }
+
+    val spineX = when (this) {
+        HEAD_LEFT -> headX - 1
+        HEAD_CENTER -> headX + headW / 2
+        HEAD_RIGHT -> headX + headW
+        HEAD_GAP_CENTER -> headX + headW + gap / 2
+        BODY_LEFT -> bodyX - 1
+        BODY_CENTER -> bodyX + bodyW / 2
+        BODY_RIGHT -> bodyX + bodyW
+        TAIL_GAP_CENTER -> tailX - gap / 2 - 1
+        TAIL_LEFT -> tailX - 1
+        TAIL_CENTER -> tailX + tailW / 2
+        TAIL_RIGHT -> tailX + tailW
+        OVERALL_CENTER -> return object : FlatAbstractIcon(22, 16, null) {
+            override fun paintIcon(c: Component, g2: Graphics2D) {
+                BEARING_CENTER_ICON.paintIcon(c, g2, 3, 0)
+            }
+        }
+    }
+
+    return SpineAttachmentIcon(width, head, tail, headX, headY, headW, bodyX, bodyY, bodyW, tailX, tailY, tailW, spineX)
+}
+
+private class SpineAttachmentIcon(
+    width: Int,
+    private val head: Boolean,
+    private val tail: Boolean,
+    private val headX: Int,
+    private val headY: Int,
+    private val headW: Int,
+    private val bodyX: Int,
+    private val bodyY: Int,
+    private val bodyW: Int,
+    private val tailX: Int,
+    private val tailY: Int,
+    private val tailW: Int,
+    private val spineX: Int
+) : FlatAbstractIcon(width, 16, null) {
+
+    override fun paintIcon(c: Component, g2: Graphics2D) {
+        g2.color = PALETTE_GRAY_COLOR
+        if (head)
+            g2.fillRect(headX, headY, headW, 2)
+        g2.fillRect(bodyX, bodyY, bodyW, 2)
+        g2.fillRect(bodyX, bodyY + 3, bodyW, 2)
+        if (tail)
+            g2.fillRect(tailX, tailY, tailW, 2)
+        g2.color = PALETTE_BLUE_COLOR
+        g2.fillRect(spineX, 1, 1, 14)
+    }
+
+}
 
 
 private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {

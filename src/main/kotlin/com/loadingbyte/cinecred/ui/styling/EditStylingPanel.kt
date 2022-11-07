@@ -296,7 +296,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))
-            if (spec is TimecodeWidgetSpec) {
+            if (spec is ToggleButtonGroupWidgetSpec<Style, *>) {
+                fun <V : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<Style, V>): ((V) -> Icon)? =
+                    spec.getIcon?.let { return fun(item: V) = it(ctrl.stylingCtx, styling, curStyle, item) }
+
+                val toIcon = makeToIcon(spec)
+                if (toIcon != null)
+                    for (setting in spec.settings)
+                        curForm.setToIconFun(setting, toIcon)
+            } else if (spec is TimecodeWidgetSpec) {
                 val fps = spec.getFPS(ctrl.stylingCtx, styling, curStyle)
                 val timecodeFormat = spec.getTimecodeFormat(ctrl.stylingCtx, styling, curStyle)
                 for (setting in spec.settings)

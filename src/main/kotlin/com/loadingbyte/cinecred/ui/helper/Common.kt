@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
+import com.loadingbyte.cinecred.common.colorFromHex
 import java.awt.*
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -20,6 +21,10 @@ import javax.swing.text.Document
 
 const val PALETTE_RED: String = "#C75450"
 const val PALETTE_GREEN: String = "#499C54"
+const val PALETTE_BLUE: String = "#3592C4"
+const val PALETTE_GRAY: String = "#AFB1B3"
+val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
+val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
 
 
 fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : JTextArea(text) {

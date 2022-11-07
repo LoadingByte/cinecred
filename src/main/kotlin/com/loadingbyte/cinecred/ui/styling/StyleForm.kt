@@ -110,7 +110,7 @@ class StyleForm<S : Style>(
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
-        val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S>>()
+        val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S, *>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
@@ -152,7 +152,7 @@ class StyleForm<S : Style>(
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     toggleButtonGroupWidgetSpec != null -> makeEnumToggleButtonGroupWidget(
                         setting.type.asSubclass(Enum::class.java), toggleButtonGroupWidgetSpec.show,
-                        inconsistent = dynChoiceConstr != null
+                        custIcons = toggleButtonGroupWidgetSpec.getIcon != null, inconsistent = dynChoiceConstr != null
                     )
                     dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
@@ -175,9 +175,11 @@ class StyleForm<S : Style>(
     private fun <E : Enum<*>> makeEnumToggleButtonGroupWidget(
         enumClass: Class<E>,
         show: ToggleButtonGroupWidgetSpec.Show,
+        custIcons: Boolean,
         inconsistent: Boolean
     ): Widget<E> {
-        var toIcon: ((E) -> Icon)? = Enum<*>::icon
+        // If a custom getIcon function is supplied, it will be applied later on via setToIconFun().
+        var toIcon: ((E) -> Icon)? = if (custIcons) null else Enum<*>::icon
         var toLabel: ((E) -> String)? = ::l10nEnum
         var toTooltip: ((E) -> String)? = toLabel
         // @formatter:off
@@ -265,6 +267,14 @@ class StyleForm<S : Style>(
             if (widget is ChoiceWidget)
                 @Suppress("UNCHECKED_CAST")
                 (widget as ChoiceWidget<Any>).updateChoices(choices)
+        }
+    }
+
+    fun setToIconFun(setting: StyleSetting<*, *>, toIcon: ((Nothing) -> Icon)?) {
+        valueWidgets.get<StyleSetting<*, *>, Widget<*>>(setting)!!.applyConfigurator { widget ->
+            if (widget is ToggleButtonGroupWidget)
+                @Suppress("UNCHECKED_CAST")
+                (widget as ToggleButtonGroupWidget<Nothing>).toIcon = toIcon
         }
     }
 

@@ -77,12 +77,12 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     bodyLetterStyleName = "???",
     hasHead = false,
     headHJustify = HJustify.CENTER,
-    headVJustify = VJustify.MIDDLE,
+    headVJustify = VJustify.TOP,
     headLetterStyleName = "???",
     headGapPx = 4f,
     hasTail = false,
     tailHJustify = HJustify.CENTER,
-    tailVJustify = VJustify.MIDDLE,
+    tailVJustify = VJustify.TOP,
     tailLetterStyleName = "???",
     tailGapPx = 4f
 )
@@ -137,7 +137,12 @@ val PLACEHOLDER_PAGE_STYLE = PRESET_PAGE_STYLE.copy(
 
 
 val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
-    name = l10n("project.placeholder")
+    name = l10n("project.placeholder"),
+    blockOrientation = BlockOrientation.HORIZONTAL,
+    hasHead = true,
+    headGapPx = 32f,
+    hasTail = true,
+    tailGapPx = 32f
 )
 
 

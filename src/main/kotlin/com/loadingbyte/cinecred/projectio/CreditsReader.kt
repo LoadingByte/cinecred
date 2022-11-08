@@ -332,7 +332,7 @@ private class CreditsReader(
         }
 
         // If the page style cell is non-empty, conclude the previous stage (if there was any) and start a new one.
-        table.getLookup(row, "pageStyle", pageStyleMap)?.let { newPageStyle ->
+        table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
             concludeBlock(0f)
             concludeSpine()
             concludeSegment(0f)
@@ -380,10 +380,7 @@ private class CreditsReader(
         // placeholder page style.
         if (stageStyle == null) {
             stageStyle = PLACEHOLDER_PAGE_STYLE
-            if (styling.pageStyles.isEmpty())
-                table.log(row, null, WARN, l10n("projectIO.credits.noPageStylesAvailable"))
-            else
-                table.log(row, null, WARN, l10n("projectIO.credits.noPageStyleSpecified"))
+            table.log(row, null, WARN, l10n("projectIO.credits.noPageStyleSpecified"))
         }
 
         // If the spine cell is non-empty, conclude the previous spine (if there was any) and start a new one.
@@ -430,7 +427,10 @@ private class CreditsReader(
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
         // Use the new content style from now on until the next explicit content style declaration.
-        table.getLookup(row, "contentStyle", contentStyleMap)?.let { newContentStyle ->
+        table.getLookup(
+            row, "contentStyle", contentStyleMap, "projectIO.credits.unavailableContentStyle",
+            fallback = PLACEHOLDER_CONTENT_STYLE
+        )?.let { newContentStyle ->
             contentStyle = newContentStyle
             isBlockConclusionMarked = true
         }
@@ -466,10 +466,7 @@ private class CreditsReader(
         if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
             contentStyle = PLACEHOLDER_CONTENT_STYLE
             blockStyle = contentStyle
-            if (styling.contentStyles.isEmpty())
-                table.log(row, null, WARN, l10n("projectIO.credits.noContentStylesAvailable"))
-            else
-                table.log(row, null, WARN, l10n("projectIO.credits.noContentStyleSpecified"))
+            table.log(row, null, WARN, l10n("projectIO.credits.noContentStyleSpecified"))
         }
 
         // If the line has a head or tail even though the current content style doesn't support it,
@@ -493,8 +490,8 @@ private class CreditsReader(
     }
 
     fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {
-        fun unknownLetterStyleMsg(name: String) =
-            l10n("projectIO.credits.unknownLetterStyle", name, letterStyleMap.keys.joinToString(" | "))
+        fun unavailableLetterStyleMsg(name: String) =
+            l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString(" | "))
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", tagKey,
@@ -516,7 +513,10 @@ private class CreditsReader(
                     in STYLE_KW -> when (tagVal) {
                         null -> curLetterStyle = initLetterStyle
                         else -> when (val newLetterStyle = letterStyleMap[tagVal]) {
-                            null -> table.log(row, l10nColName, WARN, unknownLetterStyleMsg(tagVal))
+                            null -> {
+                                curLetterStyle = PLACEHOLDER_LETTER_STYLE
+                                table.log(row, l10nColName, WARN, unavailableLetterStyleMsg(tagVal))
+                            }
                             else -> curLetterStyle = newLetterStyle
                         }
                     }

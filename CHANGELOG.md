@@ -54,6 +54,8 @@ Cinecred Changelog
 - When quitting the application on macOS, it now asks to save projects.
 - On macOS, the window title bars now respect the system theme.
 - On macOS, the application menu now uses the correct program name everywhere.
+- References from the credits file to unavailable content and letter styles are
+  now resolved to error styles instead of being discarded.
 - The styling is no longer unsaved if only ineffective settings have changed.
 - Increased the style form's scrolling speed and the preview's paging speed.
 - The style form no longer jumps to notices and issues while editing.

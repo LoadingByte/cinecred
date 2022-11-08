@@ -150,7 +150,7 @@ class Table(
             l10nAll(key).filter { it !in primaryOptions }.joinToString(" | ")
         }
         val msg = l10n(
-            "projectIO.table.illFormattedOneOfWithAlternatives",
+            "projectIO.table.illFormattedOneOf",
             primaryOptions.joinToString(" | "),
             alternativeOptionsJoined
         )
@@ -158,11 +158,11 @@ class Table(
         return null
     }
 
-    fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>): T? {
+    fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {
         val str = getString(row, l10nColName) ?: return null
         map[str]?.let { return it }
-        log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedOneOf", map.keys.joinToString(" | ")))
-        return null
+        log(row, l10nColName, WARN, l10n(l10Warning, map.keys.joinToString(" | ")))
+        return fallback
     }
 
 }

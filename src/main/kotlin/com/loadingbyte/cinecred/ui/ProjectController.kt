@@ -319,16 +319,19 @@ class ProjectController(
                 lastEditedId = editedId
                 lastEditedMillis = currMillis
                 if (rapidSucc) {
-                    // Normally, if the user edits the same widget multiple times in rapid succession, we fall into
-                    // the else case, where we overwrite the history's last state (the previous version of the rapid
+                    // Normally, if the user edits the same widget multiple times in rapid succession, we skip over
+                    // the following case and overwrite the history's last state (the previous version of the rapid
                     // succession edit) by the current state. However, if the user round-tripped back to the state
                     // where he started out at the beginning of his rapid succession edits, we remove the rapid
-                    // succession state entirely and terminate the rapid succession edit.
+                    // succession state entirely and terminate the rapid succession edit. We then overwrite the state
+                    // from before the rapid succession edits by the current state; we do this despite them being
+                    // equivalent to ensure that the current state is always reference-equivalent to the objects stored
+                    // in the UI's styling tree.
                     if (history.size >= 2 && history[currentIdx - 1] == new) {
                         history.removeAt(currentIdx--)
                         lastEditedId = null
-                    } else
-                        history[currentIdx] = new
+                    }
+                    history[currentIdx] = new
                 } else {
                     history.add(new)
                     currentIdx++

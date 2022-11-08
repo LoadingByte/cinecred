@@ -15,6 +15,7 @@ import java.awt.Component
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent.VK_DELETE
 import java.awt.event.KeyEvent.getKeyText
+import java.util.*
 import javax.swing.*
 
 
@@ -261,7 +262,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun refreshConstraintViolations() {
         constraintViolations = verifyConstraints(ctrl.stylingCtx, styling ?: return)
 
-        val severityPerStyle = HashMap<Style, Severity>()
+        val severityPerStyle = IdentityHashMap<Style, Severity>()
         for (violation in constraintViolations)
             severityPerStyle[violation.rootStyle] =
                 maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.values()[0]))
@@ -321,7 +322,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun updateUnusedStyles(project: Project?) {
-        val unusedStyles = HashSet<Style>()
+        val unusedStyles = Collections.newSetFromMap(IdentityHashMap<Style, Boolean>())
 
         if (project != null) {
             val styling = project.styling

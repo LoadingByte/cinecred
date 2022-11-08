@@ -91,9 +91,11 @@ private class CreditsReader(
        ************************************ */
 
     // Note: We use maps whose keys are case-insensitive here because style references should be case-insensitive.
-    val pageStyleMap = styling.pageStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
-    val contentStyleMap = styling.contentStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
-    val letterStyleMap = styling.letterStyles.associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER)) { it.name }
+    // We also reverse the list so that if there are duplicate names, the first style from the list will survive.
+    inline fun <S> List<S>.map(n: (S) -> String) = asReversed().associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER), n)
+    val pageStyleMap = styling.pageStyles.map(PageStyle::name)
+    val contentStyleMap = styling.contentStyles.map(ContentStyle::name)
+    val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
 
     // Put the picture loaders into a map whose keys are all possible variations of referencing the picture loaders.
     // Once again use a map with case-insensitive keys.

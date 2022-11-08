@@ -49,7 +49,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
 
 private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { _, styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     IntConstr(ERROR, PageStyle::afterwardSlugFrames.st(), min = 0),
@@ -66,7 +66,7 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
 
 private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { _, styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
@@ -114,7 +114,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
 
 private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(ERROR, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { _, styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),

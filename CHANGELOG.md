@@ -61,6 +61,8 @@ Cinecred Changelog
 - Increased the style form's scrolling speed and the preview's paging speed.
 - The style form no longer jumps to notices and issues while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".
+- Renaming a letter style now keeps in sync exactly those content styles which
+  referenced it when it was opened, even when there are duplicate names at play.
 - Font preview samples stay inside their allotted height and no longer show
   missing characters.
 - Text background widening is no longer grayed out when a background is enabled.

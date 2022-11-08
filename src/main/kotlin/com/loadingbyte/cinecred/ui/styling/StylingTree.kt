@@ -42,7 +42,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         })
 
         // Each node gets an icon depending on which type it is part of.
-        // In addition, optional extra icons are rendered at the right side of each node.
+        // In addition, optional extra icons are rendered on the right side of each node.
         setCellRenderer(StylingTreeCellRenderer())
 
         // When the user selects a node that stores an object, notify the callback.
@@ -94,6 +94,11 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             selectNode(newLeaf)
     }
 
+    /**
+     * This method uses reference equality to locate the old element. This behavior is expected by the client of this
+     * method and should not be changed. Also, this method does not re-sort the list because the client does not update
+     * the name of the list element.
+     */
     fun <T : Any> updateListElement(oldElement: T, newElement: T) {
         val oldTypeInfo = listTypeInfos.getValue(oldElement.javaClass)
         val newTypeInfo = listTypeInfos.getValue(newElement.javaClass)
@@ -101,8 +106,8 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             throw IllegalArgumentException("Both elements must belong to the same list type.")
         for (leaf in oldTypeInfo.node.children()) {
             val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
-            if (leafUserObj.obj == oldElement) {
-                leaf.userObject = StoredObj(leafUserObj.typeInfo, newElement)
+            if (leafUserObj.obj === oldElement) {
+                leafUserObj.obj = newElement
                 break
             }
         }

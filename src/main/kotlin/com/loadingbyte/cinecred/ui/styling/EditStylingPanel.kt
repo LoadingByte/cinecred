@@ -42,10 +42,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val stylingTree = StylingTree()
 
-    // Cache the styling which is currently stored in the styling tree as well as its constraint violations,
-    // so that we don't have to repeatedly regenerate both.
+    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and unused
+    // styles, so that we don't have to repeatedly regenerate these three things.
     private var styling: Styling? = null
     private var constraintViolations: List<ConstraintViolation> = emptyList()
+    private var unusedStyles: Set<Style> = emptySet()
 
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
@@ -186,6 +187,21 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun openLetterStyle(style: LetterStyle) {
+        class TrackedRef(var contentStyle: ContentStyle, val body: Boolean, val head: Boolean, val tail: Boolean)
+
+        // If the letter style has a unique name, we want to keep all content styles which reference that name in sync
+        // with changes to the name. First, record all these referencing content styles with information on which of
+        // their settings reference the name.
+        val trackedRefs = mutableListOf<TrackedRef>()
+        if (style !in unusedStyles)
+            for (contentStyle in stylingTree.getList(ContentStyle::class.java)) {
+                val body = contentStyle.bodyLetterStyleName == style.name
+                val head = contentStyle.headLetterStyleName == style.name
+                val tail = contentStyle.tailLetterStyleName == style.name
+                if (body || head || tail)
+                    trackedRefs.add(TrackedRef(contentStyle, body, head, tail))
+            }
+
         var oldName = style.name
         letterStyleForm.open(style)
         letterStyleForm.changeListeners.clear()
@@ -193,20 +209,19 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             val newStyle = letterStyleForm.save()
             stylingTree.updateSelectedListElement(newStyle)
 
-            // If the letter style changed its name, update all occurrences of that name in all content styles.
+            // If the letter style changed its name, update all previously recorded references to that name.
             val newName = newStyle.name
             if (oldName != newName)
-                for (oldContentStyle in stylingTree.getList(ContentStyle::class.java)) {
-                    var newContentStyle = oldContentStyle
-                    if (newContentStyle.bodyLetterStyleName == oldName)
+                for (trackedRef in trackedRefs) {
+                    var newContentStyle = trackedRef.contentStyle
+                    if (trackedRef.body)
                         newContentStyle = newContentStyle.copy(bodyLetterStyleName = newName)
-                    if (newContentStyle.headLetterStyleName == oldName)
+                    if (trackedRef.head)
                         newContentStyle = newContentStyle.copy(headLetterStyleName = newName)
-                    if (newContentStyle.tailLetterStyleName == oldName)
+                    if (trackedRef.tail)
                         newContentStyle = newContentStyle.copy(tailLetterStyleName = newName)
-                    // Can use identity equals here to make the check quicker.
-                    if (oldContentStyle !== newContentStyle)
-                        stylingTree.updateListElement(oldContentStyle, newContentStyle)
+                    stylingTree.updateListElement(trackedRef.contentStyle, newContentStyle)
+                    trackedRef.contentStyle = newContentStyle
                 }
             oldName = newName
 
@@ -368,6 +383,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         stylingTree.adjustAppearance(isGrayedOut = unusedStyles::contains)
+        this.unusedStyles = unusedStyles
     }
 
 }

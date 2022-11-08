@@ -35,6 +35,7 @@ open class Form(insets: Boolean = true) :
     abstract class AbstractWidget<V : Any> : Widget<V> {
 
         override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
+        protected var disableChangeListeners = false
 
         override var isVisible = true
             set(isVisible) {
@@ -65,13 +66,23 @@ open class Form(insets: Boolean = true) :
                 comp.putClientProperty(OUTLINE, outline)
         }
 
+        protected inline fun withoutChangeListeners(block: () -> Unit) {
+            disableChangeListeners = true
+            try {
+                block()
+            } finally {
+                disableChangeListeners = false
+            }
+        }
+
         protected fun notifyChangeListeners() {
             notifyChangeListenersAboutOtherWidgetChange(this)
         }
 
         protected fun notifyChangeListenersAboutOtherWidgetChange(widget: Widget<*>) {
-            for (listener in changeListeners)
-                listener(widget)
+            if (!disableChangeListeners)
+                for (listener in changeListeners)
+                    listener(widget)
         }
 
     }

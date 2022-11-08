@@ -498,13 +498,17 @@ class ToggleButtonGroupWidget<V : Any>(
             if (inconsistent && oldSelItem != null && oldSelItem !in items)
                 overflowItem = oldSelItem
             // Select the adequate button or add the overflow item if that's set.
-            if (overflowItem != null)
-                addButton(overflowItem!!).isSelected = true
-            else {
+            if (overflowItem != null) {
+                val overflowBtn = addButton(overflowItem!!)
+                withoutChangeListeners { overflowBtn.isSelected = true }
+            } else {
+                val oldSelIdx = if (oldSelItem == null) -1 else items.indexOf(oldSelItem)
                 // We default to selecting the first button because the absence of a selection is an invalid state and
                 // the value getter wouldn't know what to return.
-                val idx = if (oldSelItem == null) 0 else items.indexOf(oldSelItem).coerceAtLeast(0)
-                btnGroup.elements.asSequence().drop(idx).first().isSelected = true
+                val selBtn = btnGroup.elements.asSequence().drop(oldSelIdx.coerceAtLeast(0)).first()
+                withoutChangeListeners { selBtn.isSelected = true }
+                if (oldSelIdx == -1)
+                    notifyChangeListeners()
             }
         }
 
@@ -985,7 +989,6 @@ class ListWidget<E : Any>(
     private val allElemWidgets = mutableListOf<Form.Widget<E>>()
     private val allElemDelBtns = mutableListOf<JButton>()
     private val allSeparators = mutableListOf<JSeparator>()
-    private var disableChangeForwarding = false
 
     val elementWidgets: List<Form.Widget<E>>
         get() = allElemWidgets.subList(0, listSize)
@@ -1034,7 +1037,7 @@ class ListWidget<E : Any>(
         }
         // If requested, the new widget should start out with a reasonable value.
         if (setValue)
-            withDisabledChangeForwarding {
+            withoutChangeListeners {
                 if (newElemIsLastElem && listSize > 1)
                     allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
                 else if (newElem != null)
@@ -1046,7 +1049,7 @@ class ListWidget<E : Any>(
     }
 
     private fun userMinus(idx: Int) {
-        withDisabledChangeForwarding {
+        withoutChangeListeners {
             for (i in idx + 1 until listSize)
                 allElemWidgets[i - 1].value = allElemWidgets[i].value
         }
@@ -1081,7 +1084,7 @@ class ListWidget<E : Any>(
         widget.isVisible = isVisible
         configurator?.let(widget::applyConfigurator)
         // When the new widget changes, notify this widget's change listeners that that widget has changed.
-        widget.changeListeners.add { if (!disableChangeForwarding) notifyChangeListenersAboutOtherWidgetChange(it) }
+        widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         allElemWidgets.add(widget)
         for ((comp, constr) in widget.components.zip(widget.constraints))
             panel.add(comp, constr)
@@ -1091,15 +1094,6 @@ class ListWidget<E : Any>(
         val enabled = listSize > minSize
         for (delBtn in allElemDelBtns)
             delBtn.isEnabled = enabled
-    }
-
-    private inline fun withDisabledChangeForwarding(block: () -> Unit) {
-        disableChangeForwarding = true
-        try {
-            block()
-        } finally {
-            disableChangeForwarding = false
-        }
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {

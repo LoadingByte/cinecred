@@ -57,6 +57,7 @@ Cinecred Changelog
 - References from the credits file to unavailable content and letter styles are
   now resolved to error styles instead of being discarded.
 - The styling is no longer unsaved if only ineffective settings have changed.
+- Styles with duplicate names now keep their place in the list during edits.
 - Increased the style form's scrolling speed and the preview's paging speed.
 - The style form no longer jumps to notices and issues while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".

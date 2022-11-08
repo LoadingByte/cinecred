@@ -199,23 +199,38 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     private fun sortNode(node: DefaultMutableTreeNode) {
-        // Note: We temporarily disable the tree selection listener because the node removal and subsequent insertion
-        // at another place should not close and re-open (and thus reset) the right-hand editing panel.
-        withoutSelectionListener {
-            // We also remember the current selection path so that we can restore it later.
-            val selectionPath = this.selectionPath
+        val parent = node.parent as DefaultMutableTreeNode
+        val nodeStr = node.userObject.toString()
 
-            val parent = node.parent as DefaultMutableTreeNode
-            model.removeNodeFromParent(node)
-            val nodeStr = node.userObject.toString()
-            var idx = parent.children().asSequence().indexOfFirst {
-                String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr) > 0
+        // If the node has a duplicate name and already lies next to the other duplicates, keep the current ordering.
+        // This ensures that nodes with duplicate names do not jump around when editing them.
+        fun nodeStrAt(idx: Int) = (parent.getChildAt(idx) as DefaultMutableTreeNode).userObject.toString()
+        val curIdx = parent.getIndex(node)
+        if (curIdx != 0 && nodeStrAt(curIdx - 1).equals(nodeStr, ignoreCase = true) ||
+            curIdx != parent.childCount - 1 && nodeStrAt(curIdx + 1).equals(nodeStr, ignoreCase = true)
+        ) return
+
+        // Otherwise, find the index where we need to re-insert to keep the list sorted.
+        var newIdx = parent.children().asSequence().indexOfFirst {
+            String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr) > 0
+        }
+        if (newIdx == -1)
+            newIdx = parent.childCount
+        // Account for the fact that the node we wish to re-insert is still in the list.
+        if (newIdx > curIdx)
+            newIdx--
+
+        // Only re-insert the node if its position will actually change.
+        if (newIdx != curIdx) {
+            // Temporarily disable the tree selection listener because the node removal and subsequent insertion at
+            // another place should not close and re-open (and thus reset) the right-hand editing panel.
+            withoutSelectionListener {
+                // Also remember the current selection path so that we can restore it in a moment.
+                val selectionPath = this.selectionPath
+                model.removeNodeFromParent(node)
+                model.insertNodeInto(node, parent, newIdx)
+                this.selectionPath = selectionPath
             }
-            if (idx == -1)
-                idx = parent.childCount
-            model.insertNodeInto(node, parent, idx)
-
-            this.selectionPath = selectionPath
         }
     }
 

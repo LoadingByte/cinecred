@@ -65,13 +65,11 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> addListType(
         type: Class<T>, label: String, icon: Icon,
-        onSelect: (T) -> Unit, objToString: (T) -> String, copyObj: (T) -> T
+        onSelect: (T) -> Unit, objToString: (T) -> String
     ) {
         val node = DefaultMutableTreeNode(label, true)
         model.insertNodeInto(node, rootNode, rootNode.childCount)
-        listTypeInfos[type] = TypeInfo.List(
-            icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String, copyObj as (Any) -> Any
-        )
+        listTypeInfos[type] = TypeInfo.List(icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -110,13 +108,11 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
-    fun duplicateSelectedListElement(selectDuplicate: Boolean = false): Boolean {
-        val selectedNodeUserObj = (selectedNode ?: return false).userObject
-        if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
-            addListElement(selectedNodeUserObj.typeInfo.copyObj(selectedNodeUserObj.obj), selectDuplicate)
-            return true
-        }
-        return false
+    fun getSelectedListElement(): Any? {
+        val selectedNodeUserObj = (selectedNode ?: return null).userObject
+        if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List)
+            return selectedNodeUserObj.obj
+        return null
     }
 
     fun removeSelectedListElement(): Boolean {
@@ -267,7 +263,6 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             override val node: DefaultMutableTreeNode,
             override val onSelect: (Any) -> Unit,
             val objToString: (Any) -> String,
-            val copyObj: (Any) -> Any
         ) : TypeInfo()
 
     }

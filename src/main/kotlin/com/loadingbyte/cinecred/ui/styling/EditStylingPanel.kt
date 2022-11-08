@@ -63,20 +63,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.addListType(
             PageStyle::class.java, l10n("ui.styling.pageStyles"), FILMSTRIP_ICON,
             onSelect = ::openPageStyle,
-            objToString = PageStyle::name,
-            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
+            objToString = PageStyle::name
         )
         stylingTree.addListType(
             ContentStyle::class.java, l10n("ui.styling.contentStyles"), LAYOUT_ICON,
             onSelect = ::openContentStyle,
-            objToString = ContentStyle::name,
-            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
+            objToString = ContentStyle::name
         )
         stylingTree.addListType(
             LetterStyle::class.java, l10n("ui.styling.letterStyles"), LETTERS_ICON,
             onSelect = ::openLetterStyle,
-            objToString = LetterStyle::name,
-            copyObj = { it.copy(name = l10n("ui.styling.copiedStyleName", it.name)) }
+            objToString = LetterStyle::name
         )
 
         fun JButton.makeToolbarButton() = apply {
@@ -108,8 +105,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             onChange()
         }
         duplicateStyleButton.addActionListener {
-            if (stylingTree.duplicateSelectedListElement(selectDuplicate = true))
-                onChange()
+            val copiedStyle = when (val style = stylingTree.getSelectedListElement() as Style?) {
+                null -> return@addActionListener
+                is Global, is TextDecoration -> throw IllegalStateException()  // can never happen
+                is PageStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+                is ContentStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+                is LetterStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+            }
+            stylingTree.addListElement(copiedStyle, select = true)
+            onChange()
         }
         removeStyleButton.addActionListener {
             if (stylingTree.removeSelectedListElement())

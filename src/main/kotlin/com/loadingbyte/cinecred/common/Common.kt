@@ -94,11 +94,6 @@ fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBun
 fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String =
     MessageFormat.format(l10n(key, locale), *args)
 
-private val l10nAllCache = HashMap<String, List<String>>()
-fun l10nAll(key: String): List<String> = l10nAllCache.computeIfAbsent(key) {
-    TRANSLATED_LOCALES.map { locale -> getL10nBundle(locale).getString(key) }
-}
-
 
 val gCfg: GraphicsConfiguration
     get() = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration

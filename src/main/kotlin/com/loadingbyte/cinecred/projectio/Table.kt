@@ -3,8 +3,8 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.l10nAll
 import com.loadingbyte.cinecred.common.toFiniteFloat
 import java.util.*
 
@@ -60,7 +60,7 @@ class Table(
             outer@
             for (l10nColName in l10nColNames) {
                 val key = "$l10nPrefix$l10nColName"
-                val possibleColNames = l10nAll(key).map { "@$it" }
+                val possibleColNames = TRANSLATED_LOCALES.map { "@${l10n(key, it)}" }
                 for (colName in possibleColNames) {
                     val col = headerRecord.indexOfFirst { it.equals(colName, ignoreCase = true) }
                     if (col != -1) {
@@ -70,9 +70,8 @@ class Table(
                 }
                 // Prepare the column names which will be shown in a warning message.
                 val primaryColName = "@${l10n(key)}"
-                val alternativeColNames = possibleColNames.toMutableSet()
-                    .apply { remove(primaryColName) }
-                    .joinToString(" | ")
+                val alternativeColNames = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }
+                    .joinToString { "@${l10n(key, it)}" }
                 // The column might be missing, but first look for a legacy column name. Emit a warning if we find one.
                 val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList()).map { "@$it" }
                 for (legacyColName in possibleLegacyColNames) {
@@ -141,19 +140,15 @@ class Table(
 
         val keyBase = "$l10nPrefix${T::class.java.simpleName}."
         for (enumElem in enumValues<T>())
-            if (l10nAll("$keyBase${enumElem.name}").any { it.equals(str, ignoreCase = true) })
+            if (TRANSLATED_LOCALES.any { l10n("$keyBase${enumElem.name}", it).equals(str, ignoreCase = true) })
                 return enumElem
 
         val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
-        val primaryOptions = keys.map(::l10n)
-        val alternativeOptionsJoined = keys.joinToString(" || ") { key ->
-            l10nAll(key).filter { it !in primaryOptions }.joinToString(" | ")
+        val primaryOptions = keys.joinToString { l10n(it) }
+        val alternativeOptions = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { locale ->
+            keys.joinToString { key -> l10n(key, locale) }
         }
-        val msg = l10n(
-            "projectIO.table.illFormattedOneOf",
-            primaryOptions.joinToString(" | "),
-            alternativeOptionsJoined
-        )
+        val msg = l10n("projectIO.table.illFormattedOneOf", primaryOptions, alternativeOptions)
         log(row, l10nColName, WARN, msg)
         return null
     }
@@ -161,7 +156,7 @@ class Table(
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {
         val str = getString(row, l10nColName) ?: return null
         map[str]?.let { return it }
-        log(row, l10nColName, WARN, l10n(l10Warning, map.keys.joinToString(" | ")))
+        log(row, l10nColName, WARN, l10n(l10Warning, map.keys.joinToString()))
         return fallback
     }
 

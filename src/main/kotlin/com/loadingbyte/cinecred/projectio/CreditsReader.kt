@@ -18,7 +18,7 @@ import kotlin.io.path.nameWithoutExtension
 
 
 fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString(" | ") { fmt -> fmt.fileExt }
+    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString { fmt -> fmt.fileExt }
 
     var creditsFile: Path? = null
     val log = mutableListOf<ParserMsg>()
@@ -492,11 +492,12 @@ private class CreditsReader(
 
     fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {
         fun unavailableLetterStyleMsg(name: String) =
-            l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString(" | "))
+            l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString())
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", tagKey,
-            "{{${STYLE_KW.msgPrimary}}} | {{${PIC_KW.msgPrimary}}}", "{{${STYLE_KW.msgAlt}}} || {{${PIC_KW.msgAlt}}}"
+            "{{${STYLE_KW.msgPrimary}}}, {{${PIC_KW.msgPrimary}}}",
+            STYLE_KW.msgAltList.zip(PIC_KW.msgAltList).joinToString { (s, p) -> "{{$s}}, {{$p}}" }
         )
 
         val str = table.getString(row, l10nColName) ?: return null
@@ -696,21 +697,18 @@ private class CreditsReader(
     }
 
 
-    class Keyword(key: String) {
+    class Keyword(private val key: String) {
 
-        private val kwSet: Set<String>
-        val msgPrimary: String
-        val msgAlt: String
-
-        init {
-            val primaryKw = l10n(key)
-            val allKws = l10nAll(key)
-            kwSet = allKws.toCollection(TreeSet(String.CASE_INSENSITIVE_ORDER))
-            msgPrimary = primaryKw
-            msgAlt = allKws.filter { it != primaryKw }.joinToString(" | ")
-        }
+        private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { l10n(key, it) }
 
         operator fun contains(str: String) = str in kwSet
+
+        val msgPrimary
+            get() = l10n(key)
+        val msgAltList: List<String>
+            get() = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.map { l10n(key, it) }
+        val msgAlt: String
+            get() = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { l10n(key, it) }
 
     }
 

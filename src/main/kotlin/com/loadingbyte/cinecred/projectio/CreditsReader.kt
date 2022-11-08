@@ -273,9 +273,9 @@ private class CreditsReader(
             alignHeadTailGroupsGroup.add(block)
         } else {
             if (blockHead != null)
-                table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHeadOrTail", blockHead))
+                table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHead", blockHead))
             if (blockTail != null)
-                table.log(blockTailDeclaredRow, "tail", WARN, l10n("projectIO.credits.unusedHeadOrTail", blockTail))
+                table.log(blockTailDeclaredRow, "tail", WARN, l10n("projectIO.credits.unusedTail", blockTail))
         }
         blockStyle = contentStyle
         blockHead = null
@@ -473,11 +473,11 @@ private class CreditsReader(
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            table.log(row, "head", WARN, l10n("projectIO.credits.headOrTailUnsupported", contentStyle!!.name))
+            table.log(row, "head", WARN, l10n("projectIO.credits.headUnsupported", contentStyle!!.name))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            table.log(row, "tail", WARN, l10n("projectIO.credits.headOrTailUnsupported", contentStyle!!.name))
+            table.log(row, "tail", WARN, l10n("projectIO.credits.tailUnsupported", contentStyle!!.name))
         }
 
         // If the body cell is non-empty, add its content to the current block.

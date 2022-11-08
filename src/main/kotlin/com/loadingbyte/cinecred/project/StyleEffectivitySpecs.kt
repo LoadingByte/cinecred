@@ -145,11 +145,11 @@ private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDec
 
 
 class StyleEffectivitySpec<S : Style>(
-    vararg settings: StyleSetting<S, Any>,
+    vararg settings: StyleSetting<S, *>,
     val isAlmostEffective: ((StylingContext, S) -> Boolean)? = null,
     val isTotallyIneffective: ((StylingContext, S) -> Boolean)? = null
 ) {
-    val settings: List<StyleSetting<S, Any>> = settings.toList()
+    val settings: List<StyleSetting<S, *>> = settings.toList()
 
     init {
         require(isAlmostEffective != null || isTotallyIneffective != null)
@@ -159,10 +159,10 @@ class StyleEffectivitySpec<S : Style>(
 
 enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, EFFECTIVE }
 
-fun findIneffectiveSettings(ctx: StylingContext, style: Style): Map<StyleSetting<*, *>, Effectivity> {
-    val result = HashMap<StyleSetting<*, *>, Effectivity>()
+fun <S : Style> findIneffectiveSettings(ctx: StylingContext, style: S): Map<StyleSetting<S, *>, Effectivity> {
+    val result = HashMap<StyleSetting<S, *>, Effectivity>()
 
-    fun mark(settings: List<StyleSetting<*, *>>, tier: Effectivity) {
+    fun mark(settings: List<StyleSetting<S, *>>, tier: Effectivity) {
         for (setting in settings)
             result[setting] = minOf(result[setting] ?: tier, tier)
     }

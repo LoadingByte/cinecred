@@ -24,10 +24,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     val stylingTreeHintOwner: Component
     // =================================
 
-    private val globalForm = StyleForm(ctrl.stylingCtx, Global::class.java)
-    private val pageStyleForm = StyleForm(ctrl.stylingCtx, PageStyle::class.java)
-    private val contentStyleForm = StyleForm(ctrl.stylingCtx, ContentStyle::class.java)
-    private val letterStyleForm = StyleForm(ctrl.stylingCtx, LetterStyle::class.java)
+    private val globalForm = StyleForm(Global::class.java)
+    private val pageStyleForm = StyleForm(PageStyle::class.java)
+    private val contentStyleForm = StyleForm(ContentStyle::class.java)
+    private val letterStyleForm = StyleForm(LetterStyle::class.java)
 
     // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
@@ -273,13 +273,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun adjustOpenedForm() {
-        adjustForm(openedForm ?: return)
+        val curStyle = (stylingTree.getSelectedListElement() ?: return) as Style
+        adjustForm((openedForm ?: return).castToStyle(curStyle.javaClass), curStyle)
     }
 
-    private fun adjustForm(curForm: StyleForm<*>) {
+    private fun <S : Style> adjustForm(curForm: StyleForm<S>, curStyle: S) {
         val styling = this.styling ?: return
 
-        val curStyle = curForm.save()
+        curForm.setIneffectiveSettings(findIneffectiveSettings(ctrl.stylingCtx, curStyle))
 
         curForm.clearIssues()
         for (violation in constraintViolations)
@@ -289,7 +290,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
 
         for (constr in getStyleConstraints(curStyle.javaClass))
-            if (constr is DynChoiceConstr<Style, *>) {
+            if (constr is DynChoiceConstr<S, *>) {
                 val choices = constr.choices(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)
@@ -300,8 +301,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))
-            if (spec is ToggleButtonGroupWidgetSpec<Style, *>) {
-                fun <V : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<Style, V>): ((V) -> Icon)? =
+            if (spec is ToggleButtonGroupWidgetSpec<S, *>) {
+                fun <V : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, V>): ((V) -> Icon)? =
                     spec.getIcon?.let { return fun(item: V) = it(ctrl.stylingCtx, styling, curStyle, item) }
 
                 val toIcon = makeToIcon(spec)
@@ -315,8 +316,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                     curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }
 
-        for (nestedForm in curForm.getNestedForms())
-            adjustForm(nestedForm)
+        for ((nestedForm, nestedStyle) in curForm.getNestedFormsAndStyles(curStyle))
+            adjustForm(nestedForm.castToStyle(nestedStyle.javaClass), nestedStyle)
     }
 
     private fun updateUnusedStyles(project: Project?) {

@@ -12,7 +12,6 @@ import javax.swing.SpinnerNumberModel
 
 
 class StyleForm<S : Style>(
-    private val ctx: StylingContext,
     private val styleClass: Class<S>,
     insets: Boolean = true
 ) : Form.Storable<S>(insets) {
@@ -163,7 +162,7 @@ class StyleForm<S : Style>(
                     )
                 }
                 Style::class.java.isAssignableFrom(setting.type) ->
-                    NestedFormWidget(StyleForm(ctx, setting.type.asSubclass(Style::class.java), insets = false))
+                    NestedFormWidget(StyleForm(setting.type.asSubclass(Style::class.java), insets = false))
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
@@ -206,6 +205,13 @@ class StyleForm<S : Style>(
         return formRow
     }
 
+    fun <T : Style> castToStyle(styleClass: Class<T>): StyleForm<T> {
+        if (styleClass == this.styleClass)
+            @Suppress("UNCHECKED_CAST")
+            return this as StyleForm<T>
+        throw ClassCastException("Cannot cast StyleForm<${this.styleClass.name}> to StyleForm<${styleClass.name}>")
+    }
+
     override fun open(stored /* style */: S) {
         disableOnChange = true
         try {
@@ -215,28 +221,39 @@ class StyleForm<S : Style>(
         } finally {
             disableOnChange = false
         }
-        refresh()
     }
 
     override fun save(): S =
         newStyle(styleClass, valueWidgets.map { (_, widget) -> widget.value })
 
-    fun getNestedForms(): List<StyleForm<*>> {
-        val nestedForms = mutableListOf<StyleForm<*>>()
+    fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, Style>> {
+        val nested = mutableListOf<Pair<StyleForm<*>, Style>>()
         for (setting in getStyleSettings(styleClass))
             if (Style::class.java.isAssignableFrom(setting.type))
                 when (setting) {
-                    is DirectStyleSetting ->
-                        nestedForms.add((valueWidgets[setting] as NestedFormWidget).form as StyleForm)
+                    is DirectStyleSetting -> {
+                        val formWidget = valueWidgets[setting] as NestedFormWidget
+                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style) as Style))
+                    }
                     is OptStyleSetting -> {
                         val formWidget = (valueWidgets[setting] as OptWidget<*>).wrapped as NestedFormWidget
-                        nestedForms.add(formWidget.form as StyleForm)
+                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style).value as Style))
                     }
-                    is ListStyleSetting ->
-                        for (elementWidget in (valueWidgets[setting] as ListWidget<*>).elementWidgets)
-                            nestedForms.add((elementWidget as NestedFormWidget).form as StyleForm)
+                    is ListStyleSetting -> {
+                        val formWidgets = (valueWidgets[setting] as ListWidget<*>).elementWidgets
+                        for ((formWidget, nestedStyle) in formWidgets.zip(setting.get(style)))
+                            nested.add(Pair((formWidget as NestedFormWidget).form as StyleForm, nestedStyle as Style))
+                    }
                 }
-        return nestedForms
+        return nested
+    }
+
+    fun setIneffectiveSettings(ineffectiveSettings: Map<StyleSetting<S, *>, Effectivity>) {
+        for ((setting, formRow) in rootFormRows) {
+            val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
+            formRow.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
+            formRow.isEnabled = effectivity == Effectivity.EFFECTIVE
+        }
     }
 
     fun clearIssues() {
@@ -262,24 +279,24 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setChoices(setting: StyleSetting<*, *>, choices: List<Any>) {
-        valueWidgets[setting]!!.applyConfigurator { widget ->
+    fun setChoices(setting: StyleSetting<S, *>, choices: List<Any>) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
             if (widget is ChoiceWidget)
                 @Suppress("UNCHECKED_CAST")
                 (widget as ChoiceWidget<Any>).updateChoices(choices)
         }
     }
 
-    fun setToIconFun(setting: StyleSetting<*, *>, toIcon: ((Nothing) -> Icon)?) {
-        valueWidgets.get<StyleSetting<*, *>, Widget<*>>(setting)!!.applyConfigurator { widget ->
+    fun setToIconFun(setting: StyleSetting<S, *>, toIcon: ((Nothing) -> Icon)?) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
             if (widget is ToggleButtonGroupWidget)
                 @Suppress("UNCHECKED_CAST")
                 (widget as ToggleButtonGroupWidget<Nothing>).toIcon = toIcon
         }
     }
 
-    fun setTimecodeFPSAndFormat(setting: StyleSetting<*, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
-        valueWidgets[setting]!!.applyConfigurator { widget ->
+    fun setTimecodeFPSAndFormat(setting: StyleSetting<S, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
             if (widget is TimecodeWidget) {
                 widget.fps = fps
                 widget.timecodeFormat = timecodeFormat
@@ -288,20 +305,8 @@ class StyleForm<S : Style>(
     }
 
     override fun onChange(widget: Widget<*>) {
-        if (!disableOnChange) {
-            refresh()
+        if (!disableOnChange)
             super.onChange(widget)
-        }
-    }
-
-    private fun refresh() {
-        val style = save()
-        val ineffectiveSettings = findIneffectiveSettings(ctx, style)
-        for ((setting, formRow) in rootFormRows) {
-            val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
-            formRow.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-            formRow.isEnabled = effectivity == Effectivity.EFFECTIVE
-        }
     }
 
 

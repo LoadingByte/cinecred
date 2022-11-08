@@ -361,6 +361,7 @@ private class CreditsReader(
                     if (' ' in str) {
                         val (timecode, runtimeGroupName) = str.split(' ', limit = 2)
                         if (runtimeGroupName in namedRuntimeGroups) {
+                            stageRuntimeGroupName = runtimeGroupName
                             val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
                             table.log(row, "pageRuntime", WARN, msg)
                         } else {

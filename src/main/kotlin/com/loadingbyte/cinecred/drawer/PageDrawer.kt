@@ -24,7 +24,9 @@ fun draw(project: Project): List<DrawnPage> {
     val pages = project.pages
     val runtimeGroups = project.runtimeGroups
 
-    val textCtx = makeTextCtx(project.styling.global.locale, project.styling.global.uppercaseExceptions, project.fonts)
+    val textCtx = makeTextCtx(
+        project.styling.global.locale, project.styling.global.uppercaseExceptions, project.stylingCtx
+    )
 
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     val stageImages = HashMap<Stage, DeferredImage>()

@@ -35,7 +35,7 @@ class ProjectController(
 
     val projectName: String = projectDir.fileName.toString()
 
-    val stylingCtx: StylingContext = StylingContextImpl()
+    val stylingCtx: StylingContext
     val stylingHistory: StylingHistory
 
     val projectFrame = ProjectFrame(this)
@@ -45,7 +45,8 @@ class ProjectController(
     private var creditsFile: Path? = null
 
     private var creditsSpreadsheet = Spreadsheet(emptyList())
-    private val fonts = ConcurrentHashMap<Path, List<Font>>()
+    private val fonts = HashMap<Path, List<Font>>()
+    private val fontsByName = HashMap<String, Font>()
     private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
 
     // The state that is relevant for pushStateIntoUI().
@@ -63,6 +64,8 @@ class ProjectController(
     private var isEditStylingDialogVisible = true
 
     init {
+        stylingCtx = StylingContextImpl(fontsByName)
+
         projectFrame.isVisible = true
         editStylingDialog.isVisible = true
 
@@ -135,6 +138,7 @@ class ProjectController(
         val newFonts = tryReadFonts(file)
         if (newFonts.isNotEmpty()) {
             fonts[file] = newFonts
+            newFonts.associateByTo(fontsByName) { font -> font.getFontName(Locale.ROOT) }
             editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
@@ -148,7 +152,9 @@ class ProjectController(
     }
 
     private fun tryRemoveAuxFile(file: Path): Boolean {
-        if (fonts.remove(file) != null) {
+        val remFonts = fonts.remove(file)
+        if (remFonts != null) {
+            fontsByName.values.removeAll(remFonts)
             editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
@@ -194,6 +200,9 @@ class ProjectController(
         if (creditsFileLocatingLog.any { it.severity == ERROR } || creditsFileLoadingLog.any { it.severity == ERROR })
             return pushStateIntoUI()
 
+        // Freeze the font map so that it does not change while processing the project.
+        val stylingCtx = StylingContextImpl(fontsByName.toImmutableMap())
+
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
             // Verify the styling in the extra thread because that is not entirely cheap.
@@ -201,10 +210,9 @@ class ProjectController(
             if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
 
-            // We only now build these maps because it is expensive to build them, and we don't want to do it
+            // We only now build this map because it is not free to build it, and we don't want to do it
             // each time the function is called, but only when the issued reload & redraw actually gets through
             // (which is quite a lot less because the function is often called multiple times in rapid succession).
-            val fontsByName = fonts.values.flatten().associateBy { font -> font.getFontName(Locale.ROOT) }
             val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
             val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
@@ -214,7 +222,7 @@ class ProjectController(
                 return@submit SwingUtilities.invokeLater { creditsFileReadingLog = log; pushStateIntoUI() }
 
             val project = Project(
-                styling, fontsByName.toImmutableMap(), pages.toImmutableList(), runtimeGroups.toImmutableList()
+                styling, stylingCtx, pages.toImmutableList(), runtimeGroups.toImmutableList()
             )
             val drawnPages = draw(project)
 
@@ -278,14 +286,9 @@ class ProjectController(
     }
 
 
-    private inner class StylingContextImpl : StylingContext {
-        override fun resolveFont(name: String): Font? {
-            for (fontList in fonts.values)
-                for (font in fontList)
-                    if (font.getFontName(Locale.ROOT) == name)
-                        return font
-            return getBundledFont(name) ?: getSystemFont(name)
-        }
+    private class StylingContextImpl(private val fontsByName: Map<String, Font>) : StylingContext {
+        override fun resolveFont(name: String): Font? =
+            fontsByName[name] ?: getBundledFont(name) ?: getSystemFont(name)
     }
 
 

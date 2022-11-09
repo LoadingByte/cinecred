@@ -51,15 +51,15 @@ fun StyledString.formatted(textCtx: TextContext): FormattedString =
     (textCtx as TextContextImpl).getFmtStr(this)
 
 
-fun makeTextCtx(locale: Locale, uppercaseExceptions: List<String>, projectFonts: Map<String, Font>): TextContext =
-    TextContextImpl(locale, uppercaseExceptions, projectFonts)
+fun makeTextCtx(locale: Locale, uppercaseExceptions: List<String>, stylingCtx: StylingContext): TextContext =
+    TextContextImpl(locale, uppercaseExceptions, stylingCtx)
 
 sealed class TextContext
 
 private class TextContextImpl(
     val locale: Locale,
     private val uppercaseExceptions: List<String>,
-    val projectFonts: Map<String, Font>
+    val stylingCtx: StylingContext
 ) : TextContext() {
 
     val uppercaseExceptionsRegex: Regex? by lazy { generateUppercaseExceptionsRegex(uppercaseExceptions) }
@@ -127,12 +127,9 @@ private fun generateFmtStrAttrs(
     style: LetterStyle,
     textCtx: TextContextImpl
 ): TextContextImpl.Attrs {
-    val baseAWTFont = textCtx.projectFonts[style.fontName]
-        ?: getBundledFont(style.fontName)
-        ?: getSystemFont(style.fontName)
-        // If the font map doesn't contain a font with the specified name, we create a font object to find a font
-        // that (hopefully) best matches the specified font.
-        ?: Font(style.fontName, 0, 1)
+    // If the styling context doesn't contain a font with the specified name, we create a font object to find a
+    // fallback font that (hopefully) best matches the specified font.
+    val baseAWTFont = textCtx.stylingCtx.resolveFont(style.fontName) ?: Font(style.fontName, 0, 1)
 
     var ssScaling = 1f
     var ssHOffset = 0f

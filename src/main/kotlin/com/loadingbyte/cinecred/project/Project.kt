@@ -3,15 +3,13 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Picture
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import java.awt.Color
-import java.awt.Font
 import java.util.*
 
 
 class Project(
     val styling: Styling,
-    val fonts: ImmutableMap<String, Font>,
+    val stylingCtx: StylingContext,
     val pages: ImmutableList<Page>,
     val runtimeGroups: ImmutableList<RuntimeGroup>
 )

@@ -279,11 +279,15 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setChoices(setting: StyleSetting<S, *>, choices: List<Any>) {
+    fun setChoices(setting: StyleSetting<S, *>, choices: List<Any>, unique: Boolean = false) {
+        val remaining = if (unique) choices.toMutableList() else choices
         valueWidgets.getValue(setting).applyConfigurator { widget ->
-            if (widget is ChoiceWidget)
+            if (widget is ChoiceWidget) {
                 @Suppress("UNCHECKED_CAST")
-                (widget as ChoiceWidget<Any>).updateChoices(choices)
+                (widget as ChoiceWidget<Any>).updateChoices(remaining)
+                if (unique)
+                    (remaining as MutableList).remove(widget.value)
+            }
         }
     }
 

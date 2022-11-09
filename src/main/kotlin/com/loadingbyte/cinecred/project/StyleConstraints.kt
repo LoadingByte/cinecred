@@ -288,13 +288,25 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         if (ctx.resolveFont(value) == null)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.font"))
                     }
-                is FontFeatureConstr ->
-                    style.forEachRelevantValue(cst, ignoreSettings.keys) { st, idx, value ->
-                        if (value.tag !in cst.getAvailableTags(ctx, styling, style))
-                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.fontFeatTag"))
-                        if (value.value < 0)
-                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.fontFeatValue"))
+                is FontFeatureConstr -> {
+                    val availableTags = cst.getAvailableTags(ctx, styling, style)
+                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                        val remainingTags = HashSet(availableTags)
+                        st.extractValues(style).forEachIndexed { idx, value ->
+                            if (value.tag !in availableTags) {
+                                val msg = l10n("project.styling.constr.unsupportedFontFeatTag")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            } else if (!remainingTags.remove(value.tag)) {
+                                val msg = l10n("project.styling.constr.duplicateFontFeatTag")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                            if (value.value < 0) {
+                                val msg = l10n("project.styling.constr.fontFeatValue")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                        }
                     }
+                }
                 is JudgeConstr ->
                     if (!cst.judge(ctx, styling, style)) {
                         val settings = cst.settings.filter { it !in ignoreSettings }
@@ -326,6 +338,16 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
         verifyStyle(style, style)
 
     return violations
+}
+
+private inline fun <S : Style, V : Any> forEachRelevantSetting(
+    constraint: StyleConstraint<S, StyleSetting<S, V>>,
+    ignoreSettings: Set<StyleSetting<*, *>>,
+    action: (StyleSetting<S, V>) -> Unit
+) {
+    for (setting in constraint.settings)
+        if (setting !in ignoreSettings)
+            action(setting)
 }
 
 private inline fun <S : Style, V : Any> S.forEachRelevantValue(

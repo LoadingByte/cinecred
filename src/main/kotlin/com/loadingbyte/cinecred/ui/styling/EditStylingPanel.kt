@@ -317,7 +317,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             } else if (constr is FontFeatureConstr) {
                 val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)
-                    curForm.setChoices(setting, availableTags.toList())
+                    curForm.setChoices(setting, availableTags.toList(), unique = true)
             }
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))

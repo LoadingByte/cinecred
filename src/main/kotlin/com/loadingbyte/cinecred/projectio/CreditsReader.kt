@@ -551,6 +551,7 @@ private class CreditsReader(
 
     fun getPicture(l10nColName: String, tagKy: String, tagVal: String?): Picture? {
         fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.msgPrimary, CROP_KW.msgAlt, tagKy)
+        fun notFoundMsg() = l10n("projectIO.credits.pictureNotFound", illFormattedMsg())
         fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.msgPrimary, CROP_KW.msgAlt)
         fun hintsUnknownMsg(hints: List<String>) =
             l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(" "), illFormattedMsg())
@@ -615,7 +616,7 @@ private class CreditsReader(
         } while (splitIdx != -1)
 
         // No picture matching the tag value found.
-        table.log(row, l10nColName, WARN, illFormattedMsg())
+        table.log(row, l10nColName, WARN, notFoundMsg())
         return null
     }
 

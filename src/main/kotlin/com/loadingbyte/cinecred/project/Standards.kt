@@ -74,16 +74,16 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     paragraphsLineWidthPx = 600f,
     paragraphsParaGapPx = 8f,
     paragraphsLineGapPx = 0f,
-    bodyLetterStyleName = "???",
+    bodyLetterStyleName = "",
     hasHead = false,
     headHJustify = HJustify.CENTER,
     headVJustify = VJustify.TOP,
-    headLetterStyleName = "???",
+    headLetterStyleName = "",
     headGapPx = 4f,
     hasTail = false,
     tailHJustify = HJustify.CENTER,
     tailVJustify = VJustify.TOP,
-    tailLetterStyleName = "???",
+    tailLetterStyleName = "",
     tailGapPx = 4f
 )
 

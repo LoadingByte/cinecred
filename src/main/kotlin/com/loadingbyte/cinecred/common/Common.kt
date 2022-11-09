@@ -159,10 +159,12 @@ fun Graphics2D.setHighQuality() {
 
 
 const val KERNING_FONT_FEAT = "kern"
-val LIGATURES_FONT_FEATS = listOf("liga", "clig")
+val LIGATURES_FONT_FEATS = setOf("liga", "clig")
 const val SMALL_CAPS_FONT_FEAT = "smcp"
 const val PETITE_CAPS_FONT_FEAT = "pcap"
 const val CAPITAL_SPACING_FONT_FEAT = "cpsp"
+val MANAGED_FONT_FEATS = LIGATURES_FONT_FEATS +
+        setOf(KERNING_FONT_FEAT, SMALL_CAPS_FONT_FEAT, PETITE_CAPS_FONT_FEAT, CAPITAL_SPACING_FONT_FEAT)
 
 
 val Font.lineMetrics: LineMetrics

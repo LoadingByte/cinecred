@@ -21,7 +21,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
@@ -47,7 +46,7 @@ class ProjectController(
     private var creditsSpreadsheet = Spreadsheet(emptyList())
     private val fonts = HashMap<Path, List<Font>>()
     private val fontsByName = HashMap<String, Font>()
-    private val pictureLoaders = ConcurrentHashMap<Path, Lazy<Picture?>>()
+    private val pictureLoadersByRelPath = HashMap<Path, Lazy<Picture?>>()
 
     // The state that is relevant for pushStateIntoUI().
     private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
@@ -144,7 +143,7 @@ class ProjectController(
         }
 
         tryReadPictureLoader(file)?.let { pictureLoader ->
-            pictureLoaders[file] = pictureLoader
+            pictureLoadersByRelPath[projectDir.relativize(file)] = pictureLoader
             return true
         }
 
@@ -158,7 +157,7 @@ class ProjectController(
             editStylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
-        if (pictureLoaders.remove(file) != null)
+        if (pictureLoadersByRelPath.remove(projectDir.relativize(file)) != null)
             return true
         return false
     }
@@ -200,8 +199,9 @@ class ProjectController(
         if (creditsFileLocatingLog.any { it.severity == ERROR } || creditsFileLoadingLog.any { it.severity == ERROR })
             return pushStateIntoUI()
 
-        // Freeze the font map so that it does not change while processing the project.
+        // Freeze the font and picture loader maps so that they do not change while processing the project.
         val stylingCtx = StylingContextImpl(fontsByName.toImmutableMap())
+        val pictureLoadersByRelPath = this.pictureLoadersByRelPath.toImmutableMap()
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
@@ -209,11 +209,6 @@ class ProjectController(
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
-
-            // We only now build this map because it is not free to build it, and we don't want to do it
-            // each time the function is called, but only when the issued reload & redraw actually gets through
-            // (which is quite a lot less because the function is often called multiple times in rapid succession).
-            val pictureLoadersByRelPath = pictureLoaders.mapKeys { (path, _) -> projectDir.relativize(path) }
 
             val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
 
@@ -254,7 +249,7 @@ class ProjectController(
         RecursiveFileWatcher.unwatch(projectDir)
 
         // Dispose of all loaded pictures.
-        for (pictureLoader in pictureLoaders.values)
+        for (pictureLoader in pictureLoadersByRelPath.values)
             if (pictureLoader.isInitialized())
                 pictureLoader.value?.dispose()
 

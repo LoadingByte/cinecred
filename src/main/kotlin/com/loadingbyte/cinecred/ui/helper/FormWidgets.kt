@@ -754,17 +754,24 @@ class FontChooserWidget(
                 ?: SYSTEM_FAMILIES.getFamily(value)
             if (family != null) {
                 familyComboBox.selectedItem = family
-                fontComboBox.isEditable = false
                 fontComboBox.selectedItem = family.getFont(value)
+                fontComboBox.isEnabled = true
             } else {
                 familyComboBox.selectedItem = null
                 fontComboBox.isEditable = true
                 fontComboBox.selectedItem = value
                 fontComboBox.isEditable = false
+                fontComboBox.isEnabled = false
             }
         }
 
-    private var disableFamilyListener = false
+    override var isEnabled: Boolean
+        get() = super.isEnabled
+        set(isEnabled) {
+            super.isEnabled = isEnabled
+            if (isEnabled && fontComboBox.selectedItem is String)
+                fontComboBox.isEnabled = false
+        }
 
     init {
         // Equip the family combo box with a custom renderer that shows category headers.
@@ -787,7 +794,7 @@ class FontChooserWidget(
         }
 
         familyComboBox.addItemListener { e ->
-            if (!disableFamilyListener && e.stateChange == ItemEvent.SELECTED) {
+            if (e.stateChange == ItemEvent.SELECTED) {
                 val selectedFamily = familyComboBox.selectedItem as FontFamily?
                 fontComboBox.model = when (selectedFamily) {
                     null -> DefaultComboBoxModel()
@@ -804,16 +811,17 @@ class FontChooserWidget(
     }
 
     private fun populateFamilyComboBox() {
-        // Note: We temporarily disable the family change listener because otherwise,
-        // it would trigger multiple times and, even worse, with intermediate states.
-        disableFamilyListener = true
-        try {
+        // We temporarily disable the change listeners because otherwise, they would be notified multiple times and,
+        // even worse, with intermediate states. However, since the font widget keeps its value even if the chosen font
+        // is no longer available, we do not want any notifications to trigger.
+        withoutChangeListeners {
             val selected = value
             val families = projectFamilies.list + BUNDLED_FAMILIES.list + SYSTEM_FAMILIES.list
-            familyComboBox.model = DefaultComboBoxModel(families.toTypedArray())
+            // It is important that the family combo box initially has no selection, so that the value setter we call
+            // one line later always triggers the family combo box's selection listener (even if when the value setter
+            // sets the first family as selected!) and hence correctly populates the font combo box.
+            familyComboBox.model = DefaultComboBoxModel(families.toTypedArray()).apply { selectedItem = null }
             value = selected
-        } finally {
-            disableFamilyListener = false
         }
     }
 

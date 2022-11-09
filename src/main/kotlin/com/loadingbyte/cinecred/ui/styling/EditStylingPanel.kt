@@ -254,6 +254,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
         letterStyleForm.setProjectFontFamilies(projectFamilies)
+        if (openedForm === letterStyleForm) {
+            refreshConstraintViolations()
+            adjustOpenedForm()
+        }
     }
 
     private fun onChange(widget: Form.Widget<*>? = null) {

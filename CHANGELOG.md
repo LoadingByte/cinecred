@@ -63,6 +63,7 @@ Cinecred Changelog
 - Timecode spinners are now properly adjustable when the format is "clock".
 - Renaming a letter style now keeps in sync exactly those content styles which
   referenced it when it was opened, even when there are duplicate names at play.
+- Missing font warnings now always disappear when the font becomes available.
 - Font preview samples stay inside their allotted height and no longer show
   missing characters.
 - Text background widening is no longer grayed out when a background is enabled.

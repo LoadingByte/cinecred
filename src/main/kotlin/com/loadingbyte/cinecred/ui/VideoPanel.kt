@@ -88,7 +88,8 @@ class VideoPanel(ctrl: ProjectController) : JPanel() {
         layout = MigLayout("insets 12lp n n n, gapy 10lp")
         add(JLabel(l10n("ui.video.warning"), WARN_ICON, JLabel.LEADING), "center")
         add(playButton, "newline, split 3, width 2*pref!, gapleft 0.5%")
-        add(frameSlider, "growx")
+        // If we use % or growx instead of "sp", the slider becomes laggy due to the quickly changing timecode label.
+        add(frameSlider, "width 100sp")
         add(timecodeLabel, "gapright 0.5%")
         add(canvas, "newline, span, grow, push")
 

@@ -72,6 +72,11 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         listTypeInfos[type] = TypeInfo.List(icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String)
     }
 
+    fun getSelected(): Any? {
+        val selectedNodeUserObj = (selectedNode ?: return null).userObject
+        return if (selectedNodeUserObj is StoredObj) return selectedNodeUserObj.obj else null
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> getSingleton(type: Class<T>): T =
         (singletonTypeInfos.getValue(type).node.userObject as StoredObj).obj as T
@@ -111,13 +116,6 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
                 break
             }
         }
-    }
-
-    fun getSelectedListElement(): Any? {
-        val selectedNodeUserObj = (selectedNode ?: return null).userObject
-        if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List)
-            return selectedNodeUserObj.obj
-        return null
     }
 
     fun removeSelectedListElement(): Boolean {

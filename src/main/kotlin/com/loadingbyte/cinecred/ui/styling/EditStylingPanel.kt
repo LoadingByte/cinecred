@@ -107,12 +107,12 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             onChange()
         }
         duplicateStyleButton.addActionListener {
-            val copiedStyle = when (val style = stylingTree.getSelectedListElement() as Style?) {
-                null -> return@addActionListener
-                is Global, is TextDecoration -> throw IllegalStateException()  // can never happen
+            val copiedStyle = when (val style = stylingTree.getSelected() as Style?) {
                 is PageStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
                 is ContentStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
                 is LetterStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+                null, is Global -> return@addActionListener
+                is TextDecoration -> throw IllegalStateException()  // can never happen
             }
             stylingTree.addListElement(copiedStyle, select = true)
             onChange()
@@ -293,7 +293,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun adjustOpenedForm() {
-        val curStyle = (stylingTree.getSelectedListElement() ?: return) as Style
+        val curStyle = (stylingTree.getSelected() ?: return) as Style
         adjustForm((openedForm ?: return).castToStyle(curStyle.javaClass), curStyle)
     }
 

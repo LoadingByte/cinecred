@@ -5,6 +5,7 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
 import java.awt.*
+import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Rectangle2D
@@ -286,6 +287,20 @@ private val GraphicsConfiguration.usableBounds: Rectangle
             bounds.height - insets.top - insets.bottom
         )
     }
+
+
+class KeyListener(
+    private val shortcutKeyCode: Int,
+    private val shortcutModifiers: Int,
+    private val listener: () -> Unit
+) {
+    fun onKeyEvent(e: KeyEvent): Boolean {
+        val match = e.id == KeyEvent.KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
+        if (match)
+            listener()
+        return match
+    }
+}
 
 
 fun tryBrowse(uri: URI) {

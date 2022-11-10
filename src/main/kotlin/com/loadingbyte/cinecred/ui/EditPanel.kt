@@ -18,6 +18,7 @@ import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
+import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*
@@ -30,7 +31,8 @@ import kotlin.math.roundToInt
 class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     companion object {
-        private const val MAX_ZOOM = 3f
+        private const val MAX_ZOOM = 3
+        private const val ZOOM_INCREMENT = 0.1f
     }
 
     // ========== HINT OWNERS ==========
@@ -41,21 +43,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     val creditsLogHintOwner: Component
     // =================================
 
-    private val keyListeners = mutableListOf<(KeyEvent) -> Boolean>()
+    private val keyListeners = mutableListOf<KeyListener>()
 
-    fun onKeyEvent(event: KeyEvent) =
-        keyListeners.any { it(event) }
+    fun onKeyEvent(event: KeyEvent): Boolean =
+        keyListeners.any { it.onKeyEvent(event) }
 
-    private val toggleEditStylingDialogButton = JToggleButton(EDIT_ICON).apply {
-        toggleStylingHintOwner = this
-        isSelected = true
-        toolTipText = l10n("ui.edit.toggleStyling")
-        isFocusable = false
-        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-        addActionListener {
-            ctrl.setEditStylingDialogVisible(isSelected)
-        }
-    }
+    private val toggleEditStylingDialogButton = makeActToggleBtn(
+        label = null, EDIT_ICON, tooltip = l10n("ui.edit.toggleStyling"), toolbar = true,
+        VK_E, CTRL_DOWN_MASK, isSelected = true, listener = ctrl::setEditStylingDialogVisible
+    )
     private val undoStylingButton = makeActToolBtn("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
         ctrl.stylingHistory.undoAndRedraw()
     }
@@ -65,7 +61,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     private val saveStylingButton = makeActToolBtn("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
         ctrl.stylingHistory.save()
     }
-    private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON) {
+    private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON, VK_R, CTRL_DOWN_MASK) {
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("cancel"))
             val selectedOption = showOptionDialog(
@@ -77,53 +73,51 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 return@makeActToolBtn
         }
         ctrl.stylingHistory.resetAndRedraw()
-    }.also { resetStylingHintOwner = it }
+    }
     private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
         isVisible = false
         putClientProperty(STYLE_CLASS, "small")
     }
 
-    private val zoomSlider = object : JSlider(0, 100, 0) {
+    private val zoomSlider = object : JSlider(0, MAX_ZOOM * 100, 0) {
         var zoom: Float
-            get() = 1f + value * (MAX_ZOOM - 1f) / 100f
+            get() = 1f + value * (MAX_ZOOM - 1f) / maximum
             set(newZoom) {
-                value = ((newZoom - 1f) * 100f / (MAX_ZOOM - 1f)).roundToInt()
+                value = ((newZoom - 1f) * maximum / (MAX_ZOOM - 1f)).roundToInt()
             }
     }.apply {
         preferredSize = preferredSize.apply { width = 50 }
-        toolTipText = l10n("ui.edit.zoom")
         isFocusable = false
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
 
-    private val layoutGuidesToggleButton = JToggleButton(l10n("ui.edit.layoutGuides"), true).apply {
-        layoutGuidesHintOwner = this
-        toolTipText = l10n(
+    private val layoutGuidesToggleButton = makeActToggleBtn(
+        label = l10n("ui.edit.layoutGuides"), icon = null, tooltip = l10n(
             "ui.edit.layoutGuidesTooltip",
             STAGE_GUIDE_COLOR.toHex24(), SPINE_GUIDE_COLOR.toHex24(),
             BODY_CELL_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
-        )
-        isFocusable = false
-        addActionListener { previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) } }
+        ), toolbar = false, VK_G, CTRL_DOWN_MASK, isSelected = true
+    ) { isSelected ->
+        previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) }
     }
-    private val uniformSafeAreasToggleButton = JToggleButton(UNIFORM_SAFE_AREAS_ICON, false).apply {
-        toolTipText = l10n("ui.edit.uniformSafeAreasTooltip")
-        isFocusable = false
-        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-        addActionListener { previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) } }
+    private val uniformSafeAreasToggleButton = makeActToggleBtn(
+        label = null, UNIFORM_SAFE_AREAS_ICON, l10n("ui.edit.uniformSafeAreasTooltip"), toolbar = true,
+        VK_M, CTRL_DOWN_MASK, isSelected = false
+    ) { isSelected ->
+        previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) }
     }
-    private val cutSafeArea16to9ToggleButton = JToggleButton(X_16_TO_9_ICON, false).apply {
-        toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "16:9")
-        isFocusable = false
-        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-        addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) } }
+    private val cutSafeArea16to9ToggleButton = makeActToggleBtn(
+        label = null, X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16:9"), toolbar = true,
+        VK_9, CTRL_DOWN_MASK, isSelected = false
+    ) { isSelected ->
+        previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) }
     }
-    private val cutSafeArea4to3ToggleButton = JToggleButton(X_4_TO_3_ICON, false).apply {
-        toolTipText = l10n("ui.edit.cutSafeAreaTooltip", "4:3")
-        isFocusable = false
-        putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-        addActionListener { previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) } }
+    private val cutSafeArea4to3ToggleButton = makeActToggleBtn(
+        label = null, X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4:3"), toolbar = true,
+        VK_3, CTRL_DOWN_MASK, isSelected = false
+    ) { isSelected ->
+        previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
     }
 
     private val runtimeLabel1 = JLabel().apply {
@@ -134,7 +128,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val pageTabs = JTabbedPane().apply {
-        pageTabsHintOwner = this
         isFocusable = false
         tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
         putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
@@ -162,28 +155,45 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
     private fun makeActToolBtn(
-        name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
+        name: String, icon: Icon, shortcutKeyCode: Int, shortcutModifiers: Int, listener: () -> Unit
     ): JButton {
-        if (shortcutKeyCode != -1)
-            keyListeners.add { e ->
-                val match = e.id == KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
-                if (match)
-                    listener()
-                match
-            }
-
-        var tooltip = l10n("ui.edit.$name")
-        if (shortcutKeyCode != -1)
-            tooltip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
-        return JButton(icon).apply {
+        val ttip = l10n("ui.edit.$name") + " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
+        val btn = JButton(icon).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             isFocusable = false
-            toolTipText = tooltip
-            addActionListener { listener() }
+            toolTipText = ttip
         }
+        btn.addActionListener { listener() }
+        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
+        return btn
+    }
+
+    private fun makeActToggleBtn(
+        label: String?, icon: Icon?, tooltip: String, toolbar: Boolean, shortcutKeyCode: Int, shortcutModifiers: Int,
+        isSelected: Boolean, listener: (Boolean) -> Unit
+    ): JToggleButton {
+        val shortcutHint = getModifiersExText(shortcutModifiers) + "+" + getKeyText(shortcutKeyCode)
+        val ttip = if ("<br>" !in tooltip) "$tooltip ($shortcutHint)" else {
+            val idx = tooltip.indexOf("<br>")
+            tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
+        }
+        val btn = JToggleButton(label, icon, isSelected).apply {
+            if (toolbar)
+                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
+            toolTipText = ttip
+        }
+        btn.addItemListener { listener(it.stateChange == ItemEvent.SELECTED) }
+        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers) { btn.isSelected = !btn.isSelected })
+        return btn
     }
 
     init {
+        val zoomTooltip = l10n("ui.edit.zoom") + " (" + intArrayOf(VK_PLUS, VK_MINUS, VK_0).joinToString {
+            getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
+        } + ")"
+        zoomSlider.toolTipText = zoomTooltip
+
         val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]push[][]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") })
             add(JLabel(l10n("ui.edit.styling")))
@@ -193,7 +203,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(saveStylingButton)
             add(resetStylingButton)
             add(unsavedStylingLabel)
-            add(JLabel(ZOOM_ICON).apply { toolTipText = l10n("ui.edit.zoom") })
+            add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
             add(zoomSlider)
             add(layoutGuidesToggleButton)
             add(uniformSafeAreasToggleButton)
@@ -205,7 +215,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         val logTable = JTable(logTableModel).apply {
-            creditsLogHintOwner = this
+            isFocusable = false
             // Disable cell selection because it looks weird with the custom WordWrapCellRenderer.
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
@@ -237,6 +247,19 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Use BorderLayout to maximize the size of the split pane.
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
+
+        toggleStylingHintOwner = toggleEditStylingDialogButton
+        resetStylingHintOwner = resetStylingButton
+        layoutGuidesHintOwner = layoutGuidesToggleButton
+        pageTabsHintOwner = pageTabs
+        creditsLogHintOwner = logTable
+
+        keyListeners.add(KeyListener(VK_PLUS, CTRL_DOWN_MASK) { zoomSlider.zoom += ZOOM_INCREMENT })
+        keyListeners.add(KeyListener(VK_ADD, CTRL_DOWN_MASK) { zoomSlider.zoom += ZOOM_INCREMENT })
+        keyListeners.add(KeyListener(VK_MINUS, CTRL_DOWN_MASK) { zoomSlider.zoom -= ZOOM_INCREMENT })
+        keyListeners.add(KeyListener(VK_SUBTRACT, CTRL_DOWN_MASK) { zoomSlider.zoom -= ZOOM_INCREMENT })
+        keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1f })
+        keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1f })
     }
 
     fun onSetEditStylingDialogVisible(isVisible: Boolean) {
@@ -316,7 +339,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         while (pageTabs.tabCount < drawnPages.size) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val previewPanel = EditPagePreviewPanel(MAX_ZOOM).apply {
+            val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toFloat(), ZOOM_INCREMENT).apply {
                 zoom = zoomSlider.zoom
                 setLayerVisible(GUIDES, layoutGuidesToggleButton.isSelected)
                 setLayerVisible(UNIFORM_SAFE_AREAS, uniformSafeAreasToggleButton.isSelected)

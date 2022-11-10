@@ -274,7 +274,8 @@ class ProjectController(
     fun onGlobalKeyEvent(event: KeyEvent): Boolean {
         val window = SwingUtilities.getRoot(event.component)
         if ((window == projectFrame || window == editStylingDialog) && isEditTabActive)
-            return projectFrame.panel.editPanel.onKeyEvent(event)
+            return projectFrame.panel.editPanel.onKeyEvent(event) ||
+                    isEditStylingDialogVisible && editStylingDialog.panel.onKeyEvent(event)
         else if (window == projectFrame && isVideoTabActive)
             return projectFrame.panel.videoPanel.onKeyEvent(event)
         return false

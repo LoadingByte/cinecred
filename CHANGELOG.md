@@ -16,6 +16,7 @@ Cinecred Changelog
 - On macOS, the preferences can now be opened via the corresponding menu entry.
 - On macOS, the window title bar now shows the project folder and utilizes the
   unsaved indicator in the close button.
+- Added a shortcut for every action in the edit tab.
 - Added icons for the spine attachment (formerly "align with column axis").
 - Improved font cataloging, which now better detects font variants by exploiting
   font metadata, respects typographic and legacy (sub)family names, properly

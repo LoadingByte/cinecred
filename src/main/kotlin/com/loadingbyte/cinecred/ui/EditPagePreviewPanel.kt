@@ -18,7 +18,7 @@ import javax.swing.JPanel
 import kotlin.math.min
 
 
-class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
+class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
 
     companion object {
         val UNIFORM_SAFE_AREAS = Layer()
@@ -26,7 +26,7 @@ class EditPagePreviewPanel(maxZoom: Float) : JPanel() {
         val CUT_SAFE_AREA_4_3 = Layer()
     }
 
-    private val imagePanel = DeferredImagePanel(maxZoom).apply {
+    private val imagePanel = DeferredImagePanel(maxZoom, zoomIncrement).apply {
         layers = persistentListOf(GROUNDING, BACKGROUND, FOREGROUND)
     }
 

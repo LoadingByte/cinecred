@@ -95,8 +95,11 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     fun addListElement(element: Any, select: Boolean = false) {
         val typeInfo = listTypeInfos.getValue(element.javaClass)
         val newLeaf = insertSortedLeaf(typeInfo.node, StoredObj(typeInfo, element))
-        if (select)
-            selectNode(newLeaf)
+        if (select) {
+            val newLeafPath = TreePath(newLeaf.path)
+            scrollPathToVisible(newLeafPath)
+            selectionPath = newLeafPath
+        }
     }
 
     /**
@@ -118,11 +121,16 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
-    fun removeSelectedListElement(): Boolean {
+    fun removeSelectedListElement(selectNext: Boolean = false): Boolean {
         val selectedNode = this.selectedNode ?: return false
         val selectedNodeUserObj = selectedNode.userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
+            val selectedRow = minSelectionRow
             model.removeNodeFromParent(selectedNode)
+            if (selectNext) {
+                scrollRowToVisible(selectedRow)
+                setSelectionRow(selectedRow)
+            }
             return true
         }
         return false
@@ -246,12 +254,6 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     private val selectedNode
         get() = lastSelectedPathComponent as DefaultMutableTreeNode?
-
-    private fun selectNode(node: DefaultMutableTreeNode) {
-        val leafPath = TreePath(node.path)
-        scrollPathToVisible(TreePath(node.path))
-        selectionPath = leafPath
-    }
 
     private inline fun withoutSelectionListener(block: () -> Unit) {
         disableSelectionListener = true

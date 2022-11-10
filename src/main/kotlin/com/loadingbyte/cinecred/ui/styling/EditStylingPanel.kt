@@ -13,8 +13,8 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
 import java.awt.event.ActionEvent
-import java.awt.event.KeyEvent.VK_DELETE
-import java.awt.event.KeyEvent.getKeyText
+import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import java.util.*
 import javax.swing.*
 
@@ -24,6 +24,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // ========== HINT OWNERS ==========
     val stylingTreeHintOwner: Component
     // =================================
+
+    private val keyListeners = mutableListOf<KeyListener>()
+
+    fun onKeyEvent(event: KeyEvent): Boolean =
+        keyListeners.any { it.onKeyEvent(event) }
 
     private val globalForm = StyleForm(Global::class.java)
     private val pageStyleForm = StyleForm(PageStyle::class.java)
@@ -78,56 +83,59 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             objToString = LetterStyle::name
         )
 
-        fun JButton.makeToolbarButton() = apply {
-            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-            isFocusable = false
+        fun makeToolbarBtn(
+            name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
+        ): JButton {
+            var ttip = l10n("ui.styling.$name")
+            if (shortcutKeyCode != -1) {
+                ttip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
+                keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
+            }
+            return JButton(icon).apply {
+                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+                isFocusable = false
+                toolTipText = ttip
+                addActionListener { listener() }
+            }
         }
 
-        // Add buttons for adding and removing page and content style nodes.
-        val addPageStyleButton = JButton(SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON))
-            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addPageStyleTooltip") }
-        val addContentStyleButton = JButton(SVGIcon.Dual(ADD_ICON, LAYOUT_ICON))
-            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addContentStyleTooltip") }
-        val addLetterStyleButton = JButton(SVGIcon.Dual(ADD_ICON, LETTERS_ICON))
-            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.addLetterStyleTooltip") }
-        val duplicateStyleButton = JButton(DUPLICATE_ICON)
-            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.duplicateStyleTooltip") }
-        val removeStyleButton = JButton(TRASH_ICON)
-            .makeToolbarButton().apply { toolTipText = l10n("ui.styling.removeStyleTooltip") }
-        addPageStyleButton.addActionListener {
+        // Add buttons for adding and removing style nodes.
+        val addPageStyleButton = makeToolbarBtn(
+            "addPageStyleTooltip", SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON), VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
             stylingTree.addListElement(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
             onChange()
         }
-        addContentStyleButton.addActionListener {
+        val addContentStyleButton = makeToolbarBtn(
+            "addContentStyleTooltip", SVGIcon.Dual(ADD_ICON, LAYOUT_ICON), VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
             stylingTree.addListElement(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
             onChange()
         }
-        addLetterStyleButton.addActionListener {
+        val addLetterStyleButton = makeToolbarBtn(
+            "addLetterStyleTooltip", SVGIcon.Dual(ADD_ICON, LETTERS_ICON), VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
             stylingTree.addListElement(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
             onChange()
         }
-        duplicateStyleButton.addActionListener {
-            val copiedStyle = when (val style = stylingTree.getSelected() as Style?) {
-                is PageStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-                is ContentStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-                is LetterStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-                null, is Global -> return@addActionListener
-                is TextDecoration -> throw IllegalStateException()  // can never happen
-            }
-            stylingTree.addListElement(copiedStyle, select = true)
-            onChange()
-        }
-        removeStyleButton.addActionListener {
-            if (stylingTree.removeSelectedListElement())
-                onChange()
-        }
+        val duplicateStyleButton = makeToolbarBtn("duplicateStyleTooltip", DUPLICATE_ICON, listener = ::duplicateStyle)
+        val removeStyleButton = makeToolbarBtn("removeStyleTooltip", TRASH_ICON, listener = ::removeStyle)
 
-        // Add a keyboard shortcut for the style removal button.
+        // Add contextual keyboard shortcuts for the style duplication and removal buttons.
+        duplicateStyleButton.toolTipText += " (${getModifiersExText(CTRL_DOWN_MASK)}+${getKeyText(VK_D)})"
         removeStyleButton.toolTipText += " (${getKeyText(VK_DELETE)})"
-        stylingTree.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(VK_DELETE, 0), "remove")
+        stylingTree.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
+            put(KeyStroke.getKeyStroke(VK_D, CTRL_DOWN_MASK), "duplicate")
+            put(KeyStroke.getKeyStroke(VK_DELETE, 0), "remove")
+        }
+        stylingTree.actionMap.put("duplicate", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                duplicateStyle()
+            }
+        })
         stylingTree.actionMap.put("remove", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent) {
-                removeStyleButton.actionListeners[0].actionPerformed(null)
+                removeStyle()
             }
         })
 
@@ -149,9 +157,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // Use BorderLayout to maximize the size of the split pane.
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
-    }
 
-    init {
         globalForm.changeListeners += { widget ->
             stylingTree.setSingleton(globalForm.save())
             onChange(widget)
@@ -164,6 +170,24 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             stylingTree.updateSelectedListElement(contentStyleForm.save())
             onChange(widget)
         }
+        // Note: The change listener for the letterStyleForm is managed by openLetterStyle().
+    }
+
+    private fun duplicateStyle() {
+        val copiedStyle = when (val style = stylingTree.getSelected() as Style?) {
+            is PageStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+            is ContentStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+            is LetterStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
+            null, is Global -> return
+            is TextDecoration -> throw IllegalStateException()  // can never happen
+        }
+        stylingTree.addListElement(copiedStyle, select = true)
+        onChange()
+    }
+
+    private fun removeStyle() {
+        if (stylingTree.removeSelectedListElement(selectNext = true))
+            onChange()
     }
 
     private fun openBlank() {

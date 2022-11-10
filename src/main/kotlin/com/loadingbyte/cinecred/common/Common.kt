@@ -110,6 +110,7 @@ fun AffineTransform.scale(sx: Float, sy: Float) = scale(sx.toDouble(), sy.toDoub
 fun AffineTransform.scale(s: Float) = scale(s.toDouble(), s.toDouble())
 fun AffineTransform.shear(shx: Float, shy: Float) = shear(shx.toDouble(), shy.toDouble())
 fun Graphics2D.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
+fun Graphics2D.scale(sx: Float, sy: Float) = scale(sx.toDouble(), sy.toDouble())
 fun Graphics2D.scale(s: Float) = scale(s.toDouble(), s.toDouble())
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
 fun Matrix.scale(s: Float) = scale(s, s)

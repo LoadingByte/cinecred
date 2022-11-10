@@ -19,6 +19,7 @@ import java.awt.image.FilteredImageSource
 import java.awt.image.ImageFilter
 import javax.swing.Icon
 import javax.swing.UIManager
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -371,18 +372,23 @@ class SVGIcon private constructor(
     private val svg: GraphicsNode,
     private val svgWidth: Float,
     private val svgHeight: Float,
-    private val scaling: Float,
+    private val xScaling: Float,
+    private val yScaling: Float,
     private val isDisabled: Boolean
-) : FlatAbstractIcon((svgWidth * scaling).roundToInt(), (svgHeight * scaling).roundToInt(), null),
+) : FlatAbstractIcon((svgWidth * abs(xScaling)).roundToInt(), (svgHeight * abs(yScaling)).roundToInt(), null),
     FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         if (!isDisabled)
-            if (scaling == 1f)
+            if (xScaling == 1f && yScaling == 1f)
                 svg.paint(g2)
             else
                 g2.preserveTransform {
-                    g2.scale(scaling)
+                    if (xScaling < 0)
+                        g2.translate(-svgWidth * xScaling, 0f)
+                    if (yScaling < 0)
+                        g2.translate(0f, -svgWidth * yScaling)
+                    g2.scale(xScaling, yScaling)
                     svg.paint(g2)
                 }
         else {
@@ -394,12 +400,12 @@ class SVGIcon private constructor(
             val g2Scaling = g2.transform.scaleX
             // Draw the icon to an image.
             val img = gCfg.createCompatibleImage(
-                (svgWidth * scaling * g2Scaling).roundToInt(),
-                (svgHeight * scaling * g2Scaling).roundToInt(),
+                (svgWidth * abs(xScaling) * g2Scaling).roundToInt(),
+                (svgHeight * abs(yScaling) * g2Scaling).roundToInt(),
                 Transparency.TRANSLUCENT
             ).withG2 { g2i ->
                 g2i.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2i.scale(scaling * g2Scaling, scaling * g2Scaling)
+                g2i.scale(xScaling * g2Scaling, yScaling * g2Scaling)
                 svg.paint(g2i)
             }
             // Filter the image to make it gray.
@@ -412,13 +418,15 @@ class SVGIcon private constructor(
         }
     }
 
-    override fun getDisabledIcon() = SVGIcon(svg, svgWidth, svgHeight, scaling, isDisabled = true)
-    fun getScaledIcon(scaling: Float) = SVGIcon(svg, svgWidth, svgHeight, this.scaling * scaling, isDisabled)
+    override fun getDisabledIcon() = SVGIcon(svg, svgWidth, svgHeight, xScaling, yScaling, isDisabled = true)
+    fun getScaledIcon(scaling: Float) = getScaledIcon(scaling, scaling)
+    fun getScaledIcon(xScaling: Float, yScaling: Float) =
+        SVGIcon(svg, svgWidth, svgHeight, this.xScaling * xScaling, this.yScaling * yScaling, isDisabled)
 
     companion object {
         fun load(name: String): SVGIcon {
             val (svg, ctx) = loadSVGResource(name)
-            return SVGIcon(svg, ctx.documentSize.width.toFloat(), ctx.documentSize.height.toFloat(), 1f, false)
+            return SVGIcon(svg, ctx.documentSize.width.toFloat(), ctx.documentSize.height.toFloat(), 1f, 1f, false)
         }
     }
 

@@ -10,10 +10,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Font
-import java.awt.Graphics
+import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.ItemEvent
@@ -575,7 +572,10 @@ class ToggleButtonGroupWidget<V : Any>(
         toIcon?.let { btn.icon = it(item) }
         toLabel?.let { btn.text = it(item) }
         toTooltip?.let { btn.toolTipText = it(item) }
+        if (toLabel != null)
+            btn.margin = btn.margin.run { Insets(top - 1, left, bottom - 1, right) }
         btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
+        btn.putClientProperty(STYLE, "arc: 0")
         btn.model.addItemListener { e ->
             if (e.stateChange == ItemEvent.SELECTED) {
                 if (overflowItem != null && !btnGroup.elements.asSequence().last().isSelected)
@@ -595,20 +595,23 @@ class ToggleButtonGroupWidget<V : Any>(
     }
 
 
-    private class GroupPanel : JPanel(MigLayout("insets 0 1 0 1, gap 0")) {
+    private class GroupPanel : JPanel(FlowLayout(FlowLayout.LEADING, 0, 0)) {
 
-        val arc = UIManager.getInt("Button.arc").toFloat()
-        val focusWidth = UIManager.getInt("Component.focusWidth")
+        val arc = (UIManager.get("Component.arc") as Number).toFloat()
+        val focusWidth = (UIManager.get("Component.focusWidth") as Number).toFloat()
         val borderWidth = (UIManager.get("Component.borderWidth") as Number).toFloat()
         val innerOutlineWidth = (UIManager.get("Component.innerOutlineWidth") as Number).toFloat()
-        val backgroundColor: Color = UIManager.getColor("ComboBox.background")
-        val disabledBackgroundColor: Color = UIManager.getColor("ComboBox.disabledBackground")
-        val borderColor: Color = UIManager.getColor("Component.borderColor")
+        val normalBorderColor: Color = UIManager.getColor("Component.borderColor")
         val disabledBorderColor: Color = UIManager.getColor("Component.disabledBorderColor")
         val errorBorderColor: Color = UIManager.getColor("Component.error.borderColor")
+        val errorFocusedBorderColor: Color = UIManager.getColor("Component.error.focusedBorderColor")
         val warningBorderColor: Color = UIManager.getColor("Component.warning.borderColor")
+        val warningFocusedBorderColor: Color = UIManager.getColor("Component.warning.focusedBorderColor")
+        val normalBackground: Color = UIManager.getColor("ComboBox.background")
+        val disabledBackground: Color = UIManager.getColor("ComboBox.disabledBackground")
 
         init {
+            border = BorderFactory.createEmptyBorder(1, 1, 1, 1)
             addPropertyChangeListener(OUTLINE) { repaint() }
         }
 
@@ -616,32 +619,46 @@ class ToggleButtonGroupWidget<V : Any>(
             super.paintComponent(g)
             g.withNewG2 { g2 ->
                 FlatUIUtils.setRenderingHints(g2)
-                g2.color = if (isEnabled) backgroundColor else disabledBackgroundColor
+                g2.color = if (isEnabled) normalBackground else disabledBackground
                 FlatUIUtils.paintComponentBackground(g2, 0, 0, width, height, 0f, arc)
             }
         }
 
         override fun paintChildren(g: Graphics) {
             super.paintChildren(g)
+
             g.withNewG2 { g2 ->
                 FlatUIUtils.setRenderingHints(g2)
-                val outlineColor = when (getClientProperty(OUTLINE)) {
-                    OUTLINE_ERROR -> errorBorderColor
-                    OUTLINE_WARNING -> warningBorderColor
-                    null -> null
-                    else -> throw IllegalStateException()
-                }
-                val bordColor = outlineColor ?: if (isEnabled) borderColor else disabledBorderColor
+
+                // Draw the outline around the selected button manually because the buttons are borderless and hence do
+                // not support outlines.
+                val outline = getClientProperty(OUTLINE)
+                if (outline != null)
+                    for (idx in 0 until componentCount) {
+                        val btn = getComponent(idx) as JToggleButton
+                        if (btn.isSelected) {
+                            val focused = FlatUIUtils.isPermanentFocusOwner(btn)
+                            val outlineColor = when (outline) {
+                                OUTLINE_ERROR -> if (focused) errorFocusedBorderColor else errorBorderColor
+                                OUTLINE_WARNING -> if (focused) warningFocusedBorderColor else warningBorderColor
+                                else -> throw IllegalStateException()
+                            }
+                            FlatUIUtils.paintOutlinedComponent(
+                                g2, btn.x, btn.y, btn.width, btn.height, focusWidth, 1f,
+                                borderWidth + innerOutlineWidth, 0f, 0f, outlineColor, null, null
+                            )
+                        }
+                    }
+
+                val borderColor = if (isEnabled) normalBorderColor else disabledBorderColor
                 FlatUIUtils.paintOutlinedComponent(
-                    g2, 0, 0, width, height, focusWidth.toFloat(), 1f, borderWidth + innerOutlineWidth, borderWidth,
-                    arc, outlineColor, bordColor, null
+                    g2, 0, 0, width, height, 0f, 0f, 0f, borderWidth, arc, null, borderColor, null
                 )
             }
         }
 
         override fun getBaseline(width: Int, height: Int): Int {
-            // Since the vertical insets of this panel are 0, its baseline is equivalent to that of its components.
-            // Now, as all toggle buttons have the same baseline, just ask the first one.
+            // As all toggle buttons have the same baseline, just ask the first one.
             return if (components.isEmpty()) -1 else components[0].let { c ->
                 // It turns out that using "c.minimumSize.height" here and in the manual calculation a couple of lines
                 // below alleviates some re-layouting after the first painting that looks quite ugly.
@@ -655,7 +672,8 @@ class ToggleButtonGroupWidget<V : Any>(
                     val fm = c.getFontMetrics(c.font)
                     baseline = (c.minimumSize.height + fm.ascent - fm.descent) / 2
                 }
-                baseline
+                // Adjust for the panel's border.
+                insets.top + baseline
             }
         }
 

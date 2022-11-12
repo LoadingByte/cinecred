@@ -36,7 +36,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val updateMessageTextPane: JTextPane
 
     init {
-        val brandPanel = JPanel(MigLayout("center, wrap", "[center]", "15lp[][]-3lp[]20lp")).apply {
+        val brandPanel = JPanel(MigLayout("center, wrap", "[center]", "15[][]-3[]20")).apply {
             add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.25f)))
             add(JLabel("Cinecred").apply {
                 font = TITILLIUM_SEMI.deriveFont(H2)
@@ -57,7 +57,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
             viewport.background = null
         }
-        val changelogPanel = JPanel(MigLayout("insets 20lp")).apply {
+        val changelogPanel = JPanel(MigLayout("insets 20")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
             add(changelogScrollPane)
         }
@@ -79,10 +79,10 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 licenseScrollPane.verticalScrollBar.value = 0
             }
         }
-        val licensesPanel = JPanel(MigLayout("insets 20lp")).apply {
+        val licensesPanel = JPanel(MigLayout("insets 20")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
             add(licenseComboBox, "growx")
-            add(licenseScrollPane, "newline, grow, push, gaptop 10lp")
+            add(licenseScrollPane, "newline, grow, push, gaptop 10")
         }
 
         updateMessageTextPane = newLabelTextPane()
@@ -92,13 +92,13 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
             addActionListener { tryBrowse(URI("https://loadingbyte.com/cinecred/")) }
         }
-        updatePanel = JPanel(MigLayout("insets 60lp", "[grow 1]15lp[grow 1]", "[]30lp[]25lp[]")).apply {
+        updatePanel = JPanel(MigLayout("insets 60", "[grow 1]15[grow 1]", "[]30[]25[]")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
             add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.4f)), "right")
             add(JLabel("Cinecred").apply {
                 font = TITILLIUM_SEMI.deriveFont(H1)
                 putClientProperty(STYLE, "foreground: #FFF")
-            }, "split 2, flowy, left, gaptop 10lp")
+            }, "split 2, flowy, left, gaptop 10")
             add(updateVersionLabel.apply {
                 font = TITILLIUM_BOLD.deriveFont(H0)
                 putClientProperty(STYLE, "foreground: #FFF")
@@ -174,7 +174,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    class PreferencesPanel(welcomeCtrl: WelcomeCtrlComms) : JPanel(MigLayout("insets 20lp, wrap")) {
+    class PreferencesPanel(welcomeCtrl: WelcomeCtrlComms) : JPanel(MigLayout("insets 20, wrap")) {
 
         val form = PreferencesForm(welcomeCtrl)
 

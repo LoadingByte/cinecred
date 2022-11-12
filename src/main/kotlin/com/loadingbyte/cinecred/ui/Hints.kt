@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
@@ -93,10 +92,10 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
             Side.NONE -> Side.NONE
         }
         border = TextBubbleBorder(
-            pointerSide, pointerGirth = UIScale.scale(30f), pointerLength = UIScale.scale(15f),
+            pointerSide, pointerGirth = 30f, pointerLength = 15f,
             backgroundColor = Color(255, 175, 77),
-            outlineWidth = UIScale.scale(1f), outlineColor = Color(190, 190, 190),
-            shadowWidth = UIScale.scale(12f), shadowColor = Color.BLACK, shadowPasses = 16
+            outlineWidth = 1f, outlineColor = Color(190, 190, 190),
+            shadowWidth = 12f, shadowColor = Color.BLACK, shadowPasses = 16
         )
 
         fun JLabel.style() = apply {
@@ -109,7 +108,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
             putClientProperty(STYLE, style)
         }
 
-        layout = MigLayout("insets dialog", "[:300lp:]", "[]para[]")
+        layout = MigLayout("insets dialog", "[:300:]", "[]para[]")
         add(JLabel("<html>${hint.message}</html>").style(), "growx")
         if (idx == track.lastIndex) {
             add(JButton(l10n("ui.hints.notPassed")).style().apply {
@@ -128,7 +127,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
         // Give the popup its proper size.
         popup.size = popup.preferredSize
         // Position the popup.
-        val gap = UIScale.scale(2)
+        val gap = 2
         val popupSize = popup.size
         val ownerLoc = SwingUtilities.convertPoint(hint.owner, 0, 0, layeredPane)
         val ownerSize = hint.owner.size

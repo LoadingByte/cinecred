@@ -194,7 +194,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
 
-        val topPanel = JPanel(MigLayout("", "[]30lp[][]0[]0[]0[]0[][]30lp[][][][]0[]0[]push[][]")).apply {
+        val topPanel = JPanel(MigLayout("", "[]30[][]0[]0[]0[]0[][]30[][][][]0[]0[]push[][]")).apply {
             add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") })
             add(JLabel(l10n("ui.edit.styling")))
             add(toggleEditStylingDialogButton)

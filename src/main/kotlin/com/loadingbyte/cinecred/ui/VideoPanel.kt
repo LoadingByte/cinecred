@@ -112,14 +112,14 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         pauseButton = makeBtn(PAUSE_ICON, l10n("ui.video.pause"), VK_K, ::pause, isSelected = true)
         playButton = makeBtn(PLAY_ICON, l10n("ui.video.play"), VK_L, ::play)
 
-        layout = MigLayout("insets 12lp n n n, gapy 10lp")
+        layout = MigLayout("insets 12 n n n, gapy 10")
         add(JLabel(l10n("ui.video.warning"), WARN_ICON, JLabel.LEADING), "center")
-        add(rewindButton, "newline, split 5, gapx 2lp")
-        add(pauseButton, "gapx 2lp")
-        add(playButton, "gapx 2lp")
+        add(rewindButton, "newline, split 5, gapx 2")
+        add(pauseButton, "gapx 2")
+        add(playButton, "gapx 2")
         // If we use % or growx instead of "sp", the slider becomes laggy due to the quickly changing timecode label.
         add(frameSlider, "width 100sp")
-        add(timecodeLabel, "gapright 8lp")
+        add(timecodeLabel, "gapright 8")
         add(canvas, "newline, grow, push")
 
         addComponentListener(object : ComponentAdapter() {

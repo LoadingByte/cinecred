@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.ui.FlatUIUtils
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
@@ -34,12 +33,12 @@ import kotlin.math.ceil
 
 
 enum class WidthSpec(val mig: String) {
-    TINIER("width 50lp:50lp:"),
-    TINY("width 70lp:70lp:"),
-    NARROW("width 100lp:100lp:"),
-    FIT("width 100lp::max(300lp,40%)"),
-    WIDE("width 100lp:max(300lp,40%):"),
-    FILL("width 100lp:100%:")
+    TINIER("width 50:50:"),
+    TINY("width 70:70:"),
+    NARROW("width 100:100:"),
+    FIT("width 100::max(300,40%)"),
+    WIDE("width 100:max(300,40%):"),
+    FILL("width 100:100%:")
 }
 
 
@@ -575,7 +574,7 @@ class ToggleButtonGroupWidget<V : Any>(
     }
 
 
-    private class GroupPanel : JPanel(MigLayout("insets 0 1lp 0 1lp, gap 0")) {
+    private class GroupPanel : JPanel(MigLayout("insets 0 1 0 1, gap 0")) {
 
         val arc = UIManager.getInt("Button.arc").toFloat()
         val focusWidth = UIManager.getInt("Component.focusWidth")
@@ -597,7 +596,7 @@ class ToggleButtonGroupWidget<V : Any>(
             g.withNewG2 { g2 ->
                 FlatUIUtils.setRenderingHints(g2)
                 g2.color = if (isEnabled) backgroundColor else disabledBackgroundColor
-                FlatUIUtils.paintComponentBackground(g2, 0, 0, width, height, 0f, UIScale.scale(arc))
+                FlatUIUtils.paintComponentBackground(g2, 0, 0, width, height, 0f, arc)
             }
         }
 
@@ -613,9 +612,8 @@ class ToggleButtonGroupWidget<V : Any>(
                 }
                 val bordColor = outlineColor ?: if (isEnabled) borderColor else disabledBorderColor
                 FlatUIUtils.paintOutlinedComponent(
-                    g2, 0, 0, width, height, UIScale.scale(focusWidth.toFloat()), 1f,
-                    UIScale.scale(borderWidth + innerOutlineWidth), UIScale.scale(borderWidth), UIScale.scale(arc),
-                    outlineColor, bordColor, null
+                    g2, 0, 0, width, height, focusWidth.toFloat(), 1f, borderWidth + innerOutlineWidth, borderWidth,
+                    arc, outlineColor, bordColor, null
                 )
             }
         }
@@ -836,9 +834,9 @@ class FontChooserWidget(
 
         private val label1 = JLabel()
         private val label2 = JLabel()
-        private val panel = JPanel(MigLayout("insets 0", "[]40lp:::push[]")).apply {
+        private val panel = JPanel(MigLayout("insets 0", "[]40:::push[]")).apply {
             add(label1)
-            add(label2, "width 100lp!, height ::22lp")
+            add(label2, "width 100!, height ::22")
         }
 
         override fun getListCellRendererComponent(
@@ -1086,7 +1084,7 @@ class ListWidget<E : Any>(
             notifyChangeListeners()
         }
         allElemDelBtns.add(delBtn)
-        panel.add(delBtn, "aligny top, gapx 6lp 0lp" + if (newline) ", newline" else "")
+        panel.add(delBtn, "aligny top, gapx 6 0" + if (newline) ", newline" else "")
 
         val widget = newElemWidget()
         widget.isVisible = isVisible
@@ -1146,10 +1144,10 @@ class UnionWidget(
     }
 
     override val constraints = mutableListOf<String>().apply {
-        add("gapx 0 3lp")
+        add("gapx 0 3")
         addAll(wrapped.first().constraints)
         for (widget in wrapped.drop(1)) {
-            add("gapx 10lp 3lp")
+            add("gapx 10 3")
             addAll(widget.constraints)
         }
     }

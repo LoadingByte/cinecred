@@ -65,7 +65,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             putClientProperty(STYLE, "font: bold \$h0.font; foreground: #666")
         }
 
-        val startPanel = JPanel(MigLayout("insets 15lp, wrap")).apply {
+        val startPanel = JPanel(MigLayout("insets 15, wrap")).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(10, 10, 10, 10),
                 BorderFactory.createDashedBorder(Color(80, 80, 80), 5f, 4f, 4f, false)
@@ -75,7 +75,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(startOpenButton)
             add(JSeparator(), "growx")
             add(startMemorizedScrollPane, "grow, push")
-            add(startDropLabel, "center, gaptop 40lp, gapbottom 20lp")
+            add(startDropLabel, "center, gaptop 40, gapbottom 20")
             // Add the drag-and-drop handler.
             transferHandler = OpenTransferHandler()
         }
@@ -114,7 +114,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             }
         }
 
-        val openBrowsePanel = JPanel(MigLayout("insets 20lp, gapy 15lp, wrap")).apply {
+        val openBrowsePanel = JPanel(MigLayout("insets 20, gapy 15, wrap")).apply {
             background = null
             add(openBrowseFileChooser, "grow, push")
             add(openBrowseCancelButton, "split 2, right")
@@ -133,7 +133,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             welcomeCtrl.projects_createBrowse_onChangeSelection(createBrowseFileChooser.realSelectedPath)
         }
 
-        val createBrowsePanel = JPanel(MigLayout("insets 20lp, gapy 15lp, wrap")).apply {
+        val createBrowsePanel = JPanel(MigLayout("insets 20, gapy 15, wrap")).apply {
             background = null
             add(createBrowseFileChooser, "grow, push")
             add(createBrowseCancelButton, "split 2, right")
@@ -152,7 +152,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             }
         }
 
-        val createConfigurePanel = JPanel(MigLayout("insets 20lp, gapy 10lp, wrap")).apply {
+        val createConfigurePanel = JPanel(MigLayout("insets 20, gapy 10, wrap")).apply {
             background = null
             add(JLabel(l10n("ui.projects.create.projectDir"), FOLDER_ICON, JLabel.LEADING), "split 2, center")
             add(createConfigureProjectDirLabel)

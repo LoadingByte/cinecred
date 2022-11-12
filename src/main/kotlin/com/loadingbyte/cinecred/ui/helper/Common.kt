@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
 import java.awt.*
 import java.awt.event.KeyEvent
@@ -179,11 +178,11 @@ class LabeledListCellRenderer<E>(
                 FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
                 // On even lines, draw additional separator lines.
                 if (line % 2 == 0) {
-                    val sepGap = UIScale.scale(4f)
+                    val sepGap = 4f
                     val sepWidth = (width - textWidth) / 2f - 2f * sepGap
                     if (sepWidth > 0) {
                         val sepY = lineY + fontMetrics.height / 2f
-                        val sepHeight = UIScale.scale(1f)
+                        val sepHeight = 1f
                         g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
                         g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
                     }

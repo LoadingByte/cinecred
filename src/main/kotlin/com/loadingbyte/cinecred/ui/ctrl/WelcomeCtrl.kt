@@ -172,6 +172,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             if (initConfigChangedUILocaleWish) {
                 masterCtrl.tryCloseProjectsAndDisposeAllFrames()
                 masterCtrl.showWelcomeFrame(openProjectDir)
+                return
             }
             // If the user dragged a folder onto the program, try opening that. If opening closed the window, stop here.
             if (openProjectDir != null && tryOpenOrCreateProject(openProjectDir))

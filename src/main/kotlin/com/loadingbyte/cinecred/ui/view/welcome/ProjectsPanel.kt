@@ -253,6 +253,11 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     fun projects_setCard(card: ProjectsCard) {
         cards.show(this, card.name)
+        // Notify the controller about the initially selected directory.
+        if (card == ProjectsCard.OPEN_BROWSE)
+            welcomeCtrl.projects_openBrowse_onChangeSelection(openBrowseFileChooser.realSelectedPath)
+        else if (card == ProjectsCard.CREATE_BROWSE)
+            welcomeCtrl.projects_createBrowse_onChangeSelection(createBrowseFileChooser.realSelectedPath)
     }
 
     fun projects_start_setMemorized(projectDirs: List<Path>) {

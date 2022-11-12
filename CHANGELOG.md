@@ -61,7 +61,7 @@ Cinecred Changelog
 - The styling is no longer unsaved if only ineffective settings have changed.
 - Styles with duplicate names now keep their place in the list during edits.
 - Increased the style form's scrolling speed and the preview's paging speed.
-- The style form no longer jumps to notices and issues while editing.
+- The style form no longer jumps to issue notices and text areas while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".
 - Renaming a letter style now keeps in sync exactly those content styles which
   referenced it when it was opened, even when there are duplicate names at play.

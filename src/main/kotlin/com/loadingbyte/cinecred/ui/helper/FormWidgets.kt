@@ -28,6 +28,7 @@ import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.DefaultFormatter
 import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
+import javax.swing.text.PlainDocument
 import kotlin.io.path.Path
 import kotlin.math.ceil
 
@@ -47,12 +48,28 @@ abstract class AbstractTextComponentWidget<V : Any>(
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
-    init {
-        tc.document.addDocumentListener { notifyChangeListeners() }
-    }
-
     override val components = listOf<JComponent>(tc)
     override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig)
+
+    protected var text: String
+        get() = tc.text
+        set(text) {
+            // Avoid the field's cursor skipping around when the text is in fact not changed.
+            if (this.text == text)
+                return
+            // Do not change tc.text but instead replace the whole document to prevent document events from being
+            // triggered, which would scroll the wrapping scroll pane's viewport.
+            tc.document = PlainDocument().apply {
+                insertString(0, text, null)
+                addDocumentListener { notifyChangeListeners() }
+            }
+            notifyChangeListeners()
+        }
+
+    init {
+        // Make sure that the document listener is installed.
+        text = ""
+    }
 
 }
 
@@ -60,7 +77,11 @@ abstract class AbstractTextComponentWidget<V : Any>(
 class TextWidget(
     widthSpec: WidthSpec? = null
 ) : AbstractTextComponentWidget<String>(JTextField(), widthSpec) {
-    override var value: String by tc::text
+    override var value: String
+        get() = text
+        set(value) {
+            text = value
+        }
 }
 
 
@@ -68,9 +89,9 @@ class TextListWidget(
     widthSpec: WidthSpec? = null
 ) : AbstractTextComponentWidget<ImmutableList<String>>(JTextArea(), widthSpec) {
     override var value: ImmutableList<String>
-        get() = tc.text.split("\n").filter(String::isNotBlank).toImmutableList()
+        get() = text.split("\n").filter(String::isNotBlank).toImmutableList()
         set(value) {
-            tc.text = value.filter(String::isNotBlank).joinToString("\n")
+            text = value.filter(String::isNotBlank).joinToString("\n")
         }
 }
 
@@ -90,8 +111,8 @@ abstract class AbstractFilenameWidget<V : Any>(
         tc.addFocusListener(object : FocusAdapter() {
             override fun focusLost(e: FocusEvent) {
                 val ass = fileExtAssortment
-                if (ass != null && ass.choices.none { tc.text.endsWith(".$it", ignoreCase = true) })
-                    tc.text += ".${ass.default}"
+                if (ass != null && ass.choices.none { text.endsWith(".$it", ignoreCase = true) })
+                    text += ".${ass.default}"
             }
         })
     }
@@ -103,9 +124,9 @@ abstract class AbstractFilenameWidget<V : Any>(
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
-            if (newAssortment != null && newAssortment.choices.none { tc.text.endsWith(".$it", ignoreCase = true) }) {
-                field?.let { old -> tc.text = tc.text.removeAnySuffix(old.choices.map { ".$it" }, ignoreCase = true) }
-                tc.text += ".${newAssortment.default}"
+            if (newAssortment != null && newAssortment.choices.none { text.endsWith(".$it", ignoreCase = true) }) {
+                field?.let { old -> text = text.removeAnySuffix(old.choices.map { ".$it" }, ignoreCase = true) }
+                text += ".${newAssortment.default}"
             }
             field = newAssortment
         }
@@ -117,9 +138,9 @@ class FilenameWidget(
     widthSpec: WidthSpec? = null
 ) : AbstractFilenameWidget<String>(widthSpec) {
     override var value: String
-        get() = tc.text.trim()
+        get() = text.trim()
         set(value) {
-            tc.text = value.trim()
+            text = value.trim()
         }
 }
 
@@ -142,23 +163,23 @@ class FileWidget(
                 FileType.FILE -> JFileChooser.FILES_ONLY
                 FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
             }
-            fc.selectedFile = File(tc.text.removeAnySuffix(ass?.choices.orEmpty().map { ".$it" }))
+            fc.selectedFile = File(text.removeAnySuffix(ass?.choices.orEmpty().map { ".$it" }))
 
             if (ass != null && ass.choices.isNotEmpty()) {
                 fc.isAcceptAllFileFilterUsed = false
                 for (fileExt in ass.choices) {
                     val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
                     fc.addChoosableFileFilter(filter)
-                    if (tc.text.endsWith(".$fileExt"))
+                    if (text.endsWith(".$fileExt"))
                         fc.fileFilter = filter
                 }
             }
 
             if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
-                tc.text = fc.selectedFile.absolutePath
+                text = fc.selectedFile.absolutePath
                 if (ass != null && ass.choices.isNotEmpty()) {
                     val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
-                    tc.text += ".$selectedFileExt"
+                    text += ".$selectedFileExt"
                 }
             }
         }
@@ -168,9 +189,9 @@ class FileWidget(
     override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig, "")
 
     override var value: Path
-        get() = Path(tc.text.trim())
+        get() = Path(text.trim())
         set(value) {
-            tc.text = value.toString()
+            text = value.toString()
         }
 
 }

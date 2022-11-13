@@ -36,7 +36,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     ),
     FPSConstr(ERROR, Global::fps.st()),
     DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
-        val formats = TimecodeFormat.values().toMutableList()
+        val formats = TimecodeFormat.values().toSortedSet()
         if (!global.fps.supportsDropFrameTimecode)
             formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
         formats
@@ -71,20 +71,20 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     },
     DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
         when (style.blockOrientation) {
-            BlockOrientation.VERTICAL -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+            BlockOrientation.VERTICAL -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             BlockOrientation.HORIZONTAL -> when {
-                !style.hasHead && !style.hasTail -> listOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
-                style.hasHead && !style.hasTail -> listOf(
+                !style.hasHead && !style.hasTail -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+                style.hasHead && !style.hasTail -> sortedSetOf(
                     OVERALL_CENTER,
                     HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER,
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT
                 )
-                !style.hasHead && style.hasTail -> listOf(
+                !style.hasHead && style.hasTail -> sortedSetOf(
                     OVERALL_CENTER,
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT,
                     TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
                 )
-                else -> SpineAttachment.values().asList()
+                else -> SpineAttachment.values().toSortedSet()
             }
         }
     },
@@ -92,11 +92,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DynChoiceConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(),
-        choices = { _, styling, _ -> styling.letterStyles.map(LetterStyle::name) }
+        choices = { _, styling, _ -> styling.letterStyles.mapTo(TreeSet(), LetterStyle::name) }
     ),
     DynChoiceConstr(WARN, ContentStyle::gridCellConform.st()) { _, _, style ->
-        if (style.gridCellHJustifyPerCol.size < 2) listOf(NOTHING, HEIGHT, SQUARE)
-        else BodyCellConform.values().asList()
+        if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(NOTHING, HEIGHT, SQUARE)
+        else BodyCellConform.values().toSortedSet()
     },
     MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
     FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
@@ -173,7 +173,7 @@ class FloatConstr<S : Style>(
 class DynChoiceConstr<S : Style, V : Any>(
     val severity: Severity,
     vararg settings: StyleSetting<S, V>,
-    val choices: (StylingContext, Styling, S) -> List<V>
+    val choices: (StylingContext, Styling, S) -> SortedSet<V>
 ) : StyleConstraint<S, StyleSetting<S, V>>(*settings)
 
 

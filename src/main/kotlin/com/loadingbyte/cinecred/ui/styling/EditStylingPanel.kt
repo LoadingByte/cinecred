@@ -337,7 +337,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             if (constr is DynChoiceConstr<S, *>) {
                 val choices = constr.choices(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)
-                    curForm.setChoices(setting, choices)
+                    curForm.setChoices(setting, choices.toList())
             } else if (constr is FontFeatureConstr) {
                 val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle)
                 for (setting in constr.settings)

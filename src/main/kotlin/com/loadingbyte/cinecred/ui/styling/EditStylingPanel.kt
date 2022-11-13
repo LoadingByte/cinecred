@@ -330,7 +330,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         for (violation in constraintViolations)
             if (violation.leafStyle == curStyle) {
                 val issue = Form.Notice(violation.severity, violation.msg)
-                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafIndex, issue)
+                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
             }
 
         for (constr in getStyleConstraints(curStyle.javaClass))
@@ -346,8 +346,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass))
             if (spec is ToggleButtonGroupWidgetSpec<S, *>) {
-                fun <V : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, V>): ((V) -> Icon)? =
-                    spec.getIcon?.let { return fun(item: V) = it(ctrl.stylingCtx, styling, curStyle, item) }
+                fun <SUBJ : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
+                    spec.getIcon?.let { return fun(item: SUBJ) = it(ctrl.stylingCtx, styling, curStyle, item) }
 
                 val toIcon = makeToIcon(spec)
                 if (toIcon != null)

@@ -29,13 +29,13 @@ fun <S : Style> getStyleSettings(styleClass: Class<S>): List<StyleSetting<S, *>>
 }
 
 
-fun <S : Style, V : Any> KProperty1<S, V>.st(): DirectStyleSetting<S, V> =
+fun <S : Style, SUBJ : Any> KProperty1<S, SUBJ>.st(): DirectStyleSetting<S, SUBJ> =
     KProperty1DirectStyleSetting(this)
 
-fun <S : Style, V : Any> KProperty1<S, Opt<V>>.st(): OptStyleSetting<S, V> =
+fun <S : Style, SUBJ : Any> KProperty1<S, Opt<SUBJ>>.st(): OptStyleSetting<S, SUBJ> =
     KProperty1OptStyleSetting(this)
 
-fun <S : Style, V : Any> KProperty1<S, List<V>>.st(): ListStyleSetting<S, V> =
+fun <S : Style, SUBJ : Any> KProperty1<S, List<SUBJ>>.st(): ListStyleSetting<S, SUBJ> =
     KProperty1ListStyleSetting(this)
 
 
@@ -45,20 +45,20 @@ fun <S : Style> newStyle(styleClass: Class<S>, settingValues: List<*>): S =
         .newInstance(*settingValues.toTypedArray())
 
 
-sealed class StyleSetting<S : Style, V : Any>(val styleClass: Class<S>, val name: String, isNested: Boolean) {
+sealed class StyleSetting<S : Style, SUBJ : Any>(val styleClass: Class<S>, val name: String, isNested: Boolean) {
 
-    val type: Class<V>
+    val type: Class<SUBJ>
 
     init {
         var baseType = styleClass.getDeclaredField(name).genericType
         if (isNested)
             baseType = (baseType as ParameterizedType).actualTypeArguments[0]
         @Suppress("UNCHECKED_CAST")
-        type = (if (baseType is ParameterizedType) baseType.rawType else baseType) as Class<V>
+        type = (if (baseType is ParameterizedType) baseType.rawType else baseType) as Class<SUBJ>
     }
 
     abstract fun get(style: S): Any
-    abstract fun extractValues(style: S): List<V>
+    abstract fun extractSubjects(style: S): List<SUBJ>
 
     override fun equals(other: Any?) =
         this === other || other is StyleSetting<*, *> && styleClass == other.styleClass && name == other.name
@@ -75,24 +75,24 @@ sealed class StyleSetting<S : Style, V : Any>(val styleClass: Class<S>, val name
 }
 
 
-abstract class DirectStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
-    StyleSetting<S, V>(styleClass, name, isNested = false) {
-    abstract override fun get(style: S): V
-    override fun extractValues(style: S): List<V> = listOf(get(style))
+abstract class DirectStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, SUBJ>(styleClass, name, isNested = false) {
+    abstract override fun get(style: S): SUBJ
+    override fun extractSubjects(style: S): List<SUBJ> = listOf(get(style))
 }
 
 
-abstract class OptStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
-    StyleSetting<S, V>(styleClass, name, isNested = true) {
-    abstract override fun get(style: S): Opt<V>
-    override fun extractValues(style: S): List<V> = get(style).run { if (isActive) listOf(value) else emptyList() }
+abstract class OptStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
+    abstract override fun get(style: S): Opt<SUBJ>
+    override fun extractSubjects(style: S): List<SUBJ> = get(style).run { if (isActive) listOf(value) else emptyList() }
 }
 
 
-abstract class ListStyleSetting<S : Style, V : Any>(styleClass: Class<S>, name: String) :
-    StyleSetting<S, V>(styleClass, name, isNested = true) {
-    abstract override fun get(style: S): List<V>
-    override fun extractValues(style: S): List<V> = get(style)
+abstract class ListStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
+    abstract override fun get(style: S): List<SUBJ>
+    override fun extractSubjects(style: S): List<SUBJ> = get(style)
 }
 
 
@@ -117,21 +117,21 @@ private class ReflectedListStyleSetting<S : Style>(styleClass: Class<S>, name: S
 }
 
 
-private class KProperty1DirectStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, V>) :
-    DirectStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
-    override fun get(style: S): V = kProp.get(style)
+private class KProperty1DirectStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, SUBJ>) :
+    DirectStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): SUBJ = kProp.get(style)
 }
 
 
-private class KProperty1OptStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, Opt<V>>) :
-    OptStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
-    override fun get(style: S): Opt<V> = kProp.get(style)
+private class KProperty1OptStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, Opt<SUBJ>>) :
+    OptStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): Opt<SUBJ> = kProp.get(style)
 }
 
 
-private class KProperty1ListStyleSetting<S : Style, V : Any>(private val kProp: KProperty1<S, List<V>>) :
-    ListStyleSetting<S, V>(kProp.getOwnerClass(), kProp.name) {
-    override fun get(style: S): List<V> = kProp.get(style)
+private class KProperty1ListStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, List<SUBJ>>) :
+    ListStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): List<SUBJ> = kProp.get(style)
 }
 
 

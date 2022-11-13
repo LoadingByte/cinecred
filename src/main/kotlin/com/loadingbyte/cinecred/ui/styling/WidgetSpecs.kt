@@ -154,10 +154,10 @@ class NumberWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class ToggleButtonGroupWidgetSpec<S : Style, V : Enum<*>>(
-    setting: StyleSetting<S, V>,
+class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Enum<*>>(
+    setting: StyleSetting<S, SUBJ>,
     val show: Show,
-    val getIcon: ((StylingContext, Styling, S, V) -> Icon)? = null
+    val getIcon: ((StylingContext, Styling, S, SUBJ) -> Icon)? = null
 ) : StyleWidgetSpec<S>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
 
@@ -186,9 +186,9 @@ class UnionWidgetSpec<S : Style>(
 }
 
 
-class ListWidgetSpec<S : Style, V : Any>(
-    setting: ListStyleSetting<S, V>,
-    val newElem: V? = null,
+class ListWidgetSpec<S : Style, SUBJ : Any>(
+    setting: ListStyleSetting<S, SUBJ>,
+    val newElem: SUBJ? = null,
     val newElemIsLastElem: Boolean = false,
     val elemsPerRow: Int = 1,
     val rowSeparators: Boolean = false

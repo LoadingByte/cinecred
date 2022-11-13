@@ -82,13 +82,13 @@ class StyleForm<S : Style>(
         }
     }
 
-    private fun <V : Any /* non-null */> makeListWidget(
-        setting: ListStyleSetting<S, V>,
+    private fun <E : Any /* non-null */> makeListWidget(
+        setting: ListStyleSetting<S, E>,
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
-    ): ListWidget<V> {
+    ): ListWidget<E> {
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
-        val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, V>>()
+        val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, E>>()
         return ListWidget(
             newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
             listWidgetSpec?.newElem, listWidgetSpec?.newElemIsLastElem ?: false,
@@ -171,16 +171,16 @@ class StyleForm<S : Style>(
         return widget as Widget<V>
     }
 
-    private fun <E : Enum<*>> makeEnumToggleButtonGroupWidget(
-        enumClass: Class<E>,
+    private fun <V : Enum<*>> makeEnumToggleButtonGroupWidget(
+        enumClass: Class<V>,
         show: ToggleButtonGroupWidgetSpec.Show,
         custIcons: Boolean,
         inconsistent: Boolean
-    ): Widget<E> {
+    ): Widget<V> {
         // If a custom getIcon function is supplied, it will be applied later on via setToIconFun().
-        var toIcon: ((E) -> Icon)? = if (custIcons) null else Enum<*>::icon
-        var toLabel: ((E) -> String)? = ::l10nEnum
-        var toTooltip: ((E) -> String)? = toLabel
+        var toIcon: ((V) -> Icon)? = if (custIcons) null else Enum<*>::icon
+        var toLabel: ((V) -> String)? = ::l10nEnum
+        var toTooltip: ((V) -> String)? = toLabel
         // @formatter:off
         when (show) {
             ToggleButtonGroupWidgetSpec.Show.LABEL -> { toIcon = null; toTooltip = null }
@@ -263,13 +263,13 @@ class StyleForm<S : Style>(
         }
     }
 
-    fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, index: Int, issue: Notice) {
+    fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, subjectIndex: Int, issue: Notice) {
         val formRow = rootFormRows[setting]!!
         val prevNoticeOverride = formRow.noticeOverride
         // Only show the notice message if there isn't already a notice with the same or a higher severity.
         if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity) {
             formRow.noticeOverride = issue
-            valueWidgets[setting]!!.applySeverity(index, issue.severity)
+            valueWidgets[setting]!!.applySeverity(subjectIndex, issue.severity)
         }
     }
 

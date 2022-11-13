@@ -479,6 +479,53 @@ class FPSWidget(
 }
 
 
+class MultiComboBoxWidget<E : Any>(
+    items: List<E>,
+    private val comparator: Comparator<E>,
+    toString: (E) -> String = { it.toString() },
+    widthSpec: WidthSpec? = null,
+    inconsistent: Boolean = false,
+    noItemsMessage: String? = null
+) : Form.AbstractWidget<ImmutableList<E>>(), Form.Choice<E> {
+
+    private val mcb = MultiComboBox(toString, inconsistent, noItemsMessage).apply {
+        // Notice that this item listener is only triggered when the user manually (de)selects items. That's why we
+        // manually notify the change listeners when the user operations implemented below lead to a changed selection.
+        addItemListener { notifyChangeListeners() }
+    }
+
+    override val components = listOf(mcb)
+    override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
+
+    override var value: ImmutableList<E>
+        get() = mcb.selectedItems.sortedWith(comparator).toImmutableList()
+        set(value) {
+            val valueAsSet = value.toSet()
+            if (mcb.selectedItems == valueAsSet)
+                return
+            mcb.selectedItems = valueAsSet
+            notifyChangeListeners()
+        }
+
+    override fun updateChoices(choices: List<E>) {
+        val oldSelectedItems = mcb.selectedItems
+        mcb.items = choices
+        if (mcb.selectedItems != oldSelectedItems)
+            notifyChangeListeners()
+    }
+
+    override fun applySeverity(index: Int, severity: Severity?) {
+        super.applySeverity(index, severity)
+        mcb.overflowColor = outline(severity)
+    }
+
+    init {
+        mcb.items = items
+    }
+
+}
+
+
 class ToggleButtonGroupWidget<V : Any>(
     items: List<V>,
     toIcon: ((V) -> Icon)? = null,

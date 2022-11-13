@@ -57,13 +57,15 @@ open class Form(insets: Boolean = true) :
 
         override fun applySeverity(index: Int, severity: Severity?) {
             // Adjust FlatLaf outlines.
-            val outline = when (severity) {
-                Severity.WARN -> OUTLINE_WARNING
-                Severity.ERROR -> OUTLINE_ERROR
-                else -> null
-            }
+            val outline = outline(severity)
             for (comp in components)
                 comp.putClientProperty(OUTLINE, outline)
+        }
+
+        protected fun outline(severity: Severity?): String? = when (severity) {
+            Severity.WARN -> OUTLINE_WARNING
+            Severity.ERROR -> OUTLINE_ERROR
+            else -> null
         }
 
         protected inline fun withoutChangeListeners(block: () -> Unit) {

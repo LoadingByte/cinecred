@@ -275,7 +275,7 @@ fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
         })
 }
 
-private val GraphicsConfiguration.usableBounds: Rectangle
+val GraphicsConfiguration.usableBounds: Rectangle
     get() {
         val bounds = bounds
         val insets = Toolkit.getDefaultToolkit().getScreenInsets(this)

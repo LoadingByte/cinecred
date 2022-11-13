@@ -193,3 +193,9 @@ class ListWidgetSpec<S : Style, SUBJ : Any>(
     val elemsPerRow: Int = 1,
     val rowSeparators: Boolean = false
 ) : StyleWidgetSpec<S>(setting)
+
+
+class ChoiceWidgetSpec<S : Style>(
+    vararg settings: ListStyleSetting<S, Any>,
+    val getNoItemsMsg: (() -> String)? = null
+) : StyleWidgetSpec<S>(*settings)

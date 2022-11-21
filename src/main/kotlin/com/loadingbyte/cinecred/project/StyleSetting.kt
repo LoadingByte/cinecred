@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.project
 
+import kotlinx.collections.immutable.ImmutableList
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 import kotlin.reflect.KClass
@@ -16,7 +17,7 @@ fun <S : Style> getStyleSettings(styleClass: Class<S>): List<StyleSetting<S, *>>
                 when {
                     Opt::class.java == field.type ->
                         ReflectedOptStyleSetting(styleClass, field.name)
-                    List::class.java.isAssignableFrom(field.type) ->
+                    ImmutableList::class.java.isAssignableFrom(field.type) ->
                         ReflectedListStyleSetting(styleClass, field.name)
                     else ->
                         ReflectedDirectStyleSetting(styleClass, field.name)
@@ -35,7 +36,7 @@ fun <S : Style, SUBJ : Any> KProperty1<S, SUBJ>.st(): DirectStyleSetting<S, SUBJ
 fun <S : Style, SUBJ : Any> KProperty1<S, Opt<SUBJ>>.st(): OptStyleSetting<S, SUBJ> =
     KProperty1OptStyleSetting(this)
 
-fun <S : Style, SUBJ : Any> KProperty1<S, List<SUBJ>>.st(): ListStyleSetting<S, SUBJ> =
+fun <S : Style, SUBJ : Any> KProperty1<S, ImmutableList<SUBJ>>.st(): ListStyleSetting<S, SUBJ> =
     KProperty1ListStyleSetting(this)
 
 
@@ -91,7 +92,7 @@ abstract class OptStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name
 
 abstract class ListStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
     StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
-    abstract override fun get(style: S): List<SUBJ>
+    abstract override fun get(style: S): ImmutableList<SUBJ>
     override fun extractSubjects(style: S): List<SUBJ> = get(style)
 }
 
@@ -113,7 +114,8 @@ private class ReflectedOptStyleSetting<S : Style>(styleClass: Class<S>, name: St
 private class ReflectedListStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
     ListStyleSetting<S, Any>(styleClass, name) {
     private val getter = styleClass.getGetter(name)
-    override fun get(style: S): List<Any> = (getter.invoke(style) as List<*>).requireNoNulls()
+    override fun get(style: S): ImmutableList<Any> =
+        (getter.invoke(style) as List<*>).requireNoNulls() as ImmutableList<Any>
 }
 
 
@@ -129,9 +131,9 @@ private class KProperty1OptStyleSetting<S : Style, SUBJ : Any>(private val kProp
 }
 
 
-private class KProperty1ListStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, List<SUBJ>>) :
+private class KProperty1ListStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, ImmutableList<SUBJ>>) :
     ListStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
-    override fun get(style: S): List<SUBJ> = kProp.get(style)
+    override fun get(style: S): ImmutableList<SUBJ> = kProp.get(style)
 }
 
 

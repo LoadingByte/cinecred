@@ -174,13 +174,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun duplicateStyle() {
-        val copiedStyle = when (val style = stylingTree.getSelected() as Style?) {
-            is PageStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-            is ContentStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-            is LetterStyle -> style.copy(name = l10n("ui.styling.copiedStyleName", style.name))
-            null, is Global -> return
-            is TextDecoration -> throw IllegalStateException()  // can never happen
-        }
+        val style = stylingTree.getSelected()
+        if (style !is NamedStyle)
+            return
+        val newName = l10n("ui.styling.copiedStyleName", style.name)
+        val copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
         stylingTree.addListElement(copiedStyle, select = true)
         onChange()
     }

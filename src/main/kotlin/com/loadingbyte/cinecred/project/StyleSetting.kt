@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import kotlinx.collections.immutable.ImmutableList
-import java.lang.reflect.Field
+import kotlinx.collections.immutable.toImmutableList
 import java.lang.reflect.ParameterizedType
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -40,10 +40,26 @@ fun <S : Style, SUBJ : Any> KProperty1<S, ImmutableList<SUBJ>>.st(): ListStyleSe
     KProperty1ListStyleSetting(this)
 
 
-fun <S : Style> newStyle(styleClass: Class<S>, settingValues: List<*>): S =
-    styleClass
-        .getDeclaredConstructor(*styleClass.declaredFields.map(Field::getType).toTypedArray())
-        .newInstance(*settingValues.toTypedArray())
+fun <S : Style> S.copy(notarizedSettingValue: NotarizedStyleSettingValue<S>): S =
+    copy(listOf(notarizedSettingValue))
+
+fun <S : Style> S.copy(notarizedSettingValues: List<NotarizedStyleSettingValue<S>>): S {
+    val settings = getStyleSettings(javaClass)
+    val constructorArgs = Array(settings.size) { idx ->
+        val setting = settings[idx]
+        val notarized = notarizedSettingValues.find { (it as NotarSetImpl).setting == setting }
+        if (notarized != null) (notarized as NotarSetImpl).settingValue else setting.get(this)
+    }
+    return javaClass.cast(javaClass.constructors[0].newInstance(*constructorArgs))
+}
+
+fun <S : Style> newStyleUnsafe(styleClass: Class<S>, settingValues: List<*>): S =
+    styleClass.cast(styleClass.constructors[0].newInstance(*settingValues.toTypedArray()))
+
+
+sealed interface NotarizedStyleSettingValue<S : Style>
+private class NotarSetImpl<S : Style>(val setting: StyleSetting<S, *>, val settingValue: Any) :
+    NotarizedStyleSettingValue<S>
 
 
 sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name: String, isNested: Boolean) {
@@ -74,6 +90,7 @@ sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name:
 
     abstract fun get(style: S): Any
     abstract fun extractSubjects(style: S): List<SUBJ>
+    abstract fun repackSubjects(subjects: List<SUBJ>): NotarizedStyleSettingValue<S>
 
     override fun equals(other: Any?) =
         this === other || other is StyleSetting<*, *> && declaringClass == other.declaringClass && name == other.name
@@ -93,21 +110,29 @@ sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name:
 abstract class DirectStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
     StyleSetting<S, SUBJ>(styleClass, name, isNested = false) {
     abstract override fun get(style: S): SUBJ
+    fun notarize(settingValue: SUBJ): NotarizedStyleSettingValue<S> = NotarSetImpl(this, settingValue)
     override fun extractSubjects(style: S): List<SUBJ> = listOf(get(style))
+    override fun repackSubjects(subjects: List<SUBJ>): NotarizedStyleSettingValue<S> = notarize(subjects.single())
 }
 
 
 abstract class OptStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
     StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
     abstract override fun get(style: S): Opt<SUBJ>
+    fun notarize(settingValue: Opt<SUBJ>): NotarizedStyleSettingValue<S> = NotarSetImpl(this, settingValue)
     override fun extractSubjects(style: S): List<SUBJ> = get(style).run { if (isActive) listOf(value) else emptyList() }
+    override fun repackSubjects(subjects: List<SUBJ>): NotarizedStyleSettingValue<S> =
+        notarize(Opt(isActive = true, subjects.single()))
 }
 
 
 abstract class ListStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
     StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
     abstract override fun get(style: S): ImmutableList<SUBJ>
+    fun notarize(settingValue: ImmutableList<SUBJ>): NotarizedStyleSettingValue<S> = NotarSetImpl(this, settingValue)
     override fun extractSubjects(style: S): List<SUBJ> = get(style)
+    override fun repackSubjects(subjects: List<SUBJ>): NotarizedStyleSettingValue<S> =
+        notarize(subjects.toImmutableList())
 }
 
 

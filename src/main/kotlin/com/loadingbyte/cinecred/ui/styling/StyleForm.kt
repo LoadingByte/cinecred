@@ -235,7 +235,7 @@ class StyleForm<S : Style>(
     }
 
     override fun save(): S =
-        newStyle(styleClass, valueWidgets.map { (_, widget) -> widget.value })
+        newStyleUnsafe(styleClass, valueWidgets.values.map(Widget<*>::value))
 
     fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, Style>> {
         val nested = mutableListOf<Pair<StyleForm<*>, Style>>()

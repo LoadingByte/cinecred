@@ -133,30 +133,35 @@ private fun migrate(rawStyling: RawStyling) {
 
 
 private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
-    val settingValues = getStyleSettings(styleClass).map { setting ->
-        try {
-            when (setting) {
-                is DirectStyleSetting ->
-                    convert(setting.type, map[setting.name]!!)
-                is OptStyleSetting ->
-                    Opt(true, convert(setting.type, map[setting.name]!!))
-                is ListStyleSetting ->
-                    (map[setting.name] as List<*>)
-                        .filterNotNull()
-                        .map { convert(setting.type, it) }
-                        .toImmutableList()
+    val notarizedSettingValues = buildList {
+        for (setting in getStyleSettings(styleClass))
+            try {
+                add(readSetting(setting, map[setting.name]!!))
+            } catch (_: RuntimeException) {
+                // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
             }
-        } catch (_: RuntimeException) {
-            // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
-            setting.get(getPreset(styleClass))
-        }
     }
-
-    return newStyle(styleClass, settingValues)
+    return getPreset(styleClass).copy(notarizedSettingValues)
 }
 
+private fun <S : Style, SUBJ : Any> readSetting(
+    setting: StyleSetting<S, SUBJ>,
+    raw: Any
+): NotarizedStyleSettingValue<S> =
+    when (setting) {
+        is DirectStyleSetting ->
+            setting.notarize(convert(setting.type, raw))
+        is OptStyleSetting ->
+            setting.notarize(Opt(true, convert(setting.type, raw)))
+        is ListStyleSetting ->
+            setting.notarize((raw as List<*>).filterNotNull().map { convert(setting.type, it) }.toImmutableList())
+    }
 
-private fun convert(type: Class<*>, raw: Any): Any = when (type) {
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> convert(type: Class<T>, raw: Any): T = convertUntyped(type, raw) as T
+
+private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
     Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean

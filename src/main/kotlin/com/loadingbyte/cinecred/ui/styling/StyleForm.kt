@@ -18,7 +18,8 @@ class StyleForm<S : Style>(
 ) : Form.Storable<S>(insets) {
 
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
-    private val rootFormRows = HashMap<StyleSetting<S, *>, FormRow>()
+    private val rootFormRows = ArrayList<Pair<FormRow, List<StyleSetting<S, *>>>>()
+    private val rootFormRowLookup = HashMap<StyleSetting<S, *>, FormRow>()
 
     private var disableOnChange = false
 
@@ -43,7 +44,8 @@ class StyleForm<S : Style>(
         val valueWidget = makeSettingWidget(setting)
         val formRow = makeFormRow(setting.name, valueWidget)
         valueWidgets[setting] = valueWidget
-        rootFormRows[setting] = formRow
+        rootFormRows.add(Pair(formRow, listOf(setting)))
+        rootFormRowLookup[setting] = formRow
         addFormRow(formRow)
     }
 
@@ -56,8 +58,9 @@ class StyleForm<S : Style>(
         }
         val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
         val formRow = makeFormRow(spec.unionName, unionWidget)
+        rootFormRows.add(Pair(formRow, spec.settings))
         for (setting in spec.settings)
-            rootFormRows[setting] = formRow
+            rootFormRowLookup[setting] = formRow
         addFormRow(formRow)
     }
 
@@ -260,22 +263,33 @@ class StyleForm<S : Style>(
     }
 
     fun setIneffectiveSettings(ineffectiveSettings: Map<StyleSetting<S, *>, Effectivity>) {
-        for ((setting, formRow) in rootFormRows) {
-            val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
-            formRow.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-            formRow.isEnabled = effectivity == Effectivity.EFFECTIVE
+        for ((formRow, settings) in rootFormRows) {
+            // First find the maximum effectivity across all widgets in the form row (there can be multiple when a
+            // UnionWidget is in use). Apply that maximum effectivity to the whole row, including the label.
+            val maxEffectivity = settings.maxOf { ineffectiveSettings.getOrDefault(it, Effectivity.EFFECTIVE) }
+            formRow.isVisible = maxEffectivity >= Effectivity.ALMOST_EFFECTIVE
+            formRow.isEnabled = maxEffectivity == Effectivity.EFFECTIVE
+            // If any setting deviates from the maximum effectivity, lower that setting's effectivity individually.
+            for (setting in settings) {
+                val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
+                if (effectivity != maxEffectivity) {
+                    val widget = valueWidgets.getValue(setting)
+                    widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
+                    widget.isEnabled = effectivity == Effectivity.EFFECTIVE
+                }
+            }
         }
     }
 
     fun clearIssues() {
-        for (formRow in rootFormRows.values) {
+        for ((formRow, _) in rootFormRows) {
             formRow.noticeOverride = null
             formRow.widget.applySeverity(-1, null)
         }
     }
 
     fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, subjectIndex: Int, issue: Notice) {
-        val formRow = rootFormRows[setting]!!
+        val formRow = rootFormRowLookup[setting]!!
         val prevNoticeOverride = formRow.noticeOverride
         // Only show the notice message if there isn't already a notice with the same or a higher severity.
         if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity) {

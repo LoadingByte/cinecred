@@ -1247,6 +1247,14 @@ class UnionWidget(
                 (wrapped[idx] as Form.Widget<Any>).value = value[idx]
         }
 
+    override var isEnabled: Boolean
+        get() = super.isEnabled
+        set(isEnabled) {
+            super.isEnabled = isEnabled
+            for (widget in wrapped)
+                widget.isEnabled = isEnabled
+        }
+
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
         for (widget in wrapped)

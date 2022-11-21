@@ -47,7 +47,7 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
 
     override fun tryCloseProjectsAndDisposeAllFrames(force: Boolean): Boolean {
         for (projectCtrl in projectCtrls.toMutableList() /* copy to avoid concurrent modification */)
-            if (!projectCtrl.tryCloseProject(force) && !force)
+            if (!projectCtrl.tryCloseProject(force))
                 return false
 
         welcomeCtrl?.close()

@@ -47,7 +47,7 @@ fun Color.toHex32() = "#%08x".format(rgb)
 // overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is then 1,
 // which is interpreted as a negative sign, so this is an overflow).
 fun colorFromHex(hex: String): Color {
-    require(hex.length == 7 || hex.length == 9 && hex[0] == '#')
+    require((hex.length == 7 || hex.length == 9) && hex[0] == '#')
     return Color(hex.drop(1).toLong(16).toInt(), hex.length == 9)
 }
 
@@ -58,6 +58,10 @@ fun fpsFromFraction(fraction: String): FPS {
     require(parts.size == 2)
     return FPS(parts[0].toInt(), parts[1].toInt())
 }
+
+
+/** Implements `ceil(a / b)`, but works only for non-negative numbers! */
+fun ceilDiv(a: Int, b: Int) = (a + (b - 1)) / b
 
 
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =
@@ -112,6 +116,7 @@ fun AffineTransform.shear(shx: Float, shy: Float) = shear(shx.toDouble(), shy.to
 fun Graphics2D.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
 fun Graphics2D.scale(sx: Float, sy: Float) = scale(sx.toDouble(), sy.toDouble())
 fun Graphics2D.scale(s: Float) = scale(s.toDouble(), s.toDouble())
+fun Graphics2D.scale(s: Double) = scale(s, s)
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
 fun Matrix.scale(s: Float) = scale(s, s)
 

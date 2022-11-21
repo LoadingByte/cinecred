@@ -35,6 +35,7 @@ fun tryReadFonts(fontFile: Path): List<Font> {
         try {
             return Font.createFonts(fontFile.toFile()).toList()
         } catch (_: FontFormatException) {
+            // Skip fonts that are corrupt.
         }
     return emptyList()
 }

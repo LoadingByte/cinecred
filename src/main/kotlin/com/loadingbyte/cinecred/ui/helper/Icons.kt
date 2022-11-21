@@ -13,7 +13,6 @@ import org.apache.batik.bridge.UserAgentAdapter
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
 import java.awt.*
-import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.awt.image.FilteredImageSource
 import java.awt.image.ImageFilter
@@ -31,8 +30,7 @@ val WINDOW_ICON_IMAGES = run {
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB).withG2 { g2 ->
             g2.setHighQuality()
-            val scale = size / ctx.documentSize.width
-            g2.transform(AffineTransform.getScaleInstance(scale, scale))
+            g2.scale(size / ctx.documentSize.width)
             logo.paint(g2)
         }
     }
@@ -191,45 +189,45 @@ val FlowDirection.icon
     }
 
 
-private val SMALL_CAPS_OFF = SVGIcon.load("/icons/smallCaps/off.svg")
-private val SMALL_CAPS_SMALL_CAPS = SVGIcon.load("/icons/smallCaps/smallCaps.svg")
-private val SMALL_CAPS_PETITE_CAPS = SVGIcon.load("/icons/smallCaps/petiteCaps.svg")
+private val SMALL_CAPS_OFF_ICON = SVGIcon.load("/icons/smallCaps/off.svg")
+private val SMALL_CAPS_SMALL_CAPS_ICON = SVGIcon.load("/icons/smallCaps/smallCaps.svg")
+private val SMALL_CAPS_PETITE_CAPS_ICON = SVGIcon.load("/icons/smallCaps/petiteCaps.svg")
 
 val SmallCaps.icon
     get() = when (this) {
-        SmallCaps.OFF -> SMALL_CAPS_OFF
-        SmallCaps.SMALL_CAPS -> SMALL_CAPS_SMALL_CAPS
-        SmallCaps.PETITE_CAPS -> SMALL_CAPS_PETITE_CAPS
+        SmallCaps.OFF -> SMALL_CAPS_OFF_ICON
+        SmallCaps.SMALL_CAPS -> SMALL_CAPS_SMALL_CAPS_ICON
+        SmallCaps.PETITE_CAPS -> SMALL_CAPS_PETITE_CAPS_ICON
     }
 
 
-private val SUPERSCRIPT_OFF = SVGIcon.load("/icons/superscript/off.svg")
-private val SUPERSCRIPT_SUP = SVGIcon.load("/icons/superscript/sup.svg")
-private val SUPERSCRIPT_SUB = SVGIcon.load("/icons/superscript/sub.svg")
-private val SUPERSCRIPT_SUP_SUP = SVGIcon.load("/icons/superscript/sup_sup.svg")
-private val SUPERSCRIPT_SUP_SUB = SVGIcon.load("/icons/superscript/sup_sub.svg")
-private val SUPERSCRIPT_SUB_SUP = SVGIcon.load("/icons/superscript/sub_sup.svg")
-private val SUPERSCRIPT_SUB_SUB = SVGIcon.load("/icons/superscript/sub_sub.svg")
+private val SUPERSCRIPT_OFF_ICON = SVGIcon.load("/icons/superscript/off.svg")
+private val SUPERSCRIPT_SUP_ICON = SVGIcon.load("/icons/superscript/sup.svg")
+private val SUPERSCRIPT_SUB_ICON = SVGIcon.load("/icons/superscript/sub.svg")
+private val SUPERSCRIPT_SUP_SUP_ICON = SVGIcon.load("/icons/superscript/sup_sup.svg")
+private val SUPERSCRIPT_SUP_SUB_ICON = SVGIcon.load("/icons/superscript/sup_sub.svg")
+private val SUPERSCRIPT_SUB_SUP_ICON = SVGIcon.load("/icons/superscript/sub_sup.svg")
+private val SUPERSCRIPT_SUB_SUB_ICON = SVGIcon.load("/icons/superscript/sub_sub.svg")
 
 val Superscript.icon
     get() = when (this) {
-        Superscript.OFF -> SUPERSCRIPT_OFF
-        Superscript.SUP -> SUPERSCRIPT_SUP
-        Superscript.SUB -> SUPERSCRIPT_SUB
-        Superscript.SUP_SUP -> SUPERSCRIPT_SUP_SUP
-        Superscript.SUP_SUB -> SUPERSCRIPT_SUP_SUB
-        Superscript.SUB_SUP -> SUPERSCRIPT_SUB_SUP
-        Superscript.SUB_SUB -> SUPERSCRIPT_SUB_SUB
+        Superscript.OFF -> SUPERSCRIPT_OFF_ICON
+        Superscript.SUP -> SUPERSCRIPT_SUP_ICON
+        Superscript.SUB -> SUPERSCRIPT_SUB_ICON
+        Superscript.SUP_SUP -> SUPERSCRIPT_SUP_SUP_ICON
+        Superscript.SUP_SUB -> SUPERSCRIPT_SUP_SUB_ICON
+        Superscript.SUB_SUP -> SUPERSCRIPT_SUB_SUP_ICON
+        Superscript.SUB_SUB -> SUPERSCRIPT_SUB_SUB_ICON
     }
 
 
-private val TEXT_DECORATION_PRESET_UNDERLINE = SVGIcon.load("/icons/textDecorationPreset/underline.svg")
-private val TEXT_DECORATION_PRESET_STRIKETHROUGH = SVGIcon.load("/icons/textDecorationPreset/strikethrough.svg")
+private val TEXT_DECORATION_PRESET_UNDERLINE_ICON = SVGIcon.load("/icons/textDecorationPreset/underline.svg")
+private val TEXT_DECORATION_PRESET_STRIKETHROUGH_ICON = SVGIcon.load("/icons/textDecorationPreset/strikethrough.svg")
 
 val TextDecorationPreset.icon
     get() = when (this) {
-        TextDecorationPreset.UNDERLINE -> TEXT_DECORATION_PRESET_UNDERLINE
-        TextDecorationPreset.STRIKETHROUGH -> TEXT_DECORATION_PRESET_STRIKETHROUGH
+        TextDecorationPreset.UNDERLINE -> TEXT_DECORATION_PRESET_UNDERLINE_ICON
+        TextDecorationPreset.STRIKETHROUGH -> TEXT_DECORATION_PRESET_STRIKETHROUGH_ICON
         TextDecorationPreset.OFF -> GEAR_ICON
     }
 

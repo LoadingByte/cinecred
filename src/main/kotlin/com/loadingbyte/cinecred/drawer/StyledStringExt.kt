@@ -64,13 +64,13 @@ private class TextContextImpl(
 
     val uppercaseExceptionsRegex: Regex? by lazy { generateUppercaseExceptionsRegex(uppercaseExceptions) }
 
-    private val fmtStrAttrsCache = HashMap<LetterStyle, Attrs>()
-    private val fmtStrCache = HashMap<StyledString, FormattedString>()
+    private val fmtStrAttrsCache = IdentityHashMap<LetterStyle, Attrs>()
+    private val fmtStrCache = IdentityHashMap<StyledString, FormattedString>()
 
-    fun getFmtStrAttrs(letterStyle: LetterStyle) =
+    fun getFmtStrAttrs(letterStyle: LetterStyle): Attrs =
         fmtStrAttrsCache.computeIfAbsent(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
 
-    fun getFmtStr(styledString: StyledString) =
+    fun getFmtStr(styledString: StyledString): FormattedString =
         fmtStrCache.computeIfAbsent(styledString) { generateFmtStr(styledString, this) }
 
     class Attrs(
@@ -170,8 +170,7 @@ private fun generateFmtStrAttrs(
 
     var fakeSCScaling = Float.NaN
     when (style.smallCaps) {
-        SmallCaps.OFF -> {
-        }
+        SmallCaps.OFF -> {}
         SmallCaps.SMALL_CAPS ->
             if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
                 features.add(FormattedString.Font.Feature(SMALL_CAPS_FONT_FEAT, 1))
@@ -196,8 +195,7 @@ private fun generateFmtStrAttrs(
         var offset = td.offsetPx
         var thickness = td.thicknessPx
         when (td.preset) {
-            TextDecorationPreset.OFF -> {
-            }
+            TextDecorationPreset.OFF -> {}
             TextDecorationPreset.UNDERLINE -> {
                 offset = lm.underlineOffset + lm.underlineThickness / 2f
                 thickness = lm.underlineThickness

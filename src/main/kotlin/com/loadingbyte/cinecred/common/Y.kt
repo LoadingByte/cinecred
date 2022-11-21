@@ -1,8 +1,10 @@
 package com.loadingbyte.cinecred.common
 
 import kotlin.math.abs
+import kotlin.math.max
 
 
+// Implementation note: The arrays ss and ls store the x and y coordinates respectively of a piecewise linear function.
 class Y private constructor(private val ss: FloatArray, private val ls: FloatArray) {
 
     fun resolve(elasticScaling: Float = 1f): Float {
@@ -53,10 +55,8 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
 
     /** scale universe */
     operator fun times(universeScaling: Float): Y = Y(ss, ls.map { it * universeScaling })
-
     /** scale universe */
     operator fun div(universeScaling: Float): Y = Y(ss, ls.map { it / universeScaling })
-
     /** scale universe */
     operator fun unaryMinus(): Y = times(-1f)
 
@@ -144,7 +144,7 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
                 if (source == null || source === currTop) {
                     expandYoArraysIfNecessary()
                     yoSS[io] = s
-                    yoLS[io] = kotlin.math.max(l1, l2)
+                    yoLS[io] = max(l1, l2)
                     io++
                 }
 
@@ -168,8 +168,7 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
                 }
                 expandYoArraysIfNecessary()
                 yoSS[io] = sIntersect + 1f
-                yoLS[io] =
-                    kotlin.math.max(y1.resolveAfter(i1Last, sIntersect + 1f), y2.resolveAfter(i2Last, sIntersect + 1f))
+                yoLS[io] = max(y1.resolveAfter(i1Last, sIntersect + 1f), y2.resolveAfter(i2Last, sIntersect + 1f))
                 io++
             }
 
@@ -187,7 +186,7 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
         private inline fun forEachCtrlPoint(
             y1: Y,
             y2: Y,
-            block: (Y? /* source */, Float /* s */, Float /* l1 */, Float /* l2 */, Int /* i1 */, Int /* i2 */) -> Unit
+            block: (source: Y?, s: Float, l1: Float, l2: Float, i1: Int, i2: Int) -> Unit
         ) {
             var i1 = 0
             var i2 = 0
@@ -205,7 +204,7 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
                 val s2 = if (i2 < y2.ss.size) y2.ss[i2] else Float.POSITIVE_INFINITY
                 when {
                     s1 == s2 -> {
-                        source = null /* both */
+                        source = null // both
                         s = s1
                         l1 = y1.ls[i1]
                         l2 = y2.ls[i2]

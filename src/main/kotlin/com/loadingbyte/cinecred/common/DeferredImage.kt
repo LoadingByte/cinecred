@@ -70,8 +70,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     }
 
     fun drawRect(
-        color: Color, x: Float, y: Y, width: Float, height: Y, fill: Boolean = false,
-        layer: Layer = FOREGROUND
+        color: Color, x: Float, y: Y, width: Float, height: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
@@ -193,32 +192,32 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     class Layer
 
 
-    private sealed class Instruction {
+    private sealed interface Instruction {
 
         class DrawDeferredImageLayer(
             val x: Float, val y: Y, val universeScaling: Float, val elasticScaling: Float,
             val image: DeferredImage, val layer: Layer
-        ) : Instruction()
+        ) : Instruction
 
         class DrawShape(
             val x: Float, val y: Y, val shape: Shape, val color: Color, val fill: Boolean
-        ) : Instruction()
+        ) : Instruction
 
         class DrawLine(
             val x1: Float, val y1: Y, val x2: Float, val y2: Y, val color: Color, val fill: Boolean
-        ) : Instruction()
+        ) : Instruction
 
         class DrawRect(
             val x: Float, val y: Y, val width: Float, val height: Y, val color: Color, val fill: Boolean
-        ) : Instruction()
+        ) : Instruction
 
         class DrawStringForeground(
             val x: Float, val baselineY: Y, val fmtStr: FormattedString
-        ) : Instruction()
+        ) : Instruction
 
         class DrawPicture(
             val x: Float, val y: Y, val pic: Picture
-        ) : Instruction()
+        ) : Instruction
 
     }
 
@@ -485,7 +484,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                             }
                         }
                         // OpenType Font
-                        0x4f54544f ->
+                        0x4F54544F ->
                             docRes.pdFonts[psName] = PDType0Font.load(doc, OTFParser().parse(fontFile), false)
                         // TrueType Font
                         else ->

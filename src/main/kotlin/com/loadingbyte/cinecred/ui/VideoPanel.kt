@@ -13,6 +13,7 @@ import com.loadingbyte.cinecred.ui.helper.WARN_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.Transparency
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
@@ -195,7 +196,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         makeVideoDrawerJobSlot.submit {
             val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, previewMode = true) {
                 override fun createIntermediateImage(width: Int, height: Int) =
-                    gCfg.createCompatibleImage(width, height)
+                    gCfg.createCompatibleImage(width, height, Transparency.OPAQUE)
             }
             SwingUtilities.invokeLater {
                 this.videoDrawer = videoDrawer

@@ -27,7 +27,6 @@ import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
 import javax.swing.text.PlainDocument
 import kotlin.io.path.Path
-import kotlin.math.ceil
 
 
 enum class WidthSpec(val mig: String) {
@@ -619,8 +618,11 @@ class ToggleButtonGroupWidget<V : Any>(
         toIcon?.let { btn.icon = it(item) }
         toLabel?.let { btn.text = it(item) }
         toTooltip?.let { btn.toolTipText = it(item) }
-        if (toLabel != null)
-            btn.margin = btn.margin.run { Insets(top - 1, left, bottom - 1, right) }
+        if (toLabel != null) {
+            // Make room for GroupPanel's border. This way, the panel will have the same height as other components.
+            val panelInsets = panel.insets
+            btn.margin = btn.margin.run { Insets(top - panelInsets.top, left, bottom - panelInsets.bottom, right) }
+        }
         btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
         btn.putClientProperty(STYLE, "arc: 0")
         btn.model.addItemListener { e ->
@@ -783,7 +785,7 @@ class ColorWellWidget(
         }
 
     private fun Graphics.drawCheckerboard(width: Int, height: Int, n: Int) {
-        val checkerSize = ceil(height / n.toFloat()).toInt()
+        val checkerSize = ceilDiv(height, n)
         for (x in 0 until width / checkerSize)
             for (y in 0 until n) {
                 color = if ((x + y) % 2 == 0) Color.WHITE else Color.LIGHT_GRAY

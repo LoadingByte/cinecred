@@ -41,7 +41,6 @@ fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : J
         // This would of course lead to trouble when first enlarging and then shrinking a container which contains
         // a label text area. By setting an explicit minimum width, we turn off this undesired behavior.
         minimumSize = Dimension(0, 0)
-
     }
 
     // Disable the capability of the text area to scroll any ancestor scroll pane. Text areas usually scroll to
@@ -321,7 +320,7 @@ private fun openFallback(uri: URI) {
     fun tryExec(cmd: Array<String>) = try {
         Runtime.getRuntime().exec(cmd)
         true
-    } catch (e: IOException) {
+    } catch (_: IOException) {
         false
     }
 

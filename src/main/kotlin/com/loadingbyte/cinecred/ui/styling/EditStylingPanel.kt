@@ -331,19 +331,22 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
             }
 
-        for (constr in getStyleConstraints(curStyle.javaClass))
-            if (constr is DynChoiceConstr<S, *>) {
-                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle)
+        for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
+            is DynChoiceConstr<S, *> -> {
+                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle).toList()
                 for (setting in constr.settings)
-                    curForm.setChoices(setting, choices.toList())
-            } else if (constr is FontFeatureConstr) {
-                val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle)
-                for (setting in constr.settings)
-                    curForm.setChoices(setting, availableTags.toList(), unique = true)
+                    curForm.setChoices(setting, choices)
             }
+            is FontFeatureConstr -> {
+                val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle).toList()
+                for (setting in constr.settings)
+                    curForm.setChoices(setting, availableTags, unique = true)
+            }
+            else -> {}
+        }
 
-        for (spec in getStyleWidgetSpecs(curStyle.javaClass))
-            if (spec is ToggleButtonGroupWidgetSpec<S, *>) {
+        for (spec in getStyleWidgetSpecs(curStyle.javaClass)) when (spec) {
+            is ToggleButtonGroupWidgetSpec<S, *> -> {
                 fun <SUBJ : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
                     spec.getIcon?.let { return fun(item: SUBJ) = it(ctrl.stylingCtx, styling, curStyle, item) }
 
@@ -351,12 +354,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 if (toIcon != null)
                     for (setting in spec.settings)
                         curForm.setToIconFun(setting, toIcon)
-            } else if (spec is TimecodeWidgetSpec) {
+            }
+            is TimecodeWidgetSpec -> {
                 val fps = spec.getFPS(ctrl.stylingCtx, styling, curStyle)
                 val timecodeFormat = spec.getTimecodeFormat(ctrl.stylingCtx, styling, curStyle)
                 for (setting in spec.settings)
                     curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }
+            else -> {}
+        }
 
         for ((nestedForm, nestedStyle) in curForm.getNestedFormsAndStyles(curStyle))
             adjustForm(nestedForm.castToStyle(nestedStyle.javaClass), nestedStyle)

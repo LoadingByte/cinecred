@@ -154,13 +154,14 @@ open class VideoDrawer(
     }
 
     /**
-     * This method can (and should be) overwritten by users of this class who exactly know onto what kind of
+     * This method must be overwritten by users of this class who exactly know onto what kind of
      * graphics object they will later draw their frames. The returned image should support alpha if and only if
      * [transparentGrounding] is true.
+     * Even though this method is not abstract, it throws an [UnsupportedOperationException]. Not having it abstract
+     * makes it easier to create a video drawer just for the purpose of computing the overall number of frames.
      */
     protected open fun createIntermediateImage(width: Int, height: Int): BufferedImage {
-        val imageType = if (transparentGrounding) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
-        return BufferedImage(width, height, imageType)
+        throw UnsupportedOperationException()
     }
 
     fun drawFrame(g2: Graphics2D, frameIdx: Int) {

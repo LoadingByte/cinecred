@@ -9,6 +9,8 @@ import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.PageBehavior.CARD
+import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Font
 import java.awt.geom.Path2D
@@ -19,19 +21,18 @@ import javax.swing.UIManager
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
 
 
-fun draw(project: Project): List<DrawnPage> {
-    val global = project.styling.global
+fun drawPages(project: Project): List<DrawnPage> {
+    val styling = project.styling
+    val global = styling.global
     val pages = project.pages
     val runtimeGroups = project.runtimeGroups
 
-    val textCtx = makeTextCtx(
-        project.styling.global.locale, project.styling.global.uppercaseExceptions, project.stylingCtx
-    )
+    val textCtx = makeTextCtx(global.locale, global.uppercaseExceptions, project.stylingCtx)
 
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     val stageImages = HashMap<Stage, DeferredImage>()
     for (page in pages)
-        stageImages.putAll(drawStages(global, project.styling.letterStyles, textCtx, page))
+        stageImages.putAll(drawStages(global, styling.letterStyles, textCtx, page))
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
     val pageBotStages = pages.mapTo(HashSet()) { page -> page.stages.last() }
@@ -114,10 +115,10 @@ private fun drawStage(
     // If this stage is a scroll stage and is preceded by another scroll stage, add half the preceding vertical gap
     // as elastic space. If it is preceded by a card stage, add the full preceding vertical gap as rigid space
     // since card stage images are not allowed to have vertical gaps baked into them.
-    if (prevStage != null && stage.style.behavior != PageBehavior.CARD)
+    if (prevStage != null && stage.style.behavior != CARD)
         y += when (prevStage.style.behavior) {
-            PageBehavior.CARD -> prevStage.vGapAfterPx.toY()
-            PageBehavior.SCROLL -> (prevStage.vGapAfterPx / 2f).toElasticY()
+            CARD -> prevStage.vGapAfterPx.toY()
+            SCROLL -> (prevStage.vGapAfterPx / 2f).toElasticY()
         }
 
     for (segment in stage.segments) {
@@ -133,13 +134,15 @@ private fun drawStage(
     }
 
     // Same as for the preceding vertical gap above.
-    if (nextStage != null && stage.style.behavior != PageBehavior.CARD)
+    if (nextStage != null && stage.style.behavior != CARD)
         y += when (nextStage.style.behavior) {
-            PageBehavior.CARD -> stage.vGapAfterPx.toY()
-            PageBehavior.SCROLL -> (stage.vGapAfterPx / 2f).toElasticY()
+            CARD -> stage.vGapAfterPx.toY()
+            SCROLL -> (stage.vGapAfterPx / 2f).toElasticY()
         }
 
+    // Set the stage image's height.
     stageImage.height = y
+
     return stageImage
 }
 
@@ -149,7 +152,7 @@ private fun layoutStages(
     stageImages: Map<Stage, DeferredImage>,
     page: Page
 ): Pair<Y, Map<Stage, StageLayout>> {
-    // Determine each stage's top and bottom y coordinates in the future page image image.
+    // Determine each stage's top and bottom y coordinates in the future page image.
     // Also find the height of the whole future page image if that is given explicitly.
     val stageImageBounds = mutableListOf<Pair<Y, Y>>()
     var pageImageHeight = 0f.toY()
@@ -157,7 +160,7 @@ private fun layoutStages(
     for ((stageIdx, stage) in page.stages.withIndex()) {
         var stageHeight = stageImages.getValue(stage).height
         // Special handling for card stages...
-        if (stage.style.behavior == PageBehavior.CARD) {
+        if (stage.style.behavior == CARD) {
             // Card stages are rigid and not elastic.
             val resolvedStageHeight = stageHeight.resolve()
             stageHeight = resolvedStageHeight.toY()
@@ -185,16 +188,16 @@ private fun layoutStages(
     val stageInfo = page.stages.mapIndexed { stageIdx, stage ->
         val (topY, botY) = stageImageBounds[stageIdx]
         when (stage.style.behavior) {
-            PageBehavior.CARD -> DrawnStageInfo.Card((topY + botY) / 2f)
-            PageBehavior.SCROLL -> {
+            CARD -> DrawnStageInfo.Card((topY + botY) / 2f)
+            SCROLL -> {
                 val scrollStartY = when (page.stages.getOrNull(stageIdx - 1)?.style?.behavior) {
-                    PageBehavior.CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2f }
-                    PageBehavior.SCROLL -> stageImageBounds[stageIdx - 1].let { (_, aBotY) -> (aBotY + topY) / 2f }
+                    CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2f }
+                    SCROLL -> stageImageBounds[stageIdx - 1].let { (_, aBotY) -> (aBotY + topY) / 2f }
                     null -> topY /* will always be 0 */ - global.heightPx / 2f
                 }
                 val scrollStopY = when (page.stages.getOrNull(stageIdx + 1)?.style?.behavior) {
-                    PageBehavior.CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2f }
-                    PageBehavior.SCROLL -> stageImageBounds[stageIdx + 1].let { (bTopY, _) -> (botY + bTopY) / 2f }
+                    CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2f }
+                    SCROLL -> stageImageBounds[stageIdx + 1].let { (bTopY, _) -> (botY + bTopY) / 2f }
                     null -> botY + global.heightPx / 2f
                 }
                 DrawnStageInfo.Scroll(scrollStartY, scrollStopY)
@@ -229,7 +232,7 @@ private fun matchRuntime(
     val elasticScaling = frames.deresolve(desiredFrames.toFloat())
 
     for (stage in activeStages)
-        if (stage.style.behavior == PageBehavior.SCROLL)
+        if (stage.style.behavior == SCROLL)
             stageImages[stage] = stageImages.getValue(stage).copy(elasticScaling = elasticScaling)
 }
 
@@ -323,8 +326,8 @@ private fun getStageFrames(
     stage: Stage
 ): Y =
     when (stage.style.behavior) {
-        PageBehavior.CARD -> getCardFrames(pageTopStages, pageBotStages, stage).toFloat().toY()
-        PageBehavior.SCROLL -> getScrollFrames(stageLayouts, stage)
+        CARD -> getCardFrames(pageTopStages, pageBotStages, stage).toFloat().toY()
+        SCROLL -> getScrollFrames(stageLayouts, stage)
     }
 
 

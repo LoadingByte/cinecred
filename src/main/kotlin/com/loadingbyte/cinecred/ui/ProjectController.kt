@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.drawer.draw
+import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.*
@@ -219,7 +219,7 @@ class ProjectController(
             val project = Project(
                 styling, stylingCtx, pages.toImmutableList(), runtimeGroups.toImmutableList()
             )
-            val drawnPages = draw(project)
+            val drawnPages = drawPages(project)
 
             SwingUtilities.invokeLater {
                 creditsFileReadingLog = log

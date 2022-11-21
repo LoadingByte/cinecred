@@ -3,5 +3,5 @@
 --java-options "@JAVA_OPTIONS@"
 --app-version @VERSION@
 --description "@DESCRIPTION@"
---vendor "@VENDOR"
+--vendor "@VENDOR@"
 --copyright "Copyright (C) 2022 @VENDOR@, licensed under the GPLv3"

@@ -148,7 +148,7 @@ class VideoWriter(
         if (outPixelFormat != inPixelFormat) {
             inFrame = allocFrame(inPixelFormat)
             swsCtx = sws_getContext(
-                width, height, inPixelFormat, width, height, outPixelFormat, SWS_BICUBIC,
+                width, height, inPixelFormat, width, height, outPixelFormat, 0,
                 null, null, null as DoublePointer?
             ).throwIfNull("delivery.ffmpeg.getConverterError")
         }

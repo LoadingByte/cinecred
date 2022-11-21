@@ -80,13 +80,13 @@ private fun migrate(rawStyling: RawStyling) {
     for (letterStyle in rawStyling.letterStyles) {
         val ul = letterStyle["underline"] == true
         val st = letterStyle["strikethrough"] == true
-        if (ul || st) {
-            @Suppress("UNCHECKED_CAST")
-            val deco = letterStyle.computeIfAbsent("decorations") { mutableListOf<Any>() } as MutableList<Any>
+        if (ul || st) letterStyle.compute("decorations") { _, oldDeco ->
+            val deco = ArrayList(oldDeco as List<*>? ?: emptyList())
             if (ul)
                 deco.add(mapOf("preset" to "UNDERLINE"))
             if (st)
                 deco.add(mapOf("preset" to "STRIKETHROUGH"))
+            deco
         }
     }
 

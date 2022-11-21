@@ -52,10 +52,10 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     var zoom = 1f
         set(value) {
             val newZoom = value.coerceIn(1f, maxZoom)
-            if (zoom != newZoom) {
+            if (field != newZoom) {
                 field = newZoom
                 for (listener in zoomListeners)
-                    listener(zoom)
+                    listener(newZoom)
                 coerceViewportAndCalibrateScrollbars()
                 // Immediately repaint a scaled version of the old materialized image
                 // while we wait for the new materialized image.
@@ -159,14 +159,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
         set(value) {
             field = value.coerceIn(minViewportCenterX, maxViewportCenterX)
             disableScrollbarListeners = true
-            xScrollbar.model.value = ((value - minViewportCenterX) * SCROLLBAR_MULT).roundToInt()
+            xScrollbar.model.value = ((field - minViewportCenterX) * SCROLLBAR_MULT).roundToInt()
             disableScrollbarListeners = false
         }
     private var viewportCenterY = 0f
         set(value) {
             field = value.coerceIn(minViewportCenterY, maxViewportCenterY)
             disableScrollbarListeners = true
-            yScrollbar.model.value = ((value - minViewportCenterY) * SCROLLBAR_MULT).roundToInt()
+            yScrollbar.model.value = ((field - minViewportCenterY) * SCROLLBAR_MULT).roundToInt()
             disableScrollbarListeners = false
         }
 
@@ -196,8 +196,9 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             xScrollbar.isEnabled = false
             yScrollbar.isEnabled = false
         } else {
-            viewportCenterX = viewportCenterX.coerceIn(minViewportCenterX, maxViewportCenterX)
-            viewportCenterY = viewportCenterY.coerceIn(minViewportCenterY, maxViewportCenterY)
+            // Setters do the coercion:
+            viewportCenterX = viewportCenterX
+            viewportCenterY = viewportCenterY
 
             disableScrollbarListeners = true
             xScrollbar.model.apply {
@@ -216,6 +217,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     }
 
     private fun rematerialize() {
+        // Capture these variables.
         val image = this.image
         val viewportCenterX = this.viewportCenterX
         val viewportCenterY = this.viewportCenterY
@@ -268,14 +270,13 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             layers: List<Layer>, onFinish: (BufferedImage) -> Unit
         ) {
             jobSlot.submit {
-                // Use max(1, ...) to ensure that the raster image width doesn't drop to 0.
+                // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
                 val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
                 val matHeight = max(1, (physicalImageScaling * image.height.resolve()).roundToInt())
-                val materialized = gCfg.createCompatibleImage(matWidth, matHeight).withG2 { g2 ->
+                val materialized = gCfg.createCompatibleImage(matWidth, matHeight, Transparency.OPAQUE).withG2 { g2 ->
                     g2.setHighQuality()
                     // Paint a scaled version of the deferred image onto the raster image.
-                    val scaledImage = image.copy(universeScaling = physicalImageScaling)
-                    scaledImage.materialize(g2, layers)
+                    image.copy(universeScaling = physicalImageScaling).materialize(g2, layers)
                 }
 
                 onFinish(materialized)
@@ -299,12 +300,12 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                 val materializedViewportWidth = (viewportWidth / image.width) * materialized.width
                 // Find the amount the materialized image would need to be scaled
                 // so that it can be painted onto this canvas.
-                val extraScaling = width / materializedViewportWidth.toDouble()
+                val extraScaling = width / materializedViewportWidth
 
                 g.withNewG2 { g2 ->
                     g2.translate(
-                        -((viewportCenterX - minViewportCenterX) * imageScaling).toDouble(),
-                        -((viewportCenterY - minViewportCenterY) * imageScaling).toDouble()
+                        -((viewportCenterX - minViewportCenterX) * imageScaling),
+                        -((viewportCenterY - minViewportCenterY) * imageScaling)
                     )
                     if (abs(extraScaling - 1) > 0.001) {
                         // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel
@@ -323,7 +324,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                             RenderingHints.KEY_INTERPOLATION,
                             RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
                         )
-                        g2.scale(extraScaling, extraScaling)
+                        g2.scale(extraScaling)
                     }
                     g2.drawImage(materialized, 0, 0, null)
                 }

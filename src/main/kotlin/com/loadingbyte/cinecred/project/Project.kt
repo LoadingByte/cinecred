@@ -195,6 +195,10 @@ enum class LineJoin { MITER, ROUND, BEVEL }
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 
+// The following classes are deliberately not data classes to improve the speed of equality and hash code operations,
+// which is important as the classes are often used as map keys.
+
+
 class Page(
     val stages: ImmutableList<Stage>,
     val alignBodyColsGroups: ImmutableList<ImmutableList<Block>>,

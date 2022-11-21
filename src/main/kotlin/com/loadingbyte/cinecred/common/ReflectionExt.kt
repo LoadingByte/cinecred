@@ -163,7 +163,7 @@ private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {
         val featCount = table.getShort(featListOffset).toUShort().toInt()
         for (idx in 0 until featCount) {
             val c = table.getInt(featListOffset + 2 + idx * 6)
-            out.add(String(intArrayOf(c ushr 24, (c ushr 16) and 0xff, (c ushr 8) and 0xff, c and 0xff), 0, 4))
+            out.add(String(intArrayOf(c ushr 24, (c ushr 16) and 0xFF, (c ushr 8) and 0xFF, c and 0xFF), 0, 4))
         }
     }
 }

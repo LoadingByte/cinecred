@@ -116,9 +116,10 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
             if (leafUserObj.obj === oldElement) {
                 leafUserObj.obj = newElement
-                break
+                return
             }
         }
+        throw IllegalArgumentException("Old element not found.")
     }
 
     fun removeSelectedListElement(selectNext: Boolean = false): Boolean {

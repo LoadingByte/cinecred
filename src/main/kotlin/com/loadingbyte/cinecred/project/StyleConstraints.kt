@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
+import com.loadingbyte.cinecred.project.BlockOrientation.*
 import com.loadingbyte.cinecred.project.BodyCellConform.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
@@ -71,8 +72,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     },
     DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
         when (style.blockOrientation) {
-            BlockOrientation.VERTICAL -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
-            BlockOrientation.HORIZONTAL -> when {
+            VERTICAL -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+            HORIZONTAL -> when {
                 !style.hasHead && !style.hasTail -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
                 style.hasHead && !style.hasTail -> sortedSetOf(
                     OVERALL_CENTER,
@@ -269,11 +270,13 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, idx, cst.severity, l10n(key, restr))
                         }
                     }
-                is DynChoiceConstr<S, *> ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, subject ->
-                        if (subject !in cst.choices(ctx, styling, style))
+                is DynChoiceConstr<S, *> -> {
+                    val choices = cst.choices(ctx, styling, style)
+                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                        if (value !in choices)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.dynChoice"))
                     }
+                }
                 is ColorConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, color ->
                         if (!cst.allowAlpha && color.alpha != 255)
@@ -316,12 +319,12 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, setting, -1, cst.severity, null)
                     }
                 is MinSizeConstr ->
-                    for (setting in cst.settings)
-                        if (setting !in ignoreSettings)
-                            if (setting.extractSubjects(style).size < cst.minSize) {
-                                val msg = l10n("project.styling.constr.minSize", cst.minSize)
-                                log(rootStyle, style, setting, -1, cst.severity, msg)
-                            }
+                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                        if (st.extractSubjects(style).size < cst.minSize) {
+                            val msg = l10n("project.styling.constr.minSize", cst.minSize)
+                            log(rootStyle, style, st, -1, cst.severity, msg)
+                        }
+                    }
             }
 
         for (setting in getStyleSettings(style.javaClass))
@@ -338,20 +341,20 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     return violations
 }
 
-private inline fun <S : Style, SUBJ : Any> forEachRelevantSetting(
-    constraint: StyleConstraint<S, StyleSetting<S, SUBJ>>,
+private inline fun <S : Style, SS : StyleSetting<S, SUBJ>, SUBJ : Any> forEachRelevantSetting(
+    constraint: StyleConstraint<S, SS>,
     ignoreSettings: Set<StyleSetting<*, *>>,
-    action: (StyleSetting<S, SUBJ>) -> Unit
+    action: (SS) -> Unit
 ) {
     for (setting in constraint.settings)
         if (setting !in ignoreSettings)
             action(setting)
 }
 
-private inline fun <S : Style, SUBJ : Any> S.forEachRelevantSubject(
-    constraint: StyleConstraint<S, StyleSetting<S, SUBJ>>,
+private inline fun <S : Style, SS : StyleSetting<S, SUBJ>, SUBJ : Any> S.forEachRelevantSubject(
+    constraint: StyleConstraint<S, SS>,
     ignoreSettings: Set<StyleSetting<*, *>>,
-    action: (StyleSetting<S, SUBJ>, idx: Int, subject: SUBJ) -> Unit
+    action: (SS, idx: Int, value: SUBJ) -> Unit
 ) {
     for (setting in constraint.settings)
         if (setting !in ignoreSettings)

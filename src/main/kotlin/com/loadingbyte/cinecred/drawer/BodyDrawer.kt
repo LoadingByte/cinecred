@@ -1,8 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.DeferredImage
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.common.Y
 import com.loadingbyte.cinecred.common.Y.Companion.plus
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
@@ -143,7 +142,7 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
             cols
         }
         GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
-            val numRows = (list.size + (numCols - 1)) / numCols  // equivalent to "ceil(list.size / numCols)"
+            val numRows = ceilDiv(list.size, numCols)
             List(min(numCols, list.size)) { colIdx ->
                 list.subList(
                     (colIdx * numRows).coerceAtMost(list.size),

@@ -9,7 +9,6 @@ import com.loadingbyte.cinecred.project.BodyCellConform.*
 import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
-import com.loadingbyte.cinecred.project.TextDecorationPreset.OFF
 
 
 @Suppress("UNCHECKED_CAST")
@@ -135,7 +134,7 @@ private fun supportsNot(ctx: StylingContext, style: LetterStyle, feat: String): 
 private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDecoration>> = listOf(
     StyleEffectivitySpec(
         TextDecoration::offsetPx.st(), TextDecoration::thicknessPx.st(),
-        isAlmostEffective = { _, style -> style.preset != OFF }
+        isAlmostEffective = { _, style -> style.preset != TextDecorationPreset.OFF }
     ),
     StyleEffectivitySpec(
         TextDecoration::clearingJoin.st(),

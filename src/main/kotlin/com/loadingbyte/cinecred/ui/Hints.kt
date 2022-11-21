@@ -197,8 +197,7 @@ private class TextBubbleBorder(
             Side.RIGHT -> x2 -= pointerLength
             Side.TOP -> y1 += pointerLength
             Side.BOTTOM -> y2 -= pointerLength
-            Side.NONE -> {
-            }
+            Side.NONE -> {}
         }
         val xm = (x1 + x2) / 2f
         val ym = (y1 + y2) / 2f

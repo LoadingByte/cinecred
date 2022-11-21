@@ -192,7 +192,7 @@ private class CreditsReader(
 
     fun concludePage() {
         // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
-        // when they don't sit next to another scroll stages and when they are not alone on a page.
+        // when they don't sit next to another scroll stage and when they are not alone on a page.
         // We remove the empty scroll stages that don't make sense.
         if (pageStages.isNotEmpty() && !(pageStages.size == 1 && pageStages[0].segments.isEmpty())) {
             var idx = 0
@@ -439,13 +439,9 @@ private class CreditsReader(
         }
 
         // Get the body element, which may either be a styled string or a (optionally scaled) picture.
-        // If the last block's conclusion is marked, use the current content style and not the last block's
-        // content style, which no longer applies to the newly read body element.
-        val effectiveBlockStyle = if (isBlockConclusionMarked) contentStyle else blockStyle
-        val bodyElem = getBodyElement("body", effectiveBlockStyle?.bodyLetterStyleName, noPic = false)
+        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName, noPic = false)
 
         // Get the head and tail, which may only be styled strings.
-        // Because a non-empty head or tail always starts a new block, we can use the current content style.
         val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, noPic = true) as BodyElement.Str?)?.str
         val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, noPic = true) as BodyElement.Str?)?.str
 

@@ -32,7 +32,7 @@ object RecursiveFileWatcher {
     private var pollingTick: Long = 0
 
     init {
-        Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "FileWatcher-Poll").apply { isDaemon = true } }
+        Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "FileWatcher-Poller").apply { isDaemon = true } }
             .scheduleAtFixedRate(::poll, 1, 1, TimeUnit.SECONDS)
 
         Thread({

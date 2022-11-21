@@ -72,8 +72,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private fun tryOpenProject(projectDir: Path): Boolean {
         if (blockOpening)
             return false
-        // Don't use isDirectory() for this check because that would also wrongly flag folders not yet created.
-        if (projectDir.isRegularFile()) {
+
+        if (!projectDir.isDirectory()) {
             welcomeView.display()
             SwingUtilities.invokeLater { welcomeView.showNotADirMessage(projectDir) }
             return false

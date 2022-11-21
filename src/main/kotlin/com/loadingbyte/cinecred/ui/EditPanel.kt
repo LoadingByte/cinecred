@@ -120,10 +120,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
     }
 
-    private val runtimeLabel1 = JLabel().apply {
-        text = l10n("ui.edit.runtime")
-    }
-    private val runtimeLabel2 = JLabel().apply {
+    private val runtimeLabel1 = JLabel(l10n("ui.edit.runtime"))
+    private val runtimeLabel2 = JLabel("\u2013").apply {
         putClientProperty(STYLE_CLASS, "monospaced")
     }
 

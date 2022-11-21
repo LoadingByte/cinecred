@@ -83,7 +83,7 @@ class StyleForm<S : Style>(
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<ImmutableList<E>> {
-        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
+        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, E>>()
@@ -352,8 +352,8 @@ class StyleForm<S : Style>(
             return found
         }
 
-        private fun l10nEnum(enumElem: Enum<*>) =
-            l10n("project.${enumElem.javaClass.simpleName}.${enumElem.name}")
+        private fun l10nEnum(enumConst: Enum<*>) =
+            l10n("project.${enumConst.javaClass.simpleName}.${enumConst.name}")
 
     }
 

@@ -5,7 +5,6 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.*
-import kotlin.math.ceil
 
 
 val FPS.supportsDropFrameTimecode: Boolean
@@ -17,7 +16,7 @@ private val CLOCK_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale
 
 fun formatTimecode(fps: FPS, format: TimecodeFormat, frames: Int): String = when (format) {
     TimecodeFormat.SMPTE_NON_DROP_FRAME -> {
-        val intFPS = ceil(fps.frac).toInt()
+        val intFPS = ceilDiv(fps.numerator, fps.denominator)
         formatSmpteNonDropFrame(intFPS, ':', frames)
     }
     TimecodeFormat.SMPTE_DROP_FRAME -> {
@@ -54,7 +53,7 @@ private fun formatSmpteNonDropFrame(intFPS: Int, frameSep: Char, frames: Int): S
 
 fun parseTimecode(fps: FPS, format: TimecodeFormat, timecode: String): Int = when (format) {
     TimecodeFormat.SMPTE_NON_DROP_FRAME -> {
-        val intFPS = ceil(fps.frac).toInt()
+        val intFPS = ceilDiv(fps.numerator, fps.denominator)
         parseSmpteNonDropFrame(intFPS, ':', timecode).frames
     }
     TimecodeFormat.SMPTE_DROP_FRAME -> {
@@ -86,7 +85,7 @@ private fun roundingDiv(a: Long, b: Long): Long = (a + b / 2) / b
 private val SMPTE_REGEX_COLON = Regex("(\\d+):(\\d+):(\\d+):(\\d+)")
 private val SMPTE_REGEX_SEMICOLON = Regex("(\\d+):(\\d+):(\\d+);(\\d+)")
 
-private class SmpteParsingResult(val frames: Int, val h: Int, val m: Int, val s: Int, val f: Int)
+private class SmpteParsingResult(val frames: Int, val h: Int, val m: Int, val f: Int)
 
 private fun parseSmpteNonDropFrame(intFPS: Int, frameSep: Char, timecode: String): SmpteParsingResult {
     val regex = when (frameSep) {
@@ -104,5 +103,5 @@ private fun parseSmpteNonDropFrame(intFPS: Int, frameSep: Char, timecode: String
     require(s in 0 until 60)
     require(f in 0 until intFPS)
     val frames = f + intFPS * (s + 60 * (m + 60 * h))
-    return SmpteParsingResult(frames, h, m, s, f)
+    return SmpteParsingResult(frames, h, m, f)
 }

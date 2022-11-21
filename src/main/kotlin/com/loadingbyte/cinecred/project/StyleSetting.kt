@@ -46,32 +46,46 @@ fun <S : Style> newStyle(styleClass: Class<S>, settingValues: List<*>): S =
         .newInstance(*settingValues.toTypedArray())
 
 
-sealed class StyleSetting<S : Style, SUBJ : Any>(val styleClass: Class<S>, val name: String, isNested: Boolean) {
+sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name: String, isNested: Boolean) {
+
+    /** The upmost class/interface in the hierarchy which first defines the setting. */
+    val declaringClass: Class<*> = findDeclaringClass(styleClass)!!
 
     val type: Class<SUBJ>
 
     init {
-        var baseType = styleClass.getDeclaredField(name).genericType
+        var baseType = styleClass.getGetter(name).genericReturnType
         if (isNested)
             baseType = (baseType as ParameterizedType).actualTypeArguments[0]
         @Suppress("UNCHECKED_CAST")
         type = (if (baseType is ParameterizedType) baseType.rawType else baseType) as Class<SUBJ>
     }
 
+    private fun findDeclaringClass(curClass: Class<*>): Class<*>? {
+        for (inter in curClass.interfaces)
+            findDeclaringClass(inter)?.let { return it }
+        return try {
+            curClass.getGetter(name)
+            curClass
+        } catch (_: NoSuchMethodException) {
+            null
+        }
+    }
+
     abstract fun get(style: S): Any
     abstract fun extractSubjects(style: S): List<SUBJ>
 
     override fun equals(other: Any?) =
-        this === other || other is StyleSetting<*, *> && styleClass == other.styleClass && name == other.name
+        this === other || other is StyleSetting<*, *> && declaringClass == other.declaringClass && name == other.name
 
     override fun hashCode(): Int {
-        var result = styleClass.hashCode()
+        var result = declaringClass.hashCode()
         result = 31 * result + name.hashCode()
         return result
     }
 
     override fun toString() =
-        "StyleSetting(${styleClass.simpleName}.$name: ${type.simpleName})"
+        "StyleSetting(${declaringClass.simpleName}.$name: ${type.simpleName})"
 
 }
 

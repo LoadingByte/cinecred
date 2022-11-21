@@ -51,7 +51,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // styles, so that we don't have to repeatedly regenerate these three things.
     private var styling: Styling? = null
     private var constraintViolations: List<ConstraintViolation> = emptyList()
-    private var unusedStyles: Set<Style> = emptySet()
+    private var unusedStyles: Set<NamedStyle> = emptySet()
 
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
@@ -267,7 +267,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         this.styling = styling
 
         stylingTree.setSingleton(styling.global)
-        stylingTree.replaceAllListElements(styling.pageStyles + styling.contentStyles + styling.letterStyles)
+        stylingTree.replaceAllListElements(NamedStyle.CLASSES.flatMap { styling.getNamedStyles(it) })
         refreshConstraintViolations()
 
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
@@ -365,15 +365,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun updateUnusedStyles(project: Project?) {
-        val unusedStyles = Collections.newSetFromMap(IdentityHashMap<Style, Boolean>())
+        val unusedStyles = Collections.newSetFromMap(IdentityHashMap<NamedStyle, Boolean>())
 
         if (project != null) {
             val styling = project.styling
 
             // Mark all styles as unused. Next, we will gradually remove all styles which are actually used.
-            unusedStyles.addAll(styling.pageStyles)
-            unusedStyles.addAll(styling.contentStyles)
-            unusedStyles.addAll(styling.letterStyles)
+            for (styleClass in NamedStyle.CLASSES)
+                unusedStyles.addAll(styling.getNamedStyles(styleClass))
 
             for (contentStyle in styling.contentStyles) {
                 // Remove the content style's body letter style.

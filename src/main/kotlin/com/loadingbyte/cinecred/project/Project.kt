@@ -20,10 +20,28 @@ data class Styling constructor(
     val pageStyles: ImmutableList<PageStyle>,
     val contentStyles: ImmutableList<ContentStyle>,
     val letterStyles: ImmutableList<LetterStyle>
-)
+) {
+    @Suppress("UNCHECKED_CAST")
+    fun <S : NamedStyle> getNamedStyles(styleClass: Class<S>): ImmutableList<S> = when (styleClass) {
+        PageStyle::class.java -> pageStyles
+        ContentStyle::class.java -> contentStyles
+        LetterStyle::class.java -> letterStyles
+        else -> throw IllegalArgumentException("${styleClass.name} is not a named style class.")
+    } as ImmutableList<S>
+}
 
 
-sealed class Style
+sealed interface Style
+
+
+sealed interface NamedStyle : Style {
+    val name: String
+
+    companion object {
+        val CLASSES: List<Class<out NamedStyle>> =
+            listOf(PageStyle::class.java, ContentStyle::class.java, LetterStyle::class.java)
+    }
+}
 
 
 data class Global(
@@ -36,14 +54,14 @@ data class Global(
     val unitVGapPx: Float,
     val locale: Locale,
     val uppercaseExceptions: ImmutableList<String>
-) : Style()
+) : Style
 
 
 enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, CLOCK, FRAMES }
 
 
 data class PageStyle(
-    val name: String,
+    override val name: String,
     val afterwardSlugFrames: Int,
     val behavior: PageBehavior,
     val cardDurationFrames: Int,
@@ -52,14 +70,14 @@ data class PageStyle(
     val scrollMeltWithPrev: Boolean,
     val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Float
-) : Style()
+) : NamedStyle
 
 
 enum class PageBehavior { CARD, SCROLL }
 
 
 data class ContentStyle(
-    val name: String,
+    override val name: String,
     val blockOrientation: BlockOrientation,
     val spineAttachment: SpineAttachment,
     val vMarginPx: Float,
@@ -94,7 +112,7 @@ data class ContentStyle(
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Float
-) : Style()
+) : NamedStyle
 
 
 enum class BlockOrientation { HORIZONTAL, VERTICAL }
@@ -118,7 +136,7 @@ enum class FlowDirection { L2R, R2L }
 
 
 data class LetterStyle(
-    val name: String,
+    override val name: String,
     val fontName: String,
     val heightPx: Int,
     val foreground: Color,
@@ -144,7 +162,7 @@ data class LetterStyle(
     val backgroundWidenRightPx: Float,
     val backgroundWidenTopPx: Float,
     val backgroundWidenBottomPx: Float
-) : Style()
+) : NamedStyle
 
 
 enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }
@@ -167,7 +185,7 @@ data class TextDecoration(
     val clearingPx: Opt<Float>,
     val clearingJoin: LineJoin,
     val dashPatternPx: ImmutableList<Float>
-) : Style()
+) : Style
 
 
 enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, OFF }

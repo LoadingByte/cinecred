@@ -331,12 +331,9 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     }
 
     verifyStyle(styling.global, styling.global)
-    for (style in styling.pageStyles)
-        verifyStyle(style, style)
-    for (style in styling.contentStyles)
-        verifyStyle(style, style)
-    for (style in styling.letterStyles)
-        verifyStyle(style, style)
+    for (styleClass in NamedStyle.CLASSES)
+        for (style in styling.getNamedStyles(styleClass))
+            verifyStyle(style, style)
 
     return violations
 }

@@ -3,42 +3,41 @@ package com.loadingbyte.cinecred.project
 
 fun Styling.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx: StylingContext, other: Styling): Boolean =
     global.equalsIgnoreIneffectiveSettings(ctx, other.global) &&
-            pageStyles.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, other.pageStyles, PageStyle::name) &&
-            contentStyles.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, other.contentStyles, ContentStyle::name) &&
-            letterStyles.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, other.letterStyles, LetterStyle::name)
+            NamedStyle.CLASSES.all { sClass ->
+                getNamedStyles(sClass).equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, other.getNamedStyles(sClass))
+            }
 
 
-private inline fun <S : Style> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettings(
+private fun <S : NamedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettings(
     ctx: StylingContext,
-    other: List<S>,
-    crossinline getName: (S) -> String
+    other: List<S>
 ): Boolean {
     // Ensure that both lists have the same number of styles. This condition will be assumed by the following code.
     if (size != other.size)
         return false
 
     // Sort both lists of styles by style name.
-    val comp = Comparator<S> { s1, s2 -> String.CASE_INSENSITIVE_ORDER.compare(getName(s1), getName(s2)) }
+    val comp = Comparator<S> { s1, s2 -> String.CASE_INSENSITIVE_ORDER.compare(s1.name, s2.name) }
     val styles1 = sortedWith(comp)
     val styles2 = other.sortedWith(comp)
 
     // Ensure that both lists contain the same style names with the same multiplicities. This condition will be assumed
     // by the following duplicate-related code.
     for (idx in styles1.indices)
-        if (getName(styles1[idx]) != getName(styles2[idx]))
+        if (styles1[idx].name != styles2[idx].name)
             return false
 
     // Iterate through all pairs of styles...
     var idx = 0
     while (idx < styles1.size) {
-        if (idx < styles1.lastIndex && getName(styles1[idx]) == getName(styles1[idx + 1])) {
+        if (idx < styles1.lastIndex && styles1[idx].name == styles1[idx + 1].name) {
             // If we're at the first style of a series of styles with the same name, run a duplicate-aware procedure.
             // First determine the amount of styles which use the same name. Collect all the same-name styles from
             // styles2 in a mutable list. Then for each same-name style from styles1, try to find and remove the
             // equivalent same-name style from styles2. If at one point no match is available anymore, the two style
             // lists are not equal.
-            val dupName = getName(styles1[idx])
-            val endIdx = styles1.endOfRange(startIdx = idx) { getName(it) == dupName }
+            val dupName = styles1[idx].name
+            val endIdx = styles1.endOfRange(startIdx = idx) { it.name == dupName }
             val dupStyles2 = styles2.subList(idx, endIdx).toMutableList()
             while (idx < endIdx) {
                 val s1 = styles1[idx]

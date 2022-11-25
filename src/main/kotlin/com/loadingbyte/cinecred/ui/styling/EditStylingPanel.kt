@@ -65,21 +65,21 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
             PRESET_GLOBAL, l10n("ui.styling.globalStyling"), GLOBE_ICON,
-            onSelect = ::openGlobal
+            onSelect = { openGlobal(it, globalForm, "Global") }
         )
         stylingTree.addListType(
             PageStyle::class.java, l10n("ui.styling.pageStyles"), FILMSTRIP_ICON,
-            onSelect = ::openPageStyle,
+            onSelect = { openNamedStyle(it, pageStyleForm, "PageStyle") },
             objToString = PageStyle::name
         )
         stylingTree.addListType(
             ContentStyle::class.java, l10n("ui.styling.contentStyles"), LAYOUT_ICON,
-            onSelect = ::openContentStyle,
+            onSelect = { openNamedStyle(it, contentStyleForm, "ContentStyle") },
             objToString = ContentStyle::name
         )
         stylingTree.addListType(
             LetterStyle::class.java, l10n("ui.styling.letterStyles"), LETTERS_ICON,
-            onSelect = ::openLetterStyle,
+            onSelect = { openNamedStyle(it, letterStyleForm, "LetterStyle") },
             objToString = LetterStyle::name
         )
 
@@ -157,20 +157,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // Use BorderLayout to maximize the size of the split pane.
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
-
-        globalForm.changeListeners += { widget ->
-            stylingTree.setSingleton(globalForm.save())
-            onChange(widget)
-        }
-        pageStyleForm.changeListeners += { widget ->
-            stylingTree.updateSelectedListElement(pageStyleForm.save())
-            onChange(widget)
-        }
-        contentStyleForm.changeListeners += { widget ->
-            stylingTree.updateSelectedListElement(contentStyleForm.save())
-            onChange(widget)
-        }
-        // Note: The change listener for the letterStyleForm is managed by openLetterStyle().
     }
 
     private fun duplicateStyle() {
@@ -193,66 +179,34 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         rightPanelCards.show(rightPanel, "Blank")
     }
 
-    private fun openGlobal(global: Global) {
-        globalForm.open(global)
-        postOpenForm("Global", globalForm)
-    }
-
-    private fun openPageStyle(style: PageStyle) {
-        pageStyleForm.open(style)
-        postOpenForm("PageStyle", pageStyleForm)
-    }
-
-    private fun openContentStyle(style: ContentStyle) {
-        contentStyleForm.open(style)
-        postOpenForm("ContentStyle", contentStyleForm)
-    }
-
-    private fun openLetterStyle(style: LetterStyle) {
-        class TrackedRef(var contentStyle: ContentStyle, val body: Boolean, val head: Boolean, val tail: Boolean)
-
-        // If the letter style has a unique name, we want to keep all content styles which reference that name in sync
-        // with changes to the name. First, record all these referencing content styles with information on which of
-        // their settings reference the name.
-        val trackedRefs = mutableListOf<TrackedRef>()
-        if (style !in unusedStyles)
-            for (contentStyle in stylingTree.getList(ContentStyle::class.java)) {
-                val body = contentStyle.bodyLetterStyleName == style.name
-                val head = contentStyle.headLetterStyleName == style.name
-                val tail = contentStyle.tailLetterStyleName == style.name
-                if (body || head || tail)
-                    trackedRefs.add(TrackedRef(contentStyle, body, head, tail))
-            }
-
-        var oldName = style.name
-        letterStyleForm.open(style)
-        letterStyleForm.changeListeners.clear()
-        letterStyleForm.changeListeners += { widget ->
-            val newStyle = letterStyleForm.save()
-            stylingTree.updateSelectedListElement(newStyle)
-
-            // If the letter style changed its name, update all previously recorded references to that name.
-            val newName = newStyle.name
-            if (oldName != newName)
-                for (trackedRef in trackedRefs) {
-                    var newContentStyle = trackedRef.contentStyle
-                    if (trackedRef.body)
-                        newContentStyle = newContentStyle.copy(bodyLetterStyleName = newName)
-                    if (trackedRef.head)
-                        newContentStyle = newContentStyle.copy(headLetterStyleName = newName)
-                    if (trackedRef.tail)
-                        newContentStyle = newContentStyle.copy(tailLetterStyleName = newName)
-                    stylingTree.updateListElement(trackedRef.contentStyle, newContentStyle)
-                    trackedRef.contentStyle = newContentStyle
-                }
-            oldName = newName
-
+    private fun openGlobal(style: Global, form: StyleForm<Global>, cardName: String) {
+        // Strictly speaking, we wouldn't need to recreate the change listener each time the form is opened, but we do
+        // it here nevertheless for symmetry with the openNamedStyle() method.
+        form.changeListeners.clear()
+        form.changeListeners.add { widget ->
+            val newStyle = form.save()
+            stylingTree.setSingleton(newStyle)
             onChange(widget)
         }
-        postOpenForm("LetterStyle", letterStyleForm)
+        openStyle(style, form, cardName)
     }
 
-    private fun postOpenForm(cardName: String, form: StyleForm<*>) {
+    private fun <S : NamedStyle> openNamedStyle(style: S, form: StyleForm<S>, cardName: String) {
+        val consistencyRetainer = StylingConsistencyRetainer(styling!!, unusedStyles, style)
+        form.changeListeners.clear()
+        form.changeListeners.add { widget ->
+            val newStyle = form.save()
+            stylingTree.updateSelectedListElement(newStyle)
+            val updates = consistencyRetainer.ensureConsistencyAfterEdit(newStyle)
+            updates.forEach(stylingTree::updateListElement)
+            updates[newStyle]?.let { updatedNewStyle -> form.open(newStyle.javaClass.cast(updatedNewStyle)) }
+            onChange(widget)
+        }
+        openStyle(style, form, cardName)
+    }
+
+    private fun <S : Style> openStyle(style: S, form: StyleForm<S>, cardName: String) {
+        form.open(style)
         openedForm = form
         openCounter++
         adjustOpenedForm()
@@ -334,6 +288,12 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
             is DynChoiceConstr<S, *> -> {
                 val choices = constr.choices(ctrl.stylingCtx, styling, curStyle).toList()
+                for (setting in constr.settings)
+                    curForm.setChoices(setting, choices)
+            }
+            is StyleNameConstr<S, *> -> {
+                val choiceSet = constr.choices(ctrl.stylingCtx, styling, curStyle).mapTo(TreeSet(), NamedStyle::name)
+                val choices = choiceSet.toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)
             }

@@ -84,6 +84,7 @@ class StyleForm<S : Style>(
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<ImmutableList<E>> {
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
+        val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, E>>()
@@ -93,7 +94,7 @@ class StyleForm<S : Style>(
 
         if (setting.type == String::class.java) {
             val widget = when {
-                dynChoiceConstr != null -> MultiComboBoxWidget(
+                dynChoiceConstr != null || styleNameConstr != null -> MultiComboBoxWidget(
                     emptyList(), naturalOrder(), widthSpec = widthSpec, inconsistent = true,
                     noItemsMessage = choiceWidgetSpec?.getNoItemsMsg?.invoke()
                 )
@@ -119,6 +120,7 @@ class StyleForm<S : Style>(
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, V>>()
+        val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
@@ -148,7 +150,7 @@ class StyleForm<S : Style>(
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {
-                dynChoiceConstr != null -> InconsistentComboBoxWidget(
+                dynChoiceConstr != null || styleNameConstr != null -> InconsistentComboBoxWidget(
                     String::class.java, emptyList(), widthSpec = widthSpec
                 )
                 fontNameConstr != null -> FontChooserWidget(widthSpec)

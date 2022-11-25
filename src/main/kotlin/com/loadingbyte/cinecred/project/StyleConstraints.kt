@@ -90,10 +90,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     },
     FloatConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0f),
-    DynChoiceConstr(
+    StyleNameConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(),
-        choices = { _, styling, _ -> styling.letterStyles.mapTo(TreeSet(), LetterStyle::name) }
+        styleClass = LetterStyle::class.java,
+        choices = { _, styling, _ -> styling.letterStyles }
     ),
     DynChoiceConstr(WARN, ContentStyle::gridCellConform.st()) { _, _, style ->
         if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(NOTHING, HEIGHT, SQUARE)
@@ -176,6 +177,14 @@ class DynChoiceConstr<S : Style, SUBJ : Any>(
     vararg settings: StyleSetting<S, SUBJ>,
     val choices: (StylingContext, Styling, S) -> SortedSet<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
+
+
+class StyleNameConstr<S : Style, R : NamedStyle>(
+    val severity: Severity,
+    vararg settings: StyleSetting<S, String>,
+    val styleClass: Class<R>,
+    val choices: (StylingContext, Styling, S) -> List<R>
+) : StyleConstraint<S, StyleSetting<S, String>>(*settings)
 
 
 class ColorConstr<S : Style>(
@@ -275,6 +284,20 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
                         if (value !in choices)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.dynChoice"))
+                    }
+                }
+                is StyleNameConstr<S, *> -> {
+                    val choices = cst.choices(ctx, styling, style)
+                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                        val refs = st.extractSubjects(style)
+                        refs.forEachIndexed { idx, ref ->
+                            if (choices.none { choice -> choice.name == ref }) {
+                                val msg =
+                                    if (st is ListStyleSetting) l10n("project.styling.constr.styles")
+                                    else l10n("project.styling.constr.style")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                        }
                     }
                 }
                 is ColorConstr ->

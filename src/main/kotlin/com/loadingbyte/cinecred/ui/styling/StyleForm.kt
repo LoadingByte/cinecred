@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.styling
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.requireIsInstance
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.ImmutableList
@@ -83,6 +84,7 @@ class StyleForm<S : Style>(
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<ImmutableList<E>> {
+        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, E>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
@@ -94,8 +96,9 @@ class StyleForm<S : Style>(
 
         if (setting.type == String::class.java) {
             val widget = when {
-                dynChoiceConstr != null || styleNameConstr != null -> MultiComboBoxWidget(
-                    emptyList(), naturalOrder(), widthSpec = widthSpec, inconsistent = true,
+                fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null -> MultiComboBoxWidget(
+                    items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
+                    naturalOrder(), widthSpec = widthSpec, inconsistent = true,
                     noItemsMessage = choiceWidgetSpec?.getNoItemsMsg?.invoke()
                 )
                 else -> TextListWidget(widthSpec)
@@ -119,6 +122,7 @@ class StyleForm<S : Style>(
     ): Widget<V> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
+        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, V>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, V>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
@@ -150,9 +154,12 @@ class StyleForm<S : Style>(
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
             String::class.java -> when {
-                dynChoiceConstr != null || styleNameConstr != null -> InconsistentComboBoxWidget(
-                    String::class.java, emptyList(), widthSpec = widthSpec
-                )
+                fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
+                    InconsistentComboBoxWidget(
+                        String::class.java,
+                        items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
+                        widthSpec = widthSpec
+                    )
                 fontNameConstr != null -> FontChooserWidget(widthSpec)
                 else -> TextWidget(widthSpec)
             }
@@ -167,10 +174,13 @@ class StyleForm<S : Style>(
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     toggleButtonGroupWidgetSpec != null -> makeEnumToggleButtonGroupWidget(
                         setting.type.asSubclass(Enum::class.java), toggleButtonGroupWidgetSpec.show,
+                        items = fixedChoiceConstr?.run { choices.toList() },
                         custIcons = toggleButtonGroupWidgetSpec.getIcon != null, inconsistent = dynChoiceConstr != null
                     )
-                    dynChoiceConstr != null -> InconsistentComboBoxWidget(
-                        setting.type, emptyList(), toString = { l10nEnum(it as Enum<*>) }, widthSpec
+                    fixedChoiceConstr != null || dynChoiceConstr != null -> InconsistentComboBoxWidget(
+                        setting.type,
+                        items = fixedChoiceConstr?.run { choices.toList() } ?: emptyList(),
+                        toString = { l10nEnum(it as Enum<*>) }, widthSpec
                     )
                     else -> ComboBoxWidget(
                         setting.type, setting.type.enumConstants.asList(), toString = { l10nEnum(it as Enum<*>) },
@@ -190,6 +200,7 @@ class StyleForm<S : Style>(
     private fun <V : Enum<*>> makeEnumToggleButtonGroupWidget(
         enumClass: Class<V>,
         show: ToggleButtonGroupWidgetSpec.Show,
+        items: List<Any>?,
         custIcons: Boolean,
         inconsistent: Boolean
     ): Widget<V> {
@@ -205,8 +216,10 @@ class StyleForm<S : Style>(
         }
         // @formatter:on
 
-        val items = if (inconsistent) emptyList() else enumClass.enumConstants.asList()
-        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip, inconsistent)
+        return ToggleButtonGroupWidget(
+            items?.requireIsInstance(enumClass) ?: if (inconsistent) emptyList() else enumClass.enumConstants.asList(),
+            toIcon, toLabel, toTooltip, inconsistent
+        )
     }
 
     private fun makeFormRow(name: String, widget: Widget<*>): FormRow {

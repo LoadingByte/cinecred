@@ -172,6 +172,13 @@ class FloatConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Float>>(setting)
 
 
+class FixedChoiceConstr<S : Style, SUBJ : Any>(
+    val severity: Severity,
+    vararg settings: StyleSetting<S, SUBJ>,
+    val choices: SortedSet<SUBJ>
+) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
+
+
 class DynChoiceConstr<S : Style, SUBJ : Any>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
@@ -280,11 +287,16 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, idx, cst.severity, l10n(key, restr))
                         }
                     }
+                is FixedChoiceConstr<S, *> ->
+                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                        if (value !in cst.choices)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
+                    }
                 is DynChoiceConstr<S, *> -> {
                     val choices = cst.choices(ctx, styling, style)
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
                         if (value !in choices)
-                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.dynChoice"))
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
                     }
                 }
                 is StyleNameConstr<S, *> -> {

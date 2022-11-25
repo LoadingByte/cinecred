@@ -76,7 +76,7 @@ class ProjectController(
             tryReloadAuxFile(projectFile)
 
         // Load the initial state of the styling from disk.
-        stylingHistory = StylingHistory(readStyling(stylingFile))
+        stylingHistory = StylingHistory(readStyling(stylingFile, stylingCtx))
 
         // Try to find a credits file.
         tryLocateCreditsFile()

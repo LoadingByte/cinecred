@@ -183,6 +183,7 @@ class StyleNameConstr<S : Style, R : NamedStyle>(
     val severity: Severity,
     vararg settings: StyleSetting<S, String>,
     val styleClass: Class<R>,
+    val clustering: Boolean = false,
     val choices: (StylingContext, Styling, S) -> List<R>
 ) : StyleConstraint<S, StyleSetting<S, String>>(*settings)
 
@@ -291,12 +292,35 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
                         val refs = st.extractSubjects(style)
                         refs.forEachIndexed { idx, ref ->
-                            if (choices.none { choice -> choice.name == ref }) {
+                            val refUnavailable = choices.none { choice ->
+                                (!cst.clustering || choice.name != (style as NamedStyle).name) && choice.name == ref
+                            }
+                            if (refUnavailable) {
                                 val msg =
                                     if (st is ListStyleSetting) l10n("project.styling.constr.styles")
                                     else l10n("project.styling.constr.style")
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
+                        }
+                        if (cst.clustering) {
+                            // When the clustering flag is set, check that the constraint is configured as is expected.
+                            // We only do these checks now as specifically the second one is only relevant if there is
+                            // at least one effective setting.
+                            check(cst.styleClass == style.javaClass)
+                            check(choices.isEmpty() || choices.any { choice -> choice === style })
+                            // Note: The emptiness check is a small performance improvement for the most likely case.
+                            if (refs.isNotEmpty())
+                                for (choice in choices)
+                                    if (choice.name in refs) {
+                                        val refsOfChoice = st.extractSubjects(style.javaClass.cast(choice))
+                                        if ((style as NamedStyle).name !in refsOfChoice ||
+                                            refs.any { ref -> ref != choice.name && ref !in refsOfChoice }
+                                        ) {
+                                            val leafSubjectIndex = refs.indexOf(choice.name)
+                                            val msg = l10n("project.styling.constr.missingStyleReference", choice.name)
+                                            log(rootStyle, style, st, leafSubjectIndex, cst.severity, msg)
+                                        }
+                                    }
                         }
                     }
                 }

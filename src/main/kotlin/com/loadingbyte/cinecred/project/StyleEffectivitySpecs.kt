@@ -173,3 +173,10 @@ fun <S : Style> findIneffectiveSettings(ctx: StylingContext, style: S): Map<Styl
 
     return result
 }
+
+fun <S : Style> isEffective(ctx: StylingContext, style: S, setting: StyleSetting<S, *>): Boolean =
+    getStyleEffectivitySpecs(style.javaClass).none { spec ->
+        setting in spec.settings &&
+                (spec.isAlmostEffective.let { it != null && it(ctx, style) } ||
+                        spec.isTotallyIneffective.let { it != null && it(ctx, style) })
+    }

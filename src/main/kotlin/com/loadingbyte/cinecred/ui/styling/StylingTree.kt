@@ -122,8 +122,8 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         throw IllegalArgumentException("Old element not found.")
     }
 
-    fun removeSelectedListElement(selectNext: Boolean = false): Boolean {
-        val selectedNode = this.selectedNode ?: return false
+    fun removeSelectedListElement(selectNext: Boolean = false): Any? {
+        val selectedNode = this.selectedNode ?: return null
         val selectedNodeUserObj = selectedNode.userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
             val selectedRow = minSelectionRow
@@ -132,9 +132,9 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
                 scrollRowToVisible(selectedRow)
                 setSelectionRow(selectedRow)
             }
-            return true
+            return selectedNodeUserObj.obj
         }
-        return false
+        return null
     }
 
     fun updateSelectedListElement(newElement: Any) {

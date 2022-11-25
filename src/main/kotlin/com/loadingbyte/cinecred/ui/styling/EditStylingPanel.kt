@@ -164,14 +164,22 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         if (style !is NamedStyle)
             return
         val newName = l10n("ui.styling.copiedStyleName", style.name)
-        val copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
+        var copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
+        val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
+        for ((oldStyle, newStyle) in updates)
+            if (oldStyle === copiedStyle) copiedStyle = newStyle else stylingTree.updateListElement(oldStyle, newStyle)
         stylingTree.addListElement(copiedStyle, select = true)
         onChange()
     }
 
     private fun removeStyle() {
-        if (stylingTree.removeSelectedListElement(selectNext = true))
+        val removedStyle = stylingTree.removeSelectedListElement(selectNext = true)
+        if (removedStyle != null) {
+            removedStyle as NamedStyle
+            val updates = ensureConsistencyAfterRemoval(stylingTree.getList(removedStyle.javaClass), removedStyle)
+            updates.forEach(stylingTree::updateListElement)
             onChange()
+        }
     }
 
     private fun openBlank() {
@@ -192,12 +200,18 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun <S : NamedStyle> openNamedStyle(style: S, form: StyleForm<S>, cardName: String) {
-        val consistencyRetainer = StylingConsistencyRetainer(styling!!, unusedStyles, style)
+        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, unusedStyles, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             val newStyle = form.save()
             stylingTree.updateSelectedListElement(newStyle)
-            val updates = consistencyRetainer.ensureConsistencyAfterEdit(newStyle)
+            val newStyling = buildStyling()
+            val updates = consistencyRetainer.ensureConsistencyAfterEdit(ctrl.stylingCtx, newStyling, newStyle)
+            if (updates.isEmpty()) {
+                // Take a shortcut to avoid generating the Styling object a second time.
+                onChange(widget, newStyling)
+                return@add
+            }
             updates.forEach(stylingTree::updateListElement)
             updates[newStyle]?.let { updatedNewStyle -> form.open(newStyle.javaClass.cast(updatedNewStyle)) }
             onChange(widget)
@@ -214,6 +228,13 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // When the user selected a non-blank card, reset the vertical scrollbar position to the top.
         (form.parent.parent as JScrollPane).verticalScrollBar.value = 0
     }
+
+    private fun buildStyling() = Styling(
+        stylingTree.getSingleton(Global::class.java),
+        stylingTree.getList(PageStyle::class.java).toImmutableList(),
+        stylingTree.getList(ContentStyle::class.java).toImmutableList(),
+        stylingTree.getList(LetterStyle::class.java).toImmutableList(),
+    )
 
     fun setStyling(styling: Styling) {
         this.styling = styling
@@ -236,15 +257,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         }
     }
 
-    private fun onChange(widget: Form.Widget<*>? = null) {
-        val styling = Styling(
-            stylingTree.getSingleton(Global::class.java),
-            stylingTree.getList(PageStyle::class.java).toImmutableList(),
-            stylingTree.getList(ContentStyle::class.java).toImmutableList(),
-            stylingTree.getList(LetterStyle::class.java).toImmutableList(),
-        )
+    private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
         this.styling = styling
-
         refreshConstraintViolations()
         adjustOpenedForm()
         ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
@@ -293,6 +307,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
             is StyleNameConstr<S, *> -> {
                 val choiceSet = constr.choices(ctrl.stylingCtx, styling, curStyle).mapTo(TreeSet(), NamedStyle::name)
+                if (constr.clustering)
+                    choiceSet.remove((curStyle as NamedStyle).name)
                 val choices = choiceSet.toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)

@@ -6,13 +6,14 @@ import com.loadingbyte.cinecred.common.colorFromHex
 import com.loadingbyte.cinecred.common.enumFromName
 import com.loadingbyte.cinecred.common.fpsFromFraction
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.awt.Color
 import java.nio.file.Path
 import java.util.*
 
 
-fun readStyling(stylingFile: Path): Styling {
+fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
     val toml = Toml.read(stylingFile.toFile()) as MutableMap<String, Any>
 
     val rawStyling = RawStyling(
@@ -28,9 +29,9 @@ fun readStyling(stylingFile: Path): Styling {
 
     return Styling(
         readStyle(rawStyling.global, Global::class.java),
-        rawStyling.pageStyles.map { readStyle(it, PageStyle::class.java) }.toImmutableList(),
-        rawStyling.contentStyles.map { readStyle(it, ContentStyle::class.java) }.toImmutableList(),
-        rawStyling.letterStyles.map { readStyle(it, LetterStyle::class.java) }.toImmutableList()
+        readStyles(ctx, rawStyling.pageStyles, PageStyle::class.java),
+        readStyles(ctx, rawStyling.contentStyles, ContentStyle::class.java),
+        readStyles(ctx, rawStyling.letterStyles, LetterStyle::class.java),
     )
 }
 
@@ -131,6 +132,16 @@ private fun migrate(rawStyling: RawStyling) {
     }
 }
 
+
+private fun <S : NamedStyle> readStyles(
+    ctx: StylingContext,
+    maps: List<Map<*, *>>,
+    styleClass: Class<S>
+): ImmutableList<S> {
+    val styles = maps.map { readStyle(it, styleClass) }
+    val updates = ensureConsistency(ctx, styles)
+    return styles.map { style -> updates.getOrDefault(style, style) }.toImmutableList()
+}
 
 private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
     val notarizedSettingValues = buildList {

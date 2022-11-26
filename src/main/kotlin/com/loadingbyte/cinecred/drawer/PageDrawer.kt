@@ -11,7 +11,7 @@ import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import java.awt.Font
 import java.awt.geom.Path2D
 import java.util.*
@@ -87,7 +87,7 @@ fun drawPages(project: Project): List<DrawnPage> {
     return pages.map { page ->
         val (pageImageHeight, stageLayouts) = layoutStages(global, stageImages, page)
         val pageImage = drawPage(global, stageImages, stageLayouts, pageTopStages, pageBotStages, page, pageImageHeight)
-        DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toImmutableList())
+        DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
 }
 

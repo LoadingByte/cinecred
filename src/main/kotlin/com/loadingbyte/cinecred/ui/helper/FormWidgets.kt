@@ -6,9 +6,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.TimecodeFormat
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
@@ -84,16 +81,16 @@ class TextWidget(
 
 class TextListWidget(
     widthSpec: WidthSpec? = null
-) : AbstractTextComponentWidget<ImmutableList<String>>(JTextArea(), widthSpec) {
-    override var value: ImmutableList<String>
-        get() = text.split("\n").filter(String::isNotBlank).toImmutableList()
+) : AbstractTextComponentWidget<List<String>>(JTextArea(), widthSpec) {
+    override var value: List<String>
+        get() = text.split("\n").filter(String::isNotBlank)
         set(value) {
             text = value.filter(String::isNotBlank).joinToString("\n")
         }
 }
 
 
-class FileExtAssortment(val choices: ImmutableList<String>, val default: String) {
+class FileExtAssortment(val choices: List<String>, val default: String) {
     init {
         require(default in choices)
     }
@@ -326,7 +323,7 @@ open class ComboBoxWidget<V : Any>(
     override val components = listOf(cb)
     override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
 
-    protected var items: ImmutableList<V> = persistentListOf()
+    protected var items: List<V> = listOf()
         set(items) {
             if (field == items)
                 return
@@ -352,11 +349,11 @@ open class ComboBoxWidget<V : Any>(
         }
 
     override fun updateChoices(choices: List<V>) {
-        items = choices.toImmutableList()
+        items = choices
     }
 
     init {
-        this.items = items.toImmutableList()
+        this.items = items
     }
 
 }
@@ -486,7 +483,7 @@ class MultiComboBoxWidget<E : Any>(
     widthSpec: WidthSpec? = null,
     inconsistent: Boolean = false,
     noItemsMessage: String? = null
-) : Form.AbstractWidget<ImmutableList<E>>(), Form.Choice<E> {
+) : Form.AbstractWidget<List<E>>(), Form.Choice<E> {
 
     private val mcb = MultiComboBox(toString, inconsistent, noItemsMessage).apply {
         // Notice that this item listener is only triggered when the user manually (de)selects items. That's why we
@@ -497,8 +494,8 @@ class MultiComboBoxWidget<E : Any>(
     override val components = listOf(mcb)
     override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
 
-    override var value: ImmutableList<E>
-        get() = mcb.selectedItems.sortedWith(comparator).toImmutableList()
+    override var value: List<E>
+        get() = mcb.selectedItems.sortedWith(comparator)
         set(value) {
             val valueAsSet = value.toSet()
             if (mcb.selectedItems == valueAsSet)
@@ -542,7 +539,7 @@ class ToggleButtonGroupWidget<V : Any>(
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("")
 
-    private var items: ImmutableList<V> = persistentListOf()
+    private var items: List<V> = listOf()
         set(items) {
             if (field == items)
                 return
@@ -608,11 +605,11 @@ class ToggleButtonGroupWidget<V : Any>(
         }
 
     override fun updateChoices(choices: List<V>) {
-        items = choices.toImmutableList()
+        items = choices
     }
 
     init {
-        this.items = items.toImmutableList()
+        this.items = items
     }
 
     private fun addButton(item: V) = JToggleButton().also { btn ->
@@ -1059,7 +1056,7 @@ class ListWidget<E : Any>(
     private val elemsPerRow: Int = 1,
     private val rowSeparators: Boolean = false,
     private val minSize: Int = 0
-) : Form.AbstractWidget<ImmutableList<E>>() {
+) : Form.AbstractWidget<List<E>>() {
 
     private val addBtn = JButton(ADD_ICON)
 
@@ -1106,8 +1103,8 @@ class ListWidget<E : Any>(
         if (allElemWidgets[0].constraints.any { WidthSpec.FILL.mig in it }) WidthSpec.FILL.mig else ""
     )
 
-    override var value: ImmutableList<E>
-        get() = elementWidgets.map { it.value }.toImmutableList()
+    override var value: List<E>
+        get() = elementWidgets.map { it.value }
         set(value) {
             while (listSize < value.size)
                 userPlus()
@@ -1211,11 +1208,9 @@ class ListWidget<E : Any>(
 
 
 class UnionWidget(
-    wrapped: List<Form.Widget<*>>,
+    private val wrapped: List<Form.Widget<*>>,
     icons: List<Icon>? = null
-) : Form.AbstractWidget<ImmutableList<Any>>() {
-
-    private val wrapped = wrapped.toImmutableList()
+) : Form.AbstractWidget<List<Any>>() {
 
     init {
         if (icons != null)
@@ -1244,8 +1239,8 @@ class UnionWidget(
         }
     }
 
-    override var value: ImmutableList<Any>
-        get() = wrapped.map { it.value }.toImmutableList()
+    override var value: List<Any>
+        get() = wrapped.map { it.value }
         set(value) {
             require(wrapped.size == value.size)
             for (idx in wrapped.indices)

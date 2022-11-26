@@ -6,8 +6,8 @@ import com.loadingbyte.cinecred.common.colorFromHex
 import com.loadingbyte.cinecred.common.enumFromName
 import com.loadingbyte.cinecred.common.fpsFromFraction
 import com.loadingbyte.cinecred.project.*
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
 import java.nio.file.Path
 import java.util.*
@@ -151,10 +151,10 @@ private fun <S : NamedStyle> readStyles(
     ctx: StylingContext,
     maps: List<Map<*, *>>,
     styleClass: Class<S>
-): ImmutableList<S> {
+): PersistentList<S> {
     val styles = maps.map { readStyle(it, styleClass) }
     val updates = ensureConsistency(ctx, styles)
-    return styles.map { style -> updates.getOrDefault(style, style) }.toImmutableList()
+    return styles.map { style -> updates.getOrDefault(style, style) }.toPersistentList()
 }
 
 private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
@@ -179,7 +179,7 @@ private fun <S : Style, SUBJ : Any> readSetting(
         is OptStyleSetting ->
             setting.notarize(Opt(true, convert(setting.type, raw)))
         is ListStyleSetting ->
-            setting.notarize((raw as List<*>).filterNotNull().map { convert(setting.type, it) }.toImmutableList())
+            setting.notarize((raw as List<*>).filterNotNull().map { convert(setting.type, it) }.toPersistentList())
     }
 
 

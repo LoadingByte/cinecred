@@ -2,10 +2,10 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.DeferredImage
 import com.loadingbyte.cinecred.common.Y
-import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.PersistentList
 
 
-class DrawnPage(val defImage: DeferredImage, val stageInfo: ImmutableList<DrawnStageInfo>)
+class DrawnPage(val defImage: DeferredImage, val stageInfo: PersistentList<DrawnStageInfo>)
 
 
 sealed class DrawnStageInfo {

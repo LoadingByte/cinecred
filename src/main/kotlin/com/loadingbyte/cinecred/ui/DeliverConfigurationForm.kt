@@ -8,7 +8,6 @@ import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.toImmutableList
 import javax.swing.JOptionPane.*
 import javax.swing.SpinnerNumberModel
 import kotlin.io.path.exists
@@ -152,7 +151,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
 
     private fun onFormatChange() {
         val format = formatWidget.value
-        val fileExtAssortment = FileExtAssortment(format.fileExts.sorted().toImmutableList(), format.defaultFileExt)
+        val fileExtAssortment = FileExtAssortment(format.fileExts.sorted(), format.defaultFileExt)
         seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
         singleFileWidget.fileExtAssortment = fileExtAssortment
     }

@@ -3,8 +3,6 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.DeferredImage.Layer
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.collections.immutable.persistentListOf
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ComponentAdapter
@@ -39,7 +37,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
         rematerialize()
     }
 
-    var layers: PersistentList<Layer> = persistentListOf()
+    var layers: List<Layer> = listOf()
         set(value) {
             field = value
             // Rematerialize will call canvas.repaint() once it's done.

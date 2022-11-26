@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -231,9 +231,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun buildStyling() = Styling(
         stylingTree.getSingleton(Global::class.java),
-        stylingTree.getList(PageStyle::class.java).toImmutableList(),
-        stylingTree.getList(ContentStyle::class.java).toImmutableList(),
-        stylingTree.getList(LetterStyle::class.java).toImmutableList(),
+        stylingTree.getList(PageStyle::class.java).toPersistentList(),
+        stylingTree.getList(ContentStyle::class.java).toPersistentList(),
+        stylingTree.getList(LetterStyle::class.java).toPersistentList(),
     )
 
     fun setStyling(styling: Styling) {

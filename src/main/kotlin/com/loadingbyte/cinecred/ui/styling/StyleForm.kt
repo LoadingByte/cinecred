@@ -6,7 +6,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.requireIsInstance
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
-import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
 import java.util.*
 import javax.swing.Icon
@@ -83,7 +83,7 @@ class StyleForm<S : Style>(
         setting: ListStyleSetting<S, E>,
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
-    ): Widget<ImmutableList<E>> {
+    ): Widget<*> {
         val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, E>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
@@ -94,18 +94,16 @@ class StyleForm<S : Style>(
 
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        if (setting.type == String::class.java) {
-            val widget = when {
-                fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null -> MultiComboBoxWidget(
-                    items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
-                    naturalOrder(), widthSpec = widthSpec, inconsistent = true,
-                    noItemsMessage = choiceWidgetSpec?.getNoItemsMsg?.invoke()
-                )
+        if (setting.type == String::class.java)
+            return when {
+                fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
+                    MultiComboBoxWidget<String>(
+                        items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
+                        naturalOrder(), widthSpec = widthSpec, inconsistent = true,
+                        noItemsMessage = choiceWidgetSpec?.getNoItemsMsg?.invoke()
+                    )
                 else -> TextListWidget(widthSpec)
             }
-            @Suppress("UNCHECKED_CAST")
-            return widget as Widget<ImmutableList<E>>
-        }
 
         return ListWidget(
             newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
@@ -253,7 +251,10 @@ class StyleForm<S : Style>(
     }
 
     override fun save(): S =
-        newStyleUnsafe(styleClass, valueWidgets.values.map(Widget<*>::value))
+        newStyleUnsafe(styleClass, valueWidgets.values.map { widget ->
+            val value = widget.value
+            if (value is List<*>) value.toPersistentList() else value
+        })
 
     fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, Style>> {
         val nested = mutableListOf<Pair<StyleForm<*>, Style>>()

@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import java.io.File
 import java.nio.file.Path
@@ -204,7 +203,7 @@ private class CreditsReader(
                 else
                     pageStages.removeAt(idx)
             }
-            val page = Page(pageStages.toImmutableList())
+            val page = Page(pageStages.toPersistentList())
             pages.add(page)
         }
         pageStages.clear()
@@ -213,7 +212,7 @@ private class CreditsReader(
     fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
-            val stage = Stage(stageStyle!!, stageSegments.toImmutableList(), vGapAfter)
+            val stage = Stage(stageStyle!!, stageSegments.toPersistentList(), vGapAfter)
             pageStages.add(stage)
 
             // If directed, add the new stage to a runtime group.
@@ -221,9 +220,7 @@ private class CreditsReader(
             val stageRtGroupName = stageRuntimeGroupName
             if (stageRtGroupName != null && stageRtGroupName in namedRuntimeGroups) {
                 val oldGroup = namedRuntimeGroups.getValue(stageRtGroupName)
-                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(
-                    oldGroup.stages.toPersistentList().add(stage), oldGroup.runtimeFrames
-                )
+                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames)
             } else if (stageRtGroupName != null && stageRtFrames != null)
                 namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(persistentListOf(stage), stageRtFrames)
             else if (stageRtFrames != null)
@@ -237,13 +234,13 @@ private class CreditsReader(
 
     fun concludeSegment(vGapAfter: Float) {
         if (segmentSpines.isNotEmpty())
-            stageSegments.add(Segment(segmentSpines.toImmutableList(), vGapAfter))
+            stageSegments.add(Segment(segmentSpines.toPersistentList(), vGapAfter))
         segmentSpines.clear()
     }
 
     fun concludeSpine() {
         if (spineBlocks.isNotEmpty())
-            segmentSpines.add(Spine(spinePosOffsetPx, spineBlocks.toImmutableList()))
+            segmentSpines.add(Spine(spinePosOffsetPx, spineBlocks.toPersistentList()))
         spinePosOffsetPx = 0f
         spineBlocks.clear()
     }
@@ -251,7 +248,7 @@ private class CreditsReader(
     fun concludeBlock(vGapAfter: Float) {
         if (blockBody.isNotEmpty()) {
             val block = Block(
-                blockStyle!!, blockHead, blockBody.toImmutableList(), blockTail, vGapAfter,
+                blockStyle!!, blockHead, blockBody.toPersistentList(), blockTail, vGapAfter,
                 blockMatchHeadPartitionId, blockMatchBodyPartitionId, blockMatchTailPartitionId
             )
             spineBlocks.add(block)

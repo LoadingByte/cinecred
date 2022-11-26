@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import java.util.*
 
@@ -55,7 +54,7 @@ fun <S : NamedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, rem
     val updates = IdentityHashMap<S, MutableList<NotarizedStyleSettingValue<S>>>()
     forEachStyleClusterSetting(removedStyle.javaClass) { setting, _ ->
         for (style in remainingStyles) {
-            val refs = setting.get(style).toPersistentList()
+            val refs = setting.get(style)
             if (removedStyle.name in refs)
                 updates.computeIfAbsent(style) { mutableListOf() }.add(setting.notarize(refs.remove(removedStyle.name)))
         }
@@ -184,7 +183,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
                     for (style in choices)
                         if (style !== editedStyle) {
                             val freshestStyle = updates.freshest(style)
-                            val newStyleRefs = setting.get(freshestStyle).toPersistentList().remove(oldName)
+                            val newStyleRefs = setting.get(freshestStyle).remove(oldName)
                             updates[style] = freshestStyle.copy(setting.notarize(newStyleRefs))
                         }
             }
@@ -273,7 +272,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
             when (val st = trackSt.setting) {
                 is DirectStyleSetting -> st.notarize(newName)
                 is OptStyleSetting -> st.notarize(Opt(true, newName))
-                is ListStyleSetting -> st.notarize(TreeSet(trackSt.baseItems).apply { add(newName) }.toImmutableList())
+                is ListStyleSetting -> st.notarize(TreeSet(trackSt.baseItems).apply { add(newName) }.toPersistentList())
             }
         }
         val newStyle = updates.freshest(trackedUsage.style).copy(newSettingValues)

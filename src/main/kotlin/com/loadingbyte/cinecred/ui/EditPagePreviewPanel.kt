@@ -27,7 +27,7 @@ class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
     }
 
     private val imagePanel = DeferredImagePanel(maxZoom, zoomIncrement).apply {
-        layers = persistentListOf(GROUNDING, BACKGROUND, FOREGROUND)
+        layers = listOf(GROUNDING, BACKGROUND, FOREGROUND)
     }
 
     init {
@@ -51,8 +51,8 @@ class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
     val zoomListeners by imagePanel::zoomListeners
 
     fun setLayerVisible(layer: Layer, visible: Boolean) {
-        var layers = imagePanel.layers
-        layers = if (visible) layers.add(layer) else layers.remove(layer)
+        val layers = imagePanel.layers.toMutableList()
+        if (visible) layers.add(layer) else layers.remove(layer)
         imagePanel.layers = layers
     }
 

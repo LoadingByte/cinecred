@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Picture
-import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.PersistentList
 import java.awt.Color
 import java.util.*
 
@@ -10,24 +10,24 @@ import java.util.*
 class Project(
     val styling: Styling,
     val stylingCtx: StylingContext,
-    val pages: ImmutableList<Page>,
-    val runtimeGroups: ImmutableList<RuntimeGroup>
+    val pages: PersistentList<Page>,
+    val runtimeGroups: PersistentList<RuntimeGroup>
 )
 
 
 data class Styling constructor(
     val global: Global,
-    val pageStyles: ImmutableList<PageStyle>,
-    val contentStyles: ImmutableList<ContentStyle>,
-    val letterStyles: ImmutableList<LetterStyle>
+    val pageStyles: PersistentList<PageStyle>,
+    val contentStyles: PersistentList<ContentStyle>,
+    val letterStyles: PersistentList<LetterStyle>
 ) {
     @Suppress("UNCHECKED_CAST")
-    fun <S : NamedStyle> getNamedStyles(styleClass: Class<S>): ImmutableList<S> = when (styleClass) {
+    fun <S : NamedStyle> getNamedStyles(styleClass: Class<S>): PersistentList<S> = when (styleClass) {
         PageStyle::class.java -> pageStyles
         ContentStyle::class.java -> contentStyles
         LetterStyle::class.java -> letterStyles
         else -> throw IllegalArgumentException("${styleClass.name} is not a named style class.")
-    } as ImmutableList<S>
+    } as PersistentList<S>
 }
 
 
@@ -53,7 +53,7 @@ data class Global(
     val grounding: Color,
     val unitVGapPx: Float,
     val locale: Locale,
-    val uppercaseExceptions: ImmutableList<String>
+    val uppercaseExceptions: PersistentList<String>
 ) : Style
 
 
@@ -86,11 +86,11 @@ data class ContentStyle(
     val gridFillingOrder: GridFillingOrder,
     val gridStructure: GridStructure,
     val gridMatchColWidths: MatchExtent,
-    val gridMatchColWidthsAcrossStyles: ImmutableList<String>,
+    val gridMatchColWidthsAcrossStyles: PersistentList<String>,
     val gridMatchColUnderoccupancy: GridColUnderoccupancy,
     val gridMatchRowHeight: MatchExtent,
-    val gridMatchRowHeightAcrossStyles: ImmutableList<String>,
-    val gridCellHJustifyPerCol: ImmutableList<HJustify>,
+    val gridMatchRowHeightAcrossStyles: PersistentList<String>,
+    val gridCellHJustifyPerCol: PersistentList<HJustify>,
     val gridCellVJustify: VJustify,
     val gridRowGapPx: Float,
     val gridColGapPx: Float,
@@ -98,9 +98,9 @@ data class ContentStyle(
     val flowLineHJustify: LineHJustify,
     val flowSquareCells: Boolean,
     val flowMatchCellWidth: MatchExtent,
-    val flowMatchCellWidthAcrossStyles: ImmutableList<String>,
+    val flowMatchCellWidthAcrossStyles: PersistentList<String>,
     val flowMatchCellHeight: MatchExtent,
-    val flowMatchCellHeightAcrossStyles: ImmutableList<String>,
+    val flowMatchCellHeightAcrossStyles: PersistentList<String>,
     val flowCellHJustify: HJustify,
     val flowCellVJustify: VJustify,
     val flowLineWidthPx: Float,
@@ -114,14 +114,14 @@ data class ContentStyle(
     val hasHead: Boolean,
     val headLetterStyleName: String,
     val headMatchWidth: MatchExtent,
-    val headMatchWidthAcrossStyles: ImmutableList<String>,
+    val headMatchWidthAcrossStyles: PersistentList<String>,
     val headHJustify: HJustify,
     val headVJustify: VJustify,
     val headGapPx: Float,
     val hasTail: Boolean,
     val tailLetterStyleName: String,
     val tailMatchWidth: MatchExtent,
-    val tailMatchWidthAcrossStyles: ImmutableList<String>,
+    val tailMatchWidthAcrossStyles: PersistentList<String>,
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Float
@@ -170,8 +170,8 @@ data class LetterStyle(
     val scaling: Float,
     val hScaling: Float,
     val hShearing: Float,
-    val features: ImmutableList<FontFeature>,
-    val decorations: ImmutableList<TextDecoration>,
+    val features: PersistentList<FontFeature>,
+    val decorations: PersistentList<TextDecoration>,
     val background: Opt<Color>,
     val backgroundWidenLeftPx: Float,
     val backgroundWidenRightPx: Float,
@@ -199,7 +199,7 @@ data class TextDecoration(
     val widenRightPx: Float,
     val clearingPx: Opt<Float>,
     val clearingJoin: LineJoin,
-    val dashPatternPx: ImmutableList<Float>
+    val dashPatternPx: PersistentList<Float>
 ) : Style
 
 
@@ -215,26 +215,26 @@ data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 
 class Page(
-    val stages: ImmutableList<Stage>
+    val stages: PersistentList<Stage>
 )
 
 
 class Stage(
     val style: PageStyle,
-    val segments: ImmutableList<Segment>,
+    val segments: PersistentList<Segment>,
     val vGapAfterPx: Float
 )
 
 
 class Segment(
-    val spines: ImmutableList<Spine>,
+    val spines: PersistentList<Spine>,
     val vGapAfterPx: Float
 )
 
 
 class Spine(
     val posOffsetPx: Float,
-    val blocks: ImmutableList<Block>
+    val blocks: PersistentList<Block>
 )
 
 
@@ -243,7 +243,7 @@ typealias PartitionId = Any
 class Block(
     val style: ContentStyle,
     val head: StyledString?,
-    val body: ImmutableList<BodyElement>,
+    val body: PersistentList<BodyElement>,
     val tail: StyledString?,
     val vGapAfterPx: Float,
     val matchHeadPartitionId: PartitionId,
@@ -260,4 +260,4 @@ sealed class BodyElement {
 }
 
 
-class RuntimeGroup(val stages: ImmutableList<Stage>, val runtimeFrames: Int)
+class RuntimeGroup(val stages: PersistentList<Stage>, val runtimeFrames: Int)

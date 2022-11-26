@@ -12,8 +12,7 @@ import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.styling.EditStylingDialog
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toPersistentList
 import java.awt.Font
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
@@ -200,8 +199,8 @@ class ProjectController(
             return pushStateIntoUI()
 
         // Freeze the font and picture loader maps so that they do not change while processing the project.
-        val stylingCtx = StylingContextImpl(fontsByName.toImmutableMap())
-        val pictureLoadersByRelPath = this.pictureLoadersByRelPath.toImmutableMap()
+        val stylingCtx = StylingContextImpl(HashMap(fontsByName))
+        val pictureLoadersByRelPath = HashMap(this.pictureLoadersByRelPath)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         readCreditsAndRedrawJobSlot.submit {
@@ -216,9 +215,7 @@ class ProjectController(
             if (log.any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { creditsFileReadingLog = log; pushStateIntoUI() }
 
-            val project = Project(
-                styling, stylingCtx, pages.toImmutableList(), runtimeGroups.toImmutableList()
-            )
+            val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
             val drawnPages = drawPages(project)
 
             SwingUtilities.invokeLater {

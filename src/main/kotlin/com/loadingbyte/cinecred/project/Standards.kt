@@ -54,6 +54,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     blockOrientation = BlockOrientation.VERTICAL,
     spineAttachment = SpineAttachment.BODY_CENTER,
     vMarginPx = 0f,
+    bodyLetterStyleName = "",
     bodyLayout = BodyLayout.GRID,
     gridFillingOrder = GridFillingOrder.L2R_T2B,
     gridCellConform = BodyCellConform.NOTHING,
@@ -74,16 +75,15 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     paragraphsLineWidthPx = 600f,
     paragraphsParaGapPx = 8f,
     paragraphsLineGapPx = 0f,
-    bodyLetterStyleName = "",
     hasHead = false,
+    headLetterStyleName = "",
     headHJustify = HJustify.CENTER,
     headVJustify = VJustify.TOP,
-    headLetterStyleName = "",
     headGapPx = 4f,
     hasTail = false,
+    tailLetterStyleName = "",
     tailHJustify = HJustify.CENTER,
     tailVJustify = VJustify.TOP,
-    tailLetterStyleName = "",
     tailGapPx = 4f
 )
 

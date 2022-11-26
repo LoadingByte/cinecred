@@ -18,7 +18,6 @@ fun <S : NamedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Ma
     if (styles.isEmpty())
         return emptyMap()
     val updates = IdentityHashMap<S, MutableList<NotarizedStyleSettingValue<S>>>()
-    val ineffectiveSettings = styles.associateWith { style -> findIneffectiveSettings(ctx, style) }
     forEachStyleClusterSetting(styles[0].javaClass) { setting, _ ->
         val clusters = mutableListOf<TreeSet<String>>()
         for (style in styles) {
@@ -33,7 +32,10 @@ fun <S : NamedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Ma
             cluster.removeIf { styleName ->
                 // Do not cluster styles which may not take part because their setting is ineffective. In the case of
                 // duplicate names, all duplicates must be ineffective for the style name to be excluded.
-                styles.none { oStyle -> oStyle.name == styleName && setting !in ineffectiveSettings.getValue(oStyle) }
+                // Note: We use isEffectiveUnsafe() without a Styling object here because such an object is currently
+                // unnecessary for determining the effectivity of any style cluster setting, and not forcing the caller
+                // to provide a Styling object turns out to improve the caller code.
+                styles.none { oStyle -> oStyle.name == styleName && isEffectiveUnsafe(ctx, oStyle, setting) }
             }
         val persistentClusters = clusters.map { cluster -> cluster.toPersistentList() }
         for (style in styles) {
@@ -88,7 +90,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         // For this, record the cluster lists of editedStyle now.
         trackedClusters = buildList {
             forEachStyleClusterSetting(editedStyle.javaClass) { setting, constr ->
-                val isEff = isEffective(ctx, editedStyle, setting)
+                val isEff = isEffective(ctx, styling, editedStyle, setting)
                 add(TrackedCluster(setting, constr, isEff, if (isEff) setting.get(editedStyle) else emptyList()))
             }
         }
@@ -168,7 +170,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         editedStyle: S
     ) {
         val setting = trackedCluster.setting
-        val isEffective = isEffective(ctx, editedStyle, setting)
+        val isEffective = isEffective(ctx, styling, editedStyle, setting)
         val choices = trackedCluster.constraint.choices(ctx, styling, editedStyle)
             .requireIsInstance(editedStyle.javaClass)
 

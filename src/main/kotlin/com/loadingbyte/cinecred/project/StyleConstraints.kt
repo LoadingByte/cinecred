@@ -257,7 +257,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     }
 
     fun <S : Style> verifyStyle(rootStyle: Style, style: S) {
-        val ignoreSettings = findIneffectiveSettings(ctx, style)
+        val ignoreSettings = findIneffectiveSettings(ctx, styling, style)
 
         for (cst in getStyleConstraints(style.javaClass))
             when (cst) {

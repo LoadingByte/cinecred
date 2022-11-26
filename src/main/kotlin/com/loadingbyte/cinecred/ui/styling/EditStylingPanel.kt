@@ -290,7 +290,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun <S : Style> adjustForm(curForm: StyleForm<S>, curStyle: S) {
         val styling = this.styling ?: return
 
-        curForm.setIneffectiveSettings(findIneffectiveSettings(ctrl.stylingCtx, curStyle))
+        curForm.setIneffectiveSettings(findIneffectiveSettings(ctrl.stylingCtx, styling, curStyle))
 
         curForm.clearIssues()
         for (violation in constraintViolations)

@@ -152,19 +152,14 @@ val LineHJustify.icon
     }
 
 
-private val BODY_CELL_CONFORM_NOTHING_ICON = SVGIcon.load("/icons/bodyCellConform/nothing.svg")
-private val BODY_CELL_CONFORM_WIDTH_ICON = SVGIcon.load("/icons/bodyCellConform/width.svg")
-private val BODY_CELL_CONFORM_HEIGHT_ICON = SVGIcon.load("/icons/bodyCellConform/height.svg")
-private val BODY_CELL_CONFORM_WAH_ICON = SVGIcon.load("/icons/bodyCellConform/widthAndHeight.svg")
-private val BODY_CELL_CONFORM_SQUARE_ICON = SVGIcon.load("/icons/bodyCellConform/square.svg")
+private val MATCH_EXTENT_WITHIN_BLOCK_ICON = SVGIcon.load("/icons/matchExtent/withinBlock.svg")
+private val MATCH_EXTENT_ACROSS_BLOCKS_ICON = SVGIcon.load("/icons/matchExtent/acrossBlocks.svg")
 
-val BodyCellConform.icon
+val MatchExtent.icon
     get() = when (this) {
-        BodyCellConform.NOTHING -> BODY_CELL_CONFORM_NOTHING_ICON
-        BodyCellConform.WIDTH -> BODY_CELL_CONFORM_WIDTH_ICON
-        BodyCellConform.HEIGHT -> BODY_CELL_CONFORM_HEIGHT_ICON
-        BodyCellConform.WIDTH_AND_HEIGHT -> BODY_CELL_CONFORM_WAH_ICON
-        BodyCellConform.SQUARE -> BODY_CELL_CONFORM_SQUARE_ICON
+        MatchExtent.OFF -> CROSS_ICON
+        MatchExtent.WITHIN_BLOCK -> MATCH_EXTENT_WITHIN_BLOCK_ICON
+        MatchExtent.ACROSS_BLOCKS -> MATCH_EXTENT_ACROSS_BLOCKS_ICON
     }
 
 
@@ -179,6 +174,32 @@ val GridFillingOrder.icon
         GridFillingOrder.R2L_T2B -> GRID_FILLING_ORDER_R2L_T2B_ICON
         GridFillingOrder.T2B_L2R -> GRID_FILLING_ORDER_T2B_L2R_ICON
         GridFillingOrder.T2B_R2L -> GRID_FILLING_ORDER_T2B_R2L_ICON
+    }
+
+
+private val GRID_STRUCTURE_FREE_ICON = SVGIcon.load("/icons/gridStructure/free.svg")
+private val GRID_STRUCTURE_EQUAL_WIDTH_COLS_ICON = SVGIcon.load("/icons/gridStructure/equalWidthCols.svg")
+private val GRID_STRUCTURE_SQUARE_CELLS_ICON = SVGIcon.load("/icons/gridStructure/squareCells.svg")
+
+val GridStructure.icon
+    get() = when (this) {
+        GridStructure.FREE -> GRID_STRUCTURE_FREE_ICON
+        GridStructure.EQUAL_WIDTH_COLS -> GRID_STRUCTURE_EQUAL_WIDTH_COLS_ICON
+        GridStructure.SQUARE_CELLS -> GRID_STRUCTURE_SQUARE_CELLS_ICON
+    }
+
+
+private val GRID_COL_UNDEROCCUPANCY_LEFT_OMIT_ICON = SVGIcon.load("/icons/gridColUnderoccupancy/leftOmit.svg")
+private val GRID_COL_UNDEROCCUPANCY_LEFT_RETAIN_ICON = SVGIcon.load("/icons/gridColUnderoccupancy/leftRetain.svg")
+private val GRID_COL_UNDEROCCUPANCY_RIGHT_OMIT_ICON = SVGIcon.load("/icons/gridColUnderoccupancy/rightOmit.svg")
+private val GRID_COL_UNDEROCCUPANCY_RIGHT_RETAIN_ICON = SVGIcon.load("/icons/gridColUnderoccupancy/rightRetain.svg")
+
+val GridColUnderoccupancy.icon
+    get() = when (this) {
+        GridColUnderoccupancy.LEFT_OMIT -> GRID_COL_UNDEROCCUPANCY_LEFT_OMIT_ICON
+        GridColUnderoccupancy.LEFT_RETAIN -> GRID_COL_UNDEROCCUPANCY_LEFT_RETAIN_ICON
+        GridColUnderoccupancy.RIGHT_OMIT -> GRID_COL_UNDEROCCUPANCY_RIGHT_OMIT_ICON
+        GridColUnderoccupancy.RIGHT_RETAIN -> GRID_COL_UNDEROCCUPANCY_RIGHT_RETAIN_ICON
     }
 
 
@@ -240,8 +261,10 @@ val Enum<*>.icon
         is HJustify -> icon
         is VJustify -> icon
         is LineHJustify -> icon
-        is BodyCellConform -> icon
+        is MatchExtent -> icon
         is GridFillingOrder -> icon
+        is GridStructure -> icon
+        is GridColUnderoccupancy -> icon
         is FlowDirection -> icon
         is SmallCaps -> icon
         is Superscript -> icon

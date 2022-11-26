@@ -33,6 +33,7 @@ enum class WidthSpec(val mig: String) {
     TINIER("width 50:50:"),
     TINY("width 70:70:"),
     NARROW("width 100:100:"),
+    SQUEEZE("width 100::max(200,30%)"),
     FIT("width 100::max(300,40%)"),
     WIDE("width 100:max(300,40%):"),
     FILL("width 100:100%:")
@@ -1211,31 +1212,34 @@ class ListWidget<E : Any>(
 
 class UnionWidget(
     wrapped: List<Form.Widget<*>>,
-    icons: List<Icon>
+    icons: List<Icon>? = null
 ) : Form.AbstractWidget<ImmutableList<Any>>() {
 
     private val wrapped = wrapped.toImmutableList()
 
     init {
-        require(wrapped.size == icons.size)
+        if (icons != null)
+            require(wrapped.size == icons.size)
 
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
         for (widget in wrapped)
             widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
-    override val components = buildList {
-        for ((widget, icon) in wrapped.zip(icons)) {
-            add(JLabel(icon))
+    override val components: List<JComponent> = buildList {
+        for ((idx, widget) in wrapped.withIndex()) {
+            if (icons != null) add(JLabel(icons[idx]))
             addAll(widget.components)
         }
     }
 
     override val constraints = mutableListOf<String>().apply {
-        add("gapx 0 3")
+        if (icons != null)
+            add("gapx 0 3")
         addAll(wrapped.first().constraints)
         for (widget in wrapped.drop(1)) {
-            add("gapx 10 3")
+            if (icons != null)
+                add("gapx 10 3")
             addAll(widget.constraints)
         }
     }

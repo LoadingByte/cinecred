@@ -3,7 +3,9 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.project.BlockOrientation.*
-import com.loadingbyte.cinecred.project.BodyCellConform.*
+import com.loadingbyte.cinecred.project.BodyLayout.*
+import com.loadingbyte.cinecred.project.GridStructure.*
+import com.loadingbyte.cinecred.project.MatchExtent.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
 import java.text.NumberFormat
@@ -90,26 +92,81 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     },
     FloatConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0f),
+    FixedChoiceConstr(
+        WARN, ContentStyle::gridMatchColWidths.st(), ContentStyle::headMatchWidth.st(),
+        ContentStyle::tailMatchWidth.st(),
+        choices = sortedSetOf(OFF, ACROSS_BLOCKS)
+    ),
     StyleNameConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(),
         styleClass = LetterStyle::class.java,
         choices = { _, styling, _ -> styling.letterStyles }
     ),
-    DynChoiceConstr(WARN, ContentStyle::gridCellConform.st()) { _, _, style ->
-        if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(NOTHING, HEIGHT, SQUARE)
-        else BodyCellConform.values().toSortedSet()
+    DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
+        if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(FREE, SQUARE_CELLS)
+        else GridStructure.values().toSortedSet()
     },
+    StyleNameConstr(
+        ERROR, ContentStyle::gridMatchColWidthsAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.bodyLayout == GRID && o.gridMatchColWidths == ACROSS_BLOCKS }
+        }
+    ),
+    DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
+        if (style.gridStructure == SQUARE_CELLS) sortedSetOf(OFF, ACROSS_BLOCKS)
+        else MatchExtent.values().toSortedSet()
+    },
+    StyleNameConstr(
+        ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.bodyLayout == GRID && o.gridMatchRowHeight == ACROSS_BLOCKS }
+        }
+    ),
     MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
     FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0f),
+    DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
+        if (sty.flowSquareCells) sortedSetOf(OFF, ACROSS_BLOCKS)
+        else MatchExtent.values().toSortedSet()
+    },
+    StyleNameConstr(
+        ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.bodyLayout == FLOW && o.flowMatchCellWidth == ACROSS_BLOCKS }
+        }
+    ),
+    StyleNameConstr(
+        ERROR, ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.bodyLayout == FLOW && o.flowMatchCellHeight == ACROSS_BLOCKS }
+        }
+    ),
     FloatConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0f, minInclusive = false),
     FloatConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0f, minInclusive = false),
     FloatConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0f),
     FloatConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0f),
+    StyleNameConstr(
+        ERROR, ContentStyle::headMatchWidthAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.headMatchWidth == ACROSS_BLOCKS }
+        }
+    ),
     FloatConstr(ERROR, ContentStyle::headGapPx.st(), min = 0f),
+    StyleNameConstr(
+        ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
+        styleClass = ContentStyle::class.java, clustering = true,
+        choices = { _, styling, _ ->
+            styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.tailMatchWidth == ACROSS_BLOCKS }
+        }
+    ),
     FloatConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0f)
 )
 

@@ -6,6 +6,12 @@ Cinecred Changelog
 
 ### Additions
 
+- Replaced the previously automatic alignment of heads, tails, and grid columns
+  with fine-grained manual harmonization of head & tail width, grid column
+  widths & grid row height, and flow cell width & height.
+    - Harmonization is possible within blocks, across blocks, and even across
+      multiple different styles.
+    - It is no longer limited to within a spine, but can happen globally.
 - Unified project opening, project creation, preferences, and update
   notification in one integrated welcome window, thereby alleviating the need
   for various popup dialogs.
@@ -80,6 +86,8 @@ Cinecred Changelog
 # Notes
 
 - The column axis is now called spine.
+- Alignment breaking is now called match breaking and can be activated
+  separately for the head, body, and tail. The old syntax is no longer valid.
 - For grid and flow layouts, body elements and their boxes are now called cells.
 - The grid layout no longer reserves space for unused columns.
 - Horizontal font scaling is now applied to the whole text as opposed to

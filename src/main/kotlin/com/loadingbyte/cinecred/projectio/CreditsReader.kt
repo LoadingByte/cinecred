@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.project.*
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
@@ -67,8 +66,10 @@ fun readCredits(
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
-            "head", "body", "tail", "vGap", "contentStyle", "breakAlign", "spinePos", "pageStyle", "pageRuntime"
+            "head", "body", "tail", "vGap", "contentStyle", "breakMatch", "spinePos", "pageStyle", "pageRuntime"
         ), legacyColNames = mapOf(
+            // 1.2.0 -> 1.3.0: Cross-block alignment is renamed to matching.
+            "breakMatch" to listOf("Break Align", "Breche Ausrichtung"),
             // 1.2.0 -> 1.3.0: The column position is renamed to spine position.
             "spinePos" to listOf("Column Pos.", "Spaltenposition")
         )
@@ -125,6 +126,12 @@ private class CreditsReader(
     // explicit content style declaration.
     var contentStyle: ContentStyle? = null
 
+    // These variables keep track of the partitions which the next concluded block should belong to. These variables
+    // remain valid until the next "@Break Match" indication.
+    var matchHeadPartitionId = 0
+    var matchBodyPartitionId = 0
+    var matchTailPartitionId = 0
+
     // These variables keep track of the vertical gap that should be inserted AFTER the next CONCLUDED credits element.
     // If the gap is not specified explicitly in the vGap table column, it will be implicitly inferred from the number
     // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
@@ -141,11 +148,6 @@ private class CreditsReader(
     // to wait and see.
     var isBlockConclusionMarked = false
 
-    // This variable is set to true when a "@Break Align" indication is encountered. It will cause the respective
-    // current group to be concluded as soon as the current block is concluded.
-    var isBodyColsGroupConclusionMarked = false
-    var isHeadTailGroupConclusionMarked = false
-
     // Final result
     val pages = mutableListOf<Page>()
     val unnamedRuntimeGroups = mutableListOf<RuntimeGroup>()
@@ -153,12 +155,6 @@ private class CreditsReader(
 
     // Current page
     val pageStages = mutableListOf<Stage>()
-    val pageAlignBodyColsGroupsGroups = mutableListOf<ImmutableList<Block>>()
-    val pageAlignHeadTailGroupsGroups = mutableListOf<ImmutableList<Block>>()
-
-    // Segment and block groups
-    var alignBodyColsGroupsGroup = mutableListOf<Block>()
-    var alignHeadTailGroupsGroup = mutableListOf<Block>()
 
     // Current stage
     var stageStyle: PageStyle? = null
@@ -178,6 +174,9 @@ private class CreditsReader(
     var blockHead: StyledString? = null
     val blockBody = mutableListOf<BodyElement>()
     var blockTail: StyledString? = null
+    var blockMatchHeadPartitionId = 0
+    var blockMatchBodyPartitionId = 0
+    var blockMatchTailPartitionId = 0
 
     // Keep track where the current head and tail have been declared. This is used by an error message.
     var blockHeadDeclaredRow = 0
@@ -205,28 +204,10 @@ private class CreditsReader(
                 else
                     pageStages.removeAt(idx)
             }
-            val page = Page(
-                pageStages.toImmutableList(),
-                pageAlignBodyColsGroupsGroups.toImmutableList(),
-                pageAlignHeadTailGroupsGroups.toImmutableList()
-            )
+            val page = Page(pageStages.toImmutableList())
             pages.add(page)
         }
         pageStages.clear()
-        pageAlignBodyColsGroupsGroups.clear()
-        pageAlignHeadTailGroupsGroups.clear()
-    }
-
-    fun concludeAlignBodyColsGroupsGroup() {
-        if (alignBodyColsGroupsGroup.isNotEmpty())
-            pageAlignBodyColsGroupsGroups.add(alignBodyColsGroupsGroup.toImmutableList())
-        alignBodyColsGroupsGroup = mutableListOf()
-    }
-
-    fun concludeAlignHeadTailGroupsGroup() {
-        if (alignHeadTailGroupsGroup.isNotEmpty())
-            pageAlignHeadTailGroupsGroups.add(alignHeadTailGroupsGroup.toImmutableList())
-        alignHeadTailGroupsGroup = mutableListOf()
     }
 
     fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
@@ -269,10 +250,11 @@ private class CreditsReader(
 
     fun concludeBlock(vGapAfter: Float) {
         if (blockBody.isNotEmpty()) {
-            val block = Block(blockStyle!!, blockHead, blockBody.toImmutableList(), blockTail, vGapAfter)
+            val block = Block(
+                blockStyle!!, blockHead, blockBody.toImmutableList(), blockTail, vGapAfter,
+                blockMatchHeadPartitionId, blockMatchBodyPartitionId, blockMatchTailPartitionId
+            )
             spineBlocks.add(block)
-            alignBodyColsGroupsGroup.add(block)
-            alignHeadTailGroupsGroup.add(block)
         } else {
             if (blockHead != null)
                 table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHead", blockHead))
@@ -283,13 +265,9 @@ private class CreditsReader(
         blockHead = null
         blockBody.clear()
         blockTail = null
-
-        if (isBodyColsGroupConclusionMarked)
-            concludeAlignBodyColsGroupsGroup()
-        if (isHeadTailGroupConclusionMarked)
-            concludeAlignHeadTailGroupsGroup()
-        isBodyColsGroupConclusionMarked = false
-        isHeadTailGroupConclusionMarked = false
+        blockMatchHeadPartitionId = matchHeadPartitionId
+        blockMatchBodyPartitionId = matchBodyPartitionId
+        blockMatchTailPartitionId = matchTailPartitionId
     }
 
 
@@ -307,8 +285,6 @@ private class CreditsReader(
         concludeBlock(0f)
         concludeSpine()
         concludeSegment(0f)
-        concludeAlignBodyColsGroupsGroup()
-        concludeAlignHeadTailGroupsGroup()
         concludeStage(0f, PLACEHOLDER_PAGE_STYLE /* we just need to put some arbitrary thing in here */)
         concludePage()
 
@@ -345,11 +321,8 @@ private class CreditsReader(
             val prevPageStyle = pageStages.lastOrNull()?.style
             if (!(prevPageStyle?.behavior == PageBehavior.SCROLL && prevPageStyle.scrollMeltWithNext) &&
                 !(newPageStyle.behavior == PageBehavior.SCROLL && newPageStyle.scrollMeltWithPrev)
-            ) {
-                concludeAlignBodyColsGroupsGroup()
-                concludeAlignHeadTailGroupsGroup()
+            )
                 concludePage()
-            }
         }
         table.getString(row, "pageRuntime")?.let { str ->
             if (table.isEmpty(row, "pageStyle"))
@@ -418,16 +391,6 @@ private class CreditsReader(
             spinePosOffsetPx = posOffsetPx
         }
 
-        // If the break alignment cell is non-empty, mark the specified previous alignment group as well as the
-        // previous block for conclusion (if there were any).
-        table.getEnum<BreakAlign>(row, "breakAlign")?.let { breakAlign ->
-            when (breakAlign) {
-                BreakAlign.BODY_COLUMNS -> isBodyColsGroupConclusionMarked = true
-                BreakAlign.HEAD_AND_TAIL -> isHeadTailGroupConclusionMarked = true
-            }
-            isBlockConclusionMarked = true
-        }
-
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
         // Use the new content style from now on until the next explicit content style declaration.
         table.getLookup(
@@ -435,6 +398,17 @@ private class CreditsReader(
             fallback = PLACEHOLDER_CONTENT_STYLE
         )?.let { newContentStyle ->
             contentStyle = newContentStyle
+            isBlockConclusionMarked = true
+        }
+
+        // If the break match cell is non-empty, start a new matching partition for the head, body, and/or tail,
+        // and mark the previous block for conclusion (if there was any).
+        for (breakMatch in table.getEnumList<BreakMatch>(row, "breakMatch")) {
+            when (breakMatch) {
+                BreakMatch.HEAD -> matchHeadPartitionId++
+                BreakMatch.BODY -> matchBodyPartitionId++
+                BreakMatch.TAIL -> matchTailPartitionId++
+            }
             isBlockConclusionMarked = true
         }
 
@@ -621,7 +595,7 @@ private class CreditsReader(
        ********** MISCELLANEOUS **********
        *********************************** */
 
-    enum class BreakAlign { BODY_COLUMNS, HEAD_AND_TAIL }
+    enum class BreakMatch { HEAD, BODY, TAIL }
 
 
     companion object {

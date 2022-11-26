@@ -19,6 +19,7 @@ import javax.swing.UIManager
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
+private class DrawnSpine(val defImage: DeferredImage, val spineXInImage: Float)
 
 
 fun drawPages(project: Project): List<DrawnPage> {
@@ -29,10 +30,26 @@ fun drawPages(project: Project): List<DrawnPage> {
 
     val textCtx = makeTextCtx(global.locale, global.uppercaseExceptions, project.stylingCtx)
 
+    // First generate a body and then a block image for each block. This has to be done for all blocks at the same time
+    // because heads, bodies, and tails can harmonize various widths and heights between them.
+    val blocks = buildList {
+        for (page in pages)
+            for (stage in page.stages)
+                for (segment in stage.segments)
+                    for (spine in segment.spines)
+                        addAll(spine.blocks)
+    }
+    val drawnBodies = drawBodies(project.styling.contentStyles, project.styling.letterStyles, textCtx, blocks)
+    val drawnBlocks = drawBlocks(project.styling.contentStyles, textCtx, drawnBodies, blocks)
+
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     val stageImages = HashMap<Stage, DeferredImage>()
     for (page in pages)
-        stageImages.putAll(drawStages(global, styling.letterStyles, textCtx, page))
+        page.stages.withIndex().associateTo(stageImages) { (stageIdx, stage) ->
+            val prevStage = page.stages.getOrNull(stageIdx - 1)
+            val nextStage = page.stages.getOrNull(stageIdx + 1)
+            stage to drawStage(global, drawnBlocks, stage, prevStage, nextStage)
+        }
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
     val pageBotStages = pages.mapTo(HashSet()) { page -> page.stages.last() }
@@ -75,36 +92,9 @@ fun drawPages(project: Project): List<DrawnPage> {
 }
 
 
-private fun drawStages(
-    global: Global,
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
-    page: Page
-): Map<Stage, DeferredImage> {
-    // Convert the aligning group lists to maps that map from block to group id.
-    val alignBodyColsGroupIds = page.alignBodyColsGroups
-        .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
-    val alignHeadTailGroupIds = page.alignHeadTailGroups
-        .flatMapIndexed { blockGrpIdx, blockGrp -> blockGrp.map { block -> block to blockGrpIdx } }.toMap()
-
-    // Generate an image for each spine.
-    // Also remember the x coordinate of the spine inside each generated image.
-    val drawnSpines = page.stages
-        .flatMap { stage -> stage.segments }.flatMap { segment -> segment.spines }
-        .associateWith { spin -> drawSpine(letterStyles, textCtx, spin, alignBodyColsGroupIds, alignHeadTailGroupIds) }
-
-    // For each stage, combine the spine images to a stage image.
-    return page.stages.withIndex().associate { (stageIdx, stage) ->
-        val prevStage = page.stages.getOrNull(stageIdx - 1)
-        val nextStage = page.stages.getOrNull(stageIdx + 1)
-        stage to drawStage(global, drawnSpines, stage, prevStage, nextStage)
-    }
-}
-
-
 private fun drawStage(
     global: Global,
-    drawnSpines: Map<Spine, DrawnSpine>,
+    drawnBlocks: Map<Block, DrawnBlock>,
     stage: Stage,
     prevStage: Stage?,
     nextStage: Stage?
@@ -124,8 +114,8 @@ private fun drawStage(
     for (segment in stage.segments) {
         var maxHeight = 0f.toY()
         for (spine in segment.spines) {
+            val drawnSpine = drawSpine(drawnBlocks, spine)
             val spineXInPageImage = global.widthPx / 2f + spine.posOffsetPx
-            val drawnSpine = drawnSpines.getValue(spine)
             val x = spineXInPageImage - drawnSpine.spineXInImage
             stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
             maxHeight = maxHeight.max(drawnSpine.defImage.height)
@@ -144,6 +134,33 @@ private fun drawStage(
     stageImage.height = y
 
     return stageImage
+}
+
+
+private fun drawSpine(
+    drawnBlocks: Map<Block, DrawnBlock>,
+    spine: Spine
+): DrawnSpine {
+    // Combine the block images of the blocks that are attached to the spine to a spine image.
+    val spineXInSpineImage = spine.blocks.maxOf { block -> drawnBlocks.getValue(block).spineXInImage }
+    val spineImageWidth = spineXInSpineImage +
+            spine.blocks.maxOf { block -> drawnBlocks.getValue(block).run { defImage.width - spineXInImage } }
+    val spineImage = DeferredImage(width = spineImageWidth)
+    var y = 0f.toY()
+    for (block in spine.blocks) {
+        y += block.style.vMarginPx.toElasticY()
+        val drawnBlock = drawnBlocks.getValue(block)
+        val x = spineXInSpineImage - drawnBlock.spineXInImage
+        spineImage.drawDeferredImage(drawnBlock.defImage, x, y)
+        y += drawnBlock.defImage.height + (block.style.vMarginPx + block.vGapAfterPx).toElasticY()
+    }
+    // Set the spine image's height; note that it deliberately entails the last block's vMarginPx.
+    spineImage.height = y
+
+    // Draw a guide that shows the spine position.
+    spineImage.drawLine(SPINE_GUIDE_COLOR, spineXInSpineImage, 0f.toY(), spineXInSpineImage, y, layer = GUIDES)
+
+    return DrawnSpine(spineImage, spineXInSpineImage)
 }
 
 

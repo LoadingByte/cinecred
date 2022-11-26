@@ -84,14 +84,23 @@ data class ContentStyle(
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
     val gridFillingOrder: GridFillingOrder,
-    val gridCellConform: BodyCellConform,
+    val gridStructure: GridStructure,
+    val gridMatchColWidths: MatchExtent,
+    val gridMatchColWidthsAcrossStyles: ImmutableList<String>,
+    val gridMatchColUnderoccupancy: GridColUnderoccupancy,
+    val gridMatchRowHeight: MatchExtent,
+    val gridMatchRowHeightAcrossStyles: ImmutableList<String>,
     val gridCellHJustifyPerCol: ImmutableList<HJustify>,
     val gridCellVJustify: VJustify,
     val gridRowGapPx: Float,
     val gridColGapPx: Float,
     val flowDirection: FlowDirection,
     val flowLineHJustify: LineHJustify,
-    val flowCellConform: BodyCellConform,
+    val flowSquareCells: Boolean,
+    val flowMatchCellWidth: MatchExtent,
+    val flowMatchCellWidthAcrossStyles: ImmutableList<String>,
+    val flowMatchCellHeight: MatchExtent,
+    val flowMatchCellHeightAcrossStyles: ImmutableList<String>,
     val flowCellHJustify: HJustify,
     val flowCellVJustify: VJustify,
     val flowLineWidthPx: Float,
@@ -104,11 +113,15 @@ data class ContentStyle(
     val paragraphsLineGapPx: Float,
     val hasHead: Boolean,
     val headLetterStyleName: String,
+    val headMatchWidth: MatchExtent,
+    val headMatchWidthAcrossStyles: ImmutableList<String>,
     val headHJustify: HJustify,
     val headVJustify: VJustify,
     val headGapPx: Float,
     val hasTail: Boolean,
     val tailLetterStyleName: String,
+    val tailMatchWidth: MatchExtent,
+    val tailMatchWidthAcrossStyles: ImmutableList<String>,
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Float
@@ -130,8 +143,10 @@ enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
-enum class BodyCellConform { NOTHING, WIDTH, HEIGHT, WIDTH_AND_HEIGHT, SQUARE }
+enum class MatchExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
+enum class GridStructure { FREE, EQUAL_WIDTH_COLS, SQUARE_CELLS }
+enum class GridColUnderoccupancy { LEFT_OMIT, LEFT_RETAIN, RIGHT_OMIT, RIGHT_RETAIN }
 enum class FlowDirection { L2R, R2L }
 
 
@@ -200,9 +215,7 @@ data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 
 class Page(
-    val stages: ImmutableList<Stage>,
-    val alignBodyColsGroups: ImmutableList<ImmutableList<Block>>,
-    val alignHeadTailGroups: ImmutableList<ImmutableList<Block>>
+    val stages: ImmutableList<Stage>
 )
 
 
@@ -225,12 +238,17 @@ class Spine(
 )
 
 
+typealias PartitionId = Any
+
 class Block(
     val style: ContentStyle,
     val head: StyledString?,
     val body: ImmutableList<BodyElement>,
     val tail: StyledString?,
-    val vGapAfterPx: Float
+    val vGapAfterPx: Float,
+    val matchHeadPartitionId: PartitionId,
+    val matchBodyPartitionId: PartitionId,
+    val matchTailPartitionId: PartitionId
 )
 
 

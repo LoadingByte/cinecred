@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
@@ -49,14 +50,45 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ),
     NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
+    ChoiceWidgetSpec(
+        ContentStyle::gridMatchColWidthsAcrossStyles.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st(),
+        ContentStyle::flowMatchCellWidthAcrossStyles.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::tailMatchWidthAcrossStyles.st(),
+        getNoItemsMsg = { l10n("ui.styling.content.msg.noMatchStylesAvailable") }
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
-    ToggleButtonGroupWidgetSpec(ContentStyle::gridCellConform.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridStructure.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridMatchColWidths.st(), ICON),
+    WidthWidgetSpec(ContentStyle::gridMatchColWidthsAcrossStyles.st(), WidthSpec.SQUEEZE),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridMatchColUnderoccupancy.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridMatchRowHeight.st(), ICON),
+    WidthWidgetSpec(ContentStyle::gridMatchRowHeightAcrossStyles.st(), WidthSpec.SQUEEZE),
+    UnionWidgetSpec(
+        ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
+        ContentStyle::gridMatchColUnderoccupancy.st(),
+        unionName = "gridMatchColWidths"
+    ),
+    UnionWidgetSpec(
+        ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st(),
+        unionName = "gridMatchRowHeight"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), ICON),
     ListWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), newElemIsLastElem = true, elemsPerRow = 3),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
-    ToggleButtonGroupWidgetSpec(ContentStyle::flowCellConform.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowMatchCellWidth.st(), ICON),
+    WidthWidgetSpec(ContentStyle::flowMatchCellWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowMatchCellHeight.st(), ICON),
+    WidthWidgetSpec(ContentStyle::flowMatchCellHeightAcrossStyles.st(), WidthSpec.SQUEEZE),
+    UnionWidgetSpec(
+        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
+        unionName = "flowMatchCellWidth"
+    ),
+    UnionWidgetSpec(
+        ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        unionName = "flowMatchCellHeight"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellVJustify.st(), ICON),
     NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10f),
@@ -64,9 +96,21 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
     NumberWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), step = 10f),
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headMatchWidth.st(), ICON),
+    WidthWidgetSpec(ContentStyle::headMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
+    UnionWidgetSpec(
+        ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st(),
+        unionName = "headMatchWidth"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
     NewSectionWidgetSpec(ContentStyle::hasTail.st()),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailMatchWidth.st(), ICON),
+    WidthWidgetSpec(ContentStyle::tailMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
+    UnionWidgetSpec(
+        ContentStyle::tailMatchWidth.st(), ContentStyle::tailMatchWidthAcrossStyles.st(),
+        unionName = "tailMatchWidth"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
 )
@@ -178,10 +222,11 @@ class TimecodeWidgetSpec<S : Style>(
 class UnionWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Any>,
     val unionName: String,
-    val settingIcons: List<Icon>
+    val settingIcons: List<Icon>? = null
 ) : StyleWidgetSpec<S>(*settings) {
     init {
-        require(settings.size == settingIcons.size)
+        if (settingIcons != null)
+            require(settings.size == settingIcons.size)
     }
 }
 

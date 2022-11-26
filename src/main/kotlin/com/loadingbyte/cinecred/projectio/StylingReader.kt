@@ -123,12 +123,26 @@ private fun migrate(rawStyling: RawStyling) {
 
     // 1.2.0 -> 1.3.0: Body elements and element boxes are renamed to cells.
     for (contentStyle in rawStyling.contentStyles) {
-        contentStyle["gridElemBoxConform"]?.let { contentStyle["gridCellConform"] = it }
         contentStyle["gridElemHJustifyPerCol"]?.let { contentStyle["gridCellHJustifyPerCol"] = it }
         contentStyle["gridElemVJustify"]?.let { contentStyle["gridCellVJustify"] = it }
-        contentStyle["flowElemBoxConform"]?.let { contentStyle["flowCellConform"] = it }
         contentStyle["flowElemHJustify"]?.let { contentStyle["flowCellHJustify"] = it }
         contentStyle["flowElemVJustify"]?.let { contentStyle["flowCellVJustify"] = it }
+    }
+
+    // 1.2.0 -> 1.3.0: The matching of body cell extents has been reworked.
+    for (contentStyle in rawStyling.contentStyles) {
+        val gridC = contentStyle["gridElemBoxConform"]
+        val flowC = contentStyle["flowElemBoxConform"]
+        if (gridC is String) {
+            if (gridC == "SQUARE") contentStyle["gridStructure"] = "SQUARE_CELLS"
+            if (gridC == "WIDTH" || gridC == "WIDTH_AND_HEIGHT") contentStyle["gridStructure"] = "EQUAL_WIDTH_COLS"
+            if (gridC == "HEIGHT" || gridC == "WIDTH_AND_HEIGHT") contentStyle["gridMatchRowHeight"] = "WITHIN_BLOCK"
+        }
+        if (flowC is String) {
+            if (flowC == "SQUARE") contentStyle["flowSquareCells"] = true
+            if (flowC == "WIDTH" || flowC == "WIDTH_AND_HEIGHT") contentStyle["flowMatchCellWidth"] = "WITHIN_BLOCK"
+            if (flowC == "HEIGHT" || flowC == "WIDTH_AND_HEIGHT") contentStyle["flowMatchCellHeight"] = "WITHIN_BLOCK"
+        }
     }
 }
 

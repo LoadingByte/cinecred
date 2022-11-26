@@ -135,22 +135,33 @@ class Table(
         }
     }
 
-    inline fun <reified T : Enum<T>> getEnum(row: Int, l10nColName: String): T? {
-        val str = getString(row, l10nColName) ?: return null
+    inline fun <reified T : Enum<T>> getEnumList(row: Int, l10nColName: String): List<T> {
+        val str = getString(row, l10nColName) ?: return emptyList()
 
+        val result = mutableListOf<T>()
+        val unknown = mutableListOf<String>()
         val keyBase = "$l10nPrefix${T::class.java.simpleName}."
-        for (enumElem in enumValues<T>())
-            if (TRANSLATED_LOCALES.any { l10n("$keyBase${enumElem.name}", it).equals(str, ignoreCase = true) })
-                return enumElem
-
-        val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
-        val primaryOptions = keys.joinToString { l10n(it) }
-        val alternativeOptions = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { locale ->
-            keys.joinToString { key -> l10n(key, locale) }
+        for (part in str.split(' ')) {
+            val enumConst = enumValues<T>().find { enumConst ->
+                TRANSLATED_LOCALES.any { loc -> l10n(keyBase + enumConst.name, loc).equals(part, ignoreCase = true) }
+            }
+            if (enumConst != null)
+                result.add(enumConst)
+            else
+                unknown.add(part)
         }
-        val msg = l10n("projectIO.table.illFormattedOneOf", primaryOptions, alternativeOptions)
-        log(row, l10nColName, WARN, msg)
-        return null
+
+        if (unknown.isNotEmpty()) {
+            val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
+            val primaryOpts = keys.joinToString { l10n(it) }
+            val altOpts = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { locale ->
+                keys.joinToString { key -> l10n(key, locale) }
+            }
+            val msg = l10n("projectIO.table.illFormattedManyOf", unknown.joinToString(" "), primaryOpts, altOpts)
+            log(row, l10nColName, WARN, msg)
+        }
+
+        return result
     }
 
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {

@@ -6,7 +6,12 @@ import com.loadingbyte.cinecred.common.Y.Companion.plus
 import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.project.BodyCellConform.*
+import com.loadingbyte.cinecred.project.BodyLayout.*
+import com.loadingbyte.cinecred.project.GridColUnderoccupancy.*
+import com.loadingbyte.cinecred.project.GridStructure.EQUAL_WIDTH_COLS
+import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
+import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.MatchExtent.WITHIN_BLOCK
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -15,125 +20,196 @@ import kotlin.math.min
 class DrawnBody(val defImage: DeferredImage, val firstRowHeight: Float, val lastRowHeight: Float)
 
 
-fun drawBodyImagesWithGridBodyLayout(
+fun drawBodies(
+    contentStyles: List<ContentStyle>,
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     blocks: List<Block>
 ): Map<Block, DrawnBody> {
-    // We assume that only blocks which share the same style are laid out together.
-    require(blocks.all { block -> block.style == blocks[0].style })
-    val style = blocks[0].style
-    // In this function, we only concern ourselves with blocks whose bodies are laid out using the "grid body layout".
-    require(style.bodyLayout == BodyLayout.GRID)
+    val drawnBodies = HashMap<Block, DrawnBody>(2 * blocks.size)
 
-    // Step 1:
-    // Determine the width of each grid column (these widths are shared across blocks). Also determine the height of
-    // each row of each block (these heights are of course not shared across blocks). Depending on what "body cell
-    // conform" the user has configured, there may be only one width resp. height that is shared across all columns
-    // resp. across all rows in all blocks. For example, the user might have chosen to share column widths in order
+    // Draw body images for blocks with the "grid" or "flow" body layout.
+    drawBodyImagesWithGridBodyLayout(
+        drawnBodies, contentStyles, textCtx,
+        blocks.filter { block -> block.style.bodyLayout == GRID }
+    )
+    drawBodyImagesWithFlowBodyLayout(
+        drawnBodies, contentStyles, letterStyles, textCtx,
+        blocks.filter { block -> block.style.bodyLayout == FLOW }
+    )
+
+    // Draw body images for blocks with the "paragraphs" body layout.
+    for (block in blocks)
+        if (block.style.bodyLayout == PARAGRAPHS)
+            drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(textCtx, block)
+
+    return drawnBodies
+}
+
+
+private fun drawBodyImagesWithGridBodyLayout(
+    out: MutableMap<Block, DrawnBody>,
+    cs: List<ContentStyle>,
+    textCtx: TextContext,
+    blocks: List<Block>
+) {
+    // In this function, we only concern ourselves with blocks whose bodies are laid out using the "grid" body layout.
+    require(blocks.all { it.style.bodyLayout == GRID })
+
+    // Flow each block's body elements into the grid configured for that block.
+    val colsPerBlock = blocks.associateWith { block ->
+        flowIntoGridCols(block.body, numCols = block.style.gridCellHJustifyPerCol.size, block.style.gridFillingOrder)
+    }
+
+    // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
+    // to create neatly aligned tabular layouts that span multiple blocks. For both "extents" that can be harmonized
+    // (i.e., col widths and row height), find which styles should harmonize together.
+    val matchColWidthsPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchColWidthsAcrossStyles) {
+        bodyLayout == GRID && gridMatchColWidths == ACROSS_BLOCKS
+    }
+    val matchRowHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchRowHeightAcrossStyles) {
+        bodyLayout == GRID && gridMatchRowHeight == ACROSS_BLOCKS
+    }
+
+    // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
+    // also includes ungrouped blocks whose grid structure mandates square cells), and then find those shared widths.
+    fun colWidth(col: List<BodyElement>) = col.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+    val sharedColWidthsPerBlock: Map<Block, FloatArray> = matchExtent(
+        blocks, matchColWidthsPartitionIds,
+        matchWithinBlock = { gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS },
+        sharedBlockExtent = { block ->
+            val cols = colsPerBlock.getValue(block)
+            FloatArray(cols.size) { colIdx -> colWidth(cols[colIdx]) }
+        },
+        sharedGroupExtent = { group ->
+            // This piece of code takes a group of blocks and produces the list of shared column widths.
+            val colWidths = FloatArray(group.maxOf { block -> colsPerBlock.getValue(block).size })
+            for (block in group) {
+                val cols = colsPerBlock.getValue(block)
+                // If the blocks in the group have differing amounts of columns, the user can decide whether he'd like
+                // to match each block with the leftmost or rightmost shared columns.
+                val offset = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - cols.size else 0
+                for ((colIdx, col) in cols.withIndex())
+                    colWidths[offset + colIdx] = max(colWidths[offset + colIdx], colWidth(col))
+            }
+            colWidths
+        }
+    )
+
+    // Determine the blocks which have uniform row height, optionally shared across multiple blocks, and then find
+    // those shared heights.
+    fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
+    val sharedRowHeightPerBlock: Map<Block, MutableFloat> = matchExtent(
+        blocks, matchRowHeightPartitionIds,
+        matchWithinBlock = { gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS },
+        sharedBlockExtent = { block -> MutableFloat(maxElemHeight(block)) },
+        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemHeight)) }
+    )
+
+    // Harmonize the column widths of blocks configured as "equal width cols"
+    // Harmonize the column widths and row height of blocks configured as "square cells".
+    // For an example of the first setting, consider that the user might have chosen to share column widths in order
     // to obtain a layout like the following, where the head line (in the example 'Extras') is nice and centered:
     //                 Extras
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
-    val bodyPartitions = blocks.associateWith { block ->
-        partitionIntoCols(block.body, numCols = style.gridCellHJustifyPerCol.size, style.gridFillingOrder)
-    }
-    val numCols = bodyPartitions.values.maxOf { cols -> cols.size }
-    val numRows = bodyPartitions.mapValues { (_, cols) -> cols.maxOf { it.size } }
-
-    fun independentColWidths() = List(numCols) { colIdx ->
-        bodyPartitions.values.maxOf { cols ->
-            if (colIdx < cols.size && cols[colIdx].isNotEmpty())
-                cols[colIdx].maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
-            else 0f
-        }
-    }
-
-    fun conformedColWidth() =
-        blocks.maxOf { block ->
-            block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
-        }
-
-    fun independentRowHeights() = blocks.associateWith { block ->
-        List(numRows.getValue(block)) { rowIdx ->
-            bodyPartitions.getValue(block).maxOf { col ->
-                col.getOrNull(rowIdx)?.getHeight() ?: 0f
+    for (block in blocks)
+        if (block.style.gridStructure.let { it == EQUAL_WIDTH_COLS || it == SQUARE_CELLS }) {
+            val numCols = colsPerBlock.getValue(block).size
+            if (numCols == 0)
+                continue
+            val colWidths = sharedColWidthsPerBlock.getValue(block)
+            val startIdx = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - numCols else 0
+            val endIdx = startIdx + numCols
+            if (block.style.gridStructure == EQUAL_WIDTH_COLS) {
+                if (colWidths.anyBetween(startIdx + 1, endIdx) { it != colWidths[startIdx] }) {
+                    val max = colWidths.maxBetween(startIdx, endIdx)
+                    colWidths.fill(max, startIdx, endIdx)
+                }
+            } else if (block.style.gridStructure == SQUARE_CELLS) {
+                val rowHeight = sharedRowHeightPerBlock.getValue(block)
+                if (colWidths.anyBetween(startIdx, endIdx) { it != rowHeight.value }) {
+                    val max = max(colWidths.maxBetween(startIdx, endIdx), rowHeight.value)
+                    colWidths.fill(max, startIdx, endIdx)
+                    rowHeight.value = max
+                }
             }
         }
-    }
 
-    fun conformedRowHeight() =
-        blocks.maxOf { block ->
-            block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-        }
-
-    fun forEachCol(width: Float) = List(numCols) { width }
-    fun forEachRow(height: Float) = blocks.associateWith { block -> List(numRows.getValue(block)) { height } }
-
-    val colWidths: List<Float>
-    val rowHeights: Map<Block, List<Float>>
-    when (style.gridCellConform) {
-        NOTHING -> {
-            colWidths = independentColWidths()
-            rowHeights = independentRowHeights()
-        }
-        WIDTH -> {
-            colWidths = forEachCol(conformedColWidth())
-            rowHeights = independentRowHeights()
-        }
-        HEIGHT -> {
-            colWidths = independentColWidths()
-            rowHeights = forEachRow(conformedRowHeight())
-        }
-        WIDTH_AND_HEIGHT -> {
-            colWidths = forEachCol(conformedColWidth())
-            rowHeights = forEachRow(conformedRowHeight())
-        }
-        SQUARE -> {
-            val size = max(conformedColWidth(), conformedRowHeight())
-            colWidths = forEachCol(size)
-            rowHeights = forEachRow(size)
-        }
-    }
-
-    val bodyImageWidth = (numCols - 1) * style.gridColGapPx + colWidths.sum()
-
-    // Step 2:
     // Draw a deferred image for the body of each block.
-    return blocks.associateWith { block ->
-        // If there are no columns, there is no content, so we can just return an empty image.
-        if (numCols == 0)
-            return@associateWith DrawnBody(DeferredImage(), 0f, 0f)
-
-        val blockRowHeights = rowHeights.getValue(block)
-        val blockCols = bodyPartitions.getValue(block)
-
-        val bodyImage = DeferredImage(
-            width = bodyImageWidth,
-            height = blockRowHeights.sum() + ((numRows.getValue(block) - 1) * style.gridRowGapPx).toElasticY()
+    blocks.associateWithTo(out) { block ->
+        drawBodyImageWithGridBodyLayout(
+            textCtx, block, colsPerBlock.getValue(block), sharedColWidthsPerBlock[block], sharedRowHeightPerBlock[block]
         )
-
-        var x = 0f
-        for ((col, justifyCol, colWidth) in zip(blockCols, style.gridCellHJustifyPerCol, colWidths)) {
-            var y = 0f.toY()
-            for ((bodyElem, rowHeight) in col.zip(blockRowHeights)) {
-                bodyImage.drawJustifiedBodyElem(
-                    textCtx, bodyElem, justifyCol, style.gridCellVJustify, x, y, colWidth, rowHeight.toY()
-                )
-                // Draw a guide that shows the edges of the body cell.
-                bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, colWidth, rowHeight.toY(), layer = GUIDES)
-                // Advance to the next line in the current column.
-                y += rowHeight + style.gridRowGapPx.toElasticY()
-            }
-            // Advance to the next column.
-            x += colWidth + style.gridColGapPx
-        }
-
-        DrawnBody(bodyImage, blockRowHeights.first(), blockRowHeights.last())
     }
 }
 
 
-private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillingOrder): List<List<E>> {
+private fun drawBodyImageWithGridBodyLayout(
+    textCtx: TextContext,
+    block: Block,
+    cols: List<List<BodyElement>>,
+    sharedColWidths: FloatArray?,
+    sharedRowHeight: MutableFloat?
+): DrawnBody {
+    val style = block.style
+    val unocc = style.gridMatchColUnderoccupancy
+
+    val numCols = cols.size
+    val numRows = cols.maxOf { col -> col.size }
+    val rowHeights = FloatArray(numRows) { rowIdx ->
+        sharedRowHeight?.value ?: cols.maxOf { col -> col.getOrNull(rowIdx)?.getHeight() ?: 0f }
+    }
+
+    val bodyImage = DeferredImage(height = ((numRows - 1) * style.gridRowGapPx).toElasticY() + rowHeights.sum())
+
+    // Draw each column. If the block shares the same column widths as other blocks and the user requested to retain
+    // unoccupied columns, do that by either prepending negative column indices or appending too big ones. Only empty
+    // guides will be drawn for these out-of-bounds column indices.
+    var x = 0f
+    val startColIdx = if (sharedColWidths != null && unocc == RIGHT_RETAIN) numCols - sharedColWidths.size else 0
+    val endColIdx = if (sharedColWidths != null && unocc == LEFT_RETAIN) sharedColWidths.size else numCols
+    for (colIdx in startColIdx until endColIdx) {
+        // Either get the column's shared width, or compute it now if the block's column widths are now shared.
+        val colWidth = when (sharedColWidths) {
+            null -> cols[colIdx].maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+            else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0]
+        }
+        // Draw each row cell in the column.
+        var y = 0f.toY()
+        for ((rowIdx, rowHeight) in rowHeights.withIndex()) {
+            cols.getOrNull(colIdx)?.getOrNull(rowIdx)?.let { bodyElem ->
+                bodyImage.drawJustifiedBodyElem(
+                    textCtx, bodyElem, style.gridCellHJustifyPerCol[colIdx], style.gridCellVJustify,
+                    x, y, colWidth, rowHeight.toY()
+                )
+            }
+            // Draw a guide that shows the edges of the body cell.
+            bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, colWidth, rowHeight.toY(), layer = GUIDES)
+            // Advance to the next row in the current column.
+            y += rowHeight + style.gridRowGapPx.toElasticY()
+        }
+        // Advance to the next column.
+        x += colWidth
+        if (colIdx != endColIdx - 1)
+            x += style.gridColGapPx
+    }
+
+    // Set the width of the body image.
+    bodyImage.width = x
+
+    return DrawnBody(bodyImage, rowHeights.first(), rowHeights.last())
+}
+
+
+private val GridColUnderoccupancy.alignRight
+    get() = when (this) {
+        RIGHT_OMIT, RIGHT_RETAIN -> true
+        LEFT_OMIT, LEFT_RETAIN -> false
+    }
+
+
+private fun <E> flowIntoGridCols(list: List<E>, numCols: Int, order: GridFillingOrder): List<List<E>> {
     // First fill the columns irrespective of left-to-right / right-to-left.
     val cols = when (order) {
         GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
@@ -160,48 +236,92 @@ private fun <E> partitionIntoCols(list: List<E>, numCols: Int, order: GridFillin
 }
 
 
-fun drawBodyImageWithFlowBodyLayout(
+private fun drawBodyImagesWithFlowBodyLayout(
+    out: MutableMap<Block, DrawnBody>,
+    cs: List<ContentStyle>,
     letterStyles: List<LetterStyle>,
     textCtx: TextContext,
-    block: Block
+    blocks: List<Block>
+) {
+    // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow" body layout.
+    require(blocks.all { it.style.bodyLayout == FLOW })
+
+    // Flow blocks are free to potentially harmonize their cell width and height. This allows the user to create neatly
+    // aligned grid-like yet dynamic layouts that can even span multiple blocks. For both "extents" that can be
+    // harmonized (i.e., cell width and height), find which styles should harmonize together.
+    val matchCellWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellWidthAcrossStyles) {
+        bodyLayout == FLOW && flowMatchCellWidth == ACROSS_BLOCKS
+    }
+    val matchCellHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellHeightAcrossStyles) {
+        bodyLayout == FLOW && flowMatchCellHeight == ACROSS_BLOCKS
+    }
+
+    // Determine the blocks which have uniform cell width or height, optionally shared across multiple blocks, and then
+    // find those shared widths or heights.
+    fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+    fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
+    val sharedCellWidthPerBlock: Map<Block, MutableFloat> = matchExtent(
+        blocks, matchCellWidthPartitionIds,
+        matchWithinBlock = { flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
+        sharedBlockExtent = { block -> MutableFloat(maxElemWidth(block)) },
+        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemWidth)) }
+    )
+    val sharedCellHeightPerBlock: Map<Block, MutableFloat> = matchExtent(
+        blocks, matchCellHeightPartitionIds,
+        matchWithinBlock = { flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
+        sharedBlockExtent = { block -> MutableFloat(maxElemHeight(block)) },
+        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemHeight)) }
+    )
+
+    // Harmonize the cell width and height of square cells.
+    for (block in blocks)
+        if (block.style.flowSquareCells) {
+            val cellWidth = sharedCellWidthPerBlock.getValue(block)
+            val cellHeight = sharedCellHeightPerBlock.getValue(block)
+            if (cellWidth.value != cellHeight.value) {
+                val max = max(cellWidth.value, cellHeight.value)
+                cellWidth.value = max
+                cellHeight.value = max
+            }
+        }
+
+    // Draw a deferred image for the body of each block.
+    blocks.associateWithTo(out) { block ->
+        drawBodyImageWithFlowBodyLayout(
+            letterStyles, textCtx, block, sharedCellWidthPerBlock[block], sharedCellHeightPerBlock[block]
+        )
+    }
+}
+
+
+private fun drawBodyImageWithFlowBodyLayout(
+    letterStyles: List<LetterStyle>,
+    textCtx: TextContext,
+    block: Block,
+    sharedCellWidth: MutableFloat?,
+    sharedCellHeight: MutableFloat?
 ): DrawnBody {
     val style = block.style
-    // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow body layout".
-    require(style.bodyLayout == BodyLayout.FLOW)
-
     val horGap = style.flowHGapPx
 
     val bodyLetterStyle = letterStyles.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = style.flowSeparator
     val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle)).formatted(textCtx)
 
-    // Find the maximum width resp. height over all body elements.
-    val maxElemWidth = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
-    val maxElemHeight = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-    val maxElemSideLength = max(maxElemWidth, maxElemHeight)
-
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
     val bodyImageWidth = style.flowLineWidthPx
-        .coerceAtLeast(if (style.flowCellConform == SQUARE) maxElemSideLength else maxElemWidth)
+        .coerceAtLeast(sharedCellWidth?.value ?: block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) })
 
     // Determine which body elements should lie on which line. We use the simplest possible
     // text flow algorithm for this.
-    val lines = partitionIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
-        when (style.flowCellConform) {
-            NOTHING, HEIGHT -> bodyElem.getWidth(textCtx)
-            WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
-            SQUARE -> maxElemSideLength
-        }
+    val lines = flowIntoLines(block.body, style.flowDirection, bodyImageWidth, horGap) { bodyElem ->
+        sharedCellWidth?.value ?: bodyElem.getWidth(textCtx)
     }
 
     // We will later use this function to find the height of a specific line.
     fun getLineHeight(line: List<BodyElement>) =
-        when (style.flowCellConform) {
-            NOTHING, WIDTH -> line.maxOf { bodyElem -> bodyElem.getHeight() }
-            HEIGHT, WIDTH_AND_HEIGHT -> maxElemHeight
-            SQUARE -> maxElemSideLength
-        }
+        sharedCellHeight?.value ?: line.maxOf { bodyElem -> bodyElem.getHeight() }
 
     // Start drawing the actual image.
     val bodyImage = DeferredImage(width = bodyImageWidth)
@@ -213,11 +333,9 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Determine the width of all rigid elements in the line, that is, the total width of all body elements
         // and separator strings.
-        val totalRigidWidth = when (style.flowCellConform) {
-            NOTHING, HEIGHT -> line.sumOf { bodyElem -> bodyElem.getWidth(textCtx) }
-            WIDTH, WIDTH_AND_HEIGHT -> line.size * maxElemWidth
-            SQUARE -> line.size * maxElemSideLength
-        }
+        val totalRigidWidth =
+            if (sharedCellWidth != null) line.size * sharedCellWidth.value
+            else line.sumOf { bodyElem -> bodyElem.getWidth(textCtx) }
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
         // such that the line fills the whole width of the body image.
@@ -239,11 +357,7 @@ fun drawBodyImageWithFlowBodyLayout(
 
         // Actually draw the line using the measurements from above.
         for ((bodyElemIdx, bodyElem) in line.withIndex()) {
-            val areaWidth = when (style.flowCellConform) {
-                NOTHING, HEIGHT -> bodyElem.getWidth(textCtx)
-                WIDTH, WIDTH_AND_HEIGHT -> maxElemWidth
-                SQUARE -> maxElemSideLength
-            }
+            val areaWidth = sharedCellWidth?.value ?: bodyElem.getWidth(textCtx)
 
             // Draw the current body element.
             bodyImage.drawJustifiedBodyElem(
@@ -269,9 +383,10 @@ fun drawBodyImageWithFlowBodyLayout(
         }
 
         // Advance to the next line.
-        y += lineHeight + style.flowLineGapPx.toElasticY()
+        y += lineHeight
+        if (lineIdx != lines.lastIndex)
+            y += style.flowLineGapPx.toElasticY()
     }
-    y -= style.flowLineGapPx.toElasticY()
 
     // Set the height of the body image.
     bodyImage.height = y
@@ -284,7 +399,7 @@ fun drawBodyImageWithFlowBodyLayout(
 }
 
 
-private inline fun <E> partitionIntoLines(
+private inline fun <E> flowIntoLines(
     list: List<E>,
     direction: FlowDirection,
     maxWidth: Float,
@@ -327,23 +442,14 @@ private inline fun <E> partitionIntoLines(
 }
 
 
-private inline fun <E> Iterable<E>.sumOf(selector: (E) -> Float): Float {
-    var sum = 0f
-    for (elem in this) {
-        sum += selector(elem)
-    }
-    return sum
-}
-
-
-fun drawBodyImageWithParagraphsBodyLayout(
+private fun drawBodyImageWithParagraphsBodyLayout(
     textCtx: TextContext,
     block: Block
 ): DrawnBody {
     val style = block.style
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the
-    // "paragraphs body layout".
-    require(style.bodyLayout == BodyLayout.PARAGRAPHS)
+    // "paragraphs" body layout.
+    require(style.bodyLayout == PARAGRAPHS)
 
     val bodyImageWidth = style.paragraphsLineWidthPx
 
@@ -414,6 +520,37 @@ fun drawBodyImageWithParagraphsBodyLayout(
 }
 
 
+private class MutableFloat(var value: Float)
+
+private inline fun <T> matchExtent(
+    blocks: List<Block>,
+    styleMatchPartitionIds: Map<ContentStyle, PartitionId>,
+    matchWithinBlock: ContentStyle.() -> Boolean,
+    sharedBlockExtent: (Block) -> T,
+    sharedGroupExtent: (List<Block>) -> T
+): Map<Block, T> {
+    val groupExtents = HashMap<Block, T>(2 * blocks.size)
+    val grouper = HashMap<Any /* group key */, MutableList<Block>>()
+    for (block in blocks) {
+        val stylePartitionId = styleMatchPartitionIds[block.style]
+        // If the block's style is in some partition (!= null), matching the specific extent across blocks is enabled
+        // for that style. Hence, group the block according to both (a) the style's partition and (b) the global body
+        // match partition which arises from the "@Break Match" column in the credits table.
+        if (stylePartitionId != null)
+            grouper.computeIfAbsent(Pair(stylePartitionId, block.matchBodyPartitionId)) { ArrayList() }.add(block)
+        // Otherwise, if the block is at least configured to internally match its extents, record the shared extent now.
+        else if (matchWithinBlock(block.style))
+            groupExtents[block] = sharedBlockExtent(block)
+    }
+    // Now that the grouping is done, record the shared extent of each group.
+    for (group in grouper.values) {
+        val extent = sharedGroupExtent(group)
+        group.associateWithTo(groupExtents) { extent }
+    }
+    return groupExtents
+}
+
+
 private fun BodyElement.getWidth(textCtx: TextContext): Float = when (this) {
     is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
@@ -452,16 +589,4 @@ private fun SingleLineHJustify.toHJustify() = when (this) {
     SingleLineHJustify.LEFT -> HJustify.LEFT
     SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
     SingleLineHJustify.RIGHT -> HJustify.RIGHT
-}
-
-
-private fun <X, Y, Z> zip(xs: Iterable<X>, ys: Iterable<Y>, zs: Iterable<Z>): Sequence<Triple<X, Y, Z>> {
-    val xsIter = xs.iterator()
-    val ysIter = ys.iterator()
-    val zsIter = zs.iterator()
-    return generateSequence {
-        if (xsIter.hasNext() && ysIter.hasNext() && zsIter.hasNext())
-            Triple(xsIter.next(), ysIter.next(), zsIter.next())
-        else null
-    }
 }

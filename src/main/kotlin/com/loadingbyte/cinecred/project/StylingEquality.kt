@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.project
 
+import com.loadingbyte.cinecred.common.removeFirstOrNull
+
 
 fun Styling.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx: StylingContext, other: Styling): Boolean =
     global.equalsIgnoreIneffectiveSettings(ctx, this, other.global) &&
@@ -42,7 +44,7 @@ private fun <S : NamedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSetting
             val dupStyles2 = styles2.subList(idx, endIdx).toMutableList()
             while (idx < endIdx) {
                 val s1 = styles1[idx]
-                if (!dupStyles2.removeFirst { s2 -> s1.equalsIgnoreIneffectiveSettings(ctx, styling, s2) })
+                if (dupStyles2.removeFirstOrNull { s2 -> s1.equalsIgnoreIneffectiveSettings(ctx, styling, s2) } == null)
                     return false
                 idx++
             }
@@ -62,15 +64,6 @@ private inline fun <E> List<E>.endOfRange(startIdx: Int, predicate: (E) -> Boole
         if (!predicate(get(idx)))
             return idx
     return size
-}
-
-private inline fun <E> MutableList<E>.removeFirst(predicate: (E) -> Boolean): Boolean {
-    val idx = indexOfFirst(predicate)
-    return if (idx != -1) {
-        removeAt(idx)
-        true
-    } else
-        false
 }
 
 

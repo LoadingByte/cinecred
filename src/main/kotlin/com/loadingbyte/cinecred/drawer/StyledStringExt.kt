@@ -343,7 +343,7 @@ private inline fun BooleanArray.forEachAlternatingStrip(block: (Boolean, Int, In
     var stripStartIdx = 0
 
     while (true) {
-        val stripEndIdx = indexOf(!state, stripStartIdx)
+        val stripEndIdx = indexOfAfter(!state, stripStartIdx)
 
         if (stripEndIdx == -1) {
             if (stripStartIdx != size)
@@ -355,15 +355,6 @@ private inline fun BooleanArray.forEachAlternatingStrip(block: (Boolean, Int, In
         state = !state
         stripStartIdx = stripEndIdx
     }
-}
-
-private fun BooleanArray.indexOf(elem: Boolean, startIdx: Int): Int {
-    for (idx in startIdx until size) {
-        if (this[idx] == elem) {
-            return idx
-        }
-    }
-    return -1
 }
 
 

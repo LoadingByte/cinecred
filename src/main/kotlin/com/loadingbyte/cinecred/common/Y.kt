@@ -50,13 +50,13 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
     operator fun plus(other: Y): Y = add(this, other, 1f)
     operator fun minus(other: Y): Y = add(this, other, -1f)
 
-    operator fun plus(rigid: Float): Y = Y(ss, ls.map { it + rigid })
-    operator fun minus(rigid: Float): Y = Y(ss, ls.map { it - rigid })
+    operator fun plus(rigid: Float): Y = Y(ss, ls.mapToArray { it + rigid })
+    operator fun minus(rigid: Float): Y = Y(ss, ls.mapToArray { it - rigid })
 
     /** scale universe */
-    operator fun times(universeScaling: Float): Y = Y(ss, ls.map { it * universeScaling })
+    operator fun times(universeScaling: Float): Y = Y(ss, ls.mapToArray { it * universeScaling })
     /** scale universe */
-    operator fun div(universeScaling: Float): Y = Y(ss, ls.map { it / universeScaling })
+    operator fun div(universeScaling: Float): Y = Y(ss, ls.mapToArray { it / universeScaling })
     /** scale universe */
     operator fun unaryMinus(): Y = times(-1f)
 
@@ -64,7 +64,7 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
         require(elasticScaling >= 0f)  // One can't remove more elastic space than there is.
         return when {
             elasticScaling < EPS -> resolve(0f).toY()
-            else -> Y(ss.map { it / elasticScaling }, ls)
+            else -> Y(ss.mapToArray { it / elasticScaling }, ls)
         }
     }
 
@@ -91,9 +91,6 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
         operator fun Float.plus(y: Y): Y = y + this
         operator fun Float.minus(y: Y): Y = -y + this
         operator fun Float.times(y: Y): Y = y * this
-
-        private inline fun FloatArray.map(transform: (Float) -> Float): FloatArray =
-            FloatArray(size) { i -> transform(this[i]) }
 
         private fun add(y1: Y, y2: Y, mulSnd: Float): Y {
             val maxNumPoints = y1.ss.size + y2.ss.size

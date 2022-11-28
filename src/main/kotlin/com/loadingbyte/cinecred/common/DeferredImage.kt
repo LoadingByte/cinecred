@@ -174,17 +174,8 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         val GROUNDING = Layer()
         val GUIDES = Layer()
 
-        private inline fun FloatArray.indexOfFirst(
-            start: Int = 0, end: Int = -1, step: Int = 1, predicate: (Float) -> Boolean
-        ): Int {
-            for (idx in start until (if (end == -1) size else end) step step)
-                if (predicate(this[idx]))
-                    return idx
-            return -1
-        }
-
-        private fun FloatArray.isFinite(start: Int = 0, end: Int = -1): Boolean =
-            indexOfFirst(start, end) { !it.isFinite() } == -1
+        private fun FloatArray.isFinite(end: Int): Boolean =
+            allBetween(0, end, Float::isFinite)
 
     }
 

@@ -3,11 +3,34 @@ package com.loadingbyte.cinecred.common
 import kotlin.math.max
 
 
+/*
+ * This file contains very slight variations of Kotlin standard library functions. As a rule of thumb, if a function
+ * should probably be in the standard library but isn't, it tends to belong in this file.
+ */
+
+
 inline fun FloatArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Float) -> Boolean): Boolean {
     for (idx in startIdx until endIdx)
         if (predicate(this[idx]))
             return true
     return false
+}
+
+inline fun FloatArray.allBetween(startIdx: Int, endIdx: Int, predicate: (Float) -> Boolean): Boolean {
+    for (idx in startIdx until endIdx)
+        if (!predicate(this[idx]))
+            return false
+    return true
+}
+
+
+fun BooleanArray.indexOfAfter(elem: Boolean, startIdx: Int): Int {
+    for (idx in startIdx until size) {
+        if (this[idx] == elem) {
+            return idx
+        }
+    }
+    return -1
 }
 
 
@@ -25,6 +48,10 @@ inline fun <E> Iterable<E>.sumOf(selector: (E) -> Float): Float {
         sum += selector(elem)
     return sum
 }
+
+
+inline fun FloatArray.mapToArray(transform: (Float) -> Float): FloatArray =
+    FloatArray(size) { i -> transform(this[i]) }
 
 
 inline fun <E> MutableList<E>.removeFirstOrNull(predicate: (E) -> Boolean): E? {

@@ -351,13 +351,6 @@ private class CreditsReader(
             }
         }
 
-        // If the first stage's style is not explicitly declared, issue a warning and fall back to the
-        // placeholder page style.
-        if (stageStyle == null) {
-            stageStyle = PLACEHOLDER_PAGE_STYLE
-            table.log(row, null, WARN, l10n("projectIO.credits.noPageStyleSpecified"))
-        }
-
         // If the spine cell is non-empty, conclude the previous spine (if there was any) and start a new one.
         // If the spine cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
         // previous segment and start a new one.
@@ -462,12 +455,18 @@ private class CreditsReader(
             }
         }
 
-        // If no content style has been declared at the point where the first block starts, issue a warning and
-        // fall back to the placeholder content style.
-        if (contentStyle == null && (newHead != null || newTail != null || bodyElem != null)) {
-            contentStyle = PLACEHOLDER_CONTENT_STYLE
-            blockStyle = contentStyle
-            table.log(row, null, WARN, l10n("projectIO.credits.noContentStyleSpecified"))
+        // If no page or content style has been declared at the point where the first block starts, issue a warning and
+        // fall back to the placeholder page or content style.
+        if (newHead != null || newTail != null || bodyElem != null) {
+            if (stageStyle == null) {
+                stageStyle = PLACEHOLDER_PAGE_STYLE
+                table.log(row, null, WARN, l10n("projectIO.credits.noPageStyleSpecified"))
+            }
+            if (contentStyle == null) {
+                contentStyle = PLACEHOLDER_CONTENT_STYLE
+                blockStyle = contentStyle
+                table.log(row, null, WARN, l10n("projectIO.credits.noContentStyleSpecified"))
+            }
         }
 
         // If the line has a head or tail even though the current content style doesn't support it,

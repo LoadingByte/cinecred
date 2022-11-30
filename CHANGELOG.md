@@ -43,6 +43,8 @@ Cinecred Changelog
   correctly detected by auto reloading.
 - On macOS, system fonts are now fully supported: their metrics are properly
   utilized and exported PDFs correctly embed them.
+- Vertical gaps are now recognized even when declared in between a spine wrap
+  respectively a page beginning and the next block.
 - Runtime adjustment is now accurate even with scroll pages melted together.
 - Rectified the tracking between segments of differing font sizes.
 - Characters larger than 16 bit no longer disrupt small caps.

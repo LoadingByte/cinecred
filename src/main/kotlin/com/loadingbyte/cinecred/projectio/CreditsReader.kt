@@ -121,6 +121,10 @@ private class CreditsReader(
     // The row that is currently being read.
     var row = 0
 
+    // The page style to use for the next started stage.
+    var nextStageStyle: PageStyle? = null
+    // The spine position offset to use for the next started spine.
+    var nextSpinePosOffsetPx = 0f
     // The current content style. This variable is special because a content style stays valid until the next
     // explicit content style declaration.
     var contentStyle: ContentStyle? = null
@@ -146,6 +150,13 @@ private class CreditsReader(
     // In the latter case, the vertical gap accumulator would be given to the segment and not the block. So we have
     // to wait and see.
     var isBlockConclusionMarked = false
+    // These variables work similar to the one above, but not only cause the conclusion of the current block, but also
+    // the current spine, segment, or stage. They are used when a new spine, segment, or stage is started, but it does
+    // not have its first block defined yet, leaving room for additional vertical gaps in the meantime, which should of
+    // course still count to the vGapAfter of the just concluded spine, segment, or stage.
+    var isSpineConclusionMarked = false
+    var isSegmentConclusionMarked = false
+    var isStageConclusionMarked = false
 
     // Final result
     val pages = mutableListOf<Page>()
@@ -181,13 +192,6 @@ private class CreditsReader(
     var blockHeadDeclaredRow = 0
     var blockTailDeclaredRow = 0
 
-    fun pullVGap(): Float {
-        val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toFloat()) * styling.global.unitVGapPx
-        explicitVGapInUnits = null
-        implicitVGapInUnits = 0
-        return vGap
-    }
-
     fun concludePage() {
         // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
         // when they don't sit next to another scroll stage and when they are not alone on a page.
@@ -209,7 +213,7 @@ private class CreditsReader(
         pageStages.clear()
     }
 
-    fun concludeStage(vGapAfter: Float, newStageStyle: PageStyle) {
+    fun concludeStage(vGapAfter: Float) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
             val stage = Stage(stageStyle!!, stageSegments.toPersistentList(), vGapAfter)
@@ -226,23 +230,28 @@ private class CreditsReader(
             else if (stageRtFrames != null)
                 unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), stageRtFrames))
         }
-        stageStyle = newStageStyle
+        stageStyle = nextStageStyle
         stageSegments.clear()
         stageRuntimeFrames = null
         stageRuntimeGroupName = null
+        nextStageStyle = null
+        isStageConclusionMarked = false
     }
 
     fun concludeSegment(vGapAfter: Float) {
         if (segmentSpines.isNotEmpty())
             stageSegments.add(Segment(segmentSpines.toPersistentList(), vGapAfter))
         segmentSpines.clear()
+        isSegmentConclusionMarked = false
     }
 
     fun concludeSpine() {
         if (spineBlocks.isNotEmpty())
             segmentSpines.add(Spine(spinePosOffsetPx, spineBlocks.toPersistentList()))
-        spinePosOffsetPx = 0f
+        spinePosOffsetPx = nextSpinePosOffsetPx
         spineBlocks.clear()
+        nextSpinePosOffsetPx = 0f
+        isSpineConclusionMarked = false
     }
 
     fun concludeBlock(vGapAfter: Float) {
@@ -265,6 +274,7 @@ private class CreditsReader(
         blockMatchHeadPartitionId = matchHeadPartitionId
         blockMatchBodyPartitionId = matchBodyPartitionId
         blockMatchTailPartitionId = matchTailPartitionId
+        isBlockConclusionMarked = false
     }
 
 
@@ -282,7 +292,7 @@ private class CreditsReader(
         concludeBlock(0f)
         concludeSpine()
         concludeSegment(0f)
-        concludeStage(0f, PLACEHOLDER_PAGE_STYLE /* we just need to put some arbitrary thing in here */)
+        concludeStage(0f)
         concludePage()
 
         // Collect the runtime groups
@@ -306,20 +316,12 @@ private class CreditsReader(
                 table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapInUnits))
         }
 
-        // If the page style cell is non-empty, conclude the previous stage (if there was any) and start a new one.
+        // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
+        // specified page style for the stage that starts immediately afterwards. Also reset the spine position offset.
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
-            concludeBlock(0f)
-            concludeSpine()
-            concludeSegment(0f)
-            concludeStage(pullVGap(), newPageStyle)
-            isBlockConclusionMarked = false
-
-            // If we are not melting the previous stage with the future one, concluded the stage and the current page.
-            val prevPageStyle = pageStages.lastOrNull()?.style
-            if (!(prevPageStyle?.behavior == PageBehavior.SCROLL && prevPageStyle.scrollMeltWithNext) &&
-                !(newPageStyle.behavior == PageBehavior.SCROLL && newPageStyle.scrollMeltWithPrev)
-            )
-                concludePage()
+            nextStageStyle = newPageStyle
+            nextSpinePosOffsetPx = 0f
+            isStageConclusionMarked = true
         }
         table.getString(row, "pageRuntime")?.let { str ->
             if (table.isEmpty(row, "pageStyle"))
@@ -379,13 +381,11 @@ private class CreditsReader(
                 table.log(row, "spinePos", WARN, msg)
             }
 
-            concludeBlock(0f)
-            concludeSpine()
-            val vGap = pullVGap()  // Reset the vGap even if we don't use it.
-            if (wrap)
-                concludeSegment(vGap)
-            isBlockConclusionMarked = false
-            spinePosOffsetPx = posOffsetPx
+            nextSpinePosOffsetPx = posOffsetPx
+            if (!wrap)
+                isSpineConclusionMarked = true
+            else
+                isSegmentConclusionMarked = true
         }
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
@@ -418,9 +418,40 @@ private class CreditsReader(
 
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
-        if (newHead != null || newTail != null || (isBlockConclusionMarked && bodyElem != null)) {
-            concludeBlock(pullVGap())
-            isBlockConclusionMarked = false
+        val isConclusionMarked =
+            isBlockConclusionMarked || isSpineConclusionMarked || isSegmentConclusionMarked || isStageConclusionMarked
+        if (newHead != null || newTail != null || (isConclusionMarked && bodyElem != null)) {
+            // Pull the accumulated vertical gap.
+            val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toFloat()) * styling.global.unitVGapPx
+            explicitVGapInUnits = null
+            implicitVGapInUnits = 0
+
+            // If the conclusion of the previous spine, segment, or stage has been marked, also conclude that and give
+            // the accumulated virtual gap to the concluded element of the highest order.
+            if (isStageConclusionMarked) {
+                concludeBlock(0f)
+                concludeSpine()
+                concludeSegment(0f)
+                concludeStage(vGap)
+                // If we are not melting the previous stage with the future one, also conclude the current page.
+                val prevStageStyle = pageStages.lastOrNull()?.style
+                val currStageStyle = stageStyle!!
+                if (!(prevStageStyle?.behavior == PageBehavior.SCROLL && prevStageStyle.scrollMeltWithNext) &&
+                    !(currStageStyle.behavior == PageBehavior.SCROLL && currStageStyle.scrollMeltWithPrev)
+                )
+                    concludePage()
+            } else if (isSegmentConclusionMarked) {
+                concludeBlock(0f)
+                concludeSpine()
+                concludeSegment(vGap)
+            } else if (isSpineConclusionMarked) {
+                concludeBlock(0f)
+                concludeSpine()
+                // Discard the accumulated virtual gap.
+            } else
+                concludeBlock(vGap)
+
+            // Record the head and tail if they are provided.
             if (newHead != null) {
                 blockHead = newHead
                 blockHeadDeclaredRow = row

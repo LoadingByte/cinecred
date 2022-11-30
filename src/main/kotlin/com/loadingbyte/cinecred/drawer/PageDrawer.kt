@@ -16,6 +16,7 @@ import java.awt.Font
 import java.awt.geom.Path2D
 import java.util.*
 import javax.swing.UIManager
+import kotlin.math.ceil
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
@@ -64,7 +65,7 @@ fun drawPages(project: Project): List<DrawnPage> {
         // Adjust the stages collected in runtime groups.
         for (runtimeGroup in runtimeGroups)
             matchRuntime(
-                stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
+                pages, stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
                 desiredFrames = runtimeGroup.runtimeFrames,
                 activeStages = runtimeGroup.stages, passiveStages = emptyList()
             )
@@ -74,7 +75,7 @@ fun drawPages(project: Project): List<DrawnPage> {
             val runtimeStages = runtimeGroups.flatMap(RuntimeGroup::stages)
             val allStages = stageImages.keys
             matchRuntime(
-                stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
+                pages, stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
                 // Just subtract the frames in between pages from the number of desired frames.
                 desiredFrames = global.runtimeFrames.value - pauseFrames,
                 activeStages = allStages - runtimeStages, passiveStages = runtimeStages
@@ -201,23 +202,63 @@ private fun layoutStages(
     // Find for each stage:
     //   - If it's a card stage, its middle y coordinate in the overall page image.
     //   - If it's a scroll stage, the y coordinates in the overall page image that are at the center of the screen
-    //     when the scrolling of this stage starts resp. stops.
+    //     when the scrolling of this stage starts respectively stops. Also, the number of frames that make up the
+    //     scroll, and a fraction of a frame that should be skipped prior to the beginning of the scroll.
+    var nextScrollInitAdvance = Float.NaN
     val stageInfo = page.stages.mapIndexed { stageIdx, stage ->
         val (topY, botY) = stageImageBounds[stageIdx]
         when (stage.style.behavior) {
             CARD -> DrawnStageInfo.Card((topY + botY) / 2f)
             SCROLL -> {
-                val scrollStartY = when (page.stages.getOrNull(stageIdx - 1)?.style?.behavior) {
+                val prevStageBehavior = page.stages.getOrNull(stageIdx - 1)?.run { style.behavior }
+                val nextStageBehavior = page.stages.getOrNull(stageIdx + 1)?.run { style.behavior }
+                // Find the scroll start and end y coordinates.
+                val scrollStartY = when (prevStageBehavior) {
                     CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2f }
                     SCROLL -> stageImageBounds[stageIdx - 1].let { (_, aBotY) -> (aBotY + topY) / 2f }
                     null -> topY /* will always be 0 */ - global.heightPx / 2f
                 }
-                val scrollStopY = when (page.stages.getOrNull(stageIdx + 1)?.style?.behavior) {
+                val scrollStopY = when (nextStageBehavior) {
                     CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2f }
                     SCROLL -> stageImageBounds[stageIdx + 1].let { (bTopY, _) -> (botY + bTopY) / 2f }
                     null -> botY + global.heightPx / 2f
                 }
-                DrawnStageInfo.Scroll(scrollStartY, scrollStopY)
+                // Find (a) how much of a single frame to advance the scroll prior to the first frame actually being
+                // rendered (initAdvance) and (b) the number of frames required for the scroll.
+                // To understand this, consider a scenario with the following immediate sequence of scroll stages:
+                //  1. height = 10px & scroll speed = 2px per frame
+                //  2. height = 10px & scroll speed = 3px per frame
+                //  3. height =  9px & scroll speed = 2px per frame
+                // This sequence is surrounded either by nothing or card stages. In either case, the scroll itself
+                // should only contain "moving" frames, since the static ones (blank screen or still card) are already
+                // fully covered by the frame gaps between pages or the card stages.
+                //  1. We start with the first scroll stage. Its "moving" frames (i.e., all frames except the start
+                //     and end ones) perfectly fit into 4 frames, with a 1 frame gap to both the start and end frames.
+                //     The pixel offsets of each frame are 2, 4, 6, and 8, with the offsets 0 and 10 being excluded.
+                //     In the code, initAdvance is 1 (because the previous stage's behavior is not scroll), meaning that
+                //     the scroll skips the start frame at 0px offset. fracFrames comes out as 4.0, and hence frames is
+                //     4 and the next scroll stage's initAdvance is set to 0.0.
+                //  2. The second stage follows a scroll stage, so this time its start frame is a "moving" one and needs
+                //     to be included. Since the first stage had a perfect 1 frame gap to its excluded end frame, we
+                //     include the second stage's topmost frame, which is the same frame. This is realized by the
+                //     initAdvance of 0.0 inherited from before. In the second stage however, the "moving" do not fit
+                //     perfectly into any number of frames since fracFrames, i.e. height / scroll speed, is fractional,
+                //     namely 3.33... This tells us that (a) we need 4 frames to represent the moving part (pixel
+                //     offsets are 0, 3, 6, 9) and (b) the last frame only has a 0.33 gap to the excluded end frame at
+                //     10px offset. In the code, frames is indeed ceil(3.33) = 4, and the next stage's initAdvance is
+                //     0.66 to pay for the 1-0.33 residual frames left by the shorter gap to the excluded end frame.
+                //  3. Hence, the third stage skips the first 0.66 frames. The pixel offsets are then 1.33, 3.33, 5.33,
+                //     and 7.33; as always, the end frame at 9px offset is excluded. In the code, fracFrames comes out
+                //     as "9 / 2 - 0.66 = 3.833", and frames is indeed ceil(3.833) = 4.
+                val initAdvance = if (prevStageBehavior == SCROLL) nextScrollInitAdvance else 1f
+                val fracFrames =
+                    (scrollStopY.resolve() - scrollStartY.resolve()) / stage.style.scrollPxPerFrame - initAdvance
+                // If fracFrames is just slightly larger than an integer, we want it to be handled as if it was that
+                // integer to compensate for floating point inaccuracy. That is why we have the -0.01 in there.
+                val frames = ceil(fracFrames - 0.01f).toInt()
+                nextScrollInitAdvance = (-fracFrames).mod(1f)  // Using mod() ensures that the result is positive.
+                // Construct the info object.
+                DrawnStageInfo.Scroll(scrollStartY, scrollStopY, frames, initAdvance)
             }
         }
     }
@@ -230,6 +271,7 @@ private fun layoutStages(
 
 
 private fun matchRuntime(
+    pages: List<Page>,
     stageImages: MutableMap<Stage, DeferredImage>,
     prelimStageLayouts: Map<Stage, StageLayout>,
     pageTopStages: Set<Stage>,
@@ -241,10 +283,15 @@ private fun matchRuntime(
     // Here, we do not store a stretchable length in a Y object, but instead a stretchable number of frames.
     var frames = 0f.toY()
 
-    for (stage in activeStages)
-        frames += getStageFrames(prelimStageLayouts, pageTopStages, pageBotStages, stage) // rigid & elastic
-    for (stage in passiveStages)
-        frames += getStageFrames(prelimStageLayouts, pageTopStages, pageBotStages, stage).resolve() // rigid only
+    for (page in pages)
+        for ((stageIdx, stage) in page.stages.withIndex()) {
+            val prevStage = page.stages.getOrNull(stageIdx - 1)
+            // activate stages -> rigid & elastic  /  passive stages -> rigid only
+            if (stage in activeStages)
+                frames += getStageFrames(prelimStageLayouts, pageTopStages, pageBotStages, stage, prevStage)
+            else if (stage in passiveStages)
+                frames += getStageFrames(prelimStageLayouts, pageTopStages, pageBotStages, stage, prevStage).resolve()
+        }
 
     val elasticScaling = frames.deresolve(desiredFrames.toFloat())
 
@@ -284,7 +331,6 @@ private fun drawPage(
     for ((stageIdx, stage) in page.stages.withIndex()) {
         val stageImage = stageImages.getValue(stage)
         val stageLayout = stageLayouts.getValue(stage)
-        // Special handling for card stages...
         if (stageLayout.info is DrawnStageInfo.Card) {
             val cardTopY = stageLayout.info.middleY - global.heightPx / 2f
             val cardBotY = stageLayout.info.middleY + global.heightPx / 2f
@@ -302,12 +348,11 @@ private fun drawPage(
                 pageImage.drawMeltedCardArrowGuide(global, cardBotY)
             drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), cardTopY)
         } else if (stageLayout.info is DrawnStageInfo.Scroll) {
-            val frames = VideoDrawer.discretizeScrollFrames(getScrollFrames(stageLayouts, stage).resolve())
             val y = when (val prevStageInfo = page.stages.getOrNull(stageIdx - 1)?.let(stageLayouts::getValue)?.info) {
                 is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2f
                 else -> stageLayout.y
             }
-            drawFrames(frames, y)
+            drawFrames(stageLayout.info.frames, y)
         }
         // Actually draw the stage image onto the page image.
         pageImage.drawDeferredImage(stageImage, 0f, stageLayout.y)
@@ -340,11 +385,12 @@ private fun getStageFrames(
     stageLayouts: Map<Stage, StageLayout>,
     pageTopStages: Set<Stage>,
     pageBotStages: Set<Stage>,
-    stage: Stage
+    stage: Stage,
+    prevStage: Stage?
 ): Y =
     when (stage.style.behavior) {
         CARD -> getCardFrames(pageTopStages, pageBotStages, stage).toFloat().toY()
-        SCROLL -> getScrollFrames(stageLayouts, stage)
+        SCROLL -> getScrollFrames(stageLayouts, stage, prevStage)
     }
 
 
@@ -365,9 +411,18 @@ private fun getCardFrames(
 
 private fun getScrollFrames(
     stageLayouts: Map<Stage, StageLayout>,
-    stage: Stage
+    stage: Stage,
+    prevStage: Stage?
 ): Y {
     val stageInfo = stageLayouts.getValue(stage).info as DrawnStageInfo.Scroll
-    // The scroll should neither include the frame at scrollStartY nor the one at scrollStopY, hence the -1.
-    return (stageInfo.scrollStopY - stageInfo.scrollStartY) / stage.style.scrollPxPerFrame - 1f
+    // Notice that the scroll frames do not contain the frame at scrollStopY. For example, if there is a scroll height
+    // "scrollStopY - scrollStartY" of 10 pixels, and we scroll 2 pixels per frame, the first frame at the top is
+    // included, but the last frame at the bottom is not.
+    var frames = (stageInfo.scrollStopY - stageInfo.scrollStartY) / stage.style.scrollPxPerFrame
+    // If the stage is not preceded by another scroll stage, but either by void or by a card stage, also drop the frame
+    // at scrollStartY. As a result, the scroll now contains only "moving" frames along the continuous stretch of scroll
+    // stages, but not the still frames at its start and end.
+    if (prevStage == null || prevStage.style.behavior != SCROLL)
+        frames -= 1f
+    return frames
 }

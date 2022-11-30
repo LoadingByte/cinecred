@@ -36,7 +36,6 @@ open class VideoDrawer(
     init {
         // Write frames for each page as has been configured.
         for ((pageIdx, page) in project.pages.withIndex()) {
-            var prevScrollActualImgTopYStop: Float? = null
             for ((stageIdx, stage) in page.stages.withIndex())
                 when (val stageInfo = drawnPages[pageIdx].stageInfo[stageIdx]) {
                     is DrawnStageInfo.Card -> {
@@ -46,15 +45,13 @@ open class VideoDrawer(
                         writeStatic(pageIdx, imgTopY, stage.style.cardDurationFrames)
                         if (stageIdx == page.stages.lastIndex)
                             writeFade(pageIdx, imgTopY, stage.style.cardFadeOutFrames, fadeOut = true)
-                        prevScrollActualImgTopYStop = null
                     }
                     is DrawnStageInfo.Scroll -> {
-                        val imgTopYStart = prevScrollActualImgTopYStop
-                            ?: scaling * (stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2f)
-                        val imgTopYStop =
-                            scaling * (stageInfo.scrollStopY.resolve() - project.styling.global.heightPx / 2f)
-                        prevScrollActualImgTopYStop = writeScroll(
-                            pageIdx, imgTopYStart, imgTopYStop, scaling * stage.style.scrollPxPerFrame
+                        val imgTopYStart =
+                            scaling * (stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2f)
+                        writeScroll(
+                            pageIdx, imgTopYStart, stageInfo.frames, stageInfo.initialAdvance,
+                            scrollPxPerFrame = scaling * stage.style.scrollPxPerFrame
                         )
                     }
                 }
@@ -79,20 +76,13 @@ open class VideoDrawer(
         }
     }
 
-    /**
-     * Returns the `imgTopY` where the scroll actually stopped.
-     */
     private fun writeScroll(
-        pageIdx: Int, imgTopYStart: Float, imgTopYStop: Float, scrollPxPerFrame: Float
-    ): Float {
-        // Find the number of frames making up the scroll. It should neither include the frame at imgTopYStart
-        // nor the one at imgTopYStop, hence the -1.
-        val numFrames = discretizeScrollFrames((imgTopYStop - imgTopYStart) / scrollPxPerFrame - 1f)
+        pageIdx: Int, imgTopYStart: Float, numFrames: Int, initialAdvance: Float, scrollPxPerFrame: Float
+    ) {
         for (frame in 0 until numFrames) {
-            val imgTopY = imgTopYStart + (frame + 1) * scrollPxPerFrame
+            val imgTopY = imgTopYStart + (frame + initialAdvance) * scrollPxPerFrame
             insns.add(Insn(pageIdx, imgTopY, 1f))
         }
-        return imgTopYStart + numFrames * scrollPxPerFrame
     }
 
     val numFrames = insns.size
@@ -193,10 +183,6 @@ open class VideoDrawer(
 
     companion object {
         private const val MAX_SHIFTED_PAGE_IMAGES = 16
-
-        // If the numFrames float just slightly larger than an integer, we want it to be handled as if it was the
-        // integer to compensate for floating point inaccuracy. That is why we have the -0.02 in there.
-        fun discretizeScrollFrames(numFrames: Float): Int = ceil(numFrames - 0.02f).toInt()
     }
 
 }

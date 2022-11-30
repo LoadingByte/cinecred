@@ -103,14 +103,10 @@ private fun drawStage(
     val stageImage = DeferredImage(width = global.widthPx.toFloat())
     var y = 0f.toY()
 
-    // If this stage is a scroll stage and is preceded by another scroll stage, add half the preceding vertical gap
-    // as elastic space. If it is preceded by a card stage, add the full preceding vertical gap as rigid space
-    // since card stage images are not allowed to have vertical gaps baked into them.
-    if (prevStage != null && stage.style.behavior != CARD)
-        y += when (prevStage.style.behavior) {
-            CARD -> prevStage.vGapAfterPx.toY()
-            SCROLL -> (prevStage.vGapAfterPx / 2f).toElasticY()
-        }
+    // If this stage is a scroll stage is preceded by a card stage, add the vertical gap behind the card stage to the
+    // front of this stage because card stage images are not allowed to have extremal vertical gaps baked into them.
+    if (stage.style.behavior != CARD && prevStage != null && prevStage.style.behavior == CARD)
+        y += prevStage.vGapAfterPx.toY()
 
     for ((segmentIdx, segment) in stage.segments.withIndex()) {
         var maxHeight = 0f.toY()
@@ -126,11 +122,11 @@ private fun drawStage(
             y += segment.vGapAfterPx.toElasticY()
     }
 
-    // Same as for the preceding vertical gap above.
-    if (nextStage != null && stage.style.behavior != CARD)
+    // If this stage is a scroll stage and not the last stage on the page, add the gap behind it to its image.
+    if (stage.style.behavior != CARD && nextStage != null)
         y += when (nextStage.style.behavior) {
             CARD -> stage.vGapAfterPx.toY()
-            SCROLL -> (stage.vGapAfterPx / 2f).toElasticY()
+            SCROLL -> stage.vGapAfterPx.toElasticY()
         }
 
     // Set the stage image's height.
@@ -316,6 +312,7 @@ private fun drawPage(
 ): DeferredImage {
     val pageImage = DeferredImage(global.widthPx.toFloat(), pageImageHeight)
 
+    val framesMargin = global.widthPx / 100f
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
         // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
@@ -325,9 +322,8 @@ private fun drawPage(
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, emptySet(), null))
         }.build()
-        val margin = global.widthPx / 100f
         pageImage.drawString(
-            fmtStr, x = global.widthPx - fmtStr.width - margin, y = y + margin,
+            fmtStr, x = global.widthPx - fmtStr.width - framesMargin, y,
             foregroundLayer = GUIDES, backgroundLayer = GUIDES /* irrelevant, since our string has no background */
         )
     }
@@ -350,11 +346,12 @@ private fun drawPage(
                 pageImage.drawMeltedCardArrowGuide(global, cardTopY)
             if (stageIdx != page.stages.lastIndex)
                 pageImage.drawMeltedCardArrowGuide(global, cardBotY)
-            drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), cardTopY)
+            drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), y = cardTopY + framesMargin)
         } else if (stageLayout.info is DrawnStageInfo.Scroll) {
             val y = when (val prevStageInfo = page.stages.getOrNull(stageIdx - 1)?.let(stageLayouts::getValue)?.info) {
-                is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2f
-                else -> stageLayout.y
+                is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2f + framesMargin
+                is DrawnStageInfo.Scroll -> stageLayout.y
+                null -> stageLayout.y + framesMargin
             }
             drawFrames(stageLayout.info.frames, y)
         }

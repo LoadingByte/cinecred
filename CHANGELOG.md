@@ -91,6 +91,8 @@ Cinecred Changelog
 - The column axis is now called spine.
 - Alignment breaking is now called match breaking and can be activated
   separately for the head, body, and tail. The old syntax is no longer valid.
+- The second of two melted scroll pages now starts at its first block, not the
+  middle of the vertical gap between the two pages.
 - For grid and flow layouts, body elements and their boxes are now called cells.
 - The grid layout no longer reserves space for unused columns.
 - Horizontal font scaling is now applied to the whole text as opposed to

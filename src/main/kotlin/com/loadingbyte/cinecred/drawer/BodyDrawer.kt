@@ -552,11 +552,13 @@ private inline fun <T> matchExtent(
 
 
 private fun BodyElement.getWidth(textCtx: TextContext): Float = when (this) {
+    is BodyElement.Nil -> 0f
     is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
 }
 
 private fun BodyElement.getHeight(): Float = when (this) {
+    is BodyElement.Nil -> sty.heightPx.toFloat()
     is BodyElement.Str -> str.height.toFloat()
     is BodyElement.Pic -> pic.height
 }
@@ -567,6 +569,7 @@ private fun DeferredImage.drawJustifiedBodyElem(
     elem: BodyElement, hJustify: HJustify, vJustify: VJustify,
     areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y
 ) = when (elem) {
+    is BodyElement.Nil -> {}
     is BodyElement.Str ->
         drawJustifiedString(elem.str.formatted(textCtx), hJustify, vJustify, areaX, areaY, areaWidth, areaHeight)
     is BodyElement.Pic ->

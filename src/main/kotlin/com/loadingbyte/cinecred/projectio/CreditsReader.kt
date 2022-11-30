@@ -403,11 +403,11 @@ private class CreditsReader(
         }
 
         // Get the body element, which may either be a styled string or a (optionally scaled) picture.
-        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName, noPic = false)
+        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName)
 
         // Get the head and tail, which may only be styled strings.
-        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, noPic = true) as BodyElement.Str?)?.str
-        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, noPic = true) as BodyElement.Str?)?.str
+        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, onlyS = true) as BodyElement.Str?)?.str
+        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, onlyS = true) as BodyElement.Str?)?.str
 
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
@@ -489,27 +489,41 @@ private class CreditsReader(
             isBlockConclusionMarked = true
     }
 
-    fun getBodyElement(l10nColName: String, initLetterStyleName: String?, noPic: Boolean): BodyElement? {
+    fun getBodyElement(l10nColName: String, initLetterStyleName: String?, onlyS: Boolean = false): BodyElement? {
         fun unavailableLetterStyleMsg(name: String) =
             l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString())
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", tagKey,
-            "{{${STYLE_KW.msgPrimary}}}, {{${PIC_KW.msgPrimary}}}",
-            STYLE_KW.msgAltList.zip(PIC_KW.msgAltList).joinToString { (s, p) -> "{{$s}}, {{$p}}" }
+            "{{${BLANK_KW.msgPrimary}}}, {{${STYLE_KW.msgPrimary}}}, {{${PIC_KW.msgPrimary}}}",
+            BLANK_KW.msgAltList.zip(STYLE_KW.msgAltList).zip(PIC_KW.msgAltList)
+                .joinToString { (bs, p) -> val (b, s) = bs; "{{$b}}, {{$s}}, {{$p}}" }
         )
 
         val str = table.getString(row, l10nColName) ?: return null
         val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: PLACEHOLDER_LETTER_STYLE
 
-        var curLetterStyle = initLetterStyle
+        var curLetterStyle: LetterStyle? = null
         val styledStr = mutableListOf<Pair<String, LetterStyle>>()
+        var blankTagKey: String? = null
+        var multipleBlanks = false
+        var pictureTagKey: String? = null
         var picture: Picture? = null
+        var multiplePictures = false
         parseTaggedString(str) { plain, tagKey, tagVal ->
             when {
                 // When we encounter plaintext, add it to the styled string list using the current letter style.
-                plain != null -> styledStr.add(Pair(plain, curLetterStyle))
+                plain != null -> styledStr.add(Pair(plain, curLetterStyle ?: initLetterStyle))
                 tagKey != null -> when (tagKey) {
+                    // When we encounter a blank tag, remember it.
+                    // We can't immediately return because we want to issue a warning if the blank tag is not lone.
+                    in BLANK_KW -> when {
+                        onlyS -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        else -> when (blankTagKey) {
+                            null -> blankTagKey = tagKey
+                            else -> multipleBlanks = true
+                        }
+                    }
                     // When we encounter a style tag, change the current letter style to the desired one.
                     in STYLE_KW -> when (tagVal) {
                         null -> curLetterStyle = initLetterStyle
@@ -524,10 +538,13 @@ private class CreditsReader(
                     // When we encounter a picture tag, read it and remember the loaded picture for now.
                     // We can't immediately return because we want to issue a warning if the picture tag is not lone.
                     in PIC_KW -> when {
-                        noPic -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureDisallowed"))
-                        else -> when (picture) {
-                            null -> picture = getPicture(l10nColName, tagKey, tagVal)
-                            else -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureNotLone"))
+                        onlyS -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        else -> when (pictureTagKey) {
+                            null -> {
+                                pictureTagKey = tagKey
+                                picture = getPicture(l10nColName, tagKey, tagVal)
+                            }
+                            else -> multiplePictures = true
                         }
                     }
                     else -> table.log(row, l10nColName, WARN, unknownTagMsg(tagKey))
@@ -535,13 +552,19 @@ private class CreditsReader(
             }
         }
 
+        val isStyledStringBlank = styledStr.all { (run, _) -> run.isBlank() }
         return when {
-            picture != null -> {
-                if (styledStr.isNotEmpty())
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureNotLone"))
-                BodyElement.Pic(picture!!)
+            blankTagKey != null -> {
+                if (!isStyledStringBlank || curLetterStyle != null || multipleBlanks || pictureTagKey != null)
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", blankTagKey))
+                BodyElement.Nil(initLetterStyle)
             }
-            styledStr.isNotEmpty() -> BodyElement.Str(styledStr)
+            pictureTagKey != null -> {
+                if (!isStyledStringBlank || curLetterStyle != null || multiplePictures)
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureTagKey))
+                picture?.let(BodyElement::Pic)
+            }
+            !isStyledStringBlank -> BodyElement.Str(styledStr)
             else -> null
         }
     }
@@ -629,6 +652,7 @@ private class CreditsReader(
 
         val WRAP_KW = Keyword("projectIO.credits.table.wrap")
         val CROP_KW = Keyword("projectIO.credits.table.crop")
+        val BLANK_KW = Keyword("projectIO.credits.table.blank")
         val STYLE_KW = Keyword("projectIO.credits.table.style")
         val PIC_KW = Keyword("projectIO.credits.table.pic")
 

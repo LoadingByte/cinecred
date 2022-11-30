@@ -382,9 +382,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                                     unusedStyles -= letterStyle
                                 // Remove the body's letter styles.
                                 for (bodyElem in block.body)
-                                    if (bodyElem is BodyElement.Str)
-                                        for ((_, letterStyle) in bodyElem.str)
-                                            unusedStyles -= letterStyle
+                                    when (bodyElem) {
+                                        is BodyElement.Nil -> unusedStyles -= bodyElem.sty
+                                        is BodyElement.Str -> for ((_, letSty) in bodyElem.str) unusedStyles -= letSty
+                                        is BodyElement.Pic -> {}
+                                    }
                             }
                 }
         }

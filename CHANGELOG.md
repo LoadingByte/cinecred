@@ -12,6 +12,7 @@ Cinecred Changelog
     - Harmonization is possible within blocks, across blocks, and even across
       multiple different styles.
     - It is no longer limited to within a spine, but can happen globally.
+- Added blank tag for forcing empty body cells.
 - Unified project opening, project creation, preferences, and update
   notification in one integrated welcome window, thereby alleviating the need
   for various popup dialogs.

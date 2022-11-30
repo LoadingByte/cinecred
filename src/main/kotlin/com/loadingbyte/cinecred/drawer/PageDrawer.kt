@@ -215,12 +215,11 @@ private fun layoutStages(
                 // Find the scroll start and end y coordinates.
                 val scrollStartY = when (prevStageBehavior) {
                     CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2f }
-                    SCROLL -> stageImageBounds[stageIdx - 1].let { (_, aBotY) -> (aBotY + topY) / 2f }
-                    null -> topY /* will always be 0 */ - global.heightPx / 2f
+                    SCROLL, null -> topY - global.heightPx / 2f
                 }
                 val scrollStopY = when (nextStageBehavior) {
                     CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2f }
-                    SCROLL -> stageImageBounds[stageIdx + 1].let { (bTopY, _) -> (botY + bTopY) / 2f }
+                    SCROLL -> botY - global.heightPx / 2f
                     null -> botY + global.heightPx / 2f
                 }
                 // Find (a) how much of a single frame to advance the scroll prior to the first frame actually being

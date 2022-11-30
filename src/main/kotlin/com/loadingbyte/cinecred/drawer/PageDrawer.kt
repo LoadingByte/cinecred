@@ -112,7 +112,7 @@ private fun drawStage(
             SCROLL -> (prevStage.vGapAfterPx / 2f).toElasticY()
         }
 
-    for (segment in stage.segments) {
+    for ((segmentIdx, segment) in stage.segments.withIndex()) {
         var maxHeight = 0f.toY()
         for (spine in segment.spines) {
             val drawnSpine = drawSpine(drawnBlocks, spine)
@@ -121,7 +121,9 @@ private fun drawStage(
             stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
             maxHeight = maxHeight.max(drawnSpine.defImage.height)
         }
-        y += maxHeight + segment.vGapAfterPx.toElasticY()
+        y += maxHeight
+        if (segmentIdx != stage.segments.lastIndex)
+            y += segment.vGapAfterPx.toElasticY()
     }
 
     // Same as for the preceding vertical gap above.
@@ -148,14 +150,16 @@ private fun drawSpine(
             spine.blocks.maxOf { block -> drawnBlocks.getValue(block).run { defImage.width - spineXInImage } }
     val spineImage = DeferredImage(width = spineImageWidth)
     var y = 0f.toY()
-    for (block in spine.blocks) {
+    for ((blockIdx, block) in spine.blocks.withIndex()) {
         y += block.style.vMarginPx.toElasticY()
         val drawnBlock = drawnBlocks.getValue(block)
         val x = spineXInSpineImage - drawnBlock.spineXInImage
         spineImage.drawDeferredImage(drawnBlock.defImage, x, y)
-        y += drawnBlock.defImage.height + (block.style.vMarginPx + block.vGapAfterPx).toElasticY()
+        y += drawnBlock.defImage.height
+        if (blockIdx != spine.blocks.lastIndex)
+            y += (block.style.vMarginPx + block.vGapAfterPx).toElasticY()
     }
-    // Set the spine image's height; note that it deliberately entails the last block's vMarginPx.
+    // Set the spine image's height.
     spineImage.height = y
 
     // Draw a guide that shows the spine position.

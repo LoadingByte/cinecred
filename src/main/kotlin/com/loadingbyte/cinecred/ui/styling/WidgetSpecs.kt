@@ -137,7 +137,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NumberWidgetSpec(LetterStyle::vOffsetRem.st(), step = 0.01f),
     UnionWidgetSpec(
         LetterStyle::hOffsetRem.st(), LetterStyle::vOffsetRem.st(),
-        unionName = "offsetRem", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_TOP_BOTTOM_ICON)
+        unionName = "offsetRem", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
     ),
     NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01f),
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01f),

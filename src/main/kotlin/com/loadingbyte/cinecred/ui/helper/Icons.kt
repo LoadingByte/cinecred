@@ -76,7 +76,7 @@ val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 val ARROW_LEFT_ICON = SVGIcon.load("/icons/arrow/left.svg")
 val ARROW_RIGHT_ICON = SVGIcon.load("/icons/arrow/right.svg")
 val ARROW_LEFT_RIGHT_ICON = SVGIcon.load("/icons/arrow/leftRight.svg")
-val ARROW_TOP_BOTTOM_ICON = SVGIcon.load("/icons/arrow/topBottom.svg")
+val ARROW_UP_DOWN_ICON = SVGIcon.load("/icons/arrow/upDown.svg")
 
 val BEARING_LEFT_ICON = SVGIcon.load("/icons/bearing/left.svg")
 val BEARING_CENTER_ICON = SVGIcon.load("/icons/bearing/center.svg")

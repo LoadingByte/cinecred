@@ -220,6 +220,16 @@ val FlowDirection.icon
     }
 
 
+private val FLOW_SQUARE_CELLS_OFF_ICON = SVGIcon.load("/icons/flowSquareCells/off.svg")
+private val FLOW_SQUARE_CELLS_ON_ICON = SVGIcon.load("/icons/flowSquareCells/on.svg")
+
+fun flowSquareCellsIcon(value: Boolean) =
+    when (value) {
+        false -> FLOW_SQUARE_CELLS_OFF_ICON
+        true -> FLOW_SQUARE_CELLS_ON_ICON
+    }
+
+
 private val SMALL_CAPS_OFF_ICON = SVGIcon.load("/icons/smallCaps/off.svg")
 private val SMALL_CAPS_SMALL_CAPS_ICON = SVGIcon.load("/icons/smallCaps/smallCaps.svg")
 private val SMALL_CAPS_PETITE_CAPS_ICON = SVGIcon.load("/icons/smallCaps/petiteCaps.svg")

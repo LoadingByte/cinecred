@@ -78,6 +78,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowSquareCells.st(), ICON, ::flowSquareCellsIcon),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowMatchCellWidth.st(), ICON),
     WidthWidgetSpec(ContentStyle::flowMatchCellWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowMatchCellHeight.st(), ICON),

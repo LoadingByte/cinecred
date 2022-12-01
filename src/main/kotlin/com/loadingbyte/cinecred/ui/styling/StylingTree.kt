@@ -141,8 +141,12 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         val selectedNode = selectedNode ?: throw IllegalStateException()
         val selectedNodeUserObj = selectedNode.userObject
         if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
+            val prevNodeStr = selectedNodeUserObj.toString()
             selectedNodeUserObj.obj = newElement
-            sortNode(selectedNode)
+            // If the node's name has not changed, there is no need to change the current ordering. Having this explicit
+            // exception also ensures that nodes with duplicate names do not jump around when editing them.
+            if (!selectedNodeUserObj.toString().equals(prevNodeStr, ignoreCase = true))
+                sortNode(selectedNode)
         } else
             throw IllegalStateException()
     }
@@ -213,18 +217,23 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     private fun sortNode(node: DefaultMutableTreeNode) {
         val parent = node.parent as DefaultMutableTreeNode
         val nodeStr = node.userObject.toString()
-
-        // If the node has a duplicate name and already lies next to the other duplicates, keep the current ordering.
-        // This ensures that nodes with duplicate names do not jump around when editing them.
-        fun nodeStrAt(idx: Int) = (parent.getChildAt(idx) as DefaultMutableTreeNode).userObject.toString()
+        val isGrayedOut = (node.userObject as StoredObj).isGrayedOut
         val curIdx = parent.getIndex(node)
-        if (curIdx != 0 && nodeStrAt(curIdx - 1).equals(nodeStr, ignoreCase = true) ||
-            curIdx != parent.childCount - 1 && nodeStrAt(curIdx + 1).equals(nodeStr, ignoreCase = true)
-        ) return
 
-        // Otherwise, find the index where we need to re-insert to keep the list sorted.
+        // By default, if the node's name is used by multiple styles, sort the node below all duplicates. Only sort it
+        // above if the node is currently in use (not grayed out) and all other nodes with the same name are not in use
+        // (grayed out). This ensures that:
+        //   - When renaming a style to the name of another which is in use, the other styles remains the preferred one.
+        //   - When renaming a used style and the name is already taken by a bunch of unused (and hence irrelevant)
+        //     styles, the renamed style remains the preferred one.
+        val sortAboveDups = !isGrayedOut && parent.children().asSequence().none { sibling ->
+            val sibUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
+            sibling !== node && !sibUserObj.isGrayedOut && sibUserObj.toString().equals(nodeStr, ignoreCase = true)
+        }
         var newIdx = parent.children().asSequence().indexOfFirst {
-            String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr) > 0
+            if (it === node) return@indexOfFirst false
+            val c = String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr)
+            if (sortAboveDups) c >= 0 else c > 0
         }
         if (newIdx == -1)
             newIdx = parent.childCount

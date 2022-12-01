@@ -33,6 +33,7 @@ Cinecred Changelog
   font family, and no longer duplicates the family name in both dropdowns.
 - Enabled the font preview to show the sample text provided by the font instead
   of a generic latin one if available.
+- Added buttons for reordering text decorations.
 - Improved installer branding and added localization to the Windows installer.
 - Added scalable SVG icons to the Linux packages.
 

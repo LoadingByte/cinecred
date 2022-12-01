@@ -109,7 +109,7 @@ class StyleForm<S : Style>(
             newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
             listWidgetSpec?.newElem, listWidgetSpec?.newElemIsLastElem ?: false,
             listWidgetSpec?.elemsPerRow ?: 1, listWidgetSpec?.rowSeparators ?: false,
-            minSizeConstr?.minSize ?: 0
+            listWidgetSpec?.movButtons ?: false, minSizeConstr?.minSize ?: 0
         )
     }
 

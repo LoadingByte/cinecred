@@ -1055,6 +1055,7 @@ class ListWidget<E : Any>(
     private val newElemIsLastElem: Boolean = false,
     private val elemsPerRow: Int = 1,
     private val rowSeparators: Boolean = false,
+    private val movButtons: Boolean = false,
     private val minSize: Int = 0
 ) : Form.AbstractWidget<List<E>>() {
 
@@ -1079,7 +1080,7 @@ class ListWidget<E : Any>(
 
     private var listSize = 0
     private val allElemWidgets = mutableListOf<Form.Widget<E>>()
-    private val allElemDelBtns = mutableListOf<JButton>()
+    private val allElemCtlBtns = mutableListOf<ControlButtons>()
     private val allSeparators = mutableListOf<JSeparator>()
 
     val elementWidgets: List<Form.Widget<E>>
@@ -1087,7 +1088,7 @@ class ListWidget<E : Any>(
 
     init {
         // Create and add some widgets and buttons during initialization so that user interaction will appear quicker.
-        repeat(4) { addElemWidgetAndDelBtn(isVisible = false) }
+        repeat(4) { addElemWidgetAndCtlBtns(isVisible = false) }
 
         addBtn.addActionListener {
             userPlus(setValue = true)
@@ -1120,12 +1121,12 @@ class ListWidget<E : Any>(
         if (listSize <= allElemWidgets.size) {
             // If there are still unused components at the back of the list, just reactivate them.
             allElemWidgets[listSize - 1].isVisible = true
-            allElemDelBtns[listSize - 1].isVisible = true
+            allElemCtlBtns[listSize - 1].setVisible(true)
             if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
                 allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = true
         } else {
             // Otherwise, really create and add totally new components.
-            addElemWidgetAndDelBtn(isVisible = true)
+            addElemWidgetAndCtlBtns(isVisible = true)
         }
         // If requested, the new widget should start out with a reasonable value.
         if (setValue)
@@ -1137,7 +1138,7 @@ class ListWidget<E : Any>(
                 else
                     throw IllegalStateException("No way to choose value of new ListWidget element.")
             }
-        enableOrDisableDelBtns()
+        enableOrDisableCtlBtns()
     }
 
     private fun userMinus(idx: Int) {
@@ -1146,15 +1147,24 @@ class ListWidget<E : Any>(
                 allElemWidgets[i - 1].value = allElemWidgets[i].value
         }
         allElemWidgets[listSize - 1].isVisible = false
-        allElemDelBtns[listSize - 1].isVisible = false
+        allElemCtlBtns[listSize - 1].setVisible(false)
         if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
             allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = false
         listSize--
-        enableOrDisableDelBtns()
+        enableOrDisableCtlBtns()
     }
 
-    private fun addElemWidgetAndDelBtn(isVisible: Boolean) {
-        val newline = allElemDelBtns.size != 0 && allElemDelBtns.size % elemsPerRow == 0
+    private fun userSwap(idx1: Int, idx2: Int) {
+        withoutChangeListeners {
+            val value1 = allElemWidgets[idx1].value
+            allElemWidgets[idx1].value = allElemWidgets[idx2].value
+            allElemWidgets[idx2].value = value1
+        }
+        enableOrDisableCtlBtns()
+    }
+
+    private fun addElemWidgetAndCtlBtns(isVisible: Boolean) {
+        val newline = allElemWidgets.size != 0 && allElemWidgets.size % elemsPerRow == 0
 
         if (rowSeparators && newline) {
             val sep = JSeparator()
@@ -1166,11 +1176,36 @@ class ListWidget<E : Any>(
         val delBtn = JButton(REMOVE_ICON)
         delBtn.isVisible = isVisible
         delBtn.addActionListener {
-            userMinus(allElemDelBtns.indexOfFirst { it === delBtn })
+            userMinus(allElemCtlBtns.indexOfFirst { it.delBtn == delBtn })
             notifyChangeListeners()
         }
-        allElemDelBtns.add(delBtn)
-        panel.add(delBtn, "aligny top, gap 6 0 1 1" + if (newline) ", newline" else "")
+        var delBtnConstraint = "aligny top, gapleft 6, gaptop 1"
+        if (movButtons) delBtnConstraint += ", split 3, flowy"
+        if (newline) delBtnConstraint += ", newline"
+        panel.add(delBtn, delBtnConstraint)
+
+        var uppBtn: JButton? = null
+        var dwnBtn: JButton? = null
+        if (movButtons) {
+            uppBtn = JButton(ARROW_UP_ICON)
+            dwnBtn = JButton(ARROW_DOWN_ICON)
+            uppBtn.isVisible = isVisible
+            dwnBtn.isVisible = isVisible
+            uppBtn.addActionListener {
+                val idx = allElemCtlBtns.indexOfFirst { it.uppBtn == uppBtn }
+                userSwap(idx, idx - 1)
+                notifyChangeListeners()
+            }
+            dwnBtn.addActionListener {
+                val idx = allElemCtlBtns.indexOfFirst { it.dwnBtn == dwnBtn }
+                userSwap(idx, idx + 1)
+                notifyChangeListeners()
+            }
+            panel.add(uppBtn, "gapleft 6")
+            panel.add(dwnBtn, "gapleft 6")
+        }
+
+        allElemCtlBtns.add(ControlButtons(delBtn, uppBtn, dwnBtn))
 
         val widget = newElemWidget()
         widget.isVisible = isVisible
@@ -1182,10 +1217,14 @@ class ListWidget<E : Any>(
             panel.add(comp, constr)
     }
 
-    private fun enableOrDisableDelBtns() {
-        val enabled = listSize > minSize
-        for (delBtn in allElemDelBtns)
-            delBtn.isEnabled = enabled
+    private fun enableOrDisableCtlBtns() {
+        val delEnabled = listSize > minSize
+        for (idx in 0 until listSize) {
+            val ctlBtns = allElemCtlBtns[idx]
+            ctlBtns.delBtn.isEnabled = delEnabled
+            ctlBtns.uppBtn?.isEnabled = idx != 0
+            ctlBtns.dwnBtn?.isEnabled = idx != listSize - 1
+        }
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
@@ -1202,6 +1241,15 @@ class ListWidget<E : Any>(
                 widget.applySeverity(-1, severity)
         } else if (index in 0 until listSize)
             allElemWidgets[index].applySeverity(-1, severity)
+    }
+
+
+    private class ControlButtons(val delBtn: JButton, val uppBtn: JButton?, val dwnBtn: JButton?) {
+        fun setVisible(isVisible: Boolean) {
+            delBtn.isVisible = isVisible
+            uppBtn?.isVisible = isVisible
+            dwnBtn?.isVisible = isVisible
+        }
     }
 
 }

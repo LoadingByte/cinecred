@@ -146,7 +146,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NewSectionWidgetSpec(LetterStyle::decorations.st()),
     ListWidgetSpec(
         LetterStyle::decorations.st(),
-        newElem = PRESET_TEXT_DECORATION, elemsPerRow = 1, rowSeparators = true
+        newElem = PRESET_TEXT_DECORATION, elemsPerRow = 1, rowSeparators = true, movButtons = true
     ),
     NewSectionWidgetSpec(LetterStyle::background.st()),
     WidthWidgetSpec(LetterStyle::backgroundWidenLeftPx.st(), WidthSpec.TINY),
@@ -240,7 +240,8 @@ class ListWidgetSpec<S : Style, SUBJ : Any>(
     val newElem: SUBJ? = null,
     val newElemIsLastElem: Boolean = false,
     val elemsPerRow: Int = 1,
-    val rowSeparators: Boolean = false
+    val rowSeparators: Boolean = false,
+    val movButtons: Boolean = false
 ) : StyleWidgetSpec<S>(setting)
 
 

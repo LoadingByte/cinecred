@@ -150,7 +150,16 @@ class StyleForm<S : Style>(
                 val model = SpinnerNumberModel(min ?: max ?: 0f, min, max, step)
                 SpinnerWidget(Float::class.javaObjectType, model, widthSpec)
             }
-            Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> CheckBoxWidget()
+            Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> when {
+                toggleButtonGroupWidgetSpec != null -> makeToggleButtonGroupWidget(
+                    toggleButtonGroupWidgetSpec.show,
+                    items = listOf(false, true),
+                    getIcon = toggleButtonGroupWidgetSpec.getFixedIcon,
+                    getLabel = { l10n(if (it) "on" else "off") },
+                    inconsistent = false
+                )
+                else -> CheckBoxWidget()
+            }
             String::class.java -> when {
                 fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
                     InconsistentComboBoxWidget(
@@ -171,9 +180,12 @@ class StyleForm<S : Style>(
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     toggleButtonGroupWidgetSpec != null -> makeEnumToggleButtonGroupWidget(
-                        setting.type.asSubclass(Enum::class.java), toggleButtonGroupWidgetSpec.show,
+                        setting.type.asSubclass(Enum::class.java),
+                        toggleButtonGroupWidgetSpec.show,
                         items = fixedChoiceConstr?.run { choices.toList() },
-                        custIcons = toggleButtonGroupWidgetSpec.getIcon != null, inconsistent = dynChoiceConstr != null
+                        getFixedIcon = toggleButtonGroupWidgetSpec.getFixedIcon,
+                        dynIcons = toggleButtonGroupWidgetSpec.getDynIcon != null,
+                        inconsistent = dynChoiceConstr != null
                     )
                     fixedChoiceConstr != null || dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type,
@@ -195,17 +207,17 @@ class StyleForm<S : Style>(
         return widget as Widget<V>
     }
 
-    private fun <V : Enum<*>> makeEnumToggleButtonGroupWidget(
-        enumClass: Class<V>,
+    private fun <V : Any> makeToggleButtonGroupWidget(
         show: ToggleButtonGroupWidgetSpec.Show,
-        items: List<Any>?,
-        custIcons: Boolean,
+        items: List<V>,
+        getIcon: ((Nothing) -> Icon)?,
+        getLabel: (V) -> String,
         inconsistent: Boolean
     ): Widget<V> {
-        // If a custom getIcon function is supplied, it will be applied later on via setToIconFun().
-        var toIcon: ((V) -> Icon)? = if (custIcons) null else Enum<*>::icon
-        var toLabel: ((V) -> String)? = ::l10nEnum
-        var toTooltip: ((V) -> String)? = toLabel
+        @Suppress("UNCHECKED_CAST")
+        var toIcon: ((V) -> Icon)? = getIcon as ((V) -> Icon)?
+        var toLabel: ((V) -> String)? = getLabel
+        var toTooltip: ((V) -> String)? = getLabel
         // @formatter:off
         when (show) {
             ToggleButtonGroupWidgetSpec.Show.LABEL -> { toIcon = null; toTooltip = null }
@@ -213,12 +225,23 @@ class StyleForm<S : Style>(
             ToggleButtonGroupWidgetSpec.Show.ICON_AND_LABEL -> toTooltip = null
         }
         // @formatter:on
-
-        return ToggleButtonGroupWidget(
-            items?.requireIsInstance(enumClass) ?: if (inconsistent) emptyList() else enumClass.enumConstants.asList(),
-            toIcon, toLabel, toTooltip, inconsistent
-        )
+        return ToggleButtonGroupWidget(items, toIcon, toLabel, toTooltip, inconsistent)
     }
+
+    private fun <V : Enum<*>> makeEnumToggleButtonGroupWidget(
+        enumClass: Class<V>,
+        show: ToggleButtonGroupWidgetSpec.Show,
+        items: List<Any>?,
+        getFixedIcon: ((Nothing) -> Icon)?,
+        dynIcons: Boolean,
+        inconsistent: Boolean
+    ): Widget<V> = makeToggleButtonGroupWidget(
+        show,
+        items?.requireIsInstance(enumClass) ?: if (inconsistent) emptyList() else enumClass.enumConstants.asList(),
+        getIcon = getFixedIcon ?: if (dynIcons) null else Enum<*>::icon,
+        getLabel = ::l10nEnum,
+        inconsistent
+    )
 
     private fun makeFormRow(name: String, widget: Widget<*>): FormRow {
         val l10nKey = "ui.styling." +

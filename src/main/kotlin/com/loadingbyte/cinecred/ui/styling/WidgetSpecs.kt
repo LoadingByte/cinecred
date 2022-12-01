@@ -46,7 +46,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(
         ContentStyle::spineAttachment.st(), ICON,
-        getIcon = { _, _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
+        getDynIcon = { _, _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
     ),
     NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
@@ -198,15 +198,17 @@ class NumberWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Enum<*>>(
+class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
     setting: StyleSetting<S, SUBJ>,
     val show: Show,
-    val getIcon: ((StylingContext, Styling, S, SUBJ) -> Icon)? = null
+    val getFixedIcon: ((SUBJ) -> Icon)? = null,
+    val getDynIcon: ((StylingContext, Styling, S, SUBJ) -> Icon)? = null
 ) : StyleWidgetSpec<S>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
 
     init {
-        if (getIcon != null)
+        require(getFixedIcon == null || getDynIcon == null)
+        if (getFixedIcon != null || getDynIcon != null)
             require(show == ICON || show == ICON_AND_LABEL)
     }
 }

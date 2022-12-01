@@ -323,8 +323,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for (spec in getStyleWidgetSpecs(curStyle.javaClass)) when (spec) {
             is ToggleButtonGroupWidgetSpec<S, *> -> {
-                fun <SUBJ : Enum<*>> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
-                    spec.getIcon?.let { return fun(item: SUBJ) = it(ctrl.stylingCtx, styling, curStyle, item) }
+                fun <SUBJ : Any> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
+                    spec.getDynIcon?.let { return fun(item: SUBJ) = it(ctrl.stylingCtx, styling, curStyle, item) }
 
                 val toIcon = makeToIcon(spec)
                 if (toIcon != null)

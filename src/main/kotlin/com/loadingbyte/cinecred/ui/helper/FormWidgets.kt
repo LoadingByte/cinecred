@@ -1099,7 +1099,7 @@ class ListWidget<E : Any>(
 
     override val components = listOf<JComponent>(addBtn, panel)
     override val constraints = listOf(
-        "aligny top",
+        "aligny top, gapy 1 1",
         if (allElemWidgets[0].constraints.any { WidthSpec.FILL.mig in it }) WidthSpec.FILL.mig else ""
     )
 
@@ -1170,7 +1170,7 @@ class ListWidget<E : Any>(
             notifyChangeListeners()
         }
         allElemDelBtns.add(delBtn)
-        panel.add(delBtn, "aligny top, gapx 6 0" + if (newline) ", newline" else "")
+        panel.add(delBtn, "aligny top, gap 6 0 1 1" + if (newline) ", newline" else "")
 
         val widget = newElemWidget()
         widget.isVisible = isVisible

@@ -58,7 +58,10 @@ private fun drawBodyImagesWithGridBodyLayout(
 
     // Flow each block's body elements into the grid configured for that block.
     val colsPerBlock = blocks.associateWith { block ->
-        flowIntoGridCols(block.body, numCols = block.style.gridCellHJustifyPerCol.size, block.style.gridFillingOrder)
+        flowIntoGridCols(
+            block.body, numCols = block.style.gridCellHJustifyPerCol.size,
+            block.style.gridFillingOrder, block.style.gridFillingBalanced
+        )
     }
 
     // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
@@ -209,21 +212,48 @@ private val GridColUnderoccupancy.alignRight
     }
 
 
-private fun <E> flowIntoGridCols(list: List<E>, numCols: Int, order: GridFillingOrder): List<List<E>> {
+private fun <E> flowIntoGridCols(
+    list: List<E>,
+    numCols: Int,
+    order: GridFillingOrder,
+    balanced: Boolean
+): List<List<E>> {
+    val numRows = ceilDiv(list.size, numCols)
     // First fill the columns irrespective of left-to-right / right-to-left.
     val cols = when (order) {
         GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
-            val cols = List(numCols) { ArrayList<E>() }
-            list.forEachIndexed { idx, elem -> cols[idx % numCols].add(elem) }
+            val cols = List(numCols) { ArrayList<E>(numRows) }
+            var idx = 0
+            repeat(numRows) {
+                val remaining = list.size - idx
+                if (!balanced || remaining >= numCols)
+                    for (colIdx in 0 until min(numCols, remaining))
+                        cols[colIdx].add(list[idx++])
+                else {
+                    val skipColIdx = if (numCols % 2 == 1 && remaining % 2 == 0) numCols / 2 else -1
+                    var colIdx = (numCols - remaining) / 2
+                    while (idx < list.size) {
+                        if (colIdx != skipColIdx)
+                            cols[colIdx].add(list[idx++])
+                        colIdx++
+                    }
+                }
+            }
             cols
         }
         GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
-            val numRows = ceilDiv(list.size, numCols)
+            // lRow = last row
+            val lRowElems = list.size % numCols
+            val lRowStart = (numCols - lRowElems) / 2
+            val lRowSkip = if (numCols % 2 == 1 && lRowElems % 2 == 0) numCols / 2 else -1
+            val lRowStop = lRowStart + lRowElems + if (lRowSkip == -1) 0 else 1
+            var idx = 0
             List(numCols) { colIdx ->
-                list.subList(
-                    (colIdx * numRows).coerceAtMost(list.size),
-                    ((colIdx + 1) * numRows).coerceAtMost(list.size)
-                )
+                val useLastRow = !balanced || lRowElems == 0 || colIdx in lRowStart until lRowStop && colIdx != lRowSkip
+                val take = numRows - if (useLastRow) 0 else 1
+                val col = list.subList(idx, min(idx + take, list.size))
+                idx += take
+                col
             }
         }
     }

@@ -46,7 +46,7 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
 
 private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentStyle>> = listOf(
     StyleEffectivitySpec(
-        ContentStyle::gridFillingOrder.st(), ContentStyle::gridStructure.st(),
+        ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(), ContentStyle::gridStructure.st(),
         ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
         ContentStyle::gridMatchColUnderoccupancy.st(), ContentStyle::gridMatchRowHeight.st(),
         ContentStyle::gridMatchRowHeightAcrossStyles.st(), ContentStyle::gridCellHJustifyPerCol.st(),

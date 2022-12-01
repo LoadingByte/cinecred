@@ -84,6 +84,7 @@ data class ContentStyle(
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
     val gridFillingOrder: GridFillingOrder,
+    val gridFillingBalanced: Boolean,
     val gridStructure: GridStructure,
     val gridMatchColWidths: MatchExtent,
     val gridMatchColWidthsAcrossStyles: PersistentList<String>,

@@ -177,6 +177,16 @@ val GridFillingOrder.icon
     }
 
 
+private val GRID_FILLING_BALANCED_OFF_ICON = SVGIcon.load("/icons/gridFillingBalanced/off.svg")
+private val GRID_FILLING_BALANCED_ON_ICON = SVGIcon.load("/icons/gridFillingBalanced/on.svg")
+
+fun gridFillingBalancedIcon(value: Boolean) =
+    when (value) {
+        false -> GRID_FILLING_BALANCED_OFF_ICON
+        true -> GRID_FILLING_BALANCED_ON_ICON
+    }
+
+
 private val GRID_STRUCTURE_FREE_ICON = SVGIcon.load("/icons/gridStructure/free.svg")
 private val GRID_STRUCTURE_EQUAL_WIDTH_COLS_ICON = SVGIcon.load("/icons/gridStructure/equalWidthCols.svg")
 private val GRID_STRUCTURE_SQUARE_CELLS_ICON = SVGIcon.load("/icons/gridStructure/squareCells.svg")

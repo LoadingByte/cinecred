@@ -95,6 +95,8 @@ Cinecred Changelog
 - The column axis is now called spine.
 - Alignment breaking is now called match breaking and can be activated
   separately for the head, body, and tail. The old syntax is no longer valid.
+- Rows in the credits table with an ill-formatted but non-empty body cell no
+  longer conclude the preceding head-body-tail block.
 - The second of two melted scroll pages now starts at its first block, not the
   middle of the vertical gap between the two pages.
 - The speed of the second of two melted scroll pages now applies as soon as the

@@ -485,7 +485,7 @@ private class CreditsReader(
             blockBody.add(bodyElem)
         // Otherwise, if the row didn't just start a new block,
         // mark the previous block for conclusion (if there was any).
-        else if (newHead == null && newTail == null)
+        else if (isHBTFreeRow)
             isBlockConclusionMarked = true
     }
 

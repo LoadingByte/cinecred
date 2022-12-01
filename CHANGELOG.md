@@ -97,7 +97,6 @@ Cinecred Changelog
 - The speed of the second of two melted scroll pages now applies as soon as the
   second page comes into view, not when it reaches the screen center.
 - For grid and flow layouts, body elements and their boxes are now called cells.
-- The grid layout no longer reserves space for unused columns.
 - Horizontal font scaling is now applied to the whole text as opposed to
   individual glyphs to mirror the behavior of uniform scaling.
 

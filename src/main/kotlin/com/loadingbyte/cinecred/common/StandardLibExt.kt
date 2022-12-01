@@ -42,6 +42,10 @@ fun FloatArray.maxBetween(startIdx: Int, endIdx: Int): Float {
 }
 
 
+inline fun <E> Collection<E>.maxOfOr(default: Float, selector: (E) -> Float): Float =
+    if (isEmpty()) default else maxOf(selector)
+
+
 inline fun <E> Iterable<E>.sumOf(selector: (E) -> Float): Float {
     var sum = 0f
     for (elem in this)

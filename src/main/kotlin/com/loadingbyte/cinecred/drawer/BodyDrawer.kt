@@ -73,7 +73,7 @@ private fun drawBodyImagesWithGridBodyLayout(
 
     // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
     // also includes ungrouped blocks whose grid structure mandates square cells), and then find those shared widths.
-    fun colWidth(col: List<BodyElement>) = col.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+    fun colWidth(col: List<BodyElement>) = col.maxOfOr(0f) { bodyElem -> bodyElem.getWidth(textCtx) }
     val sharedColWidthsPerBlock: Map<Block, FloatArray> = matchExtent(
         blocks, matchColWidthsPartitionIds,
         matchWithinBlock = { gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS },
@@ -172,7 +172,7 @@ private fun drawBodyImageWithGridBodyLayout(
     for (colIdx in startColIdx until endColIdx) {
         // Either get the column's shared width, or compute it now if the block's column widths are now shared.
         val colWidth = when (sharedColWidths) {
-            null -> cols[colIdx].maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+            null -> cols[colIdx].maxOfOr(0f) { bodyElem -> bodyElem.getWidth(textCtx) }
             else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0]
         }
         // Draw each row cell in the column.
@@ -213,13 +213,13 @@ private fun <E> flowIntoGridCols(list: List<E>, numCols: Int, order: GridFilling
     // First fill the columns irrespective of left-to-right / right-to-left.
     val cols = when (order) {
         GridFillingOrder.L2R_T2B, GridFillingOrder.R2L_T2B -> {
-            val cols = List(min(numCols, list.size)) { ArrayList<E>() }
+            val cols = List(numCols) { ArrayList<E>() }
             list.forEachIndexed { idx, elem -> cols[idx % numCols].add(elem) }
             cols
         }
         GridFillingOrder.T2B_L2R, GridFillingOrder.T2B_R2L -> {
             val numRows = ceilDiv(list.size, numCols)
-            List(min(numCols, list.size)) { colIdx ->
+            List(numCols) { colIdx ->
                 list.subList(
                     (colIdx * numRows).coerceAtMost(list.size),
                     ((colIdx + 1) * numRows).coerceAtMost(list.size)

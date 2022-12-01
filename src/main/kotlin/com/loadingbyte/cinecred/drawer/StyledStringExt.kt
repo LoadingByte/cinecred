@@ -191,7 +191,7 @@ private fun generateFmtStrAttrs(
     val smallCapsFont = if (fakeSCScaling.isNaN()) null else stdFont.scaled(fakeSCScaling)
 
     val lm = stdFont.unscaledAWTFont.lineMetrics
-    val deco = style.decorations.mapTo(HashSet()) { td ->
+    val deco = style.decorations.map { td ->
         var offset = td.offsetPx
         var thickness = td.thicknessPx
         when (td.preset) {

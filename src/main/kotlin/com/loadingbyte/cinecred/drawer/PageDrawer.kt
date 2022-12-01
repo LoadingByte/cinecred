@@ -319,7 +319,7 @@ private fun drawPage(
         val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
         val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), global.widthPx / 80f)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
-            append(str, FormattedString.Attribute(font, emptySet(), null))
+            append(str, FormattedString.Attribute(font, emptyList(), null))
         }.build()
         pageImage.drawString(
             fmtStr, x = global.widthPx - fmtStr.width - framesMargin, y,

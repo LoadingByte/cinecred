@@ -50,6 +50,7 @@ Cinecred Changelog
 - Runtime adjustment is now accurate even with scroll pages melted together.
 - Rectified the tracking between segments of differing font sizes.
 - Characters larger than 16 bit no longer disrupt small caps.
+- Text decorations are now drawn on top of each other in their declared order.
 - Left widening a dashed text decoration no longer crashes the program.
 
 #### UI Fixes

@@ -270,25 +270,23 @@ class FormattedString private constructor(
     }
 
     private inline fun <T> forEachElementStretch(
-        numItems: Int, getItem: (Int) -> Set<T>, action: (T, Int, Int) -> Unit
+        numItems: Int, getItem: (Int) -> List<T>, action: (T, Int, Int) -> Unit
     ) {
-        // Maps set items which are currently to their respective run start.
-        val stretches = HashMap<T, Int>()
+        // Maps list items that currently have a stretch to their stretch start. Should preserve order.
+        val stretches = LinkedHashMap<T, Int>()
         for (idx in 0 until numItems) {
-            val set = getItem(idx)
+            val list = getItem(idx)
             // For each element which currently has a stretch but doesn't appear at the current index,
             // remove that element and call the action() function to signal a completed stretch.
             val iter = stretches.iterator()
-            while (iter.hasNext()) {
-                val (stretchValue, stretchStartIdx) = iter.next()
-                if (stretchValue !in set) {
+            for ((stretchValue, stretchStartIdx) in iter)
+                if (stretchValue !in list) {
                     action(stretchValue, stretchStartIdx, idx)
                     iter.remove()
                 }
-            }
             // For each element which doesn't have a stretch yet but appears at the current index,
             // put that element into the map alongside the current index as stretchStartIdx.
-            set.forEach { value -> stretches.putIfAbsent(value, idx) }
+            list.forEach { value -> stretches.putIfAbsent(value, idx) }
         }
         for ((stretchValue, stretchStartIdx) in stretches)
             action(stretchValue, stretchStartIdx, numItems)
@@ -438,7 +436,7 @@ class FormattedString private constructor(
 
     class Attribute(
         val font: Font,
-        val decorations: Set<Decoration>,
+        val decorations: List<Decoration>,
         val background: Background?
     )
 

@@ -5,7 +5,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.helper.DELIVER_ICON
 import com.loadingbyte.cinecred.ui.helper.EYE_ICON
 import com.loadingbyte.cinecred.ui.helper.HOME_ICON
-import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
+import com.loadingbyte.cinecred.ui.helper.PLAYBACK_ICON
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import javax.swing.JButton
@@ -40,7 +40,7 @@ class ProjectPanel(ctrl: ProjectController) : JPanel() {
             putClientProperty(TABBED_PANE_SHOW_TAB_SEPARATORS, true)
             putClientProperty(TABBED_PANE_TRAILING_COMPONENT, tabPaneTrailingPanel)
             addTab(l10n("ui.project.edit"), EYE_ICON, editPanel)
-            addTab(l10n("ui.project.video"), PLAY_ICON, videoPanel)
+            addTab(l10n("ui.project.video"), PLAYBACK_ICON, videoPanel)
             addTab(l10n("ui.project.deliver"), DELIVER_ICON, deliverPanel)
             addChangeListener {
                 ctrl.onChangeTab(leftPanel = prevSelectedTab, enteredPanel = selectedTab)

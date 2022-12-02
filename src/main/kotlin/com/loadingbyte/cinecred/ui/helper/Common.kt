@@ -1,13 +1,19 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.FlatClientProperties.STYLE
+import com.formdev.flatlaf.icons.FlatCheckBoxIcon
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
+import com.loadingbyte.cinecred.common.preserveTransform
 import java.awt.*
 import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.awt.geom.Path2D
 import java.awt.geom.Rectangle2D
+import java.awt.geom.RoundRectangle2D
 import java.io.IOException
 import java.net.URI
 import javax.swing.*
@@ -84,6 +90,62 @@ fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
         override fun removeUpdate(e: DocumentEvent) = listener(e)
         override fun changedUpdate(e: DocumentEvent) = listener(e)
     })
+}
+
+
+class LargeCheckBox(size: Int) : JCheckBox() {
+
+    init {
+        icon = LargeCheckBoxIcon(size - 2)
+        putClientProperty(STYLE, "margin: 1,0,1,0")
+    }
+
+    private class LargeCheckBoxIcon(private val size: Int) : FlatCheckBoxIcon() {
+
+        private val innerFocusWidth = (UIManager.get("Component.innerFocusWidth") as Number).toFloat()
+
+        init {
+            focusWidth = 0f
+            borderColor = UIManager.getColor("Component.borderColor")
+            selectedBorderColor = borderColor
+            focusedBackground = background
+        }
+
+        // scale() is actually necessary here because otherwise, the icon is too small, at least when the UI font size
+        // is explicitly increased.
+        override fun getIconWidth() = UIScale.scale(size)
+        override fun getIconHeight() = UIScale.scale(size)
+
+        override fun paintFocusBorder(c: Component, g: Graphics2D) {
+            throw UnsupportedOperationException()
+        }
+
+        override fun paintBorder(c: Component, g: Graphics2D, borderWidth: Float) {
+            if (borderWidth != 0f)
+                g.fillRoundRect(0, 0, size, size, arc, arc)
+        }
+
+        override fun paintBackground(c: Component, g: Graphics2D, borderWidth: Float) {
+            val bw = if (FlatUIUtils.isPermanentFocusOwner(c)) borderWidth + innerFocusWidth else borderWidth
+            g.fill(RoundRectangle2D.Float(bw, bw, size - 2 * bw, size - 2 * bw, arc - bw, arc - bw))
+        }
+
+        override fun paintCheckmark(c: Component, g: Graphics2D) {
+            g.preserveTransform {
+                val offset = (size - 14) / 2
+                g.translate(offset - 1, offset)
+                g.stroke = BasicStroke(2f)
+                g.draw(Path2D.Float().apply {
+                    // Taken from FlatCheckBoxIcon:
+                    moveTo(4.5f, 7.5f)
+                    lineTo(6.6f, 10f)
+                    lineTo(11.25f, 3.5f)
+                })
+            }
+        }
+
+    }
+
 }
 
 

@@ -293,7 +293,7 @@ class TimecodeWidget(
 
 class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 
-    private val cb = JCheckBox().apply {
+    private val cb = LargeCheckBox(STD_HEIGHT).apply {
         addItemListener { notifyChangeListeners() }
     }
 
@@ -1059,7 +1059,7 @@ class OptWidget<E : Any>(
         wrapped.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
-    private val cb = JCheckBox().apply {
+    private val cb = LargeCheckBox(STD_HEIGHT).apply {
         addItemListener {
             wrapped.isEnabled = isSelected
             notifyChangeListeners()

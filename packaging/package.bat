@@ -19,10 +19,6 @@ powershell (new-object System.Net.WebClient).DownloadFile('https://github.com/wi
 powershell Expand-Archive work\%wix_zip% -DestinationPath work\wix\
 del work\%wix_zip%
 
-echo Downloading auxiliary scripts...
-powershell (new-object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/microsoft/Windows-classic-samples/main/Samples/Win7Samples/sysmgmt/msi/scripts/WiSubStg.vbs', 'work\WiSubStg.vbs')
-powershell (new-object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/microsoft/Windows-classic-samples/main/Samples/Win7Samples/sysmgmt/msi/scripts/WiLangId.vbs', 'work\WiLangId.vbs')
-
 echo Collecting minimized JRE...
 %jdk_bin%\jlink @settings\jlink --output work\runtime\
 
@@ -38,8 +34,8 @@ work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\m
 work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\de-DE.wxl -cultures:de-DE -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\de-DE.msi -reusecab
 work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\de-DE.msi -t language -o work\wixmst\de-DE.mst
 copy work\wixmsi\en-US.msi work\out.msi
-work\WiSubStg.vbs work\out.msi work\wixmst\de-DE.mst 1031
-work\WiLangId.vbs work\out.msi Package 1033,1031
+resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\de-DE.mst 1031
+resources\msi\scripts\SetPackageLanguage.vbs work\out.msi 1033,1031
 move work\out.msi out\cinecred-@VERSION@-x86_64.msi
 
 echo Cleaning up...

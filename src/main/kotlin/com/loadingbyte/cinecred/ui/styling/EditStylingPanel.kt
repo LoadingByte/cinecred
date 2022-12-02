@@ -47,11 +47,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val stylingTree = StylingTree()
 
-    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and unused
+    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and used
     // styles, so that we don't have to repeatedly regenerate these three things.
     private var styling: Styling? = null
     private var constraintViolations: List<ConstraintViolation> = emptyList()
-    private var unusedStyles: Set<NamedStyle> = emptySet()
+    private var usedStyles: Set<NamedStyle> = emptySet()
 
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
@@ -200,7 +200,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun <S : NamedStyle> openNamedStyle(style: S, form: StyleForm<S>, cardName: String) {
-        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, unusedStyles, style)
+        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, usedStyles, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             val newStyle = form.save()
@@ -265,7 +265,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun updateProject(project: Project?) {
-        updateUnusedStyles(project)
+        usedStyles = if (project == null) emptySet() else findUsedStyles(project)
+        stylingTree.adjustAppearance(isGrayedOut = { project != null && it is NamedStyle && it !in usedStyles })
     }
 
     private fun refreshConstraintViolations() {
@@ -342,57 +343,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for ((nestedForm, nestedStyle) in curForm.getNestedFormsAndStyles(curStyle))
             adjustForm(nestedForm.castToStyle(nestedStyle.javaClass), nestedStyle)
-    }
-
-    private fun updateUnusedStyles(project: Project?) {
-        val unusedStyles = Collections.newSetFromMap(IdentityHashMap<NamedStyle, Boolean>())
-
-        if (project != null) {
-            val styling = project.styling
-
-            // Mark all styles as unused. Next, we will gradually remove all styles which are actually used.
-            for (styleClass in NamedStyle.CLASSES)
-                unusedStyles.addAll(styling.getNamedStyles(styleClass))
-
-            for (contentStyle in styling.contentStyles) {
-                // Remove the content style's body letter style.
-                styling.letterStyles.find { it.name == contentStyle.bodyLetterStyleName }?.let(unusedStyles::remove)
-                // If the content style supports heads, remove its head letter style.
-                if (contentStyle.hasHead)
-                    styling.letterStyles.find { it.name == contentStyle.headLetterStyleName }?.let(unusedStyles::remove)
-                // If the content style supports heads, remove its tail letter style.
-                if (contentStyle.hasTail)
-                    styling.letterStyles.find { it.name == contentStyle.tailLetterStyleName }?.let(unusedStyles::remove)
-            }
-
-            for (page in project.pages)
-                for (stage in page.stages) {
-                    // Remove the stage's page style.
-                    unusedStyles -= stage.style
-                    for (segment in stage.segments)
-                        for (spine in segment.spines)
-                            for (block in spine.blocks) {
-                                // Remove the block's content style.
-                                unusedStyles -= block.style
-                                // Remove the head's letter styles.
-                                for ((_, letterStyle) in block.head.orEmpty())
-                                    unusedStyles -= letterStyle
-                                // Remove the tail's letter styles.
-                                for ((_, letterStyle) in block.tail.orEmpty())
-                                    unusedStyles -= letterStyle
-                                // Remove the body's letter styles.
-                                for (bodyElem in block.body)
-                                    when (bodyElem) {
-                                        is BodyElement.Nil -> unusedStyles -= bodyElem.sty
-                                        is BodyElement.Str -> for ((_, letSty) in bodyElem.str) unusedStyles -= letSty
-                                        is BodyElement.Pic -> {}
-                                    }
-                            }
-                }
-        }
-
-        stylingTree.adjustAppearance(isGrayedOut = unusedStyles::contains)
-        this.unusedStyles = unusedStyles
     }
 
 }

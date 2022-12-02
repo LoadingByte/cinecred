@@ -66,7 +66,7 @@ fun <S : NamedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, rem
 class StylingConsistencyRetainer<S : NamedStyle>(
     ctx: StylingContext,
     styling: Styling,
-    unusedStyles: Set<NamedStyle>,
+    usedStyles: Set<NamedStyle>,
     editedStyle: S
 ) {
 
@@ -97,13 +97,13 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         // We want to keep all other styles which "use" editedStyle in sync with changes to editedStyle's name.
         // For this, record all these usages now.
         trackedUsages = NamedStyle.CLASSES.flatMap { style2Class ->
-            determineTrackedUsages(styling, unusedStyles, editedStyle, style2Class)
+            determineTrackedUsages(styling, usedStyles, editedStyle, style2Class)
         }
     }
 
     private fun <S2 : NamedStyle> determineTrackedUsages(
         styling: Styling,
-        unusedStyles: Set<NamedStyle>,
+        usedStyles: Set<NamedStyle>,
         editedStyle: S,
         style2Class: Class<S2>,
     ): List<TrackedUsage<S2>> {
@@ -123,7 +123,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
             for (constr in refConstraints) {
                 // In case that the edited style's name is not unique, the user expects that the reference stays in sync
                 // with only the used one of the duplicate styles.
-                if (editedStyle !in unusedStyles)
+                if (editedStyle in usedStyles)
                     for (setting in constr.settings) {
                         val subjects = setting.extractSubjects(style2)
                         if (editedStyle.name in subjects) {

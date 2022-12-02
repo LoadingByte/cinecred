@@ -24,6 +24,7 @@ import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
 import javax.swing.text.PlainDocument
 import kotlin.io.path.Path
+import kotlin.math.max
 
 
 enum class WidthSpec(val mig: String) {
@@ -37,13 +38,16 @@ enum class WidthSpec(val mig: String) {
 }
 
 
+private const val STD_HEIGHT = 24
+
+
 abstract class AbstractTextComponentWidget<V : Any>(
     protected val tc: JTextComponent,
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
     override val components = listOf<JComponent>(tc)
-    override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig)
+    override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.WIDE).mig)
 
     protected var text: String
         get() = tc.text
@@ -207,7 +211,7 @@ open class SpinnerWidget<V : Number>(
     }
 
     override val components = listOf(spinner)
-    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
+    override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
     override var value: V
         get() = valueClass.cast(spinner.value)
@@ -321,7 +325,7 @@ open class ComboBoxWidget<V : Any>(
     }
 
     override val components = listOf(cb)
-    override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
+    override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
     protected var items: List<V> = listOf()
         set(items) {
@@ -492,7 +496,7 @@ class MultiComboBoxWidget<E : Any>(
     }
 
     override val components = listOf(mcb)
-    override val constraints = listOf((widthSpec ?: WidthSpec.FIT).mig)
+    override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
     override var value: List<E>
         get() = mcb.selectedItems.sortedWith(comparator)
@@ -641,8 +645,7 @@ class ToggleButtonGroupWidget<V : Any>(
         btnGroup.remove(overflowBtn)
     }
 
-
-    private class GroupPanel : JPanel(FlowLayout(FlowLayout.LEADING, 0, 0)) {
+    private class GroupPanel : JPanel(GroupPanelLayout()) {
 
         val arc = (UIManager.get("Component.arc") as Number).toFloat()
         val focusWidth = (UIManager.get("Component.focusWidth") as Number).toFloat()
@@ -707,9 +710,12 @@ class ToggleButtonGroupWidget<V : Any>(
         override fun getBaseline(width: Int, height: Int): Int {
             // As all toggle buttons have the same baseline, just ask the first one.
             return if (components.isEmpty()) -1 else components[0].let { c ->
-                // It turns out that using "c.minimumSize.height" here and in the manual calculation a couple of lines
-                // below alleviates some re-layouting after the first painting that looks quite ugly.
-                var baseline = c.getBaseline(c.width, c.minimumSize.height)
+                val insets = this.insets
+                // We can use "c.preferredSize.height" here because our custom layout manager always assigns each
+                // component exactly its preferred height (bounded by STD_HEIGHT from below). This alleviates some
+                // re-layouts after the first painting that looks quite ugly.
+                val cHeight = max(c.preferredSize.height, STD_HEIGHT - insets.top - insets.bottom)
+                var baseline = c.getBaseline(c.width, cHeight)
                 if (baseline == -1) {
                     // If the toggle button doesn't have a baseline because it has no label, manually compute where the
                     // baseline would be if it had one. This makes all toggle button groups along with their form labels
@@ -717,10 +723,45 @@ class ToggleButtonGroupWidget<V : Any>(
                     // with unlabeled toggle buttons such that it matches the y position of the first row.
                     // The baseline turns out to be the baseline position of a vertically centered string.
                     val fm = c.getFontMetrics(c.font)
-                    baseline = (c.minimumSize.height + fm.ascent - fm.descent) / 2
+                    baseline = (cHeight + fm.ascent - fm.descent) / 2
                 }
                 // Adjust for the panel's border.
                 insets.top + baseline
+            }
+        }
+
+    }
+
+    // A very simple layout manager that just lays out the components from left to right and enforces the panel and all
+    // its components to have a height of at least STD_HEIGHT. We cannot use FlowLayout or BoxLayout because those do
+    // not permit enforcing a minimum height, and setting the minimum height of the buttons individually only affects
+    // the panel's but not the buttons' final height.
+    private class GroupPanelLayout : LayoutManager {
+
+        override fun addLayoutComponent(name: String, comp: Component) {}
+        override fun removeLayoutComponent(comp: Component) {}
+        override fun minimumLayoutSize(parent: Container) = preferredLayoutSize(parent)
+
+        override fun preferredLayoutSize(parent: Container): Dimension {
+            var width = 0
+            var height = 0
+            for (idx in 0 until parent.componentCount) {
+                val pref = parent.getComponent(idx).preferredSize
+                width += pref.width
+                height = max(height, pref.height)
+            }
+            val insets = parent.insets
+            return Dimension(width + insets.left + insets.right, max(STD_HEIGHT, height + insets.top + insets.bottom))
+        }
+
+        override fun layoutContainer(parent: Container) {
+            val insets = parent.insets
+            var x = insets.left
+            for (idx in 0 until parent.componentCount) {
+                val comp = parent.getComponent(idx)
+                val pref = comp.preferredSize
+                comp.setBounds(x, insets.top, pref.width, max(pref.height, STD_HEIGHT - insets.top - insets.bottom))
+                x += pref.width
             }
         }
 
@@ -773,7 +814,7 @@ class ColorWellWidget(
     }
 
     override val components = listOf<JComponent>(btn)
-    override val constraints = listOf((widthSpec ?: WidthSpec.NARROW).mig)
+    override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
     override var value: Color = Color.BLACK
         set(value) {
@@ -817,7 +858,8 @@ class FontChooserWidget(
     }
 
     override val components = listOf(familyComboBox, fontComboBox)
-    override val constraints = (widthSpec ?: WidthSpec.WIDE).let { listOf(it.mig, "newline, ${it.mig}") }
+    override val constraints = ("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.WIDE).mig)
+        .let { listOf(it, "newline, $it") }
 
     var projectFamilies: FontFamilies = FontFamilies(emptyList())
         set(value) {
@@ -920,7 +962,8 @@ class FontChooserWidget(
 
         private val label1 = JLabel()
         private val label2 = JLabel()
-        private val panel = JPanel(MigLayout("insets 0", "[]40:::push[]")).apply {
+        // Note: filly ensures that label1 is vertically centered also in an enlarged combo box.
+        private val panel = JPanel(MigLayout("insets 0, filly", "[]40:::push[]")).apply {
             add(label1)
             add(label2, "width 100!, height ::22")
         }
@@ -1068,8 +1111,9 @@ class ListWidget<E : Any>(
             for (idx in 0 until elemsPerRow.coerceAtMost(listSize))
                 for (comp in allElemWidgets[idx].components) {
                     // If the component layout hasn't been done yet, approximate the component's height using its
-                    // preferred height. This alleviates "jumping" when adding certain components like JComboBoxes.
-                    val cHeight = if (comp.height != 0) comp.height else comp.preferredSize.height
+                    // preferred height (bounded by STD_HEIGHT from below). This alleviates "jumping" when adding
+                    // certain components like JComboBoxes.
+                    val cHeight = if (comp.height != 0) comp.height else max(comp.preferredSize.height, STD_HEIGHT)
                     val baseline = comp.getBaseline(comp.width, cHeight)
                     if (baseline >= 0)
                         return baseline

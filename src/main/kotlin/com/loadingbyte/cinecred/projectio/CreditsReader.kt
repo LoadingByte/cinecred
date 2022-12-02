@@ -564,7 +564,7 @@ private class CreditsReader(
             pictureTagKey != null -> {
                 if (!isStyledStringBlank || curLetterStyle != null || multiplePictures)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureTagKey))
-                picture?.let(BodyElement::Pic)
+                picture?.let(BodyElement::Pic) ?: BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
             }
             !isStyledStringBlank -> BodyElement.Str(styledStr)
             else -> null

@@ -67,6 +67,8 @@ fun readCredits(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
             "head", "body", "tail", "vGap", "contentStyle", "breakMatch", "spinePos", "pageStyle", "pageRuntime"
         ), legacyColNames = mapOf(
+            // 1.2.0 -> 1.3.0: The vertical gap is no longer abbreviated.
+            "vGap" to listOf("Vert. Gap", "Senkr. Lücke"),
             // 1.2.0 -> 1.3.0: Cross-block alignment is renamed to matching.
             "breakMatch" to listOf("Break Align", "Breche Ausrichtung"),
             // 1.2.0 -> 1.3.0: The column position is renamed to spine position.

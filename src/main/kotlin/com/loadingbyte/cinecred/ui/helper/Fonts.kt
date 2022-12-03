@@ -1,14 +1,15 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.loadingbyte.cinecred.common.getStrings
-import com.loadingbyte.cinecred.common.getWeight
-import com.loadingbyte.cinecred.common.getWidth
-import com.loadingbyte.cinecred.common.isItalic2D
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.drawer.SYSTEM_FONTS
 import java.awt.Font
 import java.util.*
 import kotlin.math.abs
+import com.loadingbyte.cinecred.common.getStrings as getStringsReflect
+import com.loadingbyte.cinecred.common.getWeight as getWeightReflect
+import com.loadingbyte.cinecred.common.getWidth as getWidthReflect
+import com.loadingbyte.cinecred.common.isItalic2D as isItalic2DReflect
 
 
 val BUNDLED_FAMILIES: FontFamilies = FontFamilies(BUNDLED_FONTS)
@@ -62,14 +63,57 @@ class FontFamilies(fonts: Iterable<Font>) {
     fun getFamily(fontName: String): FontFamily? = fontNameToFamily[fontName]
 
     init {
+        list = object : FontSorter<Font, FontFamily>() {
+            override fun Font.getWeight() = getWeightReflect()
+            override fun Font.getWidth() = getWidthReflect()
+            override fun Font.isItalic2D() = isItalic2DReflect()
+            override fun Font.getStrings() = getStringsReflect()
+            override fun makeFamily(
+                family: Map<Locale, String>,
+                subfamilies: Map<Font, Map<Locale, String>>,
+                sampleTexts: Map<Font, Map<Locale, String>>,
+                fonts: List<Font>,
+                canonicalFont: Font
+            ) = FontFamily(family, subfamilies, sampleTexts, fonts, canonicalFont)
+        }.sort(fonts)
+        fontToFamily = HashMap()
+        fontNameToFamily = HashMap()
+        for (family in list)
+            for (font in family.fonts) {
+                fontToFamily[font] = family
+                fontNameToFamily[font.getFontName(Locale.ROOT)] = family
+            }
+    }
+
+}
+
+
+// Public for testing. This is a class for historical reasons, to not pollute the VCS diffs too much.
+abstract class FontSorter<Font, Family> {
+
+    abstract fun Font.getWeight(): Int
+    abstract fun Font.getWidth(): Int
+    abstract fun Font.isItalic2D(): Boolean
+    abstract fun Font.getStrings(): FontStrings
+
+    abstract fun makeFamily(
+        family: Map<Locale, String>,
+        subfamilies: Map<Font, Map<Locale, String>>,
+        sampleTexts: Map<Font, Map<Locale, String>>,
+        fonts: List<Font>,
+        canonicalFont: Font
+    ): Family
+
+
+    fun sort(fonts: Iterable<Font>): List<Family> {
         // We use a tree map so that the families will be sorted by name, and tree sets as values so that the fonts of
         // a family will be sorted by weight, width, and slope (WWS).
         val rootFamilyToRichFonts = TreeMap<String, TreeSet<RichFont>>()
         val richFontComparator = Comparator
-            .comparingInt(RichFont::width)
-            .thenComparingInt(RichFont::weight)
-            .thenComparing(RichFont::slope)
-            .thenComparing(RichFont::rootSubfamily)
+            .comparingInt(FontSorter<Font, Family>.RichFont::width)
+            .thenComparingInt(FontSorter<Font, Family>.RichFont::weight)
+            .thenComparing(FontSorter<Font, Family>.RichFont::slope)
+            .thenComparing(FontSorter<Font, Family>.RichFont::rootSubfamily)
 
         // Step 1: Put all fonts into families based on the root (often English) naming information, preferably based on
         // the typographic families (previously "preferred families"), which are already split into family and
@@ -104,7 +148,7 @@ class FontFamilies(fonts: Iterable<Font>) {
             if (width == null)
                 width = font.getWidth()
             if (slope == null)
-                slope = font.isItalic2D()  // Cannot use Font.isItalic() because that turns out unreliable.
+                slope = font.isItalic2D()
 
             rootFamilyToRichFonts
                 .computeIfAbsent(rootFamily) { TreeSet(richFontComparator) }
@@ -113,7 +157,7 @@ class FontFamilies(fonts: Iterable<Font>) {
 
         // Step 2: For each family, find a localized family and localized subfamilies for each font. Also determine the
         // sample texts and the canonical font.
-        list = rootFamilyToRichFonts.map { (rootFamily, richFonts) ->
+        return rootFamilyToRichFonts.map { (rootFamily, richFonts) ->
             val family = getLocalizedFamilies(richFonts, rootFamily)
             val subfamilies = richFonts.associate { it.font to getLocalizedSubfamilies(it, family) }
 
@@ -134,16 +178,8 @@ class FontFamilies(fonts: Iterable<Font>) {
             val canonicalFont =
                 richFonts.minByOrNull { abs(it.weight / 100f - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }!!.font
 
-            FontFamily(family, subfamilies, sampleTexts, richFonts.map(RichFont::font), canonicalFont)
+            makeFamily(family, subfamilies, sampleTexts, richFonts.map { it.font }, canonicalFont)
         }
-
-        fontToFamily = HashMap()
-        fontNameToFamily = HashMap()
-        for (family in list)
-            for (font in family.fonts) {
-                fontToFamily[font] = family
-                fontNameToFamily[font.getFontName(Locale.ROOT)] = family
-            }
     }
 
     /** Tries to determine the family, subfamily, and style information from the full font name alone. */
@@ -209,7 +245,7 @@ class FontFamilies(fonts: Iterable<Font>) {
         // their main family name under the English locale and sometimes under another locale. This leaves us with
         // multiple locales that in fact contain the same language. Hence, in these rare cases, there can be multiple
         // root locales.
-        val rootLocales = richFonts.mapTo(HashSet(), RichFont::rootLocale)
+        val rootLocales = richFonts.mapTo(HashSet()) { it.rootLocale }
 
         // Set up the localized family map and already insert the root family (often English) both under its locale and
         // the root locales, which will be used as fallbacks.
@@ -383,7 +419,7 @@ class FontFamilies(fonts: Iterable<Font>) {
 
     private class FontStyle(val weight: Int? = null, val width: Int? = null, val slope: Boolean? = null)
 
-    private class RichFont(
+    private inner class RichFont(
         val font: Font,
         val rootLocale: Locale, val rootSubfamily: String,
         val weight: Int, val width: Int, val slope: Boolean

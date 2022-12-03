@@ -19,8 +19,8 @@ fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
 
 
 val PRESET_GLOBAL = Global(
-    widthPx = 1920,
-    heightPx = 1080,
+    widthPx = 2048,
+    heightPx = 858,
     fps = FPS(24, 1),
     timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
     runtimeFrames = Opt(false, 1),

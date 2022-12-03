@@ -12,7 +12,7 @@ scrollMeltWithNext = true
 
 [[contentStyle]]
 name = "{project.template.contentStyleHeading}"
-bodyLetterStyleName = "{project.template.letterStyleBig}"
+bodyLetterStyleName = "{project.template.letterStyleHeading}"
 bodyLayout = "GRID"
 
 [[contentStyle]]
@@ -24,28 +24,45 @@ bodyLayout = "GRID"
 name = "{project.template.contentStyleGutter}"
 blockOrientation = "HORIZONTAL"
 spineAttachment = "HEAD_GAP_CENTER"
-bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "GRID"
-gridCellConform = "WIDTH"
-gridCellHJustifyPerCol = "LEFT"
+gridMatchColWidths = "ACROSS_BLOCKS"
+gridCellHJustifyPerCol = ["LEFT", ]
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
+headMatchWidth = "ACROSS_BLOCKS"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
 headGapPx = 24.0
 
 [[contentStyle]]
 name = "{project.template.contentStyleBullets}"
-bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "FLOW"
+flowLineWidthPx = 800.0
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
 
 [[contentStyle]]
+name = "{project.template.contentStyleTabular}"
+bodyLetterStyleName = "{project.template.letterStyleName}"
+bodyLayout = "GRID"
+gridStructure = "EQUAL_WIDTH_COLS"
+gridCellHJustifyPerCol = ["LEFT", "CENTER", "RIGHT", ]
+
+[[contentStyle]]
+name = "{project.template.contentStyleSong}"
+bodyLetterStyleName = "{project.template.letterStyleSmall}"
+bodyLayout = "GRID"
+hasHead = true
+headLetterStyleName = "{project.template.letterStyleSongTitle}"
+headGapPx = 0.0
+
+[[contentStyle]]
 name = "{project.template.contentStyleLogos}"
-bodyLetterStyleName = "{project.template.letterStyleBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "FLOW"
-flowCellConform = "SQUARE"
+flowSquareCells = true
 flowLineWidthPx = 1200.0
 flowLineGapPx = 32.0
 flowHGapPx = 32.0
@@ -53,15 +70,14 @@ flowSeparator = ""
 
 [[contentStyle]]
 name = "{project.template.contentStyleBlurb}"
-bodyLetterStyleName = "{project.template.letterStyleBig}"
+bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "PARAGRAPHS"
-paragraphsLineWidthPx = 400.0
+paragraphsLineWidthPx = 500.0
 
 [[contentStyle]]
 name = "{project.template.contentStyleCard}"
-bodyLetterStyleName = "{project.template.letterStyleCardBigBold}"
+bodyLetterStyleName = "{project.template.letterStyleCardName}"
 bodyLayout = "GRID"
-gridCellConform = "WIDTH"
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleCardSmall}"
 headGapPx = 32.0
@@ -70,12 +86,7 @@ tailLetterStyleName = "{project.template.letterStyleCardSmall}"
 tailGapPx = 32.0
 
 [[letterStyle]]
-name = "{project.template.letterStyleBigBold}"
-fontName = "Archivo Narrow Bold"
-heightPx = 32
-
-[[letterStyle]]
-name = "{project.template.letterStyleBig}"
+name = "{project.template.letterStyleNormal}"
 fontName = "Archivo Narrow Regular"
 heightPx = 32
 
@@ -85,7 +96,29 @@ fontName = "Archivo Narrow Regular"
 heightPx = 24
 
 [[letterStyle]]
-name = "{project.template.letterStyleCardBigBold}"
+name = "{project.template.letterStyleHeading}"
+fontName = "Archivo Narrow Regular"
+heightPx = 32
+trackingEm = 0.05
+
+[[letterStyle.decorations]]
+preset = "OFF"
+offsetPx = 5.0
+thicknessPx = 2.0
+
+[[letterStyle]]
+name = "{project.template.letterStyleName}"
+fontName = "Archivo Narrow Bold"
+heightPx = 32
+
+[[letterStyle]]
+name = "{project.template.letterStyleSongTitle}"
+fontName = "Archivo Narrow Bold"
+heightPx = 32
+smallCaps = "SMALL_CAPS"
+
+[[letterStyle]]
+name = "{project.template.letterStyleCardName}"
 fontName = "Archivo Narrow Bold"
 heightPx = 100
 

@@ -14,6 +14,7 @@ Cinecred Changelog
     - It is no longer limited to within a spine, but can happen globally.
 - Added blank tag for forcing empty body cells.
 - Added the option to fill the grid in a balanced, i.e., symmetric, fashion.
+- Comprehensively overhauled the new project template.
 - Unified project opening, project creation, preferences, and update
   notification in one integrated welcome window, thereby alleviating the need
   for various popup dialogs.

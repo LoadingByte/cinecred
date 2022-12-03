@@ -39,13 +39,13 @@ private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: Spread
             0 to SpreadsheetFormat.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
             1 to SpreadsheetFormat.RowLook(bold = true, borderBottom = true)
         ),
-        colWidths = listOf(48, 48, 32, 16, 28, 16, 24, 24, 36)
+        colWidths = listOf(48, 48, 32, 16, 28, 20, 24, 24, 36)
     )
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {
         logoFile.parent.createDirectories()
-        useResourceStream("/logo.svg") { Files.copy(it, logoFile) }
+        useResourceStream("/template/cinecred.svg") { Files.copy(it, logoFile) }
     }
 }
 

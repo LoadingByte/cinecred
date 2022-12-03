@@ -122,15 +122,16 @@ abstract class FontSorter<Font, Family> {
         // inside their respective family.
         for (font in fonts) {
             val (rootLocale, rootFamily, rootSubfamily, styles) =
-                getNamesAndStylesFromFamNames(font, typo = true) { it == Locale.US }
-                    ?: getNamesAndStylesFromFamNames(font, typo = true) { it.language == "en" }
-                    ?: getNamesAndStylesFromFamNames(font, typo = false) { it == Locale.US }
-                    ?: getNamesAndStylesFromFamNames(font, typo = false) { it.language == "en" }
-                    ?: getNamesAndStylesFromFullName(font) { it == Locale.US }
-                    ?: getNamesAndStylesFromFullName(font) { it.language == "en" }
-                    ?: getNamesAndStylesFromFamNames(font, typo = true) { true }
-                    ?: getNamesAndStylesFromFamNames(font, typo = false) { true }
-                    ?: getNamesAndStylesFromFullName(font) { true }!!
+                getNamesAndStylesFromFamNames(font, typo = true, matchUS)
+                    ?: getNamesAndStylesFromFamNames(font, typo = true, matchEnglish)
+                    ?: getNamesAndStylesFromFullName(font, rsub = true, matchUS)
+                    ?: getNamesAndStylesFromFullName(font, rsub = true, matchEnglish)
+                    ?: getNamesAndStylesFromFamNames(font, typo = false, matchUS)
+                    ?: getNamesAndStylesFromFamNames(font, typo = false, matchEnglish)
+                    ?: getNamesAndStylesFromFamNames(font, typo = true, matchEveryLocale)
+                    ?: getNamesAndStylesFromFullName(font, rsub = true, matchEveryLocale)
+                    ?: getNamesAndStylesFromFamNames(font, typo = false, matchEveryLocale)
+                    ?: getNamesAndStylesFromFullName(font, rsub = false, matchEveryLocale)!!
 
             var weight: Int? = null
             var width: Int? = null
@@ -166,8 +167,7 @@ abstract class FontSorter<Font, Family> {
                 if (sampleText.isNotEmpty()) {
                     // Add a root locale we can fall back to.
                     val locs = sampleText.keys
-                    sampleText[Locale.ROOT] =
-                        sampleText[locs.find { it == Locale.US } ?: locs.find { it.language == "en" } ?: locs.first()]
+                    sampleText[Locale.ROOT] = sampleText[locs.find(matchUS) ?: locs.find(matchEnglish) ?: locs.first()]
                 }
                 richFont.font to sampleText
             }
@@ -183,28 +183,26 @@ abstract class FontSorter<Font, Family> {
     }
 
     /** Tries to determine the family, subfamily, and style information from the full font name alone. */
-    private fun getNamesAndStylesFromFullName(font: Font, filter: (Locale) -> Boolean): NamesAndStyles? {
+    private fun getNamesAndStylesFromFullName(font: Font, rsub: Boolean, filter: (Locale) -> Boolean): NamesAndStyles? {
         val (locale, fullName) = font.getStrings().fullName.entries.find { filter(it.key) } ?: return null
         val (family, styles) = removeStyleSuffixes(fullName)
         val subfamily = fullName.substring(family.length).trimStart(*SUFFIX_SEPARATORS)
+        if (rsub && subfamily.isBlank())
+            return null
         return NamesAndStyles(locale, family, subfamily, styles)
     }
 
     /** Tries to determine the family, subfamily, and style information from the (typographic) family and subfamily. */
     private fun getNamesAndStylesFromFamNames(font: Font, typo: Boolean, filter: (Locale) -> Boolean): NamesAndStyles? {
         val strings = font.getStrings()
-        val locale: Locale
-        val rawFamily: String
-        val rawSubfamily: String
-        if (typo) {
-            rawFamily = (strings.typographicFamily.entries.find { filter(it.key) } ?: return null).value
-            (strings.typographicSubfamily.entries.find { filter(it.key) } ?: return null)
-                .run { locale = key; rawSubfamily = value }
-        } else {
-            rawFamily = (strings.family.entries.find { filter(it.key) } ?: return null).value
-            (strings.subfamily.entries.find { filter(it.key) } ?: return null)
-                .run { locale = key; rawSubfamily = value }
-        }
+        val familyMap = if (typo) strings.typographicFamily else strings.family
+        val subfamilyMap = if (typo) strings.typographicSubfamily else strings.subfamily
+
+        val rawFamily = (familyMap.entries.find { filter(it.key) } ?: return null).value
+        val rawSubfamilyEntry = subfamilyMap.entries.find { filter(it.key) } ?: return null
+        val rawSubfamily = rawSubfamilyEntry.value
+        val locale = rawSubfamilyEntry.key
+
         // Do not take the family/subfamily split supplied by the font at face value because many font still provide
         // subfamily information in their family (think font width like "Condensed"). Instead, manually remove any
         // leftover subfamily information from the family.
@@ -271,9 +269,9 @@ abstract class FontSorter<Font, Family> {
             var commonPrefix: String? = null
             for (richFont in richFonts) {
                 val strs = richFont.font.getStrings()
-                // If the typographic family is unavailable in the given locale, fall back to the legacy family, or even
-                // the full name, which should start with the family as well.
-                val locFam = strs.typographicFamily[locale] ?: strs.family[locale] ?: strs.fullName[locale] ?: continue
+                // If the typographic family is unavailable in the given locale, fall back to the full name, which
+                // should start with the family as well, or even to the legacy family.
+                val locFam = strs.typographicFamily[locale] ?: strs.fullName[locale] ?: strs.family[locale] ?: continue
                 commonPrefix = if (commonPrefix == null) locFam else commonPrefix.commonPrefixWith(locFam)
             }
             commonPrefix = commonPrefix!!.trimEnd(*SUFFIX_SEPARATORS)
@@ -287,10 +285,12 @@ abstract class FontSorter<Font, Family> {
     }
 
     private fun getLocalizedSubfamilies(richFont: RichFont, family: Map<Locale, String>): Map<Locale, String> {
-        // Find all locales for which a (typographic) subfamily or full name is provided by some font. These are the
-        // locales for which we can potentially find localized subfamilies.
+        // Find all locales for which a (typographic) family or subfamily or full name is provided by some font, except
+        // for the root locale. These are the locales for which we can potentially find localized subfamilies.
         val strings = richFont.font.getStrings()
-        val locales = strings.typographicSubfamily.keys + strings.subfamily.keys + strings.fullName.keys
+        val locales = strings.typographicFamily.keys + strings.typographicSubfamily.keys +
+                strings.family.keys + strings.subfamily.keys + strings.fullName.keys -
+                richFont.rootLocale
 
         // Set up the localized subfamily map and once again already insert the root family (often English).
         val subfamily = hashMapOf(Locale.ROOT to richFont.rootSubfamily, richFont.rootLocale to richFont.rootSubfamily)
@@ -299,40 +299,54 @@ abstract class FontSorter<Font, Family> {
             // Find the localized family which best matches the requested locale. Do not consider anything beyond the
             // country information, as that is rarely used by fonts.
             val closestFamilyLocale =
-                family.keys.find { it.language == locale.language && it.country == locale.country }
-                    ?: family.keys.find { it.language == locale.language }
+                family.keys.find(matchCountry(locale))
+                    ?: family.keys.find(matchLanguage(locale))
                     ?: Locale.ROOT
             val prefix = family.getValue(closestFamilyLocale)
 
             // Find the localized subfamily by taking the localized (typographic or legacy) "family + subfamily" from
             // the font and cutting off the closest localized true family as determined by us ("prefix").
-            //   - If the family string is not actually localized by the font, relax the localization requirement.
-            //   - If the subfamily string is not actually localized by the font, fall back to the localized full name.
-            //   - If there is no localized name at all, do not record a localized subfamily.
+            //   - If the typographic family or subfamily strings are not actually localized by the font, gradually
+            //     relax the localization requirement for either the family or the subfamily.
+            //   - If neither the family nor the subfamily string is actually localized by the font, the locale might
+            //     come from the localized full name, so try that.
+            //   - If the full name is not localized or yields a blank subfamily, use the legacy family and subfamily.
             // If for some reason the localized string pulled from the font does not start with the localized family
             // determined by us, there is something strange going on with the font, and by virtue of using
             // removePrefix() we just keep everything as the localized subfamily.
-            fun concatLocFamilyAndSubfamily(familyFilter: (Locale) -> Boolean): String? {
-                val typoFamily = strings.typographicFamily.entries.find { familyFilter(it.key) }?.value
-                val typoSubfamily = strings.typographicSubfamily[locale]
-                if (typoFamily != null && typoSubfamily != null)
-                    return "$typoFamily $typoSubfamily"
-                val legacyFamily = strings.family.entries.find { familyFilter(it.key) }?.value
-                val legacySubfamily = strings.subfamily[locale]
-                if (legacyFamily != null && legacySubfamily != null)
-                    return "$legacyFamily $legacySubfamily"
-                return null
+
+            fun concatLocFamilyAndSubfamily(
+                typo: Boolean,
+                familyFilter: (Locale) -> Boolean,
+                subfamilyFilter: (Locale) -> Boolean
+            ): String? {
+                val familyMap = if (typo) strings.typographicFamily else strings.family
+                val subfamilyMap = if (typo) strings.typographicSubfamily else strings.subfamily
+                val locFamily = familyMap.entries.find { familyFilter(it.key) }?.value
+                val locSubfamily = subfamilyMap.entries.find { subfamilyFilter(it.key) }?.value
+                return if (locFamily != null && locSubfamily != null) "$locFamily $locSubfamily" else null
             }
 
-            val familyPlusSubfamily =
-                concatLocFamilyAndSubfamily { it == locale }
-                    ?: concatLocFamilyAndSubfamily { it.language == locale.language && it.country == locale.country }
-                    ?: concatLocFamilyAndSubfamily { it.language == locale.language }
-                    ?: concatLocFamilyAndSubfamily { true }
-                    ?: strings.fullName[locale]
-                    ?: continue
+            fun subfamily(familyPlusSubfamily: String) =
+                familyPlusSubfamily.removePrefix(prefix).trimStart(*SUFFIX_SEPARATORS)
 
-            subfamily[locale] = familyPlusSubfamily.removePrefix(prefix).trimStart(*SUFFIX_SEPARATORS)
+            val matchLocaleCntry = matchCountry(locale)
+            val matchLocaleLangu = matchLanguage(locale)
+            val familyPlusSubfamily =
+                concatLocFamilyAndSubfamily(typo = true, matchLocaleCntry, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = true, matchLocaleLangu, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = true, matchLocaleCntry, matchLocaleLangu)
+                    ?: concatLocFamilyAndSubfamily(typo = true, matchEveryLocale, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = true, matchLocaleCntry, matchEveryLocale)
+                    ?: strings.fullName[locale]?.let { if (subfamily(it).isBlank()) null else it }
+                    ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleLangu, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchLocaleLangu)
+                    ?: concatLocFamilyAndSubfamily(typo = false, matchEveryLocale, matchLocaleCntry)
+                    ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchEveryLocale)
+                    ?: throw IllegalStateException("Mysterious locale $locale in font ${richFont.font}.")
+
+            subfamily[locale] = subfamily(familyPlusSubfamily)
         }
 
         return subfamily
@@ -340,6 +354,12 @@ abstract class FontSorter<Font, Family> {
 
 
     companion object {
+
+        private val matchEveryLocale = { _: Locale -> true }
+        private val matchUS = matchCountry(Locale.US)
+        private val matchEnglish = matchLanguage(Locale.ENGLISH)
+        private fun matchLanguage(l: Locale) = { o: Locale -> o.language == l.language }
+        private fun matchCountry(l: Locale) = { o: Locale -> o.language == l.language && o.country == l.country }
 
         private val SUFFIX_TO_STYLE = listOf(
             "Bd" to FontStyle(weight = 700),

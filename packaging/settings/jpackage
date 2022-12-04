@@ -1,5 +1,6 @@
 --type app-image
 --main-jar @MAIN_JAR@
+--main-class @MAIN_CLASS@
 --java-options "@JAVA_OPTIONS@"
 --app-version @VERSION@
 --description "@DESCRIPTION@"

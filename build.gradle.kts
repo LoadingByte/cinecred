@@ -1,37 +1,11 @@
-import org.apache.batik.anim.dom.SAXSVGDocumentFactory
-import org.apache.batik.bridge.BridgeContext
-import org.apache.batik.bridge.GVTBuilder
-import org.apache.batik.bridge.UserAgentAdapter
-import org.apache.batik.ext.awt.image.GraphicsUtil
-import org.apache.batik.util.XMLResourceDescriptor
+import com.loadingbyte.cinecred.DrawImages
+import com.loadingbyte.cinecred.MergeServices
+import com.loadingbyte.cinecred.Platform
+import com.loadingbyte.cinecred.WriteFile
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
-import java.awt.RenderingHints
-import java.awt.image.BufferedImage
 import java.util.*
-import javax.imageio.IIOImage
-import javax.imageio.ImageIO
-import javax.imageio.stream.FileImageOutputStream
 
-
-buildscript {
-    val batikVersion = "1.14"
-    val twelveMonkeysVersion = "3.7.0"
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.apache.xmlgraphics", "batik-bridge", batikVersion)
-        classpath("org.apache.xmlgraphics", "batik-codec", batikVersion)
-        // For writing Windows ICO icon files:
-        classpath("com.twelvemonkeys.imageio", "imageio-bmp", twelveMonkeysVersion)
-        // For writing macOS ICNS icon files:
-        classpath("com.twelvemonkeys.imageio", "imageio-icns", twelveMonkeysVersion)
-    }
-}
 
 plugins {
     kotlin("jvm") version "1.7.20"
@@ -40,6 +14,7 @@ plugins {
 group = "com.loadingbyte"
 version = "1.3.0-SNAPSHOT"
 
+val jdkVersion = 17
 val slf4jVersion = "1.7.32"
 val poiVersion = "5.2.2"
 val batikVersion = "1.14"
@@ -47,16 +22,12 @@ val javacppVersion = "1.5.6"
 val ffmpegVersion = "4.4-$javacppVersion"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use { load(it) } }
-val javaOptions = javaProperties.getProperty("javaOptions")!!
+val mainClass = javaProperties.getProperty("mainClass")!!
 val addModules = javaProperties.getProperty("addModules").split(' ')
 val addOpens = javaProperties.getProperty("addOpens").split(' ')
 val splashScreen = javaProperties.getProperty("splashScreen")!!
+val javaOptions = javaProperties.getProperty("javaOptions")!!
 
-enum class Platform(val label: String, val slug: String) {
-    WINDOWS("Windows", "windows-x86_64"),
-    MAC_OS("MacOS", "macosx-x86_64"),
-    LINUX("Linux", "linux-x86_64")
-}
 
 repositories {
     mavenCentral()
@@ -122,64 +93,81 @@ configurations.all {
     exclude("xalan", "xalan")
 }
 
-tasks.withType<JavaCompile> {
-    options.release.set(17)
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(jdkVersion)
     options.compilerArgs = listOf("--add-modules") + addModules
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions.jvmTarget = jdkVersion.toString()
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
 }
 
+
+val writeVersionFile by tasks.registering(WriteFile::class) {
+    text.set(version.toString())
+    outputFile.set(layout.buildDirectory.file("generated/version/version"))
+}
+
 tasks.processResources {
+    from(writeVersionFile)
     from("CHANGELOG.md")
     into("licenses") {
         from("LICENSE")
         rename("LICENSE", "Cinecred-LICENSE")
     }
-    doLast {
-        destinationDir.resolve("version").writeText(version.toString())
-    }
+    // Collect all licenses (and related files) from the dependencies.
+    // Rename these files such that each one carries the name of the JAR it originated from.
+    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts)
+        from(zipTree(dep.file)) {
+            include(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" })
+            eachFile { path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}" }
+            includeEmptyDirs = false
+        }
 }
 
 
-// Build the universal JAR containing natives for all supported platforms.
-val buildUniversalJar by tasks.registering(Jar::class) {
-    group = "Build"
-    archiveClassifier.set("universal")
-    makeFatJar(Platform.WINDOWS, Platform.MAC_OS, Platform.LINUX)
-}
+val preparePlatformPackagingTasks = Platform.values().map { platform ->
+    val excludePlatforms = Platform.values().toList() - platform
 
-
-// For each platform, build a JAR containing only natives for that platform.
-val buildPlatformJarTasks = Platform.values().asSequence().associateWith { platform ->
-    task<Jar>("build${platform.label}Jar") {
-        group = "Build"
+    // Build a JAR that excludes the other platforms' natives.
+    val platformJar = tasks.register<Jar>("${platform.lowercaseLabel}Jar") {
         archiveClassifier.set(platform.slug)
-        makeFatJar(platform)
+        from(sourceSets.main.map { it.output })
+        exclude(excludePlatforms.map { "natives/${it.slug}" })
     }
-}
 
+    // Draw the images that are needed for the platform.
+    val drawPlatformImages = tasks.register<DrawImages>("draw${platform.uppercaseLabel}Images") {
+        version.set(project.version.toString())
+        forPlatform.set(platform)
+        logoFile.set(tasks.processResources.map { it.destDirProvider.file("logo.svg") })
+        semiFontFile.set(tasks.processResources.map { it.destDirProvider.file("fonts/Titillium-SemiboldUpright.otf") })
+        boldFontFile.set(tasks.processResources.map { it.destDirProvider.file("fonts/Titillium-BoldUpright.otf") })
+        outputDir.set(layout.buildDirectory.dir("generated/packaging/${platform.slug}"))
+    }
 
-val preparePackagingTasks = Platform.values().map { platform ->
-    val pkgDir = buildDir.resolve("packaging").resolve(platform.slug)
-    val platformJar = buildPlatformJarTasks[platform]!!
-    // Copy all existing files needed for packaging into the packaging folder.
-    val copyFiles = task<Copy>("copyFiles${platform.label}") {
+    // Collect all files needed for packaging in a folder.
+    val preparePlatformPackaging = tasks.register<Copy>("prepare${platform.uppercaseLabel}Packaging") {
+        doFirst {
+            if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
+                throw GradleException("Non-release versions cannot be packaged.")
+        }
         group = "Packaging Preparation"
-        dependsOn("processResources")
-        dependsOn(platformJar)
-        into(pkgDir)
-        // Copy the packaging scripts "filter" (fill in) some variables. Note that we
+        description = "Prepares files for building a ${platform.uppercaseLabel} package on that platform."
+        into(layout.buildDirectory.dir("packaging/${platform.slug}"))
+        // Copy the packaging scripts and fill in some variables. Note that we
         // don't select the scripts by platform here because that's not worth the effort.
         from("packaging") {
+            val mainJarName = platformJar.get().archiveFileName.get()
             val tokens = mapOf(
                 "VERSION" to version,
-                "MAIN_JAR" to platformJar.archiveFileName.get(),
+                "MAIN_JAR" to mainJarName,
+                "MAIN_CLASS" to mainClass,
                 "JAVA_OPTIONS" to "--add-modules ${addModules.joinToString(",")} " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" } +
                         " -splash:\$APPDIR/$splashScreen $javaOptions",
@@ -188,203 +176,68 @@ val preparePackagingTasks = Platform.values().map { platform ->
                 "URL" to "https://loadingbyte.com/cinecred/",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "hello@loadingbyte.com",
-                "LEGAL_PATH_RUNTIME" to mapOf(
-                    Platform.WINDOWS to "runtime\\legal",
-                    Platform.MAC_OS to "runtime/Contents/Home/legal",
-                    Platform.LINUX to "lib/runtime/legal"
-                )[platform],
-                "LEGAL_PATH_APP" to mapOf(
-                    Platform.WINDOWS to "app\\${platformJar.archiveFileName.get()}",
-                    Platform.MAC_OS to "app/${platformJar.archiveFileName.get()}",
-                    Platform.LINUX to "lib/app/${platformJar.archiveFileName.get()}"
-                )[platform]
+                "LEGAL_PATH_RUNTIME" to when (platform) {
+                    Platform.WINDOWS -> "runtime\\legal"
+                    Platform.MAC_OS -> "runtime/Contents/Home/legal"
+                    Platform.LINUX -> "lib/runtime/legal"
+                },
+                "LEGAL_PATH_APP" to when (platform) {
+                    Platform.WINDOWS -> "app\\$mainJarName"
+                    Platform.MAC_OS -> "app/$mainJarName"
+                    Platform.LINUX -> "lib/app/$mainJarName"
+                }
             )
             filter<ReplaceTokens>("tokens" to tokens)
         }
         into("app") {
             from(platformJar)
-            from(sourceSets.main.get().output.resourcesDir!!.resolve(splashScreen))
-        }
-    }
-    // Transcode the logo SVG to the platform-specific icon image format and put it into the packaging folder.
-    // For Windows and macOS, additionally create the appropriate installer background images.
-    val drawImages = task("drawImages${platform.label}") {
-        group = "Packaging Preparation"
-        dependsOn("processResources")
-        doLast {
-            when (platform) {
-                Platform.WINDOWS -> {
-                    transcodeLogo(pkgDir.resolve("images/icon.ico"), intArrayOf(16, 20, 24, 32, 40, 48, 64, 256))
-                    buildImage(pkgDir.resolve("images/banner.bmp"), 493, 58, BufferedImage.TYPE_INT_RGB) { g2 ->
-                        g2.color = Color.WHITE
-                        g2.fillRect(0, 0, 493, 58)
-                        g2.drawImage(rasterizeLogo(48), 438, 5, null)
-                    }
-                    buildImage(pkgDir.resolve("images/sidebar.bmp"), 493, 312, BufferedImage.TYPE_INT_RGB) { g2 ->
-                        g2.color = Color.WHITE
-                        g2.fillRect(165, 0, 493, 312)
-                        g2.drawImage(rasterizeLogo(100), 32, 28, null)
-                        g2.font = titilliumSemi.deriveFont(32f)
-                        g2.drawString("Cinecred", 28, 176)
-                        g2.font = titilliumBold.deriveFont(20f)
-                        g2.drawString(version.toString(), 60, 204)
-                    }
-                }
-                Platform.MAC_OS -> {
-                    // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
-                    // properly parsed by macOS. We have to leave out those sizes to avoid glitches.
-                    transcodeLogo(pkgDir.resolve("images/icon.icns"), intArrayOf(128, 256, 512, 1024), margin = 0.055)
-                    buildImage(pkgDir.resolve("images/background.png"), 182, 180, BufferedImage.TYPE_INT_ARGB) { g2 ->
-                        g2.drawImage(rasterizeLogo(80), 51, 0, null)
-                        g2.color = Color.WHITE
-                        g2.font = titilliumSemi.deriveFont(24f)
-                        g2.drawString("Cinecred", 50, 110)
-                        g2.font = titilliumBold.deriveFont(16f)
-                        g2.drawString(version.toString(), 73, 130)
-                    }
-                }
-                Platform.LINUX -> {
-                    val logoFile = sourceSets.main.get().output.resourcesDir!!.resolve("logo.svg")
-                    logoFile.copyTo(pkgDir.resolve("images/cinecred.svg"), overwrite = true)
-                    transcodeLogo(pkgDir.resolve("images/cinecred.png"), intArrayOf(48))
-                }
+            from(tasks.processResources.map { it.destDirProvider.file(splashScreen) })
+            from(configurations.runtimeClasspath) {
+                // Exclude all JARs with natives for excluded platforms.
+                exclude(excludePlatforms.map { "*${it.slug}*" })
             }
         }
-    }
-    // Put it all together.
-    task("prepare${platform.label}Packaging") {
-        group = "Packaging Preparation"
-        dependsOn(copyFiles)
-        dependsOn(drawImages)
-        doFirst {
-            if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
-                throw GradleException("Non-release versions cannot be packaged.")
+        into("images") {
+            from(drawPlatformImages)
         }
     }
+
+    return@map preparePlatformPackaging
 }
 
-// And add one final job that calls all packaging jobs.
-task("preparePackaging") {
+val preparePackaging by tasks.registering {
     group = "Packaging Preparation"
-    dependsOn(preparePackagingTasks)
+    description = "For each platform, prepares files for building a package for that platform on that platform."
+    dependsOn(preparePlatformPackagingTasks)
 }
 
 
-fun Jar.makeFatJar(vararg includePlatforms: Platform) {
-    // Depend on the build task so that tests must run beforehand.
-    dependsOn("build")
+val mergeServices by tasks.registering(MergeServices::class) {
+    configuration.set(configurations.runtimeClasspath)
+    outputDir.set(layout.buildDirectory.dir("generated/universal/services"))
+}
 
-    // Include Cinecred itself.
-    with(tasks.jar.get())
-
-    // Add a manifest.
+val universalJar by tasks.registering(Jar::class) {
+    group = "Build"
+    description = "Assembles a jar archive containing the main classes and all dependencies for all platforms."
+    archiveClassifier.set("universal")
     manifest.attributes(
-        "Main-Class" to "com.loadingbyte.cinecred.Main",
+        "Main-Class" to mainClass,
         "SplashScreen-Image" to splashScreen,
         "Add-Opens" to addOpens.joinToString(" ")
     )
-
-    val excludePlatforms = Platform.values().filter { it !in includePlatforms }
-
-    // Exclude all Cinecred natives which haven't been explicitly included.
-    for (platform in excludePlatforms)
-        exclude("natives/${platform.slug}")
-
-    // Include all dependencies in the fat JAR.
-    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts) {
-        // Exclude all dependency natives which haven't been explicitly included.
-        if (excludePlatforms.any { it.slug in (dep.classifier ?: "") })
-            continue
-        // Put the files from the dependency into the fat JAR.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.map { it.output })
+    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts)
         from(zipTree(dep.file)) {
-            // Exclude service files for now as they will be merged and included by some custom logic below.
-            exclude("META-INF/services/*")
-            // Exclude JAR-specific files as they are no longer valid in a fat JAR.
-            exclude("**/module-info.class", "META-INF/INDEX.LIST", "META-INF/maven/**")
-            // Exclude various other unneeded files to tidy up the fat JAR.
-            exclude("checkstyle/**", "findbugs/**", "pmd/**", "**/DEPENDENCIES")
-            // Put all licenses and related files into a central "licenses/" directory and rename
-            // them such that each file also carries the name of the JAR it originates from.
-            filesMatching(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" }) {
-                path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}"
-            }
-            // Exclude the "license/" directory if it is empty (which we expect after relocating all licenses).
-            exclude("license")
+            exclude("META-INF/**", "**/module-info.class")
         }
-    }
-
-    // Add all service files to the fat JAR, merging them if necessary. This is necessary for POI.
-    val tmpServicesDir = temporaryDir.resolve("services")
     into("META-INF/services") {
-        from(tmpServicesDir)
-    }
-    doFirst {
-        tmpServicesDir.deleteRecursively()
-        tmpServicesDir.mkdirs()
-        for (depFile in configurations.runtimeClasspath.get())
-            for (serviceFile in zipTree(depFile).matching { include("META-INF/services/*") })
-                tmpServicesDir.resolve(serviceFile.name).appendText(serviceFile.readText())
+        from(mergeServices)
     }
 }
 
 
-fun buildImage(to: File, width: Int, height: Int, imageType: Int, block: (Graphics2D) -> Unit) {
-    val image = BufferedImage(width, height, imageType)
-    val g2 = image.createGraphics()
-    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    block(g2)
-    g2.dispose()
-    to.parentFile.mkdirs()
-    ImageIO.write(image, to.extension, to)
-}
-
-fun transcodeLogo(to: File, sizes: IntArray, margin: Double = 0.0) {
-    val imageType = if (to.extension == "ico") BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_INT_ARGB
-    val images = sizes.map { size -> rasterizeLogo(size, margin, imageType) }
-
-    to.delete()
-    to.parentFile.mkdirs()
-    FileImageOutputStream(to).use { stream ->
-        val writer = ImageIO.getImageWritersBySuffix(to.extension).next()
-        writer.output = stream
-        if (images.size == 1)
-            writer.write(images[0])
-        else {
-            writer.prepareWriteSequence(null)
-            for (image in images)
-                writer.writeToSequence(IIOImage(image, null, null), null)
-            writer.endWriteSequence()
-        }
-    }
-}
-
-fun rasterizeLogo(size: Int, margin: Double = 0.0, imageType: Int = BufferedImage.TYPE_INT_ARGB): BufferedImage {
-    val (logo, logoWidth) = logoAndWidth
-    val img = BufferedImage(size, size, imageType)
-    val g2 = GraphicsUtil.createGraphics(img)
-    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    val transl = margin * size
-    val scaling = (size * (1 - 2 * margin)) / logoWidth
-    g2.translate(transl, transl)
-    g2.scale(scaling, scaling)
-    logo.paint(g2)
-    g2.dispose()
-    return img
-}
-
-val logoAndWidth by lazy {
-    val logoFile = sourceSets.main.get().output.resourcesDir!!.resolve("logo.svg")
-    val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-        .createDocument(null, logoFile.bufferedReader())
-    val ctx = BridgeContext(UserAgentAdapter())
-    val logo = GVTBuilder().build(ctx, doc)
-    val logoWidth = ctx.documentSize.width
-    Pair(logo, logoWidth)
-}
-
-val titilliumSemi by lazy {
-    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-SemiboldUpright.otf"))[0]!!
-}
-val titilliumBold by lazy {
-    Font.createFonts(sourceSets.main.get().output.resourcesDir!!.resolve("fonts/Titillium-BoldUpright.otf"))[0]!!
-}
+// We need to retrofit this property in a hacky and not entirely compliant way because it's sadly not migrated yet.
+val Copy.destDirProvider: Directory
+    get() = layout.projectDirectory.dir(destinationDir.path)

@@ -160,10 +160,11 @@ open class VideoDrawer(
         val insn = insns[frameIdx]
 
         // Note: pageIdx == -1 means that the frame should be empty.
-        if (insn.pageIdx == -1)
-            g2.drawImage(groundingImage, 0, 0, null)
-        else {
-            if (insn.alpha != 1f) {
+        if (insn.pageIdx == -1) {
+            if (!transparentGrounding)
+                g2.drawImage(groundingImage, 0, 0, null)
+        } else {
+            if (!transparentGrounding && insn.alpha != 1f) {
                 g2.drawImage(groundingImage, 0, 0, null)
                 g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
             }

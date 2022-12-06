@@ -54,6 +54,7 @@ Cinecred Changelog
 - Characters larger than 16 bit no longer disrupt small caps.
 - Text decorations are now drawn on top of each other in their declared order.
 - Left widening a dashed text decoration no longer crashes the program.
+- Delivery with transparent grounding now always omits the background.
 
 #### UI Fixes
 

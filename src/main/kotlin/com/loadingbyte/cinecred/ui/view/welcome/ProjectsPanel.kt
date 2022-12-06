@@ -58,6 +58,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             border = null
             background = null
             viewport.background = null
+            verticalScrollBar.unitIncrement = 10
+            verticalScrollBar.blockIncrement = 100
         }
 
         val startDropLabel = JLabel(l10n("ui.projects.drop")).apply {

@@ -150,18 +150,12 @@ open class Form(insets: Boolean = true) :
         add(formRow.labelComp, "id $labelId, " + if (formRows.isEmpty() /* is first widget */) "" else "newline")
 
         val endlineGroupId = "g_${formRows.size}"
-        val endlineFieldIds = mutableListOf<String>()
         for ((fieldIdx, field) in widget.components.withIndex()) {
             val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
-            // If the field ends a line, assign it a unique ID. For this, we just use its location in memory. Also add
-            // it to the "endlineGroup". These IDs will be used later when positioning the verification components.
-            if (fieldIdx == widget.components.lastIndex ||
-                "newline" in widget.constraints.getOrElse(fieldIdx + 1) { "" }
-            ) {
-                val id = "f_${formRows.size}_$fieldIdx"
-                fieldConstraints.add("id $endlineGroupId.$id")
-                endlineFieldIds.add(id)
-            }
+            // Add each field to the "endlineGroup", whose "x2" will as such become the rightmost x border of any field
+            // in the row. This "x2" will be used later when positioning the notice components. Because of the syntax,
+            // we also need to assign each field a unique ID (after the dot), but it's not used by us anywhere.
+            fieldConstraints.add("id $endlineGroupId.f_${formRows.size}_$fieldIdx")
             // If this field starts a new line, add a skip constraint to skip the label column.
             if ("newline" in fieldConstraints[0])
                 fieldConstraints.add("skip 1")
@@ -172,8 +166,8 @@ open class Form(insets: Boolean = true) :
             add(field, fieldConstraints.joinToString())
         }
 
-        // Position the notice components using x coordinates relative to the fields that are at the line ends
-        // and y coordinates relative to the widget's label.
+        // Position the notice components using the rightmost x border coordinate of any field and the y coordinate of
+        // the widget's label.
         val noticeIconId = "n_${formRows.size}"
         add(formRow.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
         add(formRow.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")

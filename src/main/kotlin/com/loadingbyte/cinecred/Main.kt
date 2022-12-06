@@ -5,12 +5,10 @@ package com.loadingbyte.cinecred
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.resolveGnomeFont
-import com.loadingbyte.cinecred.common.useResourcePath
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
+import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
@@ -142,7 +140,7 @@ private fun mainSwing(args: Array<String>) {
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::onGlobalKeyEvent)
 
     // Apply the locale configured by the user, if any.
-    masterCtrl.applyUILocaleWish()
+    comprehensivelyApplyLocale(PersistentStorage.uiLocaleWish.locale)
 
     // On macOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))

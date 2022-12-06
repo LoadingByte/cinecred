@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
-import com.loadingbyte.cinecred.common.SYSTEM_LOCALE
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.UIFactoryComms
@@ -12,9 +11,6 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.nio.file.Path
-import java.util.*
-import javax.swing.JComponent
-import javax.swing.UIManager
 
 
 class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
@@ -24,15 +20,6 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
 
     override fun onGlobalKeyEvent(event: KeyEvent) =
         welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }
-
-    override fun applyUILocaleWish() {
-        SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.
-        val locale = PersistentStorage.uiLocaleWish.locale
-        Locale.setDefault(locale)
-        UIManager.getDefaults().defaultLocale = locale
-        UIManager.getLookAndFeelDefaults().defaultLocale = locale
-        JComponent.setDefaultLocale(locale)
-    }
 
     override fun showWelcomeFrame(openProjectDir: Path?) {
         if (welcomeCtrl == null)

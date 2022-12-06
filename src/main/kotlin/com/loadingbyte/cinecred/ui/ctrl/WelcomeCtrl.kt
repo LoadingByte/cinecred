@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.VERSION
+import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
 import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
@@ -199,7 +200,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             welcomeView.setPreferencesSubmitButton {
                 PersistentStorage.setFrom(initPrefs)
                 cachePrefs = null
-                masterCtrl.applyUILocaleWish()
+                comprehensivelyApplyLocale(initPrefs.uiLocaleWish.locale)
                 welcomeView.setTabsLocked(false)
                 welcomeView.setPreferencesSubmitButton(null)
                 finishInit(initConfigChangedUILocaleWish = initPrefs.uiLocaleWish != defaultUILocaleWish)
@@ -383,7 +384,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         override var uiLocaleWish: LocaleWish
             get() = throw NotImplementedError()
             set(wish) {
-                masterCtrl.applyUILocaleWish()
+                comprehensivelyApplyLocale(wish.locale)
                 SwingUtilities.invokeLater {
                     if (welcomeView.showRestartUILocaleQuestion(newLocale = wish.locale)) {
                         masterCtrl.tryCloseProjectsAndDisposeAllFrames()

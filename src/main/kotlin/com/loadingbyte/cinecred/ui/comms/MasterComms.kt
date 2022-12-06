@@ -8,7 +8,6 @@ import java.nio.file.Path
 interface MasterCtrlComms {
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean
-    fun applyUILocaleWish()
     fun showWelcomeFrame(openProjectDir: Path? = null)
     fun showPreferences()
     fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false): Boolean

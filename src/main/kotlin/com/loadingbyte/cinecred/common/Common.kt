@@ -15,6 +15,8 @@ import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.text.MessageFormat
 import java.util.*
+import javax.swing.JComponent
+import javax.swing.UIManager
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -97,6 +99,14 @@ private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strin
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
 fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String =
     MessageFormat.format(l10n(key, locale), *args)
+
+fun comprehensivelyApplyLocale(locale: Locale) {
+    SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.
+    Locale.setDefault(locale)
+    UIManager.getDefaults().defaultLocale = locale
+    UIManager.getLookAndFeelDefaults().defaultLocale = locale
+    JComponent.setDefaultLocale(locale)
+}
 
 
 val gCfg: GraphicsConfiguration

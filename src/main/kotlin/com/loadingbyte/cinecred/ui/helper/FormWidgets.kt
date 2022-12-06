@@ -161,9 +161,9 @@ class FileWidget(
                 FileType.FILE -> JFileChooser.FILES_ONLY
                 FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
             }
-            fc.selectedFile = File(text.removeAnySuffix(ass?.choices.orEmpty().map { ".$it" }))
+            fc.selectedFile = File(text)
 
-            if (ass != null && ass.choices.isNotEmpty()) {
+            if (ass != null) {
                 fc.isAcceptAllFileFilterUsed = false
                 for (fileExt in ass.choices) {
                     val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
@@ -174,11 +174,12 @@ class FileWidget(
             }
 
             if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
-                text = fc.selectedFile.absolutePath
-                if (ass != null && ass.choices.isNotEmpty()) {
+                var newText = fc.selectedFile.absolutePath
+                if (ass != null) {
                     val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
-                    text += ".$selectedFileExt"
+                    newText = text.removeAnySuffix(ass.choices.map { ".$it" }) + ".$selectedFileExt"
                 }
+                text = newText
             }
         }
     }

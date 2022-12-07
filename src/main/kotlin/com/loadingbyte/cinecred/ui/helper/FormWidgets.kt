@@ -373,8 +373,8 @@ class InconsistentComboBoxWidget<V : Any>(
 
     override fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
         DefaultComboBoxModel(items).apply {
-            if (oldSelectedItem != null)
-                selectedItem = oldSelectedItem
+            // Also sets selectedItem to null if oldSelectedItem was null before.
+            selectedItem = oldSelectedItem
         }
 
     override var value: V
@@ -1141,8 +1141,6 @@ class ListWidget<E : Any>(
         }
     }
 
-    private var configurator: ((Form.Widget<*>) -> Unit)? = null
-
     override val components = listOf<JComponent>(addBtn, panel)
     override val constraints = listOf(
         "aligny top, gapy 1 1",
@@ -1254,7 +1252,6 @@ class ListWidget<E : Any>(
 
         val widget = newElemWidget()
         widget.isVisible = isVisible
-        configurator?.let(widget::applyConfigurator)
         // When the new widget changes, notify this widget's change listeners that that widget has changed.
         widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         allElemWidgets.add(widget)
@@ -1273,10 +1270,9 @@ class ListWidget<E : Any>(
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
-        this.configurator = configurator
         configurator(this)
-        for (widget in allElemWidgets)
-            widget.applyConfigurator(configurator)
+        for (idx in 0 until listSize)
+            allElemWidgets[idx].applyConfigurator(configurator)
     }
 
     override fun applySeverity(index: Int, severity: Severity?) {

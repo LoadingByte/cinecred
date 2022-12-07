@@ -28,11 +28,11 @@ import kotlin.io.path.useDirectoryEntries
 
 class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
-    // ========== HINT OWNERS ==========
-    val createHintOwner: Component
-    val openHintOwner: Component
-    val dropHintOwner: Component
-    // =================================
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartCreateButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
+    // =========================================
 
     private val cards = CardLayout().also { layout = it }
 
@@ -50,8 +50,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val startOpenButton = makeOpenButton(l10n("ui.projects.open"), FOLDER_ICON).apply {
             addActionListener { welcomeCtrl.projects_start_onClickOpen() }
         }
-        createHintOwner = startCreateButton
-        openHintOwner = startOpenButton
 
         startMemorizedPanel = JPanel(MigLayout("insets 0, wrap", "[grow,fill]")).apply { background = null }
         val startMemorizedScrollPane = JScrollPane(startMemorizedPanel).apply {
@@ -63,7 +61,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
 
         val startDropLabel = JLabel(l10n("ui.projects.drop")).apply {
-            dropHintOwner = this
             putClientProperty(STYLE, "font: bold \$h0.font; foreground: #666")
         }
 
@@ -168,6 +165,13 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         add(openBrowsePanel, ProjectsCard.OPEN_BROWSE.name)
         add(createBrowsePanel, ProjectsCard.CREATE_BROWSE.name)
         add(createConfigurePanel, ProjectsCard.CREATE_CONFIGURE.name)
+
+        @Suppress("DEPRECATION")
+        leakedStartCreateButton = startCreateButton
+        @Suppress("DEPRECATION")
+        leakedStartOpenButton = startOpenButton
+        @Suppress("DEPRECATION")
+        leakedStartDropLabel = startDropLabel
     }
 
     private fun makeOpenButton(text: String, icon: Icon) = JButton(text, icon).apply {

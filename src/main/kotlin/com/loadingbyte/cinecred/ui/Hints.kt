@@ -28,11 +28,12 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
     val projPanel = welcPanel.projectsPanel
     val goProjStartPnl = fun() { welcPanel.setTab(WelcomeTab.PROJECTS); projPanel.projects_setCard(ProjectsCard.START) }
     val goPrefsPnl = fun() { welcPanel.setTab(WelcomeTab.PREFERENCES) }
+    @Suppress("DEPRECATION")
     return listOf(
         Hint(l10n("ui.hints.welcomeTrack.welcome"), welcPanel, Side.NONE, goPrefsPnl),
-        Hint(l10n("ui.hints.welcomeTrack.create"), projPanel.createHintOwner, Side.BOTTOM, goProjStartPnl),
-        Hint(l10n("ui.hints.welcomeTrack.open"), projPanel.openHintOwner, Side.BOTTOM, goProjStartPnl),
-        Hint(l10n("ui.hints.welcomeTrack.drop"), projPanel.dropHintOwner, Side.TOP, goProjStartPnl)
+        Hint(l10n("ui.hints.welcomeTrack.create"), projPanel.leakedStartCreateButton, Side.BOTTOM, goProjStartPnl),
+        Hint(l10n("ui.hints.welcomeTrack.open"), projPanel.leakedStartOpenButton, Side.BOTTOM, goProjStartPnl),
+        Hint(l10n("ui.hints.welcomeTrack.drop"), projPanel.leakedStartDropLabel, Side.TOP, goProjStartPnl)
     )
 }
 
@@ -41,16 +42,17 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val stylingPanel = ctrl.editStylingDialog.panel
     val goEditPnl = fun() { ctrl.projectFrame.panel.selectedTab = editPanel }
     val sfn = STYLING_FILE_NAME
+    @Suppress("DEPRECATION")
     return listOf(
-        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.pageTabsHintOwner, Side.NONE, goEditPnl),
-        Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.creditsLogHintOwner, Side.TOP, goEditPnl),
-        Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.toggleStylingHintOwner, Side.BOTTOM, goEditPnl),
-        Hint(l10n("ui.hints.projectTrack.stylingTree", sfn), stylingPanel.stylingTreeHintOwner, Side.RIGHT) {
+        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedPageTabs, Side.NONE, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.leakedCreditsLog, Side.TOP, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.leakedStylingDialogButton, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.stylingTree", sfn), stylingPanel.leakedStylingTree, Side.RIGHT) {
             goEditPnl()
             ctrl.setEditStylingDialogVisible(true)
         },
-        Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.resetStylingHintOwner, Side.BOTTOM, goEditPnl),
-        Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.layoutGuidesHintOwner, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.leakedResetStylingButton, Side.BOTTOM, goEditPnl),
+        Hint(l10n("ui.hints.projectTrack.layoutGuides"), editPanel.leakedLayoutGuidesButton, Side.BOTTOM, goEditPnl),
         Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE, goEditPnl)
     )
 }

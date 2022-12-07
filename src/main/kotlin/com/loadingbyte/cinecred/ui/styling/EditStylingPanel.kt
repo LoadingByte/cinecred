@@ -11,7 +11,6 @@ import kotlinx.collections.immutable.toPersistentList
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Component
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
@@ -21,9 +20,9 @@ import javax.swing.*
 
 class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
-    // ========== HINT OWNERS ==========
-    val stylingTreeHintOwner: Component
-    // =================================
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedStylingTree get() = stylingTree
+    // =========================================
 
     private val keyListeners = mutableListOf<KeyListener>()
 
@@ -61,7 +60,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private var openCounter = 0
 
     init {
-        stylingTreeHintOwner = stylingTree
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
             PRESET_GLOBAL, l10n("ui.styling.globalStyling"), GLOBE_ICON,

@@ -17,7 +17,6 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Component
 import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
@@ -35,13 +34,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         private const val ZOOM_INCREMENT = 0.1f
     }
 
-    // ========== HINT OWNERS ==========
-    val toggleStylingHintOwner: Component
-    val resetStylingHintOwner: Component
-    val layoutGuidesHintOwner: Component
-    val pageTabsHintOwner: Component
-    val creditsLogHintOwner: Component
-    // =================================
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = toggleEditStylingDialogButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedLayoutGuidesButton get() = layoutGuidesToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
+    // =========================================
 
     private val keyListeners = mutableListOf<KeyListener>()
 
@@ -246,11 +245,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
 
-        toggleStylingHintOwner = toggleEditStylingDialogButton
-        resetStylingHintOwner = resetStylingButton
-        layoutGuidesHintOwner = layoutGuidesToggleButton
-        pageTabsHintOwner = pageTabs
-        creditsLogHintOwner = logTable
+        @Suppress("DEPRECATION")
+        leakedCreditsLog = logTable
 
         keyListeners.add(KeyListener(VK_PLUS, CTRL_DOWN_MASK) { zoomSlider.zoom += ZOOM_INCREMENT })
         keyListeners.add(KeyListener(VK_ADD, CTRL_DOWN_MASK) { zoomSlider.zoom += ZOOM_INCREMENT })

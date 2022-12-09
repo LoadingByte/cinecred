@@ -1,12 +1,14 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
+import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
+import com.loadingbyte.cinecred.ui.helper.center
+import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.makeWelcomeHintTrack
 import com.loadingbyte.cinecred.ui.play
-import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -24,7 +26,9 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     val panel = WelcomePanel(welcomeCtrl)
 
     init {
-        defaultCloseOperation = DO_NOTHING_ON_CLOSE
+        setup()
+        iconImages = WINDOW_ICON_IMAGES
+
         addWindowListener(object : WindowAdapter() {
             override fun windowOpened(e: WindowEvent) {
                 // Due to the card layout inside the panel, the focus is initially "lost" somewhere, and hence tabbing
@@ -37,19 +41,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             }
         })
 
-        minimumSize = Dimension(700, 500)
-        bounds = rememberedBounds ?: run {
-            val maxWinBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-            val welcomeFrameWidth = (maxWinBounds.width * 8 / 20).coerceAtLeast(minimumSize.width)
-            val welcomeFrameHeight = (maxWinBounds.height * 11 / 20).coerceAtLeast(minimumSize.height)
-            Rectangle(
-                (maxWinBounds.width - welcomeFrameWidth) / 2,
-                (maxWinBounds.height - welcomeFrameHeight) / 2,
-                welcomeFrameWidth, welcomeFrameHeight
-            )
-        }
-
-        iconImages = WINDOW_ICON_IMAGES
+        rememberedBounds?.also(::setBounds) ?: center(gCfg, 0.4f, 0.55f)
 
         contentPane.add(panel)
     }

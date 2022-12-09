@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.ProjectController
-import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
+import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.helper.snapToSide
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -15,7 +15,8 @@ class EditStylingDialog(ctrl: ProjectController) :
     val panel = EditStylingPanel(ctrl)
 
     init {
-        defaultCloseOperation = DO_NOTHING_ON_CLOSE
+        setup()
+
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
                 ctrl.setEditStylingDialogVisible(false)
@@ -24,8 +25,6 @@ class EditStylingDialog(ctrl: ProjectController) :
 
         // Make the window fill the right half of the screen.
         snapToSide(ctrl.openOnScreen, rightSide = true)
-
-        iconImages = WINDOW_ICON_IMAGES
 
         contentPane.add(panel)
     }

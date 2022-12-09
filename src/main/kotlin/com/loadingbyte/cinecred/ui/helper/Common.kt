@@ -23,6 +23,7 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
+import kotlin.math.roundToInt
 
 
 const val PALETTE_RED: String = "#C75450"
@@ -297,11 +298,22 @@ class CustomToStringKeySelectionManager<E>(
 }
 
 
-fun Window.center(onScreen: GraphicsConfiguration) {
-    val screenBounds = onScreen.usableBounds
-    setLocation(
-        screenBounds.x + (screenBounds.width - width) / 2,
-        screenBounds.y + (screenBounds.height - height) / 2
+fun Window.setup() {
+    minimumSize = Dimension(700, 500)
+    when (this) {
+        is JFrame -> defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
+        is JDialog -> defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
+    }
+}
+
+fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Float, heightFrac: Float) {
+    val winBounds = onScreen.usableBounds
+    val width = (winBounds.width * widthFrac).roundToInt().coerceAtLeast(minimumSize.width)
+    val height = (winBounds.height * heightFrac).roundToInt().coerceAtLeast(minimumSize.height)
+    setBounds(
+        winBounds.x + (winBounds.width - width) / 2,
+        winBounds.y + (winBounds.height - height) / 2,
+        width, height
     )
 }
 

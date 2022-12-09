@@ -80,7 +80,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(1f, 0.01f, null, 0.5f)),
+        SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(1f, 0.01f, null, 1f)),
         verify = ::verifyResolutionMult
     )
     private val transparentGroundingWidget = addWidget(
@@ -140,8 +140,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
             .toSet()
-        val fractionalScrollSpeeds = scrollSpeeds
-            .filter { floor(it * resolutionMult) != it * resolutionMult }
+        val fractionalScrollSpeeds = buildSet {
+            for (scrollSpeed in scrollSpeeds) {
+                val scaledScrollSpeed = scrollSpeed * resolutionMult
+                if (floor(scrollSpeed) == scrollSpeed && floor(scaledScrollSpeed) != scaledScrollSpeed)
+                    add("$scrollSpeed \u2192 $scaledScrollSpeed")
+            }
+        }
         if (fractionalScrollSpeeds.isNotEmpty())
             return Notice(
                 Severity.WARN,

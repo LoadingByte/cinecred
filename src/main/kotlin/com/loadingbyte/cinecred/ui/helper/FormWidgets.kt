@@ -28,12 +28,14 @@ import kotlin.math.max
 
 
 enum class WidthSpec(val mig: String) {
+    FREE(""),
     TINIER("width 50:50:"),
     TINY("width 70:70:"),
     NARROW("width 100:100:"),
     SQUEEZE("width 100::max(200,30%)"),
     FIT("width 100::max(300,40%)"),
     WIDE("width 100:max(300,40%):"),
+    WIDER("width 100:max(300,50%):"),
     FILL("width 100:100%:")
 }
 

@@ -66,7 +66,7 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
         super.onChange(widget)
     }
 
-    private val isErrorFree: Boolean
+    val isErrorFree: Boolean
         get() = extFormRows.all { efr -> !efr.formRow.isVisible || !efr.formRow.isEnabled || !efr.isErroneous }
 
 }

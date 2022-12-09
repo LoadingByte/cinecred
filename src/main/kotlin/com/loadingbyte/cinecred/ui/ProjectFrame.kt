@@ -10,7 +10,7 @@ import javax.swing.JFrame
 
 class ProjectFrame(ctrl: ProjectController) : JFrame("${ctrl.projectName} \u2013 Cinecred") {
 
-    val panel = ProjectPanel(ctrl)
+    val panel = EditPanel(ctrl)
 
     init {
         setup()

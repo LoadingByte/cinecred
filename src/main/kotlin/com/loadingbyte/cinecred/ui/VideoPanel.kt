@@ -161,7 +161,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private fun play() { if (playRate < 0) playRate = 1 else playRate++ }
     // @formatter:on
 
-    fun onLeaveTab() {
+    fun onHide() {
         playRate = 0
     }
 
@@ -183,15 +183,19 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private fun restartDrawing() {
         val project = this.project ?: return
 
-        // Only access the graphics object if it's actually non-null. It can be null when the user closes a window
-        // immediately after it has been opened.
-        canvas.graphics?.let {
-            systemScaling = UIScale.getSystemScaleFactor(it as Graphics2D).toFloat()
-        }
+        // Abort if the canvas has never been shown on the screen yet, which would have it in a pre-initialized state
+        // that this method can't cope with. As soon as it is shown for the first time, the resize listener will be
+        // notified and call this method again.
+        val graphics = canvas.graphics as Graphics2D? ?: return
+
+        systemScaling = UIScale.getSystemScaleFactor(graphics).toFloat()
         val scaling = min(
             canvas.width.toFloat() / project.styling.global.widthPx,
             canvas.height.toFloat() / project.styling.global.heightPx
         ) * systemScaling
+        // Protect against too small canvas sizes.
+        if (scaling < 0.001f)
+            return
 
         makeVideoDrawerJobSlot.submit {
             val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, previewMode = true) {

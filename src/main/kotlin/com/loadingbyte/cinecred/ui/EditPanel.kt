@@ -36,9 +36,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     // ========== ENCAPSULATION LEAKS ==========
-    @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = toggleEditStylingDialogButton
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedLayoutGuidesButton get() = layoutGuidesToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = stylingDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
     // =========================================
@@ -48,10 +48,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     fun onKeyEvent(event: KeyEvent): Boolean =
         keyListeners.any { it.onKeyEvent(event) }
 
-    private val toggleEditStylingDialogButton = makeActToggleBtn(
-        label = null, EDIT_ICON, tooltip = l10n("ui.edit.toggleStyling"), toolbar = true,
-        VK_E, CTRL_DOWN_MASK, isSelected = true, listener = ctrl::setEditStylingDialogVisible
-    )
     private val undoStylingButton = makeActToolBtn(l10n("ui.edit.undoStyling"), UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
         ctrl.stylingHistory.undoAndRedraw()
     }
@@ -125,6 +121,28 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(STYLE_CLASS, "monospaced")
     }
 
+    private val stylingDialogToggleButton = makeActToggleBtn(
+        label = null, PROJECT_DIALOG_STYLING_ICON, tooltip = l10n("ui.edit.toggleStylingDialog"), toolbar = true,
+        VK_E, CTRL_DOWN_MASK, isSelected = true
+    ) { selected ->
+        ctrl.setDialogVisible(ProjectDialogType.STYLING, selected)
+    }
+    private val videoDialogToggleButton = makeActToggleBtn(
+        label = null, PROJECT_DIALOG_VIDEO_ICON, tooltip = l10n("ui.edit.toggleVideoDialog"), toolbar = true,
+        VK_P, CTRL_DOWN_MASK, isSelected = false
+    ) { selected ->
+        ctrl.setDialogVisible(ProjectDialogType.VIDEO, selected)
+    }
+    private val deliveryDialogToggleButton = makeActToggleBtn(
+        label = null, PROJECT_DIALOG_DELIVERY_ICON, tooltip = l10n("ui.edit.toggleDeliveryDialog"), toolbar = true,
+        VK_O, CTRL_DOWN_MASK, isSelected = false
+    ) { selected ->
+        ctrl.setDialogVisible(ProjectDialogType.DELIVERY, selected)
+    }
+    private val homeButton = makeActToolBtn(l10n("ui.edit.home"), HOME_ICON, VK_W, CTRL_DOWN_MASK) {
+        ctrl.masterCtrl.showWelcomeFrame()
+    }
+
     private val pageTabs = JTabbedPane().apply {
         isFocusable = false
         tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
@@ -192,23 +210,43 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
 
-        val topPanel = JPanel(MigLayout("", "[]30[][]0[]0[]0[]0[][]30[][][][]0[]0[]push[][]")).apply {
-            add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") })
-            add(JLabel(l10n("ui.edit.styling")))
-            add(toggleEditStylingDialogButton)
+        val topPanelCols = """
+                []push
+                []
+                unrel[]rel
+                []0[]0[]0[]rel[]
+                unrel[]unrel
+                []rel[]rel[]rel[]0[]0[]
+                rel[]unrel
+                []rel[]
+                unrel[]rel
+                []0[]0[]0[]
+                push[]
+        """
+        val topPanel = JPanel(MigLayout("", topPanelCols)).apply {
+            add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") }, "skip 1")
+            add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(undoStylingButton)
             add(redoStylingButton)
             add(saveStylingButton)
             add(resetStylingButton)
             add(unsavedStylingLabel)
+            add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
             add(zoomSlider)
             add(layoutGuidesToggleButton)
             add(uniformSafeAreasToggleButton)
             add(cutSafeArea16to9ToggleButton)
             add(cutSafeArea4to3ToggleButton)
+            add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(runtimeLabel1)
             add(runtimeLabel2)
+            add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
+            add(stylingDialogToggleButton)
+            add(videoDialogToggleButton)
+            add(deliveryDialogToggleButton)
+            add(homeButton)
+            add(JSeparator(), "newline, span, growx")
             add(pagePanel, "newline, span, grow, push")
         }
 
@@ -257,8 +295,12 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1f })
     }
 
-    fun onSetEditStylingDialogVisible(isVisible: Boolean) {
-        toggleEditStylingDialogButton.isSelected = isVisible
+    fun onSetDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
+        when (type) {
+            ProjectDialogType.STYLING -> stylingDialogToggleButton
+            ProjectDialogType.VIDEO -> videoDialogToggleButton
+            ProjectDialogType.DELIVERY -> deliveryDialogToggleButton
+        }.isSelected = isVisible
     }
 
     fun onTryCloseProject(): Boolean =

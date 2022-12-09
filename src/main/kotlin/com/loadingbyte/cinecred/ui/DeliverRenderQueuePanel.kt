@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.ui.helper.*
-import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.time.Duration
 import java.time.Instant
@@ -17,18 +16,7 @@ import javax.swing.table.TableCellEditor
 import javax.swing.table.TableCellRenderer
 
 
-class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
-
-    private val startButton = JToggleButton(l10n("ui.deliverRenderQueue.process"), PLAY_ICON).apply {
-        addItemListener {
-            if (jobTableModel.rows.none { !it.isFinished })
-                isSelected = false
-            else {
-                icon = if (isSelected) PAUSE_ICON else PLAY_ICON
-                RenderQueue.setPaused(ctrl.projectDir, !isSelected)
-            }
-        }
-    }
+class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane() {
 
     private val jobTableModel = JobTableModel()
 
@@ -52,7 +40,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
                     cellEditor = CancelButtonCell(::removeRowFromQueue)
                 }
                 // Set some sensible default column widths for all but the progress columns.
-                getColumn(0).width = 200
+                getColumn(0).width = 150
                 getColumn(1).width = 400
                 getColumn(3).apply { minWidth = 24; maxWidth = 24 }
             }
@@ -60,13 +48,21 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
             tableHeader.resizingColumn = columnModel.getColumn(2)
         }
 
-        layout = MigLayout()
-        add(startButton)
-        add(JScrollPane(jobTable), "newline, grow, push")
+        setViewportView(jobTable)
     }
 
     val renderJobs: Sequence<RenderJob>
         get() = jobTableModel.rows.asSequence().map { it.job }
+
+    private val hasUnfinishedRenderJobs: Boolean
+        get() = jobTableModel.rows.any { row -> !row.isFinished }
+
+    fun setProcessRenderJobs(process: Boolean) {
+        if (!hasUnfinishedRenderJobs)
+            ctrl.deliveryDialog.panel.processButton.isSelected = false
+        else
+            RenderQueue.setPaused(ctrl.projectDir, !process)
+    }
 
     fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
         val row = JobTableModel.Row(job, formatLabel, destination)
@@ -98,8 +94,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
             trySetTaskbarProgress(ctrl.projectFrame, -1)
 
             // If we just finished the last remaining job, deselect the toggle button and request user attention.
-            if (jobTableModel.rows.all { it.isFinished }) {
-                startButton.isSelected = false
+            if (!hasUnfinishedRenderJobs) {
+                ctrl.deliveryDialog.panel.processButton.isSelected = false
                 RenderQueue.setPaused(ctrl.projectDir, true)
                 tryRequestUserAttentionInTaskbar(ctrl.projectFrame)
             }
@@ -125,10 +121,10 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun onTryCloseProject(): Boolean {
-        if (startButton.isSelected && jobTableModel.rows.any { row -> !row.isFinished }) {
+        if (ctrl.deliveryDialog.panel.processButton.isSelected && hasUnfinishedRenderJobs) {
             val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("cancel"))
             val selectedOption = showOptionDialog(
-                ctrl.projectFrame, l10n("ui.deliverRenderQueue.runningWarning.msg"),
+                ctrl.deliveryDialog, l10n("ui.deliverRenderQueue.runningWarning.msg"),
                 l10n("ui.deliverRenderQueue.runningWarning.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )

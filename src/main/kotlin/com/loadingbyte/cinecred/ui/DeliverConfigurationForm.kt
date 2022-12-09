@@ -18,7 +18,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 
-class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm() {
+class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(insets = false) {
 
     companion object {
         private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
@@ -31,7 +31,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
-            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDE, scrollbar = false,
+            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.FREE, scrollbar = false,
             toString = {
                 val key =
                     if (it in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
@@ -52,20 +52,20 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
 
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
-        FileWidget(FileType.FILE),
+        FileWidget(FileType.FILE, widthSpec = WidthSpec.WIDER),
         isVisible = { !formatWidget.value.fileSeq },
         verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
     )
 
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
-        FileWidget(FileType.DIRECTORY),
+        FileWidget(FileType.DIRECTORY, widthSpec = WidthSpec.WIDER),
         isVisible = { formatWidget.value.fileSeq },
         verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
     )
     private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
-        FilenameWidget(),
+        FilenameWidget(widthSpec = WidthSpec.WIDER),
         // Reserve space even if invisible to keep the form from changing height when selecting different formats.
         invisibleSpace = true,
         isVisible = { formatWidget.value in WholePageSequenceRenderJob.Format.ALL },
@@ -90,11 +90,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     )
 
     init {
-        addSubmitButton(
-            l10n("ui.deliverConfig.addToRenderQueue"),
-            actionListener = ::addRenderJobToQueue
-        )
-
         // Set the directory-related fields to the project dir.
         val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
         val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
@@ -110,6 +105,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             onFormatChange()
 
         super.onChange(widget)
+
+        // Disable the add button if there are errors in the form.
+        // We need the null-safe access because this method might be called before everything is initialized.
+        val dialog = ctrl.deliveryDialog as DeliveryDialog?
+        if (dialog != null)
+            dialog.panel.addButton.isEnabled = isErrorFree
     }
 
     private fun verifyResolutionMult(resolutionMult: Float): Notice? {
@@ -163,10 +164,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
     }
 
-    private fun addRenderJobToQueue() {
+    fun addRenderJobToQueue() {
         if (drawnPages.isEmpty())
             showMessageDialog(
-                ctrl.projectFrame, l10n("ui.deliverConfig.noPages.msg"),
+                ctrl.deliveryDialog, l10n("ui.deliverConfig.noPages.msg"),
                 l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
@@ -175,11 +176,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             val scaling = resolutionMultWidget.value
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
-                ctrl.projectFrame, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
+                ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
             )
 
             fun overwriteDialog(msg: String) = showConfirmDialog(
-                ctrl.projectFrame, msg, l10n("ui.deliverConfig.overwrite.title"), OK_CANCEL_OPTION
+                ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.overwrite.title"), OK_CANCEL_OPTION
             ) == OK_OPTION
 
             // If there is any issue with the output file or folder, inform the user and abort if necessary.
@@ -231,8 +232,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
                 is VideoRenderJob -> renderJob.fileOrPattern.toString()
                 else -> throw IllegalStateException()
             }
-            ctrl.projectFrame.panel.deliverPanel.renderQueuePanel
-                .addRenderJobToQueue(renderJob, format.label, destination)
+            ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
         }
     }
 

@@ -1,5 +1,0 @@
-<!-- Copyright 2000-2021 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the icons/intellij-LICENSE file. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <path fill="#3592C4" d="M 13.333333,4.666666 11.333333,2.666666 6,8 V 10 H 8 Z M 15,3 c 0.214085,-0.2141066 0.214085,-0.7858932 0,-1 l -1,-1 c -0.214086,-0.21410678 -0.785915,-0.21410678 -1,0 l -1,1 L 14,4 Z"/>
-  <path fill="#3592C4" d="M 9,2 7,4 H 4 v 8 h 8 V 9 l 2,-2 v 7 H 2 V 2 Z"/>
-</svg>

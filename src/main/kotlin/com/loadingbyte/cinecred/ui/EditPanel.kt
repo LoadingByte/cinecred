@@ -32,6 +32,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     companion object {
         private const val MAX_ZOOM = 3
         private const val ZOOM_INCREMENT = 0.1f
+        private const val CTRL_SHIFT_DOWN_MASK = CTRL_DOWN_MASK or SHIFT_DOWN_MASK
     }
 
     // ========== ENCAPSULATION LEAKS ==========
@@ -51,16 +52,16 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         label = null, EDIT_ICON, tooltip = l10n("ui.edit.toggleStyling"), toolbar = true,
         VK_E, CTRL_DOWN_MASK, isSelected = true, listener = ctrl::setEditStylingDialogVisible
     )
-    private val undoStylingButton = makeActToolBtn("undoStyling", UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
+    private val undoStylingButton = makeActToolBtn(l10n("ui.edit.undoStyling"), UNDO_ICON, VK_Z, CTRL_DOWN_MASK) {
         ctrl.stylingHistory.undoAndRedraw()
     }
-    private val redoStylingButton = makeActToolBtn("redoStyling", REDO_ICON, VK_Z, CTRL_DOWN_MASK or SHIFT_DOWN_MASK) {
+    private val redoStylingButton = makeActToolBtn(l10n("ui.edit.redoStyling"), REDO_ICON, VK_Z, CTRL_SHIFT_DOWN_MASK) {
         ctrl.stylingHistory.redoAndRedraw()
     }
-    private val saveStylingButton = makeActToolBtn("saveStyling", SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
+    private val saveStylingButton = makeActToolBtn(l10n("ui.edit.saveStyling"), SAVE_ICON, VK_S, CTRL_DOWN_MASK) {
         ctrl.stylingHistory.save()
     }
-    private val resetStylingButton = makeActToolBtn("resetStyling", RESET_ICON, VK_R, CTRL_DOWN_MASK) {
+    private val resetStylingButton = makeActToolBtn(l10n("ui.edit.resetStyling"), RESET_ICON, VK_R, CTRL_DOWN_MASK) {
         if (unsavedStylingLabel.isVisible) {
             val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("cancel"))
             val selectedOption = showOptionDialog(
@@ -152,9 +153,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
     private fun makeActToolBtn(
-        name: String, icon: Icon, shortcutKeyCode: Int, shortcutModifiers: Int, listener: () -> Unit
+        tooltip: String, icon: Icon, shortcutKeyCode: Int, shortcutModifiers: Int, listener: () -> Unit
     ): JButton {
-        val ttip = l10n("ui.edit.$name") + " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
+        val ttip = "$tooltip (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
         val btn = JButton(icon).apply {
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             isFocusable = false

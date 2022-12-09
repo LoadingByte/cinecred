@@ -138,7 +138,7 @@ open class Form(insets: Boolean = true) :
 
     private val formRows = mutableListOf<FormRow>()
 
-    protected fun addFormRow(formRow: FormRow) {
+    protected fun addFormRow(formRow: FormRow, invisibleSpace: Boolean = false) {
         val widget = formRow.widget
 
         require(widget.components.size == widget.constraints.size)
@@ -147,7 +147,12 @@ open class Form(insets: Boolean = true) :
         widget.changeListeners.add(::onChange)
 
         val labelId = "l_${formRows.size}"
-        add(formRow.labelComp, "id $labelId, " + if (formRows.isEmpty() /* is first widget */) "" else "newline")
+        val labelConstraints = mutableListOf("id $labelId")
+        if (formRows.isNotEmpty() /* is not the first widget */)
+            labelConstraints.add("newline")
+        if (invisibleSpace)
+            labelConstraints.add("hidemode 0")
+        add(formRow.labelComp, labelConstraints.joinToString())
 
         val endlineGroupId = "g_${formRows.size}"
         for ((fieldIdx, field) in widget.components.withIndex()) {
@@ -163,6 +168,8 @@ open class Form(insets: Boolean = true) :
             // are located in the same cell horizontally.
             if (fieldIdx == 0 || "newline" in fieldConstraints[0])
                 fieldConstraints.add("split")
+            if (invisibleSpace)
+                fieldConstraints.add("hidemode 0")
             add(field, fieldConstraints.joinToString())
         }
 

@@ -24,12 +24,13 @@ open class EasyForm(insets: Boolean = true) : Form(insets) {
     fun <W : Widget<V>, V> addWidget(
         label: String,
         widget: W,
+        invisibleSpace: Boolean = false,
         isVisible: (() -> Boolean)? = null,
         isEnabled: (() -> Boolean)? = null,
         verify: ((V) -> Notice?)? = null
     ): W {
         val formRow = FormRow(label, widget)
-        super.addFormRow(formRow)
+        addFormRow(formRow, invisibleSpace)
         val doVerify = verify?.let { { it(widget.value) } }
         extFormRows.add(ExtFormRow(formRow, isVisible, isEnabled, doVerify))
         return widget

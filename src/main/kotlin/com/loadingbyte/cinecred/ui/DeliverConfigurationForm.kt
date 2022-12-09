@@ -50,6 +50,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             })
     )
 
+    private val singleFileWidget = addWidget(
+        l10n("ui.deliverConfig.singleFile"),
+        FileWidget(FileType.FILE),
+        isVisible = { !formatWidget.value.fileSeq },
+        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
+    )
+
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
         FileWidget(FileType.DIRECTORY),
@@ -59,6 +66,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
         FilenameWidget(),
+        // Reserve space even if invisible to keep the form from changing height when selecting different formats.
+        invisibleSpace = true,
         isVisible = { formatWidget.value in WholePageSequenceRenderJob.Format.ALL },
         verify = {
             if (!it.contains(Regex("%0\\d+d")))
@@ -68,13 +77,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
             else null
         }
     ).apply { value = "page-%02d" }
-
-    private val singleFileWidget = addWidget(
-        l10n("ui.deliverConfig.singleFile"),
-        FileWidget(FileType.FILE),
-        isVisible = { !formatWidget.value.fileSeq },
-        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
-    )
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
@@ -96,8 +98,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
         // Set the directory-related fields to the project dir.
         val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
         val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
-        seqDirWidget.value = outputLoc
         singleFileWidget.value = outputLoc
+        seqDirWidget.value = outputLoc
         // This ensures that file extensions are sensible.
         onFormatChange()
     }
@@ -152,8 +154,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm()
     private fun onFormatChange() {
         val format = formatWidget.value
         val fileExtAssortment = FileExtAssortment(format.fileExts.sorted(), format.defaultFileExt)
-        seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
         singleFileWidget.fileExtAssortment = fileExtAssortment
+        seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
     }
 
     private fun addRenderJobToQueue() {

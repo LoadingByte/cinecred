@@ -29,7 +29,7 @@ open class Form(insets: Boolean = true) :
     }
 
     interface Choice<VE : Any> {
-        fun updateChoices(choices: List<VE>)
+        var items: List<VE>
     }
 
     abstract class AbstractWidget<V : Any> : Widget<V> {

@@ -330,7 +330,7 @@ open class ComboBoxWidget<V : Any>(
     override val components = listOf(cb)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
-    protected var items: List<V> = listOf()
+    final override var items: List<V> = listOf()
         set(items) {
             if (field == items)
                 return
@@ -354,10 +354,6 @@ open class ComboBoxWidget<V : Any>(
         set(value) {
             cb.selectedItem = value
         }
-
-    override fun updateChoices(choices: List<V>) {
-        items = choices
-    }
 
     init {
         this.items = items
@@ -501,6 +497,15 @@ class MultiComboBoxWidget<E : Any>(
     override val components = listOf(mcb)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
+    override var items: List<E>
+        get() = mcb.items
+        set(items) {
+            val oldSelectedItems = mcb.selectedItems
+            mcb.items = items
+            if (mcb.selectedItems != oldSelectedItems)
+                notifyChangeListeners()
+        }
+
     override var value: List<E>
         get() = mcb.selectedItems.sortedWith(comparator)
         set(value) {
@@ -510,13 +515,6 @@ class MultiComboBoxWidget<E : Any>(
             mcb.selectedItems = valueAsSet
             notifyChangeListeners()
         }
-
-    override fun updateChoices(choices: List<E>) {
-        val oldSelectedItems = mcb.selectedItems
-        mcb.items = choices
-        if (mcb.selectedItems != oldSelectedItems)
-            notifyChangeListeners()
-    }
 
     override fun applySeverity(index: Int, severity: Severity?) {
         super.applySeverity(index, severity)
@@ -546,7 +544,7 @@ class ToggleButtonGroupWidget<V : Any>(
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("")
 
-    private var items: List<V> = listOf()
+    override var items: List<V> = listOf()
         set(items) {
             if (field == items)
                 return
@@ -610,10 +608,6 @@ class ToggleButtonGroupWidget<V : Any>(
             for (btn in btnGroup.elements)
                 btn.isEnabled = isEnabled
         }
-
-    override fun updateChoices(choices: List<V>) {
-        items = choices
-    }
 
     init {
         this.items = items

@@ -348,7 +348,7 @@ class StyleForm<S : Style>(
         valueWidgets.getValue(setting).applyConfigurator { widget ->
             if (widget is Choice<*>) {
                 @Suppress("UNCHECKED_CAST")
-                (widget as Choice<Any>).updateChoices(remaining)
+                (widget as Choice<Any>).items = remaining
                 if (unique)
                     (remaining as MutableList).remove(widget.value)
             }

@@ -92,6 +92,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
             Side.NONE -> Side.NONE
         }
         border = TextBubbleBorder(
+            hint.owner,
             pointerSide, pointerGirth = 30f, pointerLength = 15f,
             backgroundColor = Color(255, 175, 77),
             outlineWidth = 1f, outlineColor = Color(190, 190, 190),
@@ -133,13 +134,18 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
         val ownerSize = hint.owner.size
         val centeredX = ownerLoc.x + (ownerSize.width - popupSize.width) / 2
         val centeredY = ownerLoc.y + (ownerSize.height - popupSize.height) / 2
-        popup.location = when (hint.side) {
+        val loc = when (hint.side) {
             Side.TOP -> Point(centeredX, ownerLoc.y - popupSize.height - gap)
             Side.LEFT -> Point(ownerLoc.x - popupSize.width - gap, centeredY)
             Side.BOTTOM -> Point(centeredX, ownerLoc.y + ownerSize.height + gap)
             Side.RIGHT -> Point(ownerLoc.x + ownerSize.width + gap, centeredY)
             Side.NONE -> Point(centeredX, centeredY)
         }
+        // Ensure that the popup stays inside the window.
+        popup.location = Point(
+            loc.x.coerceIn(0, layeredPane.width - popupSize.width),
+            loc.y.coerceIn(0, layeredPane.height - popupSize.height)
+        )
     }
 
     // For some reason, the JLabel only does word-wrapping and then computes its real preferred height
@@ -160,6 +166,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
 
 
 private class TextBubbleBorder(
+    private val owner: Component,
     private val pointerSide: Side,
     private val pointerGirth: Float,
     private val pointerLength: Float,
@@ -199,8 +206,9 @@ private class TextBubbleBorder(
             Side.BOTTOM -> y2 -= pointerLength
             Side.NONE -> {}
         }
-        val xm = (x1 + x2) / 2f
-        val ym = (y1 + y2) / 2f
+        val m = SwingUtilities.convertPoint(owner, owner.width / 2, owner.height / 2, c)
+        val xm = m.x.toFloat()
+        val ym = m.y.toFloat()
 
         val bubble = Area(Rectangle2D.Float(x1, y1, x2 - x1, y2 - y1))
 

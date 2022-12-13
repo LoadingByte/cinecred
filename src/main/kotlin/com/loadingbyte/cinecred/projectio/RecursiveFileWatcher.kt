@@ -154,6 +154,12 @@ object RecursiveFileWatcher {
 
 
     private fun potentialModification(order: Order, file: Path, setLastSeenTick: Boolean) {
+        // Sometimes, the same file is changed multiple times within the same millisecond. If we didn't wait for a
+        // couple of milliseconds here, the first change would correctly be forwarded to the listener, but the second
+        // change would not because the file modification time stayed the same after the first change. By waiting, we
+        // ensure that the second change has already taken place when the function continues.
+        Thread.sleep(5)
+
         val memoryEntry = order.memory.computeIfAbsent(file) { MemoryEntry(-1, -1) }
         val lastModMillis = try {
             file.getLastModifiedTime().toMillis()

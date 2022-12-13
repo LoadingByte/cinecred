@@ -72,9 +72,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
             add(startCreateButton, "split 2, center")
             add(startOpenButton)
-            add(JSeparator(), "growx")
+            add(JSeparator(), "growx, shrink 0 0")
             add(startMemorizedScrollPane, "grow, push")
-            add(startDropLabel, "center, gaptop 40, gapbottom 20")
+            add(startDropLabel, "center, gaptop 20, gapbottom 20")
             // Add the drag-and-drop handler.
             transferHandler = OpenTransferHandler()
         }

@@ -113,6 +113,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, _, style -> !style.hasHead && !style.hasTail }
     ),
     StyleEffectivitySpec(
+        ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(),
+        isAlmostEffective = { _, _, style -> style.gridCellHJustifyPerCol.size < 2 }
+    ),
+    StyleEffectivitySpec(
         ContentStyle::gridMatchColUnderoccupancy.st(),
         isAlmostEffective = { _, styling, style ->
             styling!!.contentStyles.all { o ->

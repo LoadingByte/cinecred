@@ -59,6 +59,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // of the same widget but in different styles.
     private var openCounter = 0
 
+    // Remember the runtime of the latest render of the project.
+    private var mostRecentRuntime = 0
+
     init {
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
@@ -190,7 +193,13 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // it here nevertheless for symmetry with the openNamedStyle() method.
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
-            val newStyle = form.save()
+            var newStyle = form.save()
+            // If the global runtime setting is 0 and has now been activated, initialize the corresponding timecode
+            // spinner with the project's current runtime. This is to provide a good starting value for the user.
+            if (newStyle.runtimeFrames.run { isActive && value == 0 }) {
+                form.openSingleSetting(Global::runtimeFrames.st(), Opt(true, mostRecentRuntime))
+                newStyle = form.save()
+            }
             stylingTree.setSingleton(newStyle)
             onChange(widget)
         }
@@ -262,9 +271,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
-    fun updateProject(project: Project?) {
+    fun updateProject(project: Project?, runtime: Int) {
         usedStyles = if (project == null) emptySet() else findUsedStyles(project)
         stylingTree.adjustAppearance(isGrayedOut = { project != null && it is NamedStyle && it !in usedStyles })
+        mostRecentRuntime = runtime
     }
 
     private fun refreshConstraintViolations() {

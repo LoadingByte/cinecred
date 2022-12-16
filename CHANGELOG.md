@@ -80,6 +80,7 @@ Cinecred Changelog
 - Increased the style form's scrolling speed and the preview's paging speed.
 - The style form no longer jumps to issue notices and text areas while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".
+- The desired runtime spinner is now initialized with the current runtime.
 - Renaming a letter style now keeps in sync exactly those content styles which
   referenced it when it was opened, even when there are duplicate names at play.
 - Missing font warnings now always disappear when the font becomes available.

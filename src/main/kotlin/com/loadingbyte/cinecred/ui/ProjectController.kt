@@ -117,7 +117,7 @@ class ProjectController(
     private fun pushStateIntoUI() {
         val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
         projectFrame.panel.updateProject(project, drawnPages, runtime, stylingError, log)
-        stylingDialog.panel.updateProject(project)
+        stylingDialog.panel.updateProject(project, runtime)
         videoDialog.panel.updateProject(project, drawnPages)
         deliveryDialog.panel.configurationForm.updateProject(project, drawnPages)
     }

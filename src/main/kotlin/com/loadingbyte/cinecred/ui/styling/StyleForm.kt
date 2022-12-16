@@ -273,6 +273,16 @@ class StyleForm<S : Style>(
         }
     }
 
+    fun <SUBJ : Any> openSingleSetting(setting: StyleSetting<S, SUBJ>, value: SUBJ) {
+        disableOnChange = true
+        try {
+            @Suppress("UNCHECKED_CAST")
+            (valueWidgets.getValue(setting) as Widget<Any>).value = value
+        } finally {
+            disableOnChange = false
+        }
+    }
+
     override fun save(): S =
         newStyleUnsafe(styleClass, valueWidgets.values.map { widget ->
             val value = widget.value

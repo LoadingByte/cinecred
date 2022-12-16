@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
@@ -54,6 +55,7 @@ class ProjectController(
     private var stylingError = false
     private var project: Project? = null
     private var drawnPages: List<DrawnPage> = emptyList()
+    private var runtime = 0
 
     private val readCreditsAndRedrawJobSlot = JobSlot()
 
@@ -114,7 +116,7 @@ class ProjectController(
 
     private fun pushStateIntoUI() {
         val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
-        projectFrame.panel.updateProject(project, drawnPages, stylingError, log)
+        projectFrame.panel.updateProject(project, drawnPages, runtime, stylingError, log)
         stylingDialog.panel.updateProject(project)
         videoDialog.panel.updateProject(project, drawnPages)
         deliveryDialog.panel.configurationForm.updateProject(project, drawnPages)
@@ -189,6 +191,7 @@ class ProjectController(
         stylingError = false
         project = null
         drawnPages = emptyList()
+        runtime = 0
 
         // If the credits file could not be located or loaded, abort and notify the UI about the error.
         if (creditsFileLocatingLog.any { it.severity == ERROR } || creditsFileLoadingLog.any { it.severity == ERROR })
@@ -213,11 +216,13 @@ class ProjectController(
 
             val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
             val drawnPages = drawPages(project)
+            val runtime = VideoDrawer(project, drawnPages).numFrames
 
             SwingUtilities.invokeLater {
                 creditsFileReadingLog = log
                 this.project = project
                 this.drawnPages = drawnPages
+                this.runtime = runtime
                 pushStateIntoUI()
             }
         }

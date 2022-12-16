@@ -337,14 +337,16 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         resetStylingButton.isEnabled = false
     }
 
-    fun updateProject(project: Project?, drawnPages: List<DrawnPage>, stylingError: Boolean, log: List<ParserMsg>) {
+    fun updateProject(
+        project: Project?, drawnPages: List<DrawnPage>, runtime: Int,
+        stylingError: Boolean, log: List<ParserMsg>
+    ) {
         // Adjust the total runtime label.
         if (project == null || project.pages.isEmpty()) {
             runtimeLabel2.text = "\u2013"
             runtimeLabel2.toolTipText = null
             runtimeLabel1.toolTipText = null
         } else {
-            val runtime = VideoDrawer(project, drawnPages).numFrames
             val tc = formatTimecode(project.styling.global.fps, project.styling.global.timecodeFormat, runtime)
             val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
             runtimeLabel2.text = tc

@@ -98,6 +98,7 @@ Cinecred Changelog
 
 - Credits table column names are no longer abbreviated.
 - The column axis is now called spine.
+- Spines now wrap by default, and running them in parallel requires a keyword.
 - Alignment breaking is now called match breaking and can be activated
   separately for the head, body, and tail. The old syntax is no longer valid.
 - Rows in the credits table with an ill-formatted but non-empty body cell no

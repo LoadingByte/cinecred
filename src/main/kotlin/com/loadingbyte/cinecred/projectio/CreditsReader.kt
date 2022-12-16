@@ -354,16 +354,16 @@ private class CreditsReader(
         }
 
         // If the spine cell is non-empty, conclude the previous spine (if there was any) and start a new one.
-        // If the spine cell contains "Wrap" (or any localized variant of the same keyword), also conclude the
+        // If the spine cell does not contain "Parallel" (or any localized variant of that keyword), also conclude the
         // previous segment and start a new one.
         table.getString(row, "spinePos")?.let { str ->
-            var wrap = false
+            var parallel = false
             var posOffsetPx = 0f
             var erroneous = false
             for (hint in str.split(' '))
                 when {
                     hint.isBlank() -> continue
-                    hint in WRAP_KW -> wrap = true
+                    hint in PARALLEL_KW -> parallel = true
                     else -> try {
                         posOffsetPx = hint.toFiniteFloat()
                     } catch (_: NumberFormatException) {
@@ -372,12 +372,12 @@ private class CreditsReader(
                 }
 
             if (erroneous) {
-                val msg = l10n("projectIO.credits.illFormattedSpinePos", WRAP_KW.msgPrimary, WRAP_KW.msgAlt)
+                val msg = l10n("projectIO.credits.illFormattedSpinePos", PARALLEL_KW.msgPrimary, PARALLEL_KW.msgAlt)
                 table.log(row, "spinePos", WARN, msg)
             }
 
             nextSpinePosOffsetPx = posOffsetPx
-            if (!wrap)
+            if (parallel)
                 isSpineConclusionMarked = true
             else
                 isSegmentConclusionMarked = true
@@ -652,7 +652,7 @@ private class CreditsReader(
 
     companion object {
 
-        val WRAP_KW = Keyword("projectIO.credits.table.wrap")
+        val PARALLEL_KW = Keyword("projectIO.credits.table.parallel")
         val CROP_KW = Keyword("projectIO.credits.table.crop")
         val BLANK_KW = Keyword("projectIO.credits.table.blank")
         val STYLE_KW = Keyword("projectIO.credits.table.style")

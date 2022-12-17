@@ -123,8 +123,10 @@ private class CreditsReader(
     // The row that is currently being read.
     var row = 0
 
-    // The page style to use for the next started stage.
+    // The page style and runtime configuration to use for the next started stage.
     var nextStageStyle: PageStyle? = null
+    var nextStageRuntimeFrames: Int? = null
+    var nextStageRuntimeGroupName: String? = null
     // The spine position offset to use for the next started spine.
     var nextSpinePosOffsetPx = 0f
     // The current content style. This variable is special because a content style stays valid until the next
@@ -233,10 +235,12 @@ private class CreditsReader(
                 unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), stageRtFrames))
         }
         stageStyle = nextStageStyle
+        stageRuntimeFrames = nextStageRuntimeFrames
+        stageRuntimeGroupName = nextStageRuntimeGroupName
         stageSegments.clear()
-        stageRuntimeFrames = null
-        stageRuntimeGroupName = null
         nextStageStyle = null
+        nextStageRuntimeFrames = null
+        nextStageRuntimeGroupName = null
         isStageConclusionMarked = false
     }
 
@@ -328,24 +332,24 @@ private class CreditsReader(
         table.getString(row, "pageRuntime")?.let { str ->
             if (table.isEmpty(row, "pageStyle"))
                 table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.pageRuntimeInIntermediateRow"))
-            else if (str in namedRuntimeGroups)
-                stageRuntimeGroupName = str
+            else if (str in namedRuntimeGroups || str == stageRuntimeGroupName)
+                nextStageRuntimeGroupName = str
             else {
                 val fps = styling.global.fps
                 val timecodeFormat = styling.global.timecodeFormat
                 try {
                     if (' ' in str) {
                         val (timecode, runtimeGroupName) = str.split(' ', limit = 2)
-                        if (runtimeGroupName in namedRuntimeGroups) {
-                            stageRuntimeGroupName = runtimeGroupName
+                        if (runtimeGroupName in namedRuntimeGroups || runtimeGroupName == stageRuntimeGroupName) {
+                            nextStageRuntimeGroupName = runtimeGroupName
                             val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
                             table.log(row, "pageRuntime", WARN, msg)
                         } else {
-                            stageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
-                            stageRuntimeGroupName = runtimeGroupName
+                            nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
+                            nextStageRuntimeGroupName = runtimeGroupName
                         }
                     } else
-                        stageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
+                        nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
                 } catch (_: IllegalArgumentException) {
                     val sampleTc = formatTimecode(fps, timecodeFormat, 7127)
                     table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", sampleTc))

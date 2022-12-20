@@ -379,19 +379,17 @@ private class CreditsReader(
         table.getString(row, "spinePos")?.let { str ->
             var parallel = false
             var posOffsetPx = 0f
-            var erroneous = false
-            for (hint in str.split(' '))
-                when {
-                    hint.isBlank() -> continue
-                    hint in PARALLEL_KW -> parallel = true
-                    else -> try {
-                        posOffsetPx = hint.toFiniteFloat()
-                    } catch (_: NumberFormatException) {
-                        erroneous = true
-                    }
-                }
-
-            if (erroneous) {
+            try {
+                if (' ' in str) {
+                    val (offset, hint) = str.split(' ', limit = 2)
+                    posOffsetPx = offset.toFiniteFloat()
+                    if (hint in PARALLEL_KW)
+                        parallel = true
+                    else
+                        throw IllegalArgumentException()
+                } else
+                    posOffsetPx = str.toFiniteFloat()
+            } catch (_: IllegalArgumentException) {
                 val msg = l10n("projectIO.credits.illFormattedSpinePos", PARALLEL_KW.msgPrimary, PARALLEL_KW.msgAlt)
                 table.log(row, "spinePos", WARN, msg)
             }

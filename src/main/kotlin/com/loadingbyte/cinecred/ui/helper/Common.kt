@@ -150,7 +150,7 @@ class LargeCheckBox(size: Int) : JCheckBox() {
 }
 
 
-class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
+class WordWrapCellRenderer(allowHtml: Boolean = false, private val shrink: Boolean = false) : TableCellRenderer {
 
     private val comp = when (allowHtml) {
         false -> newLabelTextArea(insets = true)
@@ -162,8 +162,10 @@ class WordWrapCellRenderer(allowHtml: Boolean = false) : TableCellRenderer {
     ) = comp.apply {
         text = value as String
         setSize(table.columnModel.getColumn(colIdx).width, preferredSize.height)
-        if (table.getRowHeight(rowIdx) < preferredSize.height)
-            table.setRowHeight(rowIdx, preferredSize.height)
+        val newHeight = preferredSize.height
+        val oldHeight = table.getRowHeight(rowIdx)
+        if (if (shrink) newHeight != oldHeight else newHeight > oldHeight)
+            table.setRowHeight(rowIdx, newHeight)
         setTableCellBackground(table, rowIdx)
     }
 

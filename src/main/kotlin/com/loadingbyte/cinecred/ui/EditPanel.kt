@@ -24,6 +24,7 @@ import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 
@@ -268,7 +269,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             columnModel.getColumn(1).cellRenderer =
                 DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping and HTML display in the message column.
-            columnModel.getColumn(4).cellRenderer = WordWrapCellRenderer(allowHtml = true)
+            columnModel.getColumn(4).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
         }
         val logTablePanel = JPanel(MigLayout()).apply {
             add(JScrollPane(logTable), "grow, push")
@@ -398,8 +399,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
         var log: List<ParserMsg> = emptyList()
             set(value) {
+                val oldRows = field.size
+                val newRows = value.size
+                val minRows = min(oldRows, newRows)
+                val firstUpdatedRow = field.zip(value).indexOfFirst { (old, new) -> old != new }.coerceAtLeast(0)
                 field = value
-                fireTableDataChanged()
+                if (firstUpdatedRow < minRows) fireTableRowsUpdated(firstUpdatedRow, minRows - 1)
+                if (newRows < oldRows) fireTableRowsDeleted(newRows, oldRows - 1)
+                if (newRows > oldRows) fireTableRowsInserted(oldRows, newRows - 1)
             }
 
         override fun getRowCount() = log.size

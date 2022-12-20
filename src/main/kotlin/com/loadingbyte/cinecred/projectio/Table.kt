@@ -9,7 +9,7 @@ import com.loadingbyte.cinecred.common.toFiniteFloat
 import java.util.*
 
 
-class ParserMsg(
+data class ParserMsg(
     val recordNo: Int?,
     val colHeader: String?,
     val cellValue: String?,

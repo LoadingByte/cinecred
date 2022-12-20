@@ -10,5 +10,6 @@ class DrawnPage(val defImage: DeferredImage, val stageInfo: PersistentList<Drawn
 
 sealed class DrawnStageInfo {
     class Card(val middleY: Y) : DrawnStageInfo()
-    class Scroll(val scrollStartY: Y, val scrollStopY: Y, val frames: Int, val initialAdvance: Float) : DrawnStageInfo()
+    class Scroll(val scrollStartY: Y, val ownedScrollHeight: Y, val frames: Int, val initialAdvance: Float) :
+        DrawnStageInfo()
 }

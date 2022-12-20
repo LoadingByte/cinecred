@@ -52,6 +52,7 @@ Cinecred Changelog
 - Vertical gaps are now recognized even when declared in between a spine wrap
   respectively a page beginning and the next block.
 - Runtime adjustment is now accurate even with scroll pages melted together.
+- Runtime adjustment of a collection of non-melted scroll pages is now accurate.
 - Rectified the tracking between segments of differing font sizes.
 - Characters larger than 16 bit no longer disrupt small caps.
 - Text decorations are now drawn on top of each other in their declared order.
@@ -104,6 +105,7 @@ Cinecred Changelog
   separately for the head, body, and tail. The old syntax is no longer valid.
 - Rows in the credits table with an ill-formatted but non-empty body cell no
   longer conclude the preceding head-body-tail block.
+- Runtime adjustment now also compresses gaps on melted card pages.
 - The second of two melted scroll pages now starts at its first block, not the
   middle of the vertical gap between the two pages.
 - The speed of the second of two melted scroll pages now applies as soon as the

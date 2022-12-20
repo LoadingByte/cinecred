@@ -192,6 +192,10 @@ private class CreditsReader(
     var blockMatchBodyPartitionId = 0
     var blockMatchTailPartitionId = 0
 
+    // Keep track where each stage has been declared, for use in an error message.
+    var nextStageDeclaredRow = 0
+    var stageDeclaredRow = 0
+    val stageDeclaredRows = mutableMapOf<Stage, Int>()
     // Keep track where the current head and tail have been declared. This is used by an error message.
     var blockHeadDeclaredRow = 0
     var blockTailDeclaredRow = 0
@@ -222,6 +226,8 @@ private class CreditsReader(
         if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
             val stage = Stage(stageStyle!!, stageSegments.toPersistentList(), vGapAfter)
             pageStages.add(stage)
+            // Remember where the stage has started.
+            stageDeclaredRows[stage] = stageDeclaredRow
 
             // If directed, add the new stage to a runtime group.
             val stageRtFrames = stageRuntimeFrames
@@ -237,6 +243,7 @@ private class CreditsReader(
         stageStyle = nextStageStyle
         stageRuntimeFrames = nextStageRuntimeFrames
         stageRuntimeGroupName = nextStageRuntimeGroupName
+        stageDeclaredRow = nextStageDeclaredRow
         stageSegments.clear()
         nextStageStyle = null
         nextStageRuntimeFrames = null
@@ -301,8 +308,13 @@ private class CreditsReader(
         concludeStage(0f)
         concludePage()
 
-        // Collect the runtime groups
+        // Collect the runtime groups. Warn about those which only contain card stages.
         val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
+        for (runtimeGroup in runtimeGroups)
+            if (runtimeGroup.stages.all { stage -> stage.style.behavior == PageBehavior.CARD }) {
+                val declaredRow = stageDeclaredRows.getValue(runtimeGroup.stages.first())
+                table.log(declaredRow, "pageRuntime", WARN, l10n("projectIO.credits.pureCardRuntimeGroup"))
+            }
 
         return Pair(pages, runtimeGroups)
     }
@@ -326,6 +338,7 @@ private class CreditsReader(
         // specified page style for the stage that starts immediately afterwards. Also reset the spine position offset.
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
             nextStageStyle = newPageStyle
+            nextStageDeclaredRow = row
             nextSpinePosOffsetPx = 0f
             isStageConclusionMarked = true
         }

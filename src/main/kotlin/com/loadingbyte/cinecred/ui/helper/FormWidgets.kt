@@ -17,6 +17,7 @@ import java.text.NumberFormat
 import java.text.ParseException
 import java.util.*
 import javax.swing.*
+import javax.swing.JScrollPane.*
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.DefaultFormatter
@@ -88,6 +89,8 @@ class TextWidget(
 class TextListWidget(
     widthSpec: WidthSpec? = null
 ) : AbstractTextComponentWidget<List<String>>(JTextArea(), widthSpec) {
+    override val components = listOf(JScrollPane(tc, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER))
+    override val constraints = listOf(super.constraints.single() + ", hmax ${15 * STD_HEIGHT}")
     override var value: List<String>
         get() = text.split("\n").filter(String::isNotBlank)
         set(value) {

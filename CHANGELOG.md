@@ -105,6 +105,7 @@ Cinecred Changelog
   separately for the head, body, and tail. The old syntax is no longer valid.
 - Rows in the credits table with an ill-formatted but non-empty body cell no
   longer conclude the preceding head-body-tail block.
+- A runtime group name must now precede and not follow the timecode.
 - Runtime adjustment now also compresses gaps on melted card pages.
 - The second of two melted scroll pages now starts at its first block, not the
   middle of the vertical gap between the two pages.

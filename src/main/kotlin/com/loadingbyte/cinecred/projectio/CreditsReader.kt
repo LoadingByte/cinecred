@@ -352,7 +352,9 @@ private class CreditsReader(
                 val timecodeFormat = styling.global.timecodeFormat
                 try {
                     if (' ' in str) {
-                        val (timecode, runtimeGroupName) = str.split(' ', limit = 2)
+                        val parts = str.split(' ')
+                        val timecode = parts.last()
+                        val runtimeGroupName = parts.subList(0, parts.size - 1).joinToString(" ")
                         if (runtimeGroupName in namedRuntimeGroups || runtimeGroupName == stageRuntimeGroupName) {
                             nextStageRuntimeGroupName = runtimeGroupName
                             val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
@@ -364,8 +366,9 @@ private class CreditsReader(
                     } else
                         nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
                 } catch (_: IllegalArgumentException) {
+                    val f = l10n("project.${TimecodeFormat::class.java.simpleName}.${styling.global.timecodeFormat}")
                     val sampleTc = formatTimecode(fps, timecodeFormat, 7127)
-                    table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", sampleTc))
+                    table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", f, sampleTc))
                 }
             }
         }

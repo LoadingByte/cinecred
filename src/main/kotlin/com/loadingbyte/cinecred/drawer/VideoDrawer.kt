@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.project.DrawnPage
@@ -96,16 +97,9 @@ open class VideoDrawer(
        ************************************ */
 
     private val scaledPageDefImages = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
-
-    private val groundingImage: BufferedImage
     private val shiftedPageImages = Array(drawnPages.size) { HashMap<Float, BufferedImage>() }
 
     init {
-        groundingImage = createIntermediateImage(width, height).withG2 { g2 ->
-            g2.color = project.styling.global.grounding
-            g2.fillRect(0, 0, width, height)
-        }
-
         // In preview mode, only 0-shifted rasterized page images are used. We already precompute these now
         // to avoid wait times later when pages must be drawn in real-time.
         if (previewMode)
@@ -125,22 +119,17 @@ open class VideoDrawer(
             require(shift >= 0f && shift < 1f)
             val scaledPageDefImg = scaledPageDefImages[pageIdx]
             // Note: We add 1 to the height to make room for the shift (which is between 0 and 1).
-            // We add 2*height to make room for buffers above and below the content; they will be in frame
-            // when a scrolling page starts and ends and need to provide the correct grounding color.
-            val imageHeight = ceil(scaledPageDefImg.height.resolve()).toInt() + 1 + 2 * height
+            val imageHeight = ceil(scaledPageDefImg.height.resolve()).toInt() + 1
             createIntermediateImage(width, imageHeight).withG2 { g2 ->
                 g2.setHighQuality()
+                val layers = mutableListOf(BACKGROUND, FOREGROUND)
                 if (!transparentGrounding) {
                     // If the final image should not have an alpha channel, the intermediate images, which also don't
                     // have alpha, have to have the proper grounding, as otherwise their grounding would be black.
-                    // Note that we can't simply use the deferred image's grounding layer because that doesn't extend
-                    // to the whole height of the raster image, since the raster image is higher than the deferred
-                    // image to make room for the shift and the start/end buffers.
-                    g2.color = project.styling.global.grounding
-                    g2.fillRect(0, 0, width, imageHeight)
+                    layers.add(0, GROUNDING)
                 }
-                g2.translate(0.0, shift.toDouble() + height)
-                scaledPageDefImg.materialize(g2, layers = listOf(BACKGROUND, FOREGROUND))
+                g2.translate(0f, shift)
+                scaledPageDefImg.materialize(g2, layers)
             }
         }
     }
@@ -159,27 +148,29 @@ open class VideoDrawer(
     fun drawFrame(g2: Graphics2D, frameIdx: Int) {
         require(frameIdx in 0..numFrames) { "Frame #$frameIdx exceeds number of available frames ($numFrames)." }
 
-        val insn = insns[frameIdx]
+        if (!transparentGrounding) {
+            g2.color = project.styling.global.grounding
+            g2.fillRect(0, 0, width, height)
+        }
 
+        val insn = insns[frameIdx]
         // Note: pageIdx == -1 means that the frame should be empty.
-        if (insn.pageIdx == -1) {
-            if (!transparentGrounding)
-                g2.drawImage(groundingImage, 0, 0, null)
-        } else {
-            if (!transparentGrounding && insn.alpha != 1f) {
-                g2.drawImage(groundingImage, 0, 0, null)
-                g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
-            }
+        if (insn.pageIdx != -1) {
+            val blend = insn.alpha != 1f
+            val prevComposite = g2.composite
+            if (blend) g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
 
             val shift = -insn.imgTopY
             if (!previewMode) {
                 val img = getShiftedPageImage(insn.pageIdx, shift - floor(shift))
-                g2.drawImage(img, 0, floor(shift).toInt() - height, null)
+                g2.drawImage(img, 0, floor(shift).toInt(), null)
             } else {
                 val img = getShiftedPageImage(insn.pageIdx, 0f)
-                val tx = AffineTransform.getTranslateInstance(0.0, shift.toDouble() - height)
+                val tx = AffineTransform.getTranslateInstance(0.0, shift.toDouble())
                 g2.drawImage(img, tx, null)
             }
+
+            if (blend) g2.composite = prevComposite
         }
     }
 

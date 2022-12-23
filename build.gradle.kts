@@ -29,6 +29,10 @@ val splashScreen = javaProperties.getProperty("splashScreen")!!
 val javaOptions = javaProperties.getProperty("javaOptions")!!
 
 
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(jdkVersion))
+}
+
 repositories {
     mavenCentral()
 }

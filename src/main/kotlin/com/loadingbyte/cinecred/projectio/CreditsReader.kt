@@ -585,7 +585,10 @@ private class CreditsReader(
                 picture?.let(BodyElement::Pic) ?: BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
             }
             !isStyledStringBlank -> BodyElement.Str(styledStr)
-            else -> null
+            else -> {
+                table.log(row, l10nColName, WARN, l10n("projectIO.credits.effectivelyEmpty"))
+                BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
+            }
         }
     }
 

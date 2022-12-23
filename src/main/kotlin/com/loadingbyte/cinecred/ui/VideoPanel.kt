@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.VideoDrawer
+import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.PREVIEW
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.JobSlot
@@ -170,7 +171,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         this.drawnPages = drawnPages
 
         playRate = 0
-        if (project == null) {
+        if (project == null || drawnPages.isEmpty()) {
             videoDrawer = null
             canvas.repaint()
             timecodeLabel.text = null
@@ -198,7 +199,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             return
 
         makeVideoDrawerJobSlot.submit {
-            val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, previewMode = true) {
+            val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, mode = PREVIEW) {
                 override fun createIntermediateImage(width: Int, height: Int) =
                     gCfg.createCompatibleImage(width, height, Transparency.OPAQUE)
             }

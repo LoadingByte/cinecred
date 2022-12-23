@@ -102,67 +102,100 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         addInstruction(layer, Instruction.DrawPicture(x, y, pic))
     }
 
-    fun materialize(g2: Graphics2D, layers: List<Layer>) {
-        materializeDeferredImage(Graphics2DBackend(g2), 0f, 0f, 1f, 1f, this, layers)
+    fun materialize(g2: Graphics2D, layers: List<Layer>, culling: Rectangle2D? = null) {
+        materializeDeferredImage(Graphics2DBackend(g2), 0f, 0f, 1f, 1f, culling, this, layers)
     }
 
-    fun materialize(doc: PDDocument, cs: PDPageContentStream, csHeight: Float, layers: List<Layer>) {
-        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0f, 0f, 1f, 1f, this, layers)
+    fun materialize(
+        doc: PDDocument, cs: PDPageContentStream, csHeight: Float, layers: List<Layer>, culling: Rectangle2D? = null
+    ) {
+        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0f, 0f, 1f, 1f, culling, this, layers)
     }
 
     private fun materializeDeferredImage(
-        backend: MaterializationBackend, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        backend: MaterializationBackend,
+        x: Float, y: Float, universeScaling: Float, elasticScaling: Float, culling: Rectangle2D?,
         image: DeferredImage, layers: List<Layer>
     ) {
         for (layer in layers)
             for (insn in image.instructions.getOrDefault(layer, emptyList()))
-                materializeInstruction(backend, x, y, universeScaling, elasticScaling, insn)
+                materializeInstruction(backend, x, y, universeScaling, elasticScaling, culling, insn)
     }
 
     private fun materializeInstruction(
-        backend: MaterializationBackend, x: Float, y: Float, universeScaling: Float, elasticScaling: Float,
+        backend: MaterializationBackend,
+        x: Float, y: Float, universeScaling: Float, elasticScaling: Float, culling: Rectangle2D?,
         insn: Instruction
     ) {
         when (insn) {
             is Instruction.DrawDeferredImageLayer -> materializeDeferredImage(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, insn.image,
+                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, culling, insn.image,
                 listOf(insn.layer)
             )
             is Instruction.DrawShape -> materializeShape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, insn.shape, insn.color, insn.fill
+                universeScaling, culling, insn.shape, insn.color, insn.fill
             )
             is Instruction.DrawLine -> materializeShape(
-                backend, x, y, universeScaling,
+                backend, x, y, universeScaling, culling,
                 Line2D.Float(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
                 insn.color, insn.fill
             )
             is Instruction.DrawRect -> materializeShape(
-                backend, x, y, universeScaling,
+                backend, x, y, universeScaling, culling,
                 Rectangle2D.Float(
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
                 ), insn.color, insn.fill
             )
-            is Instruction.DrawStringForeground -> backend.materializeStringForeground(
-                x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
-                universeScaling, insn.fmtStr
+            is Instruction.DrawStringForeground -> materializeStringForeground(
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
+                universeScaling, culling, insn.fmtStr
             )
-            is Instruction.DrawPicture -> backend.materializePicture(
-                x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+            is Instruction.DrawPicture -> materializePicture(
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), culling,
                 insn.pic.scaled(universeScaling)
             )
         }
     }
 
     private fun materializeShape(
-        backend: MaterializationBackend, x: Float, y: Float, scaling: Float,
+        backend: MaterializationBackend,
+        x: Float, y: Float, scaling: Float, culling: Rectangle2D?,
         shape: Shape, color: Color, fill: Boolean
     ) {
+        if (culling != null &&
+            !shape.intersects(
+                (culling.x - x) / scaling, (culling.y - y) / scaling, culling.width / scaling, culling.height / scaling
+            )
+        ) return
         // We first transform the shape and then draw it without scaling the canvas.
         // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
         backend.materializeShape(tx.createTransformedShape(shape), color, fill)
+    }
+
+    private fun materializeStringForeground(
+        backend: MaterializationBackend,
+        x: Float, baselineY: Float, scaling: Float, culling: Rectangle2D?,
+        fmtStr: FormattedString
+    ) {
+        if (culling != null &&
+            !culling.intersects(
+                x, baselineY - fmtStr.heightAboveBaseline * scaling, fmtStr.width * scaling, fmtStr.height * scaling
+            )
+        ) return
+        backend.materializeStringForeground(x, baselineY, scaling, fmtStr)
+    }
+
+    private fun materializePicture(
+        backend: MaterializationBackend,
+        x: Float, y: Float, culling: Rectangle2D?,
+        pic: Picture
+    ) {
+        if (culling != null && !culling.intersects(x, y, pic.width, pic.height))
+            return
+        backend.materializePicture(x, y, pic)
     }
 
 
@@ -176,6 +209,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
+
+        private fun Rectangle2D.intersects(x: Float, y: Float, w: Float, h: Float): Boolean =
+            intersects(x.toDouble(), y.toDouble(), w.toDouble(), h.toDouble())
 
     }
 

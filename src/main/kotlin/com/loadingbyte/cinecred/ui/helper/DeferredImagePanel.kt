@@ -9,14 +9,13 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.geom.AffineTransform
+import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.SwingUtilities
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
+import kotlin.math.*
 
 
 /**
@@ -34,14 +33,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
         this.image = image
         coerceViewportAndCalibrateScrollbars()
         // Rematerialize will call canvas.repaint() once it's done.
-        rematerialize()
+        rematerialize(contentChanged = true)
     }
 
     var layers: List<Layer> = listOf()
         set(value) {
             field = value
             // Rematerialize will call canvas.repaint() once it's done.
-            rematerialize()
+            rematerialize(contentChanged = true)
         }
 
     /**
@@ -58,7 +57,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                 // Immediately repaint a scaled version of the old materialized image
                 // while we wait for the new materialized image.
                 canvas.repaint()
-                rematerialize()
+                rematerialize(contentChanged = false)
             }
         }
 
@@ -68,7 +67,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that
     // raster image onto the canvas. This way, we avoid materializing the deferred image over and over again
     // whenever the user scrolls, which can be very expensive when the deferred image contains, e.g., PDFs.
+    // Additionally, if a raster image of the entire deferred image would be too large to comfortably fit into
+    // memory, we only rasterize the portion around the currently visible viewport, but keep a low-res version
+    // of the entire image that we momentarily show when the user scrolls out of the rasterized portion too fast.
     private var materialized: BufferedImage? = null
+    // In image coordinates:
+    private var materializedStartY = Float.NaN
+    private var materializedStopY = Float.NaN
+    private var lowResMaterialized: BufferedImage? = null
     private val materializingJobSlot = JobSlot()
 
     private val canvas = Canvas()
@@ -88,7 +94,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                 // Immediately repaint a scaled version of the old materialized image
                 // while we wait for the new materialized image.
                 canvas.repaint()
-                rematerialize()
+                rematerialize(contentChanged = false)
             }
         })
 
@@ -166,6 +172,15 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             disableScrollbarListeners = true
             yScrollbar.model.value = ((field - minViewportCenterY) * SCROLLBAR_MULT).roundToInt()
             disableScrollbarListeners = false
+            // If only a portion of the deferred image is materialized and the viewport comes close to the portion's
+            // edge, queue a rematerialization around the current viewport.
+            // reZone is configured such that we rematerialize once the viewport's edge is viewportHeight/2 away from
+            // the portion's edge.
+            val reZone = viewportHeight
+            if (!materializedStartY.isNaN())
+                if (field < materializedStartY + reZone && materializedStartY > 0.1f ||
+                    field > materializedStopY - reZone && materializedStopY < image!!.height.resolve() - 0.1f
+                ) rematerialize(contentChanged = false)
         }
 
     // In image coordinates:
@@ -214,7 +229,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
         }
     }
 
-    private fun rematerialize() {
+    private fun rematerialize(contentChanged: Boolean) {
         // Capture these variables.
         val image = this.image
         val viewportCenterX = this.viewportCenterX
@@ -224,9 +239,19 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             materialized = null
             canvas.repaint()
         } else {
-            submitMaterializeJob(materializingJobSlot, image, physicalImageScaling, layers, onFinish = { mat ->
+            // Update the low-res version if either the content changed or there is not a low-res version yet. Note that
+            // submitMaterializeJob() only actually materializes the low-res version when the regular "mat" is just a
+            // portion of the whole deferred image. Otherwise, the function returns null, and as a consequence, the
+            // previous low-res version is discarded.
+            val lowRes = contentChanged || lowResMaterialized == null
+            submitMaterializeJob(
+                materializingJobSlot, image, physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers
+            ) { mat, matStartY, matStopY, lowResMat ->
                 SwingUtilities.invokeLater {
                     materialized = mat
+                    materializedStartY = matStartY
+                    materializedStopY = matStopY
+                    if (lowRes) lowResMaterialized = lowResMat
                     // This is a bit hacky. When materialization has finished, we want to repaint the canvas.
                     // However, the user might have supplied a new image in the meantime (e.g., because he's pushing
                     // down on some style config spinner). To avoid that the repainting of the canvas is done with
@@ -252,7 +277,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                         this.viewportCenterY = curViewportCenterY
                     }
                 }
-            })
+            }
         }
     }
 
@@ -260,24 +285,60 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     companion object {
 
         private const val SCROLLBAR_MULT = 1024f
+        private const val MIN_IMG_BUFFER = 400
+        private const val MAX_MAT_PIXELS = 5_000_000
 
         // We use this external static method to absolutely ensure all variables have been captured.
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
-            jobSlot: JobSlot, image: DeferredImage, physicalImageScaling: Float,
-            layers: List<Layer>, onFinish: (BufferedImage) -> Unit
+            jobSlot: JobSlot, image: DeferredImage,
+            physicalImageScaling: Float, viewportHeight: Float, viewportCenterY: Float, lowRes: Boolean,
+            layers: List<Layer>, onFinish: (BufferedImage, Float, Float, BufferedImage?) -> Unit
         ) {
             jobSlot.submit {
+                val imgHeight = image.height.resolve()
+
+                // If a raster image with the given physical scaling would exceed MAX_PIXELS, we only materialize the
+                // portion of the deferred image around the current viewport. For that, we find the height of the
+                // portion and its top y, both in image coordinates.
+                val clippedImgHeight = min(
+                    imgHeight,
+                    max(viewportHeight + MIN_IMG_BUFFER, MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2)))
+                )
+                val startY = if (clippedImgHeight == imgHeight) Float.NaN else
+                    (viewportCenterY - clippedImgHeight / 2f).coerceIn(0f, imgHeight - clippedImgHeight)
+
+                // Materialize the image or a portion thereof.
                 // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
                 val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
-                val matHeight = max(1, (physicalImageScaling * image.height.resolve()).roundToInt())
+                val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
                 val materialized = gCfg.createCompatibleImage(matWidth, matHeight, Transparency.OPAQUE).withG2 { g2 ->
                     g2.setHighQuality()
+                    // If only a portion is materialized, scroll the deferred image to that portion.
+                    if (!startY.isNaN())
+                        g2.translate(0f, physicalImageScaling * -startY)
+                    // If only a portion is materialized, cull the rest to improve performance.
+                    val culling = if (startY.isNaN()) null else
+                        Rectangle2D.Float(0f, physicalImageScaling * startY, matWidth.toFloat(), matHeight.toFloat())
                     // Paint a scaled version of the deferred image onto the raster image.
-                    image.copy(universeScaling = physicalImageScaling).materialize(g2, layers)
+                    image.copy(universeScaling = physicalImageScaling).materialize(g2, layers, culling)
                 }
 
-                onFinish(materialized)
+                // If only a portion is materialized, we generate another more low-res image that covers the whole
+                // deferred image. We momentarily paint this placeholder image when the user scrolls out of the
+                // materialized portion too quickly.
+                val lowResMaterialized = if (!lowRes || startY.isNaN()) null else {
+                    val lowResScaling = sqrt(MAX_MAT_PIXELS / (image.width * imgHeight))
+                    // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.
+                    val lowResMatWidth = max(1, (lowResScaling * image.width).roundToInt())
+                    val lowResMatHeight = max(1, (lowResScaling * imgHeight).roundToInt())
+                    gCfg.createCompatibleImage(lowResMatWidth, lowResMatHeight, Transparency.OPAQUE).withG2 { g2 ->
+                        g2.setHighQuality()
+                        image.copy(universeScaling = lowResScaling).materialize(g2, layers)
+                    }
+                }
+
+                onFinish(materialized, startY, startY + clippedImgHeight, lowResMaterialized)
             }
         }
 
@@ -292,8 +353,12 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             // Capture these variables.
             val image = this@DeferredImagePanel.image
             val materialized = this@DeferredImagePanel.materialized
+            val lowResMaterialized = this@DeferredImagePanel.lowResMaterialized
 
             if (image != null && materialized != null) {
+                // Find the top and bottom edges of the current viewport.
+                val viewportTopY = viewportCenterY - viewportHeight / 2f
+                val viewportBotY = viewportCenterY + viewportHeight / 2f
                 // Find the width of the viewport in materialized image coordinates.
                 val materializedViewportWidth = (viewportWidth / image.width) * materialized.width
                 // Find the amount the materialized image would need to be scaled
@@ -301,10 +366,38 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                 val extraScaling = width / materializedViewportWidth
 
                 g.withNewG2 { g2 ->
+                    // Use nearest-neighbor interpolation for a massive speed improvement when momentarily painting
+                    // intermediate images at the wrong scale.
+                    g2.setRenderingHint(
+                        RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+                    )
+
+                    // Scroll to the current viewport.
                     g2.translate(
                         -((viewportCenterX - minViewportCenterX) * imageScaling),
                         -((viewportCenterY - minViewportCenterY) * imageScaling)
                     )
+
+                    // If the materialized image doesn't cover the whole deferred image and the user has scrolled past
+                    // the covered area, momentarily paint a backup low-res image using fast nearest-neighbor
+                    // interpolation until the materialization of the now visible area has caught up. Notice that if
+                    // only part of the viewport is not covered, the regular painting further below will still paint the
+                    // full-resolution version of the covered part.
+                    if (lowResMaterialized != null && !materializedStartY.isNaN() &&
+                        (viewportTopY < materializedStartY || viewportBotY > materializedStopY)
+                    ) {
+                        // This scaling factor maps from low-res to deferred image coordinates. It can be prepended to
+                        // imageScaling to obtain a map from low-res to canvas coordinates.
+                        val invertedLowResScaling = image.width / lowResMaterialized.width
+                        val s = (invertedLowResScaling * imageScaling).toDouble()
+                        g2.drawImage(lowResMaterialized, AffineTransform.getScaleInstance(s, s), null)
+                    }
+
+                    // Again, if the materialized image doesn't cover the whole deferred image, translate such that the
+                    // partial materialized image is at the right position.
+                    if (!materializedStartY.isNaN())
+                        g2.translate(0f, materializedStartY * imageScaling)
+
                     if (abs(extraScaling - 1) > 0.001) {
                         // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel
                         // width of the viewport in the materialized image, this can have one of two reasons:
@@ -318,12 +411,9 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                         // resolution image. In the second case, the scaled version will look bad, but scaling is fast,
                         // and the quality will improve again once the background thread has finished re-materializing
                         // the image for the current size; another call to this painting method will then be triggered.
-                        g2.setRenderingHint(
-                            RenderingHints.KEY_INTERPOLATION,
-                            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
-                        )
                         g2.scale(extraScaling)
                     }
+
                     g2.drawImage(materialized, 0, 0, null)
                 }
             }

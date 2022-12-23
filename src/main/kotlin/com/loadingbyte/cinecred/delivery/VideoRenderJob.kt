@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.drawer.VideoDrawer
+import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.SEQUENTIAL
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
@@ -43,7 +44,7 @@ class VideoRenderJob(
 
         val imageType = if (transparentGrounding) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
 
-        val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, transparentGrounding) {
+        val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, transparentGrounding, mode = SEQUENTIAL) {
             override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
         }
 

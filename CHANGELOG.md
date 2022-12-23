@@ -15,6 +15,8 @@ Cinecred Changelog
 - Added blank tag for forcing empty body cells.
 - Added the option to fill the grid in a balanced, i.e., symmetric, fashion.
 - Comprehensively overhauled the new project template.
+- Reduced the memory consumption of the still preview, video preview, and
+  renderers, thereby allowing for pages of effectively arbitrary length.
 - Unified project opening, project creation, preferences, and update
   notification in one integrated welcome window, thereby alleviating the need
   for various popup dialogs.

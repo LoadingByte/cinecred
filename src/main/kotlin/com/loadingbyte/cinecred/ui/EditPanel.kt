@@ -340,7 +340,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateProject(
         project: Project?, drawnPages: List<DrawnPage>, runtime: Int,
-        stylingError: Boolean, log: List<ParserMsg>
+        stylingError: Boolean, excessivePageSizeError: Boolean, log: List<ParserMsg>
     ) {
         // Adjust the total runtime label.
         if (project == null || project.pages.isEmpty()) {
@@ -361,7 +361,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             pageErrorLabel.text = l10n("ui.edit.stylingError")
         else if (creditsError)
             pageErrorLabel.text = l10n("ui.edit.creditsError")
-        if (stylingError || creditsError)
+        else if (excessivePageSizeError)
+            pageErrorLabel.text = l10n("ui.edit.excessivePageSizeError")
+        if (stylingError || creditsError || excessivePageSizeError)
             pagePanelCards.show(pagePanel, "Error")
         else {
             pagePanelCards.show(pagePanel, "Pages")

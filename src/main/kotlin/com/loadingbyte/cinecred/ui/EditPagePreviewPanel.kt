@@ -18,7 +18,7 @@ import javax.swing.JPanel
 import kotlin.math.min
 
 
-class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
+class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
 
     companion object {
         val UNIFORM_SAFE_AREAS = Layer()
@@ -57,41 +57,41 @@ class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
     }
 
     private fun drawSafeAreas(image: DeferredImage) {
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.93f, global.heightPx * 0.93f)
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.9f, global.heightPx * 0.9f, ticks = true)
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.8f, global.heightPx * 0.8f, ticks = true)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.93, global.heightPx * 0.93)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.9, global.heightPx * 0.9, ticks = true)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.8, global.heightPx * 0.8, ticks = true)
 
-        drawCutSafeArea(image, CUT_SAFE_AREA_16_9, 16f / 9f)
-        drawCutSafeArea(image, CUT_SAFE_AREA_4_3, 4f / 3f)
+        drawCutSafeArea(image, CUT_SAFE_AREA_16_9, 16.0 / 9.0)
+        drawCutSafeArea(image, CUT_SAFE_AREA_4_3, 4.0 / 3.0)
     }
 
-    private fun drawCutSafeArea(image: DeferredImage, layer: Layer, aspect: Float) {
+    private fun drawCutSafeArea(image: DeferredImage, layer: Layer, aspect: Double) {
         drawCropMarkers(
             image, layer,
-            cropWidth = min(global.widthPx.toFloat(), global.heightPx * aspect),
-            cropHeight = min(global.heightPx.toFloat(), global.widthPx / aspect)
+            cropWidth = min(global.widthPx.toDouble(), global.heightPx * aspect),
+            cropHeight = min(global.heightPx.toDouble(), global.widthPx / aspect)
         )
     }
 
     private fun drawCropMarkers(
-        image: DeferredImage, layer: Layer, cropWidth: Float, cropHeight: Float, ticks: Boolean = false
+        image: DeferredImage, layer: Layer, cropWidth: Double, cropHeight: Double, ticks: Boolean = false
     ) {
         val c = Color.GRAY
 
-        val cropX1 = (global.widthPx - cropWidth) / 2f
+        val cropX1 = (global.widthPx - cropWidth) / 2.0
         val cropX2 = cropX1 + cropWidth
 
         // Draw full crop area hints for each card stage.
         for (cardInfo in drawnPage.stageInfo.filterIsInstance<DrawnStageInfo.Card>()) {
             val middleY = cardInfo.middleY
-            val cropY1 = middleY - cropHeight / 2f
+            val cropY1 = middleY - cropHeight / 2.0
             val cropY2 = cropY1 + cropHeight
 
             image.drawRect(c, cropX1, cropY1, cropWidth, cropHeight.toY(), layer = layer)
 
             if (ticks) {
-                val d = global.widthPx / 200f
-                val middleX = global.widthPx / 2f
+                val d = global.widthPx / 200.0
+                val middleX = global.widthPx / 2.0
                 image.drawLine(c, cropX1 - d, middleY, cropX1 + d, middleY, layer = layer)
                 image.drawLine(c, cropX2 - d, middleY, cropX2 + d, middleY, layer = layer)
                 image.drawLine(c, middleX, cropY1 - d, middleX, cropY1 + d, layer = layer)
@@ -105,12 +105,12 @@ class EditPagePreviewPanel(maxZoom: Float, zoomIncrement: Float) : JPanel() {
             val firstStageInfo = drawnPage.stageInfo.first()
             val lastStageInfo = drawnPage.stageInfo.last()
 
-            var cropY1 = 0f.toY()
+            var cropY1 = 0.0.toY()
             var cropY2 = image.height
             if (firstStageInfo is DrawnStageInfo.Card)
-                cropY1 = firstStageInfo.middleY - cropHeight / 2f
+                cropY1 = firstStageInfo.middleY - cropHeight / 2.0
             if (lastStageInfo is DrawnStageInfo.Card)
-                cropY2 = lastStageInfo.middleY + cropHeight / 2f
+                cropY2 = lastStageInfo.middleY + cropHeight / 2.0
 
             image.drawLine(c, cropX1, cropY1, cropX1, cropY2, layer = layer)
             image.drawLine(c, cropX2, cropY1, cropX2, cropY2, layer = layer)

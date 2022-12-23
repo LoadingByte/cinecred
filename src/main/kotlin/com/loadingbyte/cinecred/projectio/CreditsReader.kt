@@ -128,7 +128,7 @@ private class CreditsReader(
     var nextStageRuntimeFrames: Int? = null
     var nextStageRuntimeGroupName: String? = null
     // The spine position offset to use for the next started spine.
-    var nextSpinePosOffsetPx = 0f
+    var nextSpinePosOffsetPx = 0.0
     // The current content style. This variable is special because a content style stays valid until the next
     // explicit content style declaration.
     var contentStyle: ContentStyle? = null
@@ -144,7 +144,7 @@ private class CreditsReader(
     // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
     // (e.g., a block, a spine, and a segment), the most significant credits element will receive the gap
     // (in our example, that would be the segment).
-    var explicitVGapInUnits: Float? = null
+    var explicitVGapInUnits: Double? = null
     var implicitVGapInUnits: Int = 0
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
@@ -180,7 +180,7 @@ private class CreditsReader(
     val segmentSpines = mutableListOf<Spine>()
 
     // Current spine
-    var spinePosOffsetPx = 0f
+    var spinePosOffsetPx = 0.0
     val spineBlocks = mutableListOf<Block>()
 
     // Current block
@@ -221,7 +221,7 @@ private class CreditsReader(
         pageStages.clear()
     }
 
-    fun concludeStage(vGapAfter: Float) {
+    fun concludeStage(vGapAfter: Double) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageSegments.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
             val stage = Stage(stageStyle!!, stageSegments.toPersistentList(), vGapAfter)
@@ -251,7 +251,7 @@ private class CreditsReader(
         isStageConclusionMarked = false
     }
 
-    fun concludeSegment(vGapAfter: Float) {
+    fun concludeSegment(vGapAfter: Double) {
         if (segmentSpines.isNotEmpty())
             stageSegments.add(Segment(segmentSpines.toPersistentList(), vGapAfter))
         segmentSpines.clear()
@@ -263,11 +263,11 @@ private class CreditsReader(
             segmentSpines.add(Spine(spinePosOffsetPx, spineBlocks.toPersistentList()))
         spinePosOffsetPx = nextSpinePosOffsetPx
         spineBlocks.clear()
-        nextSpinePosOffsetPx = 0f
+        nextSpinePosOffsetPx = 0.0
         isSpineConclusionMarked = false
     }
 
-    fun concludeBlock(vGapAfter: Float) {
+    fun concludeBlock(vGapAfter: Double) {
         if (blockBody.isNotEmpty()) {
             val block = Block(
                 blockStyle!!, blockHead, blockBody.toPersistentList(), blockTail, vGapAfter,
@@ -302,10 +302,10 @@ private class CreditsReader(
         }
 
         // Conclude all open credits elements that haven't been concluded yet.
-        concludeBlock(0f)
+        concludeBlock(0.0)
         concludeSpine()
-        concludeSegment(0f)
-        concludeStage(0f)
+        concludeSegment(0.0)
+        concludeStage(0.0)
         concludePage()
 
         // Collect the runtime groups. Warn about those which only contain card stages.
@@ -325,7 +325,7 @@ private class CreditsReader(
         if (isHBTFreeRow)
             implicitVGapInUnits += 1
         // The user may explicitly specify the vertical gap size. Per gap, only one specification is permitted.
-        table.getFiniteFloat(row, "vGap", nonNeg = true)?.let {
+        table.getFiniteDouble(row, "vGap", nonNeg = true)?.let {
             if (!isHBTFreeRow)
                 table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapInContentRow"))
             if (explicitVGapInUnits == null)
@@ -339,7 +339,7 @@ private class CreditsReader(
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
             nextStageStyle = newPageStyle
             nextStageDeclaredRow = row
-            nextSpinePosOffsetPx = 0f
+            nextSpinePosOffsetPx = 0.0
             isStageConclusionMarked = true
         }
         table.getString(row, "pageRuntime")?.let { str ->
@@ -378,17 +378,17 @@ private class CreditsReader(
         // previous segment and start a new one.
         table.getString(row, "spinePos")?.let { str ->
             var parallel = false
-            var posOffsetPx = 0f
+            var posOffsetPx = 0.0
             try {
                 if (' ' in str) {
                     val (offset, hint) = str.split(' ', limit = 2)
-                    posOffsetPx = offset.toFiniteFloat()
+                    posOffsetPx = offset.toFiniteDouble()
                     if (hint in PARALLEL_KW)
                         parallel = true
                     else
                         throw IllegalArgumentException()
                 } else
-                    posOffsetPx = str.toFiniteFloat()
+                    posOffsetPx = str.toFiniteDouble()
             } catch (_: IllegalArgumentException) {
                 val msg = l10n("projectIO.credits.illFormattedSpinePos", PARALLEL_KW.msgPrimary, PARALLEL_KW.msgAlt)
                 table.log(row, "spinePos", WARN, msg)
@@ -435,16 +435,16 @@ private class CreditsReader(
             isBlockConclusionMarked || isSpineConclusionMarked || isSegmentConclusionMarked || isStageConclusionMarked
         if (newHead != null || newTail != null || (isConclusionMarked && bodyElem != null)) {
             // Pull the accumulated vertical gap.
-            val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toFloat()) * styling.global.unitVGapPx
+            val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toDouble()) * styling.global.unitVGapPx
             explicitVGapInUnits = null
             implicitVGapInUnits = 0
 
             // If the conclusion of the previous spine, segment, or stage has been marked, also conclude that and give
             // the accumulated virtual gap to the concluded element of the highest order.
             if (isStageConclusionMarked) {
-                concludeBlock(0f)
+                concludeBlock(0.0)
                 concludeSpine()
-                concludeSegment(0f)
+                concludeSegment(0.0)
                 concludeStage(vGap)
                 // If we are not melting the previous stage with the future one, also conclude the current page.
                 val prevStageStyle = pageStages.lastOrNull()?.style
@@ -454,11 +454,11 @@ private class CreditsReader(
                 )
                     concludePage()
             } else if (isSegmentConclusionMarked) {
-                concludeBlock(0f)
+                concludeBlock(0.0)
                 concludeSpine()
                 concludeSegment(vGap)
             } else if (isSpineConclusionMarked) {
-                concludeBlock(0f)
+                concludeBlock(0.0)
                 concludeSpine()
                 // Discard the accumulated virtual gap.
             } else
@@ -636,13 +636,13 @@ private class CreditsReader(
                         pic = when {
                             hint.isBlank() || hint in CROP_KW -> continue
                             hint.startsWith('x') ->
-                                pic.scaled(hint.drop(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.height)
+                                pic.scaled(hint.drop(1).toFiniteDouble(nonNeg = true, non0 = true) / pic.height)
                             hint.endsWith('x') ->
-                                pic.scaled(hint.dropLast(1).toFiniteFloat(nonNeg = true, non0 = true) / pic.width)
+                                pic.scaled(hint.dropLast(1).toFiniteDouble(nonNeg = true, non0 = true) / pic.width)
                             else -> throw IllegalArgumentException()
                         }
                     } catch (_: IllegalArgumentException) {
-                        // Note that this catch clause is mainly here because toFiniteFloat() may throw exceptions.
+                        // Note that this catch clause is mainly here because toFiniteDouble() may throw exceptions.
                         unknownHints.add(hint)
                     }
                 // If unknown hints were encountered, warn the user.

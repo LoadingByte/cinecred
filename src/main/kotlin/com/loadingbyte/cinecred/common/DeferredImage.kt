@@ -31,7 +31,7 @@ import java.io.DataInputStream
 import java.util.*
 
 
-class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
+class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private val instructions = HashMap<Layer, MutableList<Instruction>>()
 
@@ -39,7 +39,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         instructions.computeIfAbsent(layer) { ArrayList() }.add(insn)
     }
 
-    fun copy(universeScaling: Float = 1f, elasticScaling: Float = 1f): DeferredImage {
+    fun copy(universeScaling: Double = 1.0, elasticScaling: Double = 1.0): DeferredImage {
         val copy = DeferredImage(
             width = width * universeScaling,
             height = (height * universeScaling).scaleElastic(elasticScaling)
@@ -49,7 +49,8 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     }
 
     fun drawDeferredImage(
-        image: DeferredImage, x: Float = 0f, y: Y = 0f.toY(), universeScaling: Float = 1f, elasticScaling: Float = 1f
+        image: DeferredImage,
+        x: Double = 0.0, y: Y = 0.0.toY(), universeScaling: Double = 1.0, elasticScaling: Double = 1.0
     ) {
         for (layer in image.instructions.keys) {
             val insn = Instruction.DrawDeferredImageLayer(x, y, universeScaling, elasticScaling, image, layer)
@@ -58,19 +59,19 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     }
 
     fun drawShape(
-        color: Color, shape: Shape, x: Float, y: Y, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
         addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill))
     }
 
     fun drawLine(
-        color: Color, x1: Float, y1: Y, x2: Float, y2: Y, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, x1: Double, y1: Y, x2: Double, y2: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
         addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, fill))
     }
 
     fun drawRect(
-        color: Color, x: Float, y: Y, width: Float, height: Y, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
@@ -83,7 +84,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
      *     every character.
      */
     fun drawString(
-        fmtStr: FormattedString, x: Float, y: Y,
+        fmtStr: FormattedString, x: Double, y: Y,
         foregroundLayer: Layer = FOREGROUND, backgroundLayer: Layer = BACKGROUND
     ) {
         // FormattedString yields results relative to the baseline, so we need the baseline's y-coordinate.
@@ -98,23 +99,23 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
     }
 
-    fun drawPicture(pic: Picture, x: Float, y: Y, layer: Layer = FOREGROUND) {
+    fun drawPicture(pic: Picture, x: Double, y: Y, layer: Layer = FOREGROUND) {
         addInstruction(layer, Instruction.DrawPicture(x, y, pic))
     }
 
     fun materialize(g2: Graphics2D, layers: List<Layer>, culling: Rectangle2D? = null) {
-        materializeDeferredImage(Graphics2DBackend(g2), 0f, 0f, 1f, 1f, culling, this, layers)
+        materializeDeferredImage(Graphics2DBackend(g2), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
     }
 
     fun materialize(
         doc: PDDocument, cs: PDPageContentStream, csHeight: Float, layers: List<Layer>, culling: Rectangle2D? = null
     ) {
-        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0f, 0f, 1f, 1f, culling, this, layers)
+        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
     }
 
     private fun materializeDeferredImage(
         backend: MaterializationBackend,
-        x: Float, y: Float, universeScaling: Float, elasticScaling: Float, culling: Rectangle2D?,
+        x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
         image: DeferredImage, layers: List<Layer>
     ) {
         for (layer in layers)
@@ -124,7 +125,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private fun materializeInstruction(
         backend: MaterializationBackend,
-        x: Float, y: Float, universeScaling: Float, elasticScaling: Float, culling: Rectangle2D?,
+        x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
         insn: Instruction
     ) {
         when (insn) {
@@ -139,12 +140,12 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             )
             is Instruction.DrawLine -> materializeShape(
                 backend, x, y, universeScaling, culling,
-                Line2D.Float(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
+                Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
                 insn.color, insn.fill
             )
             is Instruction.DrawRect -> materializeShape(
                 backend, x, y, universeScaling, culling,
-                Rectangle2D.Float(
+                Rectangle2D.Double(
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
                 ), insn.color, insn.fill
             )
@@ -161,7 +162,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private fun materializeShape(
         backend: MaterializationBackend,
-        x: Float, y: Float, scaling: Float, culling: Rectangle2D?,
+        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
         shape: Shape, color: Color, fill: Boolean
     ) {
         if (culling != null &&
@@ -177,7 +178,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private fun materializeStringForeground(
         backend: MaterializationBackend,
-        x: Float, baselineY: Float, scaling: Float, culling: Rectangle2D?,
+        x: Double, baselineY: Double, scaling: Double, culling: Rectangle2D?,
         fmtStr: FormattedString
     ) {
         if (culling != null &&
@@ -190,7 +191,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private fun materializePicture(
         backend: MaterializationBackend,
-        x: Float, y: Float, culling: Rectangle2D?,
+        x: Double, y: Double, culling: Rectangle2D?,
         pic: Picture
     ) {
         if (culling != null && !culling.intersects(x, y, pic.width, pic.height))
@@ -210,9 +211,6 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
 
-        private fun Rectangle2D.intersects(x: Float, y: Float, w: Float, h: Float): Boolean =
-            intersects(x.toDouble(), y.toDouble(), w.toDouble(), h.toDouble())
-
     }
 
 
@@ -222,28 +220,28 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
     private sealed interface Instruction {
 
         class DrawDeferredImageLayer(
-            val x: Float, val y: Y, val universeScaling: Float, val elasticScaling: Float,
+            val x: Double, val y: Y, val universeScaling: Double, val elasticScaling: Double,
             val image: DeferredImage, val layer: Layer
         ) : Instruction
 
         class DrawShape(
-            val x: Float, val y: Y, val shape: Shape, val color: Color, val fill: Boolean
+            val x: Double, val y: Y, val shape: Shape, val color: Color, val fill: Boolean
         ) : Instruction
 
         class DrawLine(
-            val x1: Float, val y1: Y, val x2: Float, val y2: Y, val color: Color, val fill: Boolean
+            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color, val fill: Boolean
         ) : Instruction
 
         class DrawRect(
-            val x: Float, val y: Y, val width: Float, val height: Y, val color: Color, val fill: Boolean
+            val x: Double, val y: Y, val width: Double, val height: Y, val color: Color, val fill: Boolean
         ) : Instruction
 
         class DrawStringForeground(
-            val x: Float, val baselineY: Y, val fmtStr: FormattedString
+            val x: Double, val baselineY: Y, val fmtStr: FormattedString
         ) : Instruction
 
         class DrawPicture(
-            val x: Float, val y: Y, val pic: Picture
+            val x: Double, val y: Y, val pic: Picture
         ) : Instruction
 
     }
@@ -251,8 +249,8 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
 
     private interface MaterializationBackend {
         fun materializeShape(shape: Shape, color: Color, fill: Boolean)
-        fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString)
-        fun materializePicture(x: Float, y: Float, pic: Picture)
+        fun materializeStringForeground(x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString)
+        fun materializePicture(x: Double, y: Double, pic: Picture)
     }
 
 
@@ -266,7 +264,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 g2.draw(shape)
         }
 
-        override fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString) {
+        override fun materializeStringForeground(
+            x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString
+        ) {
             // We render the text by first converting the string to a path via FormattedString and then
             // filling that path. This has the following vital advantages:
             //   - Native text rendering via TextLayout.draw() etc., which internally eventually calls
@@ -289,12 +289,12 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 g2.preserveTransform {
                     g2.translate(x, baselineY)
                     g2.scale(scaling)
-                    g2.translate(segment.baseX, 0f)
+                    g2.translate(segment.baseX, 0.0)
                     materializeShape(segment.outline, segment.font.color, fill = true)
                 }
         }
 
-        override fun materializePicture(x: Float, y: Float, pic: Picture) {
+        override fun materializePicture(x: Double, y: Double, pic: Picture) {
             when (pic) {
                 is Picture.Raster -> {
                     val tx = AffineTransform().apply { translate(x, y); scale(pic.scaling) }
@@ -332,7 +332,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                         // possible because materialization might happen in a background thread), do not render the
                         // PDF to avoid provoking an exception.
                         if (!pic.doc.document.isClosed)
-                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling)
+                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling.toFloat())
                     }
                 }
             }
@@ -389,7 +389,9 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializeStringForeground(x: Float, baselineY: Float, scaling: Float, fmtStr: FormattedString) {
+        override fun materializeStringForeground(
+            x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString
+        ) {
             cs.saveGraphicsState()
             cs.beginText()
             for (seg in fmtStr.segments) {
@@ -402,18 +404,18 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                             // so that it is not applied two times.
                             / seg.font.hScaling
                             // Convert to the special PDF text coordinates.
-                            * 1000f / seg.font.pointSize)
+                            * 1000.0 / seg.font.pointSize).toFloat()
                     actualWidth - wantedWidth
                 }
 
                 val textTx = AffineTransform().apply {
                     translate(x, csHeight - baselineY)
                     scale(scaling)
-                    translate(seg.baseX, 0f)
+                    translate(seg.baseX, 0.0)
                     concatenate(seg.font.getPostprocessingTransform(withHScaling = true, invertY = true))
                 }
 
-                cs.setFont(pdFont, seg.font.pointSize)
+                cs.setFont(pdFont, seg.font.pointSize.toFloat())
                 setColor(seg.font.color, fill = true)
                 cs.setTextMatrix(Matrix(textTx))
                 cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
@@ -422,7 +424,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializePicture(x: Float, y: Float, pic: Picture) {
+        override fun materializePicture(x: Double, y: Double, pic: Picture) {
             val mat = Matrix().apply { translate(x, csHeight - y - pic.height) }
 
             when (pic) {
@@ -435,7 +437,7 @@ class DeferredImage(var width: Float = 0f, var height: Y = 0f.toY()) {
                 }
                 is Picture.SVG -> {
                     val pdForm = docRes.pdForms.computeIfAbsent(pic) {
-                        val g2 = PdfBoxGraphics2D(doc, pic.width, pic.height)
+                        val g2 = PdfBoxGraphics2D(doc, pic.width.toFloat(), pic.height.toFloat())
                         g2.scale(pic.scaling)
                         // Batik might not be thread-safe, even though we haven't tested that.
                         synchronized(pic.gvtRoot) {

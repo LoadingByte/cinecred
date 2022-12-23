@@ -198,7 +198,7 @@ private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDec
     ),
     StyleEffectivitySpec(
         TextDecoration::clearingJoin.st(),
-        isAlmostEffective = { _, _, style -> !style.clearingPx.isActive || style.clearingPx.value <= 0f }
+        isAlmostEffective = { _, _, style -> !style.clearingPx.isActive || style.clearingPx.value <= 0.0 }
     )
 )
 

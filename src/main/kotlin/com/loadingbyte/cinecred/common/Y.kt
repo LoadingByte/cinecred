@@ -5,10 +5,10 @@ import kotlin.math.max
 
 
 // Implementation note: The arrays ss and ls store the x and y coordinates respectively of a piecewise linear function.
-class Y private constructor(private val ss: FloatArray, private val ls: FloatArray) {
+class Y private constructor(private val ss: DoubleArray, private val ls: DoubleArray) {
 
-    fun resolve(elasticScaling: Float = 1f): Float {
-        require(elasticScaling >= 0f)
+    fun resolve(elasticScaling: Double = 1.0): Double {
+        require(elasticScaling >= 0.0)
         val iLeft = when {
             elasticScaling <= ss.first() -> 0
             elasticScaling >= ss.last() -> ss.lastIndex - 1
@@ -22,48 +22,48 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
      * If multiple elastic scaling values produce the same length, the largest one is returned.
      * If the Y graph is flat, 1 is returned.
      */
-    fun deresolve(length: Float): Float {
+    fun deresolve(length: Double): Double {
         val iBelow = when {
             length <= ls.first() -> 0
             length >= ls.last() -> ls.lastIndex - 1
             else -> ls.indexOfLast { it <= length }
         }
         val slope = slopeAfter(iBelow)
-        return if (abs(slope) <= EPS) ss[iBelow + 1] else ((length - biasAfter(iBelow)) / slope).coerceAtLeast(0f)
+        return if (abs(slope) <= EPS) ss[iBelow + 1] else ((length - biasAfter(iBelow)) / slope).coerceAtLeast(0.0)
     }
 
-    private fun resolveAfter(i: Int, s: Float): Float {
-        require(s >= 0f)
+    private fun resolveAfter(i: Int, s: Double): Double {
+        require(s >= 0.0)
         return slopeAfter(i) * s + biasAfter(i)
     }
 
-    private fun slopeAfter(i: Int): Float {
+    private fun slopeAfter(i: Int): Double {
         val iEff = i.coerceIn(0, ss.lastIndex - 1)
         return (ls[iEff + 1] - ls[iEff]) / (ss[iEff + 1] - ss[iEff])
     }
 
-    private fun biasAfter(i: Int): Float {
+    private fun biasAfter(i: Int): Double {
         val iEff = i.coerceIn(0, ss.lastIndex - 1)
         return ls[iEff] - slopeAfter(i) * ss[iEff]
     }
 
-    operator fun plus(other: Y): Y = add(this, other, 1f)
-    operator fun minus(other: Y): Y = add(this, other, -1f)
+    operator fun plus(other: Y): Y = add(this, other, 1.0)
+    operator fun minus(other: Y): Y = add(this, other, -1.0)
 
-    operator fun plus(rigid: Float): Y = Y(ss, ls.mapToArray { it + rigid })
-    operator fun minus(rigid: Float): Y = Y(ss, ls.mapToArray { it - rigid })
+    operator fun plus(rigid: Double): Y = Y(ss, ls.mapToArray { it + rigid })
+    operator fun minus(rigid: Double): Y = Y(ss, ls.mapToArray { it - rigid })
 
     /** scale universe */
-    operator fun times(universeScaling: Float): Y = Y(ss, ls.mapToArray { it * universeScaling })
+    operator fun times(universeScaling: Double): Y = Y(ss, ls.mapToArray { it * universeScaling })
     /** scale universe */
-    operator fun div(universeScaling: Float): Y = Y(ss, ls.mapToArray { it / universeScaling })
+    operator fun div(universeScaling: Double): Y = Y(ss, ls.mapToArray { it / universeScaling })
     /** scale universe */
-    operator fun unaryMinus(): Y = times(-1f)
+    operator fun unaryMinus(): Y = times(-1.0)
 
-    fun scaleElastic(elasticScaling: Float): Y {
-        require(elasticScaling >= 0f)  // One can't remove more elastic space than there is.
+    fun scaleElastic(elasticScaling: Double): Y {
+        require(elasticScaling >= 0.0)  // One can't remove more elastic space than there is.
         return when {
-            elasticScaling < EPS -> resolve(0f).toY()
+            elasticScaling < EPS -> resolve(0.0).toY()
             else -> Y(ss.mapToArray { it / elasticScaling }, ls)
         }
     }
@@ -82,20 +82,20 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
 
     companion object {
 
-        private const val EPS = 0.001f
-        private val ARRAY_01 = floatArrayOf(0f, 1f)
+        private const val EPS = 0.001
+        private val ARRAY_01 = doubleArrayOf(0.0, 1.0)
 
-        fun Float.toY(): Y = Y(ARRAY_01, floatArrayOf(this, this))
-        fun Float.toElasticY(): Y = Y(ARRAY_01, floatArrayOf(0f, this))
+        fun Double.toY(): Y = Y(ARRAY_01, doubleArrayOf(this, this))
+        fun Double.toElasticY(): Y = Y(ARRAY_01, doubleArrayOf(0.0, this))
 
-        operator fun Float.plus(y: Y): Y = y + this
-        operator fun Float.minus(y: Y): Y = -y + this
-        operator fun Float.times(y: Y): Y = y * this
+        operator fun Double.plus(y: Y): Y = y + this
+        operator fun Double.minus(y: Y): Y = -y + this
+        operator fun Double.times(y: Y): Y = y * this
 
-        private fun add(y1: Y, y2: Y, mulSnd: Float): Y {
+        private fun add(y1: Y, y2: Y, mulSnd: Double): Y {
             val maxNumPoints = y1.ss.size + y2.ss.size
-            val yoSS = FloatArray(maxNumPoints)
-            val yoLS = FloatArray(maxNumPoints)
+            val yoSS = DoubleArray(maxNumPoints)
+            val yoLS = DoubleArray(maxNumPoints)
 
             var io = 0
             forEachCtrlPoint(y1, y2) { _, s, l1, l2, _, _ ->
@@ -109,8 +109,8 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
 
         private fun max(y1: Y, y2: Y): Y {
             val estNumPoints = y1.ss.size + y2.ss.size
-            var yoSS = FloatArray(estNumPoints)
-            var yoLS = FloatArray(estNumPoints)
+            var yoSS = DoubleArray(estNumPoints)
+            var yoLS = DoubleArray(estNumPoints)
 
             var io = 0
 
@@ -164,41 +164,41 @@ class Y private constructor(private val ss: FloatArray, private val ls: FloatArr
                     io++
                 }
                 expandYoArraysIfNecessary()
-                yoSS[io] = sIntersect + 1f
-                yoLS[io] = max(y1.resolveAfter(i1Last, sIntersect + 1f), y2.resolveAfter(i2Last, sIntersect + 1f))
+                yoSS[io] = sIntersect + 1.0
+                yoLS[io] = max(y1.resolveAfter(i1Last, sIntersect + 1.0), y2.resolveAfter(i2Last, sIntersect + 1.0))
                 io++
             }
 
             return Y(yoSS.copyOf(io), yoLS.copyOf(io))
         }
 
-        private fun intersectAfter(y1: Y, y2: Y, i1: Int, i2: Int): Float {
+        private fun intersectAfter(y1: Y, y2: Y, i1: Int, i2: Int): Double {
             val slope1 = y1.slopeAfter(i1)
             val slope2 = y2.slopeAfter(i2)
             if (abs(slope1 - slope2) < EPS)
-                return Float.NaN
+                return Double.NaN
             return (y2.biasAfter(i2) - y1.biasAfter(i1)) / (slope1 - slope2)
         }
 
         private inline fun forEachCtrlPoint(
             y1: Y,
             y2: Y,
-            block: (source: Y?, s: Float, l1: Float, l2: Float, i1: Int, i2: Int) -> Unit
+            block: (source: Y?, s: Double, l1: Double, l2: Double, i1: Int, i2: Int) -> Unit
         ) {
             var i1 = 0
             var i2 = 0
             while (i1 < y1.ss.size || i2 < y2.ss.size) {
                 // Arguments for the block function.
                 val source: Y?
-                val s: Float
-                val l1: Float
-                val l2: Float
+                val s: Double
+                val l1: Double
+                val l2: Double
                 // Capture these two because we will modify them in a moment.
                 val blockI1 = i1
                 val blockI2 = i2
 
-                val s1 = if (i1 < y1.ss.size) y1.ss[i1] else Float.POSITIVE_INFINITY
-                val s2 = if (i2 < y2.ss.size) y2.ss[i2] else Float.POSITIVE_INFINITY
+                val s1 = if (i1 < y1.ss.size) y1.ss[i1] else Double.POSITIVE_INFINITY
+                val s2 = if (i2 < y2.ss.size) y2.ss[i2] else Double.POSITIVE_INFINITY
                 when {
                     s1 == s2 -> {
                         source = null // both

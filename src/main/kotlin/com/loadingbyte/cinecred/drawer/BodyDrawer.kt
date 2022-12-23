@@ -17,7 +17,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 
-class DrawnBody(val defImage: DeferredImage, val firstRowHeight: Float, val lastRowHeight: Float)
+class DrawnBody(val defImage: DeferredImage, val firstRowHeight: Double, val lastRowHeight: Double)
 
 
 fun drawBodies(
@@ -76,17 +76,17 @@ private fun drawBodyImagesWithGridBodyLayout(
 
     // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
     // also includes ungrouped blocks whose grid structure mandates square cells), and then find those shared widths.
-    fun colWidth(col: List<BodyElement>) = col.maxOfOr(0f) { bodyElem -> bodyElem.getWidth(textCtx) }
-    val sharedColWidthsPerBlock: Map<Block, FloatArray> = matchExtent(
+    fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
+    val sharedColWidthsPerBlock: Map<Block, DoubleArray> = matchExtent(
         blocks, matchColWidthsPartitionIds,
         matchWithinBlock = { gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS },
         sharedBlockExtent = { block ->
             val cols = colsPerBlock.getValue(block)
-            FloatArray(cols.size) { colIdx -> colWidth(cols[colIdx]) }
+            DoubleArray(cols.size) { colIdx -> colWidth(cols[colIdx]) }
         },
         sharedGroupExtent = { group ->
             // This piece of code takes a group of blocks and produces the list of shared column widths.
-            val colWidths = FloatArray(group.maxOf { block -> colsPerBlock.getValue(block).size })
+            val colWidths = DoubleArray(group.maxOf { block -> colsPerBlock.getValue(block).size })
             for (block in group) {
                 val cols = colsPerBlock.getValue(block)
                 // If the blocks in the group have differing amounts of columns, the user can decide whether he'd like
@@ -102,11 +102,11 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Determine the blocks which have uniform row height, optionally shared across multiple blocks, and then find
     // those shared heights.
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-    val sharedRowHeightPerBlock: Map<Block, MutableFloat> = matchExtent(
+    val sharedRowHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchRowHeightPartitionIds,
         matchWithinBlock = { gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS },
-        sharedBlockExtent = { block -> MutableFloat(maxElemHeight(block)) },
-        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemHeight)) }
+        sharedBlockExtent = { block -> MutableDouble(maxElemHeight(block)) },
+        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
     )
 
     // Harmonize the column widths of blocks configured as "equal width cols"
@@ -152,16 +152,16 @@ private fun drawBodyImageWithGridBodyLayout(
     textCtx: TextContext,
     block: Block,
     cols: List<List<BodyElement>>,
-    sharedColWidths: FloatArray?,
-    sharedRowHeight: MutableFloat?
+    sharedColWidths: DoubleArray?,
+    sharedRowHeight: MutableDouble?
 ): DrawnBody {
     val style = block.style
     val unocc = style.gridMatchColUnderoccupancy
 
     val numCols = cols.size
     val numRows = cols.maxOf { col -> col.size }
-    val rowHeights = FloatArray(numRows) { rowIdx ->
-        sharedRowHeight?.value ?: cols.maxOf { col -> col.getOrNull(rowIdx)?.getHeight() ?: 0f }
+    val rowHeights = DoubleArray(numRows) { rowIdx ->
+        sharedRowHeight?.value ?: cols.maxOf { col -> col.getOrNull(rowIdx)?.getHeight() ?: 0.0 }
     }
 
     val bodyImage = DeferredImage(height = ((numRows - 1) * style.gridRowGapPx).toElasticY() + rowHeights.sum())
@@ -169,17 +169,17 @@ private fun drawBodyImageWithGridBodyLayout(
     // Draw each column. If the block shares the same column widths as other blocks and the user requested to retain
     // unoccupied columns, do that by either prepending negative column indices or appending too big ones. Only empty
     // guides will be drawn for these out-of-bounds column indices.
-    var x = 0f
+    var x = 0.0
     val startColIdx = if (sharedColWidths != null && unocc == RIGHT_RETAIN) numCols - sharedColWidths.size else 0
     val endColIdx = if (sharedColWidths != null && unocc == LEFT_RETAIN) sharedColWidths.size else numCols
     for (colIdx in startColIdx until endColIdx) {
         // Either get the column's shared width, or compute it now if the block's column widths are now shared.
         val colWidth = when (sharedColWidths) {
-            null -> cols[colIdx].maxOfOr(0f) { bodyElem -> bodyElem.getWidth(textCtx) }
+            null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
             else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0]
         }
         // Draw each row cell in the column.
-        var y = 0f.toY()
+        var y = 0.0.toY()
         for ((rowIdx, rowHeight) in rowHeights.withIndex()) {
             cols.getOrNull(colIdx)?.getOrNull(rowIdx)?.let { bodyElem ->
                 bodyImage.drawJustifiedBodyElem(
@@ -290,17 +290,17 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // find those shared widths or heights.
     fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-    val sharedCellWidthPerBlock: Map<Block, MutableFloat> = matchExtent(
+    val sharedCellWidthPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchCellWidthPartitionIds,
         matchWithinBlock = { flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableFloat(maxElemWidth(block)) },
-        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemWidth)) }
+        sharedBlockExtent = { block -> MutableDouble(maxElemWidth(block)) },
+        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemWidth)) }
     )
-    val sharedCellHeightPerBlock: Map<Block, MutableFloat> = matchExtent(
+    val sharedCellHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchCellHeightPartitionIds,
         matchWithinBlock = { flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableFloat(maxElemHeight(block)) },
-        sharedGroupExtent = { group -> MutableFloat(group.maxOf(::maxElemHeight)) }
+        sharedBlockExtent = { block -> MutableDouble(maxElemHeight(block)) },
+        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
     )
 
     // Harmonize the cell width and height of square cells.
@@ -328,8 +328,8 @@ private fun drawBodyImageWithFlowBodyLayout(
     letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     block: Block,
-    sharedCellWidth: MutableFloat?,
-    sharedCellHeight: MutableFloat?
+    sharedCellWidth: MutableDouble?,
+    sharedCellHeight: MutableDouble?
 ): DrawnBody {
     val style = block.style
     val horGap = style.flowHGapPx
@@ -356,7 +356,7 @@ private fun drawBodyImageWithFlowBodyLayout(
     // Start drawing the actual image.
     val bodyImage = DeferredImage(width = bodyImageWidth)
 
-    var y = 0f.toY()
+    var y = 0.0.toY()
     for ((lineIdx, line) in lines.withIndex()) {
         // Determine the justification of the current line.
         val curLineHJustify = style.flowLineHJustify.toSingleLineHJustify(lastLine = lineIdx == lines.lastIndex)
@@ -369,7 +369,7 @@ private fun drawBodyImageWithFlowBodyLayout(
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
         // such that the line fills the whole width of the body image.
-        val horGlue = if (curLineHJustify != SingleLineHJustify.FULL) 0f else
+        val horGlue = if (curLineHJustify != SingleLineHJustify.FULL) 0.0 else
             (bodyImageWidth - totalRigidWidth) / (line.size - 1) - horGap
 
         // Find the filled width as well as the height of the current line.
@@ -380,8 +380,8 @@ private fun drawBodyImageWithFlowBodyLayout(
         // For left or full justification, we start at the leftmost position.
         // For center or right justification, we start such that the line is centered or right-justified.
         var x = when (curLineHJustify) {
-            SingleLineHJustify.LEFT, SingleLineHJustify.FULL -> 0f
-            SingleLineHJustify.CENTER -> (bodyImageWidth - lineWidth) / 2f
+            SingleLineHJustify.LEFT, SingleLineHJustify.FULL -> 0.0
+            SingleLineHJustify.CENTER -> (bodyImageWidth - lineWidth) / 2.0
             SingleLineHJustify.RIGHT -> bodyImageWidth - lineWidth
         }
 
@@ -422,8 +422,8 @@ private fun drawBodyImageWithFlowBodyLayout(
     bodyImage.height = y
 
     // Draw guides that show the body's left and right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0.0, 0.0.toY(), 0.0, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0.0.toY(), bodyImageWidth, y, layer = GUIDES)
 
     return DrawnBody(bodyImage, getLineHeight(lines.first()), getLineHeight(lines.last()))
 }
@@ -432,16 +432,16 @@ private fun drawBodyImageWithFlowBodyLayout(
 private inline fun <E> flowIntoLines(
     list: List<E>,
     direction: FlowDirection,
-    maxWidth: Float,
-    minSepWidth: Float,
-    getWidth: (E) -> Float
+    maxWidth: Double,
+    minSepWidth: Double,
+    getWidth: (E) -> Double
 ): List<List<E>> {
     if (list.isEmpty())
         return emptyList()
 
     val queue: Queue<E> = LinkedList(list)
     val lines = ArrayList<MutableList<E>>()
-    var x: Float
+    var x: Double
 
     // We extracted this code from the loop below to ensure that the first line list is never an empty list,
     // even if there are floating point inaccuracies.
@@ -487,15 +487,15 @@ private fun drawBodyImageWithParagraphsBodyLayout(
 
     // Use this to remember the height of the first and the last body row.
     // Later return these two values alongside the created body image.
-    var firstRowHeight = 0f
-    var lastRowHeight = 0f
-    fun recordRowHeight(h: Float) {
-        if (firstRowHeight == 0f)
+    var firstRowHeight = 0.0
+    var lastRowHeight = 0.0
+    fun recordRowHeight(h: Double) {
+        if (firstRowHeight == 0.0)
             firstRowHeight = h
         lastRowHeight = h
     }
 
-    var y = 0f.toY()
+    var y = 0.0.toY()
     for (bodyElem in block.body) {
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
@@ -510,11 +510,11 @@ private fun drawBodyImageWithParagraphsBodyLayout(
 
                 // Case 1a: Full justification.
                 if (curLineHJustify == SingleLineHJustify.FULL)
-                    bodyImage.drawString(lineFmtStr.justify(bodyImageWidth), 0f, y)
+                    bodyImage.drawString(lineFmtStr.justify(bodyImageWidth), 0.0, y)
                 // Case 1b: Left, center, or right justification.
                 else {
                     val hJustify = curLineHJustify.toHJustify()
-                    bodyImage.drawJustifiedString(lineFmtStr, hJustify, 0f, y, bodyImageWidth)
+                    bodyImage.drawJustifiedString(lineFmtStr, hJustify, 0.0, y, bodyImageWidth)
                 }
 
                 // Advance to the next line.
@@ -528,7 +528,9 @@ private fun drawBodyImageWithParagraphsBodyLayout(
         // Case 2: The body element is not a string. Just draw it regularly.
         else {
             val hJustify = style.paragraphsLineHJustify.toSingleLineHJustify(lastLine = false).toHJustify()
-            bodyImage.drawJustifiedBodyElem(textCtx, bodyElem, hJustify, VJustify.TOP, 0f, y, bodyImageWidth, 0f.toY())
+            bodyImage.drawJustifiedBodyElem(
+                textCtx, bodyElem, hJustify, VJustify.TOP, 0.0, y, bodyImageWidth, 0.0.toY()
+            )
             val bodyElemHeight = bodyElem.getHeight()
             y += bodyElemHeight
             recordRowHeight(bodyElemHeight)
@@ -543,14 +545,14 @@ private fun drawBodyImageWithParagraphsBodyLayout(
     bodyImage.height = y
 
     // Draw guides that show the body's left and right edges.
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0f, 0f.toY(), 0f, y, layer = GUIDES)
-    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0f.toY(), bodyImageWidth, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0.0, 0.0.toY(), 0.0, y, layer = GUIDES)
+    bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0.0.toY(), bodyImageWidth, y, layer = GUIDES)
 
     return DrawnBody(bodyImage, firstRowHeight, lastRowHeight)
 }
 
 
-private class MutableFloat(var value: Float)
+private class MutableDouble(var value: Double)
 
 private inline fun <T> matchExtent(
     blocks: List<Block>,
@@ -581,15 +583,15 @@ private inline fun <T> matchExtent(
 }
 
 
-private fun BodyElement.getWidth(textCtx: TextContext): Float = when (this) {
-    is BodyElement.Nil -> 0f
+private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
+    is BodyElement.Nil -> 0.0
     is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
 }
 
-private fun BodyElement.getHeight(): Float = when (this) {
-    is BodyElement.Nil -> sty.heightPx.toFloat()
-    is BodyElement.Str -> str.height.toFloat()
+private fun BodyElement.getHeight(): Double = when (this) {
+    is BodyElement.Nil -> sty.heightPx.toDouble()
+    is BodyElement.Str -> str.height.toDouble()
     is BodyElement.Pic -> pic.height
 }
 
@@ -597,7 +599,7 @@ private fun BodyElement.getHeight(): Float = when (this) {
 private fun DeferredImage.drawJustifiedBodyElem(
     textCtx: TextContext,
     elem: BodyElement, hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y
+    areaX: Double, areaY: Y, areaWidth: Double, areaHeight: Y
 ) = when (elem) {
     is BodyElement.Nil -> {}
     is BodyElement.Str ->

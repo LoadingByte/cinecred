@@ -41,7 +41,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             }
         })
 
-        rememberedBounds?.also(::setBounds) ?: center(gCfg, 0.4f, 0.55f)
+        rememberedBounds?.also(::setBounds) ?: center(gCfg, 0.4, 0.55)
 
         contentPane.add(panel)
     }

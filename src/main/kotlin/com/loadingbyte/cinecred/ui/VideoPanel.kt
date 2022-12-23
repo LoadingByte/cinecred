@@ -30,8 +30,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             super.paintComponent(g)
             videoDrawer?.let { videoDrawer ->
                 g as Graphics2D
-                g.translate((width - videoDrawer.width / systemScaling) / 2f, 0f)
-                g.scale(1f / systemScaling)
+                g.translate((width - videoDrawer.width / systemScaling) / 2.0, 0.0)
+                g.scale(1.0 / systemScaling)
                 g.clipRect(0, 0, videoDrawer.width, videoDrawer.height)
                 videoDrawer.drawFrame(g, frameSlider.value)
             }
@@ -63,7 +63,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val makeVideoDrawerJobSlot = JobSlot()
     private var videoDrawer: VideoDrawer? = null
-    private var systemScaling = 1f
+    private var systemScaling = 1.0
 
     private var playTimer: Timer? = null
     private var playRate = 0
@@ -80,10 +80,10 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             }
             playTimer?.stop()
             playTimer = if (playRate == 0) null else {
-                val frameSpacing /* ms */ = 1000f / (abs(playRate) * project!!.styling.global.fps.frac)
+                val frameSpacing /* ms */ = 1000.0 / (abs(playRate) * project!!.styling.global.fps.frac)
                 // We presume that we cannot draw faster than roughly 80 frames per second, and hence increase the step
                 // size once that framerate is exceeded.
-                val stepSize = ceil(12f / frameSpacing).roundToInt()
+                val stepSize = ceil(12.0 / frameSpacing).roundToInt()
                 Timer((frameSpacing * stepSize).roundToInt()) {
                     if (!ctrl.projectFrame.isVisible) {
                         // If the main frame has been disposed, also stop the timer, because would otherwise keep
@@ -100,7 +100,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
     init {
-        val rewindIcon = PLAY_ICON.getScaledIcon(-1f, 1f)
+        val rewindIcon = PLAY_ICON.getScaledIcon(-1.0, 1.0)
         val buttonGroup = ButtonGroup()
         fun makeBtn(icon: Icon, tooltip: String, keyCode: Int, listener: () -> Unit, isSelected: Boolean = false) =
             JToggleButton(icon, isSelected).apply {
@@ -189,13 +189,13 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         // notified and call this method again.
         val graphics = canvas.graphics as Graphics2D? ?: return
 
-        systemScaling = UIScale.getSystemScaleFactor(graphics).toFloat()
+        systemScaling = UIScale.getSystemScaleFactor(graphics)
         val scaling = min(
-            canvas.width.toFloat() / project.styling.global.widthPx,
-            canvas.height.toFloat() / project.styling.global.heightPx
+            canvas.width.toDouble() / project.styling.global.widthPx,
+            canvas.height.toDouble() / project.styling.global.heightPx
         ) * systemScaling
         // Protect against too small canvas sizes.
-        if (scaling < 0.001f)
+        if (scaling < 0.001)
             return
 
         makeVideoDrawerJobSlot.submit {

@@ -19,7 +19,7 @@ import kotlin.io.path.exists
 class VideoRenderJob(
     private val project: Project,
     private val drawnPages: List<DrawnPage>,
-    private val scaling: Float,
+    private val scaling: Double,
     private val transparentGrounding: Boolean,
     private val format: Format,
     fileOrDir: Path

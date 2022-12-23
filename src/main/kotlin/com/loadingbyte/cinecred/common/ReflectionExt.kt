@@ -103,15 +103,15 @@ fun Font.isItalic2D(): Boolean = (FontUtilities.getFont2D(this) as Font2D).style
 
 
 class SuperscriptMetrics(
-    val subScaling: Float, val subHOffsetEm: Float, val subVOffsetEm: Float,
-    val supScaling: Float, val supHOffsetEm: Float, val supVOffsetEm: Float
+    val subScaling: Double, val subHOffsetEm: Double, val subVOffsetEm: Double,
+    val supScaling: Double, val supHOffsetEm: Double, val supVOffsetEm: Double
 )
 
 fun Font.getSuperscriptMetrics(): SuperscriptMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toFloat()
+    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toDouble()
     val os2Table = getTableBuffer(font2D, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 26)
         return null
@@ -128,13 +128,13 @@ fun Font.getSuperscriptMetrics(): SuperscriptMetrics? {
 }
 
 
-class ExtraLineMetrics(val xHeightEm: Float, val capHeightEm: Float)
+class ExtraLineMetrics(val xHeightEm: Double, val capHeightEm: Double)
 
 fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toFloat()
+    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toDouble()
     val os2Table = getTableBuffer(font2D, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 90 || os2Table.getShort(0) /* version */ < 2)
         return null

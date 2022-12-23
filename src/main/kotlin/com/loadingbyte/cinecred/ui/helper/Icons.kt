@@ -37,7 +37,7 @@ val WINDOW_ICON_IMAGES = run {
 }
 
 
-val CINECRED_ICON = SVGIcon.load("/logo.svg").getScaledIcon(0.0625f)
+val CINECRED_ICON = SVGIcon.load("/logo.svg").getScaledIcon(0.0625)
 
 val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
 val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
@@ -414,24 +414,24 @@ private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
 
 class SVGIcon private constructor(
     private val svg: GraphicsNode,
-    private val svgWidth: Float,
-    private val svgHeight: Float,
-    private val xScaling: Float,
-    private val yScaling: Float,
+    private val svgWidth: Double,
+    private val svgHeight: Double,
+    private val xScaling: Double,
+    private val yScaling: Double,
     private val isDisabled: Boolean
 ) : FlatAbstractIcon((svgWidth * abs(xScaling)).roundToInt(), (svgHeight * abs(yScaling)).roundToInt(), null),
     FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         if (!isDisabled)
-            if (xScaling == 1f && yScaling == 1f)
+            if (xScaling == 1.0 && yScaling == 1.0)
                 svg.paint(g2)
             else
                 g2.preserveTransform {
                     if (xScaling < 0)
-                        g2.translate(-svgWidth * xScaling, 0f)
+                        g2.translate(-svgWidth * xScaling, 0.0)
                     if (yScaling < 0)
-                        g2.translate(0f, -svgWidth * yScaling)
+                        g2.translate(0.0, -svgWidth * yScaling)
                     g2.scale(xScaling, yScaling)
                     svg.paint(g2)
                 }
@@ -463,14 +463,14 @@ class SVGIcon private constructor(
     }
 
     override fun getDisabledIcon() = SVGIcon(svg, svgWidth, svgHeight, xScaling, yScaling, isDisabled = true)
-    fun getScaledIcon(scaling: Float) = getScaledIcon(scaling, scaling)
-    fun getScaledIcon(xScaling: Float, yScaling: Float) =
+    fun getScaledIcon(scaling: Double) = getScaledIcon(scaling, scaling)
+    fun getScaledIcon(xScaling: Double, yScaling: Double) =
         SVGIcon(svg, svgWidth, svgHeight, this.xScaling * xScaling, this.yScaling * yScaling, isDisabled)
 
     companion object {
         fun load(name: String): SVGIcon {
             val (svg, ctx) = loadSVGResource(name)
-            return SVGIcon(svg, ctx.documentSize.width.toFloat(), ctx.documentSize.height.toFloat(), 1f, 1f, false)
+            return SVGIcon(svg, ctx.documentSize.width, ctx.documentSize.height, 1.0, 1.0, false)
         }
     }
 

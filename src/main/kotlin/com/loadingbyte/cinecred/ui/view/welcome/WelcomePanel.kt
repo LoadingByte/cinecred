@@ -37,7 +37,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     init {
         val brandPanel = JPanel(MigLayout("center, wrap", "[center]", "15[][]-3[]20")).apply {
-            add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.25f)))
+            add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.25)))
             add(JLabel("Cinecred").apply {
                 font = TITILLIUM_SEMI.deriveFont(H2)
                 putClientProperty(STYLE, "foreground: #FFF")
@@ -86,7 +86,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
 
         updateMessageTextPane = newLabelTextPane()
-        val updateBrowseButton = JButton(l10n("ui.update.browse"), BEARING_BOTTOM_ICON.getScaledIcon(2f)).apply {
+        val updateBrowseButton = JButton(l10n("ui.update.browse"), BEARING_BOTTOM_ICON.getScaledIcon(2.0)).apply {
             iconTextGap = 10
             putClientProperty(STYLE_CLASS, "h2")
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
@@ -94,7 +94,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
         updatePanel = JPanel(MigLayout("insets 60", "[grow 1]15[grow 1]", "[]30[]25[]")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
-            add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.4f)), "right")
+            add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.4)), "right")
             add(JLabel("Cinecred").apply {
                 font = TITILLIUM_SEMI.deriveFont(H1)
                 putClientProperty(STYLE, "foreground: #FFF")

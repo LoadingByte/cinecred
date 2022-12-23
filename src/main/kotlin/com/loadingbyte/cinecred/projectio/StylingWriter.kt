@@ -56,7 +56,7 @@ private fun <S : Style> writeStyle(ctx: StylingContext, styling: Styling, style:
 
 
 private fun convert(ctx: StylingContext, styling: Styling, value: Any): Any = when (value) {
-    is Int, is Float, is Boolean, is String -> value
+    is Int, is Double, is Boolean, is String -> value
     is Enum<*> -> value.name
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()

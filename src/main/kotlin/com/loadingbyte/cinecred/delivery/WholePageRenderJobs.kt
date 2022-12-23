@@ -139,8 +139,8 @@ class WholePagePDFRenderJob(
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pageWidth = page.width
-            val pageHeight = page.height.resolve()
+            val pageWidth = page.width.toFloat()
+            val pageHeight = page.height.resolve().toFloat()
 
             val pdfPage = PDPage(PDRectangle(pageWidth, pageHeight))
             pdfDoc.addPage(pdfPage)

@@ -93,10 +93,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellVJustify.st(), ICON),
-    NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10f),
+    NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10.0),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
-    NumberWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), step = 10f),
+    NumberWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), step = 10.0),
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headMatchWidth.st(), ICON),
     WidthWidgetSpec(ContentStyle::headMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
@@ -122,26 +122,26 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NewSectionWidgetSpec(LetterStyle::leadingTopRem.st()),
     WidthWidgetSpec(LetterStyle::leadingTopRem.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::leadingBottomRem.st(), WidthSpec.TINY),
-    NumberWidgetSpec(LetterStyle::leadingTopRem.st(), step = 0.01f),
-    NumberWidgetSpec(LetterStyle::leadingBottomRem.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::leadingTopRem.st(), step = 0.01),
+    NumberWidgetSpec(LetterStyle::leadingBottomRem.st(), step = 0.01),
     UnionWidgetSpec(
         LetterStyle::leadingTopRem.st(), LetterStyle::leadingBottomRem.st(),
         unionName = "leadingRem", settingIcons = listOf(BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
     ),
-    NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01),
     ToggleButtonGroupWidgetSpec(LetterStyle::smallCaps.st(), ICON),
     ToggleButtonGroupWidgetSpec(LetterStyle::superscript.st(), ICON),
     WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
     WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),
-    NumberWidgetSpec(LetterStyle::hOffsetRem.st(), step = 0.01f),
-    NumberWidgetSpec(LetterStyle::vOffsetRem.st(), step = 0.01f),
+    NumberWidgetSpec(LetterStyle::hOffsetRem.st(), step = 0.01),
+    NumberWidgetSpec(LetterStyle::vOffsetRem.st(), step = 0.01),
     UnionWidgetSpec(
         LetterStyle::hOffsetRem.st(), LetterStyle::vOffsetRem.st(),
         unionName = "offsetRem", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
     ),
-    NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01f),
-    NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01f),
-    NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05f),
+    NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01),
+    NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01),
+    NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05),
     ListWidgetSpec(LetterStyle::features.st(), newElem = FontFeature("", 1), elemsPerRow = 2),
     NewSectionWidgetSpec(LetterStyle::decorations.st()),
     ListWidgetSpec(
@@ -170,9 +170,9 @@ private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> 
         TextDecoration::widenLeftPx.st(), TextDecoration::widenRightPx.st(),
         unionName = "widenPx", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
     ),
-    NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1f),
+    NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1),
     WidthWidgetSpec(TextDecoration::dashPatternPx.st(), WidthSpec.TINY),
-    ListWidgetSpec(TextDecoration::dashPatternPx.st(), newElem = 2f, newElemIsLastElem = true, elemsPerRow = 2)
+    ListWidgetSpec(TextDecoration::dashPatternPx.st(), newElem = 2.0, newElemIsLastElem = true, elemsPerRow = 2)
 )
 
 

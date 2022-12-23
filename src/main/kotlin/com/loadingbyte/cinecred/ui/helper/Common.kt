@@ -308,7 +308,7 @@ fun Window.setup() {
     }
 }
 
-fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Float, heightFrac: Float) {
+fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Double, heightFrac: Double) {
     val winBounds = onScreen.usableBounds
     val width = (winBounds.width * widthFrac).roundToInt().coerceAtLeast(minimumSize.width)
     val height = (winBounds.height * heightFrac).roundToInt().coerceAtLeast(minimumSize.height)

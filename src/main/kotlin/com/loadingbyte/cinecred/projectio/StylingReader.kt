@@ -188,7 +188,7 @@ private fun <T> convert(type: Class<T>, raw: Any): T = convertUntyped(type, raw)
 
 private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
-    Float::class.javaPrimitiveType, Float::class.javaObjectType -> (raw as Number).toFloat()
+    Double::class.javaPrimitiveType, Double::class.javaObjectType -> (raw as Number).toDouble()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
     String::class.java -> raw as String
     Locale::class.java -> Locale.forLanguageTag(raw as String)

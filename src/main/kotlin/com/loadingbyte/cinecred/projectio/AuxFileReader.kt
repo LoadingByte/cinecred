@@ -79,8 +79,8 @@ private fun loadSVG(svgFile: Path): Picture.SVG {
 
     val gvtRoot = GVTBuilder().build(ctx, doc)
 
-    val width = ctx.documentSize.width.toFloat()
-    val height = ctx.documentSize.height.toFloat()
+    val width = ctx.documentSize.width
+    val height = ctx.documentSize.height
 
     // Dispatch an 'onload' event if needed.
     if (ctx.isDynamic) {

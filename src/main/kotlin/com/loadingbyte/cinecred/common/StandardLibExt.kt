@@ -9,7 +9,7 @@ import kotlin.math.max
  */
 
 
-inline fun FloatArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Float) -> Boolean): Boolean {
+inline fun DoubleArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Double) -> Boolean): Boolean {
     for (idx in startIdx until endIdx)
         if (predicate(this[idx]))
             return true
@@ -34,7 +34,7 @@ fun BooleanArray.indexOfAfter(elem: Boolean, startIdx: Int): Int {
 }
 
 
-fun FloatArray.maxBetween(startIdx: Int, endIdx: Int): Float {
+fun DoubleArray.maxBetween(startIdx: Int, endIdx: Int): Double {
     var max = this[startIdx]
     for (idx in startIdx + 1 until endIdx)
         max = max(max, this[idx])
@@ -42,20 +42,20 @@ fun FloatArray.maxBetween(startIdx: Int, endIdx: Int): Float {
 }
 
 
-inline fun <E> Collection<E>.maxOfOr(default: Float, selector: (E) -> Float): Float =
+inline fun <E> Collection<E>.maxOfOr(default: Double, selector: (E) -> Double): Double =
     if (isEmpty()) default else maxOf(selector)
 
 
-inline fun <E> Iterable<E>.sumOf(selector: (E) -> Float): Float {
-    var sum = 0f
+inline fun <E> Iterable<E>.sumOf(selector: (E) -> Double): Double {
+    var sum = 0.0
     for (elem in this)
         sum += selector(elem)
     return sum
 }
 
 
-inline fun FloatArray.mapToArray(transform: (Float) -> Float): FloatArray =
-    FloatArray(size) { i -> transform(this[i]) }
+inline fun DoubleArray.mapToArray(transform: (Double) -> Double): DoubleArray =
+    DoubleArray(size) { i -> transform(this[i]) }
 
 
 inline fun <E> MutableList<E>.removeFirstOrNull(predicate: (E) -> Boolean): E? {

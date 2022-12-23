@@ -23,7 +23,7 @@ import kotlin.math.*
 open class VideoDrawer(
     private val project: Project,
     drawnPages: List<DrawnPage>,
-    scaling: Float = 1f,
+    scaling: Double = 1.0,
     private val transparentGrounding: Boolean = false,
     private val mode: Mode
 ) {
@@ -43,7 +43,7 @@ open class VideoDrawer(
        ************************************ */
 
     // Note: A pageIdx of -1 indicates an empty frame.
-    private class Insn(val pageIdx: Int, val imgTopY: Float, val alpha: Float)
+    private class Insn(val pageIdx: Int, val imgTopY: Double, val alpha: Double)
 
     private val insns = ArrayList<Insn>()
 
@@ -53,7 +53,7 @@ open class VideoDrawer(
             for ((stageIdx, stage) in page.stages.withIndex())
                 when (val stageInfo = drawnPages[pageIdx].stageInfo[stageIdx]) {
                     is DrawnStageInfo.Card -> {
-                        val imgTopY = scaling * (stageInfo.middleY.resolve() - project.styling.global.heightPx / 2f)
+                        val imgTopY = scaling * (stageInfo.middleY.resolve() - project.styling.global.heightPx / 2.0)
                         if (stageIdx == 0)
                             writeFade(pageIdx, imgTopY, stage.style.cardFadeInFrames, fadeOut = false)
                         writeStatic(pageIdx, imgTopY, stage.style.cardDurationFrames)
@@ -62,7 +62,7 @@ open class VideoDrawer(
                     }
                     is DrawnStageInfo.Scroll -> {
                         val imgTopYStart =
-                            scaling * (stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2f)
+                            scaling * (stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2.0)
                         writeScroll(
                             pageIdx, imgTopYStart, stageInfo.frames, stageInfo.initialAdvance,
                             scrollPxPerFrame = scaling * stage.style.scrollPxPerFrame
@@ -71,31 +71,31 @@ open class VideoDrawer(
                 }
 
             if (pageIdx != project.pages.lastIndex)
-                writeStatic(-1, 0f, page.stages.last().style.afterwardSlugFrames)
+                writeStatic(-1, 0.0, page.stages.last().style.afterwardSlugFrames)
         }
     }
 
-    private fun writeStatic(pageIdx: Int, imgTopY: Float, numFrames: Int) {
+    private fun writeStatic(pageIdx: Int, imgTopY: Double, numFrames: Int) {
         for (frame in 0 until numFrames)
-            insns.add(Insn(pageIdx, imgTopY, 1f))
+            insns.add(Insn(pageIdx, imgTopY, 1.0))
     }
 
-    private fun writeFade(pageIdx: Int, imgTopY: Float, numFrames: Int, fadeOut: Boolean) {
+    private fun writeFade(pageIdx: Int, imgTopY: Double, numFrames: Int, fadeOut: Boolean) {
         for (frame in 0 until numFrames) {
             // Choose alpha such that the fade sequence doesn't contain a fully empty or fully opaque frame.
-            var alpha = (frame + 1).toFloat() / (numFrames + 1)
+            var alpha = (frame + 1).toDouble() / (numFrames + 1)
             if (fadeOut)
-                alpha = 1f - alpha
+                alpha = 1.0 - alpha
             insns.add(Insn(pageIdx, imgTopY, alpha))
         }
     }
 
     private fun writeScroll(
-        pageIdx: Int, imgTopYStart: Float, numFrames: Int, initialAdvance: Float, scrollPxPerFrame: Float
+        pageIdx: Int, imgTopYStart: Double, numFrames: Int, initialAdvance: Double, scrollPxPerFrame: Double
     ) {
         for (frame in 0 until numFrames) {
             val imgTopY = imgTopYStart + (frame + initialAdvance) * scrollPxPerFrame
-            insns.add(Insn(pageIdx, imgTopY, 1f))
+            insns.add(Insn(pageIdx, imgTopY, 1.0))
         }
     }
 
@@ -114,7 +114,7 @@ open class VideoDrawer(
         val height: Int,
         val cull: Boolean,
         val defImage: DeferredImage,
-        val microShifts: FloatArray?
+        val microShifts: DoubleArray?
     ) {
         val lock = ReentrantLock()
         var microShiftedImages: SoftReference<List<BufferedImage>>? = null
@@ -143,8 +143,8 @@ open class VideoDrawer(
                 // is the deviation from an integer shift, and hence lies between 0 and 1.
                 // In preview mode, we do not cache images for all micro shifts, so instead, we just use only the 0
                 // micro shift.
-                val microShifts = if (mode == Mode.PREVIEW) floatArrayOf(0f) else {
-                    var microShifts: FloatArray? = FloatArray(MAX_MICRO_SHIFTS)
+                val microShifts = if (mode == Mode.PREVIEW) doubleArrayOf(0.0) else {
+                    var microShifts: DoubleArray? = DoubleArray(MAX_MICRO_SHIFTS)
                     var numMicroShifts = 0
                     // Skip pauses in between pages.
                     while (insnIdx < insns.size && insns[insnIdx].pageIdx == -1)
@@ -184,7 +184,7 @@ open class VideoDrawer(
         }
     }
 
-    private fun drawShiftedPage(g2: Graphics2D, pageIdx: Int, shift: Float) {
+    private fun drawShiftedPage(g2: Graphics2D, pageIdx: Int, shift: Double) {
         val chunkIdx = firstChunkInd[pageIdx] + (shift.toInt() / chunkSpacing).coerceIn(0, lastChunkInd[pageIdx])
 
         if (mode == Mode.SEQUENTIAL) {
@@ -203,16 +203,16 @@ open class VideoDrawer(
         if (microShiftedImages == null) {
             // If the cache is disabled for this chunk, directly draw the deferred image to the graphics object. This is
             // slower than using cached raster images, but it's our only option.
-            val culling = Rectangle2D.Float(0f, shift, width.toFloat(), height.toFloat())
+            val culling = Rectangle2D.Double(0.0, shift, width.toDouble(), height.toDouble())
             g2.withNewG2 {
                 g2.setHighQuality()
-                g2.translate(0f, -shift)
+                g2.translate(0.0, -shift)
                 chunk.defImage.materialize(g2, layers = listOf(BACKGROUND, FOREGROUND), culling)
             }
         } else if (mode == Mode.PREVIEW) {
             // In preview mode, we only cache a single image without micro shift, so fractionally shift now.
             val image = microShiftedImages.single()
-            g2.drawImage(image, AffineTransform.getTranslateInstance(0.0, -(shift.toDouble() - chunk.shift)), null)
+            g2.drawImage(image, AffineTransform.getTranslateInstance(0.0, -(shift - chunk.shift)), null)
         } else {
             // In non-preview mode, determine the micro shift for the given shift, select the corresponding cached
             // image, and paint it to the graphics object with only integer shifting.
@@ -254,10 +254,10 @@ open class VideoDrawer(
                     // have alpha, have to have the proper grounding, as otherwise their grounding would be black.
                     layers.add(0, GROUNDING)
                 }
-                g2.translate(0f, -(chunk.shift + microShift))
+                g2.translate(0.0, -(chunk.shift + microShift))
                 // If the chunk doesn't contain the whole page, cull the rest to improve performance.
                 val culling = if (!chunk.cull) null else
-                    Rectangle2D.Float(0f, chunk.shift.toFloat(), width.toFloat(), chunk.height.toFloat())
+                    Rectangle2D.Double(0.0, chunk.shift.toDouble(), width.toDouble(), chunk.height.toDouble())
                 // Paint the deferred image onto the raster image.
                 chunk.defImage.materialize(g2, layers, culling)
             }
@@ -289,9 +289,9 @@ open class VideoDrawer(
         val insn = insns[frameIdx]
         // Note: pageIdx == -1 means that the frame should be empty.
         if (insn.pageIdx != -1) {
-            val blend = insn.alpha != 1f
+            val blend = insn.alpha != 1.0
             val prevComposite = g2.composite
-            if (blend) g2.composite = AlphaComposite.SrcOver.derive(insn.alpha)
+            if (blend) g2.composite = AlphaComposite.SrcOver.derive(insn.alpha.toFloat())
             drawShiftedPage(g2, insn.pageIdx, shift = insn.imgTopY)
             if (blend) g2.composite = prevComposite
         }
@@ -300,7 +300,7 @@ open class VideoDrawer(
 
     companion object {
 
-        private const val EPS = 0.001f
+        private const val EPS = 0.001
         private const val MIN_CHUNK_BUFFER = 200
         private const val MAX_CHUNK_PIXELS = 20_000_000
         private const val MAX_MICRO_SHIFTS = 16

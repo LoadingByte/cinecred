@@ -119,7 +119,7 @@ class StyleForm<S : Style>(
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<V> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
-        val floatConstr = settingConstraints.oneOf<FloatConstr<S>>()
+        val doubleConstr = settingConstraints.oneOf<DoubleConstr<S>>()
         val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, V>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, V>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
@@ -143,12 +143,12 @@ class StyleForm<S : Style>(
                 else
                     SpinnerWidget(Int::class.javaObjectType, model, widthSpec)
             }
-            Float::class.javaPrimitiveType, Float::class.javaObjectType -> {
-                val min = floatConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01f) }
-                val max = floatConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01f) }
-                val step = numberWidgetSpec?.step ?: 1f
-                val model = SpinnerNumberModel(min ?: max ?: 0f, min, max, step)
-                SpinnerWidget(Float::class.javaObjectType, model, widthSpec)
+            Double::class.javaPrimitiveType, Double::class.javaObjectType -> {
+                val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01) }
+                val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01) }
+                val step = numberWidgetSpec?.step ?: 1.0
+                val model = SpinnerNumberModel(min ?: max ?: 0.0, min, max, step)
+                SpinnerWidget(Double::class.javaObjectType, model, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> when {
                 toggleButtonGroupWidgetSpec != null -> makeToggleButtonGroupWidget(

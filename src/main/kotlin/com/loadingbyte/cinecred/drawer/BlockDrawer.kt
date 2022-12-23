@@ -15,7 +15,7 @@ import com.loadingbyte.cinecred.project.SpineAttachment.*
 import com.loadingbyte.cinecred.project.VJustify
 
 
-class DrawnBlock(val defImage: DeferredImage, val spineXInImage: Float)
+class DrawnBlock(val defImage: DeferredImage, val spineXInImage: Double)
 
 
 fun drawBlocks(
@@ -63,10 +63,10 @@ private fun drawHorizontalBlocks(
 
     // Determine the groups of blocks which should share the same head/tail width, and of course also find those widths.
     val sharedHeadWidths = matchWidth(blocks, matchHeadWidthPartitionIds, Block::matchHeadPartitionId) { group ->
-        group.maxOf { block -> if (block.head == null) 0f else block.head.formatted(textCtx).width }
+        group.maxOf { block -> if (block.head == null) 0.0 else block.head.formatted(textCtx).width }
     }
     val sharedTailWidths = matchWidth(blocks, matchTailWidthPartitionIds, Block::matchTailPartitionId) { group ->
-        group.maxOf { block -> if (block.tail == null) 0f else block.tail.formatted(textCtx).width }
+        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.formatted(textCtx).width }
     }
 
     // Draw a deferred image for each block.
@@ -74,14 +74,14 @@ private fun drawHorizontalBlocks(
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = sharedHeadWidths[block] ?: block.head?.run { formatted(textCtx).width } ?: 0f
-        val tailWidth = sharedTailWidths[block] ?: block.tail?.run { formatted(textCtx).width } ?: 0f
+        val headWidth = sharedHeadWidths[block] ?: block.head?.run { formatted(textCtx).width } ?: 0.0
+        val tailWidth = sharedTailWidths[block] ?: block.tail?.run { formatted(textCtx).width } ?: 0.0
 
-        val headStartX = 0f
+        val headStartX = 0.0
         val headEndX = headStartX + headWidth
-        val bodyStartX = headEndX + (if (!block.style.hasHead) 0f else block.style.headGapPx)
+        val bodyStartX = headEndX + (if (!block.style.hasHead) 0.0 else block.style.headGapPx)
         val bodyEndX = bodyStartX + bodyImage.width
-        val tailStartX = bodyEndX + (if (!block.style.hasHead) 0f else block.style.tailGapPx)
+        val tailStartX = bodyEndX + (if (!block.style.hasHead) 0.0 else block.style.tailGapPx)
         val tailEndX = tailStartX + tailWidth
 
         // Used later on for vertically justifying the head and tail.
@@ -99,40 +99,40 @@ private fun drawHorizontalBlocks(
         if (block.head != null) {
             blockImage.drawJustifiedString(
                 block.head.formatted(textCtx), block.style.headHJustify, block.style.headVJustify,
-                headStartX, 0f.toY(), headWidth, blockImageHeight, getReferenceHeight(block.style.headVJustify)
+                headStartX, 0.0.toY(), headWidth, blockImageHeight, getReferenceHeight(block.style.headVJustify)
             )
             // Draw a guide that shows the edges of the head space.
             blockImage.drawRect(
-                HEAD_TAIL_GUIDE_COLOR, headStartX, 0f.toY(), headWidth, blockImageHeight, layer = GUIDES
+                HEAD_TAIL_GUIDE_COLOR, headStartX, 0.0.toY(), headWidth, blockImageHeight, layer = GUIDES
             )
         }
         // Draw the block's body.
-        blockImage.drawDeferredImage(bodyImage, bodyStartX, 0f.toY())
+        blockImage.drawDeferredImage(bodyImage, bodyStartX, 0.0.toY())
         // Draw the block's tail.
         if (block.tail != null) {
             blockImage.drawJustifiedString(
                 block.tail.formatted(textCtx), block.style.tailHJustify, block.style.tailVJustify,
-                tailStartX, 0f.toY(), tailWidth, blockImageHeight, getReferenceHeight(block.style.tailVJustify)
+                tailStartX, 0.0.toY(), tailWidth, blockImageHeight, getReferenceHeight(block.style.tailVJustify)
             )
             // Draw a guide that shows the edges of the tail space.
             blockImage.drawRect(
-                HEAD_TAIL_GUIDE_COLOR, tailStartX, 0f.toY(), tailWidth, blockImageHeight, layer = GUIDES
+                HEAD_TAIL_GUIDE_COLOR, tailStartX, 0.0.toY(), tailWidth, blockImageHeight, layer = GUIDES
             )
         }
 
         // Find the x coordinate of the spine in the generated image for the current block.
         val spineXInImage = when (block.style.spineAttachment) {
-            OVERALL_CENTER -> (headStartX + tailEndX) / 2f
+            OVERALL_CENTER -> (headStartX + tailEndX) / 2.0
             HEAD_LEFT -> headStartX
-            HEAD_CENTER -> (headStartX + headEndX) / 2f
+            HEAD_CENTER -> (headStartX + headEndX) / 2.0
             HEAD_RIGHT -> headEndX
-            HEAD_GAP_CENTER -> (headEndX + bodyStartX) / 2f
+            HEAD_GAP_CENTER -> (headEndX + bodyStartX) / 2.0
             BODY_LEFT -> bodyStartX
-            BODY_CENTER -> (bodyStartX + bodyEndX) / 2f
+            BODY_CENTER -> (bodyStartX + bodyEndX) / 2.0
             BODY_RIGHT -> bodyEndX
-            TAIL_GAP_CENTER -> (bodyEndX + tailStartX) / 2f
+            TAIL_GAP_CENTER -> (bodyEndX + tailStartX) / 2.0
             TAIL_LEFT -> tailStartX
-            TAIL_CENTER -> (tailStartX + tailEndX) / 2f
+            TAIL_CENTER -> (tailStartX + tailEndX) / 2.0
             TAIL_RIGHT -> tailEndX
         }
 
@@ -145,8 +145,8 @@ private inline fun matchWidth(
     blocks: List<Block>,
     styleMatchPartitionIds: Map<ContentStyle, PartitionId>,
     blockMatchPartitionId: (Block) -> PartitionId,
-    sharedGroupWidth: (List<Block>) -> Float
-): Map<Block, Float> {
+    sharedGroupWidth: (List<Block>) -> Double
+): Map<Block, Double> {
     val grouper = HashMap<Any, MutableList<Block>>()
     for (block in blocks) {
         // If the block's style is in some partition (!= null), matching the head/tail width across blocks is enabled
@@ -156,7 +156,7 @@ private inline fun matchWidth(
         grouper.computeIfAbsent(key) { ArrayList() }.add(block)
     }
     // Now that the grouping is done, record the shared extent of each group.
-    val groupWidths = HashMap<Block, Float>(2 * blocks.size)
+    val groupWidths = HashMap<Block, Double>(2 * blocks.size)
     for (group in grouper.values) {
         val width = sharedGroupWidth(group)
         group.associateWithTo(groupWidths) { width }
@@ -178,27 +178,27 @@ private fun drawVerticalBlock(
     // Draw the body image.
     val blockImageWidth = bodyImage.width
     val blockImage = DeferredImage(blockImageWidth)
-    var y = 0f.toY()
+    var y = 0.0.toY()
     // Draw the block's head.
     if (block.head != null) {
-        blockImage.drawJustifiedString(block.head.formatted(textCtx), block.style.headHJustify, 0f, y, blockImageWidth)
+        blockImage.drawJustifiedString(block.head.formatted(textCtx), block.style.headHJustify, 0.0, y, blockImageWidth)
         // Draw guides that show the edges of the head space.
-        val headHeight = block.head.height.toFloat()
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + headHeight, layer = GUIDES)
+        val headHeight = block.head.height.toDouble()
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + headHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + headHeight, layer = GUIDES)
         // Advance to the body.
         y += headHeight + block.style.headGapPx.toElasticY()
     }
     // Draw the block's body.
-    blockImage.drawDeferredImage(bodyImage, 0f, y)
+    blockImage.drawDeferredImage(bodyImage, 0.0, y)
     y += bodyImage.height
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx.toElasticY()
-        blockImage.drawJustifiedString(block.tail.formatted(textCtx), block.style.tailHJustify, 0f, y, blockImageWidth)
+        blockImage.drawJustifiedString(block.tail.formatted(textCtx), block.style.tailHJustify, 0.0, y, blockImageWidth)
         // Draw guides that show the edges of the tail space.
-        val tailHeight = block.tail.height.toFloat()
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0f, y, 0f, y + tailHeight, layer = GUIDES)
+        val tailHeight = block.tail.height.toDouble()
+        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + tailHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + tailHeight, layer = GUIDES)
         // Advance to below the tail.
         y += tailHeight
@@ -207,8 +207,8 @@ private fun drawVerticalBlock(
 
     // Find the x coordinate of the spine in the generated image for the current block.
     val spineXInImage = when (block.style.spineAttachment) {
-        HEAD_LEFT, BODY_LEFT, TAIL_LEFT -> 0f
-        OVERALL_CENTER, HEAD_CENTER, HEAD_GAP_CENTER, BODY_CENTER, TAIL_GAP_CENTER, TAIL_CENTER -> bodyImage.width / 2f
+        HEAD_LEFT, BODY_LEFT, TAIL_LEFT -> 0.0
+        OVERALL_CENTER, HEAD_CENTER, HEAD_GAP_CENTER, BODY_CENTER, TAIL_GAP_CENTER, TAIL_CENTER -> bodyImage.width / 2.0
         HEAD_RIGHT, BODY_RIGHT, TAIL_RIGHT -> bodyImage.width
     }
 

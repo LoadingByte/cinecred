@@ -27,14 +27,14 @@ enum class Severity { INFO, WARN, ERROR }
 
 
 data class FPS(val numerator: Int, val denominator: Int) {
-    val frac: Float
-        get() = numerator.toFloat() / denominator
+    val frac: Double
+        get() = numerator.toDouble() / denominator
 }
 
 
-fun String.toFiniteFloat(nonNeg: Boolean = false, non0: Boolean = false): Float {
-    val f = replace(',', '.').toFloat()
-    if (!f.isFinite() || nonNeg && f < 0f || non0 && f == 0f)
+fun String.toFiniteDouble(nonNeg: Boolean = false, non0: Boolean = false): Double {
+    val f = replace(',', '.').toDouble()
+    if (!f.isFinite() || nonNeg && f < 0.0 || non0 && f == 0.0)
         throw NumberFormatException()
     return f
 }
@@ -119,16 +119,11 @@ val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_INT_RG
     .fontRenderContext
 
 
-fun AffineTransform.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
-fun AffineTransform.scale(sx: Float, sy: Float) = scale(sx.toDouble(), sy.toDouble())
-fun AffineTransform.scale(s: Float) = scale(s.toDouble(), s.toDouble())
-fun AffineTransform.shear(shx: Float, shy: Float) = shear(shx.toDouble(), shy.toDouble())
-fun Graphics2D.translate(tx: Float, ty: Float) = translate(tx.toDouble(), ty.toDouble())
-fun Graphics2D.scale(sx: Float, sy: Float) = scale(sx.toDouble(), sy.toDouble())
-fun Graphics2D.scale(s: Float) = scale(s.toDouble(), s.toDouble())
+fun AffineTransform.scale(s: Double) = scale(s, s)
 fun Graphics2D.scale(s: Double) = scale(s, s)
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
-fun Matrix.scale(s: Float) = scale(s, s)
+fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
+fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
 
 
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {

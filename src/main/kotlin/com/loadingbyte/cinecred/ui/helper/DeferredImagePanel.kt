@@ -23,13 +23,13 @@ import kotlin.math.*
  * we devise our own scrollable panel for displaying a [DeferredImage]. We also implement additional features
  * like panning (via clicking and dragging) and zooming.
  */
-class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: Float) :
+class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement: Double) :
     JPanel(MigLayout("gap 0, insets 0")) {
 
     private var image: DeferredImage? = null
 
     fun setImage(image: DeferredImage?) {
-        require(image == null || image.width != 0f && image.height.resolve() != 0f)
+        require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
         this.image = image
         coerceViewportAndCalibrateScrollbars()
         // Rematerialize will call canvas.repaint() once it's done.
@@ -46,9 +46,9 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     /**
      * Zoom = 1 means: Show the whole width of the image.
      */
-    var zoom = 1f
+    var zoom = 1.0
         set(value) {
-            val newZoom = value.coerceIn(1f, maxZoom)
+            val newZoom = value.coerceIn(1.0, maxZoom)
             if (field != newZoom) {
                 field = newZoom
                 for (listener in zoomListeners)
@@ -61,7 +61,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             }
         }
 
-    val zoomListeners = mutableListOf<(Float) -> Unit>()
+    val zoomListeners = mutableListOf<(Double) -> Unit>()
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that
@@ -72,8 +72,8 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     // of the entire image that we momentarily show when the user scrolls out of the rasterized portion too fast.
     private var materialized: BufferedImage? = null
     // In image coordinates:
-    private var materializedStartY = Float.NaN
-    private var materializedStopY = Float.NaN
+    private var materializedStartY = Double.NaN
+    private var materializedStopY = Double.NaN
     private var lowResMaterialized: BufferedImage? = null
     private val materializingJobSlot = JobSlot()
 
@@ -124,14 +124,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
 
         // When the user scrolls inside the canvas, adjust the zoom.
         canvas.addMouseWheelListener {
-            zoom -= it.preciseWheelRotation.toFloat() * zoomIncrement
+            zoom -= it.preciseWheelRotation * zoomIncrement
         }
 
         // When the user clicks and drags inside the canvas, move the viewport center.
         val canvasDragListener = object : MouseAdapter() {
             private var startPoint: Point? = null
-            private var startViewportCenterX = 0f
-            private var startViewportCenterY = 0f
+            private var startViewportCenterX = 0.0
+            private var startViewportCenterY = 0.0
 
             override fun mousePressed(e: MouseEvent) {
                 if (e.button == MouseEvent.BUTTON1) {
@@ -159,14 +159,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     }
 
     // In image coordinates:
-    private var viewportCenterX = 0f
+    private var viewportCenterX = 0.0
         set(value) {
             field = value.coerceIn(minViewportCenterX, maxViewportCenterX)
             disableScrollbarListeners = true
             xScrollbar.model.value = ((field - minViewportCenterX) * SCROLLBAR_MULT).roundToInt()
             disableScrollbarListeners = false
         }
-    private var viewportCenterY = 0f
+    private var viewportCenterY = 0.0
         set(value) {
             field = value.coerceIn(minViewportCenterY, maxViewportCenterY)
             disableScrollbarListeners = true
@@ -178,8 +178,8 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
             // the portion's edge.
             val reZone = viewportHeight
             if (!materializedStartY.isNaN())
-                if (field < materializedStartY + reZone && materializedStartY > 0.1f ||
-                    field > materializedStopY - reZone && materializedStopY < image!!.height.resolve() - 0.1f
+                if (field < materializedStartY + reZone && materializedStartY > 0.1 ||
+                    field > materializedStopY - reZone && materializedStopY < image!!.height.resolve() - 0.1
                 ) rematerialize(contentChanged = false)
         }
 
@@ -187,9 +187,9 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     private val viewportWidth get() = image!!.width / zoom
     private val viewportHeight
         get() = min(image!!.height.resolve(), canvas.height.also { require(it != 0) } / imageScaling)
-    private val minViewportCenterX get() = viewportWidth / 2f
+    private val minViewportCenterX get() = viewportWidth / 2.0
     private val maxViewportCenterX get() = image!!.width - minViewportCenterX
-    private val minViewportCenterY get() = viewportHeight / 2f
+    private val minViewportCenterY get() = viewportHeight / 2.0
     private val maxViewportCenterY get() = image!!.height.resolve() - minViewportCenterY
 
     // The image scaling maps from deferred image coordinates to canvas coordinates as they are used by Swing.
@@ -198,7 +198,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
     private val imageScaling
         get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
     private val physicalImageScaling
-        get() = imageScaling * UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D).toFloat()
+        get() = imageScaling * UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D)
 
     private fun coerceViewportAndCalibrateScrollbars() {
         val image = this.image
@@ -284,7 +284,7 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
 
     companion object {
 
-        private const val SCROLLBAR_MULT = 1024f
+        private const val SCROLLBAR_MULT = 1024.0
         private const val MIN_IMG_BUFFER = 400
         private const val MAX_MAT_PIXELS = 5_000_000
 
@@ -292,8 +292,8 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
             jobSlot: JobSlot, image: DeferredImage,
-            physicalImageScaling: Float, viewportHeight: Float, viewportCenterY: Float, lowRes: Boolean,
-            layers: List<Layer>, onFinish: (BufferedImage, Float, Float, BufferedImage?) -> Unit
+            physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
+            layers: List<Layer>, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
         ) {
             jobSlot.submit {
                 val imgHeight = image.height.resolve()
@@ -305,8 +305,8 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                     imgHeight,
                     max(viewportHeight + MIN_IMG_BUFFER, MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2)))
                 )
-                val startY = if (clippedImgHeight == imgHeight) Float.NaN else
-                    (viewportCenterY - clippedImgHeight / 2f).coerceIn(0f, imgHeight - clippedImgHeight)
+                val startY = if (clippedImgHeight == imgHeight) Double.NaN else
+                    (viewportCenterY - clippedImgHeight / 2.0).coerceIn(0.0, imgHeight - clippedImgHeight)
 
                 // Materialize the image or a portion thereof.
                 // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
@@ -316,10 +316,11 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                     g2.setHighQuality()
                     // If only a portion is materialized, scroll the deferred image to that portion.
                     if (!startY.isNaN())
-                        g2.translate(0f, physicalImageScaling * -startY)
+                        g2.translate(0.0, physicalImageScaling * -startY)
                     // If only a portion is materialized, cull the rest to improve performance.
-                    val culling = if (startY.isNaN()) null else
-                        Rectangle2D.Float(0f, physicalImageScaling * startY, matWidth.toFloat(), matHeight.toFloat())
+                    val culling = if (startY.isNaN()) null else Rectangle2D.Double(
+                        0.0, physicalImageScaling * startY, matWidth.toDouble(), matHeight.toDouble()
+                    )
                     // Paint a scaled version of the deferred image onto the raster image.
                     image.copy(universeScaling = physicalImageScaling).materialize(g2, layers, culling)
                 }
@@ -357,8 +358,8 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
 
             if (image != null && materialized != null) {
                 // Find the top and bottom edges of the current viewport.
-                val viewportTopY = viewportCenterY - viewportHeight / 2f
-                val viewportBotY = viewportCenterY + viewportHeight / 2f
+                val viewportTopY = viewportCenterY - viewportHeight / 2.0
+                val viewportBotY = viewportCenterY + viewportHeight / 2.0
                 // Find the width of the viewport in materialized image coordinates.
                 val materializedViewportWidth = (viewportWidth / image.width) * materialized.width
                 // Find the amount the materialized image would need to be scaled
@@ -389,14 +390,14 @@ class DeferredImagePanel(private val maxZoom: Float, private val zoomIncrement: 
                         // This scaling factor maps from low-res to deferred image coordinates. It can be prepended to
                         // imageScaling to obtain a map from low-res to canvas coordinates.
                         val invertedLowResScaling = image.width / lowResMaterialized.width
-                        val s = (invertedLowResScaling * imageScaling).toDouble()
+                        val s = invertedLowResScaling * imageScaling
                         g2.drawImage(lowResMaterialized, AffineTransform.getScaleInstance(s, s), null)
                     }
 
                     // Again, if the materialized image doesn't cover the whole deferred image, translate such that the
                     // partial materialized image is at the right position.
                     if (!materializedStartY.isNaN())
-                        g2.translate(0f, materializedStartY * imageScaling)
+                        g2.translate(0.0, materializedStartY * imageScaling)
 
                     if (abs(extraScaling - 1) > 0.001) {
                         // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel

@@ -131,12 +131,12 @@ private fun generateFmtStrAttrs(
     // fallback font that (hopefully) best matches the specified font.
     val baseAWTFont = textCtx.stylingCtx.resolveFont(style.fontName) ?: Font(style.fontName, 0, 1)
 
-    var ssScaling = 1f
-    var ssHOffset = 0f
-    var ssVOffset = 0f
+    var ssScaling = 1.0
+    var ssHOffset = 0.0
+    var ssVOffset = 0.0
     if (style.superscript != Superscript.OFF) {
         val ssMetrics = baseAWTFont.getSuperscriptMetrics()
-            ?: SuperscriptMetrics(2 / 3f, 0f, 0.375f, 2 / 3f, 0f, -0.375f)
+            ?: SuperscriptMetrics(2 / 3.0, 0.0, 0.375, 2 / 3.0, 0.0, -0.375)
 
         fun sup() {
             ssHOffset += ssMetrics.supHOffsetEm * ssScaling
@@ -168,23 +168,23 @@ private fun generateFmtStrAttrs(
     if (style.uppercase && style.useUppercaseSpacing)
         features.add(FormattedString.Font.Feature(CAPITAL_SPACING_FONT_FEAT, 1))
 
-    var fakeSCScaling = Float.NaN
+    var fakeSCScaling = Double.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {}
         SmallCaps.SMALL_CAPS ->
             if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
                 features.add(FormattedString.Font.Feature(SMALL_CAPS_FONT_FEAT, 1))
             else
-                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1f, 0.8f)
+                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1, 0.8)
         SmallCaps.PETITE_CAPS ->
             if (PETITE_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
                 features.add(FormattedString.Font.Feature(PETITE_CAPS_FONT_FEAT, 1))
             else
-                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1f, 0.725f)
+                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.0, 0.725)
     }
 
     val stdFont = FormattedString.Font(
-        style.foreground, baseAWTFont, style.heightPx.toFloat(), style.scaling * ssScaling, style.hScaling,
+        style.foreground, baseAWTFont, style.heightPx.toDouble(), style.scaling * ssScaling, style.hScaling,
         style.hShearing, style.hOffsetRem + ssHOffset, style.vOffsetRem + ssVOffset,
         style.kerning, style.ligatures, features, style.trackingEm, style.leadingTopRem, style.leadingBottomRem
     )
@@ -197,12 +197,12 @@ private fun generateFmtStrAttrs(
         when (td.preset) {
             TextDecorationPreset.OFF -> {}
             TextDecorationPreset.UNDERLINE -> {
-                offset = lm.underlineOffset + lm.underlineThickness / 2f
-                thickness = lm.underlineThickness
+                offset = lm.underlineOffset + lm.underlineThickness / 2.0
+                thickness = lm.underlineThickness.toDouble()
             }
             TextDecorationPreset.STRIKETHROUGH -> {
-                offset = lm.strikethroughOffset + lm.strikethroughThickness / 2f
-                thickness = lm.strikethroughThickness
+                offset = lm.strikethroughOffset + lm.strikethroughThickness / 2.0
+                thickness = lm.strikethroughThickness.toDouble()
             }
         }
         FormattedString.Decoration(
@@ -215,7 +215,7 @@ private fun generateFmtStrAttrs(
                 LineJoin.ROUND -> BasicStroke.JOIN_ROUND
                 LineJoin.BEVEL -> BasicStroke.JOIN_BEVEL
             },
-            dashPatternPx = if (td.dashPatternPx.isEmpty()) null else td.dashPatternPx.toFloatArray()
+            dashPatternPx = if (td.dashPatternPx.isEmpty()) null else td.dashPatternPx.toDoubleArray()
         )
     }
 
@@ -231,7 +231,7 @@ private fun generateFmtStrAttrs(
     return TextContextImpl.Attrs(stdAttr, smallCapsAttr)
 }
 
-private fun getSmallCapsScaling(font: Font, multiplier: Float, fallback: Float): Float {
+private fun getSmallCapsScaling(font: Font, multiplier: Double, fallback: Double): Double {
     val extraLM = font.getExtraLineMetrics()
     return if (extraLM == null) fallback else extraLM.xHeightEm / extraLM.capHeightEm * multiplier
 }

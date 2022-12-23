@@ -22,7 +22,7 @@ import kotlin.math.floor
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
-private class DrawnSpine(val defImage: DeferredImage, val spineXInImage: Float)
+private class DrawnSpine(val defImage: DeferredImage, val spineXInImage: Double)
 
 
 fun drawPages(project: Project): List<DrawnPage> {
@@ -87,8 +87,8 @@ private fun drawStage(
     prevStage: Stage?,
     nextStage: Stage?
 ): DeferredImage {
-    val stageImage = DeferredImage(width = global.widthPx.toFloat())
-    var y = 0f.toY()
+    val stageImage = DeferredImage(width = global.widthPx.toDouble())
+    var y = 0.0.toY()
 
     // If this stage is a scroll stage is preceded by a card stage, add the vertical gap behind the card stage to the
     // front of this stage because card stage images are not allowed to have extremal vertical gaps baked into them.
@@ -96,10 +96,10 @@ private fun drawStage(
         y += prevStage.vGapAfterPx.toElasticY()
 
     for ((segmentIdx, segment) in stage.segments.withIndex()) {
-        var maxHeight = 0f.toY()
+        var maxHeight = 0.0.toY()
         for (spine in segment.spines) {
             val drawnSpine = drawSpine(drawnBlocks, spine)
-            val spineXInPageImage = global.widthPx / 2f + spine.posOffsetPx
+            val spineXInPageImage = global.widthPx / 2.0 + spine.posOffsetPx
             val x = spineXInPageImage - drawnSpine.spineXInImage
             stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
             maxHeight = maxHeight.max(drawnSpine.defImage.height)
@@ -129,7 +129,7 @@ private fun drawSpine(
     val spineImageWidth = spineXInSpineImage +
             spine.blocks.maxOf { block -> drawnBlocks.getValue(block).run { defImage.width - spineXInImage } }
     val spineImage = DeferredImage(width = spineImageWidth)
-    var y = 0f.toY()
+    var y = 0.0.toY()
     for ((blockIdx, block) in spine.blocks.withIndex()) {
         y += block.style.vMarginPx.toElasticY()
         val drawnBlock = drawnBlocks.getValue(block)
@@ -143,7 +143,7 @@ private fun drawSpine(
     spineImage.height = y
 
     // Draw a guide that shows the spine position.
-    spineImage.drawLine(SPINE_GUIDE_COLOR, spineXInSpineImage, 0f.toY(), spineXInSpineImage, y, layer = GUIDES)
+    spineImage.drawLine(SPINE_GUIDE_COLOR, spineXInSpineImage, 0.0.toY(), spineXInSpineImage, y, layer = GUIDES)
 
     return DrawnSpine(spineImage, spineXInSpineImage)
 }
@@ -157,8 +157,8 @@ private fun layoutStages(
     // Determine each stage's top and bottom y coordinates in the future page image.
     // Also find the height of the whole future page image if that is given explicitly.
     val stageImageBounds = mutableListOf<Pair<Y, Y>>()
-    var pageImageHeight = 0f.toY()
-    var y = 0f.toY()
+    var pageImageHeight = 0.0.toY()
+    var y = 0.0.toY()
     for ((stageIdx, stage) in page.stages.withIndex()) {
         val stageHeight = stageImages.getValue(stage).height
         // Special handling for card stages...
@@ -166,7 +166,7 @@ private fun layoutStages(
             // The amount of padding that needs to be added above and below the card's stage image such that
             // it is centered on the screen. Notice that as scrolling from/to a card starts/ends at the card's center,
             // the padding is irrelevant for runtime matching and can hence be rigid.
-            val cardPaddingHeight = (global.heightPx - stageHeight.resolve()) / 2f
+            val cardPaddingHeight = (global.heightPx - stageHeight.resolve()) / 2.0
             // If this card stage is the first and/or the last stage, make sure that there is extra padding below
             // and above the card stage such that its content is centered vertically.
             if (stageIdx == 0)
@@ -191,23 +191,23 @@ private fun layoutStages(
     //         occupied by the scroll stage.
     //       - The number of frames that make up the scroll, and a fraction of a frame that should be skipped prior to
     //         the beginning of the scroll.
-    var nextScrollInitAdvance = Float.NaN
+    var nextScrollInitAdvance = Double.NaN
     val stageInfo = page.stages.mapIndexed { stageIdx, stage ->
         val (topY, botY) = stageImageBounds[stageIdx]
         when (stage.style.behavior) {
-            CARD -> DrawnStageInfo.Card((topY + botY) / 2f)
+            CARD -> DrawnStageInfo.Card((topY + botY) / 2.0)
             SCROLL -> {
                 val prevStageBehavior = page.stages.getOrNull(stageIdx - 1)?.run { style.behavior }
                 val nextStageBehavior = page.stages.getOrNull(stageIdx + 1)?.run { style.behavior }
                 // Find the scroll start and end y coordinates.
                 val scrollStartY = when (prevStageBehavior) {
-                    CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2f }
-                    SCROLL, null -> topY - global.heightPx / 2f
+                    CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2.0 }
+                    SCROLL, null -> topY - global.heightPx / 2.0
                 }
                 val scrollStopY = when (nextStageBehavior) {
-                    CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2f }
-                    SCROLL -> botY - global.heightPx / 2f
-                    null -> botY + global.heightPx / 2f
+                    CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2.0 }
+                    SCROLL -> botY - global.heightPx / 2.0
+                    null -> botY + global.heightPx / 2.0
                 }
                 // Find the portion of the scrolled height which really belongs to the scroll stage itself. If you are
                 // confused, recall that scroll stages can scroll into melted card stages.
@@ -241,13 +241,13 @@ private fun layoutStages(
                 //  3. Hence, the third stage skips the first 0.66 frames. The pixel offsets are then 1.33, 3.33, 5.33,
                 //     and 7.33; as always, the end frame at 9px offset is excluded. In the code, fracFrames comes out
                 //     as "9 / 2 - 0.66 = 3.833", and frames is indeed ceil(3.833) = 4.
-                val initAdvance = if (prevStageBehavior == SCROLL) nextScrollInitAdvance else 1f
+                val initAdvance = if (prevStageBehavior == SCROLL) nextScrollInitAdvance else 1.0
                 val fracFrames =
                     (scrollStopY.resolve() - scrollStartY.resolve()) / stage.style.scrollPxPerFrame - initAdvance
                 // If fracFrames is just slightly larger than an integer, we want it to be handled as if it was that
                 // integer to compensate for floating point inaccuracy. That is why we have the -0.01 in there.
                 val frames = safeCeil(fracFrames)
-                nextScrollInitAdvance = (-fracFrames).mod(1f)  // Using mod() ensures that the result is positive.
+                nextScrollInitAdvance = (-fracFrames).mod(1.0)  // Using mod() ensures that the result is positive.
                 // Construct the info object.
                 DrawnStageInfo.Scroll(scrollStartY, ownedScrollHeight, frames, initAdvance)
             }
@@ -407,7 +407,7 @@ private fun matchRuntimeInOneDir(
 
     // If the given card has not been frozen yet, this function first scales its vertical gaps and then freezes it
     // similar to before, i.e., makes the height of the card's image rigid.
-    fun tryFreezeCard(card: Stage, elasticScaling: Float) {
+    fun tryFreezeCard(card: Stage, elasticScaling: Double) {
         if (card !in frozenCards) {
             frozenCards.add(card)
             stageImages[card] = stageImages.getValue(card).copy(elasticScaling = elasticScaling)
@@ -422,7 +422,7 @@ private fun matchRuntimeInOneDir(
         // scaling to the group and all unfrozen adjacent cards (which are consequently frozen). By iteratively
         // advancing to the more and more extreme elastic scaling, we fulfill the policy that each card should be
         // scaled in the same way as the more modest of its two adjacent scroll stages.
-        var modestElasticScaling = Float.NaN
+        var modestElasticScaling = Double.NaN
         var modestGroup: RuntimeGroup? = null
         var modestDiscreteFrames = -1
         for (group in groups) {
@@ -435,15 +435,15 @@ private fun matchRuntimeInOneDir(
                 val prevStage = prevStages[scroll]
                 // If the previous stretch ended, start a new one.
                 if (prevStage == null || prevStage.style.behavior != SCROLL || prevStage !in group.stages)
-                    stretchFrames.add(0f.toY())
+                    stretchFrames.add(0.0.toY())
                 // The number of frames needed for this scroll stage is the vertical scrolled distance divided by the
                 // scrolling speed. Apart from space owned by the scroll stage itself, the distance includes half the
                 // space of adjacent cards. Although the precomputed scrollStartY and scrollStopY values could already
                 // provide access to this distance, we need to account for the dynamically frozen card heights. As such,
                 // we manually collect the scrolled distance here.
                 var scrolledDist = (stageLayouts.getValue(scroll).info as DrawnStageInfo.Scroll).ownedScrollHeight
-                prevCard(scroll)?.let { prevCard -> scrolledDist += stageImages.getValue(prevCard).height / 2f }
-                nextCard(scroll)?.let { nextCard -> scrolledDist += stageImages.getValue(nextCard).height / 2f }
+                prevCard(scroll)?.let { prevCard -> scrolledDist += stageImages.getValue(prevCard).height / 2.0 }
+                nextCard(scroll)?.let { nextCard -> scrolledDist += stageImages.getValue(nextCard).height / 2.0 }
                 var frames = stretchFrames.last() + scrolledDist / scroll.style.scrollPxPerFrame
                 // The scroll frames we just computed do not contain the frame at DrawnStageInfo.Scroll.scrollStopY.
                 // For example, if there is a scroll height "scrollStopY - scrollStartY" of 10 pixels, and we scroll
@@ -454,12 +454,12 @@ private fun matchRuntimeInOneDir(
                 // "moving" frames along the continuous stretch of scroll stages, but not the still frames at the
                 // stretch's start and end.
                 if (prevStage == null || prevStage.style.behavior != SCROLL)
-                    frames -= 1f
+                    frames -= 1.0
                 stretchFrames[stretchFrames.lastIndex] = frames
             }
 
             // Find the elastic scaling which, when applied, makes the runtime group attain its desired runtime.
-            var elasticScaling = stretchFrames.reduce(Y::plus).deresolve(group.runtimeFrames.toFloat())
+            var elasticScaling = stretchFrames.reduce(Y::plus).deresolve(group.runtimeFrames.toDouble())
 
             // The above operation is only correct if there is only one continuous stretch of scroll stages in the
             // runtime group. If there are however two or more stretches, the total number of frames can no longer be
@@ -483,7 +483,7 @@ private fun matchRuntimeInOneDir(
                 while (
                     ctr++ < 100 &&
                     // Stop if we try to further decrease an already 0 elastic scaling.
-                    (up || elasticScaling != 0f) &&
+                    (up || elasticScaling != 0.0) &&
                     // Stop as soon as the desired runtime is attained (or in some rare cases overshot).
                     if (up) discreteFrames < group.runtimeFrames else discreteFrames > group.runtimeFrames
                 ) {
@@ -491,14 +491,14 @@ private fun matchRuntimeInOneDir(
                     // scaling such that just one of the stretch's stepwise functions (which make up the overall
                     // function) takes a single step.
                     elasticScaling = when (up) {
-                        true -> stretchFrames.minOf { it.deresolve(floor(it.resolve(elasticScaling) + 1f)) }
-                        false -> stretchFrames.maxOf { it.deresolve(ceil(it.resolve(elasticScaling) - 1f)) }
+                        true -> stretchFrames.minOf { it.deresolve(floor(it.resolve(elasticScaling) + 1.0)) }
+                        false -> stretchFrames.maxOf { it.deresolve(ceil(it.resolve(elasticScaling) - 1.0)) }
                     }
                     discreteFrames = stretchFrames.sumOf { frames -> safeCeil(frames.resolve(elasticScaling)) }
                 }
             }
 
-            if (modestElasticScaling.isNaN() || abs(elasticScaling - 1f) < abs(modestElasticScaling - 1f)) {
+            if (modestElasticScaling.isNaN() || abs(elasticScaling - 1.0) < abs(modestElasticScaling - 1.0)) {
                 modestElasticScaling = elasticScaling
                 modestGroup = group
                 modestDiscreteFrames = discreteFrames
@@ -533,15 +533,15 @@ private fun drawPage(
     page: Page,
     pageImageHeight: Y
 ): DeferredImage {
-    val pageImage = DeferredImage(global.widthPx.toFloat(), pageImageHeight)
+    val pageImage = DeferredImage(global.widthPx.toDouble(), pageImageHeight)
 
-    val framesMargin = global.widthPx / 100f
+    val framesMargin = global.widthPx / 100.0
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
         // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
         // not contain a font weight attribute, or else the FormattedString would complain.
         val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
-        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), global.widthPx / 80f)
+        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), global.widthPx / 80.0)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, emptyList(), null))
         }.build()
@@ -555,13 +555,13 @@ private fun drawPage(
         val stageImage = stageImages.getValue(stage)
         val stageLayout = stageLayouts.getValue(stage)
         if (stageLayout.info is DrawnStageInfo.Card) {
-            val cardTopY = stageLayout.info.middleY - global.heightPx / 2f
-            val cardBotY = stageLayout.info.middleY + global.heightPx / 2f
+            val cardTopY = stageLayout.info.middleY - global.heightPx / 2.0
+            val cardBotY = stageLayout.info.middleY + global.heightPx / 2.0
             // Draw guides that show the boundaries of the screen as they will be when this card will be shown.
             // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
             // rectangle are often rendered only partially or not at all.
             pageImage.drawRect(
-                STAGE_GUIDE_COLOR, 0f, cardTopY, global.widthPx - 1f, (global.heightPx - 1f).toY(),
+                STAGE_GUIDE_COLOR, 0.0, cardTopY, global.widthPx - 1.0, (global.heightPx - 1.0).toY(),
                 layer = GUIDES
             )
             // If the card is an intermediate stage, also draw arrows that indicate that the card is intermediate.
@@ -572,19 +572,19 @@ private fun drawPage(
             drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), y = cardTopY + framesMargin)
         } else if (stageLayout.info is DrawnStageInfo.Scroll) {
             val y = when (val prevStageInfo = page.stages.getOrNull(stageIdx - 1)?.let(stageLayouts::getValue)?.info) {
-                is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2f + framesMargin
+                is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2.0 + framesMargin
                 is DrawnStageInfo.Scroll -> stageLayout.y
                 null -> stageLayout.y + framesMargin
             }
             drawFrames(stageLayout.info.frames, y)
         }
         // Actually draw the stage image onto the page image.
-        pageImage.drawDeferredImage(stageImage, 0f, stageLayout.y)
+        pageImage.drawDeferredImage(stageImage, 0.0, stageLayout.y)
     }
 
     // Draw the grounding of the page image.
     pageImage.drawRect(
-        global.grounding, 0f, 0f.toY(), pageImage.width, pageImage.height, fill = true, layer = GROUNDING
+        global.grounding, 0.0, 0.0.toY(), pageImage.width, pageImage.height, fill = true, layer = GROUNDING
     )
 
     return pageImage
@@ -592,15 +592,15 @@ private fun drawPage(
 
 
 private fun DeferredImage.drawMeltedCardArrowGuide(global: Global, y: Y) {
-    val s = global.widthPx / 100f
-    val triangle = Path2D.Float().apply {
-        moveTo(-0.5f * s, -0.45f * s)
-        lineTo(0.5f * s, -0.45f * s)
-        lineTo(0f * s, 0.55f * s)
+    val s = global.widthPx / 100.0
+    val triangle = Path2D.Double().apply {
+        moveTo(-0.5 * s, -0.45 * s)
+        lineTo(0.5 * s, -0.45 * s)
+        lineTo(0.0 * s, 0.55 * s)
         closePath()
     }
     drawShape(
-        STAGE_GUIDE_COLOR, triangle, global.widthPx / 2f, y, fill = true, layer = GUIDES
+        STAGE_GUIDE_COLOR, triangle, global.widthPx / 2.0, y, fill = true, layer = GUIDES
     )
 }
 
@@ -624,4 +624,4 @@ private fun getCardFrames(
  * If [x] is just slightly larger than an integer, we want it to be handled as if it was that integer to compensate for
  * floating point inaccuracy. That is why we have the slight offset in there.
  */
-private fun safeCeil(x: Float): Int = ceil(x - 0.01f).toInt()
+private fun safeCeil(x: Double): Int = ceil(x - 0.001).toInt()

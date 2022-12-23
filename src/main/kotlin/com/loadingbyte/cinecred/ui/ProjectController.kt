@@ -226,7 +226,7 @@ class ProjectController(
                 this.project = project
                 this.runtime = runtime
                 // Limit each page's height to prevent the program from crashing due to misconfiguration.
-                if (drawnPages.none { it.defImage.height.resolve() > 1_000_000f })
+                if (drawnPages.none { it.defImage.height.resolve() > 1_000_000.0 })
                     this.drawnPages = drawnPages
                 else
                     excessivePageSizeError = true

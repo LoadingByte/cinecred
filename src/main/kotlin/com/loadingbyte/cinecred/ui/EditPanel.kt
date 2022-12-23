@@ -32,7 +32,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     companion object {
         private const val MAX_ZOOM = 3
-        private const val ZOOM_INCREMENT = 0.1f
+        private const val ZOOM_INCREMENT = 0.1
         private const val CTRL_SHIFT_DOWN_MASK = CTRL_DOWN_MASK or SHIFT_DOWN_MASK
     }
 
@@ -77,10 +77,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val zoomSlider = object : JSlider(0, MAX_ZOOM * 100, 0) {
-        var zoom: Float
-            get() = 1f + value * (MAX_ZOOM - 1f) / maximum
+        var zoom: Double
+            get() = 1.0 + value * (MAX_ZOOM - 1.0) / maximum
             set(newZoom) {
-                value = ((newZoom - 1f) * maximum / (MAX_ZOOM - 1f)).roundToInt()
+                value = ((newZoom - 1.0) * maximum / (MAX_ZOOM - 1.0)).roundToInt()
             }
     }.apply {
         preferredSize = preferredSize.apply { width = 50 }
@@ -292,8 +292,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_ADD, CTRL_DOWN_MASK) { zoomSlider.zoom += ZOOM_INCREMENT })
         keyListeners.add(KeyListener(VK_MINUS, CTRL_DOWN_MASK) { zoomSlider.zoom -= ZOOM_INCREMENT })
         keyListeners.add(KeyListener(VK_SUBTRACT, CTRL_DOWN_MASK) { zoomSlider.zoom -= ZOOM_INCREMENT })
-        keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1f })
-        keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1f })
+        keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
+        keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
     }
 
     fun onSetDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
@@ -381,7 +381,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         while (pageTabs.tabCount < drawnPages.size) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toFloat(), ZOOM_INCREMENT).apply {
+            val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
                 zoom = zoomSlider.zoom
                 setLayerVisible(GUIDES, layoutGuidesToggleButton.isSelected)
                 setLayerVisible(UNIFORM_SAFE_AREAS, uniformSafeAreasToggleButton.isSelected)

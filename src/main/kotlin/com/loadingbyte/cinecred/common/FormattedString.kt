@@ -22,7 +22,7 @@ class FormattedString private constructor(
     val string: String,
     private val attrs: Attributes,
     private val locale: Locale,
-    private val justificationWidth: Float
+    private val justificationWidth: Double
 ) {
 
     /* *************************************
@@ -41,7 +41,7 @@ class FormattedString private constructor(
     /**
      * Fully justifies the formatted string to exactly fit the provided [width].
      */
-    fun justify(width: Float): FormattedString =
+    fun justify(width: Double): FormattedString =
         FormattedString(string, attrs, locale, justificationWidth = width)
 
 
@@ -49,12 +49,12 @@ class FormattedString private constructor(
        ********** INFORMATION EXTRACTION - VERTICAL **********
        ******************************************************* */
 
-    private var _height: Float = Float.NaN
-    private var _heightAboveBaseline: Float = Float.NaN
+    private var _height: Double = Double.NaN
+    private var _heightAboveBaseline: Double = Double.NaN
 
-    val height: Float
+    val height: Double
         get() = run { ensureInitializedVertical(); _height }
-    val heightAboveBaseline: Float
+    val heightAboveBaseline: Double
         get() = run { ensureInitializedVertical(); _heightAboveBaseline }
 
     private fun ensureInitializedVertical() {
@@ -63,8 +63,8 @@ class FormattedString private constructor(
 
         // Find the tallest font, as well as the distance between the top of the string and the baseline of the
         // tallest font. In case there are multiple tallest fonts, take the largest distance.
-        var maxFontHeight = 0f
-        var aboveBaseline = 0f
+        var maxFontHeight = 0.0
+        var aboveBaseline = 0.0
 
         for (font in attrs.distinctFonts) {
             val lm = font.unscaledAWTFont.lineMetrics
@@ -74,7 +74,7 @@ class FormattedString private constructor(
             check(lm.baselineIndex == java.awt.Font.ROMAN_BASELINE)
             if (font.heightPx >= maxFontHeight) {
                 maxFontHeight = font.heightPx
-                aboveBaseline = max(aboveBaseline, lm.ascent + lm.leading / 2f + font.leadingTopPx)
+                aboveBaseline = max(aboveBaseline, lm.ascent + lm.leading / 2.0 + font.leadingTopPx)
             }
         }
         _height = maxFontHeight
@@ -86,13 +86,13 @@ class FormattedString private constructor(
        ********** INFORMATION EXTRACTION - HORIZONTAL **********
        ********************************************************* */
 
-    private var _width: Float = Float.NaN
+    private var _width: Double = Double.NaN
     private lateinit var _segments: List<Segment>
     private lateinit var _decorationsUnderlay: List<Pair<Shape, Color>>
     private lateinit var _decorationsOverlay: List<Pair<Shape, Color>>
     private lateinit var _backgrounds: List<Pair<Rectangle2D, Color>>
 
-    val width: Float
+    val width: Double
         get() = run { ensureInitializedHorizontal(); _width }
     val segments: List<Segment>
         get() = run { ensureInitializedHorizontal(); _segments }
@@ -109,7 +109,7 @@ class FormattedString private constructor(
 
         CustomGlyphLayoutEngine.begin(makeCustomGlyphLayoutEngineConfigSource())
         val textLayout = TextLayout(textLayoutAttrStr.iterator, REF_FRC).let {
-            if (justificationWidth.isNaN()) it else it.getJustifiedLayout(justificationWidth)
+            if (justificationWidth.isNaN()) it else it.getJustifiedLayout(justificationWidth.toFloat())
         }
         CustomGlyphLayoutEngine.end()
 
@@ -118,7 +118,7 @@ class FormattedString private constructor(
         // changes with a future Java version, we do not want out code to silently fail, hence we check here.
         check(textLayout.baseline.toInt() == java.awt.Font.ROMAN_BASELINE)
 
-        _width = textLayout.advance
+        _width = textLayout.advance.toDouble()
 
         // Get all GlyphVectors which layout the string. They are ordered such that the first GlyphVector realizes
         // the first chars of the string, the next one realizes the chars immediately after that and so on. In case
@@ -139,7 +139,7 @@ class FormattedString private constructor(
         val segments = Array(gvs.size) { gvIdx ->
             val gvStartCharIdx = gvStartCharIndices[gvIdx]
             val font = attrs.getAttr(gvStartCharIdx).font
-            val baseX = textLayout.getGlyphVectorX(gvIdx)
+            val baseX = textLayout.getGlyphVectorX(gvIdx).toDouble()
             Segment(font, baseX, gvs[gvIdx])
         }
         _segments = segments.asList()
@@ -151,11 +151,11 @@ class FormattedString private constructor(
         // TextLineComponents (and as such also in the GVs) at each point where the deco or background changes.
 
         /** Returns the x-coordinate of the left edge of the GlyphVector at the given visual and logical index. */
-        fun getLeftEdge(visualGvIdx: Int): Float {
+        fun getLeftEdge(visualGvIdx: Int): Double {
             // First, we check for two conditions upon which we can return early.
             // If requesting the left edge of the leftmost GlyphVector, that would of course be 0.
             if (visualGvIdx == 0)
-                return 0f
+                return 0.0
             // If requesting the left edge of the "virtual GlyphVector" right of the rightmost GlyphVector,
             // that would be the width of the entire FormattedString.
             if (visualGvIdx == gvs.size)
@@ -189,30 +189,31 @@ class FormattedString private constructor(
                     leftX = rightX.also { rightX = leftX }
 
                 val line = if (deco.dashPatternPx == null || deco.dashPatternPx.isEmpty())
-                    Rectangle2D.Float(leftX, deco.offsetPx - deco.thicknessPx / 2f, rightX - leftX, deco.thicknessPx)
+                    Rectangle2D.Double(leftX, deco.offsetPx - deco.thicknessPx / 2.0, rightX - leftX, deco.thicknessPx)
                 else {
                     val phase = if (leftX >= 0) leftX else {
                         val period = deco.dashPatternPx.sum() * (deco.dashPatternPx.size % 2 + 1)
                         leftX.mod(period)  // Using mod() instead of % ensures that the result is positive.
                     }
                     BasicStroke(
-                        deco.thicknessPx, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, deco.dashPatternPx, phase
-                    ).createStrokedShape(Line2D.Float(leftX, deco.offsetPx, rightX, deco.offsetPx))
+                        deco.thicknessPx.toFloat(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f,
+                        deco.dashPatternPx.toFloatArray(), phase.toFloat()
+                    ).createStrokedShape(Line2D.Double(leftX, deco.offsetPx, rightX, deco.offsetPx))
                 }
 
                 if (!deco.clear)
                     decorationsOverlay.add(Pair(line, deco.color))
-                else if (deco.clearRadiusPx == 0f)
+                else if (deco.clearRadiusPx == 0.0)
                     decorationsUnderlay.add(Pair(line, deco.color))
                 else {
                     val lineArea = Area(line)
                     val dilStrokeCap =
                         if (deco.clearJoin == BasicStroke.JOIN_ROUND) BasicStroke.CAP_ROUND else BasicStroke.CAP_SQUARE
-                    val dilStroke = BasicStroke(deco.clearRadiusPx * 2f, dilStrokeCap, deco.clearJoin)
+                    val dilStroke = BasicStroke((deco.clearRadiusPx * 2.0).toFloat(), dilStrokeCap, deco.clearJoin)
                     for (visualGvIdx in startVisualGvIdx until endVisualGvIdx) {
                         val gvIdx = textLayout.visualToLogicalGvIdx(visualGvIdx)
                         val segment = segments[gvIdx]
-                        val outlineTx = AffineTransform().apply { translate(segment.baseX, 0f) }
+                        val outlineTx = AffineTransform().apply { translate(segment.baseX, 0.0) }
                         for (glyphIdx in 0 until segment.numGlyphs) {
                             // Note: Glyph outlines turn out to be float paths, and hence, the following
                             // transformation by outlineTx is really efficient.
@@ -245,8 +246,8 @@ class FormattedString private constructor(
                     rightX += bg.widenRightPx
                 val topY = -heightAboveBaseline - bg.widenTopPx
                 val botY = height - heightAboveBaseline + bg.widenBottomPx
-                val rect = Rectangle2D.Float(min(leftX, rightX), min(topY, botY), abs(rightX - leftX), abs(botY - topY))
-                backgrounds.add(Pair(rect, bg.color))
+                val rct = Rectangle2D.Double(min(leftX, rightX), min(topY, botY), abs(rightX - leftX), abs(botY - topY))
+                backgrounds.add(Pair(rct, bg.color))
             })
         _backgrounds = backgrounds
     }
@@ -353,14 +354,14 @@ class FormattedString private constructor(
        ********** INFORMATION EXTRACTION - OTHER **********
        **************************************************** */
 
-    fun breakLines(wrappingWidth: Float): List<Int> {
+    fun breakLines(wrappingWidth: Double): List<Int> {
         // Employ a LineBreakMeasurer to find the best spots to insert a newline.
         val breaks = mutableListOf(0)
         CustomGlyphLayoutEngine.begin(makeCustomGlyphLayoutEngineConfigSource())
         val tlAttrCharIter = textLayoutAttrStr.iterator
         val lineMeasurer = LineBreakMeasurer(tlAttrCharIter, BreakIterator.getLineInstance(locale), REF_FRC)
         while (lineMeasurer.position != tlAttrCharIter.endIndex) {
-            val lineEndPos = lineMeasurer.nextOffset(wrappingWidth)
+            val lineEndPos = lineMeasurer.nextOffset(wrappingWidth.toFloat())
             lineMeasurer.position = lineEndPos
             breaks.add(lineEndPos)
         }
@@ -424,13 +425,19 @@ class FormattedString private constructor(
             // of the current or the respective neighboring segment. Then add half of those inter-segment trackings
             // to this segment; the neighboring segments will also receive the same half trackings, so in the end,
             // they sum up to the whole inter-segment trackings.
-            val bearingLeftPx = if (leftAttr == null) 0f else max(font.trackingPx, leftAttr.font.trackingPx) / 2f
-            val bearingRightPx = if (rightAttr == null) 0f else max(font.trackingPx, rightAttr.font.trackingPx) / 2f
+            val bearingLeftPx = if (leftAttr == null) 0.0 else max(font.trackingPx, leftAttr.font.trackingPx) / 2.0
+            val bearingRightPx = if (rightAttr == null) 0.0 else max(font.trackingPx, rightAttr.font.trackingPx) / 2.0
             // Assemble the extended configuration data object.
             CustomGlyphLayoutEngine.ExtConfig(
-                locale, font.hScaling, font.trackingPx, bearingLeftPx, bearingRightPx, font.features
+                locale, font.hScaling.toFloat(), font.trackingPx.toFloat(), bearingLeftPx.toFloat(),
+                bearingRightPx.toFloat(), font.features
             )
         }
+    }
+
+
+    companion object {
+        private fun DoubleArray.toFloatArray() = FloatArray(size) { idx -> this[idx].toFloat() }
     }
 
 
@@ -444,18 +451,18 @@ class FormattedString private constructor(
     class Font(
         val color: Color,
         private val baseAWTFont: java.awt.Font,
-        val heightPx: Float,
-        private val scaling: Float = 1f,
-        val hScaling: Float = 1f,
-        private val hShearing: Float = 0f,
-        private val hOffsetRem: Float = 0f,
-        private val vOffsetRem: Float = 0f,
+        val heightPx: Double,
+        private val scaling: Double = 1.0,
+        val hScaling: Double = 1.0,
+        private val hShearing: Double = 0.0,
+        private val hOffsetRem: Double = 0.0,
+        private val vOffsetRem: Double = 0.0,
         private val kerning: Boolean = false,
         private val ligatures: Boolean = false,
         val features: List<Feature> = emptyList(),
-        private val trackingEm: Float = 0f,
-        private val leadingTopRem: Float = 0f,
-        private val leadingBottomRem: Float = 0f
+        private val trackingEm: Double = 0.0,
+        private val leadingTopRem: Double = 0.0,
+        private val leadingBottomRem: Double = 0.0
     ) {
 
         init {
@@ -474,7 +481,7 @@ class FormattedString private constructor(
         val awtFont: java.awt.Font = run {
             val fontAttrs = HashMap<TextAttribute, Any>()
             fontAttrs[TextAttribute.SIZE] = pointSize
-            if (hScaling != 1f)
+            if (hScaling != 1.0)
                 fontAttrs[TextAttribute.WIDTH] = hScaling
             if (kerning)
                 fontAttrs[TextAttribute.KERNING] = TextAttribute.KERNING_ON
@@ -511,18 +518,18 @@ class FormattedString private constructor(
             val lm = awtFont.lineMetrics
             // The y-coordinate of the line that should remain fixed when hShearing takes place,
             // relative to the baseline.
-            val hShearingFixLine = (lm.descent - lm.ascent) / 2f
-            val inv = if (invertY) -1f else 1f
+            val hShearingFixLine = (lm.descent - lm.ascent) / 2.0
+            val inv = if (invertY) -1.0 else 1.0
             return AffineTransform().apply {
                 translate(hOffsetPx, inv * (vOffsetPx + hShearingFixLine))
-                shear(inv * hShearing, 0f)
-                translate(0f, inv * -hShearingFixLine)
+                shear(inv * hShearing, 0.0)
+                translate(0.0, inv * -hShearingFixLine)
                 if (withHScaling)
-                    scale(hScaling, 1f)
+                    scale(hScaling, 1.0)
             }
         }
 
-        fun scaled(extraScaling: Float) = Font(
+        fun scaled(extraScaling: Double) = Font(
             color, baseAWTFont, heightPx, scaling * extraScaling, hScaling, hShearing, hOffsetRem, vOffsetRem,
             kerning, ligatures, features, trackingEm, leadingTopRem, leadingBottomRem
         )
@@ -541,7 +548,7 @@ class FormattedString private constructor(
              * However, tests have shown that the above method is not reliable with all fonts (e.g., not with
              * Open Sans). Therefore, this method uses a numerical search to find the font size.
              */
-            private fun findSize(awtFont: java.awt.Font, extraLeadingEm: Float, targetHeightPx: Float): Float {
+            private fun findSize(awtFont: java.awt.Font, extraLeadingEm: Double, targetHeightPx: Double): Float {
                 // Step 1: Exponential search to determine the rough range of the font size we're looking for.
                 var size = 2f
                 // Upper-bound the number of repetitions to avoid:
@@ -566,7 +573,7 @@ class FormattedString private constructor(
                     intervalLength /= 2f
                     val height = awtFont.deriveFont(size).lineMetrics.height + extraLeadingEm * size
                     when {
-                        abs(height - targetHeightPx) < 0.001f -> break
+                        abs(height - targetHeightPx) < 0.001 -> break
                         height > targetHeightPx -> size -= intervalLength
                         height < targetHeightPx -> size += intervalLength
                     }
@@ -582,14 +589,14 @@ class FormattedString private constructor(
 
     data class Decoration(
         val color: Color,
-        val offsetPx: Float,
-        val thicknessPx: Float,
-        val widenLeftPx: Float,
-        val widenRightPx: Float,
+        val offsetPx: Double,
+        val thicknessPx: Double,
+        val widenLeftPx: Double,
+        val widenRightPx: Double,
         val clear: Boolean,
-        val clearRadiusPx: Float,
+        val clearRadiusPx: Double,
         val clearJoin: Int, // one of the constants in BasicStroke
-        val dashPatternPx: FloatArray?
+        val dashPatternPx: DoubleArray?
     ) {
 
         override fun equals(other: Any?) =
@@ -620,16 +627,16 @@ class FormattedString private constructor(
 
     data class Background(
         val color: Color,
-        val widenLeftPx: Float,
-        val widenRightPx: Float,
-        val widenTopPx: Float,
-        val widenBottomPx: Float
+        val widenLeftPx: Double,
+        val widenRightPx: Double,
+        val widenTopPx: Double,
+        val widenBottomPx: Double
     )
 
 
     class Segment(
         val font: Font,
-        val baseX: Float,
+        val baseX: Double,
         private val gv: GlyphVector
     ) {
 
@@ -649,8 +656,8 @@ class FormattedString private constructor(
         fun getGlyphCodes(): IntArray =
             gv.getGlyphCodes(0, numGlyphs, null)
 
-        fun getGlyphOffsetX(glyphIdx: Int): Float =
-            glyphPos[2 * glyphIdx]
+        fun getGlyphOffsetX(glyphIdx: Int): Double =
+            glyphPos[2 * glyphIdx].toDouble()
 
         fun getGlyphOutline(glyphIdx: Int): Shape =
             glyphOutlines[glyphIdx]
@@ -690,7 +697,7 @@ class FormattedString private constructor(
         fun build(): FormattedString =
             FormattedString(
                 stringBuilder.toString(), Attributes(numRuns, runAttrs, runEnds, 0, stringBuilder.length),
-                locale, justificationWidth = Float.NaN
+                locale, justificationWidth = Double.NaN
             )
 
     }

@@ -21,14 +21,14 @@ val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)
 
 inline fun DeferredImage.drawJustified(
     hJustify: HJustify,
-    areaX: Float,
-    areaWidth: Float,
-    objWidth: Float,
-    draw: DeferredImage.(Float) -> Unit
+    areaX: Double,
+    areaWidth: Double,
+    objWidth: Double,
+    draw: DeferredImage.(Double) -> Unit
 ) {
     val objX = when (hJustify) {
         HJustify.LEFT -> areaX
-        HJustify.CENTER -> areaX + (areaWidth - objWidth) / 2f
+        HJustify.CENTER -> areaX + (areaWidth - objWidth) / 2.0
         HJustify.RIGHT -> areaX + (areaWidth - objWidth)
     }
     draw(objX)
@@ -37,14 +37,14 @@ inline fun DeferredImage.drawJustified(
 
 inline fun DeferredImage.drawJustified(
     hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Y,
-    areaWidth: Float, areaHeight: Y,
-    objWidth: Float, objHeight: Y,
-    draw: DeferredImage.(Float, Y) -> Unit
+    areaX: Double, areaY: Y,
+    areaWidth: Double, areaHeight: Y,
+    objWidth: Double, objHeight: Y,
+    draw: DeferredImage.(Double, Y) -> Unit
 ) {
     val objY = when (vJustify) {
         VJustify.TOP -> areaY
-        VJustify.MIDDLE -> areaY + (areaHeight - objHeight) / 2f
+        VJustify.MIDDLE -> areaY + (areaHeight - objHeight) / 2.0
         VJustify.BOTTOM -> areaY + (areaHeight - objHeight)
     }
     drawJustified(hJustify, areaX, areaWidth, objWidth) { objX -> draw(objX, objY) }
@@ -53,7 +53,7 @@ inline fun DeferredImage.drawJustified(
 
 fun DeferredImage.drawJustifiedString(
     fmtStr: FormattedString, hJustify: HJustify,
-    areaX: Float, strY: Y, areaWidth: Float
+    areaX: Double, strY: Y, areaWidth: Double
 ) {
     drawJustified(hJustify, areaX, areaWidth, fmtStr.width) { strX ->
         drawString(fmtStr, strX, strY)
@@ -63,13 +63,13 @@ fun DeferredImage.drawJustifiedString(
 
 fun DeferredImage.drawJustifiedString(
     fmtStr: FormattedString, hJustify: HJustify, vJustify: VJustify,
-    areaX: Float, areaY: Y, areaWidth: Float, areaHeight: Y,
+    areaX: Double, areaY: Y, areaWidth: Double, areaHeight: Y,
     referenceHeight: Y? = null
 ) {
     val strHeight = fmtStr.height.toY()
-    val diff = if (referenceHeight == null) 0f.toY() else referenceHeight - strHeight
+    val diff = if (referenceHeight == null) 0.0.toY() else referenceHeight - strHeight
     drawJustified(
-        hJustify, vJustify, areaX, areaY + diff / 2f, areaWidth, areaHeight - diff,
+        hJustify, vJustify, areaX, areaY + diff / 2.0, areaWidth, areaHeight - diff,
         fmtStr.width, strHeight
     ) { strX, strY ->
         drawString(fmtStr, strX, strY)

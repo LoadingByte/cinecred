@@ -51,7 +51,7 @@ data class Global(
     val timecodeFormat: TimecodeFormat,
     val runtimeFrames: Opt<Int>,
     val grounding: Color,
-    val unitVGapPx: Float,
+    val unitVGapPx: Double,
     val locale: Locale,
     val uppercaseExceptions: PersistentList<String>
 ) : Style
@@ -69,7 +69,7 @@ data class PageStyle(
     val cardFadeOutFrames: Int,
     val scrollMeltWithPrev: Boolean,
     val scrollMeltWithNext: Boolean,
-    val scrollPxPerFrame: Float
+    val scrollPxPerFrame: Double
 ) : NamedStyle
 
 
@@ -80,7 +80,7 @@ data class ContentStyle(
     override val name: String,
     val blockOrientation: BlockOrientation,
     val spineAttachment: SpineAttachment,
-    val vMarginPx: Float,
+    val vMarginPx: Double,
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
     val gridFillingOrder: GridFillingOrder,
@@ -93,8 +93,8 @@ data class ContentStyle(
     val gridMatchRowHeightAcrossStyles: PersistentList<String>,
     val gridCellHJustifyPerCol: PersistentList<HJustify>,
     val gridCellVJustify: VJustify,
-    val gridRowGapPx: Float,
-    val gridColGapPx: Float,
+    val gridRowGapPx: Double,
+    val gridColGapPx: Double,
     val flowDirection: FlowDirection,
     val flowLineHJustify: LineHJustify,
     val flowSquareCells: Boolean,
@@ -104,28 +104,28 @@ data class ContentStyle(
     val flowMatchCellHeightAcrossStyles: PersistentList<String>,
     val flowCellHJustify: HJustify,
     val flowCellVJustify: VJustify,
-    val flowLineWidthPx: Float,
-    val flowLineGapPx: Float,
-    val flowHGapPx: Float,
+    val flowLineWidthPx: Double,
+    val flowLineGapPx: Double,
+    val flowHGapPx: Double,
     val flowSeparator: String,
     val paragraphsLineHJustify: LineHJustify,
-    val paragraphsLineWidthPx: Float,
-    val paragraphsParaGapPx: Float,
-    val paragraphsLineGapPx: Float,
+    val paragraphsLineWidthPx: Double,
+    val paragraphsParaGapPx: Double,
+    val paragraphsLineGapPx: Double,
     val hasHead: Boolean,
     val headLetterStyleName: String,
     val headMatchWidth: MatchExtent,
     val headMatchWidthAcrossStyles: PersistentList<String>,
     val headHJustify: HJustify,
     val headVJustify: VJustify,
-    val headGapPx: Float,
+    val headGapPx: Double,
     val hasTail: Boolean,
     val tailLetterStyleName: String,
     val tailMatchWidth: MatchExtent,
     val tailMatchWidthAcrossStyles: PersistentList<String>,
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
-    val tailGapPx: Float
+    val tailGapPx: Double
 ) : NamedStyle
 
 
@@ -156,9 +156,9 @@ data class LetterStyle(
     val fontName: String,
     val heightPx: Int,
     val foreground: Color,
-    val leadingTopRem: Float,
-    val leadingBottomRem: Float,
-    val trackingEm: Float,
+    val leadingTopRem: Double,
+    val leadingBottomRem: Double,
+    val trackingEm: Double,
     val kerning: Boolean,
     val ligatures: Boolean,
     val uppercase: Boolean,
@@ -166,18 +166,18 @@ data class LetterStyle(
     val useUppercaseSpacing: Boolean,
     val smallCaps: SmallCaps,
     val superscript: Superscript,
-    val hOffsetRem: Float,
-    val vOffsetRem: Float,
-    val scaling: Float,
-    val hScaling: Float,
-    val hShearing: Float,
+    val hOffsetRem: Double,
+    val vOffsetRem: Double,
+    val scaling: Double,
+    val hScaling: Double,
+    val hShearing: Double,
     val features: PersistentList<FontFeature>,
     val decorations: PersistentList<TextDecoration>,
     val background: Opt<Color>,
-    val backgroundWidenLeftPx: Float,
-    val backgroundWidenRightPx: Float,
-    val backgroundWidenTopPx: Float,
-    val backgroundWidenBottomPx: Float
+    val backgroundWidenLeftPx: Double,
+    val backgroundWidenRightPx: Double,
+    val backgroundWidenTopPx: Double,
+    val backgroundWidenBottomPx: Double
 ) : NamedStyle
 
 
@@ -194,13 +194,13 @@ data class FontFeature(
 data class TextDecoration(
     val color: Opt<Color>,
     val preset: TextDecorationPreset,
-    val offsetPx: Float,
-    val thicknessPx: Float,
-    val widenLeftPx: Float,
-    val widenRightPx: Float,
-    val clearingPx: Opt<Float>,
+    val offsetPx: Double,
+    val thicknessPx: Double,
+    val widenLeftPx: Double,
+    val widenRightPx: Double,
+    val clearingPx: Opt<Double>,
     val clearingJoin: LineJoin,
-    val dashPatternPx: PersistentList<Float>
+    val dashPatternPx: PersistentList<Double>
 ) : Style
 
 
@@ -223,18 +223,18 @@ class Page(
 class Stage(
     val style: PageStyle,
     val segments: PersistentList<Segment>,
-    val vGapAfterPx: Float
+    val vGapAfterPx: Double
 )
 
 
 class Segment(
     val spines: PersistentList<Spine>,
-    val vGapAfterPx: Float
+    val vGapAfterPx: Double
 )
 
 
 class Spine(
-    val posOffsetPx: Float,
+    val posOffsetPx: Double,
     val blocks: PersistentList<Block>
 )
 
@@ -246,7 +246,7 @@ class Block(
     val head: StyledString?,
     val body: PersistentList<BodyElement>,
     val tail: StyledString?,
-    val vGapAfterPx: Float,
+    val vGapAfterPx: Double,
     val matchHeadPartitionId: PartitionId,
     val matchBodyPartitionId: PartitionId,
     val matchTailPartitionId: PartitionId

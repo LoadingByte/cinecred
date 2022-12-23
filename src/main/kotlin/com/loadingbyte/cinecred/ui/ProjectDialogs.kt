@@ -45,7 +45,7 @@ class VideoDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
 
     init {
         setupProjectDialog(ctrl, ProjectDialogType.VIDEO)
-        center(ctrl.openOnScreen, 0.5f, 0.5f)
+        center(ctrl.openOnScreen, 0.5, 0.5)
         contentPane.add(panel)
     }
 
@@ -58,7 +58,7 @@ class DeliveryDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
 
     init {
         setupProjectDialog(ctrl, ProjectDialogType.DELIVERY)
-        center(ctrl.openOnScreen, 0.45f, 0.6f)
+        center(ctrl.openOnScreen, 0.45, 0.6)
         contentPane.add(panel)
     }
 

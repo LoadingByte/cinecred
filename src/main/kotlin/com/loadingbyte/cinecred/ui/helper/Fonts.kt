@@ -176,7 +176,7 @@ abstract class FontSorter<Font, Family> {
             // assigning penalty points to each font according to how much it differs from a regular font, and selecting
             // the one which received the smallest penalty.
             val canonicalFont =
-                richFonts.minByOrNull { abs(it.weight / 100f - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }!!.font
+                richFonts.minByOrNull { abs(it.weight / 100.0 - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }!!.font
 
             makeFamily(family, subfamilies, sampleTexts, richFonts.map { it.font }, canonicalFont)
         }

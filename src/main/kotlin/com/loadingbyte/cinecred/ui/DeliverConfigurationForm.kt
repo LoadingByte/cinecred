@@ -80,7 +80,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(Float::class.javaObjectType, SpinnerNumberModel(1f, 0.01f, null, 1f)),
+        SpinnerWidget(Double::class.javaObjectType, SpinnerNumberModel(1.0, 0.01, null, 1.0)),
         verify = ::verifyResolutionMult
     )
     private val transparentGroundingWidget = addWidget(
@@ -113,7 +113,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
             dialog.panel.addButton.isEnabled = isErrorFree
     }
 
-    private fun verifyResolutionMult(resolutionMult: Float): Notice? {
+    private fun verifyResolutionMult(resolutionMult: Double): Notice? {
         val project = this.project ?: return null
 
         val scaledWidth = (resolutionMult * project.styling.global.widthPx).roundToInt()

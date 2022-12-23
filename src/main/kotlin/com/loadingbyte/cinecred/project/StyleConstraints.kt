@@ -33,8 +33,8 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
         ERROR, msg("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
         Global::widthPx.st(), Global::heightPx.st(),
         judge = { _, _, global ->
-            val aspectRatio = global.widthPx.toFloat() / global.heightPx
-            aspectRatio in 1f / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1f
+            val aspectRatio = global.widthPx.toDouble() / global.heightPx
+            aspectRatio in 1.0 / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1.0
         }
     ),
     FPSConstr(ERROR, Global::fps.st()),
@@ -46,7 +46,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     },
     IntConstr(ERROR, Global::runtimeFrames.st(), min = 1),
     ColorConstr(ERROR, Global::grounding.st(), allowAlpha = false),
-    FloatConstr(ERROR, Global::unitVGapPx.st(), min = 0f, minInclusive = false)
+    DoubleConstr(ERROR, Global::unitVGapPx.st(), min = 0.0, minInclusive = false)
 )
 
 
@@ -59,7 +59,7 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     IntConstr(ERROR, PageStyle::cardDurationFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
-    FloatConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0f, minInclusive = false),
+    DoubleConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0.0, minInclusive = false),
     JudgeConstr(WARN, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
         val value = sty.scrollPxPerFrame
         floor(value) == value
@@ -91,7 +91,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     },
-    FloatConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0f),
+    DoubleConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0.0),
     FixedChoiceConstr(
         WARN, ContentStyle::gridMatchColWidths.st(), ContentStyle::headMatchWidth.st(),
         ContentStyle::tailMatchWidth.st(),
@@ -126,8 +126,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
-    FloatConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0f),
-    FloatConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0f),
+    DoubleConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
         if (sty.flowSquareCells) sortedSetOf(OFF, ACROSS_BLOCKS)
         else MatchExtent.values().toSortedSet()
@@ -146,12 +146,12 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             styling.contentStyles.filter { o -> o.bodyLayout == FLOW && o.flowMatchCellHeight == ACROSS_BLOCKS }
         }
     ),
-    FloatConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0f, minInclusive = false),
-    FloatConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0f),
-    FloatConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0f),
-    FloatConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0f, minInclusive = false),
-    FloatConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0f),
-    FloatConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0f),
+    DoubleConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::headMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
@@ -159,7 +159,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.headMatchWidth == ACROSS_BLOCKS }
         }
     ),
-    FloatConstr(ERROR, ContentStyle::headGapPx.st(), min = 0f),
+    DoubleConstr(ERROR, ContentStyle::headGapPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
@@ -167,7 +167,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.tailMatchWidth == ACROSS_BLOCKS }
         }
     ),
-    FloatConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0f)
+    DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0)
 )
 
 
@@ -186,20 +186,20 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
             SmallCaps.PETITE_CAPS -> PETITE_CAPS_FONT_FEAT in font.getSupportedFeatures()
         }
     },
-    FloatConstr(ERROR, LetterStyle::scaling.st(), min = 0f, minInclusive = false),
+    DoubleConstr(ERROR, LetterStyle::scaling.st(), min = 0.0, minInclusive = false),
     FontFeatureConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
         val font = ctx.resolveFont(style.fontName) ?: return@FontFeatureConstr Collections.emptySortedSet()
         TreeSet(font.getSupportedFeatures()).apply { removeAll(MANAGED_FONT_FEATS) }
     },
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
-    FloatConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5f, max = 10f, maxInclusive = false)
+    DoubleConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5, max = 10.0, maxInclusive = false)
 )
 
 
 private val TEXT_DECORATION_CONSTRAINTS: List<StyleConstraint<TextDecoration, *>> = listOf(
-    FloatConstr(ERROR, TextDecoration::thicknessPx.st(), min = 0f, minInclusive = false),
-    FloatConstr(ERROR, TextDecoration::clearingPx.st(), min = 0f),
-    FloatConstr(ERROR, TextDecoration::dashPatternPx.st(), min = 0f, minInclusive = false)
+    DoubleConstr(ERROR, TextDecoration::thicknessPx.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, TextDecoration::clearingPx.st(), min = 0.0),
+    DoubleConstr(ERROR, TextDecoration::dashPatternPx.st(), min = 0.0, minInclusive = false)
 )
 
 
@@ -218,15 +218,15 @@ class IntConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Int>>(setting)
 
 
-class FloatConstr<S : Style>(
+class DoubleConstr<S : Style>(
     val severity: Severity,
-    setting: StyleSetting<S, Float>,
+    setting: StyleSetting<S, Double>,
     val finite: Boolean = true,
-    val min: Float? = null,
+    val min: Double? = null,
     val minInclusive: Boolean = true,
-    val max: Float? = null,
+    val max: Double? = null,
     val maxInclusive: Boolean = true
-) : StyleConstraint<S, StyleSetting<S, Float>>(setting)
+) : StyleConstraint<S, StyleSetting<S, Double>>(setting)
 
 
 class FixedChoiceConstr<S : Style, SUBJ : Any>(
@@ -327,13 +327,13 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.number", restr))
                         }
                     }
-                is FloatConstr ->
+                is DoubleConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
                         if (cst.finite && !value.isFinite() ||
                             cst.min != null && (if (cst.minInclusive) value < cst.min else value <= cst.min) ||
                             cst.max != null && (if (cst.maxInclusive) value > cst.max else value >= cst.max)
                         ) {
-                            fun fmt(f: Float) = NumberFormat.getCompactNumberInstance().format(f)
+                            fun fmt(f: Double) = NumberFormat.getCompactNumberInstance().format(f)
                             val minRestr = cst.min?.let { (if (cst.minInclusive) "\u2265 " else "> ") + fmt(it) }
                             val maxRestr = cst.max?.let { (if (cst.maxInclusive) "\u2264 " else "< ") + fmt(it) }
                             val restr = combineNumberRestrictions(minRestr, maxRestr)

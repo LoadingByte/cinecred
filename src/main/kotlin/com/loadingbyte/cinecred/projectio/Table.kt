@@ -5,7 +5,7 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.toFiniteFloat
+import com.loadingbyte.cinecred.common.toFiniteDouble
 import java.util.*
 
 
@@ -119,10 +119,10 @@ class Table(
         return null
     }
 
-    fun getFiniteFloat(row: Int, l10nColName: String, nonNeg: Boolean = false, non0: Boolean = false): Float? {
+    fun getFiniteDouble(row: Int, l10nColName: String, nonNeg: Boolean = false, non0: Boolean = false): Double? {
         val str = getString(row, l10nColName) ?: return null
         return try {
-            str.toFiniteFloat(nonNeg, non0)
+            str.toFiniteDouble(nonNeg, non0)
         } catch (_: NumberFormatException) {
             val restriction = when {
                 nonNeg && non0 -> " > 0"
@@ -130,7 +130,7 @@ class Table(
                 !nonNeg && non0 -> " \u2260 0"
                 else -> ""
             }
-            log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedFloat", restriction).trim())
+            log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedDouble", restriction).trim())
             null
         }
     }

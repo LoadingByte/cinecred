@@ -25,7 +25,7 @@ val PRESET_GLOBAL = Global(
     timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
     runtimeFrames = Opt(false, 0),
     grounding = Color.BLACK,
-    unitVGapPx = 32f,
+    unitVGapPx = 32.0,
     locale = Locale.ENGLISH,
     uppercaseExceptions = persistentListOf(
         "_af_", "_auf_", "_d\u2019#", "_da_", "_Da#", "_dai_", "_Dai#", "_dal_", "_Dal#", "_dalla_",
@@ -45,7 +45,7 @@ val PRESET_PAGE_STYLE = PageStyle(
     cardFadeOutFrames = 12,
     scrollMeltWithPrev = false,
     scrollMeltWithNext = false,
-    scrollPxPerFrame = 3f
+    scrollPxPerFrame = 3.0
 )
 
 
@@ -53,7 +53,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     name = "???",
     blockOrientation = BlockOrientation.VERTICAL,
     spineAttachment = SpineAttachment.BODY_CENTER,
-    vMarginPx = 0f,
+    vMarginPx = 0.0,
     bodyLetterStyleName = "",
     bodyLayout = BodyLayout.GRID,
     gridFillingOrder = GridFillingOrder.L2R_T2B,
@@ -66,8 +66,8 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     gridMatchRowHeightAcrossStyles = persistentListOf(),
     gridCellHJustifyPerCol = persistentListOf(HJustify.CENTER),
     gridCellVJustify = VJustify.MIDDLE,
-    gridRowGapPx = 0f,
-    gridColGapPx = 32f,
+    gridRowGapPx = 0.0,
+    gridColGapPx = 32.0,
     flowDirection = FlowDirection.L2R,
     flowLineHJustify = LineHJustify.CENTER,
     flowSquareCells = false,
@@ -77,28 +77,28 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     flowMatchCellHeightAcrossStyles = persistentListOf(),
     flowCellHJustify = HJustify.CENTER,
     flowCellVJustify = VJustify.MIDDLE,
-    flowLineWidthPx = 1000f,
-    flowLineGapPx = 0f,
-    flowHGapPx = 32f,
+    flowLineWidthPx = 1000.0,
+    flowLineGapPx = 0.0,
+    flowHGapPx = 32.0,
     flowSeparator = "\u2022",
     paragraphsLineHJustify = LineHJustify.CENTER,
-    paragraphsLineWidthPx = 600f,
-    paragraphsParaGapPx = 8f,
-    paragraphsLineGapPx = 0f,
+    paragraphsLineWidthPx = 600.0,
+    paragraphsParaGapPx = 8.0,
+    paragraphsLineGapPx = 0.0,
     hasHead = false,
     headLetterStyleName = "",
     headMatchWidth = MatchExtent.OFF,
     headMatchWidthAcrossStyles = persistentListOf(),
     headHJustify = HJustify.CENTER,
     headVJustify = VJustify.TOP,
-    headGapPx = 4f,
+    headGapPx = 4.0,
     hasTail = false,
     tailLetterStyleName = "",
     tailMatchWidth = MatchExtent.OFF,
     tailMatchWidthAcrossStyles = persistentListOf(),
     tailHJustify = HJustify.CENTER,
     tailVJustify = VJustify.TOP,
-    tailGapPx = 4f
+    tailGapPx = 4.0
 )
 
 
@@ -107,9 +107,9 @@ val PRESET_LETTER_STYLE = LetterStyle(
     fontName = "Archivo Narrow Regular",
     heightPx = 32,
     foreground = Color.WHITE,
-    leadingTopRem = 0f,
-    leadingBottomRem = 0f,
-    trackingEm = 0f,
+    leadingTopRem = 0.0,
+    leadingBottomRem = 0.0,
+    trackingEm = 0.0,
     kerning = true,
     ligatures = true,
     uppercase = false,
@@ -117,29 +117,29 @@ val PRESET_LETTER_STYLE = LetterStyle(
     useUppercaseSpacing = true,
     smallCaps = SmallCaps.OFF,
     superscript = Superscript.OFF,
-    hOffsetRem = 0f,
-    vOffsetRem = 0f,
-    scaling = 1f,
-    hScaling = 1f,
-    hShearing = 0f,
+    hOffsetRem = 0.0,
+    vOffsetRem = 0.0,
+    scaling = 1.0,
+    hScaling = 1.0,
+    hShearing = 0.0,
     features = persistentListOf(),
     decorations = persistentListOf(),
     background = Opt(false, Color.WHITE),
-    backgroundWidenLeftPx = 0f,
-    backgroundWidenRightPx = 0f,
-    backgroundWidenTopPx = 0f,
-    backgroundWidenBottomPx = 0f
+    backgroundWidenLeftPx = 0.0,
+    backgroundWidenRightPx = 0.0,
+    backgroundWidenTopPx = 0.0,
+    backgroundWidenBottomPx = 0.0
 )
 
 
 val PRESET_TEXT_DECORATION = TextDecoration(
     color = Opt(false, Color.WHITE),
     preset = TextDecorationPreset.UNDERLINE,
-    offsetPx = 0f,
-    thicknessPx = 2f,
-    widenLeftPx = 0f,
-    widenRightPx = 0f,
-    clearingPx = Opt(false, 0f),
+    offsetPx = 0.0,
+    thicknessPx = 2.0,
+    widenLeftPx = 0.0,
+    widenRightPx = 0.0,
+    clearingPx = Opt(false, 0.0),
     clearingJoin = LineJoin.MITER,
     dashPatternPx = persistentListOf()
 )
@@ -154,9 +154,9 @@ val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
     name = l10n("project.placeholder"),
     blockOrientation = BlockOrientation.HORIZONTAL,
     hasHead = true,
-    headGapPx = 32f,
+    headGapPx = 32.0,
     hasTail = true,
-    tailGapPx = 32f
+    tailGapPx = 32.0
 )
 
 

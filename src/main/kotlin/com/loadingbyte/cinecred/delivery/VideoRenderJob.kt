@@ -35,7 +35,7 @@ class VideoRenderJob(
         else -> file == fileOrPattern
     }
 
-    override fun render(progressCallback: (Float) -> Unit) {
+    override fun render(progressCallback: (Int) -> Unit) {
         // If we have an image sequence, delete the sequence directory if it already exists.
         if (format.fileSeq && fileOrPattern.parent.exists())
             FileUtils.cleanDirectory(fileOrPattern.parent.toFile())
@@ -54,8 +54,6 @@ class VideoRenderJob(
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->
-            var prevProgress = 0f
-
             for (frameIdx in 0 until videoDrawer.numFrames) {
                 val frame = BufferedImage(videoDrawer.width, videoDrawer.height, imageType).withG2 { g2 ->
                     g2.setHighQuality()
@@ -63,11 +61,7 @@ class VideoRenderJob(
                 }
                 videoWriter.writeFrame(frame)
 
-                val progress = frameIdx.toFloat() / videoDrawer.numFrames
-                if (progress >= prevProgress + 0.01f) {
-                    prevProgress = progress
-                    progressCallback(progress)
-                }
+                progressCallback(100 * (frameIdx + 1) / videoDrawer.numFrames)
 
                 if (Thread.interrupted())
                     throw InterruptedException()

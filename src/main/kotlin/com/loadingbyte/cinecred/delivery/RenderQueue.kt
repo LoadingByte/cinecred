@@ -11,7 +11,7 @@ import kotlin.concurrent.withLock
 
 interface RenderJob {
     fun generatesFile(file: Path): Boolean
-    fun render(progressCallback: (Float) -> Unit)
+    fun render(progressCallback: (Int) -> Unit)
 }
 
 
@@ -20,7 +20,7 @@ object RenderQueue {
     private class SubmittedJob(
         val category: Any,
         val job: RenderJob,
-        val progressCallback: (Float) -> Unit,
+        val progressCallback: (Int) -> Unit,
         val finishCallback: (Exception?) -> Unit
     )
 
@@ -61,10 +61,10 @@ object RenderQueue {
 
                     try {
                         // Start rendering.
-                        job.progressCallback(0f)
+                        job.progressCallback(0)
                         job.job.render(job.progressCallback)
                         pollJobLock.withLock { runningJob = null }
-                        job.progressCallback(1f)
+                        job.progressCallback(100)
                         job.finishCallback(null)
                     } catch (e: Exception) {
                         // Note that this catch also catches InterruptedExceptions,
@@ -105,7 +105,7 @@ object RenderQueue {
     fun submitJob(
         category: Any,
         job: RenderJob,
-        progressCallback: (Float) -> Unit,
+        progressCallback: (Int) -> Unit,
         finishCallback: (Exception?) -> Unit
     ) {
         val queue = queuedJobs.computeIfAbsent(category) { ConcurrentLinkedQueue() }

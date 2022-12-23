@@ -12,7 +12,6 @@ import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
-import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
 import java.io.IOException
 import java.net.URI
@@ -242,13 +241,13 @@ class LabeledListCellRenderer<E>(
                 FlatUIUtils.drawString(list, g2, text, x + (width - textWidth) / 2, lineY + fontMetrics.ascent)
                 // On even lines, draw additional separator lines.
                 if (line % 2 == 0) {
-                    val sepGap = 4f
-                    val sepWidth = (width - textWidth) / 2f - 2f * sepGap
+                    val sepGap = 4
+                    val sepWidth = (width - textWidth) / 2 - 2 * sepGap
                     if (sepWidth > 0) {
-                        val sepY = lineY + fontMetrics.height / 2f
-                        val sepHeight = 1f
-                        g2.fill(Rectangle2D.Float(x + sepGap, sepY, sepWidth, sepHeight))
-                        g2.fill(Rectangle2D.Float((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight))
+                        val sepY = lineY + fontMetrics.height / 2
+                        val sepHeight = 1
+                        g2.fillRect(x + sepGap, sepY, sepWidth, sepHeight)
+                        g2.fillRect((x + width - sepGap - sepWidth), sepY, sepWidth, sepHeight)
                     }
                 }
             }

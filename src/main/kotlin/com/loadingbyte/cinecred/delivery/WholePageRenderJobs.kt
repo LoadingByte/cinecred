@@ -39,7 +39,7 @@ class WholePageSequenceRenderJob(
 
     override fun generatesFile(file: Path) = file.startsWith(dir)
 
-    override fun render(progressCallback: (Float) -> Unit) {
+    override fun render(progressCallback: (Int) -> Unit) {
         if (dir.exists())
             FileUtils.cleanDirectory(dir.toFile())
         dir.createDirectories()
@@ -101,7 +101,7 @@ class WholePageSequenceRenderJob(
                 }
             }
 
-            progressCallback((idx + 1).toFloat() / pageDefImages.size)
+            progressCallback(100 * (idx + 1) / pageDefImages.size)
         }
     }
 
@@ -128,7 +128,7 @@ class WholePagePDFRenderJob(
 
     override fun generatesFile(file: Path) = file == this.file
 
-    override fun render(progressCallback: (Float) -> Unit) {
+    override fun render(progressCallback: (Int) -> Unit) {
         file.parent.createDirectories()
 
         val layers =
@@ -149,7 +149,7 @@ class WholePagePDFRenderJob(
                 page.materialize(pdfDoc, stream, pageHeight, layers)
             }
 
-            progressCallback((idx + 1).toFloat() / pageDefImages.size)
+            progressCallback(100 * (idx + 1) / pageDefImages.size)
         }
 
         pdfDoc.save(file.toFile())

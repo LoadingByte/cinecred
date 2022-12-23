@@ -71,7 +71,11 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
         tryUpdateTaskbarBadge()
 
+        var prevProgress: Any? = null
         fun setProgress(progress: Any) {
+            if (progress == prevProgress)
+                return
+            prevProgress = progress
             val rowIdx = jobTableModel.rows.indexOf(row)
             // When we receive a progress notification for the first time, we record the current timestamp.
             if (row.startTime == null)
@@ -83,8 +87,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             if (rowIdx != -1) {
                 row.progress = progress
                 jobTableModel.fireTableCellUpdated(rowIdx, 2)
-                if (progress is Float)
-                    trySetTaskbarProgress(ctrl.projectFrame, progress.toPercent())
+                if (progress is Int)
+                    trySetTaskbarProgress(ctrl.projectFrame, progress)
             }
         }
 
@@ -137,7 +141,6 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
     companion object {
         private val FINISHED = Any()
-        private fun Float.toPercent() = (this * 100f).toInt().coerceIn(0, 100)
     }
 
 
@@ -145,8 +148,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
         class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
             var startTime: Instant? = null
-            var progress: Any = 0f
-            val isFinished get() = progress !is Float
+            var progress: Any = 0
+            val isFinished get() = progress !is Int
         }
 
         val rows = mutableListOf<Row>()
@@ -184,23 +187,22 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         override fun getTableCellRendererComponent(
             table: JTable, row: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
         ): JComponent = when (val progress = (row as JobTableModel.Row).progress) {
-            is Float -> progressBar.apply {
-                val percentage = progress.toPercent()
-                model.value = percentage
+            is Int -> progressBar.apply {
+                model.value = progress
                 putClientProperty(STYLE, null)  // Unset explicit foreground color.
                 setTableCellBackground(table, rowIdx)
                 if (row.startTime != null) {
                     isStringPainted = true
-                    string = if (percentage == 0)
+                    string = if (progress == 0)
                         "0 %"
                     else {
                         val d = Duration.between(row.startTime, Instant.now())
-                            .multipliedBy(100L - percentage).dividedBy(percentage.toLong())
+                            .multipliedBy(100L - progress).dividedBy(progress.toLong())
                         val timeRemaining = l10n(
                             "ui.deliverRenderQueue.timeRemaining",
                             "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
                         )
-                        "$percentage %  \u2013  $timeRemaining"
+                        "$progress %  \u2013  $timeRemaining"
                     }
                 } else
                     isStringPainted = false

@@ -5,6 +5,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.*
+import kotlin.math.max
 
 
 val FPS.supportsDropFrameTimecode: Boolean
@@ -46,7 +47,7 @@ private fun formatSmpteNonDropFrame(intFPS: Int, frameSep: Char, frames: Int): S
     val s = frames / intFPS % 60
     val m = frames / intFPS / 60 % 60
     val h = frames / intFPS / 60 / 60 % 24
-    val fDigits = (intFPS - 1).toString().length
+    val fDigits = max(2, (intFPS - 1).toString().length)
     return "%02d:%02d:%02d${frameSep}%0${fDigits}d".format(Locale.ROOT, h, m, s, f)
 }
 

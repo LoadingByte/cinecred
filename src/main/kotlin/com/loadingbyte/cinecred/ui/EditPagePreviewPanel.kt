@@ -44,7 +44,7 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
 
         val image = drawnPage.defImage.copy()
         drawSafeAreas(image)
-        imagePanel.setImage(image)
+        imagePanel.image = image
     }
 
     var zoom by imagePanel::zoom

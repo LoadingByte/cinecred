@@ -26,15 +26,15 @@ import kotlin.math.*
 class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement: Double) :
     JPanel(MigLayout("gap 0, insets 0")) {
 
-    private var image: DeferredImage? = null
-
-    fun setImage(image: DeferredImage?) {
-        require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
-        this.image = image
-        coerceViewportAndCalibrateScrollbars()
-        // Rematerialize will call canvas.repaint() once it's done.
-        rematerialize(contentChanged = true)
-    }
+    var image: DeferredImage?
+        get() = _image
+        set(image) {
+            require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
+            _image = image
+            coerceViewportAndCalibrateScrollbars()
+            // Rematerialize will call canvas.repaint() once it's done.
+            rematerialize(contentChanged = true)
+        }
 
     var layers: List<Layer> = listOf()
         set(value) {
@@ -62,6 +62,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
         }
 
     val zoomListeners = mutableListOf<(Double) -> Unit>()
+
+    private var _image: DeferredImage? = null
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that
@@ -265,14 +267,14 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     if (this.image == image)
                         canvas.repaint()
                     else {
-                        val curImage = this.image
+                        val curImage = this._image
                         val curViewportCenterX = this.viewportCenterX
                         val curViewportCenterY = this.viewportCenterY
-                        this.image = image
+                        this._image = image
                         this.viewportCenterX = viewportCenterX
                         this.viewportCenterY = viewportCenterY
                         canvas.paintImmediately(0, 0, canvas.width, canvas.height)
-                        this.image = curImage
+                        this._image = curImage
                         this.viewportCenterX = curViewportCenterX
                         this.viewportCenterY = curViewportCenterY
                     }

@@ -175,8 +175,8 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "JAVA_OPTIONS" to "--add-modules ${addModules.joinToString(",")} " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" } +
                         " -splash:\$APPDIR/$splashScreen $javaOptions",
-                "DESCRIPTION" to "Create film credits -- without pain",
-                "DESCRIPTION_DE" to "Filmabspänne schmerzfrei erstellen",
+                "DESCRIPTION" to "Create beautiful film credits without the pain",
+                "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
                 "URL" to "https://loadingbyte.com/cinecred/",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "hello@loadingbyte.com",

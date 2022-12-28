@@ -82,6 +82,7 @@ Cinecred Changelog
 - The styling is no longer unsaved if only ineffective settings have changed.
 - Styles with duplicate names now keep their place in the list during edits.
 - Increased the style form's scrolling speed and the preview's paging speed.
+- The preview can now also be scrolled (and not only zoomed) with the wheel.
 - The style form no longer jumps to issue notices and text areas while editing.
 - Timecode spinners are now properly adjustable when the format is "clock".
 - The desired runtime spinner is now initialized with the current runtime.

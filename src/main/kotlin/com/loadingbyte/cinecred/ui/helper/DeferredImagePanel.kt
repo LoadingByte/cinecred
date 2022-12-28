@@ -9,6 +9,7 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent.*
 import java.awt.geom.AffineTransform
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
@@ -124,9 +125,21 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
         // Hovering over the canvas should always display a move cursor.
         canvas.cursor = Cursor(Cursor.MOVE_CURSOR)
 
-        // When the user scrolls inside the canvas, adjust the zoom.
-        canvas.addMouseWheelListener {
-            zoom -= it.preciseWheelRotation * zoomIncrement
+        // When the user scrolls inside the canvas, scroll the viewport or adjust the zoom.
+        canvas.addMouseWheelListener { e ->
+            val block = e.scrollType == WHEEL_BLOCK_SCROLL
+            val mult = if (block) e.wheelRotation.sign.toDouble() else e.preciseWheelRotation * e.scrollAmount
+            if (e.modifiersEx == CTRL_DOWN_MASK)
+                zoom -= zoomIncrement * mult
+            else {
+                val unitIncrement = min(viewportWidth, viewportHeight) * mult / 50.0
+                when (e.modifiersEx) {
+                    0 -> viewportCenterY += if (block) viewportHeight * mult else unitIncrement
+                    SHIFT_DOWN_MASK -> viewportCenterX += if (block) viewportWidth * mult else unitIncrement
+                    else -> return@addMouseWheelListener
+                }
+                canvas.repaint()
+            }
         }
 
         // When the user clicks and drags inside the canvas, move the viewport center.

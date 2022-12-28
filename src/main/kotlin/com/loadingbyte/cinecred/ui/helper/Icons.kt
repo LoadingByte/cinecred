@@ -276,6 +276,18 @@ val TextDecorationPreset.icon
     }
 
 
+private val LINE_JOIN_MITER_ICON = SVGIcon.load("/icons/lineJoin/miter.svg")
+private val LINE_JOIN_ROUND_ICON = SVGIcon.load("/icons/lineJoin/round.svg")
+private val LINE_JOIN_BEVEL_ICON = SVGIcon.load("/icons/lineJoin/bevel.svg")
+
+val LineJoin.icon
+    get() = when (this) {
+        LineJoin.MITER -> LINE_JOIN_MITER_ICON
+        LineJoin.ROUND -> LINE_JOIN_ROUND_ICON
+        LineJoin.BEVEL -> LINE_JOIN_BEVEL_ICON
+    }
+
+
 val Enum<*>.icon
     get() = when (this) {
         is Severity -> icon
@@ -292,6 +304,7 @@ val Enum<*>.icon
         is SmallCaps -> icon
         is Superscript -> icon
         is TextDecorationPreset -> icon
+        is LineJoin -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }
 

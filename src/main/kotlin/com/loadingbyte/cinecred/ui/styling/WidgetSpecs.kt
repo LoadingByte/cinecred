@@ -171,6 +171,7 @@ private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> 
         unionName = "widenPx", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
     ),
     NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1),
+    ToggleButtonGroupWidgetSpec(TextDecoration::clearingJoin.st(), ICON),
     WidthWidgetSpec(TextDecoration::dashPatternPx.st(), WidthSpec.TINY),
     ListWidgetSpec(TextDecoration::dashPatternPx.st(), newElem = 2.0, newElemIsLastElem = true, elemsPerRow = 2)
 )

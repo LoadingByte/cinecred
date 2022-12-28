@@ -81,8 +81,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     private val materializingJobSlot = JobSlot()
 
     private val canvas = Canvas()
-    private val xScrollbar = JScrollBar(JScrollBar.HORIZONTAL)
-    private val yScrollbar = JScrollBar(JScrollBar.VERTICAL)
+    private val xScrollbar = Scrollbar(JScrollBar.HORIZONTAL)
+    private val yScrollbar = Scrollbar(JScrollBar.VERTICAL)
     private var disableScrollbarListeners = false
 
     init {
@@ -100,11 +100,6 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 rematerialize(contentChanged = false)
             }
         })
-
-        // When the user clicks on the scrollbar, the viewport should page. The default increment of 10 however is way
-        // too small. We set it to this value, which scrolls 500 pixels each time.
-        xScrollbar.blockIncrement = 500 * SCROLLBAR_MULT.toInt()
-        yScrollbar.blockIncrement = 500 * SCROLLBAR_MULT.toInt()
 
         // When the user scrolls, adjust the viewport center and repaint the viewport.
         // Note: Because the scrollbars discretize their values to integers, we store the viewport centers
@@ -358,6 +353,15 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
             }
         }
 
+    }
+
+
+    private inner class Scrollbar(orientation: Int) : JScrollBar(orientation) {
+        // When the user clicks on the scrollbar, the viewport should page. The default block increment of 10 is however
+        // way too small. We set it to scroll the entire width/height of the viewport, which is exactly what other
+        // components like text panes do.
+        override fun getBlockIncrement(direction: Int): Int =
+            (SCROLLBAR_MULT * if (orientation == HORIZONTAL) viewportWidth else viewportHeight).toInt()
     }
 
 

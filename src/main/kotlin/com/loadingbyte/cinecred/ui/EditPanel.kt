@@ -38,7 +38,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
-    @Deprecated("ENCAPSULATION LEAK") val leakedLayoutGuidesButton get() = layoutGuidesToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedGuidesButton get() = guidesToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = stylingDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
@@ -88,30 +88,30 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
 
-    private val layoutGuidesToggleButton = makeActToggleBtn(
-        label = l10n("ui.edit.layoutGuides"), icon = null, tooltip = l10n(
-            "ui.edit.layoutGuidesTooltip",
+    private val guidesToggleButton = makeActToggleBtn(
+        label = null, GUIDES_ICON, tooltip = l10n(
+            "ui.edit.guidesTooltip",
             STAGE_GUIDE_COLOR.toHex24(), SPINE_GUIDE_COLOR.toHex24(),
             BODY_CELL_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
             HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
-        ), toolbar = false, VK_G, CTRL_DOWN_MASK, isSelected = true
+        ), VK_G, CTRL_DOWN_MASK, isSelected = true
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) }
     }
     private val uniformSafeAreasToggleButton = makeActToggleBtn(
-        label = null, UNIFORM_SAFE_AREAS_ICON, l10n("ui.edit.uniformSafeAreasTooltip"), toolbar = true,
+        label = null, UNIFORM_SAFE_AREAS_ICON, l10n("ui.edit.uniformSafeAreasTooltip"),
         VK_M, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) }
     }
     private val cutSafeArea16to9ToggleButton = makeActToggleBtn(
-        label = null, X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16:9"), toolbar = true,
+        label = null, X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16:9"),
         VK_9, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) }
     }
     private val cutSafeArea4to3ToggleButton = makeActToggleBtn(
-        label = null, X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4:3"), toolbar = true,
+        label = null, X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4:3"),
         VK_3, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
@@ -123,19 +123,19 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val stylingDialogToggleButton = makeActToggleBtn(
-        label = null, PROJECT_DIALOG_STYLING_ICON, tooltip = l10n("ui.edit.toggleStylingDialog"), toolbar = true,
+        label = null, PROJECT_DIALOG_STYLING_ICON, tooltip = l10n("ui.edit.toggleStylingDialog"),
         VK_E, CTRL_DOWN_MASK, isSelected = true
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.STYLING, selected)
     }
     private val videoDialogToggleButton = makeActToggleBtn(
-        label = null, PROJECT_DIALOG_VIDEO_ICON, tooltip = l10n("ui.edit.toggleVideoDialog"), toolbar = true,
+        label = null, PROJECT_DIALOG_VIDEO_ICON, tooltip = l10n("ui.edit.toggleVideoDialog"),
         VK_P, CTRL_DOWN_MASK, isSelected = false
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.VIDEO, selected)
     }
     private val deliveryDialogToggleButton = makeActToggleBtn(
-        label = null, PROJECT_DIALOG_DELIVERY_ICON, tooltip = l10n("ui.edit.toggleDeliveryDialog"), toolbar = true,
+        label = null, PROJECT_DIALOG_DELIVERY_ICON, tooltip = l10n("ui.edit.toggleDeliveryDialog"),
         VK_O, CTRL_DOWN_MASK, isSelected = false
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.DELIVERY, selected)
@@ -186,7 +186,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun makeActToggleBtn(
-        label: String?, icon: Icon?, tooltip: String, toolbar: Boolean, shortcutKeyCode: Int, shortcutModifiers: Int,
+        label: String?, icon: Icon?, tooltip: String, shortcutKeyCode: Int, shortcutModifiers: Int,
         isSelected: Boolean, listener: (Boolean) -> Unit
     ): JToggleButton {
         val shortcutHint = getModifiersExText(shortcutModifiers) + "+" + getKeyText(shortcutKeyCode)
@@ -195,8 +195,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
         }
         val btn = JToggleButton(label, icon, isSelected).apply {
-            if (toolbar)
-                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             isFocusable = false
             toolTipText = ttip
         }
@@ -217,7 +216,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 unrel[]rel
                 []0[]0[]0[]rel[]
                 unrel[]unrel
-                []rel[]rel[]rel[]0[]0[]
+                []rel[]rel[]0[]0[]0[]
                 rel[]unrel
                 []rel[]
                 unrel[]rel
@@ -235,7 +234,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
             add(zoomSlider)
-            add(layoutGuidesToggleButton)
+            add(guidesToggleButton)
             add(uniformSafeAreasToggleButton)
             add(cutSafeArea16to9ToggleButton)
             add(cutSafeArea4to3ToggleButton)
@@ -383,7 +382,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
                 zoom = zoomSlider.zoom
-                setLayerVisible(GUIDES, layoutGuidesToggleButton.isSelected)
+                setLayerVisible(GUIDES, guidesToggleButton.isSelected)
                 setLayerVisible(UNIFORM_SAFE_AREAS, uniformSafeAreasToggleButton.isSelected)
                 setLayerVisible(CUT_SAFE_AREA_16_9, cutSafeArea16to9ToggleButton.isSelected)
                 setLayerVisible(CUT_SAFE_AREA_4_3, cutSafeArea4to3ToggleButton.isSelected)

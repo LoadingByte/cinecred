@@ -4,7 +4,10 @@ import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.awt.*
+import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
@@ -108,9 +111,6 @@ fun comprehensivelyApplyLocale(locale: Locale) {
     JComponent.setDefaultLocale(locale)
 }
 
-
-val gCfg: GraphicsConfiguration
-    get() = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
 
 // This is a reference font render context used to measure the size of fonts.
 val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)

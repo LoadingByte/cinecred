@@ -255,7 +255,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
             // previous low-res version is discarded.
             val lowRes = contentChanged || lowResMaterialized == null
             submitMaterializeJob(
-                materializingJobSlot, image, physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers
+                materializingJobSlot, image, canvas,
+                physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers
             ) { mat, matStartY, matStopY, lowResMat ->
                 SwingUtilities.invokeLater {
                     materialized = mat
@@ -301,7 +302,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
         // We use this external static method to absolutely ensure all variables have been captured.
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
-            jobSlot: JobSlot, image: DeferredImage,
+            jobSlot: JobSlot, image: DeferredImage, canvas: Canvas,
             physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
             layers: List<Layer>, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
         ) {
@@ -322,7 +323,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
                 val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
                 val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
-                val materialized = gCfg.createCompatibleImage(matWidth, matHeight, Transparency.OPAQUE).withG2 { g2 ->
+                val materialized = (canvas.createImage(matWidth, matHeight) as BufferedImage).withG2 { g2 ->
                     g2.setHighQuality()
                     // If only a portion is materialized, scroll the deferred image to that portion.
                     if (!startY.isNaN())
@@ -343,7 +344,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.
                     val lowResMatWidth = max(1, (lowResScaling * image.width).roundToInt())
                     val lowResMatHeight = max(1, (lowResScaling * imgHeight).roundToInt())
-                    gCfg.createCompatibleImage(lowResMatWidth, lowResMatHeight, Transparency.OPAQUE).withG2 { g2 ->
+                    (canvas.createImage(lowResMatWidth, lowResMatHeight) as BufferedImage).withG2 { g2 ->
                         g2.setHighQuality()
                         image.copy(universeScaling = lowResScaling).materialize(g2, layers)
                     }

@@ -471,7 +471,7 @@ class SVGIcon private constructor(
             // We assume that scaleX and scaleY are always identical.
             val g2Scaling = g2.transform.scaleX
             // Draw the icon to an image.
-            val img = gCfg.createCompatibleImage(
+            val img = c.graphicsConfiguration.createCompatibleImage(
                 (svg.width * abs(xScaling) * g2Scaling).roundToInt(),
                 (svg.height * abs(yScaling) * g2Scaling).roundToInt(),
                 Transparency.TRANSLUCENT
@@ -481,7 +481,7 @@ class SVGIcon private constructor(
                 svg.paint(g2i)
             }
             // Filter the image to make it gray.
-            val grayImg = Toolkit.getDefaultToolkit().createImage(FilteredImageSource(img.source, filter))
+            val grayImg = c.createImage(FilteredImageSource(img.source, filter))
             // Draw the image into the original graphics object.
             g2.preserveTransform {
                 g2.scale(1.0 / g2Scaling, 1.0 / g2Scaling)

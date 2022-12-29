@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
-import com.loadingbyte.cinecred.common.gCfg
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.ui.comms.*
@@ -41,7 +40,10 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             }
         })
 
-        rememberedBounds?.also(::setBounds) ?: center(gCfg, 0.4, 0.55)
+        rememberedBounds?.also(::setBounds) ?: center(
+            onScreen = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration,
+            0.4, 0.55
+        )
 
         contentPane.add(panel)
     }

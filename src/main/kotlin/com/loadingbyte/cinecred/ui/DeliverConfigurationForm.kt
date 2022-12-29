@@ -146,7 +146,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
             for (scrollSpeed in scrollSpeeds) {
                 val scaledScrollSpeed = scrollSpeed * resolutionMult
                 if (floor(scrollSpeed) == scrollSpeed && floor(scaledScrollSpeed) != scaledScrollSpeed)
-                    add("$scrollSpeed \u2192 $scaledScrollSpeed")
+                    add("%d \u2192 %.2f".format(scrollSpeed.toInt(), scaledScrollSpeed))
             }
         }
         if (fractionalScrollSpeeds.isNotEmpty())

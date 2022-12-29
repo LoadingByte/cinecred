@@ -103,13 +103,14 @@ class VideoRenderJob(
                 heightMod2 = true
             )
 
-            private fun prores(label: String, profile: String) = Format(
+            private fun prores(label: String, pixelFormat: Int, alphaPixelFormat: Int?, profile: String) = Format(
                 label = label,
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_PRORES),
                 defaultFileExt = "mov",
                 codecId = AV_CODEC_ID_PRORES,
-                pixelFormat = AV_PIX_FMT_YUV422P10LE,
+                pixelFormat = pixelFormat,
+                alphaPixelFormat = alphaPixelFormat,
                 codecOptions = mapOf("profile" to profile),
                 widthMod2 = true
             )
@@ -144,14 +145,17 @@ class VideoRenderJob(
 
             val ALL = listOf(
                 h264(),
-                prores("ProRes 422 Proxy", "0"),
-                prores("ProRes 422 LT", "1"),
-                prores("ProRes 422", "2"),
-                prores("ProRes 422 HQ", "3"),
+                prores("ProRes 422 Proxy", AV_PIX_FMT_YUV422P10LE, null, "0"),
+                prores("ProRes 422 LT", AV_PIX_FMT_YUV422P10LE, null, "1"),
+                prores("ProRes 422", AV_PIX_FMT_YUV422P10LE, null, "2"),
+                prores("ProRes 422 HQ", AV_PIX_FMT_YUV422P10LE, null, "3"),
+                prores("ProRes 4444", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, "4"),
+                prores("ProRes 4444 XQ", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, "5"),
                 dnxhr("DNxHR LB", AV_PIX_FMT_YUV422P, "dnxhr_lb"),
                 dnxhr("DNxHR SQ", AV_PIX_FMT_YUV422P, "dnxhr_sq"),
                 dnxhr("DNxHR HQ", AV_PIX_FMT_YUV422P, "dnxhr_hq"),
                 dnxhr("DNxHR HQX", AV_PIX_FMT_YUV422P10LE, "dnxhr_hqx"),
+                dnxhr("DNxHR 444", AV_PIX_FMT_YUV444P10LE, "dnxhr_444"),
                 // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
                 // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
                 rgbSeqWithOptionalAlpha(

@@ -164,7 +164,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val style = stylingTree.getSelected()
         if (style !is NamedStyle)
             return
-        val newName = l10n("ui.styling.copiedStyleName", style.name)
+        val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
         var copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
         val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
         for ((oldStyle, newStyle) in updates)

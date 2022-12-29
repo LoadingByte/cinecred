@@ -155,7 +155,7 @@ class VideoRenderJob(
                 // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
                 // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
                 rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.packBits", l10n("delivery.imgSeq", "TIFF")),
+                    label = l10n("delivery.imgSeq", "TIFF") + " (PackBits)  \u2013  " + l10n("delivery.packBits"),
                     fileExt = "tiff",
                     codecId = AV_CODEC_ID_TIFF,
                     codecOptions = mapOf("compression_algo" to "packbits")
@@ -164,7 +164,7 @@ class VideoRenderJob(
                 // exports a TIFF image sequence), we also offer the more efficient, but not universally supported
                 // Deflate compression.
                 rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.deflate", l10n("delivery.imgSeq", "TIFF")),
+                    label = l10n("delivery.imgSeq", "TIFF") + " (Deflate)  \u2013  " + l10n("delivery.deflate"),
                     fileExt = "tiff",
                     codecId = AV_CODEC_ID_TIFF,
                     codecOptions = mapOf("compression_algo" to "deflate")

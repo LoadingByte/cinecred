@@ -110,8 +110,8 @@ class WholePageSequenceRenderJob(
         RenderFormat(label, fileSeq = true, setOf(fileExt), fileExt, supportsAlpha = true) {
         companion object {
             val PNG = Format("PNG", "png")
-            val TIFF_PACK_BITS = Format(l10n("delivery.packBits", "TIFF"), "tiff")
-            val TIFF_DEFLATE = Format(l10n("delivery.deflate", "TIFF"), "tiff")
+            val TIFF_PACK_BITS = Format("TIFF (PackBits)  \u2013  " + l10n("delivery.packBits"), "tiff")
+            val TIFF_DEFLATE = Format("TIFF (Deflate)  \u2013  " + l10n("delivery.deflate"), "tiff")
             val SVG = Format("SVG", "svg")
             val ALL = listOf(PNG, TIFF_PACK_BITS, TIFF_DEFLATE, SVG)
         }

@@ -342,12 +342,14 @@ class VideoWriter(
 
     private fun <P : Pointer> P?.throwIfNull(l10nKey: String, vararg l10nArgs: Any?): P =
         if (this == null || this.isNull)
-            throw AVException(l10n("delivery.ffmpeg.errorNull", l10n(l10nKey, *l10nArgs)))
+            throw AVException(l10n(l10nKey, *l10nArgs) + ".")
         else this
 
     private fun Int.throwIfErrnum(l10nKey: String, vararg l10nArgs: Any?): Int =
         if (this < 0)
-            throw AVException(l10n("delivery.ffmpeg.errorNum", l10n(l10nKey, *l10nArgs), err2str(this), this))
+            throw AVException(
+                "${l10n(l10nKey, *l10nArgs)}: ${err2str(this)} (${l10n("delivery.ffmpeg.errorNumber")} $this)."
+            )
         else this
 
     // Replicates the macro of the same name from error.h.

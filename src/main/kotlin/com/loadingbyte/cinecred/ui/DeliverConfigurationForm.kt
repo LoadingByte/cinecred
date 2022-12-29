@@ -32,18 +32,18 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
             RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.FREE, scrollbar = false,
-            toString = {
-                val key =
-                    if (it in WHOLE_PAGE_FORMATS) "ui.deliverConfig.wholePagesFormatName"
-                    else "ui.deliverConfig.videoFormatName"
-                l10n(key, it.label)
+            toString = { format ->
+                val prefix =
+                    if (format in WHOLE_PAGE_FORMATS) l10n("ui.deliverConfig.wholePageFormat")
+                    else l10n("ui.deliverConfig.videoFormat")
+                "$prefix: ${format.label}"
             },
             // User a custom render that shows category headers.
             decorateRenderer = { baseRenderer ->
                 LabeledListCellRenderer(baseRenderer) { index ->
                     when (index) {
-                        0 -> listOf(l10n("ui.deliverConfig.wholePagesFormatCategory"))
-                        WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormatCategory"))
+                        0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
+                        WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
                         else -> emptyList()
                     }
                 }
@@ -120,20 +120,21 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         val scaledHeight = (resolutionMult * project.styling.global.heightPx).roundToInt()
         val yieldMsg = l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
 
-        fun err(msg: String) = Notice(Severity.ERROR, msg)
+        fun warn(msg: String) = Notice(Severity.WARN, "$yieldMsg $msg")
+        fun err(msg: String) = Notice(Severity.ERROR, "$yieldMsg $msg")
 
         // Check for violated restrictions of the currently selected format.
         val format = formatWidget.value
         val forLabel = format.label
         if (format is VideoRenderJob.Format)
             if (format.widthMod2 && scaledWidth % 2 != 0)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", yieldMsg, forLabel))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", forLabel))
             else if (format.heightMod2 && scaledHeight % 2 != 0)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", yieldMsg, forLabel))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", forLabel))
             else if (format.minWidth != null && scaledWidth < format.minWidth)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", yieldMsg, forLabel, format.minWidth))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", forLabel, format.minWidth))
             else if (format.minHeight != null && scaledWidth < format.minHeight)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", yieldMsg, forLabel, format.minHeight))
+                return err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", forLabel, format.minHeight))
 
         // Check for fractional scroll speeds.
         val scrollSpeeds = project.pages
@@ -149,10 +150,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
             }
         }
         if (fractionalScrollSpeeds.isNotEmpty())
-            return Notice(
-                Severity.WARN,
-                l10n("ui.deliverConfig.resolutionMultiplierFractional", yieldMsg, fractionalScrollSpeeds.joinToString())
-            )
+            return warn(l10n("ui.deliverConfig.resolutionMultiplierFractional", fractionalScrollSpeeds.joinToString()))
 
         return Notice(Severity.INFO, yieldMsg)
     }

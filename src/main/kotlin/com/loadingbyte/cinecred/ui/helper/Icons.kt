@@ -25,12 +25,13 @@ import kotlin.math.roundToInt
 
 const val ICON_ICON_GAP = 4
 
+
 val WINDOW_ICON_IMAGES = run {
-    val (logo, ctx) = loadSVGResource("/logo.svg")
+    val logo = SVGResource("/logo.svg")
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB).withG2 { g2 ->
             g2.setHighQuality()
-            g2.scale(size / ctx.documentSize.width)
+            g2.scale(size / logo.width)
             logo.paint(g2)
         }
     }
@@ -417,23 +418,36 @@ private class SpineAttachmentIcon(
 }
 
 
-private fun loadSVGResource(name: String): Pair<GraphicsNode, BridgeContext> {
-    val doc = useResourceStream(name) {
-        SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName()).createDocument(null, it) as SVGOMDocument
+private class SVGResource(name: String) {
+
+    private val node: GraphicsNode
+    val width: Double
+    val height: Double
+
+    init {
+        val doc = useResourceStream(name) {
+            SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
+                .createDocument(null, it) as SVGOMDocument
+        }
+        val ctx = BridgeContext(UserAgentAdapter())
+        node = GVTBuilder().build(ctx, doc)
+        width = ctx.documentSize.width
+        height = ctx.documentSize.height
     }
-    val ctx = BridgeContext(UserAgentAdapter())
-    return Pair(GVTBuilder().build(ctx, doc), ctx)
+
+    fun paint(g2: Graphics2D) {
+        node.paint(g2)
+    }
+
 }
 
 
 class SVGIcon private constructor(
-    private val svg: GraphicsNode,
-    private val svgWidth: Double,
-    private val svgHeight: Double,
+    private val svg: SVGResource,
     private val xScaling: Double,
     private val yScaling: Double,
     private val isDisabled: Boolean
-) : FlatAbstractIcon((svgWidth * abs(xScaling)).roundToInt(), (svgHeight * abs(yScaling)).roundToInt(), null),
+) : FlatAbstractIcon((svg.width * abs(xScaling)).roundToInt(), (svg.height * abs(yScaling)).roundToInt(), null),
     FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
@@ -443,9 +457,9 @@ class SVGIcon private constructor(
             else
                 g2.preserveTransform {
                     if (xScaling < 0)
-                        g2.translate(-svgWidth * xScaling, 0.0)
+                        g2.translate(-svg.width * xScaling, 0.0)
                     if (yScaling < 0)
-                        g2.translate(0.0, -svgWidth * yScaling)
+                        g2.translate(0.0, -svg.width * yScaling)
                     g2.scale(xScaling, yScaling)
                     svg.paint(g2)
                 }
@@ -458,8 +472,8 @@ class SVGIcon private constructor(
             val g2Scaling = g2.transform.scaleX
             // Draw the icon to an image.
             val img = gCfg.createCompatibleImage(
-                (svgWidth * abs(xScaling) * g2Scaling).roundToInt(),
-                (svgHeight * abs(yScaling) * g2Scaling).roundToInt(),
+                (svg.width * abs(xScaling) * g2Scaling).roundToInt(),
+                (svg.height * abs(yScaling) * g2Scaling).roundToInt(),
                 Transparency.TRANSLUCENT
             ).withG2 { g2i ->
                 g2i.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
@@ -476,16 +490,13 @@ class SVGIcon private constructor(
         }
     }
 
-    override fun getDisabledIcon() = SVGIcon(svg, svgWidth, svgHeight, xScaling, yScaling, isDisabled = true)
+    override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, isDisabled = true)
     fun getScaledIcon(scaling: Double) = getScaledIcon(scaling, scaling)
     fun getScaledIcon(xScaling: Double, yScaling: Double) =
-        SVGIcon(svg, svgWidth, svgHeight, this.xScaling * xScaling, this.yScaling * yScaling, isDisabled)
+        SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, isDisabled)
 
     companion object {
-        fun load(name: String): SVGIcon {
-            val (svg, ctx) = loadSVGResource(name)
-            return SVGIcon(svg, ctx.documentSize.width, ctx.documentSize.height, 1.0, 1.0, false)
-        }
+        fun load(name: String) = SVGIcon(SVGResource(name), 1.0, 1.0, false)
     }
 
 

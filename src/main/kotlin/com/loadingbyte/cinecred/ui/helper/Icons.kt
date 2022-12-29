@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
+import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
@@ -12,10 +13,12 @@ import org.apache.batik.bridge.GVTBuilder
 import org.apache.batik.bridge.UserAgentAdapter
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
-import java.awt.*
+import java.awt.Color
+import java.awt.Component
+import java.awt.Graphics2D
+import java.awt.Paint
 import java.awt.image.BufferedImage
-import java.awt.image.FilteredImageSource
-import java.awt.image.ImageFilter
+import java.awt.image.RGBImageFilter
 import javax.swing.Icon
 import javax.swing.UIManager
 import kotlin.math.abs
@@ -451,7 +454,7 @@ class SVGIcon private constructor(
     FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
-        if (!isDisabled)
+        fun paintTo(g2: Graphics2D) {
             if (xScaling == 1.0 && yScaling == 1.0)
                 svg.paint(g2)
             else
@@ -463,31 +466,11 @@ class SVGIcon private constructor(
                     g2.scale(xScaling, yScaling)
                     svg.paint(g2)
                 }
-        else {
-            // Note: Custom composites are not universally supported. Once they are, we can also use the gray filter
-            // from inside a custom composite. For now, we first render the icon to an image, then apply the gray
-            // filter to that image, and finally draw the filtered image.
-            val filter = UIManager.get("Component.grayFilter") as ImageFilter
-            // We assume that scaleX and scaleY are always identical.
-            val g2Scaling = g2.transform.scaleX
-            // Draw the icon to an image.
-            val img = c.graphicsConfiguration.createCompatibleImage(
-                (svg.width * abs(xScaling) * g2Scaling).roundToInt(),
-                (svg.height * abs(yScaling) * g2Scaling).roundToInt(),
-                Transparency.TRANSLUCENT
-            ).withG2 { g2i ->
-                g2i.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2i.scale(xScaling * g2Scaling, yScaling * g2Scaling)
-                svg.paint(g2i)
-            }
-            // Filter the image to make it gray.
-            val grayImg = c.createImage(FilteredImageSource(img.source, filter))
-            // Draw the image into the original graphics object.
-            g2.preserveTransform {
-                g2.scale(1.0 / g2Scaling, 1.0 / g2Scaling)
-                g2.drawImage(grayImg, 0, 0, null)
-            }
         }
+
+        // Custom composites are not universally supported. If they were, we could also use the gray filter from inside
+        // a custom composite. Instead, we use a Graphics2D proxy that intercepts calls to setColor() and setPaint().
+        if (!isDisabled) paintTo(g2) else paintTo(GrayFilteredGraphics2D(g2))
     }
 
     override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, isDisabled = true)
@@ -497,6 +480,27 @@ class SVGIcon private constructor(
 
     companion object {
         fun load(name: String) = SVGIcon(SVGResource(name), 1.0, 1.0, false)
+    }
+
+
+    private class GrayFilteredGraphics2D(delegate: Graphics2D) : Graphics2DProxy(delegate) {
+
+        override fun create() = GrayFilteredGraphics2D(super.create() as Graphics2D)
+        override fun create(x: Int, y: Int, width: Int, height: Int) =
+            GrayFilteredGraphics2D(super.create(x, y, width, height) as Graphics2D)
+
+        override fun setColor(c: Color) = super.setColor(filter(color))
+        override fun setPaint(p: Paint) = super.setPaint(if (p is Color) filter(p) else p)
+
+        companion object {
+            private val FILTER = UIManager.get("Component.grayFilter") as RGBImageFilter
+            private fun filter(color: Color): Color {
+                val oldRGB = color.rgb
+                val newRGB = FILTER.filterRGB(0, 0, oldRGB)
+                return if (newRGB != oldRGB) Color(newRGB, true) else color
+            }
+        }
+
     }
 
 

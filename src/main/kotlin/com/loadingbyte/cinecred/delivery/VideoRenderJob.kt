@@ -5,6 +5,8 @@ import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.SEQUENTIAL
+import com.loadingbyte.cinecred.imaging.MuxerFormat
+import com.loadingbyte.cinecred.imaging.VideoWriter
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils

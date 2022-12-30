@@ -1,10 +1,12 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.common.Y.Companion.plus
-import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
-import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.Y
+import com.loadingbyte.cinecred.imaging.Y.Companion.plus
+import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.GridColUnderoccupancy.*

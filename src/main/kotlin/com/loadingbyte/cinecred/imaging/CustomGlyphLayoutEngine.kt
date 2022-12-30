@@ -1,7 +1,8 @@
 @file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 
-package com.loadingbyte.cinecred.common
+package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.natives.harfbuzz.*
 import com.loadingbyte.cinecred.natives.harfbuzz.hb_h.*
 import jdk.incubator.foreign.CLinker.toCString

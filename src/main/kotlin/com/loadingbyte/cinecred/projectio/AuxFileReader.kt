@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory

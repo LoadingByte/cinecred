@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList

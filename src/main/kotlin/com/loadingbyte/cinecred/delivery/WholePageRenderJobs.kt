@@ -1,12 +1,12 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D

@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.Y
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.Y
 import kotlinx.collections.immutable.PersistentList
 
 

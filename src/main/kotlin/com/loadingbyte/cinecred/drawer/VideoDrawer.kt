@@ -1,9 +1,13 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
+import com.loadingbyte.cinecred.common.anyBetween
+import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.withNewG2
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Project
@@ -15,7 +19,6 @@ import java.awt.image.BufferedImage
 import java.lang.ref.SoftReference
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.collections.map
 import kotlin.concurrent.withLock
 import kotlin.math.*
 

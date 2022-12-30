@@ -1,9 +1,9 @@
-package com.loadingbyte.cinecred.common
+package com.loadingbyte.cinecred.imaging
 
-import com.loadingbyte.cinecred.common.Y.Companion.minus
-import com.loadingbyte.cinecred.common.Y.Companion.plus
-import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
-import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.imaging.Y.Companion.minus
+import com.loadingbyte.cinecred.imaging.Y.Companion.plus
+import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

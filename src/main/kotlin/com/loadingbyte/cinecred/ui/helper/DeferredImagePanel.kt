@@ -2,7 +2,8 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.DeferredImage.Layer
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ComponentAdapter

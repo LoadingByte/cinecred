@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
 import java.awt.Font

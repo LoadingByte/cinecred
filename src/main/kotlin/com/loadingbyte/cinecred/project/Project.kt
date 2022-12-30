@@ -1,7 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Picture
+import com.loadingbyte.cinecred.imaging.Picture
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Color
 import java.util.*

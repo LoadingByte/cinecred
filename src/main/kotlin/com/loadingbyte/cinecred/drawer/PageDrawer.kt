@@ -1,13 +1,13 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.common.FormattedString
-import com.loadingbyte.cinecred.common.Y
-import com.loadingbyte.cinecred.common.Y.Companion.toElasticY
-import com.loadingbyte.cinecred.common.Y.Companion.toY
 import com.loadingbyte.cinecred.common.formatTimecode
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.FormattedString
+import com.loadingbyte.cinecred.imaging.Y
+import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL

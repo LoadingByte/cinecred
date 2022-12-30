@@ -1,4 +1,4 @@
-package com.loadingbyte.cinecred.common
+package com.loadingbyte.cinecred.imaging
 
 import mkl.testarea.pdfbox2.extract.BoundingBoxFinder
 import org.apache.batik.gvt.GraphicsNode

@@ -1,4 +1,4 @@
-package com.loadingbyte.cinecred.delivery
+package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.l10n

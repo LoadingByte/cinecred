@@ -1,12 +1,12 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.Picture
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.drawer.VideoDrawer
 import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.NO_DRAWING
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms

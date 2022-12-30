@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.FormattedString
-import com.loadingbyte.cinecred.common.Y
-import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.FormattedString
+import com.loadingbyte.cinecred.imaging.Y
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.ContentStyle
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PartitionId

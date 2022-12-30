@@ -1,11 +1,11 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.DeferredImage
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.BACKGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.FOREGROUND
-import com.loadingbyte.cinecred.common.DeferredImage.Companion.GROUNDING
-import com.loadingbyte.cinecred.common.DeferredImage.Layer
-import com.loadingbyte.cinecred.common.Y.Companion.toY
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
+import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Global

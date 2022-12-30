@@ -1,5 +1,6 @@
-package com.loadingbyte.cinecred.common
+package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.mapToArray
 import kotlin.math.abs
 import kotlin.math.max
 

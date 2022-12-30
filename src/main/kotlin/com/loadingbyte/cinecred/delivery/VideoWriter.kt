@@ -329,7 +329,7 @@ class VideoWriter(
         oc.letIfNonNull { oc ->
             // Close the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0)
-                avio_closep(oc.pb())
+                oc.pb().letIfNonNull(::avio_closep)
 
             avformat_free_context(oc)
         }
@@ -353,9 +353,12 @@ class VideoWriter(
         else this
 
     // Replicates the macro of the same name from error.h.
-    private fun err2str(errnum: Int) = String(
-        ByteArray(AV_ERROR_MAX_STRING_SIZE).also { av_make_error_string(it, AV_ERROR_MAX_STRING_SIZE.toLong(), errnum) }
-    )
+    private fun err2str(errnum: Int): String {
+        val string = BytePointer(AV_ERROR_MAX_STRING_SIZE.toLong())
+        av_make_error_string(string, AV_ERROR_MAX_STRING_SIZE.toLong(), errnum)
+        string.limit(BytePointer.strlen(string))
+        return string.string
+    }
 
     private class AVException(message: String) : RuntimeException(message)
 

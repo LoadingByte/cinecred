@@ -28,15 +28,35 @@ import kotlin.math.*
 class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement: Double) :
     JPanel(MigLayout("gap 0, insets 0")) {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK")
+    fun leakedViewportCenterYSetter(value: Double) {
+        viewportCenterY = value
+        canvas.repaint()
+    }
+    // =========================================
+
     var image: DeferredImage?
         get() = _image
         set(image) {
-            require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
-            _image = image
-            coerceViewportAndCalibrateScrollbars()
-            // Rematerialize will call canvas.repaint() once it's done.
-            rematerialize(contentChanged = true)
+            setImageAndGrounding(image, grounding)
         }
+
+    var grounding: Color
+        get() = _grounding
+        set(grounding) {
+            setImageAndGrounding(image, grounding)
+        }
+
+    fun setImageAndGrounding(image: DeferredImage?, grounding: Color) {
+        val imageChanged = image !== _image
+        if (imageChanged) require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
+        _image = image
+        _grounding = grounding
+        if (imageChanged) coerceViewportAndCalibrateScrollbars()
+        // Rematerialize will call canvas.repaint() once it's done.
+        rematerialize(contentChanged = true)
+    }
 
     var layers: List<Layer> = listOf()
         set(value) {
@@ -66,6 +86,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     val zoomListeners = mutableListOf<(Double) -> Unit>()
 
     private var _image: DeferredImage? = null
+    private var _grounding: Color = Color.BLACK
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that
@@ -257,7 +278,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
             val lowRes = contentChanged || lowResMaterialized == null
             submitMaterializeJob(
                 materializingJobSlot, image, canvas,
-                physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers
+                physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers, grounding
             ) { mat, matStartY, matStopY, lowResMat ->
                 SwingUtilities.invokeLater {
                     materialized = mat
@@ -305,7 +326,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
         private fun submitMaterializeJob(
             jobSlot: JobSlot, image: DeferredImage, canvas: Canvas,
             physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
-            layers: List<Layer>, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
+            layers: List<Layer>, grounding: Color, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
         ) {
             jobSlot.submit {
                 val imgHeight = image.height.resolve()
@@ -326,6 +347,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
                 val materialized = (canvas.createImage(matWidth, matHeight) as BufferedImage).withG2 { g2 ->
                     g2.setHighQuality()
+                    // Paint the grounding.
+                    g2.color = grounding
+                    g2.fillRect(0, 0, matWidth, matHeight)
                     // If only a portion is materialized, scroll the deferred image to that portion.
                     if (!startY.isNaN())
                         g2.translate(0.0, physicalImageScaling * -startY)
@@ -347,6 +371,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     val lowResMatHeight = max(1, (lowResScaling * imgHeight).roundToInt())
                     (canvas.createImage(lowResMatWidth, lowResMatHeight) as BufferedImage).withG2 { g2 ->
                         g2.setHighQuality()
+                        g2.color = grounding
+                        g2.fillRect(0, 0, matWidth, matHeight)
                         image.copy(universeScaling = lowResScaling).materialize(g2, layers)
                     }
                 }

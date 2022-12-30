@@ -163,7 +163,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
     }
 
     fun addRenderJobToQueue() {
-        if (drawnPages.isEmpty())
+        val project = this.project
+        val drawnPages = this.drawnPages
+
+        if (project == null || drawnPages.isEmpty())
             showMessageDialog(
                 ctrl.deliveryDialog, l10n("ui.deliverConfig.noPages.msg"),
                 l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
@@ -172,6 +175,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
             val scaling = resolutionMultWidget.value
+            val grounding = if (transparentGroundingWidget.value) null else project.styling.global.grounding
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
@@ -209,16 +213,16 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
             val renderJob = when (format) {
                 is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
                     getScaledPageDefImages(),
-                    transparentGroundingWidget.value, format,
+                    grounding, format,
                     dir = fileOrDir, filenamePattern = seqFilenamePatternWidget.value
                 )
                 WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
                     getScaledPageDefImages(),
-                    transparentGroundingWidget.value,
+                    grounding,
                     file = fileOrDir
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project!!, drawnPages,
+                    project, drawnPages,
                     scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
                     fileOrDir = fileOrDir
                 )

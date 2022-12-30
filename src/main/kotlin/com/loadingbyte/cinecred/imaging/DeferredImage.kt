@@ -206,7 +206,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         // These common layers are typically used. Additional layers may be defined by users of this class.
         val FOREGROUND = Layer()
         val BACKGROUND = Layer()
-        val GROUNDING = Layer()
         val GUIDES = Layer()
 
         private fun FloatArray.isFinite(end: Int): Boolean =

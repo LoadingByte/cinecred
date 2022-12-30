@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
@@ -581,11 +580,6 @@ private fun drawPage(
         // Actually draw the stage image onto the page image.
         pageImage.drawDeferredImage(stageImage, 0.0, stageLayout.y)
     }
-
-    // Draw the grounding of the page image.
-    pageImage.drawRect(
-        global.grounding, 0.0, 0.0.toY(), pageImage.width, pageImage.height, fill = true, layer = GROUNDING
-    )
 
     return pageImage
 }

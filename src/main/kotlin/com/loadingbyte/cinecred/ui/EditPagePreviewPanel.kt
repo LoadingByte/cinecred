@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.DrawnPage
@@ -27,7 +26,7 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
     }
 
     private val imagePanel = DeferredImagePanel(maxZoom, zoomIncrement).apply {
-        layers = listOf(GROUNDING, BACKGROUND, FOREGROUND)
+        layers = listOf(BACKGROUND, FOREGROUND)
     }
 
     init {
@@ -44,7 +43,7 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
 
         val image = drawnPage.defImage.copy()
         drawSafeAreas(image)
-        imagePanel.image = image
+        imagePanel.setImageAndGrounding(image, global.grounding)
     }
 
     var zoom by imagePanel::zoom

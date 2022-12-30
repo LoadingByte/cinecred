@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GROUNDING
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Project
@@ -251,18 +250,18 @@ open class VideoDrawer(
         val microShiftedImages = chunk.microShifts!!.map { microShift ->
             createIntermediateImage(width, chunk.height).withG2 { g2 ->
                 g2.setHighQuality()
-                val layers = mutableListOf(BACKGROUND, FOREGROUND)
                 if (!transparentGrounding) {
                     // If the final image should not have an alpha channel, the intermediate images, which also don't
                     // have alpha, have to have the proper grounding, as otherwise their grounding would be black.
-                    layers.add(0, GROUNDING)
+                    g2.color = project.styling.global.grounding
+                    g2.fillRect(0, 0, width, chunk.height)
                 }
                 g2.translate(0.0, -(chunk.shift + microShift))
                 // If the chunk doesn't contain the whole page, cull the rest to improve performance.
                 val culling = if (!chunk.cull) null else
                     Rectangle2D.Double(0.0, chunk.shift.toDouble(), width.toDouble(), chunk.height.toDouble())
                 // Paint the deferred image onto the raster image.
-                chunk.defImage.materialize(g2, layers, culling)
+                chunk.defImage.materialize(g2, listOf(BACKGROUND, FOREGROUND), culling)
             }
         }
         chunk.microShiftedImages = SoftReference(microShiftedImages)

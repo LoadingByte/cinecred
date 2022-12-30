@@ -1,9 +1,6 @@
 package com.loadingbyte.cinecred.ui.styling
 
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.requireIsInstance
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList

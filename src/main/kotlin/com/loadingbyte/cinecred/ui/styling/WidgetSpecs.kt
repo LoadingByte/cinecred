@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*

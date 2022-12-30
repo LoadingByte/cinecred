@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.imaging.Picture
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Color
@@ -55,9 +56,6 @@ data class Global(
     val locale: Locale,
     val uppercaseExceptions: PersistentList<String>
 ) : Style
-
-
-enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, CLOCK, FRAMES }
 
 
 data class PageStyle(

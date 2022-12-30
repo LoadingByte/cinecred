@@ -5,7 +5,6 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
-import com.loadingbyte.cinecred.project.TimecodeFormat
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter

@@ -1,11 +1,13 @@
 package com.loadingbyte.cinecred.common
 
-import com.loadingbyte.cinecred.project.TimecodeFormat
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.*
 import kotlin.math.max
+
+
+enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, CLOCK, FRAMES }
 
 
 val FPS.supportsDropFrameTimecode: Boolean

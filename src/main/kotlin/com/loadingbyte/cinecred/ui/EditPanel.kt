@@ -336,10 +336,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         resetStylingButton.isEnabled = false
     }
 
-    fun updateProject(
-        drawnProject: DrawnProject?,
-        stylingError: Boolean, excessivePageSizeError: Boolean, log: List<ParserMsg>
-    ) {
+    fun updateProject(drawnProject: DrawnProject?, log: List<ParserMsg>, error: ProjectController.Error?) {
         // Adjust the total runtime label.
         if (drawnProject == null) {
             runtimeLabel2.text = "\u2013"
@@ -356,16 +353,19 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
 
         // Update the pages tabs or show a big error notice.
-        val creditsError = log.any { it.severity == Severity.ERROR }
-        if (stylingError)
-            pageErrorLabel.text = l10n("ui.edit.stylingError")
-        else if (creditsError)
-            pageErrorLabel.text = l10n("ui.edit.creditsError")
-        else if (excessivePageSizeError)
-            pageErrorLabel.text = l10n("ui.edit.excessivePageSizeError")
-        if (stylingError || creditsError || excessivePageSizeError)
+        val errorText = when {
+            log.any { it.severity == Severity.ERROR } -> l10n("ui.edit.creditsError")
+            else -> when (error) {
+                ProjectController.Error.STYLING -> l10n("ui.edit.stylingError")
+                ProjectController.Error.NO_PAGES -> l10n("ui.edit.noPagesError")
+                ProjectController.Error.EXCESSIVE_PAGE_SIZE -> l10n("ui.edit.excessivePageSizeError")
+                null -> null
+            }
+        }
+        if (errorText != null) {
+            pageErrorLabel.text = errorText
             pagePanelCards.show(pagePanel, "Error")
-        else {
+        } else {
             pagePanelCards.show(pagePanel, "Pages")
             updatePageTabs(drawnProject)
         }

@@ -52,8 +52,7 @@ class ProjectController(
     private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
     private var creditsFileLoadingLog: List<ParserMsg> = emptyList()
     private var creditsFileReadingLog: List<ParserMsg> = emptyList()
-    private var stylingError = false
-    private var excessivePageSizeError = false
+    private var error: Error? = null
     private var drawnProject: DrawnProject? = null
 
     private val readCreditsAndRedrawJobSlot = JobSlot()
@@ -115,7 +114,7 @@ class ProjectController(
 
     private fun pushStateIntoUI() {
         val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
-        projectFrame.panel.updateProject(drawnProject, stylingError, excessivePageSizeError, log)
+        projectFrame.panel.updateProject(drawnProject, log, error)
         stylingDialog.panel.updateProject(drawnProject)
         videoDialog.panel.updateProject(drawnProject)
         deliveryDialog.panel.configurationForm.updateProject(drawnProject)
@@ -187,8 +186,7 @@ class ProjectController(
 
         // Reset these variables. We will set some of them in the following code, depending on which problems occur.
         creditsFileReadingLog = emptyList()
-        stylingError = false
-        excessivePageSizeError = false
+        error = null
         drawnProject = null
 
         // If the credits file could not be located or loaded, abort and notify the UI about the error.
@@ -204,14 +202,19 @@ class ProjectController(
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
-                return@submit SwingUtilities.invokeLater { stylingError = true; pushStateIntoUI() }
+                return@submit SwingUtilities.invokeLater { error = Error.STYLING; pushStateIntoUI() }
 
             val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
 
             // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
-            // Also abort if the spreadsheet doesn't contain a single page.
-            if (log.any { it.severity == ERROR } || pages.isEmpty())
+            if (log.any { it.severity == ERROR })
                 return@submit SwingUtilities.invokeLater { creditsFileReadingLog = log; pushStateIntoUI() }
+
+            // Also abort if the spreadsheet doesn't contain a single page.
+            if (pages.isEmpty())
+                return@submit SwingUtilities.invokeLater {
+                    creditsFileReadingLog = log; error = Error.NO_PAGES; pushStateIntoUI()
+                }
 
             val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
             val drawnPages = drawPages(project)
@@ -219,7 +222,7 @@ class ProjectController(
             // Limit each page's height to prevent the program from crashing due to misconfiguration.
             if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 })
                 return@submit SwingUtilities.invokeLater {
-                    creditsFileReadingLog = log; excessivePageSizeError = true; pushStateIntoUI()
+                    creditsFileReadingLog = log; error = Error.EXCESSIVE_PAGE_SIZE; pushStateIntoUI()
                 }
 
             val video = drawVideo(project, drawnPages)
@@ -284,6 +287,9 @@ class ProjectController(
             else -> false
         }
     }
+
+
+    enum class Error { STYLING, NO_PAGES, EXCESSIVE_PAGE_SIZE }
 
 
     private class StylingContextImpl(private val fontsByName: Map<String, Font>) : StylingContext {

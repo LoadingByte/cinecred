@@ -3,10 +3,8 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.drawer.VideoDrawer
-import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.PREVIEW
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.imaging.DeferredVideo
+import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
 import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
@@ -28,12 +26,14 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private val canvas: JPanel = object : JPanel() {
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            videoDrawer?.let { videoDrawer ->
+            val video = scaledVideo
+            val videoBackend = scaledVideoBackend
+            if (video != null && videoBackend != null) {
                 g as Graphics2D
-                g.translate((width - videoDrawer.width / systemScaling) / 2.0, 0.0)
+                g.translate((width - video.width / systemScaling) / 2.0, 0.0)
                 g.scale(1.0 / systemScaling)
-                g.clipRect(0, 0, videoDrawer.width, videoDrawer.height)
-                videoDrawer.drawFrame(g, frameSlider.value)
+                g.clipRect(0, 0, video.width, video.height)
+                videoBackend.materializeFrame(g, frameSlider.value)
             }
         }
     }
@@ -58,17 +58,17 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(STYLE_CLASS, "monospaced")
     }
 
-    private var project: Project? = null
-    private var drawnPages: List<DrawnPage> = emptyList()
+    private var drawnProject: DrawnProject? = null
 
-    private val makeVideoDrawerJobSlot = JobSlot()
-    private var videoDrawer: VideoDrawer? = null
+    private val makeVideoBackendJobSlot = JobSlot()
+    private var scaledVideo: DeferredVideo? = null
+    private var scaledVideoBackend: DeferredVideo.Graphics2DBackend? = null
     private var systemScaling = 1.0
 
     private var playTimer: Timer? = null
     private var playRate = 0
         set(value) {
-            val project = this.project
+            val project = drawnProject?.project
             val playRate = if (project == null) 0 else value
             if (field == playRate)
                 return
@@ -134,6 +134,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     fun onKeyEvent(event: KeyEvent): Boolean {
         if (event.id != KEY_PRESSED)
             return false
+
+        val project = drawnProject?.project
         when (event.modifiersEx) {
             0 -> when (event.keyCode) {
                 VK_J -> rewind()
@@ -166,13 +168,13 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         playRate = 0
     }
 
-    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
-        this.project = project
-        this.drawnPages = drawnPages
+    fun updateProject(drawnProject: DrawnProject?) {
+        this.drawnProject = drawnProject
 
         playRate = 0
-        if (project == null || drawnPages.isEmpty()) {
-            videoDrawer = null
+        if (drawnProject == null) {
+            scaledVideo = null
+            scaledVideoBackend = null
             canvas.repaint()
             timecodeLabel.text = null
         } else {
@@ -182,7 +184,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun restartDrawing() {
-        val project = this.project ?: return
+        val (project, _, video) = drawnProject ?: return
 
         // Abort if the canvas has never been shown on the screen yet, which would have it in a pre-initialized state
         // that this method can't cope with. As soon as it is shown for the first time, the resize listener will be
@@ -198,26 +200,35 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         if (scaling < 0.001)
             return
 
-        makeVideoDrawerJobSlot.submit {
-            val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, mode = PREVIEW) {
+        // Adjust the frame slider's range, then capture its current position.
+        frameSlider.maximum = video.numFrames - 1
+        val currentFrameIdx = frameSlider.value
+
+        makeVideoBackendJobSlot.submit {
+            val scaledVideo = video.copy(scaling)
+            val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
+                scaledVideo, project.styling.global.grounding, draft = true, preloading = true
+            ) {
                 override fun createIntermediateImage(width: Int, height: Int) =
                     canvas.createImage(width, height) as BufferedImage
             }
+            // Simulate materializing the currently selected frame in the background thread. As expensive operations
+            // are cached, the subsequent materialization of that frame in the EDT thread will be very fast.
+            scaledVideoBackend.preloadFrame(currentFrameIdx)
             SwingUtilities.invokeLater {
-                this.videoDrawer = videoDrawer
-                frameSlider.maximum = videoDrawer.numFrames - 1
+                this.scaledVideo = scaledVideo
+                this.scaledVideoBackend = scaledVideoBackend
                 canvas.repaint()
             }
         }
     }
 
     private fun adjustTimecodeLabel() {
-        val project = this.project ?: return
-        val videoDrawer = this.videoDrawer ?: return
+        val (project, _, video) = drawnProject ?: return
         val fps = project.styling.global.fps
         val timecodeFormat = project.styling.global.timecodeFormat
         val curTc = formatTimecode(fps, timecodeFormat, frameSlider.value)
-        val runtimeTc = formatTimecode(fps, timecodeFormat, videoDrawer.numFrames)
+        val runtimeTc = formatTimecode(fps, timecodeFormat, video.numFrames)
         timecodeLabel.text = "$curTc / $runtimeTc"
     }
 

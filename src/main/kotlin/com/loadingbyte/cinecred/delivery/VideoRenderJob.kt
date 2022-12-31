@@ -3,11 +3,9 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
-import com.loadingbyte.cinecred.drawer.VideoDrawer
-import com.loadingbyte.cinecred.drawer.VideoDrawer.Mode.SEQUENTIAL
+import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.MuxerFormat
 import com.loadingbyte.cinecred.imaging.VideoWriter
-import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
@@ -20,7 +18,7 @@ import kotlin.io.path.exists
 
 class VideoRenderJob(
     private val project: Project,
-    private val drawnPages: List<DrawnPage>,
+    private val video: DeferredVideo,
     private val scaling: Double,
     private val transparentGrounding: Boolean,
     private val format: Format,
@@ -44,26 +42,30 @@ class VideoRenderJob(
         // Make sure that the parent directory exists.
         fileOrPattern.parent.createDirectories()
 
+        val grounding = if (transparentGrounding) null else project.styling.global.grounding
         val imageType = if (transparentGrounding) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
 
-        val videoDrawer = object : VideoDrawer(project, drawnPages, scaling, transparentGrounding, mode = SEQUENTIAL) {
+        val scaledVideo = video.copy(scaling)
+        val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
+            scaledVideo, grounding, sequentialAccess = true
+        ) {
             override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
         }
 
         VideoWriter(
-            fileOrPattern, videoDrawer.width, videoDrawer.height, project.styling.global.fps,
+            fileOrPattern, scaledVideo.width, scaledVideo.height, project.styling.global.fps,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->
-            for (frameIdx in 0 until videoDrawer.numFrames) {
-                val frame = BufferedImage(videoDrawer.width, videoDrawer.height, imageType).withG2 { g2 ->
+            for (frameIdx in 0 until scaledVideo.numFrames) {
+                val frame = BufferedImage(scaledVideo.width, scaledVideo.height, imageType).withG2 { g2 ->
                     g2.setHighQuality()
-                    videoDrawer.drawFrame(g2, frameIdx)
+                    scaledVideoBackend.materializeFrame(g2, frameIdx)
                 }
                 videoWriter.writeFrame(frame)
 
-                progressCallback(100 * (frameIdx + 1) / videoDrawer.numFrames)
+                progressCallback(100 * (frameIdx + 1) / scaledVideo.numFrames)
 
                 if (Thread.interrupted())
                     throw InterruptedException()

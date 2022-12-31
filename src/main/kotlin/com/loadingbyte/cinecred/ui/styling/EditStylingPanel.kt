@@ -271,10 +271,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
-    fun updateProject(project: Project?, runtime: Int) {
+    fun updateProject(drawnProject: DrawnProject?) {
+        val project = drawnProject?.project
         usedStyles = if (project == null) emptySet() else findUsedStyles(project)
         stylingTree.adjustAppearance(isGrayedOut = { project != null && it is NamedStyle && it !in usedStyles })
-        mostRecentRuntime = runtime
+        mostRecentRuntime = drawnProject?.video?.numFrames ?: 0
     }
 
     private fun refreshConstraintViolations() {

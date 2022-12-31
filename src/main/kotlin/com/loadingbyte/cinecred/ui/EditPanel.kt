@@ -7,8 +7,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toHex24
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
 import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
@@ -338,16 +337,18 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun updateProject(
-        project: Project?, drawnPages: List<DrawnPage>, runtime: Int,
+        drawnProject: DrawnProject?,
         stylingError: Boolean, excessivePageSizeError: Boolean, log: List<ParserMsg>
     ) {
         // Adjust the total runtime label.
-        if (project == null || project.pages.isEmpty()) {
+        if (drawnProject == null) {
             runtimeLabel2.text = "\u2013"
             runtimeLabel2.toolTipText = null
             runtimeLabel1.toolTipText = null
         } else {
-            val tc = formatTimecode(project.styling.global.fps, project.styling.global.timecodeFormat, runtime)
+            val global = drawnProject.project.styling.global
+            val runtime = drawnProject.video.numFrames
+            val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
             val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
             runtimeLabel2.text = tc
             runtimeLabel2.toolTipText = tooltip
@@ -366,18 +367,19 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             pagePanelCards.show(pagePanel, "Error")
         else {
             pagePanelCards.show(pagePanel, "Pages")
-            updatePageTabs(project, drawnPages)
+            updatePageTabs(drawnProject)
         }
 
         // Put the new parser log messages into the log table.
         logTableModel.log = log.sortedWith(compareByDescending(ParserMsg::severity).thenBy(ParserMsg::recordNo))
     }
 
-    private fun updatePageTabs(project: Project?, drawnPages: List<DrawnPage>) {
+    private fun updatePageTabs(drawnProject: DrawnProject?) {
         // First adjust the number of tabs to the number of pages.
-        while (pageTabs.tabCount > drawnPages.size)
+        val numPages = drawnProject?.drawnPages?.size ?: 0
+        while (pageTabs.tabCount > numPages)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
-        while (pageTabs.tabCount < drawnPages.size) {
+        while (pageTabs.tabCount < numPages) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
@@ -391,8 +393,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             pageTabs.addTab(tabTitle, PAGE_ICON, previewPanel)
         }
         // Then fill each tab with its corresponding page.
-        for ((drawnPage, previewPanel) in drawnPages.zip(previewPanels))
-            previewPanel.setContent(project!!.styling.global, drawnPage)
+        if (drawnProject != null)
+            for ((drawnPage, previewPanel) in drawnProject.drawnPages.zip(previewPanels))
+                previewPanel.setContent(drawnProject.project.styling.global, drawnPage)
     }
 
 

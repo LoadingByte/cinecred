@@ -4,9 +4,8 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
-import com.loadingbyte.cinecred.project.DrawnPage
+import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
-import com.loadingbyte.cinecred.project.Project
 import com.loadingbyte.cinecred.ui.helper.*
 import javax.swing.JOptionPane.*
 import javax.swing.SpinnerNumberModel
@@ -25,8 +24,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
     }
 
-    private var project: Project? = null
-    private var drawnPages: List<DrawnPage> = emptyList()
+    private var drawnProject: DrawnProject? = null
 
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
@@ -114,7 +112,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
     }
 
     private fun verifyResolutionMult(resolutionMult: Double): Notice? {
-        val project = this.project ?: return null
+        val (project, _, _) = drawnProject ?: return null
 
         val scaledWidth = (resolutionMult * project.styling.global.widthPx).roundToInt()
         val scaledHeight = (resolutionMult * project.styling.global.heightPx).roundToInt()
@@ -163,15 +161,15 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
     }
 
     fun addRenderJobToQueue() {
-        val project = this.project
-        val drawnPages = this.drawnPages
-
-        if (project == null || drawnPages.isEmpty())
+        val drawnProject = this.drawnProject
+        if (drawnProject == null)
             showMessageDialog(
                 ctrl.deliveryDialog, l10n("ui.deliverConfig.noPages.msg"),
                 l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
+            val (project, drawnPages, video) = drawnProject
+
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
             val scaling = resolutionMultWidget.value
@@ -222,7 +220,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
                     file = fileOrDir
                 )
                 is VideoRenderJob.Format -> VideoRenderJob(
-                    project, drawnPages,
+                    project, video,
                     scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
                     fileOrDir = fileOrDir
                 )
@@ -238,9 +236,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         }
     }
 
-    fun updateProject(project: Project?, drawnPages: List<DrawnPage>) {
-        this.project = project
-        this.drawnPages = drawnPages
+    fun updateProject(drawnProject: DrawnProject?) {
+        this.drawnProject = drawnProject
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
         onChange(resolutionMultWidget)

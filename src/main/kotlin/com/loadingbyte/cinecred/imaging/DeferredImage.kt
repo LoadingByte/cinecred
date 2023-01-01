@@ -482,7 +482,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             else
                 cs.setStrokingColor(color)
 
-            cs.setGraphicsStateParameters(docRes.extGStates.computeIfAbsent(color.alpha) {
+            cs.setGraphicsStateParameters(docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.alpha)) {
                 PDExtendedGraphicsState().apply {
                     if (fill)
                         nonStrokingAlphaConstant = color.alpha / 255f
@@ -538,12 +538,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         private class DocRes(doc: PDDocument) {
-            val extGStates = HashMap<Int /* alpha */, PDExtendedGraphicsState>()
+            val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
             val pdFonts = HashMap<String /* font name */, PDFont>()
             val pdImages = HashMap<Picture.Raster, PDImageXObject>()
             val pdForms = HashMap<Picture, PDFormXObject>()
             val layerUtil by lazy { LayerUtility(doc) }
         }
+
+        private data class ExtGStateKey(private val fill: Boolean, private val alpha: Int)
 
     }
 

@@ -61,6 +61,7 @@ Cinecred Changelog
 - Text decorations are now drawn on top of each other in their declared order.
 - Left widening a dashed text decoration no longer crashes the program.
 - Delivery with transparent grounding now always omits the background.
+- Transparency now works correctly in exported PDFs.
 
 #### UI Fixes
 

@@ -5,4 +5,4 @@
 --app-version @VERSION@
 --description "@DESCRIPTION@"
 --vendor "@VENDOR@"
---copyright "Copyright (C) 2022 @VENDOR@, licensed under the GPLv3"
+--copyright "Copyright (C) 2023 @VENDOR@, licensed under the GPLv3"

@@ -176,7 +176,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             scaledVideo = null
             scaledVideoBackend = null
             canvas.repaint()
-            timecodeLabel.text = null
+            timecodeLabel.text = "\u2014 / \u2014"
         } else {
             restartDrawing()
             adjustTimecodeLabel()

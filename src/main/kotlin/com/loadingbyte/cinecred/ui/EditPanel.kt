@@ -16,6 +16,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Dimension
 import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
@@ -117,7 +118,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val runtimeLabel1 = JLabel(l10n("ui.edit.runtime"))
-    private val runtimeLabel2 = JLabel("\u2013").apply {
+    private val runtimeLabel2 = JLabel("\u2014").apply {
         putClientProperty(STYLE_CLASS, "monospaced")
     }
 
@@ -339,7 +340,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     fun updateProject(drawnProject: DrawnProject?, log: List<ParserMsg>, error: ProjectController.Error?) {
         // Adjust the total runtime label.
         if (drawnProject == null) {
-            runtimeLabel2.text = "\u2013"
+            runtimeLabel2.preferredSize = Dimension(runtimeLabel2.width, 0)
+            runtimeLabel2.text = "\u2014"
             runtimeLabel2.toolTipText = null
             runtimeLabel1.toolTipText = null
         } else {
@@ -347,6 +349,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             val runtime = drawnProject.video.numFrames
             val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
             val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
+            runtimeLabel2.preferredSize = null
             runtimeLabel2.text = tc
             runtimeLabel2.toolTipText = tooltip
             runtimeLabel1.toolTipText = tooltip

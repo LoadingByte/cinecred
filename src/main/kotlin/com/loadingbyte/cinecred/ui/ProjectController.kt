@@ -138,7 +138,9 @@ class ProjectController(
         }
 
         tryReadPictureLoader(file)?.let { pictureLoader ->
-            pictureLoadersByRelPath[projectDir.relativize(file)] = pictureLoader
+            val prevPictureLoader = pictureLoadersByRelPath.put(projectDir.relativize(file), pictureLoader)
+            if (prevPictureLoader != null && prevPictureLoader.isInitialized())
+                prevPictureLoader.value?.dispose()
             return true
         }
 
@@ -152,8 +154,12 @@ class ProjectController(
             stylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
             return true
         }
-        if (pictureLoadersByRelPath.remove(projectDir.relativize(file)) != null)
+        val pictureLoader = pictureLoadersByRelPath.remove(projectDir.relativize(file))
+        if (pictureLoader != null) {
+            if (pictureLoader.isInitialized())
+                pictureLoader.value?.dispose()
             return true
+        }
         return false
     }
 

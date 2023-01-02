@@ -124,8 +124,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         trySetTaskbarIconBadge(RenderQueue.getRemainingJobs().size)
     }
 
-    fun onTryCloseProject(): Boolean {
-        if (ctrl.deliveryDialog.panel.processButton.isSelected && hasUnfinishedRenderJobs) {
+    fun onTryCloseProject(force: Boolean): Boolean {
+        if (!force && ctrl.deliveryDialog.panel.processButton.isSelected && hasUnfinishedRenderJobs) {
             val options = arrayOf(l10n("ui.deliverRenderQueue.runningWarning.stop"), l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.deliveryDialog, l10n("ui.deliverRenderQueue.runningWarning.msg"),

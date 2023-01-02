@@ -303,16 +303,17 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }.isSelected = isVisible
     }
 
-    fun onTryCloseProject(): Boolean =
+    fun onTryCloseProject(force: Boolean): Boolean =
         if (unsavedStylingLabel.isVisible) {
-            val options = arrayOf(
-                l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard"),
-                l10n("cancel")
+            val options = mutableListOf(
+                l10n("ui.edit.openUnsavedChangesWarning.save"), l10n("ui.edit.openUnsavedChangesWarning.discard")
             )
+            if (!force)
+                options.add(l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
                 l10n("ui.edit.openUnsavedChangesWarning.title"),
-                DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
+                DEFAULT_OPTION, WARNING_MESSAGE, null, options.toTypedArray(), options[0]
             )
             when (selectedOption) {
                 0 -> {

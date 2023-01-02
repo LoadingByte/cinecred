@@ -243,12 +243,8 @@ class ProjectController(
     }
 
     fun tryCloseProject(force: Boolean = false): Boolean {
-        if (force) {
-            projectFrame.panel.onTryCloseProject()
-            deliveryDialog.panel.renderQueuePanel.onTryCloseProject()
-        } else if (
-            !projectFrame.panel.onTryCloseProject() ||
-            !deliveryDialog.panel.renderQueuePanel.onTryCloseProject()
+        if (!projectFrame.panel.onTryCloseProject(force) ||
+            !deliveryDialog.panel.renderQueuePanel.onTryCloseProject(force)
         )
             return false
 

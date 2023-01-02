@@ -2,6 +2,7 @@
 
 package com.loadingbyte.cinecred
 
+import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
@@ -12,6 +13,7 @@ import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
+import net.miginfocom.swing.MigLayout
 import org.bytedeco.ffmpeg.avutil.LogCallback
 import org.bytedeco.ffmpeg.global.avcodec
 import org.bytedeco.ffmpeg.global.avformat
@@ -20,19 +22,13 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import java.awt.Desktop
-import java.awt.Font
-import java.awt.KeyboardFocusManager
-import java.awt.RenderingHints
+import java.awt.*
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
 import java.util.logging.*
 import java.util.logging.Formatter
-import javax.swing.JOptionPane
-import javax.swing.SwingUtilities
-import javax.swing.ToolTipManager
-import javax.swing.UIManager
+import javax.swing.*
 import kotlin.io.path.*
 
 
@@ -174,22 +170,33 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
     override fun uncaughtException(t: Thread, e: Throwable) {
         LOGGER.error("Uncaught exception. Will terminate the program.", e)
         SwingUtilities.invokeLater {
-            sendReport(e)
+            sendReport()
             // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.
             if (::masterCtrl.isInitialized)
                 masterCtrl.tryCloseProjectsAndDisposeAllFrames(force = true)
         }
     }
 
-    private fun sendReport(e: Throwable) {
+    private fun sendReport() {
+        val log = JULBuilderHandler.log.toString()
+        val logComp = JTextArea(log).apply {
+            isEditable = false
+            putClientProperty(STYLE_CLASS, "monospaced")
+        }
+        val msgComp = JPanel(MigLayout("insets 0, wrap", "[::50sp]", "[][]unrel[][]")).apply {
+            add(JLabel(l10n("ui.crash.msg.error")))
+            add(JScrollPane(logComp), "hmax 40sp")
+            add(JLabel(l10n("ui.crash.msg.exit")))
+            add(JLabel(l10n("ui.crash.msg.report")))
+        }
         val send = JOptionPane.showConfirmDialog(
-            null, l10n("ui.crash.msg", e), l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
+            null, msgComp, l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
         ) == JOptionPane.YES_OPTION
         if (send) {
             val address = encodeMailURIComponent("cinecred-crash-report@loadingbyte.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
             // We replace tabs by four dots because some email programs trim leading tabs and spaces.
-            val body = encodeMailURIComponent(JULBuilderHandler.log.toString().replace("\t", "...."))
+            val body = encodeMailURIComponent(log.replace("\t", "...."))
             tryMail(URI("mailto:$address?Subject=$subject&Body=$body"))
         }
     }

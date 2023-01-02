@@ -237,7 +237,9 @@ private object JULBuilderHandler : Handler() {
         formatter = JULFormatter
     }
 
-    val log = StringBuilder()
+    // Use StringBuffer for thread-safety.
+    val log = StringBuffer()
+
     override fun publish(record: LogRecord) {
         if (isLoggable(record))
             try {

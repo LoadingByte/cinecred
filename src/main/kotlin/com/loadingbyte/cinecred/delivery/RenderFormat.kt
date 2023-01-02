@@ -1,14 +1,18 @@
 package com.loadingbyte.cinecred.delivery
 
 
-open class RenderFormat(
-    val label: String,
+abstract class RenderFormat(
     val fileSeq: Boolean,
     val fileExts: Set<String>,
     val defaultFileExt: String,
     val supportsAlpha: Boolean
 ) {
+
+    abstract val label: String
+    abstract val notice: String?
+
     init {
         require(defaultFileExt in fileExts)
     }
+
 }

@@ -34,7 +34,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
                 val prefix =
                     if (format in WHOLE_PAGE_FORMATS) l10n("ui.deliverConfig.wholePageFormat")
                     else l10n("ui.deliverConfig.videoFormat")
-                "$prefix: ${format.label}"
+                val suffix = format.notice.let { if (it == null) "" else "  \u2013  $it" }
+                "$prefix  \u2013  ${format.label}$suffix"
             },
             // User a custom render that shows category headers.
             decorateRenderer = { baseRenderer ->

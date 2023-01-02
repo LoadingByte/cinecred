@@ -74,8 +74,7 @@ class VideoRenderJob(
     }
 
 
-    class Format private constructor(
-        label: String,
+    abstract class Format private constructor(
         fileSeq: Boolean,
         fileExts: Set<String>,
         defaultFileExt: String,
@@ -87,7 +86,7 @@ class VideoRenderJob(
         val heightMod2: Boolean = false,
         val minWidth: Int? = null,
         val minHeight: Int? = null
-    ) : RenderFormat(label, fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaPixelFormat != null) {
+    ) : RenderFormat(fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaPixelFormat != null) {
 
         companion object {
 
@@ -96,8 +95,7 @@ class VideoRenderJob(
                     .filter { codecId in it.supportedCodecIds }
                     .flatMapTo(HashSet()) { it.extensions }
 
-            private fun h264() = Format(
-                label = "H.264",
+            private fun h264() = object : Format(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_H264),
                 defaultFileExt = "mp4",
@@ -105,10 +103,17 @@ class VideoRenderJob(
                 pixelFormat = AV_PIX_FMT_YUV420P,
                 widthMod2 = true,
                 heightMod2 = true
-            )
+            ) {
+                override val label get() = "H.264"
+                override val notice get() = l10n("delivery.lowQuality")
+            }
 
-            private fun prores(label: String, pixelFormat: Int, alphaPixelFormat: Int?, profile: String) = Format(
-                label = label,
+            private fun prores(
+                label: String,
+                pixelFormat: Int,
+                alphaPixelFormat: Int?,
+                profile: String
+            ) = object : Format(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_PRORES),
                 defaultFileExt = "mov",
@@ -117,10 +122,12 @@ class VideoRenderJob(
                 alphaPixelFormat = alphaPixelFormat,
                 codecOptions = mapOf("profile" to profile),
                 widthMod2 = true
-            )
+            ) {
+                override val label get() = label
+                override val notice get() = null
+            }
 
-            private fun dnxhr(label: String, pixelFormat: Int, profile: String) = Format(
-                label = label,
+            private fun dnxhr(label: String, pixelFormat: Int, profile: String) = object : Format(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_DNXHD),
                 defaultFileExt = "mxf",
@@ -129,15 +136,18 @@ class VideoRenderJob(
                 codecOptions = mapOf("profile" to profile),
                 minWidth = 256,
                 minHeight = 120
-            )
+            ) {
+                override val label get() = label
+                override val notice get() = null
+            }
 
             private fun rgbSeqWithOptionalAlpha(
-                label: String,
                 fileExt: String,
                 codecId: Int,
-                codecOptions: Map<String, String> = emptyMap()
-            ) = Format(
-                label = label,
+                codecOptions: Map<String, String> = emptyMap(),
+                labelSuffix: String = "",
+                l10nNotice: String? = null
+            ) = object : Format(
                 fileSeq = true,
                 fileExts = setOf(fileExt),
                 defaultFileExt = fileExt,
@@ -145,7 +155,10 @@ class VideoRenderJob(
                 pixelFormat = AV_PIX_FMT_RGB24,
                 alphaPixelFormat = AV_PIX_FMT_RGBA,
                 codecOptions = codecOptions
-            )
+            ) {
+                override val label get() = l10n("delivery.imgSeq", fileExt.uppercase()) + labelSuffix
+                override val notice get() = l10nNotice?.let(::l10n)
+            }
 
             val ALL = listOf(
                 h264(),
@@ -163,30 +176,24 @@ class VideoRenderJob(
                 // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
                 // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
                 rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.imgSeq", "TIFF") + " (PackBits)  \u2013  " + l10n("delivery.packBits"),
                     fileExt = "tiff",
                     codecId = AV_CODEC_ID_TIFF,
-                    codecOptions = mapOf("compression_algo" to "packbits")
+                    codecOptions = mapOf("compression_algo" to "packbits"),
+                    labelSuffix = " (PackBits)",
+                    l10nNotice = "delivery.packBits"
                 ),
                 // For those who require more compression and know what they are doing (which can be expected when one
                 // exports a TIFF image sequence), we also offer the more efficient, but not universally supported
                 // Deflate compression.
                 rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.imgSeq", "TIFF") + " (Deflate)  \u2013  " + l10n("delivery.deflate"),
                     fileExt = "tiff",
                     codecId = AV_CODEC_ID_TIFF,
-                    codecOptions = mapOf("compression_algo" to "deflate")
+                    codecOptions = mapOf("compression_algo" to "deflate"),
+                    labelSuffix = " (Deflate)",
+                    l10nNotice = "delivery.deflate"
                 ),
-                rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.imgSeq", "DPX"),
-                    fileExt = "dpx",
-                    codecId = AV_CODEC_ID_DPX
-                ),
-                rgbSeqWithOptionalAlpha(
-                    label = l10n("delivery.imgSeq", "PNG"),
-                    fileExt = "png",
-                    codecId = AV_CODEC_ID_PNG
-                )
+                rgbSeqWithOptionalAlpha("dpx", AV_CODEC_ID_DPX),
+                rgbSeqWithOptionalAlpha("png", AV_CODEC_ID_PNG)
             )
 
         }

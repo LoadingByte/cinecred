@@ -111,15 +111,23 @@ class WholePageSequenceRenderJob(
     }
 
 
-    class Format private constructor(label: String, fileExt: String) :
-        RenderFormat(label, fileSeq = true, setOf(fileExt), fileExt, supportsAlpha = true) {
+    class Format private constructor(
+        fileExt: String,
+        labelSuffix: String = "",
+        private val l10nNotice: String? = null
+    ) : RenderFormat(fileSeq = true, setOf(fileExt), fileExt, supportsAlpha = true) {
+
+        override val label = fileExt.uppercase() + labelSuffix
+        override val notice get() = l10nNotice?.let(::l10n)
+
         companion object {
-            val PNG = Format("PNG", "png")
-            val TIFF_PACK_BITS = Format("TIFF (PackBits)  \u2013  " + l10n("delivery.packBits"), "tiff")
-            val TIFF_DEFLATE = Format("TIFF (Deflate)  \u2013  " + l10n("delivery.deflate"), "tiff")
-            val SVG = Format("SVG", "svg")
+            val PNG = Format("png")
+            val TIFF_PACK_BITS = Format("tiff", " (PackBits)", "delivery.packBits")
+            val TIFF_DEFLATE = Format("tiff", " (Deflate)", "delivery.deflate")
+            val SVG = Format("svg")
             val ALL = listOf(PNG, TIFF_PACK_BITS, TIFF_DEFLATE, SVG)
         }
+
     }
 
 }
@@ -167,7 +175,10 @@ class WholePagePDFRenderJob(
 
 
     companion object {
-        val FORMAT = RenderFormat("PDF", fileSeq = false, setOf("pdf"), "pdf", supportsAlpha = true)
+        val FORMAT = object : RenderFormat(fileSeq = false, setOf("pdf"), "pdf", supportsAlpha = true) {
+            override val label get() = "PDF"
+            override val notice get() = null
+        }
     }
 
 }

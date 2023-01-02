@@ -1,19 +1,17 @@
 package com.loadingbyte.cinecred.projectio
 
+import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourceStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.createDirectories
 import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 
 fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
-    if (destDir.notExists())
-        destDir.createDirectories()
-
+    destDir.createDirectoriesSafely()
     tryCopyStylingTemplate(destDir, locale)
     tryCopyCreditsTemplate(destDir, locale, format)
 }
@@ -44,7 +42,7 @@ private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: Spread
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {
-        logoFile.parent.createDirectories()
+        logoFile.parent.createDirectoriesSafely()
         useResourceStream("/template/cinecred.svg") { Files.copy(it, logoFile) }
     }
 }

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -12,7 +13,6 @@ import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.image.BufferedImage
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
 
@@ -40,7 +40,7 @@ class VideoRenderJob(
         if (format.fileSeq && fileOrPattern.parent.exists())
             FileUtils.cleanDirectory(fileOrPattern.parent.toFile())
         // Make sure that the parent directory exists.
-        fileOrPattern.parent.createDirectories()
+        fileOrPattern.parent.createDirectoriesSafely()
 
         val grounding = if (transparentGrounding) null else project.styling.global.grounding
         val imageType = if (transparentGrounding) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR

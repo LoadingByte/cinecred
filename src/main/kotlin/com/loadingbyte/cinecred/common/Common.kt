@@ -20,6 +20,8 @@ import java.text.MessageFormat
 import java.util.*
 import javax.swing.JComponent
 import javax.swing.UIManager
+import kotlin.io.path.createDirectories
+import kotlin.io.path.isDirectory
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -80,6 +82,16 @@ inline fun <R> useResourcePath(path: String, action: (Path) -> R): R {
         }
     else
         action(Path.of(uri))
+}
+
+
+/**
+ * The implementation of [createDirectories] will throw an exception if the path already exists and is a symbolic link
+ * to a directory. This function does not fail in such cases.
+ */
+fun Path.createDirectoriesSafely() {
+    if (!isDirectory() /* follows symlinks */)
+        createDirectories()
 }
 
 

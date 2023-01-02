@@ -67,7 +67,7 @@ fun main(args: Array<String>) {
             if (file.fileSystem.provider().scheme == "file")
                 System.load(file.toString())
             else {
-                Path(nativesExDir).createDirectories()
+                Path(nativesExDir).createDirectoriesSafely()
                 val exFile = Path(nativesExDir, file.name)
                 file.copyTo(exFile, overwrite = true)
                 System.load(exFile.toString())

@@ -50,6 +50,7 @@ Cinecred Changelog
   like network shares.
 - Copying a full directory into or moving one from the project folder is now
   correctly detected by auto reloading.
+- Writing to symlink directory no longer raises an error.
 - On macOS, system fonts are now fully supported: their metrics are properly
   utilized and exported PDFs correctly embed them.
 - Vertical gaps are now recognized even when declared in between a spine wrap

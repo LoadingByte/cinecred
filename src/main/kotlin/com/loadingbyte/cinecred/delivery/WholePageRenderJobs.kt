@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
@@ -24,7 +25,6 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import javax.imageio.stream.FileImageOutputStream
 import kotlin.io.path.bufferedWriter
-import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.math.roundToInt
@@ -43,7 +43,7 @@ class WholePageSequenceRenderJob(
     override fun render(progressCallback: (Int) -> Unit) {
         if (dir.exists())
             FileUtils.cleanDirectory(dir.toFile())
-        dir.createDirectories()
+        dir.createDirectoriesSafely()
 
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
@@ -142,7 +142,7 @@ class WholePagePDFRenderJob(
     override fun generatesFile(file: Path) = file == this.file
 
     override fun render(progressCallback: (Int) -> Unit) {
-        file.parent.createDirectories()
+        file.parent.createDirectoriesSafely()
 
         val pdfDoc = PDDocument()
 

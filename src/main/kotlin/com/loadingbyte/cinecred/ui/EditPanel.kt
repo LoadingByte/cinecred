@@ -264,9 +264,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             columnModel.getColumn(2).apply { minWidth = 96; width = 96 }
             columnModel.getColumn(3).apply { minWidth = 96; width = 96 }
             tableHeader.resizingColumn = columnModel.getColumn(4)
-            // Center the record number column.
-            columnModel.getColumn(1).cellRenderer =
-                DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
+            // Center the record number, column name, and cell value columns.
+            for (colIdx in 1..3)
+                columnModel.getColumn(colIdx).cellRenderer =
+                    DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping and HTML display in the message column.
             columnModel.getColumn(4).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
         }

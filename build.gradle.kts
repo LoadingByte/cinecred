@@ -177,9 +177,9 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                         " -splash:\$APPDIR/$splashScreen $javaOptions",
                 "DESCRIPTION" to "Create beautiful film credits without the pain",
                 "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
-                "URL" to "https://loadingbyte.com/cinecred/",
+                "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
-                "EMAIL" to "hello@loadingbyte.com",
+                "EMAIL" to "info@cinecred.com",
                 "LEGAL_PATH_RUNTIME" to when (platform) {
                     Platform.WINDOWS -> "runtime\\legal"
                     Platform.MAC_OS -> "runtime/Contents/Home/legal"

@@ -90,7 +90,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             iconTextGap = 10
             putClientProperty(STYLE_CLASS, "h2")
             putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
-            addActionListener { tryBrowse(URI("https://loadingbyte.com/cinecred/")) }
+            addActionListener { tryBrowse(URI("https://cinecred.com")) }
         }
         updatePanel = JPanel(MigLayout("insets 60", "[grow 1]15[grow 1]", "[]30[]25[]")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")

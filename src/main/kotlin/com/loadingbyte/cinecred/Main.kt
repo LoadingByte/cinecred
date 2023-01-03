@@ -193,7 +193,7 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
             null, msgComp, l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
         ) == JOptionPane.YES_OPTION
         if (send) {
-            val address = encodeMailURIComponent("cinecred-crash-report@loadingbyte.com")
+            val address = encodeMailURIComponent("crashes@cinecred.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
             // We replace tabs by four dots because some email programs trim leading tabs and spaces.
             val body = encodeMailURIComponent(log.replace("\t", "...."))

@@ -3,7 +3,7 @@ Cinecred
 
 Create beautiful film credits without the pain.
 
-Visit the website at https://loadingbyte.com/cinecred/ for further information about the nature of this software, as well as manifold download options.
+Visit the website at https://cinecred.com for further information about the nature of this software, as well as manifold download options.
 
 ## Running
 

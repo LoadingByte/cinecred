@@ -130,7 +130,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         else if (PersistentStorage.checkForUpdates) {
             val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
             client.sendAsync(
-                HttpRequest.newBuilder(URI.create("https://loadingbyte.com/cinecred/dl/api/v1/components")).build(),
+                HttpRequest.newBuilder(URI.create("https://cinecred.com/dl/api/v1/components")).build(),
                 HttpResponse.BodyHandlers.ofString()
             ).thenAccept { resp ->
                 if (resp.statusCode() != 200)

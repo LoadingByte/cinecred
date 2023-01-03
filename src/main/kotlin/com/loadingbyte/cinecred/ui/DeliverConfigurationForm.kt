@@ -47,7 +47,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
                     }
                 }
             })
-    )
+    ).apply { value = VideoRenderJob.Format.ALL.first() }
 
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),

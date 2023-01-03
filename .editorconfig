@@ -1,0 +1,32 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = off
+ij_continuation_indent_size = 8
+ij_formatter_tags_enabled = true
+
+[{*.kt,*.kts}]
+max_line_length = 120
+ij_kotlin_blank_lines_before_declaration_with_comment_or_annotation_on_separate_line = 0
+ij_kotlin_line_break_after_multiline_when_entry = false
+ij_kotlin_field_annotation_wrap = off
+
+[*.bat]
+end_of_line = crlf
+
+[{*.sh,*.svg}]
+indent_size = 2
+tab_width = 2
+
+[*.svg]
+insert_final_newline = false
+
+[*.md]
+max_line_length = 80

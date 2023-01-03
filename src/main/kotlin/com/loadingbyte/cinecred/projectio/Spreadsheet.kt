@@ -109,6 +109,8 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
             val rowStyle = rowStyles[rowIdx]
 
             for ((colIdx, cellValue) in record.cells.withIndex()) {
+                if (cellValue.isEmpty())
+                    continue
                 val cell = row.createCell(colIdx)
                 try {
                     cell.setCellValue(cellValue.toDouble())
@@ -195,7 +197,7 @@ object OdsFormat : SpreadsheetFormat {
         val numCols = spreadsheet.numColumns
 
         val sheet = com.github.miachm.sods.Sheet(file.nameWithoutExtension, numRows, numCols)
-        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].tryToDouble() } }
+        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].preprocess() } }
         sheet.dataRange.values = cellMatrix
 
         for (record in spreadsheet) {
@@ -225,8 +227,8 @@ object OdsFormat : SpreadsheetFormat {
         workbook.save(file.toFile())
     }
 
-    private fun String.tryToDouble(): Any =
-        try {
+    private fun String.preprocess(): Any? =
+        if (isEmpty()) null else try {
             toDouble()
         } catch (_: NumberFormatException) {
             this
@@ -259,7 +261,7 @@ object CsvFormat : SpreadsheetFormat {
     ) {
         CSVFormat.DEFAULT.print(file, Charsets.UTF_8).use { printer ->
             for (record in spreadsheet)
-                printer.printRecord(record.cells)
+                printer.printRecord(record.cells.map { it.ifEmpty { null } })
         }
     }
 

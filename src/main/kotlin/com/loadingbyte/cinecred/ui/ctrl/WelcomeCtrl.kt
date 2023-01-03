@@ -71,7 +71,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     private fun tryOpenProject(projectDir: Path): Boolean {
-        if (blockOpening)
+        if (blockOpening || !projectDir.isAbsolute)
             return false
 
         if (!projectDir.isDirectory()) {
@@ -103,10 +103,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         return true
     }
 
-    private fun tryOpenOrCreateProject(projectDir: Path) =
-        if (isProjectDir(projectDir))
-            tryOpenProject(projectDir)
-        else {
+    private fun tryOpenOrCreateProject(projectDir: Path) = when {
+        !projectDir.isAbsolute -> false
+        isProjectDir(projectDir) -> tryOpenProject(projectDir)
+        else -> {
             welcomeView.setTab(WelcomeTab.PROJECTS)
             welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
             welcomeView.projects_createBrowse_setSelection(projectDir)
@@ -114,6 +114,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             projects_createBrowse_onClickNext()
             false
         }
+    }
 
     /**
      * If configured accordingly, checks for updates (in the background if there's no cached information yet) and shows

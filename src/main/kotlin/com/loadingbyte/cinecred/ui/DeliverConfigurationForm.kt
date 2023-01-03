@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
+import java.nio.file.Path
 import javax.swing.JOptionPane.*
 import javax.swing.SpinnerNumberModel
 import kotlin.io.path.exists
@@ -53,14 +54,14 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         l10n("ui.deliverConfig.singleFile"),
         FileWidget(FileType.FILE, widthSpec = WidthSpec.WIDER),
         isVisible = { !formatWidget.value.fileSeq },
-        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
+        verify = ::verifyFile
     )
 
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
         FileWidget(FileType.DIRECTORY, widthSpec = WidthSpec.WIDER),
         isVisible = { formatWidget.value.fileSeq },
-        verify = { if (it.toString().isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
+        verify = ::verifyFile
     )
     private val seqFilenamePatternWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenamePattern"),
@@ -110,6 +111,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         val dialog = ctrl.deliveryDialog as DeliveryDialog?
         if (dialog != null)
             dialog.panel.addButton.isEnabled = isErrorFree
+    }
+
+    private fun verifyFile(file: Path): Notice? = when {
+        file.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
+        !file.isAbsolute -> Notice(Severity.ERROR, l10n("ui.deliverConfig.nonAbsolutePath"))
+        else -> null
     }
 
     private fun verifyResolutionMult(resolutionMult: Double): Notice? {

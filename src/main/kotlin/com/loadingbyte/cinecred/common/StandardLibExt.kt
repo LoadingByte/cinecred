@@ -54,6 +54,14 @@ inline fun <E> Iterable<E>.sumOf(selector: (E) -> Double): Double {
 }
 
 
+fun IntArray.sumBetween(startIdx: Int, endIdx: Int): Int {
+    var sum = 0
+    for (idx in startIdx until endIdx)
+        sum += this[idx]
+    return sum
+}
+
+
 inline fun DoubleArray.mapToArray(transform: (Double) -> Double): DoubleArray =
     DoubleArray(size) { i -> transform(this[i]) }
 

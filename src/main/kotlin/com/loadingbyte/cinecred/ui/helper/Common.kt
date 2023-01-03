@@ -318,7 +318,12 @@ fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Double, heightFrac
     )
 }
 
+var disableSnapToSide = false
+
 fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
+    if (disableSnapToSide)
+        return
+
     val winBounds = onScreen.usableBounds
     winBounds.width /= 2
 

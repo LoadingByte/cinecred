@@ -259,6 +259,9 @@ class StyleForm<S : Style>(
         throw ClassCastException("Cannot cast StyleForm<${this.styleClass.name}> to StyleForm<${styleClass.name}>")
     }
 
+    fun getWidgetFor(setting: StyleSetting<S, *>): Widget<*> =
+        valueWidgets.getValue(setting)
+
     override fun open(stored /* style */: S) {
         disableOnChange = true
         try {

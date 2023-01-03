@@ -18,6 +18,14 @@ import javax.swing.table.TableCellRenderer
 
 class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane() {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK")
+    fun leakedProgressSetter(rowIdx: Int, progress: Int = 0, isFinished: Boolean = false) {
+        jobTableModel.rows[rowIdx].progress = if (isFinished) FINISHED else progress
+        jobTableModel.fireTableCellUpdated(rowIdx, 2)
+    }
+    // =========================================
+
     private val jobTableModel = JobTableModel()
 
     init {

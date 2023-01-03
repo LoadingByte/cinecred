@@ -40,7 +40,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedGuidesButton get() = guidesToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = stylingDialogToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedVideoDialogButton get() = videoDialogToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
     @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
+    @Deprecated("ENCAPSULATION LEAK") val leakedPreviewPanels get() = previewPanels
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
     // =========================================
 
@@ -285,6 +289,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         layout = BorderLayout()
         add(splitPane, BorderLayout.CENTER)
 
+        @Suppress("DEPRECATION")
+        leakedSplitPane = splitPane
         @Suppress("DEPRECATION")
         leakedCreditsLog = logTable
 

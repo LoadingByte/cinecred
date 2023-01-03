@@ -29,9 +29,12 @@ import kotlin.io.path.useDirectoryEntries
 class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartPanel: JPanel
     @Deprecated("ENCAPSULATION LEAK") val leakedStartCreateButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget: ComboBoxWidget<SpreadsheetFormat>
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgDoneButton: JButton
     // =========================================
 
     private val cards = CardLayout().also { layout = it }
@@ -167,11 +170,17 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         add(createConfigurePanel, ProjectsCard.CREATE_CONFIGURE.name)
 
         @Suppress("DEPRECATION")
+        leakedStartPanel = startPanel
+        @Suppress("DEPRECATION")
         leakedStartCreateButton = startCreateButton
         @Suppress("DEPRECATION")
         leakedStartOpenButton = startOpenButton
         @Suppress("DEPRECATION")
         leakedStartDropLabel = startDropLabel
+        @Suppress("DEPRECATION")
+        leakedCreCfgFormatWidget = createConfigureForm.formatWidget
+        @Suppress("DEPRECATION")
+        leakedCreCfgDoneButton = createConfigureDoneButton
     }
 
     private fun makeOpenButton(text: String, icon: Icon) = JButton(text, icon).apply {

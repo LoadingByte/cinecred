@@ -32,6 +32,10 @@ import kotlin.reflect.KMutableProperty1
 
 class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedWelcomeView get() = welcomeView
+    // =========================================
+
     private lateinit var welcomeView: WelcomeViewComms
 
     /**

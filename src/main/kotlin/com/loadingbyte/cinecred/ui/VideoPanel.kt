@@ -23,6 +23,11 @@ import kotlin.math.*
 
 class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedPlayButton get() = playButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedFrameSlider get() = frameSlider
+    // =========================================
+
     private val canvas: JPanel = object : JPanel() {
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)

@@ -22,6 +22,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingTree get() = stylingTree
+    @Deprecated("ENCAPSULATION LEAK") val leakedGlobalForm get() = globalForm
+    @Deprecated("ENCAPSULATION LEAK") val leakedPageStyleForm get() = pageStyleForm
+    @Deprecated("ENCAPSULATION LEAK") val leakedContentStyleForm get() = contentStyleForm
+    @Deprecated("ENCAPSULATION LEAK") val leakedLetterStyleForm get() = letterStyleForm
     // =========================================
 
     private val keyListeners = mutableListOf<KeyListener>()

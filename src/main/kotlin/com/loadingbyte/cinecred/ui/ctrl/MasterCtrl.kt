@@ -15,6 +15,11 @@ import java.nio.file.Path
 
 class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedWelcomeCtrl get() = welcomeCtrl
+    @Deprecated("ENCAPSULATION LEAK") val leakedProjectCtrls get() = projectCtrls
+    // =========================================
+
     private var welcomeCtrl: WelcomeCtrlComms? = null
     private val projectCtrls = mutableListOf<ProjectController>()
 

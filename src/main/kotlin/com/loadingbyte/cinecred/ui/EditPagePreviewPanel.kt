@@ -25,6 +25,10 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
         val CUT_SAFE_AREA_4_3 = Layer()
     }
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedImagePanel get() = imagePanel
+    // =========================================
+
     private val imagePanel = DeferredImagePanel(maxZoom, zoomIncrement).apply {
         layers = listOf(BACKGROUND, FOREGROUND)
     }

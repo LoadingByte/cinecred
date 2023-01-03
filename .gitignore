@@ -2,6 +2,7 @@
 
 publishing/*
 !publishing/*.sh
+demoOutput/
 
 
 

@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
+import com.loadingbyte.cinecred.ui.demo.demo
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
@@ -153,6 +154,10 @@ private fun mainSwing(args: Array<String>) {
             else
                 response.cancelQuit()
         }
+
+    // Run a demo if configured, and then abort the regular startup.
+    if (demo(masterCtrl))
+        return
 
     // Finally open the UI.
     openUI(args)

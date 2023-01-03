@@ -25,6 +25,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
         private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
     }
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedFormatWidget get() = formatWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedTransparentGroundingWidget get() = transparentGroundingWidget
+    // =========================================
+
     private var drawnProject: DrawnProject? = null
 
     private val formatWidget = addWidget(

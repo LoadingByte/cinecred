@@ -298,12 +298,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     // @formatter:on
 
     fun projects_createBrowse_setSelection(dir: Path) {
-        val dirF = dir.toFile()
-        // If the selected dir doesn't exist yet, we have to set the file name textbox manually.
-        // Adapted from MetalFileChooserUI.doSelectedFileChanged().
-        if (dir.notExists())
-            (createBrowseFileChooser.ui as BasicFileChooserUI).fileName = dirF.path
-        createBrowseFileChooser.selectedFile = dirF
+        createBrowseFileChooser.fullySetSelectedFile(dir.toFile())
     }
 
     // @formatter:off

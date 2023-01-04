@@ -13,6 +13,7 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
+import java.io.File
 import java.io.IOException
 import java.net.URI
 import javax.swing.*
@@ -20,6 +21,7 @@ import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import javax.swing.plaf.basic.BasicFileChooserUI
 import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
 import kotlin.math.roundToInt
@@ -90,6 +92,16 @@ fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
         override fun removeUpdate(e: DocumentEvent) = listener(e)
         override fun changedUpdate(e: DocumentEvent) = listener(e)
     })
+}
+
+
+fun JFileChooser.fullySetSelectedFile(file: File) {
+    selectedFile = file
+    // If we're selecting a directory and the selected dir doesn't exist yet, calling setSelectedFile() doesn't actually
+    // put the non-existent portion into the file name textbox, so we have to set that manually.
+    // Adapted from MetalFileChooserUI.doSelectedFileChanged().
+    if (fileSelectionMode == JFileChooser.DIRECTORIES_ONLY && !file.exists())
+        (ui as BasicFileChooserUI).fileName = file.path
 }
 
 

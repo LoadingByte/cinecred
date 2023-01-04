@@ -165,7 +165,9 @@ class FileWidget(
                 FileType.FILE -> JFileChooser.FILES_ONLY
                 FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
             }
-            fc.selectedFile = File(text)
+            // It is important that we only need to convert to File and not to Path here, as converting to Path throws
+            // an exception if the Path is illegal on the OS.
+            fc.fullySetSelectedFile(File(text))
 
             if (ass != null) {
                 fc.isAcceptAllFileFilterUsed = false

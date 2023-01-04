@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.TomlWriter
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.toFraction
 import com.loadingbyte.cinecred.common.toHex32
 import com.loadingbyte.cinecred.project.*
@@ -27,6 +28,7 @@ fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
         TomlWriter(writer, 1, false, "\n").write(toml)
     }.toString()
 
+    stylingFile.parent.createDirectoriesSafely()
     stylingFile.writeText(text)
 }
 

@@ -81,12 +81,19 @@ object RecursiveFileWatcher {
 
     private fun receiveWatchKey(watchKey: WatchKey) {
         lock.withLock {
-            val order = orders.values.first { order -> watchKey in order.watchKeys }
+            // Poll the event list now so that it is cleared even when we return early.
+            val events = watchKey.pollEvents()
+
+            // Retrieve the order which has added the watch key.
+            // Sometimes, it can happen that a watch key of a deleted child directory arrives after that of the deleted
+            // parent directory. In such cases, the deletion routine on the parent directory has already taken out the
+            // child watch keys and notified the listener about the child directories, so we can just return here.
+            val order = orders.values.firstOrNull { order -> watchKey in order.watchKeys } ?: return
 
             // We have just seen that the native file watcher is working, so stop polling this root directory.
             order.continuousPolling = false
 
-            for (event in watchKey.pollEvents())
+            for (event in events)
                 if (event.kind() == OVERFLOW) {
                     // In the rare case of too many events overflowing the native file watcher, go back to polling for
                     // just one cycle to catch up.

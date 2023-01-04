@@ -6,8 +6,8 @@ repositories {
     mavenCentral()
 }
 
-val batikVersion = "1.14"
-val twelveMonkeysVersion = "3.7.0"
+val batikVersion = "1.16"
+val twelveMonkeysVersion = "3.9.4"
 
 dependencies {
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)

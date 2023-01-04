@@ -8,18 +8,18 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "1.7.20"
+    kotlin("jvm") version "1.8.0"
 }
 
 group = "com.loadingbyte"
 version = "1.3.0-SNAPSHOT"
 
 val jdkVersion = 17
-val slf4jVersion = "1.7.32"
-val poiVersion = "5.2.2"
-val batikVersion = "1.14"
-val javacppVersion = "1.5.6"
-val ffmpegVersion = "4.4-$javacppVersion"
+val slf4jVersion = "2.0.6"
+val poiVersion = "5.2.3"
+val batikVersion = "1.16"
+val javacppVersion = "1.5.8"
+val ffmpegVersion = "5.1.2-$javacppVersion"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use { load(it) } }
 val mainClass = javaProperties.getProperty("mainClass")!!
@@ -38,14 +38,14 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.3.4")
+    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.3.5")
 
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
     // Redirect other logging frameworks to slf4j.
     // Batik & PDFBox use Jakarta Commons Logging. POI uses log4j2.
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
-    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.17.2")
+    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.19.0")
 
     // Spreadsheet Reading and Writing
     implementation("org.apache.poi", "poi", poiVersion)
@@ -60,8 +60,8 @@ dependencies {
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
     // PDF Reading and Writing
-    implementation("org.apache.pdfbox", "pdfbox", "2.0.24")
-    implementation("de.rototor.pdfbox", "graphics2d", "0.33")
+    implementation("org.apache.pdfbox", "pdfbox", "2.0.27")
+    implementation("de.rototor.pdfbox", "graphics2d", "0.42")
 
     // Video Encoding
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -74,10 +74,10 @@ dependencies {
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
     implementation("com.formdev", "flatlaf", "2.6")
-    implementation("org.commonmark", "commonmark", "0.19.0")
+    implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.8.1")
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.1")
 }
 
 configurations.all {

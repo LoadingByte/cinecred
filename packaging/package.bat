@@ -7,9 +7,9 @@ mkdir work\
 mkdir out\
 
 echo Downloading and extracting AdoptOpenJDK...
-set jdk_zip=OpenJDK%JDK_MAJOR%-jdk_x64_windows_hotspot_%JDK_MAJOR%_%JDK_PATCH%.zip
-set jdk_bin=work\jdk-%JDK_MAJOR%+%JDK_PATCH%\bin
-powershell (new-object System.Net.WebClient).DownloadFile('https://github.com/adoptium/temurin%JDK_MAJOR%-binaries/releases/download/jdk-%JDK_MAJOR%+%JDK_PATCH%/%jdk_zip%', 'work\%jdk_zip%')
+set jdk_zip=OpenJDK%JDK_MAJOR%U-jdk_x64_windows_hotspot_%JDK_MAJOR%%JDK_MINOR%_%JDK_PATCH%.zip
+set jdk_bin=work\jdk-%JDK_MAJOR%%JDK_MINOR%+%JDK_PATCH%\bin
+powershell (new-object System.Net.WebClient).DownloadFile('https://github.com/adoptium/temurin%JDK_MAJOR%-binaries/releases/download/jdk-%JDK_MAJOR%%JDK_MINOR%+%JDK_PATCH%/%jdk_zip%', 'work\%jdk_zip%')
 powershell Expand-Archive work\%jdk_zip% -DestinationPath work\
 del work\%jdk_zip%
 

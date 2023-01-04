@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.view.welcome
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
@@ -236,7 +237,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 selF = fileSystemView.getChild(currentDirectory, filename)
             if (!fileSystemView.isFileSystem(selF))
                 return null
-            val selP = selF.toPath()
+            // Note: Some disallowed paths only now throw an exception when converting them to Path objects. This safe
+            // conversion method catches that exception.
+            val selP = selF.toPathSafely() ?: return null
             return if (selP.notExists()) selP else
                 try {
                     selP.useDirectoryEntries { }
@@ -320,9 +323,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             if (transferData.isEmpty())
                 return false
 
+            val path = (transferData[0] as File).toPathSafely() ?: return false
             // Note: As the drag-and-drop thread is not the EDT thread, we use SwingUtilities.invokeLater()
             // to make sure all action happens in the EDT thread.
-            val path = (transferData[0] as File).toPath()
             SwingUtilities.invokeLater { welcomeCtrl.projects_start_onDrop(path) }
             return true
         }

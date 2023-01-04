@@ -100,6 +100,7 @@ Cinecred Changelog
 - Preview playback and frame navigation shortcuts now work regardless of focus.
 - Closing a project now always discards all pending render jobs.
 - Fixed crashes when closing a project immediately after opening it.
+- Fixed various crashes when entering illegal file paths.
 - The missing Ghostscript dialog now only displays installation instructions for
   the current OS and no longer shows a broken link for the Windows download.
 

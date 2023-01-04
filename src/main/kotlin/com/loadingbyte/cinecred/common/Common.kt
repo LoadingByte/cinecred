@@ -13,13 +13,16 @@ import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.io.File
 import java.io.InputStream
 import java.nio.file.FileSystems
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.text.MessageFormat
 import java.util.*
 import javax.swing.JComponent
 import javax.swing.UIManager
+import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.isDirectory
 
@@ -83,6 +86,21 @@ inline fun <R> useResourcePath(path: String, action: (Path) -> R): R {
     else
         action(Path.of(uri))
 }
+
+
+fun String.toPathSafely(): Path? =
+    try {
+        Path(this)
+    } catch (_: InvalidPathException) {
+        null
+    }
+
+fun File.toPathSafely(): Path? =
+    try {
+        toPath()
+    } catch (_: InvalidPathException) {
+        null
+    }
 
 
 /**

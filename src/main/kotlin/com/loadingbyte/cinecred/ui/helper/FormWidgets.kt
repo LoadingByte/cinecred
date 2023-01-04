@@ -194,7 +194,7 @@ class FileWidget(
     override val constraints = listOf((widthSpec ?: WidthSpec.WIDE).mig, "")
 
     override var value: Path
-        get() = Path(text.trim())
+        get() = text.trim().toPathSafely() ?: Path("")
         set(value) {
             text = value.toString()
         }

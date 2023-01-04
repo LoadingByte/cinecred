@@ -1,10 +1,10 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
+import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.ui.comms.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.Preferences
 import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.Path
 
 
 object PersistentStorage : Preferences {
@@ -51,7 +51,7 @@ object PersistentStorage : Preferences {
     var memorizedProjectDirs: List<Path>
         get() = prefsProjectDirs.keys()
             .sortedBy(String::toInt)
-            .map { key -> Path(prefsProjectDirs.get(key, null)) }
+            .mapNotNull { key -> prefsProjectDirs.get(key, null).toPathSafely() }
         set(dirs) {
             prefsProjectDirs.clear()
             for ((idx, dir) in dirs.withIndex())

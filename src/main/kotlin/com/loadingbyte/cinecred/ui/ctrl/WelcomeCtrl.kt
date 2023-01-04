@@ -275,7 +275,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             false
 
     override fun projects_openBrowse_onClickDone() {
-        tryOpenProject(openBrowseSelection!!)
+        tryOpenProject(openBrowseSelection ?: return)
     }
 
     override fun projects_createBrowse_onChangeSelection(dir: Path?) {
@@ -285,7 +285,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun projects_createBrowse_onClickNext() {
-        val projectDir = newBrowseSelection!!
+        val projectDir = newBrowseSelection ?: return
         // Ask for confirmation if the selected directory is not empty; maybe the user made a mistake.
         if (projectDir.exists() && projectDir.useDirectoryEntries { seq -> !seq.all(Path::isHidden) }) {
             if (!welcomeView.showNotEmptyQuestion(projectDir))
@@ -296,7 +296,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat) {
-        val projectDir = newBrowseSelection!!
+        val projectDir = newBrowseSelection ?: return
         tryCopyTemplate(projectDir, locale, format)
         tryOpenProject(projectDir)
     }

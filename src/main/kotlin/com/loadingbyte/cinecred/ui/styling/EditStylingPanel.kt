@@ -9,7 +9,6 @@ import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
 import net.miginfocom.swing.MigLayout
-import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
@@ -145,7 +144,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         })
 
         // Layout the tree and the buttons.
-        val leftPanel = JPanel(MigLayout()).apply {
+        val leftPanel = JPanel(MigLayout("insets 0")).apply {
             add(addPageStyleButton, "split, grow")
             add(addContentStyleButton, "grow")
             add(addLetterStyleButton, "grow")
@@ -159,9 +158,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
         SwingUtilities.invokeLater { splitPane.setDividerLocation(0.25) }
 
-        // Use BorderLayout to maximize the size of the split pane.
-        layout = BorderLayout()
-        add(splitPane, BorderLayout.CENTER)
+        layout = MigLayout()
+        add(splitPane, "grow, push")
     }
 
     private fun duplicateStyle() {

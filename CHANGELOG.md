@@ -63,6 +63,7 @@ Cinecred Changelog
 - Left widening a dashed text decoration no longer crashes the program.
 - Delivery with transparent grounding now always omits the background.
 - Transparency now works correctly in exported PDFs.
+- Prevented render jobs from overwriting the project folder.
 
 #### UI Fixes
 

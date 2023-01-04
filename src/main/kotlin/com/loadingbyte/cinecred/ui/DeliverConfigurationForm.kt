@@ -196,10 +196,18 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.overwrite.title"), OK_CANCEL_OPTION
             ) == OK_OPTION
 
+            fun overwriteProjectDirDialog() = showMessageDialog(
+                ctrl.deliveryDialog, l10n("ui.deliverConfig.overwriteProjectDir.msg"),
+                l10n("ui.deliverConfig.overwriteProjectDir.title"), ERROR_MESSAGE
+            )
+
             // If there is any issue with the output file or folder, inform the user and abort if necessary.
             if (format.fileSeq) {
                 if (fileOrDir.isRegularFile()) {
                     wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", fileOrDir))
+                    return
+                } else if (fileOrDir == ctrl.projectDir) {
+                    overwriteProjectDirDialog()
                     return
                 } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))

@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
 import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
+import com.loadingbyte.cinecred.projectio.isAllowedToBeProjectDir
 import com.loadingbyte.cinecred.projectio.isProjectDir
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.comms.*
@@ -81,6 +82,11 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         if (!projectDir.isDirectory()) {
             welcomeView.display()
             SwingUtilities.invokeLater { welcomeView.showNotADirMessage(projectDir) }
+            return false
+        }
+        if (!isAllowedToBeProjectDir(projectDir)) {
+            welcomeView.display()
+            SwingUtilities.invokeLater { welcomeView.showIllegalPathMessage(projectDir) }
             return false
         }
         if (!isProjectDir(projectDir)) {
@@ -274,8 +280,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_createBrowse_onChangeSelection(dir: Path?) {
         newBrowseSelection = dir
-        // Gray out the "next" button if the selected directory is not real.
-        welcomeView.projects_createBrowse_setNextEnabled(dir != null)
+        // Gray out the "next" button if the selected directory is not real or not allowed to be a project dir.
+        welcomeView.projects_createBrowse_setNextEnabled(dir != null && isAllowedToBeProjectDir(dir))
     }
 
     override fun projects_createBrowse_onClickNext() {

@@ -113,6 +113,13 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         )
     }
 
+    override fun showIllegalPathMessage(path: Path) {
+        JOptionPane.showMessageDialog(
+            this, l10n("ui.projects.illegalPath.msg", path),
+            l10n("ui.projects.illegalPath.title"), JOptionPane.ERROR_MESSAGE
+        )
+    }
+
     override fun showNotAProjectMessage(dir: Path) {
         JOptionPane.showMessageDialog(
             this, l10n("ui.projects.notAProject.msg", dir, STYLING_FILE_NAME),

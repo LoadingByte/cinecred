@@ -17,14 +17,11 @@ import java.awt.Container
 import java.awt.datatransfer.DataFlavor
 import java.beans.PropertyChangeListener
 import java.io.File
-import java.nio.file.FileSystemException
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
 import javax.swing.filechooser.FileView
 import javax.swing.plaf.basic.BasicFileChooserUI
-import kotlin.io.path.notExists
-import kotlin.io.path.useDirectoryEntries
 
 
 class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
@@ -239,14 +236,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 return null
             // Note: Some disallowed paths only now throw an exception when converting them to Path objects. This safe
             // conversion method catches that exception.
-            val selP = selF.toPathSafely() ?: return null
-            return if (selP.notExists()) selP else
-                try {
-                    selP.useDirectoryEntries { }
-                    selP
-                } catch (e: FileSystemException) {
-                    null
-                }
+            return selF.toPathSafely()
         }
 
     /**

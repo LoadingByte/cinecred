@@ -80,6 +80,7 @@ interface WelcomeViewComms {
     fun setUpdate(version: String)
 
     fun showNotADirMessage(path: Path)
+    fun showIllegalPathMessage(path: Path)
     fun showNotAProjectMessage(dir: Path)
     fun showAlreadyOpenMessage(projectDir: Path)
     fun showNotEmptyQuestion(projectDir: Path): Boolean

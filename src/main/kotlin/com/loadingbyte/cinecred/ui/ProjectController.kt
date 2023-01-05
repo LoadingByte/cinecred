@@ -312,7 +312,6 @@ class ProjectController(
         private var lastEditedMillis = 0L
 
         init {
-            projectFrame.onStylingChange(isUnsaved = false)
             projectFrame.panel.onStylingChange(isUnsaved = false, isUndoable = false, isRedoable = false)
             stylingDialog.panel.setStyling(saved)
         }
@@ -385,7 +384,6 @@ class ProjectController(
 
         private fun onStylingChange() {
             val isUnsaved = !current.equalsIgnoreStyleOrderAndIneffectiveSettings(stylingCtx, saved)
-            projectFrame.onStylingChange(isUnsaved)
             projectFrame.panel.onStylingChange(
                 isUnsaved,
                 isUndoable = currentIdx != 0,

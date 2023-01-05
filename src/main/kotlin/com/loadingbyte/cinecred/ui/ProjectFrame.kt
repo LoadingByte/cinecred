@@ -31,9 +31,4 @@ class ProjectFrame(ctrl: ProjectController) : JFrame("${ctrl.projectName} \u2013
         contentPane.add(panel)
     }
 
-    fun onStylingChange(isUnsaved: Boolean) {
-        // On macOS, show an unsaved indicator inside the "close window" button.
-        rootPane.putClientProperty("Window.documentModified", isUnsaved)
-    }
-
 }

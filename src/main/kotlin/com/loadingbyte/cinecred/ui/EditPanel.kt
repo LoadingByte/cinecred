@@ -334,15 +334,20 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             true
 
     fun onStylingChange(isUnsaved: Boolean, isUndoable: Boolean, isRedoable: Boolean) {
-        unsavedStylingLabel.isVisible = isUnsaved
+        setStylingUnsaved(isUnsaved)
         undoStylingButton.isEnabled = isUndoable
         redoStylingButton.isEnabled = isRedoable
-        resetStylingButton.isEnabled = isUnsaved
     }
 
     fun onStylingSave() {
-        unsavedStylingLabel.isVisible = false
-        resetStylingButton.isEnabled = false
+        setStylingUnsaved(false)
+    }
+
+    private fun setStylingUnsaved(isUnsaved: Boolean) {
+        unsavedStylingLabel.isVisible = isUnsaved
+        resetStylingButton.isEnabled = isUnsaved
+        // On macOS, show an unsaved indicator inside the "close window" button.
+        rootPane.putClientProperty("Window.documentModified", isUnsaved)
     }
 
     fun updateProject(drawnProject: DrawnProject?, log: List<ParserMsg>, error: ProjectController.Error?) {

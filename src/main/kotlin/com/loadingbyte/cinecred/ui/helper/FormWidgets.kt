@@ -724,7 +724,7 @@ class ToggleButtonGroupWidget<V : Any>(
                     // with unlabeled toggle buttons such that it matches the y position of the first row.
                     // The baseline turns out to be the baseline position of a vertically centered string.
                     val fm = c.getFontMetrics(c.font)
-                    baseline = (cHeight + fm.ascent - fm.descent) / 2
+                    baseline = ceilDiv(cHeight + fm.ascent - fm.descent, 2)
                 }
                 // Adjust for the panel's border.
                 insets.top + baseline

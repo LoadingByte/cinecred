@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.ui.FlatArrowButton
 import com.formdev.flatlaf.ui.FlatRoundBorder
 import com.formdev.flatlaf.ui.FlatUIUtils
+import com.loadingbyte.cinecred.common.ceilDiv
 import com.loadingbyte.cinecred.common.withNewG2
 import java.awt.Dimension
 import java.awt.Graphics
@@ -245,7 +246,8 @@ class MultiComboBox<E : Any>(
     }
 
     override fun getBaseline(width: Int, height: Int): Int =
-        (height - selectionLabel.height) / 2 + selectionLabel.getBaseline(selectionLabel.width, selectionLabel.height)
+        ceilDiv(height - selectionLabel.height, 2) +
+                selectionLabel.getBaseline(selectionLabel.width, selectionLabel.height)
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)

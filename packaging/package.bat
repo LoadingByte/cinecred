@@ -23,7 +23,7 @@ echo Collecting minimized JRE...
 %jdk_bin%\jlink @settings\jlink --output work\runtime\
 
 echo Collecting installation image...
-%jdk_bin%\jpackage @settings\jpackage --name cinecred --icon images\icon.ico --input app\ --runtime-image work\runtime\ --dest work\image\
+%jdk_bin%\jpackage @settings\jpackage @settings\jpackage-windows --name cinecred --icon images\icon.ico --input app\ --runtime-image work\runtime\ --dest work\image\
 del work\image\cinecred\cinecred.ico
 copy resources\universal\LEGAL work\image\cinecred\
 

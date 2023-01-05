@@ -3,6 +3,5 @@
 --main-class @MAIN_CLASS@
 --java-options "@JAVA_OPTIONS@"
 --app-version @VERSION@
---description "@DESCRIPTION@"
 --vendor "@VENDOR@"
 --copyright "Copyright (C) 2023 @VENDOR@, licensed under the GPLv3"

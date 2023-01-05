@@ -77,8 +77,6 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         jobTableModel.rows.add(row)
         jobTableModel.fireTableRowsInserted(jobTableModel.rowCount - 1, jobTableModel.rowCount - 1)
 
-        tryUpdateTaskbarBadge()
-
         var prevProgress: Any? = null
         fun setProgress(progress: Any) {
             if (progress == prevProgress)
@@ -118,6 +116,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             progressCallback = { SwingUtilities.invokeLater { setProgress(it) } },
             finishCallback = { SwingUtilities.invokeLater { onFinish(it) } }
         )
+
+        tryUpdateTaskbarBadge()
     }
 
     private fun removeRowFromQueue(rowIdx: Int) {

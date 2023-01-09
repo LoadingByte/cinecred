@@ -8,6 +8,13 @@ Cinecred Changelog
 
 - Added presets for well-known resolutions.
 
+### Fixes
+
+
+#### UI Fixes
+
+- The layout guides tooltip shows the guide colors again.
+
 
 1.3.0
 -----

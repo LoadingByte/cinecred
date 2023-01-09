@@ -5,10 +5,7 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
-import com.loadingbyte.cinecred.ui.helper.JobSlot
-import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
-import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
-import com.loadingbyte.cinecred.ui.helper.WARN_ICON
+import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -28,6 +25,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedFrameSlider get() = frameSlider
     // =========================================
 
+    private val keyListeners = mutableListOf<KeyListener>()
+
     private val canvas: JPanel = object : JPanel() {
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
@@ -36,12 +35,23 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             if (video != null && videoBackend != null) {
                 val (videoWidth, videoHeight) = video.resolution
                 g as Graphics2D
-                g.translate((width - videoWidth / systemScaling) / 2.0, 0.0)
+                g.translate((width - videoWidth / systemScaling) / 2.0, (height - videoHeight / systemScaling) / 2.0)
                 g.scale(1.0 / systemScaling)
                 g.clipRect(0, 0, videoWidth, videoHeight)
                 videoBackend.materializeFrame(g, frameSlider.value)
             }
         }
+    }
+
+    private val actualSizeButton = newToolbarToggleButtonWithKeyListener(
+        X_1_TO_1_ICON, l10n("ui.video.actualSize"),
+        VK_1, CTRL_DOWN_MASK
+    ) { restartDrawing() }
+    private val fullScreenButton = newToolbarToggleButtonWithKeyListener(
+        SCREEN_ICON, l10n("ui.video.fullScreen"),
+        VK_F11, 0
+    ) { isSelected ->
+        graphicsConfiguration.device.fullScreenWindow = if (isSelected) ctrl.videoDialog else null
     }
 
     private val rewindButton: JToggleButton
@@ -105,6 +115,18 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             }
         }
 
+    private fun newToolbarToggleButtonWithKeyListener(
+        icon: Icon,
+        tooltip: String,
+        shortcutKeyCode: Int,
+        shortcutModifiers: Int,
+        listener: (Boolean) -> Unit
+    ): JToggleButton {
+        val btn = newToolbarToggleButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, false, listener)
+        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers) { btn.isSelected = !btn.isSelected })
+        return btn
+    }
+
     init {
         val rewindIcon = PLAY_ICON.getScaledIcon(-1.0, 1.0)
         val buttonGroup = ButtonGroup()
@@ -118,15 +140,18 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         pauseButton = newToolbarPlayButton(PAUSE_ICON, l10n("ui.video.pause"), VK_K, ::pause, isSelected = true)
         playButton = newToolbarPlayButton(PLAY_ICON, l10n("ui.video.play"), VK_L, ::play)
 
-        layout = MigLayout("insets 12 n n n, gapy 10")
-        add(JLabel(l10n("ui.video.warning"), WARN_ICON, JLabel.LEADING), "center")
-        add(rewindButton, "newline, split 5, gapx 2")
-        add(pauseButton, "gapx 2")
-        add(playButton, "gapx 2")
+        layout = MigLayout("insets 0", "[]8[]0[]rel[]rel[]2[]2[][][]14[]", "[]0[]8[]8")
+        add(canvas, "span, grow, push")
+        add(JSeparator(), "newline, span, growx, shrink 0 0")
+        add(actualSizeButton, "newline, skip 1")
+        add(fullScreenButton)
+        add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
+        add(rewindButton)
+        add(pauseButton)
+        add(playButton)
         // If we use % or growx instead of "sp", the slider becomes laggy due to the quickly changing timecode label.
         add(frameSlider, "width 100sp")
-        add(timecodeLabel, "gapright 8")
-        add(canvas, "newline, grow, push")
+        add(timecodeLabel)
 
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
@@ -136,12 +161,16 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun onKeyEvent(event: KeyEvent): Boolean {
+        if (keyListeners.any { it.onKeyEvent(event) })
+            return true
+
         if (event.id != KEY_PRESSED)
             return false
 
         val project = drawnProject?.project
         when (event.modifiersEx) {
             0 -> when (event.keyCode) {
+                VK_ESCAPE -> fullScreenButton.isSelected = false
                 VK_J -> rewind()
                 VK_K -> pause()
                 VK_L -> play()
@@ -196,10 +225,12 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         val graphics = canvas.graphics as Graphics2D? ?: return
 
         systemScaling = UIScale.getSystemScaleFactor(graphics)
-        val scaling = min(
-            canvas.width.toDouble() / project.styling.global.resolution.widthPx,
-            canvas.height.toDouble() / project.styling.global.resolution.heightPx
-        ) * systemScaling
+        var scaling = systemScaling
+        if (!actualSizeButton.isSelected)
+            scaling *= min(
+                canvas.width.toDouble() / project.styling.global.resolution.widthPx,
+                canvas.height.toDouble() / project.styling.global.resolution.heightPx
+            )
         // Protect against too small canvas sizes.
         if (scaling < 0.001)
             return

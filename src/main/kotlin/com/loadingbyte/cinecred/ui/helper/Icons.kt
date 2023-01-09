@@ -43,6 +43,7 @@ val WINDOW_ICON_IMAGES = run {
 
 val CINECRED_ICON = SVGIcon.load("/logo.svg").getScaledIcon(0.0625)
 
+val X_1_TO_1_ICON = SVGIcon.load("/icons/1to1.svg")
 val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
 val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
@@ -68,6 +69,7 @@ val REDO_ICON = SVGIcon.load("/icons/redo.svg")
 val REMOVE_ICON = SVGIcon.load("/icons/remove.svg")
 val RESET_ICON = SVGIcon.load("/icons/reset.svg")
 val SAVE_ICON = SVGIcon.load("/icons/save.svg")
+val SCREEN_ICON = SVGIcon.load("/icons/screen.svg")
 val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
 val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
 val UNIFORM_SAFE_AREAS_ICON = SVGIcon.load("/icons/uniformSafeAreas.svg")

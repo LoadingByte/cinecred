@@ -7,6 +7,7 @@ Cinecred Changelog
 ### Additions
 
 - Added presets for well-known resolutions.
+- Added full screen and actual size video previews.
 
 ### Fixes
 

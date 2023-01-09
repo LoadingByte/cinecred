@@ -8,7 +8,7 @@ import com.loadingbyte.cinecred.project.Project
 
 
 fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
-    val video = DeferredVideo(project.styling.global.widthPx, project.styling.global.heightPx)
+    val video = DeferredVideo(project.styling.global.resolution)
 
     // Write frames for each page as has been configured.
     for ((pageIdx, page) in project.pages.withIndex()) {
@@ -17,7 +17,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
         for ((stageIdx, stage) in page.stages.withIndex())
             when (val stageInfo = drawnPage.stageInfo[stageIdx]) {
                 is DrawnStageInfo.Card -> {
-                    val shift = stageInfo.middleY.resolve() - project.styling.global.heightPx / 2.0
+                    val shift = stageInfo.middleY.resolve() - video.resolution.heightPx / 2.0
                     if (stageIdx == 0)
                         builder.playFade(shift, stage.style.cardFadeInFrames, fadeOut = false)
                     builder.playStatic(shift, stage.style.cardDurationFrames)
@@ -26,7 +26,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                 }
                 is DrawnStageInfo.Scroll ->
                     builder.playScroll(
-                        shiftStart = stageInfo.scrollStartY.resolve() - project.styling.global.heightPx / 2.0,
+                        shiftStart = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
                         stageInfo.frames, stageInfo.initialAdvance, stage.style.scrollPxPerFrame
                     )
             }

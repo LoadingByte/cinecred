@@ -21,8 +21,6 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
 
 
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
-    NumberWidgetSpec(Global::widthPx.st(), step = 10),
-    NumberWidgetSpec(Global::heightPx.st(), step = 10),
     TimecodeWidgetSpec(
         Global::runtimeFrames.st(),
         getFPS = { _, _, global -> global.fps },

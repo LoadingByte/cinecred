@@ -60,19 +60,21 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
     }
 
     private fun drawSafeAreas(image: DeferredImage) {
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.93, global.heightPx * 0.93)
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.9, global.heightPx * 0.9, ticks = true)
-        drawCropMarkers(image, UNIFORM_SAFE_AREAS, global.widthPx * 0.8, global.heightPx * 0.8, ticks = true)
+        val resolution = global.resolution
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, resolution.widthPx * 0.93, resolution.heightPx * 0.93)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, resolution.widthPx * 0.9, resolution.heightPx * 0.9, ticks = true)
+        drawCropMarkers(image, UNIFORM_SAFE_AREAS, resolution.widthPx * 0.8, resolution.heightPx * 0.8, ticks = true)
 
         drawCutSafeArea(image, CUT_SAFE_AREA_16_9, 16.0 / 9.0)
         drawCutSafeArea(image, CUT_SAFE_AREA_4_3, 4.0 / 3.0)
     }
 
     private fun drawCutSafeArea(image: DeferredImage, layer: Layer, aspect: Double) {
+        val resolution = global.resolution
         drawCropMarkers(
             image, layer,
-            cropWidth = min(global.widthPx.toDouble(), global.heightPx * aspect),
-            cropHeight = min(global.heightPx.toDouble(), global.widthPx / aspect)
+            cropWidth = min(resolution.widthPx.toDouble(), resolution.heightPx * aspect),
+            cropHeight = min(resolution.heightPx.toDouble(), resolution.widthPx / aspect)
         )
     }
 
@@ -80,8 +82,9 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
         image: DeferredImage, layer: Layer, cropWidth: Double, cropHeight: Double, ticks: Boolean = false
     ) {
         val c = Color.GRAY
+        val globalWidth = global.resolution.widthPx
 
-        val cropX1 = (global.widthPx - cropWidth) / 2.0
+        val cropX1 = (globalWidth - cropWidth) / 2.0
         val cropX2 = cropX1 + cropWidth
 
         // Draw full crop area hints for each card stage.
@@ -93,8 +96,8 @@ class EditPagePreviewPanel(maxZoom: Double, zoomIncrement: Double) : JPanel() {
             image.drawRect(c, cropX1, cropY1, cropWidth, cropHeight.toY(), layer = layer)
 
             if (ticks) {
-                val d = global.widthPx / 200.0
-                val middleX = global.widthPx / 2.0
+                val d = globalWidth / 200.0
+                val middleX = globalWidth / 2.0
                 image.drawLine(c, cropX1 - d, middleY, cropX1 + d, middleY, layer = layer)
                 image.drawLine(c, cropX2 - d, middleY, cropX2 + d, middleY, layer = layer)
                 image.drawLine(c, middleX, cropY1 - d, middleX, cropY1 + d, layer = layer)

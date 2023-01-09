@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.imaging.Picture
 import kotlinx.collections.immutable.PersistentList
@@ -46,8 +47,7 @@ sealed interface NamedStyle : Style {
 
 
 data class Global(
-    val widthPx: Int,
-    val heightPx: Int,
+    val resolution: Resolution,
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
     val runtimeFrames: Opt<Int>,

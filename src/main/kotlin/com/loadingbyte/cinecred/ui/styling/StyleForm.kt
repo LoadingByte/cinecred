@@ -172,6 +172,7 @@ class StyleForm<S : Style>(
                 toString = Locale::getDisplayName, widthSpec
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
+            Resolution::class.java -> ResolutionWidget()
             FPS::class.java -> FPSWidget(widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
             else -> when {

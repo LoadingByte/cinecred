@@ -443,7 +443,7 @@ private class Screencast(
     private val height = desktop.height + captionHeight
 
     private val videoWriter = VideoWriter(
-        file, width, height, FPS(fps, 1), avcodec.AV_CODEC_ID_H264, avutil.AV_PIX_FMT_YUV420P, emptyMap(),
+        file, Resolution(width, height), FPS(fps, 1), avcodec.AV_CODEC_ID_H264, avutil.AV_PIX_FMT_YUV420P, emptyMap(),
         codecOptions = mapOf("crf" to "17")
     )
 

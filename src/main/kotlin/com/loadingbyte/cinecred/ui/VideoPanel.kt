@@ -34,10 +34,11 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             val video = scaledVideo
             val videoBackend = scaledVideoBackend
             if (video != null && videoBackend != null) {
+                val (videoWidth, videoHeight) = video.resolution
                 g as Graphics2D
-                g.translate((width - video.width / systemScaling) / 2.0, 0.0)
+                g.translate((width - videoWidth / systemScaling) / 2.0, 0.0)
                 g.scale(1.0 / systemScaling)
-                g.clipRect(0, 0, video.width, video.height)
+                g.clipRect(0, 0, videoWidth, videoHeight)
                 videoBackend.materializeFrame(g, frameSlider.value)
             }
         }
@@ -198,8 +199,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
         systemScaling = UIScale.getSystemScaleFactor(graphics)
         val scaling = min(
-            canvas.width.toDouble() / project.styling.global.widthPx,
-            canvas.height.toDouble() / project.styling.global.heightPx
+            canvas.width.toDouble() / project.styling.global.resolution.widthPx,
+            canvas.height.toDouble() / project.styling.global.resolution.heightPx
         ) * systemScaling
         // Protect against too small canvas sizes.
         if (scaling < 0.001)

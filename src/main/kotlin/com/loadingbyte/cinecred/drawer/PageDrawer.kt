@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
@@ -50,7 +51,7 @@ fun drawPages(project: Project): List<DrawnPage> {
         page.stages.withIndex().associateTo(stageImages) { (stageIdx, stage) ->
             val prevStage = page.stages.getOrNull(stageIdx - 1)
             val nextStage = page.stages.getOrNull(stageIdx + 1)
-            stage to drawStage(global, drawnBlocks, stage, prevStage, nextStage)
+            stage to drawStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
         }
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
@@ -61,7 +62,7 @@ fun drawPages(project: Project): List<DrawnPage> {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
         val prelimStageLayouts = HashMap<Stage, StageLayout>()
         for (page in pages)
-            prelimStageLayouts.putAll(layoutStages(global, stageImages, page).second)
+            prelimStageLayouts.putAll(layoutStages(global.resolution, stageImages, page).second)
         // Use that information to scale the vertical gaps.
         stageImages = matchRuntime(
             pages, stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
@@ -72,7 +73,7 @@ fun drawPages(project: Project): List<DrawnPage> {
     // Finally, do the real layout pass with potentially changed stage images and combine the stage images
     // to page images.
     return pages.map { page ->
-        val (pageImageHeight, stageLayouts) = layoutStages(global, stageImages, page)
+        val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, stageImages, page)
         val pageImage = drawPage(global, stageImages, stageLayouts, pageTopStages, pageBotStages, page, pageImageHeight)
         DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
@@ -80,13 +81,13 @@ fun drawPages(project: Project): List<DrawnPage> {
 
 
 private fun drawStage(
-    global: Global,
+    resolution: Resolution,
     drawnBlocks: Map<Block, DrawnBlock>,
     stage: Stage,
     prevStage: Stage?,
     nextStage: Stage?
 ): DeferredImage {
-    val stageImage = DeferredImage(width = global.widthPx.toDouble())
+    val stageImage = DeferredImage(width = resolution.widthPx.toDouble())
     var y = 0.0.toY()
 
     // If this stage is a scroll stage is preceded by a card stage, add the vertical gap behind the card stage to the
@@ -98,7 +99,7 @@ private fun drawStage(
         var maxHeight = 0.0.toY()
         for (spine in segment.spines) {
             val drawnSpine = drawSpine(drawnBlocks, spine)
-            val spineXInPageImage = global.widthPx / 2.0 + spine.posOffsetPx
+            val spineXInPageImage = resolution.widthPx / 2.0 + spine.posOffsetPx
             val x = spineXInPageImage - drawnSpine.spineXInImage
             stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
             maxHeight = maxHeight.max(drawnSpine.defImage.height)
@@ -149,7 +150,7 @@ private fun drawSpine(
 
 
 private fun layoutStages(
-    global: Global,
+    resolution: Resolution,
     stageImages: Map<Stage, DeferredImage>,
     page: Page
 ): Pair<Y, Map<Stage, StageLayout>> {
@@ -165,7 +166,7 @@ private fun layoutStages(
             // The amount of padding that needs to be added above and below the card's stage image such that
             // it is centered on the screen. Notice that as scrolling from/to a card starts/ends at the card's center,
             // the padding is irrelevant for runtime matching and can hence be rigid.
-            val cardPaddingHeight = (global.heightPx - stageHeight.resolve()) / 2.0
+            val cardPaddingHeight = (resolution.heightPx - stageHeight.resolve()) / 2.0
             // If this card stage is the first and/or the last stage, make sure that there is extra padding below
             // and above the card stage such that its content is centered vertically.
             if (stageIdx == 0)
@@ -201,12 +202,12 @@ private fun layoutStages(
                 // Find the scroll start and end y coordinates.
                 val scrollStartY = when (prevStageBehavior) {
                     CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2.0 }
-                    SCROLL, null -> topY - global.heightPx / 2.0
+                    SCROLL, null -> topY - resolution.heightPx / 2.0
                 }
                 val scrollStopY = when (nextStageBehavior) {
                     CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2.0 }
-                    SCROLL -> botY - global.heightPx / 2.0
-                    null -> botY + global.heightPx / 2.0
+                    SCROLL -> botY - resolution.heightPx / 2.0
+                    null -> botY + resolution.heightPx / 2.0
                 }
                 // Find the portion of the scrolled height which really belongs to the scroll stage itself. If you are
                 // confused, recall that scroll stages can scroll into melted card stages.
@@ -532,20 +533,21 @@ private fun drawPage(
     page: Page,
     pageImageHeight: Y
 ): DeferredImage {
-    val pageImage = DeferredImage(global.widthPx.toDouble(), pageImageHeight)
+    val resolution = global.resolution
+    val pageImage = DeferredImage(resolution.widthPx.toDouble(), pageImageHeight)
 
-    val framesMargin = global.widthPx / 100.0
+    val framesMargin = resolution.widthPx / 100.0
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
         // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
         // not contain a font weight attribute, or else the FormattedString would complain.
         val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
-        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), global.widthPx / 80.0)
+        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), resolution.widthPx / 80.0)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, emptyList(), null))
         }.build()
         pageImage.drawString(
-            fmtStr, x = global.widthPx - fmtStr.width - framesMargin, y,
+            fmtStr, x = resolution.widthPx - fmtStr.width - framesMargin, y,
             foregroundLayer = GUIDES, backgroundLayer = GUIDES /* irrelevant, since our string has no background */
         )
     }
@@ -554,24 +556,24 @@ private fun drawPage(
         val stageImage = stageImages.getValue(stage)
         val stageLayout = stageLayouts.getValue(stage)
         if (stageLayout.info is DrawnStageInfo.Card) {
-            val cardTopY = stageLayout.info.middleY - global.heightPx / 2.0
-            val cardBotY = stageLayout.info.middleY + global.heightPx / 2.0
+            val cardTopY = stageLayout.info.middleY - resolution.heightPx / 2.0
+            val cardBotY = stageLayout.info.middleY + resolution.heightPx / 2.0
             // Draw guides that show the boundaries of the screen as they will be when this card will be shown.
             // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
             // rectangle are often rendered only partially or not at all.
             pageImage.drawRect(
-                STAGE_GUIDE_COLOR, 0.0, cardTopY, global.widthPx - 1.0, (global.heightPx - 1.0).toY(),
+                STAGE_GUIDE_COLOR, 0.0, cardTopY, resolution.widthPx - 1.0, (resolution.heightPx - 1.0).toY(),
                 layer = GUIDES
             )
             // If the card is an intermediate stage, also draw arrows that indicate that the card is intermediate.
             if (stageIdx != 0)
-                pageImage.drawMeltedCardArrowGuide(global, cardTopY)
+                pageImage.drawMeltedCardArrowGuide(resolution, cardTopY)
             if (stageIdx != page.stages.lastIndex)
-                pageImage.drawMeltedCardArrowGuide(global, cardBotY)
+                pageImage.drawMeltedCardArrowGuide(resolution, cardBotY)
             drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), y = cardTopY + framesMargin)
         } else if (stageLayout.info is DrawnStageInfo.Scroll) {
             val y = when (val prevStageInfo = page.stages.getOrNull(stageIdx - 1)?.let(stageLayouts::getValue)?.info) {
-                is DrawnStageInfo.Card -> prevStageInfo.middleY + global.heightPx / 2.0 + framesMargin
+                is DrawnStageInfo.Card -> prevStageInfo.middleY + resolution.heightPx / 2.0 + framesMargin
                 is DrawnStageInfo.Scroll -> stageLayout.y
                 null -> stageLayout.y + framesMargin
             }
@@ -585,8 +587,8 @@ private fun drawPage(
 }
 
 
-private fun DeferredImage.drawMeltedCardArrowGuide(global: Global, y: Y) {
-    val s = global.widthPx / 100.0
+private fun DeferredImage.drawMeltedCardArrowGuide(resolution: Resolution, y: Y) {
+    val s = resolution.widthPx / 100.0
     val triangle = Path2D.Double().apply {
         moveTo(-0.5 * s, -0.45 * s)
         lineTo(0.5 * s, -0.45 * s)
@@ -594,7 +596,7 @@ private fun DeferredImage.drawMeltedCardArrowGuide(global: Global, y: Y) {
         closePath()
     }
     drawShape(
-        STAGE_GUIDE_COLOR, triangle, global.widthPx / 2.0, y, fill = true, layer = GUIDES
+        STAGE_GUIDE_COLOR, triangle, resolution.widthPx / 2.0, y, fill = true, layer = GUIDES
     )
 }
 

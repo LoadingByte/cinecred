@@ -127,8 +127,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
     private fun verifyResolutionMult(resolutionMult: Double): Notice? {
         val (project, _, _) = drawnProject ?: return null
 
-        val scaledWidth = (resolutionMult * project.styling.global.widthPx).roundToInt()
-        val scaledHeight = (resolutionMult * project.styling.global.heightPx).roundToInt()
+        val resolution = project.styling.global.resolution
+        val scaledWidth = (resolutionMult * resolution.widthPx).roundToInt()
+        val scaledHeight = (resolutionMult * resolution.heightPx).roundToInt()
         val yieldMsg = l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
 
         fun warn(msg: String) = Notice(Severity.WARN, "$yieldMsg $msg")

@@ -24,19 +24,8 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
 } as List<StyleConstraint<S, *>>
 
 
-private const val ASPECT_RATIO_LIMIT = 32
-
 private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
-    IntConstr(ERROR, Global::widthPx.st(), min = 1),
-    IntConstr(ERROR, Global::heightPx.st(), min = 1),
-    JudgeConstr(
-        ERROR, msg("project.styling.constr.illegalAspectRatio", ASPECT_RATIO_LIMIT),
-        Global::widthPx.st(), Global::heightPx.st(),
-        judge = { _, _, global ->
-            val aspectRatio = global.widthPx.toDouble() / global.heightPx
-            aspectRatio in 1.0 / ASPECT_RATIO_LIMIT..ASPECT_RATIO_LIMIT / 1.0
-        }
-    ),
+    ResolutionConstr(ERROR, Global::resolution.st()),
     FPSConstr(ERROR, Global::fps.st()),
     DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
         val formats = TimecodeFormat.values().toSortedSet()
@@ -259,6 +248,12 @@ class ColorConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Color>>(setting)
 
 
+class ResolutionConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, Resolution>
+) : StyleConstraint<S, StyleSetting<S, Resolution>>(setting)
+
+
 class FPSConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FPS>
@@ -397,6 +392,20 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, color ->
                         if (!cst.allowAlpha && color.alpha != 255)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.colorAlpha"))
+                    }
+                is ResolutionConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, resolution ->
+                        if (resolution.run { widthPx <= 0 || heightPx <= 0 }) {
+                            val msg = l10n("project.styling.constr.negativeResolution")
+                            log(rootStyle, style, st, idx, cst.severity, msg)
+                        } else {
+                            val aspectRatio = resolution.widthPx.toDouble() / resolution.heightPx
+                            val aspectRatioLimit = 32
+                            if (aspectRatio !in 1.0 / aspectRatioLimit..aspectRatioLimit / 1.0) {
+                                val msg = l10n("project.styling.constr.extremeAspectRatio", aspectRatioLimit)
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                        }
                     }
                 is FPSConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, fps ->

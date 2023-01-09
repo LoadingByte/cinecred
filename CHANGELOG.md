@@ -4,6 +4,10 @@ Cinecred Changelog
 1.3.1-SNAPSHOT
 --------------
 
+### Additions
+
+- Added presets for well-known resolutions.
+
 
 1.3.0
 -----

@@ -51,15 +51,16 @@ class VideoRenderJob(
         ) {
             override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
         }
+        val resolution = scaledVideo.resolution
 
         VideoWriter(
-            fileOrPattern, scaledVideo.width, scaledVideo.height, project.styling.global.fps,
+            fileOrPattern, resolution, project.styling.global.fps,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->
             for (frameIdx in 0 until scaledVideo.numFrames) {
-                val frame = BufferedImage(scaledVideo.width, scaledVideo.height, imageType).withG2 { g2 ->
+                val frame = BufferedImage(resolution.widthPx, resolution.heightPx, imageType).withG2 { g2 ->
                     g2.setHighQuality()
                     scaledVideoBackend.materializeFrame(g2, frameIdx)
                 }

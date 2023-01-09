@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.electronwill.toml.Toml
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.colorFromHex
-import com.loadingbyte.cinecred.common.enumFromName
-import com.loadingbyte.cinecred.common.fpsFromFraction
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
@@ -144,6 +141,9 @@ private fun migrate(rawStyling: RawStyling) {
             if (flowC == "HEIGHT" || flowC == "WIDTH_AND_HEIGHT") contentStyle["flowMatchCellHeight"] = "WITHIN_BLOCK"
         }
     }
+
+    // 1.3.0 -> 1.3.1: The resolution is now stored as a single setting.
+    rawStyling.global.let { g -> g["widthPx"]?.let { w -> g["heightPx"]?.let { h -> g["resolution"] = "${w}x$h" } } }
 }
 
 
@@ -193,6 +193,7 @@ private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     String::class.java -> raw as String
     Locale::class.java -> Locale.forLanguageTag(raw as String)
     Color::class.java -> colorFromHex(raw as String)
+    Resolution::class.java -> resolutionFromTimes(raw as String)
     FPS::class.java -> fpsFromFraction(raw as String)
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     else -> when {

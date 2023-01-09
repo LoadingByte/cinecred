@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
 import kotlinx.collections.immutable.persistentListOf
@@ -20,8 +21,7 @@ fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
 
 
 val PRESET_GLOBAL = Global(
-    widthPx = 2048,
-    heightPx = 858,
+    resolution = Resolution(2048, 858),
     fps = FPS(24, 1),
     timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
     runtimeFrames = Opt(false, 0),

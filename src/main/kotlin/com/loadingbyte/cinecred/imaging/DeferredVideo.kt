@@ -19,7 +19,11 @@ import kotlin.math.*
  * The implementation assumes that no [DeferredImage] is drawn more than once and is optimized accordingly. If this
  * assumption is violated, the image will be materialized more often than it needs to be.
  */
-class DeferredVideo(val width: Int, val height: Int) {
+class DeferredVideo(val resolution: Resolution) {
+
+    // Convenient accessors:
+    private val width get() = resolution.widthPx
+    private val height get() = resolution.heightPx
 
     private val instructions = ArrayList<Instruction>()
 
@@ -27,10 +31,7 @@ class DeferredVideo(val width: Int, val height: Int) {
         get() = instructions.run { if (isEmpty()) 0 else last().lastFrameIdx + 1 }
 
     fun copy(scaling: Double = 1.0): DeferredVideo {
-        val copy = DeferredVideo(
-            width = (width * scaling).roundToInt(),
-            height = (height * scaling).roundToInt()
-        )
+        val copy = DeferredVideo(Resolution((width * scaling).roundToInt(), (height * scaling).roundToInt()))
         for (insn in instructions)
             when (insn) {
                 is Instruction.PlayBlank ->

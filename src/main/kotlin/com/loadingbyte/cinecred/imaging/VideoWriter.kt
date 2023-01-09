@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
@@ -63,14 +64,16 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
  */
 class VideoWriter(
     fileOrDir: Path,
-    private val width: Int,
-    private val height: Int,
+    resolution: Resolution,
     fps: FPS,
     codecId: Int,
     private val outPixelFormat: Int,
     muxerOptions: Map<String, String>,
     codecOptions: Map<String, String>
 ) : Closeable {
+
+    private val width = resolution.widthPx
+    private val height = resolution.heightPx
 
     private var inPixelFormat: Int? = null
 

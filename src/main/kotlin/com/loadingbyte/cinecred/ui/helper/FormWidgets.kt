@@ -5,6 +5,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
+import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
@@ -831,6 +832,97 @@ class ColorWellWidget(
                 color = if ((x + y) % 2 == 0) Color.WHITE else Color.LIGHT_GRAY
                 fillRect(x * checkerSize, y * checkerSize, checkerSize, checkerSize)
             }
+    }
+
+}
+
+
+class ResolutionWidget : Form.AbstractWidget<Resolution>() {
+
+    private sealed interface Preset {
+        class Choice(val label: String, val resolution: Resolution) : Preset
+        object Custom : Preset
+    }
+
+    companion object {
+        private val CHOICE_PRESETS = listOf(
+            Preset.Choice("HD", Resolution(1280, 720)),
+            Preset.Choice("Full HD", Resolution(1920, 1080)),
+            Preset.Choice("Ultra HD", Resolution(3840, 2160)),
+            Preset.Choice("DCI 2K Flat", Resolution(1998, 1080)),
+            Preset.Choice("DCI 2K Scope", Resolution(2048, 858)),
+            Preset.Choice("DCI 4K Flat", Resolution(3996, 2160)),
+            Preset.Choice("DCI 4K Scope", Resolution(4096, 1716))
+        )
+    }
+
+    private val presetWidget = ComboBoxWidget(
+        Preset::class.java, listOf(Preset.Custom) + CHOICE_PRESETS,
+        toString = { p ->
+            when (p) {
+                is Preset.Choice -> "${p.label} (${p.resolution.widthPx} \u00D7 ${p.resolution.heightPx})"
+                is Preset.Custom -> l10n("ui.form.resolutionCustom")
+            }
+        }
+    )
+
+    private val widthWidget = SpinnerWidget(
+        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.widthPx, 1, null, 10), WidthSpec.TINY
+    )
+    private val heightWidget = SpinnerWidget(
+        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.heightPx, 1, null, 10), WidthSpec.TINY
+    )
+    private val timesLabel = JLabel("\u00D7")
+
+    init {
+        // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        // If necessary, also update the custom resolution visibility.
+        presetWidget.changeListeners.add { widget ->
+            val isCustom = presetWidget.value == Preset.Custom
+            widthWidget.isVisible = isCustom
+            heightWidget.isVisible = isCustom
+            timesLabel.isVisible = isCustom
+            notifyChangeListenersAboutOtherWidgetChange(widget)
+        }
+        widthWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+        heightWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+    }
+
+    override val components: List<JComponent> = presetWidget.components +
+            widthWidget.components + listOf(timesLabel) + heightWidget.components
+    override val constraints =
+        presetWidget.constraints + widthWidget.constraints + listOf("") + heightWidget.constraints
+
+    override var value: Resolution
+        get() = when (val preset = presetWidget.value) {
+            is Preset.Custom -> Resolution(widthWidget.value, heightWidget.value)
+            is Preset.Choice -> preset.resolution
+        }
+        set(value) {
+            val preset = CHOICE_PRESETS.find { it.resolution == value } ?: Preset.Custom
+            presetWidget.value = preset
+            if (preset == Preset.Custom) {
+                widthWidget.value = value.widthPx
+                heightWidget.value = value.heightPx
+            }
+        }
+
+    override var isVisible: Boolean
+        get() = super.isVisible
+        set(isVisible) {
+            super.isVisible = isVisible
+            if (isVisible && presetWidget.value != Preset.Custom) {
+                widthWidget.isVisible = false
+                heightWidget.isVisible = false
+                timesLabel.isVisible = false
+            }
+        }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        configurator(this)
+        presetWidget.applyConfigurator(configurator)
+        widthWidget.applyConfigurator(configurator)
+        heightWidget.applyConfigurator(configurator)
     }
 
 }

@@ -34,6 +34,12 @@ val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 enum class Severity { INFO, WARN, ERROR }
 
 
+data class Resolution(
+    val widthPx: Int,
+    val heightPx: Int
+)
+
+
 data class FPS(val numerator: Int, val denominator: Int) {
     val frac: Double
         get() = numerator.toDouble() / denominator
@@ -59,6 +65,14 @@ fun Color.toHex32() = "#%08x".format(rgb)
 fun colorFromHex(hex: String): Color {
     require((hex.length == 7 || hex.length == 9) && hex[0] == '#')
     return Color(hex.drop(1).toLong(16).toInt(), hex.length == 9)
+}
+
+fun Resolution.toTimes() = "${widthPx}x${heightPx}"
+
+fun resolutionFromTimes(quote: String): Resolution {
+    val parts = quote.split("x")
+    require(parts.size == 2)
+    return Resolution(parts[0].toInt(), parts[1].toInt())
 }
 
 fun FPS.toFraction() = "$numerator/$denominator"

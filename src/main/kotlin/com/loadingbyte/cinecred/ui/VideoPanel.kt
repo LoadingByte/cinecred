@@ -108,17 +108,15 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     init {
         val rewindIcon = PLAY_ICON.getScaledIcon(-1.0, 1.0)
         val buttonGroup = ButtonGroup()
-        fun makeBtn(icon: Icon, tooltip: String, keyCode: Int, listener: () -> Unit, isSelected: Boolean = false) =
-            JToggleButton(icon, isSelected).apply {
-                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-                isFocusable = false
-                toolTipText = "$tooltip (${getKeyText(keyCode)})"
-                addActionListener { listener() }
-                buttonGroup.add(this)
+        fun newToolbarPlayButton(icon: Icon, ttip: String, kc: Int, listener: () -> Unit, isSelected: Boolean = false) =
+            newToolbarToggleButton(icon, ttip, kc, 0, isSelected).also { btn ->
+                buttonGroup.add(btn)
+                // Register an ActionListener (and not an ItemListener) to prevent feedback loops.
+                btn.addActionListener { listener() }
             }
-        rewindButton = makeBtn(rewindIcon, l10n("ui.video.rewind"), VK_J, ::rewind)
-        pauseButton = makeBtn(PAUSE_ICON, l10n("ui.video.pause"), VK_K, ::pause, isSelected = true)
-        playButton = makeBtn(PLAY_ICON, l10n("ui.video.play"), VK_L, ::play)
+        rewindButton = newToolbarPlayButton(rewindIcon, l10n("ui.video.rewind"), VK_J, ::rewind)
+        pauseButton = newToolbarPlayButton(PAUSE_ICON, l10n("ui.video.pause"), VK_K, ::pause, isSelected = true)
+        playButton = newToolbarPlayButton(PLAY_ICON, l10n("ui.video.play"), VK_L, ::play)
 
         layout = MigLayout("insets 12 n n n, gapy 10")
         add(JLabel(l10n("ui.video.warning"), WARN_ICON, JLabel.LEADING), "center")

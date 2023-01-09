@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.formdev.flatlaf.FlatClientProperties.STYLE
+import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.icons.FlatCheckBoxIcon
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
@@ -8,6 +8,7 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
 import com.loadingbyte.cinecred.common.preserveTransform
 import java.awt.*
+import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -78,6 +79,45 @@ fun newLabelEditorPane(type: String, text: String? = null) = object : JEditorPan
 
     // Disable the ability to scroll for the same reason as explained above.
     override fun scrollRectToVisible(aRect: Rectangle) {}
+}
+
+
+fun newToolbarButton(
+    icon: Icon,
+    tooltip: String,
+    shortcutKeyCode: Int,
+    shortcutModifiers: Int,
+    listener: (() -> Unit)? = null
+) = JButton(icon).also { btn ->
+    cfgForToolbar(btn, tooltip, shortcutKeyCode, shortcutModifiers)
+    if (listener != null)
+        btn.addActionListener { listener() }
+}
+
+fun newToolbarToggleButton(
+    icon: Icon,
+    tooltip: String,
+    shortcutKeyCode: Int,
+    shortcutModifiers: Int,
+    isSelected: Boolean = false,
+    listener: ((Boolean) -> Unit)? = null
+) = JToggleButton(icon, isSelected).also { btn ->
+    cfgForToolbar(btn, tooltip, shortcutKeyCode, shortcutModifiers)
+    if (listener != null)
+        btn.addItemListener { listener(it.stateChange == ItemEvent.SELECTED) }
+}
+
+private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcutKeyCode: Int, shortcutModifiers: Int) {
+    btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+    btn.isFocusable = false
+
+    var shortcutHint = KeyEvent.getKeyText(shortcutKeyCode)
+    if (shortcutModifiers != 0)
+        shortcutHint = KeyEvent.getModifiersExText(shortcutModifiers) + "+" + shortcutHint
+    btn.toolTipText = if ("<br>" !in tooltip) "$tooltip ($shortcutHint)" else {
+        val idx = tooltip.indexOf("<br>")
+        tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
+    }
 }
 
 

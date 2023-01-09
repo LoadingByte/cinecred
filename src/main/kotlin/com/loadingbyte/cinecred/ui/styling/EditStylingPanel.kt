@@ -1,7 +1,5 @@
 package com.loadingbyte.cinecred.ui.styling
 
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE
-import com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.project.*
@@ -87,47 +85,36 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             objToString = LetterStyle::name
         )
 
-        fun makeToolbarBtn(
-            name: String, icon: Icon, shortcutKeyCode: Int = -1, shortcutModifiers: Int = 0, listener: () -> Unit
-        ): JButton {
-            var ttip = l10n("ui.styling.$name")
-            if (shortcutKeyCode != -1) {
-                ttip += " (${getModifiersExText(shortcutModifiers)}+${getKeyText(shortcutKeyCode)})"
-                keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
-            }
-            return JButton(icon).apply {
-                putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-                isFocusable = false
-                toolTipText = ttip
-                addActionListener { listener() }
-            }
-        }
-
         // Add buttons for adding and removing style nodes.
-        val addPageStyleButton = makeToolbarBtn(
-            "addPageStyleTooltip", SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON), VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        val addPageStyleButton = newToolbarButtonWithKeyListener(
+            SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON), l10n("ui.styling.addPageStyleTooltip"),
+            VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             stylingTree.addListElement(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
             onChange()
         }
-        val addContentStyleButton = makeToolbarBtn(
-            "addContentStyleTooltip", SVGIcon.Dual(ADD_ICON, LAYOUT_ICON), VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        val addContentStyleButton = newToolbarButtonWithKeyListener(
+            SVGIcon.Dual(ADD_ICON, LAYOUT_ICON), l10n("ui.styling.addContentStyleTooltip"),
+            VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             stylingTree.addListElement(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
             onChange()
         }
-        val addLetterStyleButton = makeToolbarBtn(
-            "addLetterStyleTooltip", SVGIcon.Dual(ADD_ICON, LETTERS_ICON), VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        val addLetterStyleButton = newToolbarButtonWithKeyListener(
+            SVGIcon.Dual(ADD_ICON, LETTERS_ICON), l10n("ui.styling.addLetterStyleTooltip"),
+            VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             stylingTree.addListElement(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
             onChange()
         }
-        val duplicateStyleButton = makeToolbarBtn("duplicateStyleTooltip", DUPLICATE_ICON, listener = ::duplicateStyle)
-        val removeStyleButton = makeToolbarBtn("removeStyleTooltip", TRASH_ICON, listener = ::removeStyle)
+        val duplicateStyleButton = newToolbarButton(
+            DUPLICATE_ICON, l10n("ui.styling.duplicateStyleTooltip"), VK_D, CTRL_DOWN_MASK, ::duplicateStyle
+        )
+        val removeStyleButton = newToolbarButton(
+            TRASH_ICON, l10n("ui.styling.removeStyleTooltip"), VK_DELETE, 0, ::removeStyle
+        )
 
         // Add contextual keyboard shortcuts for the style duplication and removal buttons.
-        duplicateStyleButton.toolTipText += " (${getModifiersExText(CTRL_DOWN_MASK)}+${getKeyText(VK_D)})"
-        removeStyleButton.toolTipText += " (${getKeyText(VK_DELETE)})"
         stylingTree.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
             put(KeyStroke.getKeyStroke(VK_D, CTRL_DOWN_MASK), "duplicate")
             put(KeyStroke.getKeyStroke(VK_DELETE, 0), "remove")
@@ -160,6 +147,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         layout = MigLayout()
         add(splitPane, "grow, push")
+    }
+
+    private fun newToolbarButtonWithKeyListener(
+        icon: Icon,
+        tooltip: String,
+        shortcutKeyCode: Int,
+        shortcutModifiers: Int,
+        listener: () -> Unit
+    ): JButton {
+        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
+        return newToolbarButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, listener)
     }
 
     private fun duplicateStyle() {

@@ -4,7 +4,8 @@ import com.loadingbyte.cinecred.common.Severity
 import javax.swing.JButton
 
 
-open class EasyForm(insets: Boolean = true) : Form(insets) {
+open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boolean) :
+    Form(insets, noticeArea, constLabelWidth) {
 
     private class ExtFormRow(
         val formRow: FormRow,

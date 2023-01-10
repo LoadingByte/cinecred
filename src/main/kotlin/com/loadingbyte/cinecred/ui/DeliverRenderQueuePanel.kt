@@ -47,13 +47,12 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                     cellRenderer = CancelButtonCell()
                     cellEditor = CancelButtonCell(::removeRowFromQueue)
                 }
-                // Set some sensible default column widths for all but the progress columns.
-                getColumn(0).width = 150
-                getColumn(1).width = 400
+                // Set some sensible default col widths that define which ratio of the available space each col gets.
+                getColumn(0).preferredWidth = 150
+                getColumn(1).preferredWidth = 450
+                getColumn(2).preferredWidth = 200
                 getColumn(3).apply { minWidth = 24; maxWidth = 24 }
             }
-            // The progress column should be the one that receives all remaining width.
-            tableHeader.resizingColumn = columnModel.getColumn(2)
         }
 
         setViewportView(jobTable)

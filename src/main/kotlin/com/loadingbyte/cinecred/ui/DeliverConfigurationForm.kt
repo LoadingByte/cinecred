@@ -18,7 +18,8 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 
-class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(insets = false) {
+class DeliverConfigurationForm(private val ctrl: ProjectController) :
+    EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
 
     companion object {
         private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
@@ -35,7 +36,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) : EasyForm(i
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
-            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.FREE, scrollbar = false,
+            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDER, scrollbar = false,
             toString = { format ->
                 val prefix =
                     if (format in WHOLE_PAGE_FORMATS) l10n("ui.deliverConfig.wholePageFormat")

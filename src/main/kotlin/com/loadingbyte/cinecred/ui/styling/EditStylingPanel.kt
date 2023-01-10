@@ -7,12 +7,13 @@ import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
 import net.miginfocom.swing.MigLayout
-import java.awt.CardLayout
+import java.awt.*
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.util.*
 import javax.swing.*
+import kotlin.math.max
 
 
 class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
@@ -130,14 +131,20 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
         })
 
-        // Layout the tree and the buttons.
-        val leftPanel = JPanel(MigLayout("insets 0")).apply {
-            add(addPageStyleButton, "split, grow")
-            add(addContentStyleButton, "grow")
-            add(addLetterStyleButton, "grow")
-            add(duplicateStyleButton, "grow")
-            add(removeStyleButton, "grow")
-            add(JScrollPane(stylingTree), "newline, grow, push")
+        // Layout the buttons.
+        val buttonPanel = JPanel(WrappingToolbarLayout(gap = 6)).apply {
+            add(addPageStyleButton)
+            add(addContentStyleButton)
+            add(addLetterStyleButton)
+            add(duplicateStyleButton)
+            add(removeStyleButton)
+        }
+
+        // Layout the tree and the button panel.
+        val leftPanel = JPanel(BorderLayout(0, 6)).apply {
+            add(buttonPanel, BorderLayout.NORTH)
+            add(JScrollPane(stylingTree), BorderLayout.CENTER)
+            minimumSize = Dimension(100, 0)
         }
 
         // Put everything together in a split pane.
@@ -352,6 +359,69 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         for ((nestedForm, nestedStyle) in curForm.getNestedFormsAndStyles(curStyle))
             adjustForm(nestedForm.castToStyle(nestedStyle.javaClass), nestedStyle)
+    }
+
+
+    /**
+     * A wrapping LayoutManager similar to FlowLayout. In contrast to FlowLayout, this implementation increases the
+     * minimum and preferred height of the container when wrapping occurs.
+     */
+    private class WrappingToolbarLayout(private val gap: Int) : LayoutManager {
+
+        override fun addLayoutComponent(name: String, comp: Component) {}
+        override fun removeLayoutComponent(comp: Component) {}
+        override fun minimumLayoutSize(parent: Container) = preferredLayoutSize(parent)
+
+        override fun preferredLayoutSize(parent: Container): Dimension {
+            val rows = flowIntoRows(parent)
+            val height = rows.sumOf(Row::height) + gap * (rows.size - 1)
+            val insets = parent.insets
+            return Dimension(parent.width + insets.left + insets.right, height + insets.top + insets.bottom)
+        }
+
+        override fun layoutContainer(parent: Container) {
+            val insets = parent.insets
+            var y = insets.top
+            for (row in flowIntoRows(parent)) {
+                var x = insets.left + (parent.width - row.width) / 2
+                for (comp in row.comps) {
+                    val pref = comp.preferredSize
+                    comp.setBounds(x, y, pref.width, pref.height)
+                    x += pref.width + gap
+                }
+                y += row.height + gap
+            }
+        }
+
+        private fun flowIntoRows(parent: Container): List<Row> {
+            val rows = mutableListOf<Row>()
+
+            var rowComps = mutableListOf<Component>()
+            var rowWidth = 0
+            var rowHeight = 0
+            for (idx in 0 until parent.componentCount) {
+                val comp = parent.getComponent(idx)
+                val pref = comp.preferredSize
+                if (rowWidth == 0 || rowWidth + gap + pref.width <= parent.width) {
+                    rowComps.add(comp)
+                    if (rowWidth != 0) rowWidth += gap
+                    rowWidth += pref.width
+                    rowHeight = max(rowHeight, pref.height)
+                } else {
+                    rows.add(Row(rowComps, rowWidth, rowHeight))
+                    rowComps = mutableListOf(comp)
+                    rowWidth = pref.width
+                    rowHeight = pref.height
+                }
+            }
+            if (rowComps.isNotEmpty())
+                rows.add(Row(rowComps, rowWidth, rowHeight))
+
+            return rows
+        }
+
+        private class Row(val comps: List<Component>, val width: Int, val height: Int)
+
     }
 
 }

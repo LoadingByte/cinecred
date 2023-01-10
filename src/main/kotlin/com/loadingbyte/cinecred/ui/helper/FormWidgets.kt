@@ -29,14 +29,14 @@ import kotlin.math.max
 
 
 enum class WidthSpec(val mig: String) {
-    FREE(""),
     TINIER("width 50:50:"),
-    TINY("width 70:70:"),
+    TINY("width 60:60:"),
+    LITTLE("width 70:70:"),
     NARROW("width 100:100:"),
-    SQUEEZE("width 100::max(200,30%)"),
-    FIT("width 100::max(300,40%)"),
-    WIDE("width 100:max(300,40%):"),
-    WIDER("width 100:max(300,50%):"),
+    SQUEEZE("width 100::200"),
+    FIT("width 100::300"),
+    WIDE("width 100:300:"),
+    WIDER("width 100:500:"),
     FILL("width 100:100%:")
 }
 
@@ -867,10 +867,10 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     )
 
     private val widthWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.widthPx, 1, null, 10), WidthSpec.TINY
+        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.widthPx, 1, null, 10), WidthSpec.LITTLE
     )
     private val heightWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.heightPx, 1, null, 10), WidthSpec.TINY
+        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.heightPx, 1, null, 10), WidthSpec.LITTLE
     )
     private val timesLabel = JLabel("\u00D7")
 

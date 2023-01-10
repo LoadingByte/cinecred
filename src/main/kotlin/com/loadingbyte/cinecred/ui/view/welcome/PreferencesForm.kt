@@ -11,7 +11,8 @@ import com.loadingbyte.cinecred.ui.helper.EasyForm
 import java.util.*
 
 
-class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) : EasyForm(insets = false) {
+class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
+    EasyForm(insets = false, noticeArea = false, constLabelWidth = false) {
 
     private val uiLocaleWishWidget = addWidget(
         l10n("ui.preferences.uiLocaleWish"),

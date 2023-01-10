@@ -13,7 +13,7 @@ import javax.swing.SpinnerNumberModel
 class StyleForm<S : Style>(
     private val styleClass: Class<S>,
     insets: Boolean = true
-) : Form.Storable<S>(insets) {
+) : Form.Storable<S>(insets, noticeArea = true, constLabelWidth = true) {
 
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
     private val rootFormRows = ArrayList<Pair<FormRow, List<StyleSetting<S, *>>>>()

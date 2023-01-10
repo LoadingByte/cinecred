@@ -14,6 +14,8 @@ Cinecred Changelog
 
 #### UI Fixes
 
+- Monitor resolutions down to 1280x720 are now supported on a best-effort basis.
+- All style editing UIs now allocate the same width to labels.
 - The layout guides tooltip shows the guide colors again.
 
 

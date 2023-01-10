@@ -97,7 +97,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 value = ((newZoom - 1.0) * maximum / (MAX_ZOOM - 1.0)).roundToInt()
             }
     }.apply {
-        preferredSize = preferredSize.apply { width = 50 }
         isFocusable = false
         addChangeListener { previewPanels.forEach { it.zoom = zoom } }
     }
@@ -131,8 +130,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
     }
 
-    private val runtimeLabel1 = JLabel(l10n("ui.edit.runtime"))
-    private val runtimeLabel2 = JLabel("\u2014").apply {
+    private val runtimeLabel = JLabel("\u2014").apply {
         putClientProperty(STYLE_CLASS, "monospaced")
     }
 
@@ -218,22 +216,31 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
 
+        val autoReloadLabel = JLabel(l10n("ui.edit.autoReloadActive")).apply {
+            toolTipText = text
+            putClientProperty(STYLE_CLASS, "small")
+        }
+        val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {
+            toolTipText = text
+        }
+
+        // Note: The shrink group with shrinkprio 200 appears to implicitly include shrinkable gaps.
         val topPanelCols = """
                 []push
-                []
-                unrel[]rel
+                [shrinkprio 200]
+                0:unrel:[shrinkprio 100]rel
                 []0[]0[]0[]rel[]
                 unrel[]unrel
                 []rel[]rel[]0[]0[]0[]
                 rel[]unrel
-                []rel[]
+                [shrinkprio 300]0:rel:[]
                 unrel[]rel
                 []0[]0[]0[]
                 push[]
         """
         val topPanel = JPanel(MigLayout("", topPanelCols)).apply {
-            add(JLabel(l10n("ui.edit.autoReloadActive")).apply { putClientProperty(STYLE_CLASS, "small") }, "skip 1")
-            add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
+            add(autoReloadLabel, "skip 1, wmin 0")
+            add(JSeparator(JSeparator.VERTICAL), "growy")
             add(undoStylingButton)
             add(redoStylingButton)
             add(saveStylingButton)
@@ -241,14 +248,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(unsavedStylingLabel)
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
-            add(zoomSlider)
+            add(zoomSlider, "width 50!")
             add(guidesToggleButton)
             add(uniformSafeAreasToggleButton)
             add(cutSafeArea16to9ToggleButton)
             add(cutSafeArea4to3ToggleButton)
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
-            add(runtimeLabel1)
-            add(runtimeLabel2)
+            add(runtimeDescLabel, "wmin 0")
+            add(runtimeLabel)
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(stylingDialogToggleButton)
             add(videoDialogToggleButton)
@@ -357,19 +364,17 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     fun updateProject(drawnProject: DrawnProject?, log: List<ParserMsg>, error: ProjectController.Error?) {
         // Adjust the total runtime label.
         if (drawnProject == null) {
-            runtimeLabel2.preferredSize = Dimension(runtimeLabel2.width, 0)
-            runtimeLabel2.text = "\u2014"
-            runtimeLabel2.toolTipText = null
-            runtimeLabel1.toolTipText = null
+            runtimeLabel.preferredSize = Dimension(runtimeLabel.width, 0)
+            runtimeLabel.text = "\u2014"
+            runtimeLabel.toolTipText = null
         } else {
             val global = drawnProject.project.styling.global
             val runtime = drawnProject.video.numFrames
             val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
             val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
-            runtimeLabel2.preferredSize = null
-            runtimeLabel2.text = tc
-            runtimeLabel2.toolTipText = tooltip
-            runtimeLabel1.toolTipText = tooltip
+            runtimeLabel.preferredSize = null
+            runtimeLabel.text = tc
+            runtimeLabel.toolTipText = tooltip
         }
 
         // Update the pages tabs or show a big error notice.

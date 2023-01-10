@@ -10,10 +10,7 @@ import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.CardLayout
-import java.awt.Color
-import java.awt.Component
-import java.awt.Container
+import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.beans.PropertyChangeListener
 import java.io.File
@@ -193,6 +190,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         fc.border = null
         fc.controlButtonsAreShown = false
 
+        fc.minimumSize = Dimension(0, 0)
+
         // Workaround for FlatLaf's issue #604.
         fc.remove(0)
 
@@ -323,7 +322,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    private class CreateConfigureForm : EasyForm(insets = false) {
+    private class CreateConfigureForm : EasyForm(insets = false, noticeArea = false, constLabelWidth = false) {
 
         val localeWidget = addWidget(
             l10n("ui.projects.create.locale"),

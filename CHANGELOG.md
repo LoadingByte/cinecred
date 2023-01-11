@@ -11,6 +11,8 @@ Cinecred Changelog
 
 ### Fixes
 
+- On macOS, rendering opaque ProRes, DNxHR, or an opaque image sequence no
+  longer crashes the program.
 
 #### UI Fixes
 

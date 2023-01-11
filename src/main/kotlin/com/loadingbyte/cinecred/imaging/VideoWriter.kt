@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
@@ -24,7 +25,6 @@ import org.bytedeco.javacpp.Pointer
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
-import java.nio.ByteBuffer
 import java.nio.file.Path
 
 
@@ -268,7 +268,20 @@ class VideoWriter(
     }
 
     private fun fillFrame(frame: AVFrame, image: BufferedImage) {
-        val source = BytePointer(ByteBuffer.wrap(((image.raster.dataBuffer) as DataBufferByte).data))
+        val imageData = ((image.raster.dataBuffer) as DataBufferByte).data
+        var sourceLen = imageData.size.toLong()
+        // On macOS, some (but not all) swscale pixel format converters read frame data beyond the last pixel. This is
+        // most certainly a bug. As a workaround, adding 1 extra byte at the end of the frame array prevents segfaults,
+        // and we have empirically confirmed that the resulting videos and image sequences do not differ from ones
+        // generated on Linux without this extra byte. Further, to be absolutely safe, we not only add 1, but 256 bytes.
+        // For reference, we have encountered the issue at least with the following pixel formats:
+        //   - YUV422P
+        //   - YUV422P10LE
+        //   - YUV444P10LE
+        //   - RGB24
+        if (SystemInfo.isMacOS)
+            sourceLen += 256
+        val source = BytePointer(sourceLen).put(imageData, 0, imageData.size)
         // Notice that this function only reassigns pointers. It does not copy data.
         av_image_fill_arrays(frame.data(), frame.linesize(), source, inPixelFormat!!, width, height, 1)
             .throwIfErrnum("delivery.ffmpeg.fillFrameError")

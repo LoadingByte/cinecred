@@ -21,7 +21,6 @@ import org.bytedeco.ffmpeg.swscale.SwsContext
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.DoublePointer
 import org.bytedeco.javacpp.Pointer
-import org.bytedeco.javacpp.PointerPointer
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
@@ -147,8 +146,10 @@ class VideoWriter(
         outFrame = allocFrame(outPixelFormat)
         // If the output format is not equal to the input format, then a temporary picture which uses the input format
         // is needed too. That picture will then be converted to the required output format by an SWS context, which
-        // we need to create as well.
+        // we need to create as well. The converter needs somewhere to write to, so we finally need to allocate a buffer
+        // for the output frame.
         if (outPixelFormat != inPixelFormat) {
+            av_frame_get_buffer(outFrame, 0).throwIfErrnum("delivery.ffmpeg.allocFrameDataError")
             inFrame = allocFrame(inPixelFormat)
             swsCtx = sws_getContext(
                 width, height, inPixelFormat, width, height, outPixelFormat, 0,
@@ -216,8 +217,6 @@ class VideoWriter(
             width(width)
             height(height)
         }
-        // Allocate the buffers for the frame data.
-        av_frame_get_buffer(frame, 0).throwIfErrnum("delivery.ffmpeg.allocFrameDataError")
         return frame
     }
 
@@ -249,10 +248,6 @@ class VideoWriter(
         }
         require(image.type == inImageType)
 
-        // When we pass a frame to the encoder, it may keep a reference to it internally;
-        // make sure we do not overwrite it here.
-        av_frame_make_writable(outFrame).throwIfErrnum("delivery.ffmpeg.makeFrameWritableError")
-
         // Transfer the BufferedImage's data to the output frame. When the input and output pixel formats differ,
         // instead transfer the data to the input frame and then use the SWS context which converts it to the
         // output format and writes it to the output frame.
@@ -261,6 +256,9 @@ class VideoWriter(
         else {
             val inFrame = this.inFrame!!
             fillFrame(inFrame, image)
+            // When we pass a frame to the encoder, it may keep a reference to it internally;
+            // make sure we do not overwrite it here.
+            //av_frame_make_writable(outFrame).throwIfErrnum("delivery.ffmpeg.makeFrameWritableError")
             sws_scale(swsCtx!!, inFrame.data(), inFrame.linesize(), 0, height, outFrame.data(), outFrame.linesize())
         }
 
@@ -270,9 +268,9 @@ class VideoWriter(
     }
 
     private fun fillFrame(frame: AVFrame, image: BufferedImage) {
-        val destination = PointerPointer<AVFrame>(frame)
         val source = BytePointer(ByteBuffer.wrap(((image.raster.dataBuffer) as DataBufferByte).data))
-        av_image_fill_arrays(destination, frame.linesize(), source, inPixelFormat!!, width, height, 1)
+        // Notice that this function only reassigns pointers. It does not copy data.
+        av_image_fill_arrays(frame.data(), frame.linesize(), source, inPixelFormat!!, width, height, 1)
             .throwIfErrnum("delivery.ffmpeg.fillFrameError")
     }
 

@@ -10,10 +10,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path
 import javax.swing.JOptionPane.*
 import javax.swing.SpinnerNumberModel
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.*
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -69,20 +66,21 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         isVisible = { formatWidget.value.fileSeq },
         verify = ::verifyFile
     )
-    private val seqFilenamePatternWidget = addWidget(
-        l10n("ui.deliverConfig.seqFilenamePattern"),
+    private val seqFilenameSuffixWidget = addWidget(
+        l10n("ui.deliverConfig.seqFilenameSuffix"),
         FilenameWidget(widthSpec = WidthSpec.WIDER),
         // Reserve space even if invisible to keep the form from changing height when selecting different formats.
         invisibleSpace = true,
-        isVisible = { formatWidget.value in WholePageSequenceRenderJob.Format.ALL },
+        isVisible = { formatWidget.value.fileSeq },
         verify = {
-            if (!it.contains(Regex("%0\\d+d")))
-                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternMissesN"))
-            else if (it.count { c -> c == '%' } > 1)
-                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenamePatternTooManyPercents"))
+            val numHoles = Regex("#+").findAll(it).count()
+            if (numHoles == 0)
+                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixMissesHole"))
+            else if (numHoles > 1)
+                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles"))
             else null
         }
-    ).apply { value = "page-%02d" }
+    ).apply { value = ".#######" }
 
     private val resolutionMultWidget = addWidget(
         l10n("ui.deliverConfig.resolutionMultiplier"),
@@ -172,7 +170,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val format = formatWidget.value
         val fileExtAssortment = FileExtAssortment(format.fileExts.sorted(), format.defaultFileExt)
         singleFileWidget.fileExtAssortment = fileExtAssortment
-        seqFilenamePatternWidget.fileExtAssortment = fileExtAssortment
+        seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
     }
 
     fun addRenderJobToQueue() {
@@ -230,31 +228,48 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             }
 
             fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
+            fun getFilenameHashPattern() = fileOrDir.name + seqFilenameSuffixWidget.value
+            fun hashPatternToFormatStr(pat: String) = pat.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
 
-            val renderJob = when (format) {
-                is WholePageSequenceRenderJob.Format -> WholePageSequenceRenderJob(
-                    getScaledPageDefImages(),
-                    grounding, format,
-                    dir = fileOrDir, filenamePattern = seqFilenamePatternWidget.value
-                )
-                WholePagePDFRenderJob.FORMAT -> WholePagePDFRenderJob(
-                    getScaledPageDefImages(),
-                    grounding,
-                    file = fileOrDir
-                )
-                is VideoRenderJob.Format -> VideoRenderJob(
-                    project, video,
-                    scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
-                    fileOrDir = fileOrDir
-                )
+            val renderJob: RenderJob
+            val destination: String
+            when (format) {
+                is WholePageSequenceRenderJob.Format -> {
+                    renderJob = WholePageSequenceRenderJob(
+                        getScaledPageDefImages(),
+                        grounding,
+                        format,
+                        dir = fileOrDir,
+                        filenamePattern = hashPatternToFormatStr(getFilenameHashPattern()).also { println(it) }
+                    )
+                    destination = fileOrDir.resolve(getFilenameHashPattern()).pathString
+                }
+                WholePagePDFRenderJob.FORMAT -> {
+                    renderJob = WholePagePDFRenderJob(
+                        getScaledPageDefImages(),
+                        grounding,
+                        file = fileOrDir
+                    )
+                    destination = fileOrDir.pathString
+                }
+                is VideoRenderJob.Format -> {
+                    val fileOrPattern: Path
+                    if (format.fileSeq) {
+                        fileOrPattern = fileOrDir.resolve(hashPatternToFormatStr(getFilenameHashPattern()))
+                        destination = fileOrDir.resolve(getFilenameHashPattern()).pathString
+                    } else {
+                        fileOrPattern = fileOrDir
+                        destination = fileOrDir.pathString
+                    }
+                    renderJob = VideoRenderJob(
+                        project, video,
+                        scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
+                        fileOrPattern
+                    )
+                }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }
-            val destination = when (renderJob) {
-                is WholePageSequenceRenderJob -> renderJob.dir.resolve(renderJob.filenamePattern).toString()
-                is WholePagePDFRenderJob -> renderJob.file.toString()
-                is VideoRenderJob -> renderJob.fileOrPattern.toString()
-                else -> throw IllegalStateException()
-            }
+
             ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
         }
     }

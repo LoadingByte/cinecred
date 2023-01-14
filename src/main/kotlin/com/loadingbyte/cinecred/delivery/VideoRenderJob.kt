@@ -22,13 +22,8 @@ class VideoRenderJob(
     private val scaling: Double,
     private val transparentGrounding: Boolean,
     private val format: Format,
-    fileOrDir: Path
+    val fileOrPattern: Path
 ) : RenderJob {
-
-    val fileOrPattern: Path = when {
-        format.fileSeq -> fileOrDir.resolve("${fileOrDir.fileName}.%07d.${format.fileExts.single()}")
-        else -> fileOrDir
-    }
 
     override fun generatesFile(file: Path) = when {
         format.fileSeq -> file.startsWith(fileOrPattern.parent)

@@ -15,7 +15,7 @@ Cinecred Changelog
 - On macOS, rendering opaque ProRes, DNxHR, or an opaque image sequence no
   longer crashes the program.
 
-#### UI Fixes
+### UI Fixes
 
 - Monitor resolutions down to 1280x720 are now supported on a best-effort basis.
 - All style editing UIs now allocate the same width to labels.
@@ -86,7 +86,7 @@ Cinecred Changelog
 - Transparency now works correctly in exported PDFs.
 - Prevented render jobs from overwriting the project folder.
 
-#### UI Fixes
+### UI Fixes
 
 - UHD (aka 4K) monitors with a scaled UI no longer break the edit and video
   previews.
@@ -193,7 +193,7 @@ Cinecred Changelog
 - When saving the credits file, the preview is no longer re-rendered two times.
 - Column widths in template credits files are now consistent across formats.
 
-#### UI Fixes
+### UI Fixes
 
 - Font names are now localized in the GUI.
 - Font family names are no longer stripped of a trailing "Roman".
@@ -259,7 +259,7 @@ Cinecred Changelog
 - Fix first line of flow layout sometimes being empty, leading to empty space
   and crashes.
 
-#### UI Fixes
+### UI Fixes
 
 - A duplicated style now has a name different from the respective original style
   to avoid bugging the user with a duplicated style name error message.

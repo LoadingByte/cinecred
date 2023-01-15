@@ -125,12 +125,12 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         sc.hold()
         edt { vidPnl.leakedPlayButton.actionListeners.forEach(vidPnl.leakedPlayButton::removeActionListener) }
         sc.mouseTo(vidWin.desktopPosOf(vidPnl.leakedPlayButton))
-        sc.click { vidPnl.leakedFrameSlider.value += 1 }
+        sc.click { edt { vidPnl.leakedFrameSlider.value += 1 } }
         sc.caption("screencast.caption.video.play") { vidPnl.leakedFrameSlider.value += 1 }
-        for (speed in 2..7)
-            sc.click { vidPnl.leakedFrameSlider.value += speed }
+        for (speed in 2..3)
+            sc.click { edt { vidPnl.leakedFrameSlider.value += speed } }
         while (vidPnl.leakedFrameSlider.run { value != maximum })
-            sc.frame { vidPnl.leakedFrameSlider.value += 8 }
+            sc.frame { edt { vidPnl.leakedFrameSlider.value += 4 } }
         vidPnl.leakedPlayButton.isSelected = false
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
@@ -231,7 +231,7 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         sc.caption("screencast.caption.assign.guides1")
         sc.caption("screencast.caption.assign.guides2")
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedGuidesButton))
-        sc.click(2 * HOLD)
+        sc.click(4 * HOLD)
         sc.click()
         sc.caption("screencast.caption.assign.change")
         sc.type(spreadsheetEditorWin, 35, 4, l10n("project.template.contentStyleSong"), 4 * HOLD)
@@ -483,7 +483,7 @@ private class Screencast(
 
     fun click(holdMillis: Int = HOLD, holdAction: (() -> Unit)? = null) {
         desktop.mouseDown()
-        hold(100)
+        hold(100, holdAction)
         desktop.mouseUp()
         hold(holdMillis, holdAction)
     }

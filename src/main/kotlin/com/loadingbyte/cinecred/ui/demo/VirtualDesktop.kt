@@ -404,9 +404,9 @@ abstract class FakeVirtualWindow : VirtualWindow() {
 
     override fun paint(g2: Graphics2D) {
         // Paint title bar
-        paintWindowDecorations(g2, title, icon = null, Color.GRAY, Color.BLACK)
+        paintWindowDecorations(g2, title, icon = null, PALETTE_BLUE_COLOR.darker(), Color.LIGHT_GRAY)
         // Paint window background
-        g2.color = Color.GRAY
+        g2.color = PALETTE_BLUE_COLOR.darker()
         g2.fillRect(
             VirtualWindow.INSET_L,
             VirtualWindow.INSET_T,

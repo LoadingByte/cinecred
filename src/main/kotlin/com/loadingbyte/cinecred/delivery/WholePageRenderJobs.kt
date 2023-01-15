@@ -136,7 +136,7 @@ class WholePageSequenceRenderJob(
 class WholePagePDFRenderJob(
     private val pageDefImages: List<DeferredImage>,
     private val grounding: Color?,
-    val file: Path,
+    val file: Path
 ) : RenderJob {
 
     override fun generatesFile(file: Path) = file == this.file

@@ -149,7 +149,9 @@ private val GS_EXECUTABLE: Path? by lazy {
     null
 }
 
-private val GS_STREAM_GOBBLER_EXECUTOR = Executors.newSingleThreadExecutor { r -> Thread(r, "Ghostscript") }
+private val GS_STREAM_GOBBLER_EXECUTOR = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "GhostscriptStreamGobbler").apply { isDaemon = true }
+}
 private val GS_LOGGER = LoggerFactory.getLogger("Ghostscript")
 
 private fun loadPostScript(psFile: Path): Picture.PDF {

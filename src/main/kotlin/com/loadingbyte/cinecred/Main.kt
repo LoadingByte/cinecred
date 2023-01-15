@@ -102,7 +102,10 @@ private fun mainSwing(args: Array<String>) {
     // MigLayout's platform-specific gaps etc. mess up our rather intricate layouts.
     // To alleviate this, we force one invariant set of platform defaults.
     // We chose the Gnome defaults because they waste the least space on gaps.
+    // At the same time, we retain the platform-specific button order.
+    val nativeButtonOrder = PlatformDefaults.getButtonOrder()
     PlatformDefaults.setPlatform(PlatformDefaults.GNOME)
+    PlatformDefaults.setButtonOrder(nativeButtonOrder)
 
     // Set the Swing Look & Feel.
     FlatDarkLaf.setup()

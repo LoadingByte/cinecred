@@ -76,7 +76,7 @@ object RenderQueue {
                     }
                 }
             }
-        }, "RenderQueueThread").apply { isDaemon = true; start() }
+        }, "RenderQueue").apply { isDaemon = true; start() }
     }
 
     fun setPaused(category: Any, paused: Boolean) {

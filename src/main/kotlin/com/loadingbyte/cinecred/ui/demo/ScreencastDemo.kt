@@ -112,7 +112,10 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         dt.snapToSide(prjWin, rightSide = false)
         dt.snapToSide(styWin, rightSide = true)
         sleep(500)
-        edt { prjPnl.leakedSplitPane.setDividerLocation(0.9) }
+        edt {
+            prjPnl.leakedSplitPane.setDividerLocation(0.9)
+            styPnl.leakedSplitPane.setDividerLocation(0.25)
+        }
         sleep(500)
         sc.hold(8 * HOLD)
         sc.caption("screencast.caption.create.done")

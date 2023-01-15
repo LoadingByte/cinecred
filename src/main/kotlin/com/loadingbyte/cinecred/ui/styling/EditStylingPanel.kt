@@ -19,6 +19,7 @@ import kotlin.math.max
 class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingTree get() = stylingTree
     @Deprecated("ENCAPSULATION LEAK") val leakedGlobalForm get() = globalForm
     @Deprecated("ENCAPSULATION LEAK") val leakedPageStyleForm get() = pageStyleForm
@@ -154,6 +155,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         layout = MigLayout()
         add(splitPane, "grow, push")
+
+        @Suppress("DEPRECATION")
+        leakedSplitPane = splitPane
     }
 
     private fun newToolbarButtonWithKeyListener(

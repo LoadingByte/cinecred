@@ -80,7 +80,7 @@ fun screenshotDemo(masterCtrl: MasterCtrl, locale: Locale) {
     // video-preview
     edt { projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, true) }
     sleep(500)
-    locate(vidDialog, 2, 900, 455)
+    locate(vidDialog, 2, 900, 430)
     sleep(500)
     edt {
         vidPanel.leakedPlayButton.isSelected = true

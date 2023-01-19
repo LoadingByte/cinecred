@@ -365,10 +365,11 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 // deferred image. We momentarily paint this placeholder image when the user scrolls out of the
                 // materialized portion too quickly.
                 val lowResMaterialized = if (!lowRes || startY.isNaN()) null else {
-                    val lowResScaling = sqrt(MAX_MAT_PIXELS / (image.width * imgHeight))
+                    val theoreticalLowResScaling = sqrt(MAX_MAT_PIXELS / (image.width * imgHeight))
                     // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.
-                    val lowResMatWidth = max(1, (lowResScaling * image.width).roundToInt())
-                    val lowResMatHeight = max(1, (lowResScaling * imgHeight).roundToInt())
+                    val lowResMatWidth = max(1, (theoreticalLowResScaling * image.width).toInt())
+                    val lowResScaling = lowResMatWidth / image.width
+                    val lowResMatHeight = max(1, ceil(lowResScaling * imgHeight).toInt())
                     (canvas.createImage(lowResMatWidth, lowResMatHeight) as BufferedImage).withG2 { g2 ->
                         g2.setHighQuality()
                         g2.color = grounding

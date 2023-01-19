@@ -5,6 +5,10 @@ Cinecred Changelog
 1.4.0-SNAPSHOT
 --------------
 
+### UI Fixes
+
+- Rapidly scrolling a very long page no longer causes flicker.
+
 
 1.3.1
 -----

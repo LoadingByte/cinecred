@@ -219,6 +219,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     private val viewportWidth get() = image!!.width / zoom
     private val viewportHeight
         get() = min(image!!.height.resolve(), canvas.height.also { require(it != 0) } / imageScaling)
+    private val viewportStartX get() = viewportCenterX - viewportWidth / 2.0
+    private val viewportStartY get() = viewportCenterY - viewportHeight / 2.0
+    private val viewportStopY get() = viewportCenterY + viewportHeight / 2.0
     private val minViewportCenterX get() = viewportWidth / 2.0
     private val maxViewportCenterX get() = image!!.width - minViewportCenterX
     private val minViewportCenterY get() = viewportHeight / 2.0
@@ -373,7 +376,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     (canvas.createImage(lowResMatWidth, lowResMatHeight) as BufferedImage).withG2 { g2 ->
                         g2.setHighQuality()
                         g2.color = grounding
-                        g2.fillRect(0, 0, matWidth, matHeight)
+                        g2.fillRect(0, 0, lowResMatWidth, lowResMatHeight)
                         image.copy(universeScaling = lowResScaling).materialize(g2, layers)
                     }
                 }
@@ -405,9 +408,6 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
             val lowResMaterialized = this@DeferredImagePanel.lowResMaterialized
 
             if (image != null && materialized != null) {
-                // Find the top and bottom edges of the current viewport.
-                val viewportTopY = viewportCenterY - viewportHeight / 2.0
-                val viewportBotY = viewportCenterY + viewportHeight / 2.0
                 // Find the width of the viewport in materialized image coordinates.
                 val materializedViewportWidth = (viewportWidth / image.width) * materialized.width
                 // Find the amount the materialized image would need to be scaled
@@ -421,32 +421,50 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                         RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
                     )
 
-                    // Scroll to the current viewport.
-                    g2.translate(
-                        -((viewportCenterX - minViewportCenterX) * imageScaling),
-                        -((viewportCenterY - minViewportCenterY) * imageScaling)
-                    )
-
                     // If the materialized image doesn't cover the whole deferred image and the user has scrolled past
                     // the covered area, momentarily paint a backup low-res image using fast nearest-neighbor
                     // interpolation until the materialization of the now visible area has caught up. Notice that if
                     // only part of the viewport is not covered, the regular painting further below will still paint the
                     // full-resolution version of the covered part.
                     if (lowResMaterialized != null && !materializedStartY.isNaN() &&
-                        (viewportTopY < materializedStartY || viewportBotY > materializedStopY)
+                        (viewportStartY < materializedStartY || viewportStopY > materializedStopY)
                     ) {
                         // This scaling factor maps from low-res to deferred image coordinates. It can be prepended to
                         // imageScaling to obtain a map from low-res to canvas coordinates.
                         val invertedLowResScaling = image.width / lowResMaterialized.width
-                        val s = invertedLowResScaling * imageScaling
-                        g2.drawImage(lowResMaterialized, AffineTransform.getScaleInstance(s, s), null)
+                        // Obtain a version of the materialized low-res image that has its top cut off, such that we do
+                        // not have to translate it much in order to draw it at the overall y translation (which is
+                        // dictated by the current viewport). This is necessary because Java2D completely refuses to
+                        // draw an image if the y translation exceeds 2^16.
+                        val cut = (viewportStartY / invertedLowResScaling).toInt()
+                        val subLowResMat = lowResMaterialized.getSubimage(
+                            0, cut, lowResMaterialized.width, lowResMaterialized.height - cut
+                        )
+                        // Obtain a transformation that performs:
+                        //   - The upscaling of the low-res version.
+                        //   - The x translation dictated by the viewport position.
+                        //   - The remaining y translation.
+                        val tx = AffineTransform().apply {
+                            scale(imageScaling)
+                            translate(-viewportStartX, -viewportStartY)
+                            scale(invertedLowResScaling)
+                            translate(0.0, cut.toDouble())
+                        }
+                        // Draw the low-res version.
+                        g2.drawImage(subLowResMat, tx, null)
                     }
 
+                    // This transformation will be used for drawing the materialized image.
+                    val tx = AffineTransform()
+                    // Scroll to the current viewport.
+                    tx.translate(
+                        -((viewportCenterX - minViewportCenterX) * imageScaling),
+                        -((viewportCenterY - minViewportCenterY) * imageScaling)
+                    )
                     // Again, if the materialized image doesn't cover the whole deferred image, translate such that the
                     // partial materialized image is at the right position.
                     if (!materializedStartY.isNaN())
-                        g2.translate(0.0, materializedStartY * imageScaling)
-
+                        tx.translate(0.0, materializedStartY * imageScaling)
                     if (abs(extraScaling - 1) > 0.001) {
                         // If we have a materialized image, but the pixel width of the canvas doesn't match the pixel
                         // width of the viewport in the materialized image, this can have one of two reasons:
@@ -460,10 +478,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                         // resolution image. In the second case, the scaled version will look bad, but scaling is fast,
                         // and the quality will improve again once the background thread has finished re-materializing
                         // the image for the current size; another call to this painting method will then be triggered.
-                        g2.scale(extraScaling)
+                        tx.scale(extraScaling)
                     }
-
-                    g2.drawImage(materialized, 0, 0, null)
+                    g2.drawImage(materialized, tx, null)
                 }
             }
         }

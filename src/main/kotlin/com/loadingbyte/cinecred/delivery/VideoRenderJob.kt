@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.MuxerFormat
 import com.loadingbyte.cinecred.imaging.VideoWriter
@@ -42,7 +43,7 @@ class VideoRenderJob(
 
         val scaledVideo = video.copy(scaling)
         val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-            scaledVideo, grounding, sequentialAccess = true
+            scaledVideo, DELIVERED_LAYERS, grounding, sequentialAccess = true
         ) {
             override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
         }

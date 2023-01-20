@@ -78,6 +78,7 @@ class DeferredVideo(val resolution: Resolution) {
 
     abstract class Graphics2DBackend(
         private val video: DeferredVideo,
+        private val layers: List<DeferredImage.Layer>,
         private val grounding: Color?,
         draft: Boolean = false,
         sequentialAccess: Boolean = false,
@@ -142,7 +143,7 @@ class DeferredVideo(val resolution: Resolution) {
             val culling = if (height < image.height.resolve()) null else
                 Rectangle2D.Double(0.0, shift, video.width.toDouble(), height.toDouble())
             // Paint the deferred image onto the raster image.
-            image.materialize(this, listOf(DeferredImage.BACKGROUND, DeferredImage.FOREGROUND), culling)
+            image.materialize(this, layers, culling)
         }
 
         private fun translation(tx: Double, ty: Double) = AffineTransform.getTranslateInstance(tx, ty)

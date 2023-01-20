@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.*
@@ -242,7 +243,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         makeVideoBackendJobSlot.submit {
             val scaledVideo = video.copy(scaling)
             val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-                scaledVideo, project.styling.global.grounding, draft = true, preloading = true
+                scaledVideo, DELIVERED_LAYERS, project.styling.global.grounding, draft = true, preloading = true
             ) {
                 override fun createIntermediateImage(width: Int, height: Int) =
                     canvas.createImage(width, height) as BufferedImage

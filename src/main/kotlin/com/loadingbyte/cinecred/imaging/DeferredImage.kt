@@ -208,6 +208,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val BACKGROUND = Layer()
         val GUIDES = Layer()
 
+        val DELIVERED_LAYERS = listOf(BACKGROUND, FOREGROUND)
+
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
 

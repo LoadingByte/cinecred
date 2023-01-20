@@ -5,8 +5,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.BACKGROUND
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.FOREGROUND
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
@@ -57,7 +56,7 @@ class WholePageSequenceRenderJob(
                     g2.color = grounding
                     g2.fillRect(0, 0, pageWidth, pageHeight)
                 }
-                pageDefImage.materialize(g2, listOf(BACKGROUND, FOREGROUND))
+                pageDefImage.materialize(g2, DELIVERED_LAYERS)
             }
 
             when (format) {
@@ -163,7 +162,7 @@ class WholePagePDFRenderJob(
                     cs.fill()
                     cs.restoreGraphicsState()
                 }
-                page.materialize(pdfDoc, cs, pageHeight, listOf(BACKGROUND, FOREGROUND))
+                page.materialize(pdfDoc, cs, pageHeight, DELIVERED_LAYERS)
             }
 
             progressCallback(100 * (idx + 1) / pageDefImages.size)

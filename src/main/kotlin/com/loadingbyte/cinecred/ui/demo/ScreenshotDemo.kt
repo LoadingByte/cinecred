@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.delivery.WholePageSequenceRenderJob
 import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.Styling
 import com.loadingbyte.cinecred.projectio.CsvFormat
@@ -178,7 +179,7 @@ private fun materialize(defImage: DeferredImage, scaling: Double, cropTop: Doubl
         g2.color = Color.BLACK
         g2.fillRect(0, 0, width, height)
         g2.translate(0.0, -scaled.height.resolve() * cropTop)
-        scaled.materialize(g2, listOf(DeferredImage.BACKGROUND, DeferredImage.FOREGROUND))
+        scaled.materialize(g2, DELIVERED_LAYERS)
     }
 }
 

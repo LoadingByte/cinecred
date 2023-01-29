@@ -5,6 +5,11 @@ Cinecred Changelog
 1.4.0-SNAPSHOT
 --------------
 
+### Fixes
+
+- Native libraries are no longer extracted on startup, which alleviates some
+  false security alarms.
+
 ### UI Fixes
 
 - Rapidly scrolling a very long page no longer causes flicker.

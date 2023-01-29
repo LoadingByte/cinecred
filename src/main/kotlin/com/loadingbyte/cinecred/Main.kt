@@ -4,6 +4,7 @@ package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatSystemProperties
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
@@ -58,22 +59,13 @@ fun main(args: Array<String>) {
     rootLogger.addHandler(ConsoleHandler().apply { level = Level.WARNING; formatter = JULFormatter })
     rootLogger.addHandler(JULBuilderHandler)
 
-    // Load all natives from the system-specific directory in the natives/ resource folder.
-    val nativesExDir = System.getProperty("java.io.tmpdir") + "/cinecred-natives-" + System.getProperty("user.name")
-    useResourcePath("/natives/" + Loader.Detector.getPlatform()) { nativesDir ->
-        for (file in nativesDir.listDirectoryEntries())
-            if (file.fileSystem.provider().scheme == "file")
-                System.load(file.toString())
-            else {
-                Path(nativesExDir).createDirectoriesSafely()
-                val exFile = Path(nativesExDir, file.name)
-                file.copyTo(exFile, overwrite = true)
-                System.load(exFile.toString())
-            }
-    }
+    // Load our native libraries.
+    System.loadLibrary("harfbuzz")
 
-    // Let JavaCPP extract its natives into the temp dir, so that they don't clutter the user's filesystem.
-    System.setProperty("org.bytedeco.javacpp.cachedir", nativesExDir)
+    // Make JavaCPP and FlatLaf load their native libraries from java.library.path.
+    System.setProperty("org.bytedeco.javacpp.cacheLibraries", "false")
+    System.setProperty(FlatSystemProperties.NATIVE_LIBRARY_PATH, "system")
+
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
     // Load FFmpeg.

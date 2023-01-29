@@ -9,7 +9,7 @@ Visit the website at https://cinecred.com for further information about the natu
 
 This software requires JDK 17. Make sure you are using that version when building and manually running it.
 
-To run the main class at `com.loadingbyte.cinecred.Main`, some VM arguments are required, which can be found in the `java.properties` file.
+Depending on your platform, use the commands `gradle runOnWindows`, `gradle runOnMacOS`, or `gradle runOnLinux` to build and run the software.
 
 ## Internal: Upgrading HarfBuzz
 

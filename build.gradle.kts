@@ -33,6 +33,12 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(jdkVersion))
 }
 
+val natives by configurations.creating
+val implementationAndNatives by configurations.creating {
+    configurations.implementation.get().extendsFrom(this)
+    natives.extendsFrom(this)
+}
+
 repositories {
     mavenCentral()
 }
@@ -67,13 +73,13 @@ dependencies {
     implementation("org.bytedeco", "javacpp", javacppVersion)
     implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
     for (platform in Platform.values()) {
-        implementation("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slug)
-        implementation("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slug}-gpl")
+        natives("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slug)
+        natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slug}-gpl")
     }
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.0")
-    implementation("com.formdev", "flatlaf", "2.6")
+    implementationAndNatives("com.formdev", "flatlaf", "2.6")
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing
@@ -135,16 +141,42 @@ tasks.processResources {
 }
 
 
-val preparePlatformPackagingTasks = Platform.values().map { platform ->
-    val excludePlatforms = Platform.values().toList() - platform
-
-    // Build a JAR that excludes the other platforms' natives.
-    val platformJar = tasks.register<Jar>("${platform.lowercaseLabel}Jar") {
-        archiveClassifier.set(platform.slug)
-        from(sourceSets.main.map { it.output })
-        exclude(excludePlatforms.map { "natives/${it.slug}" })
+val platformNativesTasks = Platform.values().map { platform ->
+    tasks.register<Copy>("${platform.lowercaseLabel}Natives") {
+        // Collect all natives for the platform in a single directory
+        from(layout.projectDirectory.dir("src/main/natives/${platform.slug}"))
+        for (dep in natives.resolvedConfiguration.resolvedArtifacts)
+            from(zipTree(dep.file)) {
+                include("**/*${platform.slug}*/**/*.${platform.nativesExt}*")
+                include("**/*${platform.slug}*.${platform.nativesExt}*")
+                exclude("**/*avdevice*", "**/*avfilter*", "**/*ffmpeg*", "**/*ffprobe*", "**/*postproc*")
+            }
+        into(layout.buildDirectory.dir("natives/${platform.slug}"))
+        eachFile { path = name }
+        includeEmptyDirs = false
     }
+}
 
+
+Platform.values().map { platform ->
+    val platformNatives = platformNativesTasks[platform.ordinal]
+    val mainClass_ = mainClass
+    tasks.register<JavaExec>("runOn${platform.uppercaseLabel}") {
+        group = "Execution"
+        description = "Runs the program on ${platform.uppercaseLabel}."
+        dependsOn(tasks.processResources, platformNatives)
+        classpath(sourceSets.main.map { it.runtimeClasspath })
+        mainClass.set(mainClass_)
+        jvmArgs = listOf(
+            "-Djava.library.path=${platformNatives.get().destinationDir}",
+            "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
+            "--add-modules", addModules.joinToString(",")
+        ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
+    }
+}
+
+
+val preparePlatformPackagingTasks = Platform.values().map { platform ->
     // Draw the images that are needed for the platform.
     val drawPlatformImages = tasks.register<DrawImages>("draw${platform.uppercaseLabel}Images") {
         version.set(project.version.toString())
@@ -167,12 +199,13 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
         // Copy the packaging scripts and fill in some variables. Note that we
         // don't select the scripts by platform here because that's not worth the effort.
         from("packaging") {
-            val mainJarName = platformJar.get().archiveFileName.get()
+            val mainJarName = tasks.jar.get().archiveFileName.get()
             val tokens = mapOf(
                 "VERSION" to version,
                 "MAIN_JAR" to mainJarName,
                 "MAIN_CLASS" to mainClass,
-                "JAVA_OPTIONS" to "--add-modules ${addModules.joinToString(",")} " +
+                "JAVA_OPTIONS" to "-Djava.library.path=\$APPDIR" +
+                        " --add-modules ${addModules.joinToString(",")} " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" } +
                         " -splash:\$APPDIR/$splashScreen $javaOptions",
                 "DESCRIPTION" to "Create beautiful film credits without the pain",
@@ -194,12 +227,10 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
             filter<ReplaceTokens>("tokens" to tokens)
         }
         into("app") {
-            from(platformJar)
+            from(tasks.jar)
+            from(configurations.runtimeClasspath)
+            from(platformNativesTasks[platform.ordinal])
             from(tasks.processResources.map { it.destDirProvider.file(splashScreen) })
-            from(configurations.runtimeClasspath) {
-                // Exclude all JARs with natives for excluded platforms.
-                exclude(excludePlatforms.map { "*${it.slug}*" })
-            }
         }
         into("images") {
             from(drawPlatformImages)
@@ -218,13 +249,13 @@ val preparePackaging by tasks.registering {
 
 val mergeServices by tasks.registering(MergeServices::class) {
     configuration.set(configurations.runtimeClasspath)
-    outputDir.set(layout.buildDirectory.dir("generated/universal/services"))
+    outputDir.set(layout.buildDirectory.dir("generated/allJar/services"))
 }
 
-val universalJar by tasks.registering(Jar::class) {
+val allJar by tasks.registering(Jar::class) {
     group = "Build"
-    description = "Assembles a jar archive containing the main classes and all dependencies for all platforms."
-    archiveClassifier.set("universal")
+    description = "Assembles a jar archive containing the program classes and all dependencies, excluding natives."
+    archiveClassifier.set("all")
     manifest.attributes(
         "Main-Class" to mainClass,
         "SplashScreen-Image" to splashScreen,

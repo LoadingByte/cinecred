@@ -58,7 +58,7 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
             efr.verify?.let {
                 val notice = it()
                 efr.formRow.noticeOverride = notice
-                efr.formRow.widget.applySeverity(-1, notice?.severity)
+                efr.formRow.widget.setSeverity(-1, notice?.severity)
                 efr.isErroneous = notice?.severity == Severity.ERROR
             }
         }

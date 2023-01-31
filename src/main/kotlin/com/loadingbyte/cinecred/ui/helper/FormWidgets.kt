@@ -521,8 +521,8 @@ class MultiComboBoxWidget<E : Any>(
             notifyChangeListeners()
         }
 
-    override fun applySeverity(index: Int, severity: Severity?) {
-        super.applySeverity(index, severity)
+    override fun setSeverity(index: Int, severity: Severity?) {
+        super.setSeverity(index, severity)
         mcb.overflowColor = outline(severity)
     }
 
@@ -1367,13 +1367,16 @@ class ListWidget<E : Any>(
             allElemWidgets[idx].applyConfigurator(configurator)
     }
 
-    override fun applySeverity(index: Int, severity: Severity?) {
+    override fun getSeverity(index: Int): Severity? =
+        if (index == -1) super.getSeverity(-1) else allElemWidgets[index].getSeverity(-1)
+
+    override fun setSeverity(index: Int, severity: Severity?) {
         if (index == -1) {
-            super.applySeverity(-1, severity)
+            super.setSeverity(-1, severity)
             for (widget in allElemWidgets)
-                widget.applySeverity(-1, severity)
+                widget.setSeverity(-1, severity)
         } else if (index in 0 until listSize)
-            allElemWidgets[index].applySeverity(-1, severity)
+            allElemWidgets[index].setSeverity(-1, severity)
     }
 
 
@@ -1437,6 +1440,13 @@ class UnionWidget(
                 widget.isEnabled = isEnabled
         }
 
+    override fun getSeverity(index: Int): Severity? =
+        if (index == -1) throw UnsupportedOperationException() else wrapped[index].getSeverity(-1)
+
+    override fun setSeverity(index: Int, severity: Severity?) {
+        if (index == -1) throw UnsupportedOperationException() else wrapped[index].setSeverity(-1, severity)
+    }
+
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
         for (widget in wrapped)
@@ -1463,6 +1473,9 @@ class NestedFormWidget<V : Any>(
         set(value) {
             form.open(value)
         }
+
+    override fun getSeverity(index: Int) = null
+    override fun setSeverity(index: Int, severity: Severity?) {}
 
 }
 

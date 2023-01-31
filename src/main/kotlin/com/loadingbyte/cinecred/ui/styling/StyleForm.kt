@@ -332,20 +332,23 @@ class StyleForm<S : Style>(
     }
 
     fun clearIssues() {
-        for ((formRow, _) in rootFormRows) {
+        for ((formRow, _) in rootFormRows)
             formRow.noticeOverride = null
-            formRow.widget.applySeverity(-1, null)
-        }
+        for (widget in valueWidgets.values)
+            widget.setSeverity(-1, null)
     }
 
     fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, subjectIndex: Int, issue: Notice) {
+        // Only show the notice message if there isn't already a notice with the same or a higher severity.
         val formRow = rootFormRowLookup[setting]!!
         val prevNoticeOverride = formRow.noticeOverride
-        // Only show the notice message if there isn't already a notice with the same or a higher severity.
-        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity) {
+        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
             formRow.noticeOverride = issue
-            valueWidgets[setting]!!.applySeverity(subjectIndex, issue.severity)
-        }
+        // Only increase and not decrease the severity on the widget.
+        val widget = valueWidgets[setting]!!
+        val prevSeverity = widget.getSeverity(subjectIndex)
+        if (prevSeverity == null || issue.severity > prevSeverity)
+            widget.setSeverity(subjectIndex, issue.severity)
     }
 
     fun setProjectFontFamilies(projectFamilies: FontFamilies) {

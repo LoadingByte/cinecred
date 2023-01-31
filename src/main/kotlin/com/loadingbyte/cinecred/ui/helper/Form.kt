@@ -29,8 +29,9 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         var value: V
         var isVisible: Boolean
         var isEnabled: Boolean
+        fun getSeverity(index: Int): Severity?
+        fun setSeverity(index: Int, severity: Severity?)
         fun applyConfigurator(configurator: (Widget<*>) -> Unit)
-        fun applySeverity(index: Int, severity: Severity?)
     }
 
     interface Choice<VE : Any> {
@@ -38,6 +39,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
     }
 
     abstract class AbstractWidget<V : Any> : Widget<V> {
+
+        private var severity: Severity? = null
 
         override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
         protected var disableChangeListeners = false
@@ -56,11 +59,10 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
                     comp.isEnabled = isEnabled
             }
 
-        override fun applyConfigurator(configurator: (Widget<*>) -> Unit) {
-            configurator(this)
-        }
+        override fun getSeverity(index: Int): Severity? = severity
 
-        override fun applySeverity(index: Int, severity: Severity?) {
+        override fun setSeverity(index: Int, severity: Severity?) {
+            this.severity = severity
             // Adjust FlatLaf outlines.
             val outline = outline(severity)
             for (comp in components)
@@ -71,6 +73,10 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
             Severity.WARN -> OUTLINE_WARNING
             Severity.ERROR -> OUTLINE_ERROR
             else -> null
+        }
+
+        override fun applyConfigurator(configurator: (Widget<*>) -> Unit) {
+            configurator(this)
         }
 
         protected inline fun withoutChangeListeners(block: () -> Unit) {

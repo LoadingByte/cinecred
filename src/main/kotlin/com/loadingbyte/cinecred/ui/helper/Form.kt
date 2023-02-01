@@ -225,7 +225,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
 
     override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) =
-        if (orientation == SwingConstants.VERTICAL) visibleRect.height / 10 else visibleRect.width / 10
+        if (orientation == SwingConstants.VERTICAL) visibleRect.height / 20 else visibleRect.width / 20
 
     override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) =
         if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width

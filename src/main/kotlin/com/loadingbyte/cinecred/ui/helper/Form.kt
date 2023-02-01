@@ -26,6 +26,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         val components: List<JComponent>
         val constraints: List<String>
         val changeListeners: MutableList<(Widget<*>) -> Unit>
+        val visibleListeners: MutableList<(Boolean) -> Unit>
+        val enabledListeners: MutableList<(Boolean) -> Unit>
         var value: V
         var isVisible: Boolean
         var isEnabled: Boolean
@@ -43,6 +45,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         private var severity: Severity? = null
 
         override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
+        override val visibleListeners = mutableListOf<(Boolean) -> Unit>()
+        override val enabledListeners = mutableListOf<(Boolean) -> Unit>()
         protected var disableChangeListeners = false
 
         override var isVisible = true
@@ -50,6 +54,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
                 field = isVisible
                 for (comp in components)
                     comp.isVisible = isVisible
+                for (listener in visibleListeners)
+                    listener(isVisible)
             }
 
         override var isEnabled = true
@@ -57,6 +63,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
                 field = isEnabled
                 for (comp in components)
                     comp.isEnabled = isEnabled
+                for (listener in enabledListeners)
+                    listener(isEnabled)
             }
 
         override fun getSeverity(index: Int): Severity? = severity

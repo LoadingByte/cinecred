@@ -1401,13 +1401,23 @@ class UnionWidget(
             require(wrapped.size == icons.size)
 
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
-        for (widget in wrapped)
+        // When a wrapped widget becomes invisible or disabled, also modify its corresponding label or icon.
+        for (widget in wrapped) {
             widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+            widget.visibleListeners.add { isVisible -> widgetLabels[widget]?.isVisible = isVisible }
+            widget.enabledListeners.add { isEnabled -> widgetLabels[widget]?.isEnabled = isEnabled }
+        }
     }
+
+    private val widgetLabels = HashMap<Form.Widget<*>, JLabel>()
 
     override val components: List<JComponent> = buildList {
         for ((idx, widget) in wrapped.withIndex()) {
-            if (icons != null) add(JLabel(icons[idx]))
+            if (icons != null) {
+                val lbl = JLabel(icons[idx])
+                add(lbl)
+                widgetLabels[widget] = lbl
+            }
             addAll(widget.components)
         }
     }
@@ -1438,6 +1448,14 @@ class UnionWidget(
             super.isEnabled = isEnabled
             for (widget in wrapped)
                 widget.isEnabled = isEnabled
+        }
+
+    override var isVisible: Boolean
+        get() = super.isVisible
+        set(isVisible) {
+            super.isVisible = isVisible
+            for (widget in wrapped)
+                widget.isVisible = isVisible
         }
 
     override fun getSeverity(index: Int): Severity? =

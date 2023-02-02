@@ -246,7 +246,9 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
                 scaledVideo, DELIVERED_LAYERS, project.styling.global.grounding, draft = true, preloading = true
             ) {
                 override fun createIntermediateImage(width: Int, height: Int) =
-                    canvas.createImage(width, height) as BufferedImage
+                    // If the canvas was disposed in the meantime, create a dummy image to avoid crashing.
+                    canvas.createImage(width, height) as BufferedImage?
+                        ?: BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
             }
             // Simulate materializing the currently selected frame in the background thread. As expensive operations
             // are cached, the subsequent materialization of that frame in the EDT thread will be very fast.

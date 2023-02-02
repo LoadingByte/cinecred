@@ -348,7 +348,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
                 val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
                 val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
-                val materialized = (canvas.createImage(matWidth, matHeight) as BufferedImage).withG2 { g2 ->
+                // Abort if the canvas was disposed in the meantime.
+                val materialized = (canvas.createImage(matWidth, matHeight) ?: return@submit) as BufferedImage
+                materialized.withG2 { g2 ->
                     g2.setHighQuality()
                     // Paint the grounding.
                     g2.color = grounding
@@ -373,7 +375,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     val lowResMatWidth = max(1, (theoreticalLowResScaling * image.width).toInt())
                     val lowResScaling = lowResMatWidth / image.width
                     val lowResMatHeight = max(1, ceil(lowResScaling * imgHeight).toInt())
-                    (canvas.createImage(lowResMatWidth, lowResMatHeight) as BufferedImage).withG2 { g2 ->
+                    // Abort if the canvas was disposed in the meantime.
+                    val img = (canvas.createImage(lowResMatWidth, lowResMatHeight) ?: return@submit) as BufferedImage
+                    img.withG2 { g2 ->
                         g2.setHighQuality()
                         g2.color = grounding
                         g2.fillRect(0, 0, lowResMatWidth, lowResMatHeight)

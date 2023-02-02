@@ -13,6 +13,7 @@ Cinecred Changelog
 ### UI Fixes
 
 - Rapidly scrolling a very long page no longer causes flicker.
+- Resolved rare crashes when closing a project while the previews are rendered.
 
 
 1.3.1

@@ -6,19 +6,24 @@ import java.util.*
 /** Returns a [Set] that compares elements based on identity for better performance. */
 fun findUsedStyles(project: Project): Set<NamedStyle> {
     val usedStyles = Collections.newSetFromMap(IdentityHashMap<NamedStyle, Boolean>())
+    val ctx = project.stylingCtx
     val styling = project.styling
 
-    // Add the letter styles referenced by the content styles.
-    for (contentStyle in styling.contentStyles) {
-        // Add the content style's body letter style.
-        styling.letterStyles.find { it.name == contentStyle.bodyLetterStyleName }?.let(usedStyles::add)
-        // If the content style supports heads, add its head letter style.
-        if (contentStyle.hasHead)
-            styling.letterStyles.find { it.name == contentStyle.headLetterStyleName }?.let(usedStyles::add)
-        // If the content style supports heads, add its tail letter style.
-        if (contentStyle.hasTail)
-            styling.letterStyles.find { it.name == contentStyle.tailLetterStyleName }?.let(usedStyles::add)
+    fun <S : Style> processStyle(style: S) {
+        val ignoreSettings = findIneffectiveSettings(ctx, styling, style)
+        for (cst in getStyleConstraints(style.javaClass))
+            if (cst is StyleNameConstr<S, *> && !cst.clustering)
+                for (setting in cst.settings)
+                    if (setting !in ignoreSettings)
+                        for (ref in setting.extractSubjects(style))
+                            cst.choices(ctx, styling, style).find { choice -> choice.name == ref }?.let(usedStyles::add)
     }
+
+    // Add styles referenced from other styles.
+    // Note: Currently, we only look in named styles, but as of now, that is sufficient for our use case.
+    for (styleClass in NamedStyle.CLASSES)
+        for (style in styling.getNamedStyles(styleClass))
+            processStyle(style)
 
     // Add the page, content, and letter styles referenced from the read pages.
     for (page in project.pages)

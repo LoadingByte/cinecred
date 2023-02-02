@@ -12,8 +12,10 @@ import javax.swing.SpinnerNumberModel
 
 class StyleForm<S : Style>(
     private val styleClass: Class<S>,
-    insets: Boolean = true
-) : Form.Storable<S>(insets, noticeArea = true, constLabelWidth = true) {
+    insets: Boolean = true,
+    noticeArea: Boolean = true,
+    constLabelWidth: Boolean = true
+) : Form.Storable<S>(insets, noticeArea, constLabelWidth) {
 
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
     private val rootFormRows = ArrayList<Pair<FormRow, List<StyleSetting<S, *>>>>()
@@ -195,8 +197,14 @@ class StyleForm<S : Style>(
                         widthSpec
                     )
                 }
-                Style::class.java.isAssignableFrom(setting.type) ->
-                    NestedFormWidget(StyleForm(setting.type.asSubclass(Style::class.java), insets = false))
+                Style::class.java.isAssignableFrom(setting.type) -> {
+                    val nestedForm = StyleForm(
+                        setting.type.asSubclass(Style::class.java),
+                        // Horizontal space in nested forms is scarce, so save where we can.
+                        insets = false, noticeArea = false, constLabelWidth = false
+                    )
+                    NestedFormWidget(nestedForm)
+                }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }

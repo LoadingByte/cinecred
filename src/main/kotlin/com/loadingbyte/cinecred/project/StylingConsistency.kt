@@ -66,7 +66,6 @@ fun <S : NamedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, rem
 class StylingConsistencyRetainer<S : NamedStyle>(
     ctx: StylingContext,
     styling: Styling,
-    usedStyles: Set<NamedStyle>,
     editedStyle: S
 ) {
 
@@ -97,13 +96,13 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         // We want to keep all other styles which "use" editedStyle in sync with changes to editedStyle's name.
         // For this, record all these usages now.
         trackedUsages = NamedStyle.CLASSES.flatMap { style2Class ->
-            determineTrackedUsages(styling, usedStyles, editedStyle, style2Class)
+            determineTrackedUsages(ctx, styling, editedStyle, style2Class)
         }
     }
 
     private fun <S2 : NamedStyle> determineTrackedUsages(
+        ctx: StylingContext,
         styling: Styling,
-        usedStyles: Set<NamedStyle>,
         editedStyle: S,
         style2Class: Class<S2>,
     ): List<TrackedUsage<S2>> {
@@ -120,19 +119,19 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         val trackedUsages = mutableListOf<TrackedUsage<S2>>()
         for (style2 in styling.getNamedStyles(style2Class)) {
             val trackedUsageSettings = mutableListOf<TrackedUsage.Setting<S2>>()
-            for (constr in refConstraints) {
-                // In case that the edited style's name is not unique, the user expects that the reference stays in sync
-                // with only the used one of the duplicate styles.
-                if (editedStyle in usedStyles)
-                    for (setting in constr.settings) {
-                        val subjects = setting.extractSubjects(style2)
-                        if (editedStyle.name in subjects) {
-                            val baseItems = if (setting !is ListStyleSetting) null else
-                                TreeSet(subjects).apply { remove(editedStyle.name) }
-                            trackedUsageSettings.add(TrackedUsage.Setting(setting, baseItems))
-                        }
+            for (constr in refConstraints)
+                for (setting in constr.settings) {
+                    val subjects = setting.extractSubjects(style2)
+                    if (editedStyle.name in subjects &&
+                        // In case that the edited style's name is not unique, the user expects that the reference
+                        // stays in sync with only the used (i.e., the first permissible) of the duplicate styles.
+                        constr.choices(ctx, styling, style2).find { it.name == editedStyle.name } === editedStyle
+                    ) {
+                        val baseItems = if (setting !is ListStyleSetting) null else
+                            TreeSet(subjects).apply { remove(editedStyle.name) }
+                        trackedUsageSettings.add(TrackedUsage.Setting(setting, baseItems))
                     }
-            }
+                }
             if (trackedUsageSettings.isNotEmpty())
                 trackedUsages.add(TrackedUsage(style2, trackedUsageSettings))
         }

@@ -49,11 +49,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val stylingTree = StylingTree()
 
-    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and used
-    // styles, so that we don't have to repeatedly regenerate these three things.
+    // Cache the styling which is currently stored in the styling tree as well as its constraint violations,
+    // so that we don't have to repeatedly regenerate these three things.
     private var styling: Styling? = null
     private var constraintViolations: List<ConstraintViolation> = emptyList()
-    private var usedStyles: Set<NamedStyle> = emptySet()
 
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
@@ -218,7 +217,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun <S : NamedStyle> openNamedStyle(style: S, form: StyleForm<S>, cardName: String) {
-        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, usedStyles, style)
+        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             val newStyle = form.save()
@@ -282,7 +281,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateProject(drawnProject: DrawnProject?) {
         val project = drawnProject?.project
-        usedStyles = if (project == null) emptySet() else findUsedStyles(project)
+        val usedStyles = if (project == null) emptySet() else findUsedStyles(project)
         stylingTree.adjustAppearance(isGrayedOut = { project != null && it is NamedStyle && it !in usedStyles })
         mostRecentRuntime = drawnProject?.video?.numFrames ?: 0
     }

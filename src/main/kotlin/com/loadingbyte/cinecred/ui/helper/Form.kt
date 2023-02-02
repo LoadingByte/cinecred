@@ -161,7 +161,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
 
     private val formRows = mutableListOf<FormRow>()
 
-    protected fun addFormRow(formRow: FormRow, invisibleSpace: Boolean = false) {
+    protected fun addFormRow(formRow: FormRow, wholeWidth: Boolean = false, invisibleSpace: Boolean = false) {
         val widget = formRow.widget
 
         require(widget.components.size == widget.constraints.size)
@@ -170,14 +170,16 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         widget.changeListeners.add(::onChange)
 
         val labelId = "l_${formRows.size}"
-        val labelConstraints = mutableListOf("id $labelId")
-        if (constLabelWidth)
-            labelConstraints.add("wmax $LABEL_WIDTH_CONSTRAINT")
-        if (formRows.isNotEmpty() /* is not the first widget */)
-            labelConstraints.add("newline")
-        if (invisibleSpace)
-            labelConstraints.add("hidemode 0")
-        add(formRow.labelComp, labelConstraints.joinToString())
+        if (!wholeWidth) {
+            val labelConstraints = mutableListOf("id $labelId")
+            if (constLabelWidth)
+                labelConstraints.add("wmax $LABEL_WIDTH_CONSTRAINT")
+            if (formRows.isNotEmpty() /* is not the first widget */)
+                labelConstraints.add("newline")
+            if (invisibleSpace)
+                labelConstraints.add("hidemode 0")
+            add(formRow.labelComp, labelConstraints.joinToString())
+        }
 
         val endlineGroupId = "g_${formRows.size}"
         for ((fieldIdx, field) in widget.components.withIndex()) {
@@ -186,13 +188,21 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
             // in the row. This "x2" will be used later when positioning the notice components. Because of the syntax,
             // we also need to assign each field a unique ID (after the dot), but it's not used by us anywhere.
             fieldConstraints.add("id $endlineGroupId.f_${formRows.size}_$fieldIdx")
+            // If this field starts the first line, and we don't have a row label, start the new form row here.
+            if (wholeWidth && fieldIdx == 0)
+                fieldConstraints.add("newline")
             // If this field starts a new line, add a skip constraint to skip the label column.
-            if ("newline" in fieldConstraints[0])
+            if (!wholeWidth && "newline" in fieldConstraints[0])
                 fieldConstraints.add("skip 1")
             // If this field starts the first or a later line, add a split constraint to make sure all components
             // are located in the same cell horizontally.
-            if (fieldIdx == 0 || "newline" in fieldConstraints[0])
+            if (fieldIdx == 0 || "newline" in fieldConstraints[0]) {
                 fieldConstraints.add("split")
+                // If the row doesn't have a label and doesn't reserve a notice area, make the cell which contains
+                // the fields span from the label to the final dummy column.
+                if (wholeWidth)
+                    fieldConstraints.add("span")
+            }
             if (invisibleSpace)
                 fieldConstraints.add("hidemode 0")
             add(field, fieldConstraints.joinToString())
@@ -200,9 +210,11 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
 
         // Position the notice components using the rightmost x border coordinate of any field and the y coordinate of
         // the widget's label.
-        val noticeIconId = "n_${formRows.size}"
-        add(formRow.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
-        add(formRow.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
+        if (!wholeWidth) {
+            val noticeIconId = "n_${formRows.size}"
+            add(formRow.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
+            add(formRow.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
+        }
 
         formRows.add(formRow)
     }

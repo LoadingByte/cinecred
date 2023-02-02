@@ -31,7 +31,7 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
         verify: ((V) -> Notice?)? = null
     ): W {
         val formRow = FormRow(label, widget)
-        addFormRow(formRow, invisibleSpace)
+        addFormRow(formRow, invisibleSpace = invisibleSpace)
         val doVerify = verify?.let { { it(widget.value) } }
         extFormRows.add(ExtFormRow(formRow, isVisible, isEnabled, doVerify))
         return widget

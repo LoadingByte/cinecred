@@ -142,7 +142,7 @@ tasks.processResources {
 
 
 val platformNativesTasks = Platform.values().map { platform ->
-    tasks.register<Copy>("${platform.lowercaseLabel}Natives") {
+    tasks.register<Sync>("${platform.lowercaseLabel}Natives") {
         // Collect all natives for the platform in a single directory
         from(layout.projectDirectory.dir("src/main/natives/${platform.slug}"))
         for (dep in natives.resolvedConfiguration.resolvedArtifacts)
@@ -188,7 +188,7 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
     }
 
     // Collect all files needed for packaging in a folder.
-    val preparePlatformPackaging = tasks.register<Copy>("prepare${platform.uppercaseLabel}Packaging") {
+    val preparePlatformPackaging = tasks.register<Sync>("prepare${platform.uppercaseLabel}Packaging") {
         doFirst {
             if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
                 throw GradleException("Non-release versions cannot be packaged.")

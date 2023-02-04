@@ -455,9 +455,9 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
             }
 
         for (setting in getStyleSettings(style.javaClass))
-            if (Style::class.java.isAssignableFrom(setting.type) && setting !in ignoreSettings)
+            if (NestedStyle::class.java.isAssignableFrom(setting.type) && setting !in ignoreSettings)
                 for (subject in setting.extractSubjects(style))
-                    verifyStyle(rootStyle, subject as Style)
+                    verifyStyle(rootStyle, subject as NestedStyle<*>)
     }
 
     verifyStyle(styling.global, styling.global)

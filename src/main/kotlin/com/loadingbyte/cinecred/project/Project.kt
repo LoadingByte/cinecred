@@ -23,6 +23,13 @@ data class Styling constructor(
     val contentStyles: PersistentList<ContentStyle>,
     val letterStyles: PersistentList<LetterStyle>
 ) {
+
+    private val parentStyleLookup = IdentityHashMap<NestedStyle<*>, Style>().apply {
+        for (letterStyle in letterStyles)
+            for (layer in letterStyle.layers)
+                put(layer, letterStyle)
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun <S : NamedStyle> getNamedStyles(styleClass: Class<S>): PersistentList<S> = when (styleClass) {
         PageStyle::class.java -> pageStyles
@@ -30,6 +37,11 @@ data class Styling constructor(
         LetterStyle::class.java -> letterStyles
         else -> throw IllegalArgumentException("${styleClass.name} is not a named style class.")
     } as PersistentList<S>
+
+    @Suppress("UNCHECKED_CAST")
+    fun <S : NestedStyle<P>, P : Style> getParentStyle(style: S): P =
+        parentStyleLookup[style] as P
+
 }
 
 
@@ -44,6 +56,9 @@ sealed interface NamedStyle : Style {
             listOf(PageStyle::class.java, ContentStyle::class.java, LetterStyle::class.java)
     }
 }
+
+
+sealed interface NestedStyle<P : Style> : Style
 
 
 data class Global(
@@ -199,7 +214,7 @@ data class TextDecoration(
     val clearingPx: Opt<Double>,
     val clearingJoin: LineJoin,
     val dashPatternPx: PersistentList<Double>
-) : Style
+) : NestedStyle<LetterStyle>
 
 
 enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, OFF }

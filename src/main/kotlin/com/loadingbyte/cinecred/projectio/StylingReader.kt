@@ -198,7 +198,8 @@ private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)
-        Style::class.java.isAssignableFrom(type) -> readStyle(raw as Map<*, *>, type.asSubclass(Style::class.java))
+        NestedStyle::class.java.isAssignableFrom(type) ->
+            readStyle(raw as Map<*, *>, type.asSubclass(NestedStyle::class.java))
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

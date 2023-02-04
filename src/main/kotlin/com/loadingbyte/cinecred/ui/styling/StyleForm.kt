@@ -200,9 +200,9 @@ class StyleForm<S : Style>(
                         widthSpec
                     )
                 }
-                Style::class.java.isAssignableFrom(setting.type) -> {
+                NestedStyle::class.java.isAssignableFrom(setting.type) -> {
                     val nestedForm = StyleForm(
-                        setting.type.asSubclass(Style::class.java),
+                        setting.type.asSubclass(NestedStyle::class.java),
                         // Horizontal space in nested forms is scarce, so save where we can.
                         insets = false, noticeArea = false, constLabelWidth = false
                     )
@@ -303,23 +303,25 @@ class StyleForm<S : Style>(
             if (value is List<*>) value.toPersistentList() else value
         })
 
-    fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, Style>> {
-        val nested = mutableListOf<Pair<StyleForm<*>, Style>>()
+    fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, NestedStyle<*>>> {
+        val nested = mutableListOf<Pair<StyleForm<*>, NestedStyle<*>>>()
         for (setting in getStyleSettings(styleClass))
-            if (Style::class.java.isAssignableFrom(setting.type))
+            if (NestedStyle::class.java.isAssignableFrom(setting.type))
                 when (setting) {
                     is DirectStyleSetting -> {
                         val formWidget = valueWidgets[setting] as NestedFormWidget
-                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style) as Style))
+                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style) as NestedStyle<*>))
                     }
                     is OptStyleSetting -> {
                         val formWidget = (valueWidgets[setting] as OptWidget<*>).wrapped as NestedFormWidget
-                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style).value as Style))
+                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style).value as NestedStyle<*>))
                     }
                     is ListStyleSetting -> {
-                        val formWidgets = (valueWidgets[setting] as ListWidget<*>).elementWidgets
+                        val formWidgets = (valueWidgets[setting] as AbstractListWidget<*>).elementWidgets
                         for ((formWidget, nestedStyle) in formWidgets.zip(setting.get(style)))
-                            nested.add(Pair((formWidget as NestedFormWidget).form as StyleForm, nestedStyle as Style))
+                            nested.add(
+                                Pair((formWidget as NestedFormWidget).form as StyleForm, nestedStyle as NestedStyle<*>)
+                            )
                     }
                 }
         return nested

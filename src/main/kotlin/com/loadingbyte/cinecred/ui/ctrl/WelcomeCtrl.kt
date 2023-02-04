@@ -260,8 +260,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_openBrowse_onChangeSelection(dir: Path?) {
         openBrowseSelection = dir?.normalize()
+        if (openBrowseSelection?.let(::isProjectDir) == false) openBrowseSelection = null
         // Gray out the "open" button if the selected directory is not real or not a project dir.
-        welcomeView.projects_openBrowse_setDoneEnabled(dir != null && isProjectDir(dir))
+        welcomeView.projects_openBrowse_setDoneEnabled(openBrowseSelection != null)
     }
 
     override fun projects_openBrowse_onDoubleClickDir(dir: Path): Boolean =
@@ -280,8 +281,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_createBrowse_onChangeSelection(dir: Path?) {
         newBrowseSelection = dir?.normalize()
+        if (newBrowseSelection?.let(::isAllowedToBeProjectDir) == false) newBrowseSelection = null
         // Gray out the "next" button if the selected directory is not real or not allowed to be a project dir.
-        welcomeView.projects_createBrowse_setNextEnabled(dir != null && isAllowedToBeProjectDir(dir))
+        welcomeView.projects_createBrowse_setNextEnabled(newBrowseSelection != null)
     }
 
     override fun projects_createBrowse_onClickNext() {

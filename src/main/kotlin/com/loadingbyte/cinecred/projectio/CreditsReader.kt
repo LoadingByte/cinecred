@@ -10,10 +10,7 @@ import kotlinx.collections.immutable.toPersistentList
 import java.io.File
 import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.extension
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.*
 
 
 fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
@@ -106,7 +103,7 @@ private class CreditsReader(
         // Allow the user to use an arbitrary number of parent components.
         // For example, the path "a/b/c.png" could be expressed as "c.png", "", "b/c.png", or "a/b/c.png".
         (0 until path.nameCount).asSequence()
-            .map { idx -> path.subpath(idx, path.nameCount).toString() }
+            .map { idx -> path.subpath(idx, path.nameCount).pathString }
             // Allow both Windows and Unix file separators.
             .flatMap { key ->
                 listOf(

@@ -52,18 +52,19 @@ fun StyledString.formatted(textCtx: TextContext): FormattedString =
     (textCtx as TextContextImpl).getFmtStr(this)
 
 
-fun makeTextCtx(locale: Locale, uppercaseExceptions: List<String>, stylingCtx: StylingContext): TextContext =
-    TextContextImpl(locale, uppercaseExceptions, stylingCtx)
+fun makeTextCtx(styling: Styling, stylingCtx: StylingContext): TextContext =
+    TextContextImpl(styling, stylingCtx)
 
 sealed class TextContext
 
-private class TextContextImpl(
-    val locale: Locale,
-    private val uppercaseExceptions: List<String>,
-    val stylingCtx: StylingContext
-) : TextContext() {
+private class TextContextImpl(private val styling: Styling, val stylingCtx: StylingContext) : TextContext() {
 
-    val uppercaseExceptionsRegex: Regex? by lazy { generateUppercaseExceptionsRegex(uppercaseExceptions) }
+    val locale: Locale
+        get() = styling.global.locale
+
+    val uppercaseExceptionsRegex: Regex? by lazy {
+        generateUppercaseExceptionsRegex(styling.global.uppercaseExceptions)
+    }
 
     private val fmtStrAttrsCache = IdentityHashMap<LetterStyle, Attrs>()
     private val fmtStrCache = IdentityHashMap<StyledString, FormattedString>()
@@ -132,6 +133,7 @@ private fun generateFmtStrAttrs(
     // fallback font that (hopefully) best matches the specified font.
     val baseAWTFont = textCtx.stylingCtx.resolveFont(style.fontName) ?: Font(style.fontName, 0, 1)
 
+    // Superscript
     var ssScaling = 1.0
     var ssHOffset = 0.0
     var ssVOffset = 0.0
@@ -164,11 +166,14 @@ private fun generateFmtStrAttrs(
         // @formatter:on
     }
 
+    // User-defined OpenType features
     val features = style.features.mapTo(mutableListOf()) { FormattedString.Font.Feature(it.tag, it.value) }
 
+    // Uppercase spacing
     if (style.uppercase && style.useUppercaseSpacing)
         features.add(FormattedString.Font.Feature(CAPITAL_SPACING_FONT_FEAT, 1))
 
+    // Small caps
     var fakeSCScaling = Double.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {}
@@ -277,7 +282,7 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
         }
     }
 
-    // 2. Prepare for small caps. For this, create the "smallCapsed" styled string, which has all runs with a small
+    // 2. Prepare for fake small caps. For this, create the "smallCapsed" styled string, which has all runs with a small
     //    caps style uppercased. For each character in those uppercased runs, remember whether it should be rendered
     //    as a small cap letter or regular uppercase letter.
     val smallCapsed: StyledString

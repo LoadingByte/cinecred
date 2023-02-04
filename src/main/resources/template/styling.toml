@@ -27,7 +27,7 @@ spineAttachment = "HEAD_GAP_CENTER"
 bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "GRID"
 gridMatchColWidths = "ACROSS_BLOCKS"
-gridCellHJustifyPerCol = ["LEFT", ]
+gridCellHJustifyPerCol = ["LEFT"]
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
 headMatchWidth = "ACROSS_BLOCKS"
@@ -48,7 +48,7 @@ name = "{project.template.contentStyleTabular}"
 bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "GRID"
 gridStructure = "EQUAL_WIDTH_COLS"
-gridCellHJustifyPerCol = ["LEFT", "CENTER", "RIGHT", ]
+gridCellHJustifyPerCol = ["LEFT", "CENTER", "RIGHT"]
 
 [[contentStyle]]
 name = "{project.template.contentStyleSong}"

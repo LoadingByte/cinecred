@@ -118,7 +118,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     }
 
     private fun verifyFile(file: Path): Notice? = when {
-        file.toString().isBlank() -> Notice(Severity.ERROR, l10n("blank"))
+        file.pathString.isBlank() -> Notice(Severity.ERROR, l10n("blank"))
         !file.isAbsolute -> Notice(Severity.ERROR, l10n("ui.deliverConfig.nonAbsolutePath"))
         else -> null
     }
@@ -237,10 +237,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is WholePageSequenceRenderJob.Format -> {
                     renderJob = WholePageSequenceRenderJob(
                         getScaledPageDefImages(),
-                        grounding,
-                        format,
-                        dir = fileOrDir,
-                        filenamePattern = hashPatternToFormatStr(getFilenameHashPattern()).also { println(it) }
+                        grounding, format,
+                        dir = fileOrDir, filenamePattern = hashPatternToFormatStr(getFilenameHashPattern())
                     )
                     destination = fileOrDir.resolve(getFilenameHashPattern()).pathString
                 }

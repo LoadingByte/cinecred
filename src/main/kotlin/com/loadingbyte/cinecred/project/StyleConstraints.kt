@@ -238,7 +238,12 @@ class StyleNameConstr<S : Style, R : NamedStyle>(
     val styleClass: Class<R>,
     val clustering: Boolean = false,
     val choices: (StylingContext, Styling, S) -> List<R>
-) : StyleConstraint<S, StyleSetting<S, String>>(*settings)
+) : StyleConstraint<S, StyleSetting<S, String>>(*settings) {
+    init {
+        // This is due to limitations in our current implementation of StylingConsistency and StyleUsage.
+        require(settings.all { st -> NamedStyle::class.java.isAssignableFrom(st.declaringClass) })
+    }
+}
 
 
 class ColorConstr<S : Style>(
@@ -309,12 +314,12 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     }
 
     fun <S : Style> verifyStyle(rootStyle: Style, style: S) {
-        val ignoreSettings = findIneffectiveSettings(ctx, styling, style)
+        val ignoreSettings = findIneffectiveSettings(ctx, styling, style).keys
 
         for (cst in getStyleConstraints(style.javaClass))
             when (cst) {
                 is IntConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         if (cst.min != null && value < cst.min || cst.max != null && value > cst.max) {
                             val minRestr = cst.min?.let { "\u2265 $it" }
                             val maxRestr = cst.max?.let { "\u2264 $it" }
@@ -323,7 +328,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         }
                     }
                 is DoubleConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         if (cst.finite && !value.isFinite() ||
                             cst.min != null && (if (cst.minInclusive) value < cst.min else value <= cst.min) ||
                             cst.max != null && (if (cst.maxInclusive) value > cst.max else value >= cst.max)
@@ -340,20 +345,20 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         }
                     }
                 is FixedChoiceConstr<S, *> ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         if (value !in cst.choices)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
                     }
                 is DynChoiceConstr<S, *> -> {
                     val choices = cst.choices(ctx, styling, style)
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, value ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         if (value !in choices)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
                     }
                 }
                 is StyleNameConstr<S, *> -> {
                     val choices = cst.choices(ctx, styling, style)
-                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                    forEachRelevantSetting(cst, ignoreSettings) { st ->
                         val refs = st.extractSubjects(style)
                         refs.forEachIndexed { idx, ref ->
                             val refUnavailable = choices.none { choice ->
@@ -389,12 +394,12 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     }
                 }
                 is ColorConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, color ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, color ->
                         if (!cst.allowAlpha && color.alpha != 255)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.colorAlpha"))
                     }
                 is ResolutionConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, resolution ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, resolution ->
                         if (resolution.run { widthPx <= 0 || heightPx <= 0 }) {
                             val msg = l10n("project.styling.constr.negativeResolution")
                             log(rootStyle, style, st, idx, cst.severity, msg)
@@ -408,18 +413,18 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         }
                     }
                 is FPSConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, fps ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, fps ->
                         if (fps.run { numerator <= 0 || denominator <= 0 || !frac.isFinite() })
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.fps"))
                     }
                 is FontNameConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings.keys) { st, idx, fontName ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, fontName ->
                         if (ctx.resolveFont(fontName) == null)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.font"))
                     }
                 is FontFeatureConstr -> {
                     val availableTags = cst.getAvailableTags(ctx, styling, style)
-                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                    forEachRelevantSetting(cst, ignoreSettings) { st ->
                         val remainingTags = HashSet(availableTags)
                         st.extractSubjects(style).forEachIndexed { idx, feat ->
                             if (feat.tag !in availableTags) {
@@ -437,14 +442,11 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     }
                 }
                 is JudgeConstr ->
-                    if (!cst.judge(ctx, styling, style)) {
-                        val settings = cst.settings.filter { it !in ignoreSettings }
-                        log(rootStyle, style, settings[0], -1, cst.severity, cst.getMsg())
-                        for (setting in settings.drop(1))
-                            log(rootStyle, style, setting, -1, cst.severity, null)
-                    }
+                    if (!cst.judge(ctx, styling, style))
+                        for ((idx, setting) in cst.settings.filter { it !in ignoreSettings }.withIndex())
+                            log(rootStyle, style, setting, -1, cst.severity, if (idx == 0) cst.getMsg() else null)
                 is MinSizeConstr ->
-                    forEachRelevantSetting(cst, ignoreSettings.keys) { st ->
+                    forEachRelevantSetting(cst, ignoreSettings) { st ->
                         if (st.extractSubjects(style).size < cst.minSize) {
                             val msg = l10n("project.styling.constr.minSize", cst.minSize)
                             log(rootStyle, style, st, -1, cst.severity, msg)

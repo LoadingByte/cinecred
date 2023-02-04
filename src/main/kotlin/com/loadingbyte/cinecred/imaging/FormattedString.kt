@@ -408,26 +408,26 @@ class FormattedString private constructor(
 
         return CustomGlyphLayoutEngine.ExtConfigSource { startCharIdx: Int, endCharIdx: Int ->
             val font = attrs.getAttr(startCharIdx).font
-            // Get the attributes of the segment to the left and right of the current segment.
-            val leftAttr: Attribute?
-            val rightAttr: Attribute?
+            // Get the fonts of the segment to the left and right of the current segment.
+            val leftFont: Font?
+            val rightFont: Font?
             if (visToLog == null || logToVis == null) {
-                leftAttr = if (startCharIdx == 0) null else attrs.getAttr(startCharIdx - 1)
-                rightAttr = if (endCharIdx == string.length) null else attrs.getAttr(endCharIdx)
+                leftFont = if (startCharIdx == 0) null else attrs.getAttr(startCharIdx - 1).font
+                rightFont = if (endCharIdx == string.length) null else attrs.getAttr(endCharIdx).font
             } else {
                 var leftVisIdx = logToVis[startCharIdx]
                 var rightVisIdx = logToVis[endCharIdx - 1]
                 if (leftVisIdx > rightVisIdx)
                     leftVisIdx = rightVisIdx.also { rightVisIdx = leftVisIdx }
-                leftAttr = if (leftVisIdx == 0) null else attrs.getAttr(visToLog[leftVisIdx - 1])
-                rightAttr = if (rightVisIdx == string.lastIndex) null else attrs.getAttr(visToLog[rightVisIdx + 1])
+                leftFont = if (leftVisIdx == 0) null else attrs.getAttr(visToLog[leftVisIdx - 1]).font
+                rightFont = if (rightVisIdx == string.lastIndex) null else attrs.getAttr(visToLog[rightVisIdx + 1]).font
             }
             // Find the inter-segment tracking to the left and the right. Each one is defined as the maximal tracking
             // of the current or the respective neighboring segment. Then add half of those inter-segment trackings
             // to this segment; the neighboring segments will also receive the same half trackings, so in the end,
             // they sum up to the whole inter-segment trackings.
-            val bearingLeftPx = if (leftAttr == null) 0.0 else max(font.trackingPx, leftAttr.font.trackingPx) / 2.0
-            val bearingRightPx = if (rightAttr == null) 0.0 else max(font.trackingPx, rightAttr.font.trackingPx) / 2.0
+            val bearingLeftPx = if (leftFont == null) 0.0 else max(font.trackingPx, leftFont.trackingPx) / 2.0
+            val bearingRightPx = if (rightFont == null) 0.0 else max(font.trackingPx, rightFont.trackingPx) / 2.0
             // Assemble the extended configuration data object.
             CustomGlyphLayoutEngine.ExtConfig(
                 locale, font.hScaling.toFloat(), font.trackingPx.toFloat(), bearingLeftPx.toFloat(),
@@ -685,13 +685,12 @@ class FormattedString private constructor(
             if (string.isEmpty())
                 return
             stringBuilder.append(string)
-            val runEnd = (if (numRuns == 0) 0 else runEnds[numRuns - 1]) + string.length
             if (runAttrs.size == numRuns) {
                 runAttrs = runAttrs.copyOf(numRuns * 4)
                 runEnds = runEnds.copyOf(numRuns * 4)
             }
             runAttrs[numRuns] = attribute
-            runEnds[numRuns] = runEnd
+            runEnds[numRuns] = stringBuilder.length
             numRuns++
         }
 

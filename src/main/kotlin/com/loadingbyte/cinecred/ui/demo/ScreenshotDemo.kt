@@ -74,6 +74,8 @@ fun screenshotDemo(masterCtrl: MasterCtrl, locale: Locale) {
     sleep(500)
     locate(styDialog, 1, 760, 570)
     sleep(500)
+    edt { styPanel.leakedSplitPane.setDividerLocation(0.3) }
+    sleep(500)
     selectLastRow(styPanel.leakedStylingTree, l10n("project.template.contentStyleGutter", locale))
     sleep(500)
     png("screenshot-styling", locale, screenshot(styPanel))

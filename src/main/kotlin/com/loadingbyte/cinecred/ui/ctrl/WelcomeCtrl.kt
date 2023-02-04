@@ -341,7 +341,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         private val LICENSES = run {
             val rawAppLicenses = useResourcePath("/licenses") { appLicensesDir ->
                 Files.walk(appLicensesDir).toList().filter(Files::isRegularFile).map { file ->
-                    val relPath = appLicensesDir.relativize(file).toString()
+                    val relPath = appLicensesDir.relativize(file).pathString
                     val splitIdx = relPath.indexOfAny(listOf("LICENSE", "NOTICE", "COPYING", "COPYRIGHT", "README"))
                     Triple(relPath.substring(0, splitIdx - 1), relPath.substring(splitIdx), file.readText())
                 }

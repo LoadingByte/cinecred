@@ -65,10 +65,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill))
     }
 
-    fun drawLine(
-        color: Color, x1: Double, y1: Y, x2: Double, y2: Y, fill: Boolean = false, layer: Layer = FOREGROUND
-    ) {
-        addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, fill))
+    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, layer: Layer = FOREGROUND) {
+        addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color))
     }
 
     fun drawRect(
@@ -142,7 +140,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             is Instruction.DrawLine -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
-                insn.color, insn.fill
+                insn.color, fill = false
             )
             is Instruction.DrawRect -> materializeShape(
                 backend, x, y, universeScaling, culling,
@@ -231,7 +229,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawLine(
-            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color, val fill: Boolean
+            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color
         ) : Instruction
 
         class DrawRect(

@@ -26,6 +26,7 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
 import java.nio.file.Path
+import kotlin.io.path.pathString
 
 
 class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensions: List<String>) {
@@ -109,7 +110,7 @@ class VideoWriter(
         // Allocate the output media context.
         val oc = AVFormatContext(null)
         this.oc = oc
-        avformat_alloc_output_context2(oc, null, null, fileOrDir.toString())
+        avformat_alloc_output_context2(oc, null, null, fileOrDir.pathString)
             .throwIfErrnum("delivery.ffmpeg.unknownMuxerError")
 
         // Find the encoder.
@@ -164,7 +165,7 @@ class VideoWriter(
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
-                avio_open2(pb, fileOrDir.toString(), AVIO_FLAG_WRITE, null, muxerOptionsDict)
+                avio_open2(pb, fileOrDir.pathString, AVIO_FLAG_WRITE, null, muxerOptionsDict)
                     .throwIfErrnum("delivery.ffmpeg.openFileError", fileOrDir)
                 oc.pb(pb)
             }
@@ -258,7 +259,7 @@ class VideoWriter(
             fillFrame(inFrame, image)
             // When we pass a frame to the encoder, it may keep a reference to it internally;
             // make sure we do not overwrite it here.
-            //av_frame_make_writable(outFrame).throwIfErrnum("delivery.ffmpeg.makeFrameWritableError")
+            av_frame_make_writable(outFrame).throwIfErrnum("delivery.ffmpeg.makeFrameWritableError")
             sws_scale(swsCtx!!, inFrame.data(), inFrame.linesize(), 0, height, outFrame.data(), outFrame.linesize())
         }
 
@@ -279,6 +280,7 @@ class VideoWriter(
         //   - YUV422P10LE
         //   - YUV444P10LE
         //   - RGB24
+        // The issue is tracked here: https://trac.ffmpeg.org/ticket/10144
         if (SystemInfo.isMacOS)
             sourceLen += 256
         val source = BytePointer(sourceLen).put(imageData, 0, imageData.size)

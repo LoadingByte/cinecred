@@ -276,6 +276,7 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedResetStylingButton))
         sc.click()
 
+        sleep(1000)
         val resetDia = Window.getWindows()
             .filterIsInstance<JDialog>().first { it.contentPane.getComponent(0) is JOptionPane }
         val resetWin = BackedVirtualWindow(resetDia)

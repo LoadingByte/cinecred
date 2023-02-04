@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.swing.SwingUtilities
+import kotlin.io.path.name
 
 
 class ProjectController(
@@ -30,7 +31,7 @@ class ProjectController(
     private val onClose: () -> Unit
 ) {
 
-    val projectName: String = projectDir.fileName.toString()
+    val projectName: String = projectDir.name
 
     val stylingCtx: StylingContext
     val stylingHistory: StylingHistory

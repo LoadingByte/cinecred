@@ -5,7 +5,6 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
-import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.FocusAdapter
@@ -25,6 +24,7 @@ import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.JTextComponent
 import javax.swing.text.PlainDocument
 import kotlin.io.path.Path
+import kotlin.io.path.pathString
 import kotlin.math.max
 
 
@@ -197,7 +197,7 @@ class FileWidget(
     override var value: Path
         get() = text.trim().toPathSafely() ?: Path("")
         set(value) {
-            text = value.toString()
+            text = value.pathString
         }
 
 }
@@ -284,6 +284,7 @@ class TimecodeWidget(
         private val timecodeFormat: TimecodeFormat
     ) : DefaultFormatter() {
         init {
+            valueClass = Int::class.javaObjectType
             makeSafe()
         }
 
@@ -837,7 +838,9 @@ class ColorWellWidget(
 }
 
 
-class ResolutionWidget : Form.AbstractWidget<Resolution>() {
+class ResolutionWidget(
+    defaultCustom: Resolution
+) : Form.AbstractWidget<Resolution>() {
 
     private sealed interface Preset {
         class Choice(val label: String, val resolution: Resolution) : Preset
@@ -867,10 +870,10 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     )
 
     private val widthWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.widthPx, 1, null, 10), WidthSpec.LITTLE
+        Int::class.javaObjectType, SpinnerNumberModel(defaultCustom.widthPx, 1, null, 10), WidthSpec.LITTLE
     )
     private val heightWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(PRESET_GLOBAL.resolution.heightPx, 1, null, 10), WidthSpec.LITTLE
+        Int::class.javaObjectType, SpinnerNumberModel(defaultCustom.heightPx, 1, null, 10), WidthSpec.LITTLE
     )
     private val timesLabel = JLabel("\u00D7")
 
@@ -996,7 +999,7 @@ class FontChooserWidget(
         // Equip the family combo box with a custom renderer that shows category headers.
         val baseRenderer = FontSampleListCellRenderer({ it.getFamily(Locale.getDefault()) }, FontFamily::canonicalFont)
         familyComboBox.renderer = LabeledListCellRenderer(baseRenderer, groupSpacing = 10) { index: Int ->
-            mutableListOf<String>().apply {
+            buildList {
                 val projectHeaderIdx = 0
                 val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
                 val systemHeaderIdx = bundledHeaderIdx + BUNDLED_FAMILIES.list.size
@@ -1173,8 +1176,14 @@ class OptWidget<E : Any>(
         get() = super.isEnabled
         set(isEnabled) {
             super.isEnabled = isEnabled
-            if (isEnabled && !cb.isSelected)
-                wrapped.isEnabled = false
+            wrapped.isEnabled = isEnabled && cb.isSelected
+        }
+
+    override var isVisible: Boolean
+        get() = super.isVisible
+        set(isVisible) {
+            super.isVisible = isVisible
+            wrapped.isVisible = isVisible
         }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
@@ -1411,7 +1420,7 @@ class UnionWidget(
 
     private val widgetLabels = HashMap<Form.Widget<*>, JLabel>()
 
-    override val components: List<JComponent> = buildList {
+    override val components = buildList {
         for ((idx, widget) in wrapped.withIndex()) {
             if (icons != null) {
                 val lbl = JLabel(icons[idx])
@@ -1422,7 +1431,7 @@ class UnionWidget(
         }
     }
 
-    override val constraints = mutableListOf<String>().apply {
+    override val constraints = buildList {
         if (icons != null)
             add("gapx 0 3")
         addAll(wrapped.first().constraints)

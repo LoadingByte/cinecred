@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.ui.comms.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.Preferences
 import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.pathString
 
 
 object PersistentStorage : Preferences {
@@ -55,7 +56,7 @@ object PersistentStorage : Preferences {
         set(dirs) {
             prefsProjectDirs.clear()
             for ((idx, dir) in dirs.withIndex())
-                prefsProjectDirs.put(idx.toString(), dir.toString())
+                prefsProjectDirs.put(idx.toString(), dir.pathString)
         }
 
 }

@@ -31,7 +31,7 @@ fun drawPages(project: Project): List<DrawnPage> {
     val pages = project.pages
     val runtimeGroups = project.runtimeGroups
 
-    val textCtx = makeTextCtx(global.locale, global.uppercaseExceptions, project.stylingCtx)
+    val textCtx = makeTextCtx(styling, project.stylingCtx)
 
     // First generate a body and then a block image for each block. This has to be done for all blocks at the same time
     // because heads, bodies, and tails can harmonize various widths and heights between them.
@@ -595,9 +595,7 @@ private fun DeferredImage.drawMeltedCardArrowGuide(resolution: Resolution, y: Y)
         lineTo(0.0 * s, 0.55 * s)
         closePath()
     }
-    drawShape(
-        STAGE_GUIDE_COLOR, triangle, resolution.widthPx / 2.0, y, fill = true, layer = GUIDES
-    )
+    drawShape(STAGE_GUIDE_COLOR, triangle, resolution.widthPx / 2.0, y, fill = true, layer = GUIDES)
 }
 
 

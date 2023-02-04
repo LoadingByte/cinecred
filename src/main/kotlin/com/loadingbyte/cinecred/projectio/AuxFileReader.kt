@@ -158,7 +158,7 @@ private fun loadPostScript(psFile: Path): Picture.PDF {
     val gs = GS_EXECUTABLE ?: throw IOException()
     val tmpFile = createTempFile("cinecred-ps2pdf-", ".pdf")
     try {
-        val cmd = arrayOf(gs.toString(), "-sDEVICE=pdfwrite", "-o", tmpFile.toString(), psFile.toString())
+        val cmd = arrayOf(gs.pathString, "-sDEVICE=pdfwrite", "-o", tmpFile.pathString, psFile.pathString)
         val process = Runtime.getRuntime().exec(cmd)
         GS_STREAM_GOBBLER_EXECUTOR.submit {
             process.inputStream.bufferedReader().lines().forEach { GS_LOGGER.info(it) }

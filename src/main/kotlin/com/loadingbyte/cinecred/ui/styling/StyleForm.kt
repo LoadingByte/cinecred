@@ -96,7 +96,7 @@ class StyleForm<S : Style>(
         if (setting.type == String::class.java)
             return when {
                 fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
-                    MultiComboBoxWidget<String>(
+                    MultiComboBoxWidget(
                         items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
                         naturalOrder(), widthSpec = widthSpec, inconsistent = true,
                         noItemsMessage = choiceWidgetSpec?.getNoItemsMsg?.invoke()
@@ -174,7 +174,7 @@ class StyleForm<S : Style>(
                 toString = Locale::getDisplayName, widthSpec
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
-            Resolution::class.java -> ResolutionWidget()
+            Resolution::class.java -> ResolutionWidget(defaultCustom = PRESET_GLOBAL.resolution)
             FPS::class.java -> FPSWidget(widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
             else -> when {

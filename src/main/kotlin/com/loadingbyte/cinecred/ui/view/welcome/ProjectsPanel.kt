@@ -19,6 +19,7 @@ import java.util.*
 import javax.swing.*
 import javax.swing.filechooser.FileView
 import javax.swing.plaf.basic.BasicFileChooserUI
+import kotlin.io.path.pathString
 
 
 class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
@@ -295,14 +296,14 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     // @formatter:off
     fun projects_createBrowse_setNextEnabled(enabled: Boolean) { createBrowseNextButton.isEnabled = enabled }
-    fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.toString() }
+    fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.pathString }
     // @formatter:on
 
 
     private inner class OpenTransferHandler : TransferHandler() {
 
         override fun canImport(support: TransferSupport) =
-            support.dataFlavors.any { it.isFlavorJavaFileListType }
+            support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
 
         override fun importData(support: TransferSupport): Boolean {
             if (!canImport(support))

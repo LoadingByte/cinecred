@@ -1402,10 +1402,14 @@ class ListWidget<E : Any>(
 
 class UnionWidget(
     private val wrapped: List<Form.Widget<*>>,
-    icons: List<Icon>? = null
+    labels: List<String?>? = null,
+    icons: List<Icon?>? = null,
+    newlines: List<Int> = emptyList()
 ) : Form.AbstractWidget<List<Any>>() {
 
     init {
+        if (labels != null)
+            require(wrapped.size == labels.size)
         if (icons != null)
             require(wrapped.size == icons.size)
 
@@ -1422,8 +1426,10 @@ class UnionWidget(
 
     override val components = buildList {
         for ((idx, widget) in wrapped.withIndex()) {
-            if (icons != null) {
-                val lbl = JLabel(icons[idx])
+            val label = labels?.get(idx)
+            val icon = icons?.get(idx)
+            if (label != null || icon != null) {
+                val lbl = JLabel(label, icon, JLabel.LEADING)
                 add(lbl)
                 widgetLabels[widget] = lbl
             }
@@ -1432,13 +1438,20 @@ class UnionWidget(
     }
 
     override val constraints = buildList {
-        if (icons != null)
-            add("gapx 0 3")
-        addAll(wrapped.first().constraints)
-        for (widget in wrapped.drop(1)) {
-            if (icons != null)
-                add("gapx 10 3")
-            addAll(widget.constraints)
+        for ((idx, widget) in wrapped.withIndex()) {
+            val hasLabel = labels?.get(idx) != null
+            val hasIcon = icons?.get(idx) != null
+            val hasNewline = idx in newlines
+            if (hasLabel || hasIcon) {
+                val gapLeft = if (idx == 0 || hasNewline) "0" else if (hasLabel) "unrel" else "10"
+                val gapRight = if (hasLabel) "rel" else "3"
+                add("gapx $gapLeft $gapRight" + if (hasNewline) ", newline" else "")
+                addAll(widget.constraints)
+            } else if (hasNewline) {
+                add(widget.constraints[0] + ", newline")
+                addAll(widget.constraints.drop(1))
+            } else
+                addAll(widget.constraints)
         }
     }
 

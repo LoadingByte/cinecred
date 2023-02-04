@@ -65,13 +65,9 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     WidthWidgetSpec(ContentStyle::gridMatchRowHeightAcrossStyles.st(), WidthSpec.SQUEEZE),
     UnionWidgetSpec(
         ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
-        ContentStyle::gridMatchColUnderoccupancy.st(),
-        unionName = "gridMatchColWidths"
+        ContentStyle::gridMatchColUnderoccupancy.st()
     ),
-    UnionWidgetSpec(
-        ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st(),
-        unionName = "gridMatchRowHeight"
-    ),
+    UnionWidgetSpec(ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), ICON),
     ListWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), newElemIsLastElem = true, elemsPerRow = 3),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
@@ -82,14 +78,8 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     WidthWidgetSpec(ContentStyle::flowMatchCellWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowMatchCellHeight.st(), ICON),
     WidthWidgetSpec(ContentStyle::flowMatchCellHeightAcrossStyles.st(), WidthSpec.SQUEEZE),
-    UnionWidgetSpec(
-        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
-        unionName = "flowMatchCellWidth"
-    ),
-    UnionWidgetSpec(
-        ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
-        unionName = "flowMatchCellHeight"
-    ),
+    UnionWidgetSpec(ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st()),
+    UnionWidgetSpec(ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellVJustify.st(), ICON),
     NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10.0),
@@ -99,19 +89,13 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headMatchWidth.st(), ICON),
     WidthWidgetSpec(ContentStyle::headMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
-    UnionWidgetSpec(
-        ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st(),
-        unionName = "headMatchWidth"
-    ),
+    UnionWidgetSpec(ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
     NewSectionWidgetSpec(ContentStyle::hasTail.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailMatchWidth.st(), ICON),
     WidthWidgetSpec(ContentStyle::tailMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
-    UnionWidgetSpec(
-        ContentStyle::tailMatchWidth.st(), ContentStyle::tailMatchWidthAcrossStyles.st(),
-        unionName = "tailMatchWidth"
-    ),
+    UnionWidgetSpec(ContentStyle::tailMatchWidth.st(), ContentStyle::tailMatchWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
 )
@@ -128,6 +112,10 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
         unionName = "leadingRem", settingIcons = listOf(BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
     ),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01),
+    UnionWidgetSpec(
+        LetterStyle::uppercase.st(), LetterStyle::useUppercaseExceptions.st(), LetterStyle::useUppercaseSpacing.st(),
+        settingLabels = listOf(1, 2)
+    ),
     ToggleButtonGroupWidgetSpec(LetterStyle::smallCaps.st(), ICON),
     ToggleButtonGroupWidgetSpec(LetterStyle::superscript.st(), ICON),
     WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
@@ -225,10 +213,14 @@ class TimecodeWidgetSpec<S : Style>(
 
 class UnionWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Any>,
-    val unionName: String,
-    val settingIcons: List<Icon>? = null
+    val unionName: String? = null,
+    val settingLabels: List<Int> = emptyList(),
+    val settingIcons: List<Icon?>? = null,
+    val settingNewlines: List<Int> = emptyList()
 ) : StyleWidgetSpec<S>(*settings) {
     init {
+        require(settingLabels.all(settings.indices::contains))
+        require(settingNewlines.all(settings.indices::contains))
         if (settingIcons != null)
             require(settings.size == settingIcons.size)
     }

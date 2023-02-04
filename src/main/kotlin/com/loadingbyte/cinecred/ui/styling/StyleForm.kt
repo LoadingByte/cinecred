@@ -51,13 +51,16 @@ class StyleForm<S : Style>(
 
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
         val wrappedWidgets = mutableListOf<Widget<*>>()
-        for (setting in spec.settings) {
+        val wrappedLabels = if (spec.settingLabels.isEmpty()) null else mutableListOf<String?>()
+        for ((idx, setting) in spec.settings.withIndex()) {
             val valueWidget = makeSettingWidget(setting)
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
+            wrappedLabels?.add(if (idx in spec.settingLabels) l10n(l10nKey(setting.name)) else null)
         }
-        val unionWidget = UnionWidget(wrappedWidgets, spec.settingIcons)
-        val formRow = makeFormRow(spec.unionName, unionWidget)
+        val unionWidget = UnionWidget(wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingNewlines)
+        val unionName = spec.unionName ?: spec.settings.first().name
+        val formRow = makeFormRow(unionName, unionWidget)
         rootFormRows.add(Pair(formRow, spec.settings))
         for (setting in spec.settings)
             rootFormRowLookup[setting] = formRow
@@ -250,9 +253,7 @@ class StyleForm<S : Style>(
     )
 
     private fun makeFormRow(name: String, widget: Widget<*>): FormRow {
-        val l10nKey = "ui.styling." +
-                styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercase) +
-                ".$name"
+        val l10nKey = l10nKey(name)
         val formRow = FormRow(l10n(l10nKey), widget)
         try {
             formRow.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
@@ -260,6 +261,10 @@ class StyleForm<S : Style>(
         }
         return formRow
     }
+
+    private fun l10nKey(name: String) = "ui.styling." +
+            styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercase) +
+            ".$name"
 
     fun <T : Style> castToStyle(styleClass: Class<T>): StyleForm<T> {
         if (styleClass == this.styleClass)

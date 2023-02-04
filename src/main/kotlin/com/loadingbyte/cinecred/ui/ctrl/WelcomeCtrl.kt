@@ -249,10 +249,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun projects_start_onDrop(path: Path) {
-        when {
-            path.isDirectory() -> tryOpenOrCreateProject(path)
-            path.parent != null -> tryOpenOrCreateProject(path.parent)
-        }
+        tryOpenOrCreateProject(path)
     }
 
     override fun projects_openBrowse_shouldShowAppIcon(dir: Path) =

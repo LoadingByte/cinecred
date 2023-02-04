@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.poi.util.LocaleID
 import sun.font.*
 import java.awt.Font
+import java.awt.Window
 import java.awt.font.GlyphVector
 import java.awt.font.TextLayout
 import java.io.OutputStream
@@ -229,6 +230,14 @@ fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: Floa
 
 fun resolveGnomeFont(): Font {
     return getGnomeFont() as Font
+}
+
+
+fun setWindowCanFullScreenMacOS(window: Window, canFullScreen: Boolean) {
+    // Resort to regular reflection because this method isn't performance-critical and only available on macOS.
+    Class.forName("com.apple.eawt.FullScreenUtilities")
+        .getMethod("setWindowCanFullScreen", Window::class.java, Boolean::class.java)
+        .invoke(null, window, canFullScreen)
 }
 
 

@@ -5,6 +5,10 @@ Cinecred Changelog
 1.4.0-SNAPSHOT
 --------------
 
+### Additions
+
+- On macOS, all project windows now support native full-screen mode.
+
 ### Fixes
 
 - Native libraries are no longer extracted on startup, which alleviates some
@@ -14,6 +18,7 @@ Cinecred Changelog
 
 - Rapidly scrolling a very long page no longer causes flicker.
 - Styles with an empty name now have the correct height in the dropdown.
+- On macOS, the video preview controls remain responsive in full-screen mode.
 - Resolved rare crashes when closing a project while the previews are rendered.
 
 

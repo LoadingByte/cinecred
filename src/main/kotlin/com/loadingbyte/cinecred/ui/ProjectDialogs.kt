@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.setWindowCanFullScreenMacOS
 import com.loadingbyte.cinecred.ui.helper.center
 import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.helper.snapToSide
@@ -22,6 +24,10 @@ private fun JDialog.setupProjectDialog(ctrl: ProjectController, type: ProjectDia
             ctrl.setDialogVisible(type, false)
         }
     })
+
+    // On macOS, enable the system-native full-screen buttons also for dialogs.
+    if (SystemInfo.isMacOS)
+        setWindowCanFullScreenMacOS(this, true)
 }
 
 

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.*
+import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
@@ -48,7 +49,10 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         X_1_TO_1_ICON, l10n("ui.video.actualSize"),
         VK_1, CTRL_DOWN_MASK
     ) { restartDrawing() }
-    private val fullScreenButton = newToolbarToggleButtonWithKeyListener(
+    // Do not add the full-screen button on macOS, as full screen is supported though native window buttons there.
+    // Additionally, our shortcut F11 is already occupied by "show desktop", and when using Java's full-screen API,
+    // the dock (presumably) blocks mouse click events in the lower part of the window, where our buttons are.
+    private val fullScreenButton = if (SystemInfo.isMacOS) null else newToolbarToggleButtonWithKeyListener(
         SCREEN_ICON, l10n("ui.video.fullScreen"),
         VK_F11, 0
     ) { isSelected ->
@@ -141,11 +145,15 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         pauseButton = newToolbarPlayButton(PAUSE_ICON, l10n("ui.video.pause"), VK_K, ::pause, isSelected = true)
         playButton = newToolbarPlayButton(PLAY_ICON, l10n("ui.video.play"), VK_L, ::play)
 
-        layout = MigLayout("insets 0", "[]8[]0[]rel[]rel[]2[]2[][][]14[]", "[]0[]8[]8")
+        layout = MigLayout(
+            "insets 0",
+            "[]8[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]rel[]2[]2[][][]14[]",
+            "[]0[]8[]8"
+        )
         add(canvas, "span, grow, push")
         add(JSeparator(), "newline, span, growx, shrink 0 0")
         add(actualSizeButton, "newline, skip 1")
-        add(fullScreenButton)
+        fullScreenButton?.let(::add)
         add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
         add(rewindButton)
         add(pauseButton)
@@ -171,7 +179,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         val project = drawnProject?.project
         when (event.modifiersEx) {
             0 -> when (event.keyCode) {
-                VK_ESCAPE -> fullScreenButton.isSelected = false
+                VK_ESCAPE -> fullScreenButton?.isSelected = false
                 VK_J -> rewind()
                 VK_K -> pause()
                 VK_L -> play()

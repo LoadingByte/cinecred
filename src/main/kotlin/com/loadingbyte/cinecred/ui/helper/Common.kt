@@ -137,10 +137,10 @@ fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
 
 fun JFileChooser.fullySetSelectedFile(file: File) {
     selectedFile = file
-    // If we're selecting a directory and the selected dir doesn't exist yet, calling setSelectedFile() doesn't actually
-    // put the non-existent portion into the file name textbox, so we have to set that manually.
+    // If we're selecting a dir and the selection doesn't exist yet or is a regular file, calling setSelectedFile()
+    // doesn't actually put the non-existent portion into the file name textbox, so we have to set that manually.
     // Adapted from MetalFileChooserUI.doSelectedFileChanged().
-    if (fileSelectionMode == JFileChooser.DIRECTORIES_ONLY && !file.exists())
+    if (fileSelectionMode == JFileChooser.DIRECTORIES_ONLY && !file.isDirectory)
         (ui as BasicFileChooserUI).fileName = file.path
 }
 

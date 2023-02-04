@@ -164,7 +164,8 @@ private fun mainSwing(args: Array<String>) {
 
 private fun openUI(args: Array<String>) {
     // If the user dragged a folder onto the program, try opening that, otherwise show the regular welcome window.
-    masterCtrl.showWelcomeFrame(if (args.isEmpty()) null else args[0].toPathSafely())
+    val openProjectDir = if (args.isEmpty()) null else args[0].toPathSafely()?.absolute()
+    masterCtrl.showWelcomeFrame(openProjectDir)
 }
 
 

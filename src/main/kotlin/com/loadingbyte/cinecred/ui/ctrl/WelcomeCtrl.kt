@@ -259,7 +259,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         isProjectDir(dir)
 
     override fun projects_openBrowse_onChangeSelection(dir: Path?) {
-        openBrowseSelection = dir
+        openBrowseSelection = dir?.normalize()
         // Gray out the "open" button if the selected directory is not real or not a project dir.
         welcomeView.projects_openBrowse_setDoneEnabled(dir != null && isProjectDir(dir))
     }
@@ -279,7 +279,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun projects_createBrowse_onChangeSelection(dir: Path?) {
-        newBrowseSelection = dir
+        newBrowseSelection = dir?.normalize()
         // Gray out the "next" button if the selected directory is not real or not allowed to be a project dir.
         welcomeView.projects_createBrowse_setNextEnabled(dir != null && isAllowedToBeProjectDir(dir))
     }

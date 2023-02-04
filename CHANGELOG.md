@@ -13,6 +13,7 @@ Cinecred Changelog
 ### UI Fixes
 
 - Rapidly scrolling a very long page no longer causes flicker.
+- Styles with an empty name now have the correct height in the dropdown.
 - Resolved rare crashes when closing a project while the previews are rendered.
 
 

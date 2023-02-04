@@ -329,7 +329,7 @@ open class ComboBoxWidget<V : Any>(
 
     protected val cb = JComboBox<V>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass, toString))
+        renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass) { toString(it).ifEmpty { " " } })
         keySelectionManager = CustomToStringKeySelectionManager(valueClass, toString)
     }
 

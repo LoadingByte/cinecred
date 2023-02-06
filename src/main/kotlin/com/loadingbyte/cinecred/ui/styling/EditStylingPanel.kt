@@ -176,6 +176,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             return
         val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
         var copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
+        if (copiedStyle is LetterStyle && !copiedStyle.inheritLayersFromStyle.isActive)
+            copiedStyle = copiedStyle.copy(inheritLayersFromStyle = Opt(true, style.name))
         val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
         for ((oldStyle, newStyle) in updates)
             if (oldStyle === copiedStyle) copiedStyle = newStyle else stylingTree.updateListElement(oldStyle, newStyle)
@@ -336,6 +338,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
             }
+            is SiblingOrdinalConstr<*, *> -> {
+                fun <S : NestedStyle<P>, P : Style> withNestedTypeVars(curStyle: S) {
+                    @Suppress("UNCHECKED_CAST")
+                    constr as SiblingOrdinalConstr<S, P>
+                    val choices = constr.siblings.get(styling.getParentStyle(curStyle))
+                        .mapIndexedNotNull { idx, sibling -> if (sibling === curStyle) null else idx + 1 }
+                    for (setting in constr.settings)
+                        curForm.setChoices(setting, choices)
+                }
+                withNestedTypeVars(curStyle as NestedStyle<*>)
+            }
             else -> {}
         }
 
@@ -348,6 +361,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 if (toIcon != null)
                     for (setting in spec.settings)
                         curForm.setToIconFun(setting, toIcon)
+            }
+            is MultiplierWidgetSpec -> {
+                val multiplier = spec.getMultiplier(ctrl.stylingCtx, styling, curStyle)
+                for (setting in spec.settings)
+                    curForm.setMultiplier(setting, multiplier)
             }
             is TimecodeWidgetSpec -> {
                 val fps = spec.getFPS(ctrl.stylingCtx, styling, curStyle)

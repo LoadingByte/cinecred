@@ -74,27 +74,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
-    /**
-     * The [y] coordinate used by this method differs from the one used by Graphics2D.
-     * Here, the coordinate doesn't point to the baseline, but to the topmost part of the largest font.
-     *
-     * @throws IllegalArgumentException If [fmtStr] is not equipped with both a font and a foreground color at
-     *     every character.
-     */
-    fun drawString(
-        fmtStr: FormattedString, x: Double, y: Y,
-        foregroundLayer: Layer = FOREGROUND, backgroundLayer: Layer = BACKGROUND
-    ) {
-        // FormattedString yields results relative to the baseline, so we need the baseline's y-coordinate.
-        val baselineY = y + fmtStr.heightAboveBaseline
-
-        for ((shape, color) in fmtStr.decorationsUnderlay)
-            addInstruction(foregroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
-        addInstruction(foregroundLayer, Instruction.DrawStringForeground(x, baselineY, fmtStr))
-        for ((shape, color) in fmtStr.decorationsOverlay)
-            addInstruction(foregroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
-        for ((shape, color) in fmtStr.backgrounds)
-            addInstruction(backgroundLayer, Instruction.DrawShape(x, baselineY, shape, color, true))
+    fun drawText(color: Color, text: Text, x: Double, yBaseline: Y, layer: Layer = FOREGROUND) {
+        addInstruction(layer, Instruction.DrawText(x, yBaseline, text, color))
     }
 
     fun drawPicture(pic: Picture, x: Double, y: Y, layer: Layer = FOREGROUND) {
@@ -147,9 +128,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
                 ), insn.color, insn.fill, blurRadius = 0.0
             )
-            is Instruction.DrawStringForeground -> materializeStringForeground(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
-                universeScaling, culling, insn.fmtStr
+            is Instruction.DrawText -> materializeText(
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.yBaseline.resolve(elasticScaling),
+                universeScaling, culling, insn.text, insn.color
             )
             is Instruction.DrawPicture -> materializePicture(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), culling,
@@ -235,17 +216,20 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         return FloatArray(vecSize) { idx -> vec[idx] / sum }
     }
 
-    private fun materializeStringForeground(
+    private fun materializeText(
         backend: MaterializationBackend,
-        x: Double, baselineY: Double, scaling: Double, culling: Rectangle2D?,
-        fmtStr: FormattedString
+        x: Double, yBaseline: Double, scaling: Double, culling: Rectangle2D?,
+        text: Text, color: Color
     ) {
         if (culling != null &&
             !culling.intersects(
-                x, baselineY - fmtStr.heightAboveBaseline * scaling, fmtStr.width * scaling, fmtStr.height * scaling
+                x,
+                yBaseline - text.heightAboveBaseline * scaling,
+                text.width * scaling,
+                (text.heightAboveBaseline + text.heightBelowBaseline) * scaling
             )
         ) return
-        backend.materializeStringForeground(x, baselineY, scaling, fmtStr)
+        backend.materializeText(x, yBaseline, scaling, text, color)
     }
 
     private fun materializePicture(
@@ -263,10 +247,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         // These common layers are typically used. Additional layers may be defined by users of this class.
         val FOREGROUND = Layer()
-        val BACKGROUND = Layer()
         val GUIDES = Layer()
 
-        val DELIVERED_LAYERS = listOf(BACKGROUND, FOREGROUND)
+        val DELIVERED_LAYERS = listOf(FOREGROUND)
 
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
@@ -275,6 +258,20 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
 
     class Layer
+
+
+    interface Text {
+        val width: Double
+        val heightAboveBaseline: Double
+        val heightBelowBaseline: Double
+        /** The outline of the entire text, with the [transform] already applied. */
+        val transformedOutline: Shape
+        val font: Font
+        val glyphCodes: IntArray
+        fun getGlyphOffsetX(glyphIdx: Int): Double
+        /** Applying this to the drawn [glyphCodes] positioned by [getGlyphOffsetX] yields [transformedOutline]. */
+        val transform: AffineTransform
+    }
 
 
     private sealed interface Instruction {
@@ -296,8 +293,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val x: Double, val y: Y, val width: Double, val height: Y, val color: Color, val fill: Boolean
         ) : Instruction
 
-        class DrawStringForeground(
-            val x: Double, val baselineY: Y, val fmtStr: FormattedString
+        class DrawText(
+            val x: Double, val yBaseline: Y, val text: Text, val color: Color
         ) : Instruction
 
         class DrawPicture(
@@ -309,7 +306,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private interface MaterializationBackend {
         fun materializeShape(shape: Shape, color: Color, fill: Boolean)
-        fun materializeStringForeground(x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString)
+        fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color)
         fun materializePicture(x: Double, y: Double, pic: Picture)
     }
 
@@ -324,9 +321,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 g2.draw(shape)
         }
 
-        override fun materializeStringForeground(
-            x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString
-        ) {
+        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color) {
             // We render the text by first converting the string to a path via FormattedString and then
             // filling that path. This has the following vital advantages:
             //   - Native text rendering via TextLayout.draw() etc., which internally eventually calls
@@ -345,13 +340,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
             //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
             //     acceptable in a movie context.
-            for (segment in fmtStr.segments)
-                g2.preserveTransform {
-                    g2.translate(x, baselineY)
-                    g2.scale(scaling)
-                    g2.translate(segment.baseX, 0.0)
-                    materializeShape(segment.outline, segment.font.color, fill = true)
-                }
+            g2.preserveTransform {
+                g2.translate(x, yBaseline)
+                g2.scale(scaling)
+                materializeShape(text.transformedOutline, color, fill = true)
+            }
         }
 
         override fun materializePicture(x: Double, y: Double, pic: Picture) {
@@ -449,37 +442,32 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializeStringForeground(
-            x: Double, baselineY: Double, scaling: Double, fmtStr: FormattedString
-        ) {
+        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color) {
             cs.saveGraphicsState()
             cs.beginText()
-            for (seg in fmtStr.segments) {
-                val pdFont = getPDFont(seg.font.awtFont)
-                val glyphs = seg.getGlyphCodes()
-                val xShifts = FloatArray(seg.numGlyphs - 1) { glyphIdx ->
-                    val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
-                    val wantedWidth = ((seg.getGlyphOffsetX(glyphIdx + 1) - seg.getGlyphOffsetX(glyphIdx))
-                            // Because we apply hScaling via the text matrix, we have to divide it out here
-                            // so that it is not applied two times.
-                            / seg.font.hScaling
-                            // Convert to the special PDF text coordinates.
-                            * 1000.0 / seg.font.pointSize).toFloat()
-                    actualWidth - wantedWidth
-                }
 
-                val textTx = AffineTransform().apply {
-                    translate(x, csHeight - baselineY)
-                    scale(scaling)
-                    translate(seg.baseX, 0.0)
-                    concatenate(seg.font.getPostprocessingTransform(withHScaling = true, invertY = true))
-                }
-
-                cs.setFont(pdFont, seg.font.pointSize.toFloat())
-                setColor(seg.font.color, fill = true)
-                cs.setTextMatrix(Matrix(textTx))
-                cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
+            val pdFont = getPDFont(text.font)
+            val glyphs = text.glyphCodes
+            val xShifts = FloatArray(glyphs.size - 1) { glyphIdx ->
+                val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
+                val wantedWidth = ((text.getGlyphOffsetX(glyphIdx + 1) - text.getGlyphOffsetX(glyphIdx)).toFloat()
+                        // Convert to the special PDF text coordinates.
+                        * 1000f / text.font.size2D)
+                actualWidth - wantedWidth
             }
+
+            val textTx = AffineTransform().apply {
+                translate(x, csHeight - yBaseline)
+                scale(scaling)
+                val t = text.transform
+                concatenate(AffineTransform(t.scaleX, t.shearY, -t.shearX, t.scaleY, t.translateX, -t.translateY))
+            }
+
+            cs.setFont(pdFont, text.font.size2D)
+            setColor(color, fill = true)
+            cs.setTextMatrix(Matrix(textTx))
+            cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
+
             cs.endText()
             cs.restoreGraphicsState()
         }

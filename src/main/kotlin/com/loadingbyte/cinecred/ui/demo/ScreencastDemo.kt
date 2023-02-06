@@ -94,9 +94,12 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         val styPageForm = styPnl.leakedPageStyleForm
         val styContForm = styPnl.leakedContentStyleForm
         val styLetrForm = styPnl.leakedLetterStyleForm
-        fun styDecoForm() =
-            (styLetrForm.getWidgetFor(LetterStyle::decorations.st()).components[1].getComponent(3) as StyleForm<*>)
-                .castToStyle(TextDecoration::class.java)
+        fun styLayrForm(idx: Int): StyleForm<Layer> {
+            val panel = styLetrForm.getWidgetFor(LetterStyle::layers.st()).components[0]
+            val layerPanel = panel.getComponent(panel.componentCount - 2 - 2 * idx) as JPanel
+            val widgetPanel = layerPanel.getComponent(layerPanel.componentCount - 1) as JPanel
+            return (widgetPanel.getComponent(0) as StyleForm<*>).castToStyle(Layer::class.java)
+        }
 
         val styIncUnitVGap = styGlobForm.getWidgetFor(Global::unitVGapPx.st()).components[0].getComponent(0)
         val styRuntime = styGlobForm.getWidgetFor(Global::runtimeFrames.st()).components[1] as JSpinner
@@ -104,7 +107,7 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         val styFlowSep = styContForm.getWidgetFor(ContentStyle::flowSeparator.st()).components[0] as JTextComponent
         val styIncFontHeight = styLetrForm.getWidgetFor(LetterStyle::heightPx.st()).components[0].getComponent(0)
         val styFeat = styLetrForm.getWidgetFor(LetterStyle::features.st()).components[1].getComponent(1) as JComboBox<*>
-        fun styIncClearing() = styDecoForm().getWidgetFor(TextDecoration::clearingPx.st()).components[1].getComponent(0)
+        fun styIncClearing() = styLayrForm(0).getWidgetFor(Layer::clearingRfh.st()).components[1].getComponent(0)
         val dlvFormats = dlvPnl.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
         val dlvTransparent = dlvPnl.configurationForm.leakedTransparentGroundingWidget.components[0] as JCheckBox
 
@@ -401,9 +404,9 @@ fun screencastDemo(masterCtrl: MasterCtrl, locale: Locale) {
         sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::features.st(), 1))
         sc.click()
         sc.caption("screencast.caption.letter.deco")
-        sc.demonstrateSetting(styWin, styLetrForm, LetterStyle::decorations.st(), 0)
+        sc.demonstrateSetting(styWin, styLetrForm, LetterStyle::layers.st(), 0)
         sc.caption("screencast.caption.letter.clear")
-        sc.mouseTo(styWin.desktopPosOfSetting(styDecoForm(), TextDecoration::clearingPx.st(), 0))
+        sc.mouseTo(styWin.desktopPosOfSetting(styLayrForm(0), Layer::clearingRfh.st(), 0))
         sc.click()
         sc.mouseTo(styWin.desktopPosOf(styIncClearing()))
         repeat(69) { sc.click(10) }

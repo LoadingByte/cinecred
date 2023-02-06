@@ -15,7 +15,7 @@ fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
     PageStyle::class.java -> PRESET_PAGE_STYLE
     ContentStyle::class.java -> PRESET_CONTENT_STYLE
     LetterStyle::class.java -> PRESET_LETTER_STYLE
-    TextDecoration::class.java -> PRESET_TEXT_DECORATION
+    Layer::class.java -> PRESET_LAYER
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as S
 
@@ -103,13 +103,45 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 )
 
 
+val PRESET_LAYER = Layer(
+    color = Color.WHITE,
+    shape = LayerShape.STRIPE,
+    stripePreset = StripePreset.UNDERLINE,
+    stripeHeightRfh = 0.05,
+    stripeOffsetRfh = 0.0,
+    stripeWidenLeftRfh = 0.0,
+    stripeWidenRightRfh = 0.0,
+    stripeWidenTopRfh = 0.0,
+    stripeWidenBottomRfh = 0.0,
+    stripeCornerJoin = LineJoin.MITER,
+    stripeCornerRadiusRfh = 0.2,
+    stripeDashPatternRfh = persistentListOf(),
+    cloneLayers = persistentListOf(),
+    dilationRfh = 0.0,
+    dilationJoin = LineJoin.MITER,
+    contour = false,
+    contourThicknessRfh = 0.02,
+    contourJoin = LineJoin.MITER,
+    hOffsetRfh = 0.0,
+    vOffsetRfh = 0.0,
+    hScaling = 1.0,
+    vScaling = 1.0,
+    hShearing = 0.0,
+    vShearing = 0.0,
+    anchorInStripe = false,
+    clearingLayers = persistentListOf(),
+    clearingRfh = 0.0,
+    clearingJoin = LineJoin.MITER,
+    blurRadiusRfh = 0.0
+)
+
+
 val PRESET_LETTER_STYLE = LetterStyle(
     name = "???",
     fontName = "Archivo Narrow Regular",
-    heightPx = 32,
-    foreground = Color.WHITE,
-    leadingTopRem = 0.0,
-    leadingBottomRem = 0.0,
+    heightPx = 32.0,
+    leadingTopRh = 0.0,
+    leadingBottomRh = 0.0,
     trackingEm = 0.0,
     kerning = true,
     ligatures = true,
@@ -118,31 +150,13 @@ val PRESET_LETTER_STYLE = LetterStyle(
     useUppercaseSpacing = true,
     smallCaps = SmallCaps.OFF,
     superscript = Superscript.OFF,
-    hOffsetRem = 0.0,
-    vOffsetRem = 0.0,
-    scaling = 1.0,
+    superscriptScaling = 1.0,
+    superscriptHOffsetRfh = 0.0,
+    superscriptVOffsetRfh = 0.0,
     hScaling = 1.0,
-    hShearing = 0.0,
     features = persistentListOf(),
-    decorations = persistentListOf(),
-    background = Opt(false, Color.WHITE),
-    backgroundWidenLeftPx = 0.0,
-    backgroundWidenRightPx = 0.0,
-    backgroundWidenTopPx = 0.0,
-    backgroundWidenBottomPx = 0.0
-)
-
-
-val PRESET_TEXT_DECORATION = TextDecoration(
-    color = Opt(false, Color.WHITE),
-    preset = TextDecorationPreset.UNDERLINE,
-    offsetPx = 0.0,
-    thicknessPx = 2.0,
-    widenLeftPx = 0.0,
-    widenRightPx = 0.0,
-    clearingPx = Opt(false, 0.0),
-    clearingJoin = LineJoin.MITER,
-    dashPatternPx = persistentListOf()
+    inheritLayersFromStyle = Opt(false, ""),
+    layers = persistentListOf(PRESET_LAYER.copy(shape = LayerShape.TEXT))
 )
 
 
@@ -163,6 +177,15 @@ val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
 
 val PLACEHOLDER_LETTER_STYLE = PRESET_LETTER_STYLE.copy(
     name = l10n("project.placeholder"),
-    foreground = Color.BLACK,
-    background = Opt(true, Color.ORANGE)
+    layers = persistentListOf(
+        PRESET_LAYER.copy(
+            color = Color.ORANGE,
+            shape = LayerShape.STRIPE,
+            stripePreset = StripePreset.BACKGROUND
+        ),
+        PRESET_LAYER.copy(
+            color = Color.BLACK,
+            shape = LayerShape.TEXT
+        )
+    )
 )

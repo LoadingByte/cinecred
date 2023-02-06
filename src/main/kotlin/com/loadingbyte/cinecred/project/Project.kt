@@ -164,13 +164,17 @@ enum class GridColUnderoccupancy { LEFT_OMIT, LEFT_RETAIN, RIGHT_OMIT, RIGHT_RET
 enum class FlowDirection { L2R, R2L }
 
 
+// Custom units:
+//   - rh: Ratio of total height (w/ leading)
+//   - rfh: Ratio of font height (w/o leading)
+
+
 data class LetterStyle(
     override val name: String,
     val fontName: String,
-    val heightPx: Int,
-    val foreground: Color,
-    val leadingTopRem: Double,
-    val leadingBottomRem: Double,
+    val heightPx: Double,
+    val leadingTopRh: Double,
+    val leadingBottomRh: Double,
     val trackingEm: Double,
     val kerning: Boolean,
     val ligatures: Boolean,
@@ -179,23 +183,18 @@ data class LetterStyle(
     val useUppercaseSpacing: Boolean,
     val smallCaps: SmallCaps,
     val superscript: Superscript,
-    val hOffsetRem: Double,
-    val vOffsetRem: Double,
-    val scaling: Double,
+    val superscriptScaling: Double,
+    val superscriptHOffsetRfh: Double,
+    val superscriptVOffsetRfh: Double,
     val hScaling: Double,
-    val hShearing: Double,
     val features: PersistentList<FontFeature>,
-    val decorations: PersistentList<TextDecoration>,
-    val background: Opt<Color>,
-    val backgroundWidenLeftPx: Double,
-    val backgroundWidenRightPx: Double,
-    val backgroundWidenTopPx: Double,
-    val backgroundWidenBottomPx: Double
+    val inheritLayersFromStyle: Opt<String>,
+    val layers: PersistentList<Layer>
 ) : NamedStyle
 
 
 enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }
-enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB }
+enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB, CUSTOM }
 
 
 data class FontFeature(
@@ -204,20 +203,41 @@ data class FontFeature(
 )
 
 
-data class TextDecoration(
-    val color: Opt<Color>,
-    val preset: TextDecorationPreset,
-    val offsetPx: Double,
-    val thicknessPx: Double,
-    val widenLeftPx: Double,
-    val widenRightPx: Double,
-    val clearingPx: Opt<Double>,
+data class Layer(
+    val color: Color,
+    val shape: LayerShape,
+    val stripePreset: StripePreset,
+    val stripeHeightRfh: Double,
+    val stripeOffsetRfh: Double,
+    val stripeWidenLeftRfh: Double,
+    val stripeWidenRightRfh: Double,
+    val stripeWidenTopRfh: Double,
+    val stripeWidenBottomRfh: Double,
+    val stripeCornerJoin: LineJoin,
+    val stripeCornerRadiusRfh: Double,
+    val stripeDashPatternRfh: PersistentList<Double>,
+    val cloneLayers: PersistentList<Int>,
+    val dilationRfh: Double,
+    val dilationJoin: LineJoin,
+    val contour: Boolean,
+    val contourThicknessRfh: Double,
+    val contourJoin: LineJoin,
+    val hOffsetRfh: Double,
+    val vOffsetRfh: Double,
+    val hScaling: Double,
+    val vScaling: Double,
+    val hShearing: Double,
+    val vShearing: Double,
+    val anchorInStripe: Boolean,
+    val clearingLayers: PersistentList<Int>,
+    val clearingRfh: Double,
     val clearingJoin: LineJoin,
-    val dashPatternPx: PersistentList<Double>
+    val blurRadiusRfh: Double
 ) : NestedStyle<LetterStyle>
 
 
-enum class TextDecorationPreset { UNDERLINE, STRIKETHROUGH, OFF }
+enum class LayerShape { TEXT, STRIPE, CLONE }
+enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }
 
 

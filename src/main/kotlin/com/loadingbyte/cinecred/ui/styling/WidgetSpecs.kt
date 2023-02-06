@@ -15,7 +15,7 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
     PageStyle::class.java -> PAGE_STYLE_WIDGET_SPECS
     ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS
     LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS
-    TextDecoration::class.java -> TEXT_DECORATION_WIDGET_SPECS
+    Layer::class.java -> LAYER_WIDGET_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleWidgetSpec<S>>
 
@@ -69,7 +69,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ),
     UnionWidgetSpec(ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), ICON),
-    ListWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), newElemIsLastElem = true, elemsPerRow = 3),
+    SimpleListWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), newElementIsLastElement = true, elementsPerRow = 3),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
@@ -102,15 +102,22 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    NewSectionWidgetSpec(LetterStyle::leadingTopRem.st()),
-    WidthWidgetSpec(LetterStyle::leadingTopRem.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::leadingBottomRem.st(), WidthSpec.TINY),
-    NumberWidgetSpec(LetterStyle::leadingTopRem.st(), step = 0.01),
-    NumberWidgetSpec(LetterStyle::leadingBottomRem.st(), step = 0.01),
+    WidthWidgetSpec(LetterStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
-        LetterStyle::leadingTopRem.st(), LetterStyle::leadingBottomRem.st(),
-        unionName = "leadingRem", settingIcons = listOf(BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
+        LetterStyle::heightPx.st(),
+        settingIcons = listOf(FONT_HEIGHT_TOTAL_ICON)
     ),
+    WidthWidgetSpec(LetterStyle::leadingTopRh.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(LetterStyle::leadingBottomRh.st(), WidthSpec.LITTLE),
+    MultiplierWidgetSpec(
+        LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st(),
+        getMultiplier = { _, _, style -> style.heightPx }
+    ),
+    UnionWidgetSpec(
+        LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st(),
+        unionName = "leadingRh", settingIcons = listOf(FONT_HEIGHT_LEADING_TOP_ICON, FONT_HEIGHT_LEADING_BOTTOM_ICON)
+    ),
+    NewSectionWidgetSpec(LetterStyle::trackingEm.st()),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01),
     UnionWidgetSpec(
         LetterStyle::uppercase.st(), LetterStyle::useUppercaseExceptions.st(), LetterStyle::useUppercaseSpacing.st(),
@@ -118,49 +125,106 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     ),
     ToggleButtonGroupWidgetSpec(LetterStyle::smallCaps.st(), ICON),
     ToggleButtonGroupWidgetSpec(LetterStyle::superscript.st(), ICON),
-    WidthWidgetSpec(LetterStyle::hOffsetRem.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::vOffsetRem.st(), WidthSpec.TINY),
-    NumberWidgetSpec(LetterStyle::hOffsetRem.st(), step = 0.01),
-    NumberWidgetSpec(LetterStyle::vOffsetRem.st(), step = 0.01),
-    UnionWidgetSpec(
-        LetterStyle::hOffsetRem.st(), LetterStyle::vOffsetRem.st(),
-        unionName = "offsetRem", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+    WidthWidgetSpec(LetterStyle::superscriptScaling.st(), WidthSpec.TINY),
+    NumberWidgetSpec(LetterStyle::superscriptScaling.st(), step = 0.01),
+    WidthWidgetSpec(LetterStyle::superscriptHOffsetRfh.st(), WidthSpec.TINY),
+    WidthWidgetSpec(LetterStyle::superscriptVOffsetRfh.st(), WidthSpec.TINY),
+    MultiplierWidgetSpec(
+        LetterStyle::superscriptHOffsetRfh.st(), LetterStyle::superscriptVOffsetRfh.st(),
+        getMultiplier = { _, _, style -> style.heightPx * (1.0 - style.leadingTopRh - style.leadingBottomRh) }
     ),
-    NumberWidgetSpec(LetterStyle::scaling.st(), step = 0.01),
+    UnionWidgetSpec(
+        LetterStyle::superscript.st(), LetterStyle::superscriptScaling.st(),
+        LetterStyle::superscriptHOffsetRfh.st(), LetterStyle::superscriptVOffsetRfh.st(),
+        settingIcons = listOf(null, ZOOM_ICON, ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON),
+        settingNewlines = listOf(1)
+    ),
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01),
-    NumberWidgetSpec(LetterStyle::hShearing.st(), step = 0.05),
-    ListWidgetSpec(LetterStyle::features.st(), newElem = FontFeature("", 1), elemsPerRow = 2),
-    NewSectionWidgetSpec(LetterStyle::decorations.st()),
-    ListWidgetSpec(
-        LetterStyle::decorations.st(),
-        newElem = PRESET_TEXT_DECORATION, elemsPerRow = 1, rowSeparators = true, movButtons = true
-    ),
-    NewSectionWidgetSpec(LetterStyle::background.st()),
-    WidthWidgetSpec(LetterStyle::backgroundWidenLeftPx.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenRightPx.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenTopPx.st(), WidthSpec.TINY),
-    WidthWidgetSpec(LetterStyle::backgroundWidenBottomPx.st(), WidthSpec.TINY),
-    UnionWidgetSpec(
-        LetterStyle::backgroundWidenLeftPx.st(), LetterStyle::backgroundWidenRightPx.st(),
-        LetterStyle::backgroundWidenTopPx.st(), LetterStyle::backgroundWidenBottomPx.st(),
-        unionName = "backgroundWidenPx",
-        settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON, BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
-    )
+    SimpleListWidgetSpec(LetterStyle::features.st(), newElement = FontFeature("", 1), elementsPerRow = 2),
+    NewSectionWidgetSpec(LetterStyle::layers.st()),
+    LayerListWidgetSpec(LetterStyle::layers.st(), newElement = PRESET_LAYER)
 )
 
 
-private val TEXT_DECORATION_WIDGET_SPECS: List<StyleWidgetSpec<TextDecoration>> = listOf(
-    ToggleButtonGroupWidgetSpec(TextDecoration::preset.st(), ICON),
-    WidthWidgetSpec(TextDecoration::widenLeftPx.st(), WidthSpec.TINY),
-    WidthWidgetSpec(TextDecoration::widenRightPx.st(), WidthSpec.TINY),
-    UnionWidgetSpec(
-        TextDecoration::widenLeftPx.st(), TextDecoration::widenRightPx.st(),
-        unionName = "widenPx", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
+    MultiplierWidgetSpec(
+        Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(), Layer::stripeWidenLeftRfh.st(),
+        Layer::stripeWidenRightRfh.st(), Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
+        Layer::stripeCornerRadiusRfh.st(), Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(),
+        Layer::contourThicknessRfh.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::clearingRfh.st(),
+        Layer::blurRadiusRfh.st(),
+        getMultiplier = { _, styling, style ->
+            val letterStyle = styling.getParentStyle(style)
+            letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
+        }
     ),
-    NumberWidgetSpec(TextDecoration::clearingPx.st(), step = 0.1),
-    ToggleButtonGroupWidgetSpec(TextDecoration::clearingJoin.st(), ICON),
-    WidthWidgetSpec(TextDecoration::dashPatternPx.st(), WidthSpec.TINY),
-    ListWidgetSpec(TextDecoration::dashPatternPx.st(), newElem = 2.0, newElemIsLastElem = true, elemsPerRow = 2)
+    ToggleButtonGroupWidgetSpec(Layer::shape.st(), ICON_AND_LABEL),
+    ToggleButtonGroupWidgetSpec(Layer::stripePreset.st(), ICON),
+    WidthWidgetSpec(Layer::stripeHeightRfh.st(), WidthSpec.TINY),
+    WidthWidgetSpec(Layer::stripeOffsetRfh.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        Layer::stripePreset.st(), Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
+        settingIcons = listOf(null, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
+    ),
+    WidthWidgetSpec(Layer::stripeWidenLeftRfh.st(), WidthSpec.TINY),
+    WidthWidgetSpec(Layer::stripeWidenRightRfh.st(), WidthSpec.TINY),
+    WidthWidgetSpec(Layer::stripeWidenTopRfh.st(), WidthSpec.TINY),
+    WidthWidgetSpec(Layer::stripeWidenBottomRfh.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(),
+        Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
+        unionName = "stripeWidenRfh",
+        settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON, BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
+    ),
+    ToggleButtonGroupWidgetSpec(Layer::stripeCornerJoin.st(), ICON),
+    WidthWidgetSpec(Layer::stripeCornerRadiusRfh.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
+        settingLabels = listOf(1)
+    ),
+    WidthWidgetSpec(Layer::stripeDashPatternRfh.st(), WidthSpec.LITTLE),
+    SimpleListWidgetSpec(
+        Layer::stripeDashPatternRfh.st(),
+        newElement = 0.1, newElementIsLastElement = true, elementsPerRow = 2
+    ),
+    WidthWidgetSpec(Layer::dilationRfh.st(), WidthSpec.LITTLE),
+    ToggleButtonGroupWidgetSpec(Layer::dilationJoin.st(), ICON),
+    UnionWidgetSpec(
+        Layer::dilationRfh.st(), Layer::dilationJoin.st(),
+        unionName = "dilation"
+    ),
+    WidthWidgetSpec(Layer::contourThicknessRfh.st(), WidthSpec.LITTLE),
+    ToggleButtonGroupWidgetSpec(Layer::contourJoin.st(), ICON),
+    UnionWidgetSpec(Layer::contour.st(), Layer::contourThicknessRfh.st(), Layer::contourJoin.st()),
+    WidthWidgetSpec(Layer::hOffsetRfh.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::vOffsetRfh.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
+        unionName = "offsetRfh", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+    ),
+    WidthWidgetSpec(Layer::hScaling.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::vScaling.st(), WidthSpec.LITTLE),
+    NumberWidgetSpec(Layer::hScaling.st(), step = 0.01),
+    NumberWidgetSpec(Layer::vScaling.st(), step = 0.01),
+    UnionWidgetSpec(
+        Layer::hScaling.st(), Layer::vScaling.st(),
+        unionName = "scaling", settingIcons = listOf(BEARING_LEFT_RIGHT_ICON, BEARING_TOP_BOTTOM_ICON)
+    ),
+    WidthWidgetSpec(Layer::hShearing.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::vShearing.st(), WidthSpec.LITTLE),
+    NumberWidgetSpec(Layer::hShearing.st(), step = 0.05),
+    NumberWidgetSpec(Layer::vShearing.st(), step = 0.05),
+    UnionWidgetSpec(
+        Layer::hShearing.st(), Layer::vShearing.st(),
+        unionName = "shearing", settingIcons = listOf(SHEARING_HORIZONTAL_ICON, SHEARING_VERTICAL_ICON)
+    ),
+    WidthWidgetSpec(Layer::clearingRfh.st(), WidthSpec.LITTLE),
+    NumberWidgetSpec(Layer::clearingRfh.st(), step = 0.1),
+    ToggleButtonGroupWidgetSpec(Layer::clearingJoin.st(), ICON),
+    UnionWidgetSpec(
+        Layer::clearingLayers.st(), Layer::clearingRfh.st(), Layer::clearingJoin.st(),
+        unionName = "clearing"
+    )
 )
 
 
@@ -204,6 +268,12 @@ class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
 }
 
 
+class MultiplierWidgetSpec<S : Style>(
+    vararg settings: StyleSetting<S, Double>,
+    val getMultiplier: (StylingContext, Styling, S) -> Double
+) : StyleWidgetSpec<S>(*settings)
+
+
 class TimecodeWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Number>,
     val getFPS: (StylingContext, Styling, S) -> FPS,
@@ -227,13 +297,17 @@ class UnionWidgetSpec<S : Style>(
 }
 
 
-class ListWidgetSpec<S : Style, SUBJ : Any>(
+class SimpleListWidgetSpec<S : Style, SUBJ : Any>(
     setting: ListStyleSetting<S, SUBJ>,
-    val newElem: SUBJ? = null,
-    val newElemIsLastElem: Boolean = false,
-    val elemsPerRow: Int = 1,
-    val rowSeparators: Boolean = false,
-    val movButtons: Boolean = false
+    val newElement: SUBJ? = null,
+    val newElementIsLastElement: Boolean = false,
+    val elementsPerRow: Int = 1
+) : StyleWidgetSpec<S>(setting)
+
+
+class LayerListWidgetSpec<S : Style, SUBJ : Any>(
+    setting: ListStyleSetting<S, SUBJ>,
+    val newElement: SUBJ
 ) : StyleWidgetSpec<S>(setting)
 
 

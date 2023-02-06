@@ -57,6 +57,7 @@ val GEAR_ICON = SVGIcon.load("/icons/gear.svg")
 val GIFT_ICON = SVGIcon.load("/icons/gift.svg")
 val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
 val GUIDES_ICON = SVGIcon.load("/icons/guides.svg")
+val HEIGHT_ICON = SVGIcon.load("/icons/height.svg")
 val HOME_ICON = SVGIcon.load("/icons/home.svg")
 val INFO_ICON = SVGIcon.load("/icons/info.svg")
 val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
@@ -90,10 +91,19 @@ val BEARING_RIGHT_ICON = SVGIcon.load("/icons/bearing/right.svg")
 val BEARING_TOP_ICON = SVGIcon.load("/icons/bearing/top.svg")
 val BEARING_MIDDLE_ICON = SVGIcon.load("/icons/bearing/middle.svg")
 val BEARING_BOTTOM_ICON = SVGIcon.load("/icons/bearing/bottom.svg")
+val BEARING_LEFT_RIGHT_ICON = SVGIcon.load("/icons/bearing/leftRight.svg")
+val BEARING_TOP_BOTTOM_ICON = SVGIcon.load("/icons/bearing/topBottom.svg")
+
+val FONT_HEIGHT_TOTAL_ICON = SVGIcon.load("/icons/fontHeight/total.svg")
+val FONT_HEIGHT_LEADING_TOP_ICON = SVGIcon.load("/icons/fontHeight/leadingTop.svg")
+val FONT_HEIGHT_LEADING_BOTTOM_ICON = SVGIcon.load("/icons/fontHeight/leadingBottom.svg")
 
 val PROJECT_DIALOG_STYLING_ICON = SVGIcon.load("/icons/projectDialog/styling.svg")
 val PROJECT_DIALOG_VIDEO_ICON = SVGIcon.load("/icons/projectDialog/video.svg")
 val PROJECT_DIALOG_DELIVERY_ICON = SVGIcon.load("/icons/projectDialog/delivery.svg")
+
+val SHEARING_HORIZONTAL_ICON = SVGIcon.load("/icons/shearing/horizontal.svg")
+val SHEARING_VERTICAL_ICON = SVGIcon.load("/icons/shearing/vertical.svg")
 
 
 val Severity.icon
@@ -269,17 +279,32 @@ val Superscript.icon
         Superscript.SUP_SUB -> SUPERSCRIPT_SUP_SUB_ICON
         Superscript.SUB_SUP -> SUPERSCRIPT_SUB_SUP_ICON
         Superscript.SUB_SUB -> SUPERSCRIPT_SUB_SUB_ICON
+        Superscript.CUSTOM -> GEAR_ICON
     }
 
 
-private val TEXT_DECORATION_PRESET_UNDERLINE_ICON = SVGIcon.load("/icons/textDecorationPreset/underline.svg")
-private val TEXT_DECORATION_PRESET_STRIKETHROUGH_ICON = SVGIcon.load("/icons/textDecorationPreset/strikethrough.svg")
+private val STRIPE_PRESET_BACKGROUND_ICON = SVGIcon.load("/icons/stripePreset/background.svg")
+private val STRIPE_PRESET_UNDERLINE_ICON = SVGIcon.load("/icons/stripePreset/underline.svg")
+private val STRIPE_PRESET_STRIKETHROUGH_ICON = SVGIcon.load("/icons/stripePreset/strikethrough.svg")
 
-val TextDecorationPreset.icon
+val StripePreset.icon
     get() = when (this) {
-        TextDecorationPreset.UNDERLINE -> TEXT_DECORATION_PRESET_UNDERLINE_ICON
-        TextDecorationPreset.STRIKETHROUGH -> TEXT_DECORATION_PRESET_STRIKETHROUGH_ICON
-        TextDecorationPreset.OFF -> GEAR_ICON
+        StripePreset.BACKGROUND -> STRIPE_PRESET_BACKGROUND_ICON
+        StripePreset.UNDERLINE -> STRIPE_PRESET_UNDERLINE_ICON
+        StripePreset.STRIKETHROUGH -> STRIPE_PRESET_STRIKETHROUGH_ICON
+        StripePreset.CUSTOM -> GEAR_ICON
+    }
+
+
+private val LAYER_SHAPE_TEXT_ICON = SVGIcon.load("/icons/layerShape/text.svg")
+private val LAYER_SHAPE_STRIPE_ICON = SVGIcon.load("/icons/layerShape/stripe.svg")
+private val LAYER_SHAPE_CLONE_ICON = SVGIcon.load("/icons/layerShape/clone.svg")
+
+val LayerShape.icon
+    get() = when (this) {
+        LayerShape.TEXT -> LAYER_SHAPE_TEXT_ICON
+        LayerShape.STRIPE -> LAYER_SHAPE_STRIPE_ICON
+        LayerShape.CLONE -> LAYER_SHAPE_CLONE_ICON
     }
 
 
@@ -310,7 +335,8 @@ val Enum<*>.icon
         is FlowDirection -> icon
         is SmallCaps -> icon
         is Superscript -> icon
-        is TextDecorationPreset -> icon
+        is StripePreset -> icon
+        is LayerShape -> icon
         is LineJoin -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }

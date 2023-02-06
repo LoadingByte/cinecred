@@ -363,7 +363,7 @@ class BackedVirtualWindow(val backingWin: Window) : VirtualWindow() {
     fun <S : Style> desktopPosOfSetting(
         form: StyleForm<S>, setting: StyleSetting<S, *>, idx: Int = 0, center: Boolean = true
     ): Point {
-        fun inListWidget(widget: ListWidget<*>): Component {
+        fun inSimpleListWidget(widget: SimpleListWidget<*>): Component {
             if (idx == 0)
                 return widget.components[0]
             var ctr = 1
@@ -377,7 +377,7 @@ class BackedVirtualWindow(val backingWin: Window) : VirtualWindow() {
 
         val comp = when (val widget = form.getWidgetFor(setting)) {
             is ToggleButtonGroupWidget -> widget.components[0].getComponent(idx)
-            is ListWidget<*> -> inListWidget(widget)
+            is SimpleListWidget<*> -> inSimpleListWidget(widget)
             else -> widget.components[idx]
         }
         return desktopPosOf(comp, center)

@@ -542,14 +542,12 @@ private fun drawPage(
         // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
         // not contain a font weight attribute, or else the FormattedString would complain.
         val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
-        val font = FormattedString.Font(STAGE_GUIDE_COLOR, Font(fontName, Font.PLAIN, 1), resolution.widthPx / 80.0)
+        val font = FormattedString.Font(Font(fontName, Font.PLAIN, 1), resolution.widthPx / 80.0)
+        val layer = FormattedString.Layer(STAGE_GUIDE_COLOR, FormattedString.Layer.Shape.Text)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
-            append(str, FormattedString.Attribute(font, emptyList(), null))
+            append(str, FormattedString.Attribute(font, FormattedString.Design(font, listOf(layer))))
         }.build()
-        pageImage.drawString(
-            fmtStr, x = resolution.widthPx - fmtStr.width - framesMargin, y,
-            foregroundLayer = GUIDES, backgroundLayer = GUIDES /* irrelevant, since our string has no background */
-        )
+        pageImage.drawString(fmtStr, x = resolution.widthPx - fmtStr.width - framesMargin, y, layer = GUIDES)
     }
 
     for ((stageIdx, stage) in page.stages.withIndex()) {

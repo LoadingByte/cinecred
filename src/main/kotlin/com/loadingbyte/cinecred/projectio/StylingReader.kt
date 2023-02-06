@@ -20,7 +20,7 @@ fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
         readMapList(toml["letterStyle"])
     )
 
-    migrateStyling(rawStyling)
+    migrateStyling(ctx, rawStyling)
 
     return Styling(
         readStyle(rawStyling.global, Global::class.java),

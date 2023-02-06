@@ -19,7 +19,7 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
     PageStyle::class.java -> PAGE_STYLE_CONSTRAINTS
     ContentStyle::class.java -> CONTENT_STYLE_CONSTRAINTS
     LetterStyle::class.java -> LETTER_STYLE_CONSTRAINTS
-    TextDecoration::class.java -> TEXT_DECORATION_CONSTRAINTS
+    Layer::class.java -> LAYER_CONSTRAINTS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleConstraint<S, *>>
 
@@ -166,7 +166,14 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     FontNameConstr(WARN, LetterStyle::fontName.st()),
-    IntConstr(ERROR, LetterStyle::heightPx.st(), min = 1),
+    DoubleConstr(ERROR, LetterStyle::heightPx.st(), min = 1.0),
+    JudgeConstr(
+        WARN, msg("project.styling.constr.excessiveLeading"),
+        LetterStyle::heightPx.st(), LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st()
+    ) { _, _, style ->
+        // The formula is written this way to exactly match the computation in StyledStringExt.
+        style.heightPx - style.leadingTopRh * style.heightPx - style.leadingBottomRh * style.heightPx >= 1.0
+    },
     JudgeConstr(INFO, msg("project.styling.constr.fakeSmallCaps"), LetterStyle::smallCaps.st()) { ctx, _, style ->
         val font = ctx.resolveFont(style.fontName) ?: return@JudgeConstr true
         when (style.smallCaps) {
@@ -175,21 +182,79 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
             SmallCaps.PETITE_CAPS -> PETITE_CAPS_FONT_FEAT in font.getSupportedFeatures()
         }
     },
-    DoubleConstr(ERROR, LetterStyle::scaling.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, LetterStyle::superscriptScaling.st(), min = 0.0, minInclusive = false),
     FontFeatureConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
         val font = ctx.resolveFont(style.fontName) ?: return@FontFeatureConstr Collections.emptySortedSet()
         TreeSet(font.getSupportedFeatures()).apply { removeAll(MANAGED_FONT_FEATS) }
     },
+    StyleNameConstr(
+        WARN, LetterStyle::inheritLayersFromStyle.st(),
+        styleClass = LetterStyle::class.java,
+        choices = { _, styling, _ -> styling.letterStyles.filter { o -> !o.inheritLayersFromStyle.isActive } }
+    ),
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     DoubleConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5, max = 10.0, maxInclusive = false)
 )
 
 
-private val TEXT_DECORATION_CONSTRAINTS: List<StyleConstraint<TextDecoration, *>> = listOf(
-    DoubleConstr(ERROR, TextDecoration::thicknessPx.st(), min = 0.0, minInclusive = false),
-    DoubleConstr(ERROR, TextDecoration::clearingPx.st(), min = 0.0),
-    DoubleConstr(ERROR, TextDecoration::dashPatternPx.st(), min = 0.0, minInclusive = false)
+private const val BLUR_RADIUS_LIMIT = 200
+
+private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
+    DoubleConstr(ERROR, Layer::stripeHeightRfh.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, Layer::stripeCornerRadiusRfh.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, Layer::stripeDashPatternRfh.st(), min = 0.0, minInclusive = false),
+    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::cloneLayers.st()) { _, styling, style ->
+        if (style.shape != LayerShape.CLONE || style.cloneLayers.isEmpty())
+            return@JudgeConstr true
+        val layers = styling.getParentStyle(style).layers
+        !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
+    },
+    SiblingOrdinalConstr(ERROR, Layer::cloneLayers.st(), siblings = LetterStyle::layers.st()),
+    MinSizeConstr(WARN, Layer::cloneLayers.st(), minSize = 1),
+    DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
+    DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
+    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::clearingLayers.st()) { _, styling, style ->
+        if (style.clearingLayers.isEmpty())
+            return@JudgeConstr true
+        val layers = styling.getParentStyle(style).layers
+        !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
+    },
+    SiblingOrdinalConstr(ERROR, Layer::clearingLayers.st(), siblings = LetterStyle::layers.st()),
+    DoubleConstr(ERROR, Layer::clearingRfh.st(), min = 0.0),
+    DoubleConstr(ERROR, Layer::blurRadiusRfh.st(), min = 0.0),
+    JudgeConstr(
+        ERROR, msg("project.styling.constr.excessiveBlurRadius", BLUR_RADIUS_LIMIT),
+        Layer::blurRadiusRfh.st()
+    ) { _, styling, style ->
+        val letterStyle = styling.getParentStyle(style)
+        val fontHeightPx = letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
+        style.blurRadiusRfh * fontHeightPx <= BLUR_RADIUS_LIMIT
+    }
 )
+
+private fun canWalkBackToSelf(layers: List<Layer>, ownLayerIdx: Int): Boolean {
+    val visitingLayers = BooleanArray(layers.size)
+    var walkedBackToSelf = false
+
+    fun visit(layerIdx: Int) {
+        if (visitingLayers[layerIdx]) {
+            if (layerIdx == ownLayerIdx)
+                walkedBackToSelf = true
+            return
+        }
+        visitingLayers[layerIdx] = true
+        val layer = layers[layerIdx]
+        if (layer.shape == LayerShape.CLONE)
+            for (refLayerOrdinal in layer.cloneLayers)
+                visit(refLayerOrdinal - 1)
+        for (refLayerOrdinal in layer.clearingLayers)
+            visit(refLayerOrdinal - 1)
+        visitingLayers[layerIdx] = false
+    }
+
+    visit(ownLayerIdx)
+    return walkedBackToSelf
+}
 
 
 sealed class StyleConstraint<S : Style, SS : StyleSetting<S, *>>(
@@ -291,6 +356,13 @@ class MinSizeConstr<S : Style>(
     setting: ListStyleSetting<S, Any>,
     val minSize: Int
 ) : StyleConstraint<S, ListStyleSetting<S, Any>>(setting)
+
+
+class SiblingOrdinalConstr<S : NestedStyle<P>, P : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, Int>,
+    val siblings: ListStyleSetting<P, S>
+) : StyleConstraint<S, StyleSetting<S, Int>>(setting)
 
 
 class ConstraintViolation(
@@ -452,6 +524,25 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, -1, cst.severity, msg)
                         }
                     }
+                is SiblingOrdinalConstr<*, *> -> {
+                    fun <S : NestedStyle<P>, P : Style> withNestedTypeVars(style: S) {
+                        @Suppress("UNCHECKED_CAST")
+                        val cst2 = cst as SiblingOrdinalConstr<S, P>
+                        val siblings = cst2.siblings.get(styling.getParentStyle(style))
+                        val ownOrdinal = 1 + siblings.indexOfFirst { sibling -> sibling === style }
+                        val largestOrdinal = siblings.size
+                        style.forEachRelevantSubject(cst2, ignoreSettings) { st, idx, ordinal ->
+                            if (ordinal !in 1..largestOrdinal) {
+                                val msg = l10n("project.styling.constr.siblingOrdinalOutOfBounds", largestOrdinal)
+                                log(rootStyle, style, st, idx, cst2.severity, msg)
+                            } else if (ordinal == ownOrdinal) {
+                                val msg = l10n("project.styling.constr.siblingOrdinalOwn", largestOrdinal)
+                                log(rootStyle, style, st, idx, cst2.severity, msg)
+                            }
+                        }
+                    }
+                    withNestedTypeVars(style as NestedStyle<*>)
+                }
             }
 
         for (setting in getStyleSettings(style.javaClass))

@@ -20,7 +20,7 @@ fun <S : Style> getStyleEffectivitySpecs(styleClass: Class<S>): List<StyleEffect
     PageStyle::class.java -> PAGE_STYLE_EFFECTIVITY_SPECS
     ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS
     LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS
-    TextDecoration::class.java -> TEXT_DECORATION_EFFECTIVITY_SPECS
+    Layer::class.java -> LAYER_EFFECTIVITY_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleEffectivitySpec<S>>
 
@@ -163,6 +163,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
 
 private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyle>> = listOf(
     StyleEffectivitySpec(
+        LetterStyle::layers.st(),
+        isTotallyIneffective = { _, _, style -> style.inheritLayersFromStyle.isActive }
+    ),
+    StyleEffectivitySpec(
         LetterStyle::kerning.st(),
         isAlmostEffective = { ctx, _, style -> supportsNot(ctx, style, KERNING_FONT_FEAT) }
     ),
@@ -179,9 +183,9 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
         isAlmostEffective = { _, _, style -> !style.uppercase }
     ),
     StyleEffectivitySpec(
-        LetterStyle::backgroundWidenLeftPx.st(), LetterStyle::backgroundWidenRightPx.st(),
-        LetterStyle::backgroundWidenTopPx.st(), LetterStyle::backgroundWidenBottomPx.st(),
-        isAlmostEffective = { _, _, style -> !style.background.isActive }
+        LetterStyle::superscriptScaling.st(), LetterStyle::superscriptHOffsetRfh.st(),
+        LetterStyle::superscriptVOffsetRfh.st(),
+        isAlmostEffective = { _, _, style -> style.superscript != Superscript.CUSTOM }
     )
 )
 
@@ -191,14 +195,46 @@ private fun supportsNot(ctx: StylingContext, style: LetterStyle, feat: String): 
 }
 
 
-private val TEXT_DECORATION_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TextDecoration>> = listOf(
+private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
     StyleEffectivitySpec(
-        TextDecoration::offsetPx.st(), TextDecoration::thicknessPx.st(),
-        isAlmostEffective = { _, _, style -> style.preset != TextDecorationPreset.OFF }
+        Layer::stripePreset.st(), Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
+        Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(),
+        Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
+        Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
+        Layer::stripeDashPatternRfh.st(), Layer::anchorInStripe.st(),
+        isTotallyIneffective = { _, _, style -> style.shape != LayerShape.STRIPE }
     ),
     StyleEffectivitySpec(
-        TextDecoration::clearingJoin.st(),
-        isAlmostEffective = { _, _, style -> !style.clearingPx.isActive || style.clearingPx.value <= 0.0 }
+        Layer::cloneLayers.st(),
+        isTotallyIneffective = { _, _, style -> style.shape != LayerShape.CLONE }
+    ),
+    StyleEffectivitySpec(
+        Layer::dilationRfh.st(), Layer::dilationJoin.st(),
+        isTotallyIneffective = { _, _, style -> style.shape != LayerShape.TEXT && style.shape != LayerShape.CLONE }
+    ),
+    StyleEffectivitySpec(
+        Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
+        isAlmostEffective = { _, _, style -> style.stripePreset != StripePreset.CUSTOM }
+    ),
+    StyleEffectivitySpec(
+        Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
+        isAlmostEffective = { _, _, style -> style.stripePreset != StripePreset.BACKGROUND }
+    ),
+    StyleEffectivitySpec(
+        Layer::stripeCornerRadiusRfh.st(),
+        isAlmostEffective = { _, _, style -> style.stripeCornerJoin == LineJoin.MITER }
+    ),
+    StyleEffectivitySpec(
+        Layer::dilationJoin.st(),
+        isAlmostEffective = { _, _, style -> style.dilationRfh == 0.0 }
+    ),
+    StyleEffectivitySpec(
+        Layer::contourThicknessRfh.st(), Layer::contourJoin.st(),
+        isAlmostEffective = { _, _, style -> !style.contour }
+    ),
+    StyleEffectivitySpec(
+        Layer::clearingRfh.st(), Layer::clearingJoin.st(),
+        isAlmostEffective = { _, _, style -> style.clearingLayers.isEmpty() }
     )
 )
 

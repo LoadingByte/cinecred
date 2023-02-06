@@ -88,41 +88,45 @@ tailGapPx = 32.0
 [[letterStyle]]
 name = "{project.template.letterStyleNormal}"
 fontName = "Archivo Narrow Regular"
-heightPx = 32
+heightPx = 32.0
 
 [[letterStyle]]
 name = "{project.template.letterStyleSmall}"
 fontName = "Archivo Narrow Regular"
-heightPx = 24
+heightPx = 24.0
 
 [[letterStyle]]
 name = "{project.template.letterStyleHeading}"
 fontName = "Archivo Narrow Regular"
-heightPx = 32
+heightPx = 32.0
 trackingEm = 0.05
 
-[[letterStyle.decorations]]
-preset = "OFF"
-offsetPx = 5.0
-thicknessPx = 2.0
+[[letterStyle.layers]]
+shape = "TEXT"
+
+[[letterStyle.layers]]
+shape = "STRIPE"
+stripePreset = "CUSTOM"
+stripeHeightRfh = 0.0625
+stripeOffsetRfh = 0.15625
 
 [[letterStyle]]
 name = "{project.template.letterStyleName}"
 fontName = "Archivo Narrow Bold"
-heightPx = 32
+heightPx = 32.0
 
 [[letterStyle]]
 name = "{project.template.letterStyleSongTitle}"
 fontName = "Archivo Narrow Bold"
-heightPx = 32
+heightPx = 32.0
 smallCaps = "SMALL_CAPS"
 
 [[letterStyle]]
 name = "{project.template.letterStyleCardName}"
 fontName = "Archivo Narrow Bold"
-heightPx = 100
+heightPx = 100.0
 
 [[letterStyle]]
 name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
-heightPx = 50
+heightPx = 50.0

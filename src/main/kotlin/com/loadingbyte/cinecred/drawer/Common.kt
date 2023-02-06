@@ -19,6 +19,15 @@ val BODY_WIDTH_GUIDE_COLOR = Color(120, 0, 0)
 val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)
 
 
+fun DeferredImage.drawString(
+    fmtStr: FormattedString,
+    x: Double, y: Y,
+    layer: DeferredImage.Layer = DeferredImage.FOREGROUND
+) {
+    fmtStr.drawTo(this, x, y, layer)
+}
+
+
 inline fun DeferredImage.drawJustified(
     hJustify: HJustify,
     areaX: Double,

@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
 import java.awt.Font
 import java.util.*
+import kotlin.math.abs
 
 
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
@@ -39,7 +40,7 @@ fun StyledString.trim(): StyledString {
 }
 
 
-val StyledString.height: Int
+val StyledString.height: Double
     get() = maxOf { it.second.heightPx }
 
 
@@ -66,18 +67,34 @@ private class TextContextImpl(private val styling: Styling, val stylingCtx: Styl
         generateUppercaseExceptionsRegex(styling.global.uppercaseExceptions)
     }
 
-    private val fmtStrAttrsCache = IdentityHashMap<LetterStyle, Attrs>()
+    private val fmtStrFontsCache = IdentityHashMap<LetterStyle, Fonts>()
+    private val fmtStrDesignCache = IdentityHashMap<LetterStyle, FormattedString.Design>()
     private val fmtStrCache = IdentityHashMap<StyledString, FormattedString>()
 
-    fun getFmtStrAttrs(letterStyle: LetterStyle): Attrs =
-        fmtStrAttrsCache.computeIfAbsent(letterStyle) { generateFmtStrAttrs(letterStyle, this) }
+    fun getFmtStrFonts(letterStyle: LetterStyle): Fonts =
+        fmtStrFontsCache.getOrPut(letterStyle) {
+            generateFmtStrFonts(letterStyle, this) ?: getFmtStrFonts(PLACEHOLDER_LETTER_STYLE)
+        }
+
+    fun getFmtStrDesign(letterStyle: LetterStyle): FormattedString.Design =
+        fmtStrDesignCache.getOrPut(letterStyle) {
+            if (letterStyle.inheritLayersFromStyle.isActive) {
+                val refStyle = styling.letterStyles.find { o -> o.name == letterStyle.inheritLayersFromStyle.value }
+                    ?: letterStyle.copy(
+                        inheritLayersFromStyle = Opt(false, ""),
+                        layers = PLACEHOLDER_LETTER_STYLE.layers
+                    )
+                getFmtStrDesign(refStyle)
+            } else
+                generateFmtStrDesign(letterStyle.layers, getFmtStrFonts(letterStyle).std)
+        }
 
     fun getFmtStr(styledString: StyledString): FormattedString =
         fmtStrCache.computeIfAbsent(styledString) { generateFmtStr(styledString, this) }
 
-    class Attrs(
-        val std: FormattedString.Attribute,
-        val smallCaps: FormattedString.Attribute?
+    class Fonts(
+        val std: FormattedString.Font,
+        val fakeSmallCaps: FormattedString.Font?
     )
 
 }
@@ -125,19 +142,36 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 }
 
 
-private fun generateFmtStrAttrs(
+private fun generateFmtStrFonts(
     style: LetterStyle,
     textCtx: TextContextImpl
-): TextContextImpl.Attrs {
+): TextContextImpl.Fonts? {
     // If the styling context doesn't contain a font with the specified name, we create a font object to find a
     // fallback font that (hopefully) best matches the specified font.
     val baseAWTFont = textCtx.stylingCtx.resolveFont(style.fontName) ?: Font(style.fontName, 0, 1)
+
+    // Leading
+    val leadingTopPx = style.leadingTopRh * style.heightPx
+    val leadingBottomPx = style.leadingBottomRh * style.heightPx
+
+    // Font height
+    // This formula exactly matches the computation in StyleConstraints.
+    val fontHeightPx = style.heightPx - leadingTopPx - leadingBottomPx
+    if (fontHeightPx < 1.0)
+        return null
 
     // Superscript
     var ssScaling = 1.0
     var ssHOffset = 0.0
     var ssVOffset = 0.0
-    if (style.superscript != Superscript.OFF) {
+    var ssOffsetUnit = FormattedString.Font.Unit.PIXEL
+    if (style.superscript == Superscript.CUSTOM) {
+        ssScaling = style.superscriptScaling
+        ssHOffset = style.superscriptHOffsetRfh * fontHeightPx
+        ssVOffset = style.superscriptVOffsetRfh * fontHeightPx
+    } else if (style.superscript != Superscript.OFF) {
+        ssOffsetUnit = FormattedString.Font.Unit.UNSCALED_EM
+
         val ssMetrics = baseAWTFont.getSuperscriptMetrics()
             ?: SuperscriptMetrics(2 / 3.0, 0.0, 0.375, 2 / 3.0, 0.0, -0.375)
 
@@ -155,7 +189,7 @@ private fun generateFmtStrAttrs(
 
         // @formatter:off
         when (style.superscript) {
-            Superscript.OFF -> { /* can never happen */ }
+            Superscript.OFF, Superscript.CUSTOM -> { /* can never happen */ }
             Superscript.SUP -> sup()
             Superscript.SUB -> sub()
             Superscript.SUP_SUP -> { sup(); sup() }
@@ -190,56 +224,119 @@ private fun generateFmtStrAttrs(
     }
 
     val stdFont = FormattedString.Font(
-        style.foreground, baseAWTFont, style.heightPx.toDouble(), style.scaling * ssScaling, style.hScaling,
-        style.hShearing, style.hOffsetRem + ssHOffset, style.vOffsetRem + ssVOffset,
-        style.kerning, style.ligatures, features, style.trackingEm, style.leadingTopRem, style.leadingBottomRem
+        baseAWTFont, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling, style.hScaling,
+        ssHOffset, ssOffsetUnit, ssVOffset, ssOffsetUnit,
+        style.trackingEm, style.kerning, style.ligatures, features
     )
-    val smallCapsFont = if (fakeSCScaling.isNaN()) null else stdFont.scaled(fakeSCScaling)
+    val fakeSmallCapsFont = if (fakeSCScaling.isNaN()) null else FormattedString.Font(
+        baseAWTFont, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling * fakeSCScaling, style.hScaling,
+        ssHOffset, ssOffsetUnit, ssVOffset, ssOffsetUnit,
+        style.trackingEm, style.kerning, style.ligatures, features
+    )
 
-    val lm = stdFont.unscaledAWTFont.lineMetrics
-    val deco = style.decorations.map { td ->
-        var offset = td.offsetPx
-        var thickness = td.thicknessPx
-        when (td.preset) {
-            TextDecorationPreset.OFF -> {}
-            TextDecorationPreset.UNDERLINE -> {
-                offset = lm.underlineOffset + lm.underlineThickness / 2.0
-                thickness = lm.underlineThickness.toDouble()
-            }
-            TextDecorationPreset.STRIKETHROUGH -> {
-                offset = lm.strikethroughOffset + lm.strikethroughThickness / 2.0
-                thickness = lm.strikethroughThickness.toDouble()
-            }
-        }
-        FormattedString.Decoration(
-            color = if (td.color.isActive) td.color.value else style.foreground,
-            offset, thickness, td.widenLeftPx, td.widenRightPx,
-            clear = td.clearingPx.isActive,
-            clearRadiusPx = td.clearingPx.value,
-            clearJoin = when (td.clearingJoin) {
-                LineJoin.MITER -> BasicStroke.JOIN_MITER
-                LineJoin.ROUND -> BasicStroke.JOIN_ROUND
-                LineJoin.BEVEL -> BasicStroke.JOIN_BEVEL
-            },
-            dashPatternPx = if (td.dashPatternPx.isEmpty()) null else td.dashPatternPx.toDoubleArray()
-        )
-    }
-
-    val bg = if (!style.background.isActive || style.background.value.alpha == 0) null else
-        FormattedString.Background(
-            style.background.value,
-            style.backgroundWidenLeftPx, style.backgroundWidenRightPx,
-            style.backgroundWidenTopPx, style.backgroundWidenBottomPx
-        )
-
-    val stdAttr = FormattedString.Attribute(stdFont, deco, bg)
-    val smallCapsAttr = if (smallCapsFont == null) null else FormattedString.Attribute(smallCapsFont, deco, bg)
-    return TextContextImpl.Attrs(stdAttr, smallCapsAttr)
+    return TextContextImpl.Fonts(stdFont, fakeSmallCapsFont)
 }
 
 private fun getSmallCapsScaling(font: Font, multiplier: Double, fallback: Double): Double {
     val extraLM = font.getExtraLineMetrics()
     return if (extraLM == null) fallback else extraLM.xHeightEm / extraLM.capHeightEm * multiplier
+}
+
+
+private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.Font): FormattedString.Design {
+    val fh = stdFont.fontHeightPx
+    val lm = stdFont.unscaledAWTFont.lineMetrics
+
+    val fmtStrLayers = layers.map { layer ->
+        val shape = when (layer.shape) {
+            LayerShape.TEXT ->
+                FormattedString.Layer.Shape.Text
+            LayerShape.STRIPE -> {
+                val heightPx: Double
+                val offsetPx: Double
+                when (layer.stripePreset) {
+                    StripePreset.BACKGROUND -> {
+                        offsetPx = fh / 2.0 * (1.0 + layer.stripeWidenBottomRfh - layer.stripeWidenTopRfh) -
+                                stdFont.fontHeightAboveBaselinePx
+                        heightPx = abs(fh * (1.0 + layer.stripeWidenTopRfh + layer.stripeWidenBottomRfh))
+                    }
+                    StripePreset.UNDERLINE -> {
+                        offsetPx = lm.underlineOffset + lm.underlineThickness / 2.0
+                        heightPx = lm.underlineThickness.toDouble()
+                    }
+                    StripePreset.STRIKETHROUGH -> {
+                        offsetPx = lm.strikethroughOffset + lm.strikethroughThickness / 2.0
+                        heightPx = lm.strikethroughThickness.toDouble()
+                    }
+                    StripePreset.CUSTOM -> {
+                        heightPx = layer.stripeHeightRfh * fh
+                        offsetPx = layer.stripeOffsetRfh * fh
+                    }
+                }
+                val dashPatternPx = if (layer.stripeDashPatternRfh.isEmpty()) null else
+                    layer.stripeDashPatternRfh.mapToDoubleArray { it * fh }
+                FormattedString.Layer.Shape.Stripe(
+                    heightPx = heightPx,
+                    offsetPx = offsetPx,
+                    widenLeftPx = layer.stripeWidenLeftRfh * fh,
+                    widenRightPx = layer.stripeWidenRightRfh * fh,
+                    cornerJoin = getLineJoinNumber(layer.stripeCornerJoin),
+                    cornerRadiusPx = layer.stripeCornerRadiusRfh * fh,
+                    dashPatternPx = dashPatternPx,
+                    anchorInStripe = layer.anchorInStripe
+                )
+            }
+            LayerShape.CLONE ->
+                FormattedString.Layer.Shape.Clone(
+                    layers = layer.cloneLayers.mapToIntArray { it - 1 }
+                )
+        }
+
+        val dilation = if (layer.shape == LayerShape.STRIPE || layer.dilationRfh == 0.0) null else
+            FormattedString.Layer.Dilation(
+                radiusPx = layer.dilationRfh * fh,
+                join = getLineJoinNumber(layer.dilationJoin)
+            )
+
+        val contour = if (!layer.contour) null else
+            FormattedString.Layer.Contour(
+                thicknessPx = layer.contourThicknessRfh * fh,
+                join = getLineJoinNumber(layer.contourJoin)
+            )
+
+        val clearing = if (layer.clearingLayers.isEmpty()) null else
+            FormattedString.Layer.Clearing(
+                layers = layer.clearingLayers.mapToIntArray { it - 1 },
+                radiusPx = layer.clearingRfh * fh,
+                join = getLineJoinNumber(layer.clearingJoin)
+            )
+
+        FormattedString.Layer(
+            color = layer.color,
+            shape = shape,
+            dilation = dilation,
+            contour = contour,
+            hOffsetPx = layer.hOffsetRfh * fh,
+            vOffsetPx = layer.vOffsetRfh * fh,
+            hScaling = layer.hScaling,
+            vScaling = layer.vScaling,
+            hShearing = layer.hShearing,
+            vShearing = layer.vShearing,
+            clearing = clearing,
+            blurRadiusPx = layer.blurRadiusRfh * fh
+        )
+    }
+
+    return FormattedString.Design(
+        masterFont = stdFont,
+        layers = fmtStrLayers
+    )
+}
+
+private fun getLineJoinNumber(lineJoin: LineJoin): Int = when (lineJoin) {
+    LineJoin.MITER -> BasicStroke.JOIN_MITER
+    LineJoin.ROUND -> BasicStroke.JOIN_ROUND
+    LineJoin.BEVEL -> BasicStroke.JOIN_BEVEL
 }
 
 
@@ -288,13 +385,13 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
     val smallCapsed: StyledString
     var smallCapsMasks: Array<BooleanArray?>? = null
 
-    if (uppercased.all { (_, style) -> textCtx.getFmtStrAttrs(style).smallCaps == null })
+    if (uppercased.all { (_, style) -> textCtx.getFmtStrFonts(style).fakeSmallCaps == null })
         smallCapsed = uppercased
     else {
         val masks = arrayOfNulls<BooleanArray?>(uppercased.size)
         smallCapsMasks = masks
         smallCapsed = uppercased.mapRuns { runIdx, run, style, _, _ ->
-            if (textCtx.getFmtStrAttrs(style).smallCaps == null)
+            if (textCtx.getFmtStrFonts(style).fakeSmallCaps == null)
                 run
             else {
                 val smallCapsedRun = run.uppercase(textCtx.locale)
@@ -332,13 +429,14 @@ private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): Formatt
     // 3. Build a FormattedString by adding attributes to the "smallCapsed" string as indicated by the letter styles.
     val fmtStrBuilder = FormattedString.Builder(textCtx.locale)
     smallCapsed.forEachRun { runIdx, run, style, _, _ ->
-        val attrs = textCtx.getFmtStrAttrs(style)
-        if (attrs.smallCaps == null)
-            fmtStrBuilder.append(run, attrs.std)
+        val fonts = textCtx.getFmtStrFonts(style)
+        val design = textCtx.getFmtStrDesign(style)
+        if (fonts.fakeSmallCaps == null)
+            fmtStrBuilder.append(run, FormattedString.Attribute(fonts.std, design))
         else
             smallCapsMasks!![runIdx]!!.forEachAlternatingStrip { isStripSmallCaps, stripStartIdx, stripEndIdx ->
-                val attr = if (isStripSmallCaps) attrs.smallCaps else attrs.std
-                fmtStrBuilder.append(run.substring(stripStartIdx, stripEndIdx), attr)
+                val font = if (isStripSmallCaps) fonts.fakeSmallCaps else fonts.std
+                fmtStrBuilder.append(run.substring(stripStartIdx, stripEndIdx), FormattedString.Attribute(font, design))
             }
     }
     return fmtStrBuilder.build()

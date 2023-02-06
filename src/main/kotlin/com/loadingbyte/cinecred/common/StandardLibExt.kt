@@ -62,6 +62,17 @@ fun IntArray.sumBetween(startIdx: Int, endIdx: Int): Int {
 }
 
 
+inline fun List<Int>.mapToIntArray(transform: (Int) -> Int): IntArray =
+    IntArray(size) { i -> transform(this[i]) }
+
+inline fun List<Double>.mapToDoubleArray(transform: (Double) -> Double): DoubleArray =
+    DoubleArray(size) { i -> transform(this[i]) }
+
+
+inline fun <R> IntArray.flatMapToSequence(crossinline transform: (Int) -> Iterable<R>): Sequence<R> =
+    sequence { for (e in this@flatMapToSequence) yieldAll(transform(e)) }
+
+
 inline fun DoubleArray.mapToArray(transform: (Double) -> Double): DoubleArray =
     DoubleArray(size) { i -> transform(this[i]) }
 

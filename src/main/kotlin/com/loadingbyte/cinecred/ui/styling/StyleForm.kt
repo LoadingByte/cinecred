@@ -42,11 +42,12 @@ class StyleForm<S : Style>(
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val valueWidget = makeSettingWidget(setting)
-        val formRow = makeFormRow(setting.name, valueWidget)
+        val wholeWidth = valueWidget is LayerListWidget<*>
+        val formRow = if (wholeWidth) FormRow("", valueWidget) else makeFormRow(setting.name, valueWidget)
         valueWidgets[setting] = valueWidget
         rootFormRows.add(Pair(formRow, listOf(setting)))
         rootFormRowLookup[setting] = formRow
-        addFormRow(formRow)
+        addFormRow(formRow, wholeWidth = wholeWidth)
     }
 
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
@@ -90,14 +91,25 @@ class StyleForm<S : Style>(
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
+        val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*, *>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
-        val listWidgetSpec = settingWidgetSpecs.oneOf<ListWidgetSpec<S, E>>()
+        val simpleListWidgetSpec = settingWidgetSpecs.oneOf<SimpleListWidgetSpec<S, E>>()
+        val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, E>>()
         val choiceWidgetSpec = settingWidgetSpecs.oneOf<ChoiceWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        if (setting.type == String::class.java)
-            return when {
+        return when {
+            (setting.type == Int::class.javaPrimitiveType || setting.type == Int::class.javaObjectType) &&
+                    siblingOrdinalConstr != null ->
+                MultiComboBoxWidget<Int>(
+                    items = emptyList(), naturalOrder(), widthSpec = widthSpec,
+                    // Even though sibling ordinal widgets are never actually inconsistent to the user, they are for a
+                    // very short period after a style has been loaded into a form and before the widget's items have
+                    // been adjusted to reflect the layers available in the currently loaded style.
+                    inconsistent = true
+                )
+            setting.type == String::class.java -> when {
                 fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
                     MultiComboBoxWidget(
                         items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
@@ -106,13 +118,37 @@ class StyleForm<S : Style>(
                     )
                 else -> TextListWidget(widthSpec)
             }
+            layerListWidgetSpec != null -> {
+                // We need a local function to introduce the NE type variable, which extends NestedStyle instead of Any.
+                fun <NE : NestedStyle<*>> makeOrdinalMapper(nestedStyleClass: Class<NE>): (NE, (Int) -> Int?) -> NE {
+                    val siblingOrdinalSettings = buildList {
+                        for (constr in getStyleConstraints(nestedStyleClass))
+                            if (constr is SiblingOrdinalConstr<NE, *>)
+                                addAll(constr.settings)
+                    }
+                    return { nestedStyle, mapping ->
+                        nestedStyle.copy(siblingOrdinalSettings.map { setting ->
+                            setting.repackSubjects(setting.extractSubjects(nestedStyle).mapNotNull(mapping))
+                        })
+                    }
+                }
 
-        return ListWidget(
-            newElemWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
-            listWidgetSpec?.newElem, listWidgetSpec?.newElemIsLastElem ?: false,
-            listWidgetSpec?.elemsPerRow ?: 1, listWidgetSpec?.rowSeparators ?: false,
-            listWidgetSpec?.movButtons ?: false, minSizeConstr?.minSize ?: 0
-        )
+                LayerListWidget(
+                    makeElementWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
+                    newElement = layerListWidgetSpec.newElement,
+                    mapOrdinalsInElement = if (!NestedStyle::class.java.isAssignableFrom(setting.type)) null else
+                        @Suppress("UNCHECKED_CAST")
+                        (makeOrdinalMapper(setting.type.asSubclass(NestedStyle::class.java)) as (E, (Int) -> Int?) -> E)
+                )
+            }
+            else -> SimpleListWidget(
+                makeElementWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
+                newElement = simpleListWidgetSpec?.newElement,
+                newElementIsLastElement = simpleListWidgetSpec?.newElementIsLastElement ?: false,
+                elementsPerRow = simpleListWidgetSpec?.elementsPerRow ?: 1,
+                minSize = minSizeConstr?.minSize ?: 0
+            )
+        }
     }
 
     private fun <V : Any /* non-null */> makeBackingSettingWidget(
@@ -130,6 +166,7 @@ class StyleForm<S : Style>(
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S, *>>()
+        val multiplierWidgetSpec = settingWidgetSpecs.oneOf<MultiplierWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
@@ -150,7 +187,10 @@ class StyleForm<S : Style>(
                 val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01) }
                 val step = numberWidgetSpec?.step ?: 1.0
                 val model = SpinnerNumberModel(min ?: max ?: 0.0, min, max, step)
-                SpinnerWidget(Double::class.javaObjectType, model, widthSpec)
+                if (multiplierWidgetSpec != null)
+                    MultipliedSpinnerWidget(model, widthSpec)
+                else
+                    SpinnerWidget(Double::class.javaObjectType, model, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> when {
                 toggleButtonGroupWidgetSpec != null -> makeToggleButtonGroupWidget(
@@ -372,9 +412,9 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setChoices(setting: StyleSetting<S, *>, choices: List<Any>, unique: Boolean = false) {
+    fun setChoices(setting: StyleSetting<*, *>, choices: List<Any>, unique: Boolean = false) {
         val remaining = if (unique) choices.toMutableList() else choices
-        valueWidgets.getValue(setting).applyConfigurator { widget ->
+        valueWidgets[setting]!!.applyConfigurator { widget ->
             if (widget is Choice<*>) {
                 @Suppress("UNCHECKED_CAST")
                 (widget as Choice<Any>).items = remaining
@@ -389,6 +429,13 @@ class StyleForm<S : Style>(
             if (widget is ToggleButtonGroupWidget)
                 @Suppress("UNCHECKED_CAST")
                 (widget as ToggleButtonGroupWidget<Nothing>).toIcon = toIcon
+        }
+    }
+
+    fun setMultiplier(setting: StyleSetting<S, *>, multiplier: Double) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
+            if (widget is MultipliedSpinnerWidget)
+                widget.multiplier = multiplier
         }
     }
 

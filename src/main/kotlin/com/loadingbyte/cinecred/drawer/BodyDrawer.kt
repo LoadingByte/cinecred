@@ -592,8 +592,8 @@ private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
 }
 
 private fun BodyElement.getHeight(): Double = when (this) {
-    is BodyElement.Nil -> sty.heightPx.toDouble()
-    is BodyElement.Str -> str.height.toDouble()
+    is BodyElement.Nil -> sty.heightPx
+    is BodyElement.Str -> str.height
     is BodyElement.Pic -> pic.height
 }
 

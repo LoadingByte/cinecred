@@ -183,7 +183,7 @@ private fun drawVerticalBlock(
     if (block.head != null) {
         blockImage.drawJustifiedString(block.head.formatted(textCtx), block.style.headHJustify, 0.0, y, blockImageWidth)
         // Draw guides that show the edges of the head space.
-        val headHeight = block.head.height.toDouble()
+        val headHeight = block.head.height
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + headHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + headHeight, layer = GUIDES)
         // Advance to the body.
@@ -197,7 +197,7 @@ private fun drawVerticalBlock(
         y += block.style.tailGapPx.toElasticY()
         blockImage.drawJustifiedString(block.tail.formatted(textCtx), block.style.tailHJustify, 0.0, y, blockImageWidth)
         // Draw guides that show the edges of the tail space.
-        val tailHeight = block.tail.height.toDouble()
+        val tailHeight = block.tail.height
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + tailHeight, layer = GUIDES)
         blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + tailHeight, layer = GUIDES)
         // Advance to below the tail.

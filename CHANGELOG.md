@@ -7,12 +7,26 @@ Cinecred Changelog
 
 ### Additions
 
+- Letter styles are now made of freely composable and customizable layers:
+    - Layers can render the text, draw a stripe like a background or underline,
+      or clone multiple other layers.
+    - Stripes can also have rounded or bevelled corners.
+    - Shapes can be dilated.
+    - The contour of a shape can be drawn instead of its fill.
+    - Shapes can be offset, scaled, or sheared.
+    - Shapes can be cleared around arbitrary other layers, not only the text.
+    - Shapes can be blurred.
+- Letter styles can inherit all layers from another style, which is useful for
+  sharing the same design across related styles (e.g., normal and superscript).
+- All letter style lengths apart from tracking are now specified in pixels and
+  still automatically scaled with the font size.
 - On macOS, all project windows now support native full-screen mode.
 
 ### Fixes
 
 - Native libraries are no longer extracted on startup, which alleviates some
   false security alarms.
+- Baseline determination when mixing letter styles is no longer jumpy.
 - Translucent pixels in raster images are no longer tinted black in PDF exports.
 
 ### UI Fixes
@@ -21,6 +35,14 @@ Cinecred Changelog
 - Styles with an empty name now have the correct height in the dropdown.
 - On macOS, the video preview controls remain responsive in full-screen mode.
 - Resolved rare crashes when closing a project while the previews are rendered.
+
+### Compatibility Notes
+
+- Stripes of adjacent letter styles in the same cell are no longer automatically
+  merged. As a replacement, layer inheritance is a more robust and explicit way
+  of sharing and merging designs.
+- Letter styles are automatically migrated to the new format. Only in very rare
+  edge cases do migrated projects differ slightly from legacy ones.
 
 
 1.3.1

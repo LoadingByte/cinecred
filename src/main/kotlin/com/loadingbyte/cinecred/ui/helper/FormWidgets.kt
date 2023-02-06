@@ -1,15 +1,18 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.FlatClientProperties.*
+import com.formdev.flatlaf.ui.FlatBorder
+import com.formdev.flatlaf.ui.FlatButtonUI
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import net.miginfocom.swing.MigLayout
 import java.awt.*
-import java.awt.event.FocusAdapter
-import java.awt.event.FocusEvent
-import java.awt.event.ItemEvent
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.dnd.*
+import java.awt.event.*
 import java.io.File
 import java.nio.file.Path
 import java.text.NumberFormat
@@ -17,14 +20,13 @@ import java.text.ParseException
 import java.util.*
 import javax.swing.*
 import javax.swing.JScrollPane.*
+import javax.swing.Timer
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.plaf.basic.BasicComboBoxEditor
-import javax.swing.text.DefaultFormatter
-import javax.swing.text.DefaultFormatterFactory
-import javax.swing.text.JTextComponent
-import javax.swing.text.PlainDocument
+import javax.swing.text.*
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
+import kotlin.math.abs
 import kotlin.math.max
 
 
@@ -226,6 +228,54 @@ open class SpinnerWidget<V : Number>(
         set(value) {
             spinner.value = value
         }
+
+}
+
+
+class MultipliedSpinnerWidget(
+    model: SpinnerNumberModel,
+    widthSpec: WidthSpec? = null
+) : SpinnerWidget<Double>(Double::class.javaObjectType, model, widthSpec) {
+
+    private val step = model.stepSize as Double
+
+    var multiplier: Double = 1.0
+        set(multiplier) {
+            if (field == multiplier)
+                return
+            field = multiplier
+            // Note: We have verified that changing the formatter only causes valueToString(), but not stringToValue()
+            // calls. Hence, the value in the spinner model remains unmodified each time the multiplier is changed.
+            // As such, no floating point drift occurs.
+            (spinner.editor as JSpinner.DefaultEditor).textField.formatterFactory =
+                DefaultFormatterFactory(MultipliedFormatter(spinner.model as SpinnerNumberModel, multiplier))
+            // Also adapt the step size to the multiplier. Notice that this triggers ChangeEvents, which we discard.
+            withoutChangeListeners { (spinner.model as SpinnerNumberModel).stepSize = step / multiplier }
+        }
+
+
+    private class MultipliedFormatter(
+        private val model: SpinnerNumberModel,
+        private val multiplier: Double
+    ) : NumberFormatter() {
+        init {
+            valueClass = model.value.javaClass
+            makeSafe()
+        }
+
+        // Necessary to have limits on the text input. If the multiplier is negative, the bounds need to be flipped.
+        // Otherwise, the user would only be allowed to input out-of-bounds numbers.
+        override fun getMinimum(): Comparable<*>? = if (multiplier < 0) model.maximum else model.minimum
+        override fun getMaximum(): Comparable<*>? = if (multiplier < 0) model.minimum else model.maximum
+        override fun setMinimum(minimum: Comparable<*>?) = throw UnsupportedOperationException()
+        override fun setMaximum(maximum: Comparable<*>?) = throw UnsupportedOperationException()
+
+        override fun valueToString(value: Any?): String =
+            super.valueToString(value as Double * multiplier)
+
+        override fun stringToValue(string: String?): Double =
+            (super.stringToValue(string) as Number).toDouble() / multiplier
+    }
 
 }
 
@@ -1194,15 +1244,159 @@ class OptWidget<E : Any>(
 }
 
 
-class ListWidget<E : Any>(
-    private val newElemWidget: () -> Form.Widget<E>,
-    private val newElem: E? = null,
-    private val newElemIsLastElem: Boolean = false,
-    private val elemsPerRow: Int = 1,
-    private val rowSeparators: Boolean = false,
-    private val movButtons: Boolean = false,
-    private val minSize: Int = 0
+abstract class AbstractListWidget<E : Any>(
+    private val makeElementWidget: () -> Form.Widget<E>,
+    private val newElement: E?,
+    private val newElementIsLastElement: Boolean
 ) : Form.AbstractWidget<List<E>>() {
+
+    private val partWidgets = mutableListOf<Form.Widget<E>>()
+
+    var elementCount = 0
+        private set
+
+    val elementWidgets: List<Form.Widget<E>>
+        get() = partWidgets.subList(0, elementCount)
+
+    override var value: List<E>
+        get() = elementWidgets.map { it.value }
+        set(value) {
+            elementCount = value.size
+            while (partWidgets.size < value.size)
+                appendNewPart()
+            for ((idx, widget) in partWidgets.withIndex()) {
+                val vis = idx < value.size
+                setPartVisible(idx, widget, vis)
+                if (vis)
+                    withoutChangeListeners { widget.value = value[idx] }
+            }
+            notifyChangeListeners()
+        }
+
+    /** Already prepares some parts so that user interaction will appear quicker later on. */
+    protected fun addInitialParts() {
+        repeat(4) { idx ->
+            appendNewPart()
+            setPartVisible(idx, partWidgets[idx], false)
+        }
+    }
+
+    protected fun userAdd(idx: Int, element: E? = null) {
+        require(idx in 0..elementCount)
+        // If there is still an unused part at the back of the list, just reactivate it. Otherwise, create a new one.
+        if (elementCount + 1 <= partWidgets.size)
+            setPartVisible(elementCount, partWidgets[elementCount], true)
+        else
+            appendNewPart()
+        // This reorder mapping shifts list elements to the right to make room for the added one.
+        val mapping = IntArray(elementCount + 1) { it }
+        mapping[elementCount /* exceeds current list size, hence filled with fillElement */] = idx
+        for (i in idx until elementCount)
+            mapping[i] = i + 1
+        // The new widget should start out with the requested value.
+        val fillElement = when {
+            element != null -> element
+            newElementIsLastElement && elementCount >= 2 -> partWidgets[elementCount - 2].value
+            newElement != null -> newElement
+            else -> throw IllegalStateException("No way to choose value of new ListWidget element.")
+        }
+        withoutChangeListeners { reorder(mapping, fillElement) }
+        elementCount++
+        notifyChangeListeners()
+    }
+
+    protected fun userDel(idx: Int) {
+        require(idx in 0 until elementCount)
+        // This reorder mapping shifts list elements to the left to overwrite the removed one.
+        val mapping = IntArray(elementCount) { it }
+        mapping[idx] = -1
+        for (i in idx + 1 until elementCount)
+            mapping[i] = i - 1
+        withoutChangeListeners { reorder(mapping) }
+        elementCount--
+        setPartVisible(elementCount, partWidgets[elementCount], false)
+        notifyChangeListeners()
+    }
+
+    /**
+     * Removes the element at fromIdx, shifts all elements until toIdx into the now empty space,
+     * and then reinserts the removed element at toIdx.
+     */
+    protected fun userMov(fromIdx: Int, toIdx: Int) {
+        require(fromIdx in 0 until elementCount)
+        require(toIdx in 0 until elementCount)
+        if (fromIdx == toIdx)
+            return
+        // This reorder mapping applies the rotation described in the function comment.
+        val mapping = IntArray(elementCount) { it }
+        mapping[fromIdx] = toIdx
+        if (fromIdx < toIdx)
+            for (i in fromIdx + 1..toIdx)
+                mapping[i] = i - 1
+        else
+            for (i in toIdx until fromIdx)
+                mapping[i] = i + 1
+        withoutChangeListeners { reorder(mapping) }
+        notifyChangeListeners()
+    }
+
+    /**
+     * Reorders the list based on the given mapping. Querying the mapping array at `fromIdx` yields `toIdx`. Values of
+     * `fromIdx` exceeding the current list size are assumed to refer to the given [fillElement]. Values of `toIdx` that
+     * are -1 prevent the element from being copied anywhere.
+     */
+    private fun reorder(mapping: IntArray, fillElement: E? = null) {
+        val oldList = value
+        for ((fromIdx, toIdx) in mapping.withIndex())
+            if (toIdx != -1) {
+                val element = if (fromIdx >= oldList.size) fillElement!! else
+                    adjustElementOnReorder(oldList[fromIdx], mapping)
+                if (toIdx >= oldList.size || oldList[toIdx] != element)
+                    partWidgets[toIdx].value = element
+            }
+    }
+
+
+    private fun appendNewPart() {
+        val widget = makeElementWidget()
+        // When the new widget changes, notify this widget's change listeners that that widget has changed.
+        widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+        partWidgets.add(widget)
+        addPart(partWidgets.size - 1, widget)
+    }
+
+    protected abstract fun addPart(idx: Int, widget: Form.Widget<E>)
+    protected abstract fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean)
+    protected open fun adjustElementOnReorder(element: E, mapping: IntArray): E = element
+
+    override fun getSeverity(index: Int): Severity? =
+        if (index == -1) super.getSeverity(-1) else partWidgets[index].getSeverity(-1)
+
+    override fun setSeverity(index: Int, severity: Severity?) {
+        if (index == -1) {
+            super.setSeverity(-1, severity)
+            for (widget in partWidgets)
+                widget.setSeverity(-1, severity)
+        } else if (index in 0 until elementCount)
+            partWidgets[index].setSeverity(-1, severity)
+    }
+
+    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
+        configurator(this)
+        for (idx in 0 until elementCount)
+            partWidgets[idx].applyConfigurator(configurator)
+    }
+
+}
+
+
+class SimpleListWidget<E : Any>(
+    makeElementWidget: () -> Form.Widget<E>,
+    newElement: E? = null,
+    newElementIsLastElement: Boolean = false,
+    private val elementsPerRow: Int = 1,
+    private val minSize: Int = 0
+) : AbstractListWidget<E>(makeElementWidget, newElement, newElementIsLastElement) {
 
     private val addBtn = JButton(ADD_ICON)
 
@@ -1210,8 +1404,8 @@ class ListWidget<E : Any>(
         override fun getBaseline(width: Int, height: Int): Int {
             // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component
             // in the first row. We choose the first one which has a valid baseline.
-            for (idx in 0 until elemsPerRow.coerceAtMost(listSize))
-                for (comp in allElemWidgets[idx].components) {
+            for (idx in 0 until elementsPerRow.coerceAtMost(elementCount))
+                for (comp in elementWidgets[idx].components) {
                     // If the component layout hasn't been done yet, approximate the component's height using its
                     // preferred height (bounded by STD_HEIGHT from below). This alleviates "jumping" when adding
                     // certain components like JComboBoxes.
@@ -1224,176 +1418,300 @@ class ListWidget<E : Any>(
         }
     }
 
-    private var listSize = 0
-    private val allElemWidgets = mutableListOf<Form.Widget<E>>()
-    private val allElemCtlBtns = mutableListOf<ControlButtons>()
-    private val allSeparators = mutableListOf<JSeparator>()
-
-    val elementWidgets: List<Form.Widget<E>>
-        get() = allElemWidgets.subList(0, listSize)
+    private val delBtns = mutableListOf<JButton>()
 
     init {
-        // Create and add some widgets and buttons during initialization so that user interaction will appear quicker.
-        repeat(4) { addElemWidgetAndCtlBtns(isVisible = false) }
+        require(newElement != null || minSize > 0)
 
-        addBtn.addActionListener {
-            userPlus(setValue = true)
-            notifyChangeListeners()
-        }
+        addInitialParts()
+        addBtn.addActionListener { userAdd(elementCount) }
+        if (minSize > 0)
+            changeListeners.add { for (delBtn in delBtns) delBtn.isEnabled = elementCount > minSize }
     }
 
     override val components = listOf<JComponent>(addBtn, panel)
-    override val constraints = listOf(
-        "aligny top, gapy 1 1",
-        if (allElemWidgets[0].constraints.any { WidthSpec.FILL.mig in it }) WidthSpec.FILL.mig else ""
-    )
+    override val constraints = listOf("aligny top, gapy 1 1", "")
 
-    override var value: List<E>
-        get() = elementWidgets.map { it.value }
-        set(value) {
-            while (listSize < value.size)
-                userPlus()
-            while (listSize > value.size)
-                userMinus(listSize - 1)
-            for ((widget, item) in elementWidgets.zip(value))
-                widget.value = item
-            notifyChangeListeners()
-        }
-
-    private fun userPlus(setValue: Boolean = false) {
-        listSize++
-        if (listSize <= allElemWidgets.size) {
-            // If there are still unused components at the back of the list, just reactivate them.
-            allElemWidgets[listSize - 1].isVisible = true
-            allElemCtlBtns[listSize - 1].setVisible(true)
-            if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
-                allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = true
-        } else {
-            // Otherwise, really create and add totally new components.
-            addElemWidgetAndCtlBtns(isVisible = true)
-        }
-        // If requested, the new widget should start out with a reasonable value.
-        if (setValue)
-            withoutChangeListeners {
-                if (newElemIsLastElem && listSize > 1)
-                    allElemWidgets[listSize - 1].value = allElemWidgets[listSize - 2].value
-                else if (newElem != null)
-                    allElemWidgets[listSize - 1].value = newElem
-                else
-                    throw IllegalStateException("No way to choose value of new ListWidget element.")
-            }
-        enableOrDisableCtlBtns()
-    }
-
-    private fun userMinus(idx: Int) {
-        withoutChangeListeners {
-            for (i in idx + 1 until listSize)
-                allElemWidgets[i - 1].value = allElemWidgets[i].value
-        }
-        allElemWidgets[listSize - 1].isVisible = false
-        allElemCtlBtns[listSize - 1].setVisible(false)
-        if (rowSeparators && listSize != 1 && (listSize - 1) % elemsPerRow == 0)
-            allSeparators[(listSize - 1) / elemsPerRow - 1].isVisible = false
-        listSize--
-        enableOrDisableCtlBtns()
-    }
-
-    private fun userSwap(idx1: Int, idx2: Int) {
-        withoutChangeListeners {
-            val value1 = allElemWidgets[idx1].value
-            allElemWidgets[idx1].value = allElemWidgets[idx2].value
-            allElemWidgets[idx2].value = value1
-        }
-        enableOrDisableCtlBtns()
-    }
-
-    private fun addElemWidgetAndCtlBtns(isVisible: Boolean) {
-        val newline = allElemWidgets.size != 0 && allElemWidgets.size % elemsPerRow == 0
-
-        if (rowSeparators && newline) {
-            val sep = JSeparator()
-            sep.isVisible = isVisible
-            allSeparators.add(sep)
-            panel.add(sep, "newline, span, growx")
-        }
-
+    override fun addPart(idx: Int, widget: Form.Widget<E>) {
         val delBtn = JButton(REMOVE_ICON)
-        delBtn.isVisible = isVisible
-        delBtn.addActionListener {
-            userMinus(allElemCtlBtns.indexOfFirst { it.delBtn == delBtn })
-            notifyChangeListeners()
-        }
+        delBtn.addActionListener { userDel(delBtns.indexOfFirst { it === delBtn }) }
         var delBtnConstraint = "aligny top, gapleft 6, gaptop 1"
-        if (movButtons) delBtnConstraint += ", split 3, flowy"
-        if (newline) delBtnConstraint += ", newline"
+        if (idx != 0 && idx % elementsPerRow == 0)
+            delBtnConstraint += ", newline"
         panel.add(delBtn, delBtnConstraint)
+        delBtns.add(delBtn)
 
-        var uppBtn: JButton? = null
-        var dwnBtn: JButton? = null
-        if (movButtons) {
-            uppBtn = JButton(ARROW_UP_ICON)
-            dwnBtn = JButton(ARROW_DOWN_ICON)
-            uppBtn.isVisible = isVisible
-            dwnBtn.isVisible = isVisible
-            uppBtn.addActionListener {
-                val idx = allElemCtlBtns.indexOfFirst { it.uppBtn == uppBtn }
-                userSwap(idx, idx - 1)
-                notifyChangeListeners()
-            }
-            dwnBtn.addActionListener {
-                val idx = allElemCtlBtns.indexOfFirst { it.dwnBtn == dwnBtn }
-                userSwap(idx, idx + 1)
-                notifyChangeListeners()
-            }
-            panel.add(uppBtn, "gapleft 6")
-            panel.add(dwnBtn, "gapleft 6")
-        }
-
-        allElemCtlBtns.add(ControlButtons(delBtn, uppBtn, dwnBtn))
-
-        val widget = newElemWidget()
-        widget.isVisible = isVisible
-        // When the new widget changes, notify this widget's change listeners that that widget has changed.
-        widget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
-        allElemWidgets.add(widget)
         for ((comp, constr) in widget.components.zip(widget.constraints))
             panel.add(comp, constr)
     }
 
-    private fun enableOrDisableCtlBtns() {
-        val delEnabled = listSize > minSize
-        for (idx in 0 until listSize) {
-            val ctlBtns = allElemCtlBtns[idx]
-            ctlBtns.delBtn.isEnabled = delEnabled
-            ctlBtns.uppBtn?.isEnabled = idx != 0
-            ctlBtns.dwnBtn?.isEnabled = idx != listSize - 1
+    override fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean) {
+        delBtns[idx].isVisible = isVisible
+        widget.isVisible = isVisible
+    }
+
+}
+
+
+class LayerListWidget<E : Any>(
+    makeElementWidget: () -> Form.Widget<E>,
+    newElement: E,
+    private val mapOrdinalsInElement: ((E, mapping: (Int) -> Int?) -> E)? = null
+) : AbstractListWidget<E>(makeElementWidget, newElement, newElementIsLastElement = false) {
+
+    private val panel = object : JPanel(MigLayout("hidemode 3, insets 0, fillx, wrap", "[fill]")) {
+        override fun getBaseline(width: Int, height: Int): Int {
+            // Manually compute where the topmost baseline would be, to ensure that the row label stays up top.
+            val fm = getFontMetrics(font)
+            return ceilDiv(STD_HEIGHT + fm.ascent - fm.descent, 2)
         }
     }
 
-    override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
-        configurator(this)
-        for (idx in 0 until listSize)
-            allElemWidgets[idx].applyConfigurator(configurator)
+    private val parts = mutableListOf<Pair<LayerPanel, AddButton>>()
+
+    init {
+        panel.add(AddButton(addAtIdx = 0))
+        addInitialParts()
     }
 
-    override fun getSeverity(index: Int): Severity? =
-        if (index == -1) super.getSeverity(-1) else allElemWidgets[index].getSeverity(-1)
+    override val components = listOf<JComponent>(panel)
+    override val constraints = listOf("growx, pushx")
 
-    override fun setSeverity(index: Int, severity: Severity?) {
-        if (index == -1) {
-            super.setSeverity(-1, severity)
-            for (widget in allElemWidgets)
-                widget.setSeverity(-1, severity)
-        } else if (index in 0 until listSize)
-            allElemWidgets[index].setSeverity(-1, severity)
+    override fun addPart(idx: Int, widget: Form.Widget<E>) {
+        val layerPanel = LayerPanel(idx, widget)
+        panel.add(layerPanel, 0)
+        val addBtn = AddButton(addAtIdx = idx + 1)
+        panel.add(addBtn, 0)
+        parts.add(Pair(layerPanel, addBtn))
+    }
+
+    override fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean) {
+        val part = parts[idx]
+        part.first.isVisible = isVisible
+        part.second.isVisible = isVisible
+    }
+
+    override fun adjustElementOnReorder(element: E, mapping: IntArray): E =
+        mapOrdinalsInElement?.invoke(element) { ordinal ->
+            val fromIdx = ordinal - 1
+            val toIdx = mapping[fromIdx]
+            if (toIdx == -1) null else toIdx + 1
+        } ?: element
+
+
+    private inner class LayerPanel(idx: Int, widget: Form.Widget<*>) : JPanel(MigLayout()) {
+
+        init {
+            putClientProperty(STYLE, "background: @componentBackground")
+            border = FlatBorder()
+
+            val delBtn = JButton(REMOVE_ICON)
+            delBtn.addActionListener { userDel(idx) }
+
+            val widgetPanel = JPanel(MigLayout()).apply { border = FlatBorder() }
+            for ((comp, constr) in widget.components.zip(widget.constraints))
+                widgetPanel.add(comp, constr)
+
+            add(Grip(), "split 4, flowy, center, gapbottom 20")
+            add(JLabel((idx + 1).toString()).apply { putClientProperty(STYLE, "font: bold") }, "center")
+            add(delBtn, "center, gaptop 8")
+            add(Grip(), "center, gaptop 24")
+            add(widgetPanel, "growx, pushx")
+
+            // Add a transfer handler for dragging.
+            transferHandler = LayerPanelTransferHandler(idx)
+            // Add a mouse listener that notifies the transfer handler when dragging should start.
+            val mouseListener = object : MouseAdapter() {
+                private val thresh = DragSource.getDragThreshold()
+                private var startPoint: Point? = null
+
+                override fun mousePressed(e: MouseEvent) {
+                    if (e.button == MouseEvent.BUTTON1)
+                        startPoint = e.point
+                }
+
+                override fun mouseReleased(e: MouseEvent) {
+                    if (e.button == MouseEvent.BUTTON1)
+                        startPoint = null
+                }
+
+                override fun mouseDragged(e: MouseEvent) {
+                    startPoint?.let { s ->
+                        if (abs(e.x - s.x) > thresh || abs(e.y - s.y) > thresh) {
+                            startPoint = null
+                            startDrag(e)
+                        }
+                    }
+                }
+            }
+            addMouseListener(mouseListener)
+            addMouseMotionListener(mouseListener)
+            // Prevent dragging when the user clicks inside the widget panel.
+            widgetPanel.addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    e.consume()
+                }
+            })
+        }
+
+        // Note: The autoscroll functionality inside this function is adapted from TransferHandler.DropHandler.
+        private fun startDrag(e: MouseEvent) {
+            // Find the form this widget is part of. We'll use it in a moment.
+            val form = SwingUtilities.getAncestorOfClass(Form::class.java, this) as Form
+
+            // This variable will constantly be updated to represent the current mouse position on the screen.
+            var mousePos: Point? = null
+
+            // Add a timer that periodically scrolls the form when the mouse is outside its visible portion.
+            val toolkit = Toolkit.getDefaultToolkit()
+            val interval = toolkit.getDesktopProperty("DnD.Autoscroll.interval") as Int? ?: 100
+            val initialDelay = toolkit.getDesktopProperty("DnD.Autoscroll.initialDelay") as Int? ?: 100
+            val timer = Timer(interval) {
+                mousePos?.let { mousePos ->
+                    val formOnScreen = form.locationOnScreen
+                    val formVis = form.visibleRect
+                    if (mousePos.y < formOnScreen.y + formVis.y) {
+                        val dy = form.getScrollableUnitIncrement(formVis, SwingConstants.VERTICAL, -1)
+                        form.scrollRectToVisible(Rectangle(formVis.x, formVis.y - dy, 0, 0))
+                    } else if (mousePos.y > formOnScreen.y + formVis.y + formVis.height) {
+                        val dy = form.getScrollableUnitIncrement(formVis, SwingConstants.VERTICAL, 1)
+                        form.scrollRectToVisible(Rectangle(formVis.x, formVis.y + formVis.height + dy, 0, 0))
+                    }
+                }
+            }
+            timer.initialDelay = initialDelay
+            timer.start()
+
+            // Update the mousePos variable whenever the mouse moves. Also stop the timer and remove the listener when
+            // the drag stops.
+            val dragSource = DragSource.getDefaultDragSource()
+            val dragListener = object : DragSourceAdapter() {
+                override fun dragMouseMoved(dsde: DragSourceDragEvent) {
+                    mousePos = dsde.location
+                }
+
+                override fun dragDropEnd(dsde: DragSourceDropEvent) {
+                    dragSource.removeDragSourceListener(this)
+                    dragSource.removeDragSourceMotionListener(this)
+                    timer.stop()
+                }
+            }
+            dragSource.addDragSourceListener(dragListener)
+            dragSource.addDragSourceMotionListener(dragListener)
+
+            // Actually start dragging.
+            transferHandler.exportAsDrag(this, e, TransferHandler.MOVE)
+        }
+
     }
 
 
-    private class ControlButtons(val delBtn: JButton, val uppBtn: JButton?, val dwnBtn: JButton?) {
-        fun setVisible(isVisible: Boolean) {
-            delBtn.isVisible = isVisible
-            uppBtn?.isVisible = isVisible
-            dwnBtn?.isVisible = isVisible
+    private class Grip : JComponent() {
+
+        private val gripColor = UIManager.getColor("ToolBar.gripColor")
+
+        init {
+            preferredSize = Dimension(12 + 1, 48 + 1)
+        }
+
+        override fun paintComponent(g: Graphics) {
+            g.color = gripColor
+            var y = 0
+            while (y < height) {
+                var x = 0
+                while (x < width) {
+                    g.fillRect(x, y, 1, 1)
+                    x += 3
+                }
+                y += 3
+            }
+        }
+
+    }
+
+
+    private inner class AddButton(addAtIdx: Int) : JButton(ADD_ICON) {
+
+        private val background = UIManager.getColor("Button.background")
+        private val disabledBackground = UIManager.getColor("Button.disabledBackground")
+        private val focusedBackground = UIManager.getColor("Button.focusedBackground")
+        private val hoverBackground = UIManager.getColor("Button.hoverBackground")
+        private val pressedBackground = UIManager.getColor("Button.pressedBackground")
+        private val focusedBorderColor = UIManager.getColor("Button.focusedBorderColor")
+
+        private var dndHover = false
+
+        init {
+            border = null
+            addActionListener { userAdd(addAtIdx) }
+
+            // Add a transfer handler for dropping.
+            transferHandler = AddButtonTransferHandler(addAtIdx)
+            // Highlight this button when the user hovers over it during drag-and-drop.
+            dropTarget.addDropTargetListener(object : DropTargetAdapter() {
+                override fun dragEnter(dtde: DropTargetDragEvent) = run { dndHover = true; repaint() }
+                override fun dragExit(dte: DropTargetEvent) = run { dndHover = false; repaint() }
+                override fun drop(dtde: DropTargetDropEvent) = run { dndHover = false; repaint() }
+            })
+        }
+
+        override fun paintComponent(g: Graphics) {
+            icon.paintIcon(this, g, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
+
+            val w = (width - icon.iconWidth) / 2 - 8
+            val h = 2
+            val x1 = 0
+            val x2 = width - w
+            val y = (height - h) / 2
+            g.color = when {
+                dndHover -> pressedBackground
+                FlatUIUtils.isPermanentFocusOwner(this) -> focusedBorderColor
+                else -> FlatButtonUI.buttonStateColor(
+                    this, background, disabledBackground, focusedBackground, hoverBackground, pressedBackground
+                )
+            }
+            g.fillRect(x1, y, w, h)
+            g.fillRect(x2, y, w, h)
+        }
+
+    }
+
+
+    private inner class LayerPanelTransferHandler(private val idx: Int) : TransferHandler() {
+        override fun getSourceActions(c: JComponent) = COPY_OR_MOVE
+        override fun createTransferable(c: JComponent) = object : Transferable {
+            override fun getTransferDataFlavors() = arrayOf(LayerTransferData.FLAVOR)
+            override fun isDataFlavorSupported(flavor: DataFlavor) = flavor == LayerTransferData.FLAVOR
+            override fun getTransferData(flavor: DataFlavor) = LayerTransferData(this@LayerListWidget, idx)
+        }
+    }
+
+
+    private inner class AddButtonTransferHandler(private val addAtIdx: Int) : TransferHandler() {
+        override fun canImport(support: TransferSupport) = support.isDataFlavorSupported(LayerTransferData.FLAVOR)
+        override fun importData(support: TransferSupport): Boolean {
+            if (!canImport(support))
+                return false
+            val transferData = support.transferable.getTransferData(LayerTransferData.FLAVOR) as LayerTransferData
+            // Only permit drag-and-drop within the same widget.
+            if (transferData.widget !== this@LayerListWidget)
+                return false
+            val fromIdx = transferData.idx
+            when (support.dropAction) {
+                COPY -> userAdd(addAtIdx, value[fromIdx])
+                MOVE -> userMov(fromIdx, if (addAtIdx <= fromIdx) addAtIdx else addAtIdx - 1)
+                else -> return false
+            }
+            return true
+        }
+    }
+
+
+    private class LayerTransferData(val widget: LayerListWidget<*>, val idx: Int) {
+        companion object {
+            val FLAVOR = DataFlavor(
+                DataFlavor.javaJVMLocalObjectMimeType + ";class=${LayerTransferData::class.java.name}"
+            )
         }
     }
 

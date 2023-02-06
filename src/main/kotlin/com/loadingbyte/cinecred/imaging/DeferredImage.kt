@@ -22,13 +22,13 @@ import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.util.Matrix
 import java.awt.*
-import java.awt.geom.AffineTransform
-import java.awt.geom.Line2D
-import java.awt.geom.PathIterator
-import java.awt.geom.Rectangle2D
+import java.awt.geom.*
 import java.awt.image.BufferedImage
+import java.awt.image.ConvolveOp
+import java.awt.image.Kernel
 import java.io.DataInputStream
 import java.util.*
+import kotlin.math.*
 
 
 class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
@@ -59,9 +59,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun drawShape(
-        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
     ) {
-        addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill))
+        addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill, blurRadius))
     }
 
     fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, layer: Layer = FOREGROUND) {
@@ -134,18 +134,18 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             )
             is Instruction.DrawShape -> materializeShape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.shape, insn.color, insn.fill
+                universeScaling, culling, insn.shape, insn.color, insn.fill, universeScaling * insn.blurRadius
             )
             is Instruction.DrawLine -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
-                insn.color, fill = false
+                insn.color, fill = false, blurRadius = 0.0
             )
             is Instruction.DrawRect -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Rectangle2D.Double(
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
-                ), insn.color, insn.fill
+                ), insn.color, insn.fill, blurRadius = 0.0
             )
             is Instruction.DrawStringForeground -> materializeStringForeground(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.baselineY.resolve(elasticScaling),
@@ -161,17 +161,78 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeShape(
         backend: MaterializationBackend,
         x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        shape: Shape, color: Color, fill: Boolean
+        shape: Shape, color: Color, fill: Boolean, blurRadius: Double
     ) {
+        // It would be a bit complicated to exactly determine which pixels are affected after the blur, so instead, we
+        // just add a safeguard buffer to better be sure that not a single blurred pixel is accidentally culled.
+        val safeBlurRadius = if (blurRadius == 0.0) 0.0 else blurRadius + 4.0
         if (culling != null &&
             !shape.intersects(
-                (culling.x - x) / scaling, (culling.y - y) / scaling, culling.width / scaling, culling.height / scaling
+                (culling.x - x - safeBlurRadius) / scaling,
+                (culling.y - y - safeBlurRadius) / scaling,
+                (culling.width + 2 * safeBlurRadius) / scaling,
+                (culling.height + 2 * safeBlurRadius) / scaling
             )
         ) return
         // We first transform the shape and then draw it without scaling the canvas.
         // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
-        backend.materializeShape(tx.createTransformedShape(shape), color, fill)
+        val transformedShape = if (shape is Path2D.Float) Path2D.Float(shape, tx) else Path2D.Double(shape, tx)
+        if (blurRadius <= 0.0)
+            backend.materializeShape(transformedShape, color, fill)
+        else {
+            // For both backends, the only conceivable way to implement blurring appears to be to first draw the shape
+            // to an image, blur that, and then to send it to the backend.
+            check(fill) { "Blurring is only supported for filled shapes." }
+            // Build the horizontal and vertical Gaussian kernels and determine the necessary image padding.
+            val kernelVec = gaussianKernelVector(blurRadius)
+            val hKernel = Kernel(kernelVec.size, 1, kernelVec)
+            val vKernel = Kernel(1, kernelVec.size, kernelVec)
+            val halfPad = (kernelVec.size - 1) / 2
+            val fullPad = 2 * halfPad
+            // Determine the bounds of the shape, and the whole and fractional parts of the shape's coordinates.
+            val bounds = transformedShape.bounds2D
+            val xWhole = floor(bounds.x)
+            val yWhole = floor(bounds.y)
+            val xFrac = bounds.x - xWhole
+            val yFrac = bounds.y - yWhole
+            // Paint the shape to an intermediate image with sufficient padding.
+            var img = BufferedImage(
+                ceil(xFrac + bounds.width).toInt() + 2 * fullPad,
+                ceil(yFrac + bounds.height).toInt() + 2 * fullPad,
+                // If the image did not have premultiplied alpha, transparent pixels would have black color channels
+                // and would hence spill blackness when blurred into other pixels.
+                BufferedImage.TYPE_INT_ARGB_PRE
+            ).withG2 { g2 ->
+                g2.setHighQuality()
+                g2.color = color
+                g2.translate(fullPad - xWhole, fullPad - yWhole)
+                g2.fill(transformedShape)
+            }
+            // Apply the convolution kernels.
+            val tmp = ConvolveOp(hKernel).filter(img, null)
+            img = ConvolveOp(vKernel).filter(tmp, img)
+            // Cut off the padding that is guaranteed to be empty due to the convolutions' EDGE_ZERO_FILL behavior.
+            img = img.getSubimage(halfPad, halfPad, img.width - fullPad, img.height - fullPad)
+            // Send the resulting image to the backend.
+            backend.materializePicture(xWhole - halfPad, yWhole - halfPad, Picture.Raster(img))
+        }
+    }
+
+    private fun gaussianKernelVector(radius: Double): FloatArray {
+        val sigma = radius / 2.0
+        val twoSigmaSq = 2.0 * sigma * sigma
+        val sqrtOfTwoPiSigma = sqrt(2.0 * PI * sigma)
+        // Compute the Gaussian curve.
+        val intRadius = floor(radius).toInt()
+        val vecSize = intRadius * 2 + 1
+        val vec = FloatArray(vecSize) { idx ->
+            val distToCenter = idx - intRadius
+            (exp(-distToCenter * distToCenter / twoSigmaSq) / sqrtOfTwoPiSigma).toFloat()
+        }
+        // Normalize the curve to fix numerical inaccuracies.
+        val sum = vec.sum()
+        return FloatArray(vecSize) { idx -> vec[idx] / sum }
     }
 
     private fun materializeStringForeground(
@@ -224,7 +285,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawShape(
-            val x: Double, val y: Y, val shape: Shape, val color: Color, val fill: Boolean
+            val x: Double, val y: Y, val shape: Shape, val color: Color, val fill: Boolean, val blurRadius: Double
         ) : Instruction
 
         class DrawLine(

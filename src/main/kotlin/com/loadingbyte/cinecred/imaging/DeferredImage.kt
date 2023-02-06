@@ -8,6 +8,7 @@ import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
 import org.apache.fontbox.ttf.TTFParser
 import org.apache.fontbox.ttf.TrueTypeCollection
+import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPageContentStream
@@ -20,14 +21,12 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.util.Matrix
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
-import java.awt.Shape
+import java.awt.*
 import java.awt.geom.AffineTransform
 import java.awt.geom.Line2D
 import java.awt.geom.PathIterator
 import java.awt.geom.Rectangle2D
+import java.awt.image.BufferedImage
 import java.io.DataInputStream
 import java.util.*
 
@@ -432,7 +431,30 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     mat.scale(pic.width, pic.height)
                     // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
                     // images to produce smaller files.
-                    val pdImg = docRes.pdImages.computeIfAbsent(pic) { JPEGFactory.createFromImage(doc, pic.img) }
+                    val pdImg = docRes.pdImages.computeIfAbsent(pic) {
+                        val img = pic.img
+                        // Adapted from JPEGFactory, but uses AlphaComposite to discard the alpha channel instead of
+                        // ColorConvertOp, because the latter just draws the image onto a black background, thereby
+                        // tinting all non-opaque pixels black depending on their transparency. Notice that even though
+                        // JPEGFactory.getColorImage() warns about using AlphaComposite, we cannot reproduce the
+                        // problems that they describe.
+                        if (img.colorModel.hasAlpha()) {
+                            val alphaRaster = img.alphaRaster
+                            if (alphaRaster != null) {
+                                val alphaImg = BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_GRAY)
+                                    .apply { data = alphaRaster }
+                                val colorImg = BufferedImage(img.width, img.height, BufferedImage.TYPE_3BYTE_BGR)
+                                    .withG2 { g2 ->
+                                        g2.composite = AlphaComposite.Src
+                                        g2.drawImage(img, 0, 0, null)
+                                    }
+                                return@computeIfAbsent JPEGFactory.createFromImage(doc, colorImg).apply {
+                                    cosObject.setItem(COSName.SMASK, JPEGFactory.createFromImage(doc, alphaImg))
+                                }
+                            }
+                        }
+                        JPEGFactory.createFromImage(doc, img)
+                    }
                     cs.drawImage(pdImg, mat)
                 }
                 is Picture.SVG -> {

@@ -13,6 +13,7 @@ Cinecred Changelog
 
 - Native libraries are no longer extracted on startup, which alleviates some
   false security alarms.
+- Translucent pixels in raster images are no longer tinted black in PDF exports.
 
 ### UI Fixes
 

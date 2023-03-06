@@ -62,16 +62,20 @@ abstract class AbstractTextComponentWidget<V : Any>(
                 return
             // Do not change tc.text but instead replace the whole document to prevent document events from being
             // triggered, which would scroll the wrapping scroll pane's viewport.
-            tc.document = PlainDocument().apply {
-                insertString(0, text, null)
-                addDocumentListener { notifyChangeListeners() }
-            }
+            installDocument(text)
             notifyChangeListeners()
         }
 
+    private fun installDocument(string: String) {
+        tc.document = PlainDocument().apply {
+            insertString(0, string, null)
+            addDocumentListener { notifyChangeListeners() }
+        }
+    }
+
     init {
         // Make sure that the document listener is installed.
-        text = ""
+        installDocument("")
     }
 
 }

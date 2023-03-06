@@ -18,7 +18,7 @@ import javax.swing.event.PopupMenuListener
 
 
 class MultiComboBox<E : Any>(
-    private val toString: (E) -> String = { it.toString() },
+    toString: (E) -> String = { it.toString() },
     private val inconsistent: Boolean = false,
     private val noItemsMessage: String? = null
 ) : JComponent(), ItemSelectable, FocusListener, MouseListener, KeyListener {
@@ -96,6 +96,18 @@ class MultiComboBox<E : Any>(
             // @formatter:on
         })
     }
+
+    var toString: (E) -> String = toString
+        set(toString) {
+            field = toString
+            updateSelectionLabel()
+            for (idx in 0 until popup.componentCount) {
+                val menuItem = popup.getComponent(idx)
+                if (menuItem is MultiComboBox<*>.CustomMenuItem)
+                    @Suppress("UNCHECKED_CAST")
+                    menuItem.text = toString((menuItem as MultiComboBox<E>.CustomMenuItem).item)
+            }
+        }
 
     var items: List<E> = emptyList()
         set(items) {

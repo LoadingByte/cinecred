@@ -64,6 +64,9 @@ sealed interface ListedStyle : NamedStyle {
 sealed interface NestedStyle<P : Style> : Style
 
 
+sealed interface NamedNestedStyle<P : Style> : NamedStyle, NestedStyle<P>
+
+
 data class Global(
     val resolution: Resolution,
     val fps: FPS,
@@ -207,6 +210,7 @@ data class FontFeature(
 
 
 data class Layer(
+    override val name: String,
     val color: Color,
     val shape: LayerShape,
     val stripePreset: StripePreset,
@@ -236,7 +240,7 @@ data class Layer(
     val clearingRfh: Double,
     val clearingJoin: LineJoin,
     val blurRadiusRfh: Double
-) : NestedStyle<LetterStyle>
+) : NamedNestedStyle<LetterStyle>
 
 
 enum class LayerShape { TEXT, STRIPE, CLONE }

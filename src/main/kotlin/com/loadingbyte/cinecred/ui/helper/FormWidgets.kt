@@ -566,6 +566,12 @@ class MultiComboBoxWidget<E : Any>(
                 notifyChangeListeners()
         }
 
+    var toString: (E) -> String
+        get() = mcb.toString
+        set(toString) {
+            mcb.toString = toString
+        }
+
     override var value: List<E>
         get() = mcb.selectedItems.sortedWith(comparator)
         set(value) {
@@ -1248,22 +1254,22 @@ class OptWidget<E : Any>(
 }
 
 
-abstract class AbstractListWidget<E : Any>(
-    private val makeElementWidget: () -> Form.Widget<E>,
+abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
+    private val makeElementWidget: () -> W,
     private val newElement: E?,
     private val newElementIsLastElement: Boolean
 ) : Form.AbstractWidget<List<E>>() {
 
-    private val partWidgets = mutableListOf<Form.Widget<E>>()
+    private val partWidgets = mutableListOf<W>()
 
     var elementCount = 0
         private set
 
-    val elementWidgets: List<Form.Widget<E>>
+    val elementWidgets: List<W>
         get() = partWidgets.subList(0, elementCount)
 
     override var value: List<E>
-        get() = elementWidgets.map { it.value }
+        get() = elementWidgets.mapIndexed(::getPartElement)
         set(value) {
             elementCount = value.size
             while (partWidgets.size < value.size)
@@ -1272,7 +1278,7 @@ abstract class AbstractListWidget<E : Any>(
                 val vis = idx < value.size
                 setPartVisible(idx, widget, vis)
                 if (vis)
-                    withoutChangeListeners { widget.value = value[idx] }
+                    withoutChangeListeners { setPartElement(idx, widget, value[idx]) }
             }
             notifyChangeListeners()
         }
@@ -1300,7 +1306,8 @@ abstract class AbstractListWidget<E : Any>(
         // The new widget should start out with the requested value.
         val fillElement = when {
             element != null -> element
-            newElementIsLastElement && elementCount >= 2 -> partWidgets[elementCount - 2].value
+            newElementIsLastElement && elementCount >= 2 ->
+                getPartElement(elementCount - 2, partWidgets[elementCount - 2])
             newElement != null -> newElement
             else -> throw IllegalStateException("No way to choose value of new ListWidget element.")
         }
@@ -1356,7 +1363,7 @@ abstract class AbstractListWidget<E : Any>(
                 val element = if (fromIdx >= oldList.size) fillElement!! else
                     adjustElementOnReorder(oldList[fromIdx], mapping)
                 if (toIdx >= oldList.size || oldList[toIdx] != element)
-                    partWidgets[toIdx].value = element
+                    setPartElement(toIdx, partWidgets[toIdx], element)
             }
     }
 
@@ -1369,8 +1376,10 @@ abstract class AbstractListWidget<E : Any>(
         addPart(partWidgets.size - 1, widget)
     }
 
-    protected abstract fun addPart(idx: Int, widget: Form.Widget<E>)
-    protected abstract fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean)
+    protected abstract fun addPart(idx: Int, widget: W)
+    protected abstract fun setPartVisible(idx: Int, widget: W, isVisible: Boolean)
+    protected open fun getPartElement(idx: Int, widget: W): E = partWidgets[idx].value
+    protected open fun setPartElement(idx: Int, widget: W, element: E) = run { partWidgets[idx].value = element }
     protected open fun adjustElementOnReorder(element: E, mapping: IntArray): E = element
 
     override fun getSeverity(index: Int): Severity? =
@@ -1400,7 +1409,7 @@ class SimpleListWidget<E : Any>(
     newElementIsLastElement: Boolean = false,
     private val elementsPerRow: Int = 1,
     private val minSize: Int = 0
-) : AbstractListWidget<E>(makeElementWidget, newElement, newElementIsLastElement) {
+) : AbstractListWidget<E, Form.Widget<E>>(makeElementWidget, newElement, newElementIsLastElement) {
 
     private val addBtn = JButton(ADD_ICON)
 
@@ -1457,13 +1466,16 @@ class SimpleListWidget<E : Any>(
 }
 
 
-class LayerListWidget<E : Any>(
-    makeElementWidget: () -> Form.Widget<E>,
+class LayerListWidget<E : Any, W : Form.Widget<E>>(
+    makeElementWidget: () -> W,
     newElement: E,
-    private val mapOrdinalsInElement: ((E, mapping: (Int) -> Int?) -> E)? = null
-) : AbstractListWidget<E>(makeElementWidget, newElement, newElementIsLastElement = false) {
+    private val getElementName: (E) -> String,
+    private val setElementName: (E, String) -> E,
+    private val mapOrdinalsInElement: (E, mapping: (Int) -> Int?) -> E,
+    private val toggleAdvanced: (W, Boolean) -> Unit
+) : AbstractListWidget<E, W>(makeElementWidget, newElement, newElementIsLastElement = false) {
 
-    private val panel = object : JPanel(MigLayout("hidemode 3, insets 0, fillx, wrap", "[fill]")) {
+    private val panel = object : JPanel(MigLayout("hidemode 3, insets 0, gapy 0, fillx, wrap", "[fill]")) {
         override fun getBaseline(width: Int, height: Int): Int {
             // Manually compute where the topmost baseline would be, to ensure that the row label stays up top.
             val fm = getFontMetrics(font)
@@ -1471,6 +1483,7 @@ class LayerListWidget<E : Any>(
         }
     }
 
+    private val nameWidgets = mutableListOf<TextWidget>()
     private val parts = mutableListOf<Pair<LayerPanel, AddButton>>()
 
     init {
@@ -1481,46 +1494,67 @@ class LayerListWidget<E : Any>(
     override val components = listOf<JComponent>(panel)
     override val constraints = listOf("growx, pushx")
 
-    override fun addPart(idx: Int, widget: Form.Widget<E>) {
-        val layerPanel = LayerPanel(idx, widget)
+    override fun addPart(idx: Int, widget: W) {
+        val nameWidget = TextWidget()
+        // When the name widget changes, notify this widget's change listeners that the name widget has changed.
+        nameWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+        nameWidgets.add(nameWidget)
+        val layerPanel = LayerPanel(idx, widget, nameWidget)
         panel.add(layerPanel, 0)
         val addBtn = AddButton(addAtIdx = idx + 1)
         panel.add(addBtn, 0)
         parts.add(Pair(layerPanel, addBtn))
     }
 
-    override fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean) {
+    override fun setPartVisible(idx: Int, widget: W, isVisible: Boolean) {
         val part = parts[idx]
         part.first.isVisible = isVisible
         part.second.isVisible = isVisible
     }
 
+    override fun getPartElement(idx: Int, widget: W): E =
+        setElementName(super.getPartElement(idx, widget), nameWidgets[idx].value)
+
+    override fun setPartElement(idx: Int, widget: W, element: E) {
+        super.setPartElement(idx, widget, element)
+        withoutChangeListeners { nameWidgets[idx].value = getElementName(element) }
+    }
+
     override fun adjustElementOnReorder(element: E, mapping: IntArray): E =
-        mapOrdinalsInElement?.invoke(element) { ordinal ->
+        mapOrdinalsInElement(element) { ordinal ->
             val fromIdx = ordinal - 1
             val toIdx = mapping[fromIdx]
             if (toIdx == -1) null else toIdx + 1
-        } ?: element
+        }
 
 
-    private inner class LayerPanel(idx: Int, widget: Form.Widget<*>) : JPanel(MigLayout()) {
+    private inner class LayerPanel(idx: Int, widget: W, nameWidget: TextWidget) : JPanel(MigLayout()) {
 
         init {
             putClientProperty(STYLE, "background: @componentBackground")
             border = FlatBorder()
 
-            val delBtn = JButton(REMOVE_ICON)
+            val advancedBtn = JToggleButton(l10n("ui.form.layerAdvanced"), ADVANCED_ICON)
+            advancedBtn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
+            advancedBtn.addItemListener { toggleAdvanced(widget, it.stateChange == ItemEvent.SELECTED) }
+            // By default, the layer is collapsed.
+            toggleAdvanced(widget, false)
+
+            val delBtn = JButton(l10n("ui.form.layerDelete"), REMOVE_ICON)
+            delBtn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             delBtn.addActionListener { userDel(idx) }
 
             val widgetPanel = JPanel(MigLayout()).apply { border = FlatBorder() }
             for ((comp, constr) in widget.components.zip(widget.constraints))
                 widgetPanel.add(comp, constr)
 
-            add(Grip(), "split 4, flowy, center, gapbottom 20")
-            add(JLabel((idx + 1).toString()).apply { putClientProperty(STYLE, "font: bold") }, "center")
-            add(delBtn, "center, gaptop 8")
-            add(Grip(), "center, gaptop 24")
-            add(widgetPanel, "growx, pushx")
+            add(Grip(), "split 6, center, gap 20:40: 30")
+            add(JLabel((idx + 1).toString()).apply { putClientProperty(STYLE, "font: bold") })
+            add(nameWidget.components.single(), "width 100, growx, shrinkprio 50, gap 12 10")
+            add(advancedBtn)
+            add(delBtn)
+            add(Grip(), "gap 30 20:40:")
+            add(widgetPanel, "newline, growx, pushx")
 
             // Add a transfer handler for dragging.
             transferHandler = LayerPanelTransferHandler(idx)
@@ -1615,7 +1649,7 @@ class LayerListWidget<E : Any>(
         private val gripColor = UIManager.getColor("ToolBar.gripColor")
 
         init {
-            preferredSize = Dimension(12 + 1, 48 + 1)
+            preferredSize = Dimension(96 + 1, 12 + 1)
         }
 
         override fun paintComponent(g: Graphics) {
@@ -1646,6 +1680,7 @@ class LayerListWidget<E : Any>(
         private var dndHover = false
 
         init {
+            preferredSize = Dimension(0, 32)
             border = null
             addActionListener { userAdd(addAtIdx) }
 
@@ -1711,7 +1746,7 @@ class LayerListWidget<E : Any>(
     }
 
 
-    private class LayerTransferData(val widget: LayerListWidget<*>, val idx: Int) {
+    private class LayerTransferData(val widget: LayerListWidget<*, *>, val idx: Int) {
         companion object {
             val FLAVOR = DataFlavor(
                 DataFlavor.javaJVMLocalObjectMimeType + ";class=${LayerTransferData::class.java.name}"

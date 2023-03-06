@@ -12,6 +12,7 @@ import javax.swing.SpinnerNumberModel
 
 class StyleForm<S : Style>(
     private val styleClass: Class<S>,
+    private val constSettings: Map<StyleSetting<in S, *>, Any> = emptyMap(),
     insets: Boolean = true,
     noticeArea: Boolean = true,
     constLabelWidth: Boolean = true
@@ -28,6 +29,8 @@ class StyleForm<S : Style>(
         val unionSpecs = widgetSpecs.filterIsInstance<UnionWidgetSpec<S>>()
 
         for (setting in getStyleSettings(styleClass)) {
+            if (setting in constSettings)
+                continue
             val unionSpec = unionSpecs.find { setting in it.settings }
             if (unionSpec == null || unionSpec.settings.first() == setting) {
                 if (widgetSpecs.any { setting in it.settings && it is NewSectionWidgetSpec<S> })
@@ -42,7 +45,7 @@ class StyleForm<S : Style>(
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val valueWidget = makeSettingWidget(setting)
-        val wholeWidth = valueWidget is LayerListWidget<*>
+        val wholeWidth = valueWidget is LayerListWidget<*, *>
         val formRow = if (wholeWidth) FormRow("", valueWidget) else makeFormRow(setting.name, valueWidget)
         valueWidgets[setting] = valueWidget
         rootFormRows.add(Pair(formRow, listOf(setting)))
@@ -94,7 +97,7 @@ class StyleForm<S : Style>(
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*, *>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val simpleListWidgetSpec = settingWidgetSpecs.oneOf<SimpleListWidgetSpec<S, E>>()
-        val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, E>>()
+        val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, *>>()
         val choiceWidgetSpec = settingWidgetSpecs.oneOf<ChoiceWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
@@ -118,29 +121,11 @@ class StyleForm<S : Style>(
                     )
                 else -> TextListWidget(widthSpec)
             }
-            layerListWidgetSpec != null -> {
-                // We need a local function to introduce the NE type variable, which extends NestedStyle instead of Any.
-                fun <NE : NestedStyle<*>> makeOrdinalMapper(nestedStyleClass: Class<NE>): (NE, (Int) -> Int?) -> NE {
-                    val siblingOrdinalSettings = buildList {
-                        for (constr in getStyleConstraints(nestedStyleClass))
-                            if (constr is SiblingOrdinalConstr<NE, *>)
-                                addAll(constr.settings)
-                    }
-                    return { nestedStyle, mapping ->
-                        nestedStyle.copy(siblingOrdinalSettings.map { setting ->
-                            setting.repackSubjects(setting.extractSubjects(nestedStyle).mapNotNull(mapping))
-                        })
-                    }
-                }
-
-                LayerListWidget(
-                    makeElementWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
-                    newElement = layerListWidgetSpec.newElement,
-                    mapOrdinalsInElement = if (!NestedStyle::class.java.isAssignableFrom(setting.type)) null else
-                        @Suppress("UNCHECKED_CAST")
-                        (makeOrdinalMapper(setting.type.asSubclass(NestedStyle::class.java)) as (E, (Int) -> Int?) -> E)
-                )
-            }
+            layerListWidgetSpec != null -> makeLayerListWidget(
+                @Suppress("UNCHECKED_CAST")
+                (setting as ListStyleSetting<S, NamedNestedStyle<S>>),
+                settingWidgetSpecs
+            )
             else -> SimpleListWidget(
                 makeElementWidget = { makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs) },
                 newElement = simpleListWidgetSpec?.newElement,
@@ -149,6 +134,42 @@ class StyleForm<S : Style>(
                 minSize = minSizeConstr?.minSize ?: 0
             )
         }
+    }
+
+    private fun <E : NamedNestedStyle<S>> makeLayerListWidget(
+        setting: ListStyleSetting<S, E>,
+        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+    ): Widget<*> {
+        val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, E>>()!!
+
+        val siblingOrdinalSettings = buildList {
+            for (constr in getStyleConstraints(setting.type))
+                if (constr is SiblingOrdinalConstr<E, *>)
+                    addAll(constr.settings)
+        }
+
+        return LayerListWidget(
+            makeElementWidget = {
+                val nestedForm = StyleForm(
+                    setting.type, constSettings = mapOf(NamedStyle::name.st() to ""),
+                    // Horizontal space in nested forms is scarce, so save where we can.
+                    insets = false, noticeArea = false, constLabelWidth = false
+                )
+                NestedFormWidget(nestedForm)
+            },
+            newElement = layerListWidgetSpec.newElement,
+            getElementName = { style -> style.name },
+            setElementName = { style, name -> style.copy(NamedStyle::name.st().notarize(name)) },
+            mapOrdinalsInElement = { nestedStyle, mapping ->
+                nestedStyle.copy(siblingOrdinalSettings.map { setting ->
+                    setting.repackSubjects(setting.extractSubjects(nestedStyle).mapNotNull(mapping))
+                })
+            },
+            toggleAdvanced = { widget, advanced ->
+                (widget.form as StyleForm<E>).hiddenSettings =
+                    if (advanced) emptySet() else layerListWidgetSpec.advancedSettings
+            }
+        )
     }
 
     private fun <V : Any /* non-null */> makeBackingSettingWidget(
@@ -240,14 +261,6 @@ class StyleForm<S : Style>(
                         widthSpec
                     )
                 }
-                NestedStyle::class.java.isAssignableFrom(setting.type) -> {
-                    val nestedForm = StyleForm(
-                        setting.type.asSubclass(NestedStyle::class.java),
-                        // Horizontal space in nested forms is scarce, so save where we can.
-                        insets = false, noticeArea = false, constLabelWidth = false
-                    )
-                    NestedFormWidget(nestedForm)
-                }
                 else -> throw UnsupportedOperationException("UI unsupported for objects of type ${setting.type.name}.")
             }
         }
@@ -338,8 +351,8 @@ class StyleForm<S : Style>(
     }
 
     override fun save(): S =
-        newStyleUnsafe(styleClass, valueWidgets.values.map { widget ->
-            val value = widget.value
+        newStyleUnsafe(styleClass, getStyleSettings(styleClass).map { setting ->
+            val value = valueWidgets[setting]?.value ?: constSettings[setting]!!
             if (value is List<*>) value.toPersistentList() else value
         })
 
@@ -357,7 +370,7 @@ class StyleForm<S : Style>(
                         nested.add(Pair(formWidget.form as StyleForm, setting.get(style).value as NestedStyle<*>))
                     }
                     is ListStyleSetting -> {
-                        val formWidgets = (valueWidgets[setting] as AbstractListWidget<*>).elementWidgets
+                        val formWidgets = (valueWidgets[setting] as AbstractListWidget<*, *>).elementWidgets
                         for ((formWidget, nestedStyle) in formWidgets.zip(setting.get(style)))
                             nested.add(
                                 Pair((formWidget as NestedFormWidget).form as StyleForm, nestedStyle as NestedStyle<*>)
@@ -367,20 +380,44 @@ class StyleForm<S : Style>(
         return nested
     }
 
-    fun setIneffectiveSettings(ineffectiveSettings: Map<StyleSetting<S, *>, Effectivity>) {
+    var hiddenSettings: Set<StyleSetting<S, *>> = emptySet()
+        set(value) {
+            field = value
+            updateVisibleAndEnabled()
+        }
+
+    var ineffectiveSettings: Map<StyleSetting<S, *>, Effectivity> = emptyMap()
+        set(value) {
+            field = value
+            updateVisibleAndEnabled()
+        }
+
+    private fun updateVisibleAndEnabled() {
+        fun status(effectivity: Effectivity) = when (effectivity) {
+            Effectivity.TOTALLY_INEFFECTIVE -> 2
+            Effectivity.ALMOST_EFFECTIVE -> 1
+            Effectivity.EFFECTIVE -> 0
+        }
+
         for ((formRow, settings) in rootFormRows) {
-            // First find the maximum effectivity across all widgets in the form row (there can be multiple when a
-            // UnionWidget is in use). Apply that maximum effectivity to the whole row, including the label.
-            val maxEffectivity = settings.maxOf { ineffectiveSettings.getOrDefault(it, Effectivity.EFFECTIVE) }
-            formRow.isVisible = maxEffectivity >= Effectivity.ALMOST_EFFECTIVE
-            formRow.isEnabled = maxEffectivity == Effectivity.EFFECTIVE
-            // If any setting deviates from the maximum effectivity, lower that setting's effectivity individually.
+            // First find the minimum status (2 invisible, 1 disabled, 0 regular) across all widgets in the form row
+            // (there can be multiple when a UnionWidget is used). Apply that minimum status to the whole row,
+            // including the label.
+            val rowStatus = settings.minOf { st ->
+                if (st in hiddenSettings) 2
+                else status(ineffectiveSettings.getOrDefault(st, Effectivity.EFFECTIVE))
+            }
+            formRow.isVisible = rowStatus != 2
+            formRow.isEnabled = rowStatus != 1
+            // If the status of any setting deviates from the minimum status, up that setting's status individually.
             for (setting in settings) {
-                val effectivity = ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE)
-                if (effectivity != maxEffectivity) {
+                val settingStatus =
+                    if (setting in hiddenSettings) 2
+                    else status(ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE))
+                if (settingStatus != rowStatus) {
                     val widget = valueWidgets.getValue(setting)
-                    widget.isVisible = effectivity >= Effectivity.ALMOST_EFFECTIVE
-                    widget.isEnabled = effectivity == Effectivity.EFFECTIVE
+                    widget.isVisible = settingStatus != 2
+                    widget.isEnabled = settingStatus != 1
                 }
             }
         }
@@ -421,6 +458,14 @@ class StyleForm<S : Style>(
                 if (unique)
                     (remaining as MutableList).remove(widget.value)
             }
+        }
+    }
+
+    fun setToStringFun(setting: StyleSetting<*, *>, toString: ((Nothing) -> String)) {
+        valueWidgets[setting]!!.applyConfigurator { widget ->
+            if (widget is MultiComboBoxWidget<*>)
+                @Suppress("UNCHECKED_CAST")
+                (widget as MultiComboBoxWidget<Nothing>).toString = toString
         }
     }
 

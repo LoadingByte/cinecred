@@ -142,7 +142,19 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01),
     SimpleListWidgetSpec(LetterStyle::features.st(), newElement = FontFeature("", 1), elementsPerRow = 2),
     NewSectionWidgetSpec(LetterStyle::layers.st()),
-    LayerListWidgetSpec(LetterStyle::layers.st(), newElement = PRESET_LAYER)
+    LayerListWidgetSpec(
+        LetterStyle::layers.st(),
+        newElement = PRESET_LAYER,
+        advancedSettings = setOf(
+            Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(), Layer::stripeWidenTopRfh.st(),
+            Layer::stripeWidenBottomRfh.st(), Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
+            Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(), Layer::dilationJoin.st(), Layer::contour.st(),
+            Layer::contourThicknessRfh.st(), Layer::contourJoin.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
+            Layer::hScaling.st(), Layer::vScaling.st(), Layer::hShearing.st(), Layer::vShearing.st(),
+            Layer::anchorInStripe.st(), Layer::clearingLayers.st(), Layer::clearingRfh.st(), Layer::clearingJoin.st(),
+            Layer::blurRadiusRfh.st()
+        )
+    )
 )
 
 
@@ -305,9 +317,10 @@ class SimpleListWidgetSpec<S : Style, SUBJ : Any>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class LayerListWidgetSpec<S : Style, SUBJ : Any>(
+class LayerListWidgetSpec<S : Style, SUBJ : NamedNestedStyle<S>>(
     setting: ListStyleSetting<S, SUBJ>,
-    val newElement: SUBJ
+    val newElement: SUBJ,
+    val advancedSettings: Set<StyleSetting<SUBJ, Any>>
 ) : StyleWidgetSpec<S>(setting)
 
 

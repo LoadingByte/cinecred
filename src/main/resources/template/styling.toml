@@ -90,10 +90,18 @@ name = "{project.template.letterStyleNormal}"
 fontName = "Archivo Narrow Regular"
 heightPx = 32.0
 
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"
+
 [[letterStyle]]
 name = "{project.template.letterStyleSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = 24.0
+
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"
 
 [[letterStyle]]
 name = "{project.template.letterStyleHeading}"
@@ -102,9 +110,11 @@ heightPx = 32.0
 trackingEm = 0.05
 
 [[letterStyle.layers]]
+name = "{project.template.layerText}"
 shape = "TEXT"
 
 [[letterStyle.layers]]
+name = "{project.template.layerUnderline}"
 shape = "STRIPE"
 stripePreset = "CUSTOM"
 stripeHeightRfh = 0.0625
@@ -115,18 +125,34 @@ name = "{project.template.letterStyleName}"
 fontName = "Archivo Narrow Bold"
 heightPx = 32.0
 
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"
+
 [[letterStyle]]
 name = "{project.template.letterStyleSongTitle}"
 fontName = "Archivo Narrow Bold"
 heightPx = 32.0
 smallCaps = "SMALL_CAPS"
 
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"
+
 [[letterStyle]]
 name = "{project.template.letterStyleCardName}"
 fontName = "Archivo Narrow Bold"
 heightPx = 100.0
 
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"
+
 [[letterStyle]]
 name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = 50.0
+
+[[letterStyle.layers]]
+name = "{project.template.layerText}"
+shape = "TEXT"

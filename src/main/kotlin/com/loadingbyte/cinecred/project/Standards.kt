@@ -104,6 +104,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 
 
 val PRESET_LAYER = Layer(
+    name = "",
     color = Color.WHITE,
     shape = LayerShape.STRIPE,
     stripePreset = StripePreset.UNDERLINE,

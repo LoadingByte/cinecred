@@ -310,7 +310,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun <S : Style> adjustForm(curForm: StyleForm<S>, curStyle: S) {
         val styling = this.styling ?: return
 
-        curForm.setIneffectiveSettings(findIneffectiveSettings(ctrl.stylingCtx, styling, curStyle))
+        curForm.ineffectiveSettings = findIneffectiveSettings(ctrl.stylingCtx, styling, curStyle)
 
         curForm.clearIssues()
         for (violation in constraintViolations)
@@ -339,15 +339,23 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                     curForm.setChoices(setting, availableTags, unique = true)
             }
             is SiblingOrdinalConstr<*, *> -> {
-                fun <S : NestedStyle<P>, P : Style> withNestedTypeVars(curStyle: S) {
+                fun <S : NamedNestedStyle<P>, P : Style> withNestedTypeVars(curStyle: S) {
                     @Suppress("UNCHECKED_CAST")
                     constr as SiblingOrdinalConstr<S, P>
-                    val choices = constr.siblings.get(styling.getParentStyle(curStyle))
-                        .mapIndexedNotNull { idx, sibling -> if (sibling === curStyle) null else idx + 1 }
-                    for (setting in constr.settings)
-                        curForm.setChoices(setting, choices)
+                    val choices = LinkedHashMap<Int, String>()  // retains insertion order
+                    for ((idx, sibling) in constr.siblings.get(styling.getParentStyle(curStyle)).withIndex())
+                        if (sibling !== curStyle)
+                            choices[idx + 1] = sibling.name
+                    val toString = { choice: Int ->
+                        val choiceName = choices.getOrDefault(choice, "")
+                        if (choiceName.isBlank()) "$choice" else "$choice  $choiceName"
+                    }
+                    for (setting in constr.settings) {
+                        curForm.setChoices(setting, choices.keys.toList())
+                        curForm.setToStringFun(setting, toString)
+                    }
                 }
-                withNestedTypeVars(curStyle as NestedStyle<*>)
+                withNestedTypeVars(curStyle as NamedNestedStyle<*>)
             }
             else -> {}
         }

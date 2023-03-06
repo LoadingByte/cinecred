@@ -297,7 +297,7 @@ class DynChoiceConstr<S : Style, SUBJ : Any>(
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 
-class StyleNameConstr<S : Style, R : NamedStyle>(
+class StyleNameConstr<S : Style, R : ListedStyle>(
     val severity: Severity,
     vararg settings: StyleSetting<S, String>,
     val styleClass: Class<R>,
@@ -306,7 +306,7 @@ class StyleNameConstr<S : Style, R : NamedStyle>(
 ) : StyleConstraint<S, StyleSetting<S, String>>(*settings) {
     init {
         // This is due to limitations in our current implementation of StylingConsistency and StyleUsage.
-        require(settings.all { st -> NamedStyle::class.java.isAssignableFrom(st.declaringClass) })
+        require(settings.all { st -> ListedStyle::class.java.isAssignableFrom(st.declaringClass) })
     }
 }
 
@@ -434,7 +434,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         val refs = st.extractSubjects(style)
                         refs.forEachIndexed { idx, ref ->
                             val refUnavailable = choices.none { choice ->
-                                (!cst.clustering || choice.name != (style as NamedStyle).name) && choice.name == ref
+                                (!cst.clustering || choice.name != (style as ListedStyle).name) && choice.name == ref
                             }
                             if (refUnavailable) {
                                 val msg =
@@ -454,7 +454,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                                 for (choice in choices)
                                     if (choice.name in refs) {
                                         val refsOfChoice = st.extractSubjects(style.javaClass.cast(choice))
-                                        if ((style as NamedStyle).name !in refsOfChoice ||
+                                        if ((style as ListedStyle).name !in refsOfChoice ||
                                             refs.any { ref -> ref != choice.name && ref !in refsOfChoice }
                                         ) {
                                             val leafSubjectIndex = refs.indexOf(choice.name)
@@ -552,8 +552,8 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     }
 
     verifyStyle(styling.global, styling.global)
-    for (styleClass in NamedStyle.CLASSES)
-        for (style in styling.getNamedStyles(styleClass))
+    for (styleClass in ListedStyle.CLASSES)
+        for (style in styling.getListedStyles(styleClass))
             verifyStyle(style, style)
 
     return violations

@@ -9,11 +9,11 @@ import java.util.*
 /*
  * The functions in this file generate updates to the styling to ensure that (a) certain invariants are always fulfilled
  * and (b) user changes like renaming a style are reflected in the other styles as expected. Currently, the functions
- * can only generate updates to named styles, but as of now, that is sufficient for our use case.
+ * can only generate updates to ListedStyles, but as of now, that is sufficient for our use case.
  */
 
 
-fun <S : NamedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Map<S, S> {
+fun <S : ListedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Map<S, S> {
     if (styles.isEmpty())
         return emptyMap()
     val updates = IdentityHashMap<S, MutableList<NotarizedStyleSettingValue<S>>>()
@@ -50,7 +50,7 @@ fun <S : NamedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Ma
 }
 
 
-fun <S : NamedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, removedStyle: S): Map<S, S> {
+fun <S : ListedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, removedStyle: S): Map<S, S> {
     val updates = IdentityHashMap<S, MutableList<NotarizedStyleSettingValue<S>>>()
     forEachStyleClusterSetting(removedStyle.javaClass) { setting, _ ->
         for (style in remainingStyles) {
@@ -63,14 +63,14 @@ fun <S : NamedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, rem
 }
 
 
-class StylingConsistencyRetainer<S : NamedStyle>(
+class StylingConsistencyRetainer<S : ListedStyle>(
     ctx: StylingContext,
     styling: Styling,
     editedStyle: S
 ) {
 
-    private class TrackedUsage<S2 : NamedStyle>(var style: S2, val settings: List<Setting<S2>>) {
-        class Setting<S2 : NamedStyle>(val setting: StyleSetting<S2, String>, val baseItems: TreeSet<String>?)
+    private class TrackedUsage<S2 : ListedStyle>(var style: S2, val settings: List<Setting<S2>>) {
+        class Setting<S2 : ListedStyle>(val setting: StyleSetting<S2, String>, val baseItems: TreeSet<String>?)
     }
 
     private inner class TrackedCluster(
@@ -95,12 +95,12 @@ class StylingConsistencyRetainer<S : NamedStyle>(
 
         // We want to keep all other styles which "use" editedStyle in sync with changes to editedStyle's name.
         // For this, record all these usages now.
-        trackedUsages = NamedStyle.CLASSES.flatMap { style2Class ->
+        trackedUsages = ListedStyle.CLASSES.flatMap { style2Class ->
             determineTrackedUsages(ctx, styling, editedStyle, style2Class)
         }
     }
 
-    private fun <S2 : NamedStyle> determineTrackedUsages(
+    private fun <S2 : ListedStyle> determineTrackedUsages(
         ctx: StylingContext,
         styling: Styling,
         editedStyle: S,
@@ -117,7 +117,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
 
         // Iterate over all instances of style2 and find which of the style name settings found above reference style2.
         val trackedUsages = mutableListOf<TrackedUsage<S2>>()
-        for (style2 in styling.getNamedStyles(style2Class)) {
+        for (style2 in styling.getListedStyles(style2Class)) {
             val trackedUsageSettings = mutableListOf<TrackedUsage.Setting<S2>>()
             for (constr in refConstraints)
                 for (setting in constr.settings) {
@@ -142,8 +142,8 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         ctx: StylingContext,
         styling: Styling,
         editedStyle: S
-    ): Map<NamedStyle, NamedStyle> {
-        val updates = IdentityHashMap<NamedStyle, NamedStyle>()
+    ): Map<ListedStyle, ListedStyle> {
+        val updates = IdentityHashMap<ListedStyle, ListedStyle>()
         val newName = editedStyle.name
 
         // Keep style clusters intact.
@@ -161,7 +161,7 @@ class StylingConsistencyRetainer<S : NamedStyle>(
     }
 
     private fun updateTrackedCluster(
-        updates: MutableMap<NamedStyle, NamedStyle>,
+        updates: MutableMap<ListedStyle, ListedStyle>,
         trackedCluster: TrackedCluster,
         ctx: StylingContext,
         styling: Styling,
@@ -262,8 +262,8 @@ class StylingConsistencyRetainer<S : NamedStyle>(
         trackedCluster.wasEffective = isEffective
     }
 
-    private fun <S2 : NamedStyle> updateTrackedUsage(
-        updates: MutableMap<NamedStyle, NamedStyle>,
+    private fun <S2 : ListedStyle> updateTrackedUsage(
+        updates: MutableMap<ListedStyle, ListedStyle>,
         trackedUsage: TrackedUsage<S2>,
         newName: String
     ) {
@@ -283,11 +283,11 @@ class StylingConsistencyRetainer<S : NamedStyle>(
 
 
 @Suppress("UNCHECKED_CAST")
-private fun <S : NamedStyle> Map<NamedStyle, NamedStyle>.freshest(style: S) =
+private fun <S : ListedStyle> Map<ListedStyle, ListedStyle>.freshest(style: S) =
     getOrDefault(style, style) as S
 
 
-private inline fun <S : NamedStyle> forEachStyleClusterSetting(
+private inline fun <S : ListedStyle> forEachStyleClusterSetting(
     styleClass: Class<S>,
     action: (ListStyleSetting<S, String>, StyleNameConstr<S, *>) -> Unit
 ) {

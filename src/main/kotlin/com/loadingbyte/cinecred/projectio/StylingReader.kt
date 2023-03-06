@@ -49,7 +49,7 @@ private fun readMapList(mapList: Any?): MutableList<MutableMap<String, Any>> =
     else mapList.filterIsInstanceTo(mutableListOf())
 
 
-private fun <S : NamedStyle> readStyles(
+private fun <S : ListedStyle> readStyles(
     ctx: StylingContext,
     maps: List<Map<*, *>>,
     styleClass: Class<S>

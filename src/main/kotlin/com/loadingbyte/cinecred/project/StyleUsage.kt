@@ -4,8 +4,8 @@ import java.util.*
 
 
 /** Returns a [Set] that compares elements based on identity for better performance. */
-fun findUsedStyles(project: Project): Set<NamedStyle> {
-    val usedStyles = Collections.newSetFromMap(IdentityHashMap<NamedStyle, Boolean>())
+fun findUsedStyles(project: Project): Set<ListedStyle> {
+    val usedStyles = Collections.newSetFromMap(IdentityHashMap<ListedStyle, Boolean>())
     val ctx = project.stylingCtx
     val styling = project.styling
 
@@ -20,9 +20,9 @@ fun findUsedStyles(project: Project): Set<NamedStyle> {
     }
 
     // Add styles referenced from other styles.
-    // Note: Currently, we only look in named styles, but as of now, that is sufficient for our use case.
-    for (styleClass in NamedStyle.CLASSES)
-        for (style in styling.getNamedStyles(styleClass))
+    // Note: Currently, we only look in ListedStyles, but as of now, that is sufficient for our use case.
+    for (styleClass in ListedStyle.CLASSES)
+        for (style in styling.getListedStyles(styleClass))
             processStyle(style)
 
     // Add the page, content, and letter styles referenced from the read pages.

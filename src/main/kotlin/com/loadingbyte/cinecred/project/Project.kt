@@ -31,11 +31,11 @@ data class Styling constructor(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <S : NamedStyle> getNamedStyles(styleClass: Class<S>): PersistentList<S> = when (styleClass) {
+    fun <S : ListedStyle> getListedStyles(styleClass: Class<S>): PersistentList<S> = when (styleClass) {
         PageStyle::class.java -> pageStyles
         ContentStyle::class.java -> contentStyles
         LetterStyle::class.java -> letterStyles
-        else -> throw IllegalArgumentException("${styleClass.name} is not a named style class.")
+        else -> throw IllegalArgumentException("${styleClass.name} is not a ListedStyle class.")
     } as PersistentList<S>
 
     @Suppress("UNCHECKED_CAST")
@@ -50,9 +50,12 @@ sealed interface Style
 
 sealed interface NamedStyle : Style {
     val name: String
+}
 
+
+sealed interface ListedStyle : NamedStyle {
     companion object {
-        val CLASSES: List<Class<out NamedStyle>> =
+        val CLASSES: List<Class<out ListedStyle>> =
             listOf(PageStyle::class.java, ContentStyle::class.java, LetterStyle::class.java)
     }
 }
@@ -83,7 +86,7 @@ data class PageStyle(
     val scrollMeltWithPrev: Boolean,
     val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Double
-) : NamedStyle
+) : ListedStyle
 
 
 enum class PageBehavior { CARD, SCROLL }
@@ -139,7 +142,7 @@ data class ContentStyle(
     val tailHJustify: HJustify,
     val tailVJustify: VJustify,
     val tailGapPx: Double
-) : NamedStyle
+) : ListedStyle
 
 
 enum class BlockOrientation { HORIZONTAL, VERTICAL }
@@ -190,7 +193,7 @@ data class LetterStyle(
     val features: PersistentList<FontFeature>,
     val inheritLayersFromStyle: Opt<String>,
     val layers: PersistentList<Layer>
-) : NamedStyle
+) : ListedStyle
 
 
 enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }

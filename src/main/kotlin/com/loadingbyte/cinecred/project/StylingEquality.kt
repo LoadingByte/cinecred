@@ -5,12 +5,12 @@ import com.loadingbyte.cinecred.common.removeFirstOrNull
 
 fun Styling.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx: StylingContext, other: Styling): Boolean =
     global.equalsIgnoreIneffectiveSettings(ctx, this, other.global) &&
-            NamedStyle.CLASSES.all { sCls ->
-                getNamedStyles(sCls).equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, this, other.getNamedStyles(sCls))
+            ListedStyle.CLASSES.all { cls ->
+                getListedStyles(cls).equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, this, other.getListedStyles(cls))
             }
 
 
-private fun <S : NamedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettings(
+private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettings(
     ctx: StylingContext,
     styling: Styling,
     other: List<S>

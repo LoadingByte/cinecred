@@ -72,17 +72,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         )
         stylingTree.addListType(
             PageStyle::class.java, l10n("ui.styling.pageStyles"), FILMSTRIP_ICON,
-            onSelect = { openNamedStyle(it, pageStyleForm, "PageStyle") },
+            onSelect = { openListedStyle(it, pageStyleForm, "PageStyle") },
             objToString = PageStyle::name
         )
         stylingTree.addListType(
             ContentStyle::class.java, l10n("ui.styling.contentStyles"), LAYOUT_ICON,
-            onSelect = { openNamedStyle(it, contentStyleForm, "ContentStyle") },
+            onSelect = { openListedStyle(it, contentStyleForm, "ContentStyle") },
             objToString = ContentStyle::name
         )
         stylingTree.addListType(
             LetterStyle::class.java, l10n("ui.styling.letterStyles"), LETTERS_ICON,
-            onSelect = { openNamedStyle(it, letterStyleForm, "LetterStyle") },
+            onSelect = { openListedStyle(it, letterStyleForm, "LetterStyle") },
             objToString = LetterStyle::name
         )
 
@@ -172,10 +172,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun duplicateStyle() {
         val style = stylingTree.getSelected()
-        if (style !is NamedStyle)
+        if (style !is ListedStyle)
             return
         val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
-        var copiedStyle = style.copy(NamedStyle::name.st().notarize(newName))
+        var copiedStyle = style.copy(ListedStyle::name.st().notarize(newName))
         if (copiedStyle is LetterStyle && !copiedStyle.inheritLayersFromStyle.isActive)
             copiedStyle = copiedStyle.copy(inheritLayersFromStyle = Opt(true, style.name))
         val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
@@ -188,7 +188,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun removeStyle() {
         val removedStyle = stylingTree.removeSelectedListElement(selectNext = true)
         if (removedStyle != null) {
-            removedStyle as NamedStyle
+            removedStyle as ListedStyle
             val updates = ensureConsistencyAfterRemoval(stylingTree.getList(removedStyle.javaClass), removedStyle)
             updates.forEach(stylingTree::updateListElement)
             onChange()
@@ -202,7 +202,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun openGlobal(style: Global, form: StyleForm<Global>, cardName: String) {
         // Strictly speaking, we wouldn't need to recreate the change listener each time the form is opened, but we do
-        // it here nevertheless for symmetry with the openNamedStyle() method.
+        // it here nevertheless for symmetry with the openListedStyle() method.
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             var newStyle = form.save()
@@ -218,7 +218,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         openStyle(style, form, cardName)
     }
 
-    private fun <S : NamedStyle> openNamedStyle(style: S, form: StyleForm<S>, cardName: String) {
+    private fun <S : ListedStyle> openListedStyle(style: S, form: StyleForm<S>, cardName: String) {
         val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
@@ -257,7 +257,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         this.styling = styling
 
         stylingTree.setSingleton(styling.global)
-        stylingTree.replaceAllListElements(NamedStyle.CLASSES.flatMap { styling.getNamedStyles(it) })
+        stylingTree.replaceAllListElements(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
         refreshConstraintViolations()
 
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
@@ -326,9 +326,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                     curForm.setChoices(setting, choices)
             }
             is StyleNameConstr<S, *> -> {
-                val choiceSet = constr.choices(ctrl.stylingCtx, styling, curStyle).mapTo(TreeSet(), NamedStyle::name)
+                val choiceSet = constr.choices(ctrl.stylingCtx, styling, curStyle).mapTo(TreeSet(), ListedStyle::name)
                 if (constr.clustering)
-                    choiceSet.remove((curStyle as NamedStyle).name)
+                    choiceSet.remove((curStyle as ListedStyle).name)
                 val choices = choiceSet.toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)

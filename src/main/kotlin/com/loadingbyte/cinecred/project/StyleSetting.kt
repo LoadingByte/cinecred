@@ -70,7 +70,7 @@ sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name:
     val type: Class<SUBJ>
 
     init {
-        var baseType = styleClass.getGetter(name).genericReturnType
+        var baseType = declaringClass.getGetter(name).genericReturnType
         if (isNested)
             baseType = (baseType as ParameterizedType).actualTypeArguments[0]
         @Suppress("UNCHECKED_CAST")

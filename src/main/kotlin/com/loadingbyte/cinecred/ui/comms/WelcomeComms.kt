@@ -40,7 +40,7 @@ interface WelcomeCtrlComms {
     fun projects_createBrowse_onClickNext()
 
     fun projects_createConfigure_onClickBack()
-    fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat)
+    fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int)
 
     fun <V> onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V)
 

@@ -10,27 +10,27 @@ import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 
-fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
+fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
     destDir.createDirectoriesSafely()
-    tryCopyStylingTemplate(destDir, locale)
-    tryCopyCreditsTemplate(destDir, locale, format)
+    tryCopyStylingTemplate(destDir, locale, scale)
+    tryCopyCreditsTemplate(destDir, locale, format, scale)
 }
 
 
-private fun tryCopyStylingTemplate(destDir: Path, locale: Locale) {
-    val text = useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }.fillPlaceholders(locale)
+private fun tryCopyStylingTemplate(destDir: Path, locale: Locale, scale: Int) {
+    val text = filt(useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }, locale, scale)
     val file = destDir.resolve(STYLING_FILE_NAME)
     if (file.notExists())
         file.writeText(text)
 }
 
 
-private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat) {
+private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
     if (locateCreditsFile(destDir).first != null)
         return
 
     val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
-    val spreadsheet = CsvFormat.read(csv).map { it.fillPlaceholders(locale) }
+    val spreadsheet = CsvFormat.read(csv).map { filt(it, locale, scale) }
     format.write(
         destDir.resolve("Credits.${format.fileExt}"), spreadsheet,
         rowLooks = mapOf(
@@ -48,10 +48,15 @@ private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: Spread
 }
 
 
-private fun String.fillPlaceholders(locale: Locale): String =
-    replace(PLACEHOLDER_REGEX) { match ->
+private fun filt(string: String, locale: Locale, scale: Int): String = string
+    .replace(PLACEHOLDER_REGEX) { match ->
         val key = match.groups[1]!!.value
         if (key == "locale") locale.toLanguageTag() else l10n(key, locale)
     }
+    .replace(SCALING_REGEX) { match ->
+        val num = match.groups[1]!!.value
+        (num.toInt() * scale).toString()
+    }
 
 private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")
+private val SCALING_REGEX = Regex("<([0-9]+)>")

@@ -294,9 +294,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 
-    override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat) {
+    override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int) {
         val projectDir = newBrowseSelection ?: return
-        tryCopyTemplate(projectDir, locale, format)
+        tryCopyTemplate(projectDir, locale, format, scale)
         tryOpenProject(projectDir)
     }
 

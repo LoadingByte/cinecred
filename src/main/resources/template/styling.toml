@@ -1,4 +1,6 @@
 [global]
+resolution = "<2048>x<858>"
+unitVGapPx = <32>
 locale = "{locale}"
 
 [[pageStyle]]
@@ -9,6 +11,7 @@ behavior = "CARD"
 name = "{project.template.pageStyleScroll}"
 behavior = "SCROLL"
 scrollMeltWithNext = true
+scrollPxPerFrame = <3>
 
 [[contentStyle]]
 name = "{project.template.contentStyleHeading}"
@@ -33,15 +36,17 @@ headLetterStyleName = "{project.template.letterStyleSmall}"
 headMatchWidth = "ACROSS_BLOCKS"
 headHJustify = "RIGHT"
 headVJustify = "TOP"
-headGapPx = 24.0
+headGapPx = <24>
 
 [[contentStyle]]
 name = "{project.template.contentStyleBullets}"
 bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "FLOW"
-flowLineWidthPx = 800.0
+flowLineWidthPx = <800>
+flowHGapPx = <32>
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleSmall}"
+headGapPx = <4>
 
 [[contentStyle]]
 name = "{project.template.contentStyleTabular}"
@@ -49,6 +54,7 @@ bodyLetterStyleName = "{project.template.letterStyleName}"
 bodyLayout = "GRID"
 gridStructure = "EQUAL_WIDTH_COLS"
 gridCellHJustifyPerCol = ["LEFT", "CENTER", "RIGHT"]
+gridColGapPx = <32>
 
 [[contentStyle]]
 name = "{project.template.contentStyleSong}"
@@ -63,16 +69,17 @@ name = "{project.template.contentStyleLogos}"
 bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "FLOW"
 flowSquareCells = true
-flowLineWidthPx = 1200.0
-flowLineGapPx = 32.0
-flowHGapPx = 32.0
+flowLineWidthPx = <1200>
+flowLineGapPx = <32>
+flowHGapPx = <32>
 flowSeparator = ""
 
 [[contentStyle]]
 name = "{project.template.contentStyleBlurb}"
 bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "PARAGRAPHS"
-paragraphsLineWidthPx = 500.0
+paragraphsLineWidthPx = <500>
+paragraphsParaGapPx = <8>
 
 [[contentStyle]]
 name = "{project.template.contentStyleCard}"
@@ -80,15 +87,15 @@ bodyLetterStyleName = "{project.template.letterStyleCardName}"
 bodyLayout = "GRID"
 hasHead = true
 headLetterStyleName = "{project.template.letterStyleCardSmall}"
-headGapPx = 32.0
+headGapPx = <32>
 hasTail = true
 tailLetterStyleName = "{project.template.letterStyleCardSmall}"
-tailGapPx = 32.0
+tailGapPx = <32>
 
 [[letterStyle]]
 name = "{project.template.letterStyleNormal}"
 fontName = "Archivo Narrow Regular"
-heightPx = 32.0
+heightPx = <32>
 
 [[letterStyle.layers]]
 name = "{project.template.layerText}"
@@ -97,7 +104,7 @@ shape = "TEXT"
 [[letterStyle]]
 name = "{project.template.letterStyleSmall}"
 fontName = "Archivo Narrow Regular"
-heightPx = 24.0
+heightPx = <24>
 
 [[letterStyle.layers]]
 name = "{project.template.layerText}"
@@ -106,7 +113,7 @@ shape = "TEXT"
 [[letterStyle]]
 name = "{project.template.letterStyleHeading}"
 fontName = "Archivo Narrow Regular"
-heightPx = 32.0
+heightPx = <32>
 trackingEm = 0.05
 
 [[letterStyle.layers]]
@@ -123,7 +130,7 @@ stripeOffsetRfh = 0.15625
 [[letterStyle]]
 name = "{project.template.letterStyleName}"
 fontName = "Archivo Narrow Bold"
-heightPx = 32.0
+heightPx = <32>
 
 [[letterStyle.layers]]
 name = "{project.template.layerText}"
@@ -132,7 +139,7 @@ shape = "TEXT"
 [[letterStyle]]
 name = "{project.template.letterStyleSongTitle}"
 fontName = "Archivo Narrow Bold"
-heightPx = 32.0
+heightPx = <32>
 smallCaps = "SMALL_CAPS"
 
 [[letterStyle.layers]]
@@ -142,7 +149,7 @@ shape = "TEXT"
 [[letterStyle]]
 name = "{project.template.letterStyleCardName}"
 fontName = "Archivo Narrow Bold"
-heightPx = 100.0
+heightPx = <100>
 
 [[letterStyle.layers]]
 name = "{project.template.layerText}"
@@ -151,7 +158,7 @@ shape = "TEXT"
 [[letterStyle]]
 name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
-heightPx = 50.0
+heightPx = <50>
 
 [[letterStyle.layers]]
 name = "{project.template.layerText}"

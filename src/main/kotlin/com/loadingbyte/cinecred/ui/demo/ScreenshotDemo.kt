@@ -33,7 +33,7 @@ fun screenshotDemo(masterCtrl: MasterCtrl, locale: Locale) {
     comprehensivelyApplyLocale(locale)
 
     val projectDir = Files.createTempDirectory("cinecred-demo-project")
-    tryCopyTemplate(projectDir, locale, CsvFormat)
+    tryCopyTemplate(projectDir, locale, CsvFormat, 1)
     // Inject an error into the credits file.
     val creditsFile = projectDir.resolve("Credits.csv")
     creditsFile.writeLines(creditsFile.readLines().toMutableList().apply { set(6, ",,,-1,,,,,") })

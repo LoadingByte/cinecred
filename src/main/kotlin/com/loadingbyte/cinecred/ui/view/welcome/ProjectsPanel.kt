@@ -145,7 +145,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val createConfigureDoneButton = JButton(l10n("ui.projects.create"), ADD_ICON).apply {
             addActionListener {
                 welcomeCtrl.projects_createConfigure_onClickDone(
-                    createConfigureForm.localeWidget.value, createConfigureForm.formatWidget.value
+                    createConfigureForm.localeWidget.value,
+                    createConfigureForm.formatWidget.value,
+                    createConfigureForm.scaleWidget.value
                 )
             }
         }
@@ -340,6 +342,14 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 SpreadsheetFormat::class.java, SPREADSHEET_FORMATS,
                 toString = { l10n("ui.projects.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" },
                 WidthSpec.WIDE
+            )
+        )
+
+        val scaleWidget = addWidget(
+            l10n("ui.projects.create.scale"),
+            ToggleButtonGroupWidget(
+                listOf(1, 2),
+                toLabel = { "${it * 2}K" }
             )
         )
 

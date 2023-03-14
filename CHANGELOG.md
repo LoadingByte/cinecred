@@ -20,6 +20,7 @@ Cinecred Changelog
   sharing the same design across related styles (e.g., normal and superscript).
 - All letter style lengths apart from tracking are now specified in pixels and
   still automatically scaled with the font size.
+- New projects can now be created in 4K, which simply doubles all initial sizes.
 - On macOS, all project windows now support native full-screen mode.
 
 ### Fixes

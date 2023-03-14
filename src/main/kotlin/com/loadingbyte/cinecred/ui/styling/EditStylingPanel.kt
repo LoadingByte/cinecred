@@ -283,8 +283,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateProject(drawnProject: DrawnProject?) {
         val project = drawnProject?.project
-        val usedStyles = if (project == null) emptySet() else findUsedStyles(project)
-        stylingTree.adjustAppearance(isGrayedOut = { project != null && it is NamedStyle && it !in usedStyles })
+        // Only update the grayed-out status of styles if the DrawnProject we received stems from the current Styling.
+        // If it doesn't, the Styling has changed again in the meantime, and we can't compare with the outdated usage
+        // information because the identity of the styles has changed since then. If we didn't have this check, rapidly
+        // changing a style would cause it to blink gray and white in the styling tree.
+        // As a special case, if there was an error, we just mark all styles as used.
+        if (project == null)
+            stylingTree.adjustAppearance(isGrayedOut = { false })
+        else if (project.styling === styling) {
+            val usedStyles = findUsedStyles(project)
+            stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
+        }
         mostRecentRuntime = drawnProject?.video?.numFrames ?: 0
     }
 

@@ -211,25 +211,35 @@ class FileWidget(
 
 open class SpinnerWidget<V : Number>(
     private val valueClass: Class<V>,
-    model: SpinnerModel,
+    model: SpinnerNumberModel,
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
-    init {
-        require(!valueClass.isPrimitive)
-    }
+    protected val spinner = JSpinner(model)
 
-    protected val spinner = JSpinner(model).apply {
-        addChangeListener { notifyChangeListeners() }
-        ((editor as JSpinner.DefaultEditor).textField.formatter as DefaultFormatter).makeSafe()
+    init {
+        require(valueClass == Int::class.javaObjectType || valueClass == Double::class.javaObjectType)
+
+        spinner.addChangeListener {
+            val newValue = valueClass.cast(spinner.value)
+            // Only update the widget's value if the new value diverges sufficiently from the old one. We need this
+            // check because the spinner uses its formatter's stringToValue() function once BEFORE the value is actually
+            // increased or decreased, and due to floating point inaccuracy, that can change the value ever so slightly.
+            if (valueClass != Double::class.javaObjectType || abs(newValue.toDouble() - value.toDouble()) > 0.00001) {
+                value = newValue
+                notifyChangeListeners()
+            }
+        }
+
+        ((spinner.editor as JSpinner.DefaultEditor).textField.formatter as DefaultFormatter).makeSafe()
     }
 
     override val components = listOf(spinner)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
-    override var value: V
-        get() = valueClass.cast(spinner.value)
+    override var value: V = valueClass.cast(spinner.value)
         set(value) {
+            field = value
             spinner.value = value
         }
 

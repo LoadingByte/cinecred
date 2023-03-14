@@ -35,6 +35,7 @@ Cinecred Changelog
 - Styles with an empty name now have the correct height in the dropdown.
 - On macOS, the video preview controls remain responsive in full-screen mode.
 - Resolved rare crashes when closing a project while the previews are rendered.
+- The delivery file selection dialog now actually applies the selection.
 
 ### Compatibility Notes
 

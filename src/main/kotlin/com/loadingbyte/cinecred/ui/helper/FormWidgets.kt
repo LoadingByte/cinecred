@@ -190,7 +190,7 @@ class FileWidget(
                 var newText = fc.selectedFile.absolutePath
                 if (ass != null) {
                     val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
-                    newText = text.removeAnySuffix(ass.choices.map { ".$it" }) + ".$selectedFileExt"
+                    newText = newText.removeAnySuffix(ass.choices.map { ".$it" }) + ".$selectedFileExt"
                 }
                 text = newText
             }

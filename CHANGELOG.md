@@ -46,6 +46,7 @@ Cinecred Changelog
   of sharing and merging designs.
 - Letter styles are automatically migrated to the new format. Only in very rare
   edge cases do migrated projects differ slightly from legacy ones.
+- Pictures can now only be referenced by filename and no longer by path.
 
 
 1.3.1

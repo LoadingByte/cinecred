@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.io.File
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.*
@@ -97,21 +96,27 @@ private class CreditsReader(
     val contentStyleMap = styling.contentStyles.map(ContentStyle::name)
     val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
 
-    // Put the picture loaders into a map whose keys are all possible variations of referencing the picture loaders.
+    // Put the picture loaders into a map whose keys are the picture filenames. Also record all duplicate filenames.
     // Once again use a map with case-insensitive keys.
-    val pictureLoaderMap = pictureLoaders.asSequence().flatMap { (path, pictureLoader) ->
-        // Allow the user to use an arbitrary number of parent components.
-        // For example, the path "a/b/c.png" could be expressed as "c.png", "", "b/c.png", or "a/b/c.png".
-        (0 until path.nameCount).asSequence()
-            .map { idx -> path.subpath(idx, path.nameCount).pathString }
-            // Allow both Windows and Unix file separators.
-            .flatMap { key ->
-                listOf(
-                    key.replace(File.separatorChar, '/') to pictureLoader,
-                    key.replace(File.separatorChar, '\\') to pictureLoader
-                )
-            }
-    }.toMap(TreeMap(String.CASE_INSENSITIVE_ORDER))
+    val pictureLoaderMap: Map<String, Lazy<Picture?>>
+    val duplicatePictures: Set<String>
+
+    init {
+        val loaderMap = TreeMap<String, Lazy<Picture?>>(String.CASE_INSENSITIVE_ORDER)
+        val dupSet = TreeSet(String.CASE_INSENSITIVE_ORDER)
+        for ((path, pictureLoader) in pictureLoaders) {
+            val filename = path.name
+            if (filename !in dupSet)
+                if (filename !in loaderMap)
+                    loaderMap[filename] = pictureLoader
+                else {
+                    loaderMap.remove(filename)
+                    dupSet.add(filename)
+                }
+        }
+        pictureLoaderMap = loaderMap
+        duplicatePictures = dupSet
+    }
 
 
     /* *****************************************
@@ -610,6 +615,12 @@ private class CreditsReader(
         var splitIdx = tagVal.length
         do {
             val picName = tagVal.take(splitIdx).trim()
+
+            // If the picture is present multiple times in the project folder, abort and inform the user.
+            if (picName in duplicatePictures) {
+                table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureDuplicate", picName))
+                return null
+            }
 
             pictureLoaderMap[picName]?.let { picLoader ->
                 val origPic = picLoader.value

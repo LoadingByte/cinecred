@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.MuxerFormat
 import com.loadingbyte.cinecred.imaging.VideoWriter
+import com.loadingbyte.cinecred.imaging.VideoWriter.*
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
@@ -22,6 +23,7 @@ class VideoRenderJob(
     private val video: DeferredVideo,
     private val scaling: Double,
     private val transparentGrounding: Boolean,
+    private val colorSpace: ColorSpace,
     private val format: Format,
     private val fileOrPattern: Path
 ) : RenderJob {
@@ -52,6 +54,7 @@ class VideoRenderJob(
         VideoWriter(
             fileOrPattern, resolution, project.styling.global.fps,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
+            colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->
@@ -68,6 +71,16 @@ class VideoRenderJob(
                     throw InterruptedException()
             }
         }
+    }
+
+
+    enum class ColorSpace(
+        val range: Range,
+        val transferCharacteristic: TransferCharacteristic,
+        val yCbCrCoefficients: YCbCrCoefficients
+    ) {
+        REC_709(Range.LIMITED, TransferCharacteristic.BT709, YCbCrCoefficients.BT709),
+        SRGB(Range.FULL, TransferCharacteristic.SRGB, YCbCrCoefficients.BT601)
     }
 
 

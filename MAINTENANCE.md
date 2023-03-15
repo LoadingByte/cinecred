@@ -175,3 +175,97 @@ Finally, generate Java bindings using the following command:
         --include-struct hb_glyph_position_t \
         --include-typedef hb_destroy_func_t \
         --include-typedef hb_reference_table_func_t
+
+### zimg
+
+The compilations currently present in this repository stem from version 3.0.4.
+
+Download the source code tarball of the latest
+[zimg release](https://github.com/sekrit-twc/zimg/releases) and unpack it. Edit
+`src/zimg/api/zimg.h` and look for the following lines near the beginning:
+
+    ....
+    #if defined(_WIN32) || defined(__CYGWIN__)
+      #define ZIMG_VISIBILITY
+    ...
+
+Change that definition to `#define __declspec(dllexport)`. This will make the
+Windows DLL actually export symbols.
+
+Next, navigate a bash shell to `src/zimg/`. There, run the following bash script
+three times with the arguments `windows`/`mac`/`linux`. Each time, you obtain a
+series of commands that build the library on that platform. Those commands need
+to be executed in a command prompt on that platform again in `src/zimg/`.
+
+    #!/bin/bash
+
+    if [[ "$1" == windows ]]; then
+      COMP="clang-cl /c /EHsc /O2 /GS- -flto /DZIMG_X86 /DZIMG_X86_AVX512 /DNDEBUG /I. -Wno-assume"
+      LINK="lld-link /DLL /OUT:zimg.dll"
+      OBJ="obj"
+      # Note: There are no switches for SSE and SSE2; both are always enabled.
+      declare -A SIMD_FLAVORS=([sse]="" [sse2]="" [avx]="/arch:AVX" [f16c_ivb]="/arch:AVX -mf16c" [avx2]="/arch:AVX2" [avx512]="/arch:AVX512" [avx512_vnni]="/arch:AVX512 -mavx512vnni")
+    else
+      if [[ "$1" == mac ]]; then
+        COMP="clang++"
+        LINK="clang++ -dynamiclib -o libzimg.dylib"
+      elif [[ "$1" == linux ]]; then
+        COMP="g++"
+        LINK="g++ -shared -o libzimg.so"
+      fi
+      COMP="$COMP -c -std=c++14 -O2 -fPIC -flto -fvisibility=hidden -DZIMG_X86 -DZIMG_X86_AVX512 -DNDEBUG -I."
+      LINK="$LINK -s"
+      OBJ="o"
+      declare -A SIMD_FLAVORS=([sse]="-msse" [sse2]="-msse2" [avx]="-mavx -mtune=sandybridge" [f16c_ivb]="-mavx -mf16c -mtune=ivybridge" [avx2]="-mavx2 -mf16c -mfma -mtune=haswell" [avx512]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mtune=skylake-avx512" [avx512_vnni]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512vnni -mtune=cascadelake")
+    fi
+
+    shopt -s expand_aliases
+    alias FINDCPP="find -not -path '*/arm/*' -name '*.cpp'"
+
+    echo $COMP $(FINDCPP $(for flavor in ${!SIMD_FLAVORS[@]}; do echo -not -name "*$flavor.cpp"; done))
+    for flavor in ${!SIMD_FLAVORS[@]}; do
+      echo $COMP ${SIMD_FLAVORS[$flavor]} $(FINDCPP -name "*$flavor.cpp")
+    done
+    echo $LINK $(FINDCPP -printf '%f\n' | sed "s/\.cpp/.$OBJ/")
+
+Side note: The above bash script is derived from the GNU autotools build process
+officially provided by zlib (and from the MSVC project files). However, as that
+process is extremely cumbersome on Windows when it comes to dependencies added
+by MinGW-w64, we decided to instead manually employ Window's native CL compiler,
+without a proper build system.
+
+Finally, generate Java bindings using the following command:
+
+    jextract --source -d <OUT_DIR> --target-package com.loadingbyte.cinecred.natives.zimg <ZIMG_DIR>/src/zimg/api/zimg.h \
+        --include-function zimg_filter_graph_build \
+        --include-function zimg_filter_graph_free \
+        --include-function zimg_filter_graph_get_tmp_size \
+        --include-function zimg_filter_graph_process \
+        --include-function zimg_get_last_error \
+        --include-function zimg_graph_builder_params_default \
+        --include-function zimg_image_format_default \
+        --include-macro ZIMG_ALPHA_NONE \
+        --include-macro ZIMG_ALPHA_STRAIGHT \
+        --include-macro ZIMG_API_VERSION \
+        --include-macro ZIMG_BUFFER_MAX \
+        --include-macro ZIMG_COLOR_RGB \
+        --include-macro ZIMG_COLOR_YUV \
+        --include-macro ZIMG_CPU_AUTO_64B \
+        --include-macro ZIMG_MATRIX_BT470_BG \
+        --include-macro ZIMG_MATRIX_BT709 \
+        --include-macro ZIMG_MATRIX_RGB \
+        --include-macro ZIMG_PIXEL_BYTE \
+        --include-macro ZIMG_PIXEL_WORD \
+        --include-macro ZIMG_PRIMARIES_709 \
+        --include-macro ZIMG_RANGE_FULL \
+        --include-macro ZIMG_RANGE_LIMITED \
+        --include-macro ZIMG_TRANSFER_BT709 \
+        --include-macro ZIMG_TRANSFER_IEC_61966_2_1 \
+        --include-struct zimg_image_buffer \
+        --include-struct zimg_image_buffer_const \
+        --include-struct zimg_graph_builder_params \
+        --include-struct zimg_image_format
+
+It is then necessary to replace all occurrences of `C_LONG` with `C_LONG_LONG`,
+as the former is 32-bit even on 64-bit Windows machines, while the original C
+source code actually specifies 64-bit `size_t` and `ptrdiff_t` types.

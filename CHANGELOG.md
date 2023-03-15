@@ -20,6 +20,9 @@ Cinecred Changelog
   sharing the same design across related styles (e.g., normal and superscript).
 - All letter style lengths apart from tracking are now specified in pixels and
   still automatically scaled with the font size.
+- Delivered videos now fully conform to the Rec. 709 or sRGB/sYCC color space
+  specifications, depending on which one the user selects, and containerized
+  formats also include color space metadata.
 - New projects can now be created in 4K, which simply doubles all initial sizes.
 - On macOS, all project windows now support native full-screen mode.
 

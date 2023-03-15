@@ -61,6 +61,7 @@ fun main(args: Array<String>) {
 
     // Load our native libraries.
     System.loadLibrary("harfbuzz")
+    System.loadLibrary("zimg")
 
     // Make JavaCPP and FlatLaf load their native libraries from java.library.path.
     System.setProperty("org.bytedeco.javacpp.cacheLibraries", "false")

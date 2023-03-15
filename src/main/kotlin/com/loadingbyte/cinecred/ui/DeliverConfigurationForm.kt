@@ -91,6 +91,22 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         CheckBoxWidget(),
         isEnabled = { formatWidget.value.supportsAlpha }
     )
+    private val colorSpaceWidget = addWidget(
+        l10n("ui.deliverConfig.colorSpace"),
+        ComboBoxWidget(
+            VideoRenderJob.ColorSpace::class.java, VideoRenderJob.ColorSpace.values().asList(),
+            widthSpec = WidthSpec.WIDER,
+            toString = { cs ->
+                when (cs) {
+                    VideoRenderJob.ColorSpace.REC_709 ->
+                        "Rec. 709  \u2013  BT.709 Gamut, BT.709 Gamma, Limited Range, BT.709 YCbCr Coefficients"
+                    VideoRenderJob.ColorSpace.SRGB ->
+                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full Range, BT.601 YCbCr Coefficients"
+                }
+            }
+        ).apply { value = VideoRenderJob.ColorSpace.REC_709 },
+        isEnabled = { formatWidget.value is VideoRenderJob.Format }
+    )
 
     init {
         // Set the directory-related fields to the project dir.
@@ -187,6 +203,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val scaling = resolutionMultWidget.value
             val transparentGrounding = transparentGroundingWidget.value && format.supportsAlpha
             val grounding = if (transparentGrounding) null else project.styling.global.grounding
+            val colorSpace = colorSpaceWidget.value
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
@@ -260,7 +277,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         destination = fileOrDir.pathString
                     }
                     renderJob = VideoRenderJob(
-                        project, video, scaling, transparentGrounding, format, fileOrPattern
+                        project, video, scaling, transparentGrounding, colorSpace, format, fileOrPattern
                     )
                 }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

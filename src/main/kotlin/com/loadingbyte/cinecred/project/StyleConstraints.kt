@@ -49,7 +49,7 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
     DoubleConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0.0, minInclusive = false),
-    JudgeConstr(WARN, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
+    JudgeConstr(INFO, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
         val value = sty.scrollPxPerFrame
         floor(value) == value
     }

@@ -176,7 +176,7 @@ class WholePagePDFRenderJob(
     companion object {
         val FORMAT = object : RenderFormat(fileSeq = false, setOf("pdf"), "pdf", supportsAlpha = true) {
             override val label get() = "PDF"
-            override val notice get() = null
+            override val notice get() = l10n("delivery.reducedQuality")
         }
     }
 

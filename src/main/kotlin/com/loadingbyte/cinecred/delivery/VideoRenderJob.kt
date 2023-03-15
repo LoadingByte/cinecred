@@ -23,7 +23,7 @@ class VideoRenderJob(
     private val scaling: Double,
     private val transparentGrounding: Boolean,
     private val format: Format,
-    val fileOrPattern: Path
+    private val fileOrPattern: Path
 ) : RenderJob {
 
     override fun generatesFile(file: Path) = when {
@@ -102,7 +102,7 @@ class VideoRenderJob(
                 heightMod2 = true
             ) {
                 override val label get() = "H.264"
-                override val notice get() = l10n("delivery.lowQuality")
+                override val notice get() = l10n("delivery.reducedQuality")
             }
 
             private fun prores(

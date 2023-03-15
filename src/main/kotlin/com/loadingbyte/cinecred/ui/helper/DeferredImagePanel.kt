@@ -152,6 +152,11 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 val unitIncrement = min(viewportWidth, viewportHeight) * mult / 50.0
                 when (e.modifiersEx) {
                     0 -> viewportCenterY += if (block) viewportHeight * mult else unitIncrement
+                    // At least on Windows and macOS, the functions WmMouseWheel() in awt_Component.cpp respectively
+                    // handleScrollEvent() in CPlatformResponder.java set the shift modifier when the user scrolls with
+                    // a horizontal mouse wheel or touchpad. We read that modifier here.
+                    // As a side effect, for Linux we now at least support shift + vert. scrolling = hor. scrolling,
+                    // which is a common UI idiom.
                     SHIFT_DOWN_MASK -> viewportCenterX += if (block) viewportWidth * mult else unitIncrement
                     else -> return@addMouseWheelListener
                 }
@@ -233,7 +238,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     private val imageScaling
         get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
     private val physicalImageScaling
-        get() = imageScaling * UIScale.getSystemScaleFactor(canvas.graphics as Graphics2D)
+        // Safeguard in case the graphics object is not yet ready or has already been discarded; this happens sometimes.
+        get() = imageScaling * ((canvas.graphics as Graphics2D?)?.let(UIScale::getSystemScaleFactor) ?: 1.0)
 
     private fun coerceViewportAndCalibrateScrollbars() {
         val image = this.image
@@ -272,6 +278,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
 
         if (image == null || canvas.width == 0 || canvas.height == 0) {
             materialized = null
+            lowResMaterialized = null
             canvas.repaint()
         } else {
             // Update the low-res version if either the content changed or there is not a low-res version yet. Note that

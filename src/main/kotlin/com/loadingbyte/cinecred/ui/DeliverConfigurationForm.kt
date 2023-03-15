@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui
 
-
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
@@ -186,7 +185,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
             val scaling = resolutionMultWidget.value
-            val grounding = if (transparentGroundingWidget.value) null else project.styling.global.grounding
+            val transparentGrounding = transparentGroundingWidget.value && format.supportsAlpha
+            val grounding = if (transparentGrounding) null else project.styling.global.grounding
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
@@ -260,9 +260,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         destination = fileOrDir.pathString
                     }
                     renderJob = VideoRenderJob(
-                        project, video,
-                        scaling, transparentGroundingWidget.value && format.supportsAlpha, format,
-                        fileOrPattern
+                        project, video, scaling, transparentGrounding, format, fileOrPattern
                     )
                 }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

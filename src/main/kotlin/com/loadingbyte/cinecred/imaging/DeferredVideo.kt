@@ -5,7 +5,7 @@ import com.loadingbyte.cinecred.imaging.DeferredVideo.Cache.Response
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Graphics2D
-import java.awt.geom.AffineTransform
+import java.awt.geom.AffineTransform.getTranslateInstance
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import java.lang.ref.SoftReference
@@ -117,7 +117,7 @@ class DeferredVideo(val resolution: Resolution) {
                 is Response.AlignedRender ->
                     g2.blend(resp.alpha) { g2.drawImage(resp.render, 0, -resp.shift, null) }
                 is Response.UnalignedRender ->
-                    g2.blend(resp.alpha) { g2.drawImage(resp.render, translation(0.0, -resp.shift), null) }
+                    g2.blend(resp.alpha) { g2.drawImage(resp.render, getTranslateInstance(0.0, -resp.shift), null) }
             }
         }
 
@@ -145,8 +145,6 @@ class DeferredVideo(val resolution: Resolution) {
             // Paint the deferred image onto the raster image.
             image.materialize(this, layers, culling)
         }
-
-        private fun translation(tx: Double, ty: Double) = AffineTransform.getTranslateInstance(tx, ty)
 
     }
 

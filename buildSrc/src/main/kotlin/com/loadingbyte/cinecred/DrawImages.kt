@@ -68,9 +68,9 @@ abstract class DrawImages : DefaultTask() {
                     g2.fillRect(165, 0, 493, 312)
                     g2.drawImage(logo.rasterize(100), 32, 28, null)
                     g2.font = semiFont.deriveFont(32f)
-                    g2.drawString("Cinecred", 28, 176)
+                    g2.drawCenteredString("Cinecred", 0, 176, 165)
                     g2.font = boldFont.deriveFont(20f)
-                    g2.drawString(version, 60, 204)
+                    g2.drawCenteredString(version, 0, 204, 165)
                 }
             }
             Platform.MAC_OS -> {
@@ -81,9 +81,9 @@ abstract class DrawImages : DefaultTask() {
                     g2.drawImage(logo.rasterize(80), 51, 0, null)
                     g2.color = Color.WHITE
                     g2.font = semiFont.deriveFont(24f)
-                    g2.drawString("Cinecred", 50, 110)
+                    g2.drawCenteredString("Cinecred", 0, 110, 182)
                     g2.font = boldFont.deriveFont(16f)
-                    g2.drawString(version, 73, 130)
+                    g2.drawCenteredString(version, 0, 130, 182)
                 }
             }
             Platform.LINUX -> {
@@ -101,6 +101,10 @@ abstract class DrawImages : DefaultTask() {
         g2.dispose()
         to.parentFile.mkdirs()
         ImageIO.write(image, to.extension, to)
+    }
+
+    private fun Graphics2D.drawCenteredString(str: String, x: Int, y: Int, w: Int) {
+        drawString(str, x + (w - fontMetrics.stringWidth(str)) / 2, y)
     }
 
 

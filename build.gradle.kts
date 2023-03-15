@@ -149,7 +149,7 @@ val platformNativesTasks = Platform.values().map { platform ->
             from(zipTree(dep.file)) {
                 include("**/*${platform.slug}*/**/*.${platform.nativesExt}*")
                 include("**/*${platform.slug}*.${platform.nativesExt}*")
-                exclude("**/*avdevice*", "**/*avfilter*", "**/*ffmpeg*", "**/*ffprobe*", "**/*postproc*")
+                exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
             }
         into(layout.buildDirectory.dir("natives/${platform.slug}"))
         eachFile { path = name }
@@ -212,7 +212,7 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
                 "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
-                "EMAIL" to "info@cinecred.com",
+                "EMAIL" to "felix@cinecred.com",
                 "LEGAL_PATH_RUNTIME" to when (platform) {
                     Platform.WINDOWS -> "runtime\\legal"
                     Platform.MAC_OS -> "runtime/Contents/Home/legal"

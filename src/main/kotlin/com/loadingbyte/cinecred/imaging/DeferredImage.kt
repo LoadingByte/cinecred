@@ -61,20 +61,24 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     fun drawShape(
         color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
     ) {
+        if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill, blurRadius))
     }
 
     fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, layer: Layer = FOREGROUND) {
+        if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color))
     }
 
     fun drawRect(
         color: Color, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = FOREGROUND
     ) {
+        if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
     fun drawText(color: Color, text: Text, x: Double, yBaseline: Y, layer: Layer = FOREGROUND) {
+        if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawText(x, yBaseline, text, color))
     }
 

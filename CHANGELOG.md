@@ -31,6 +31,7 @@ Cinecred Changelog
 - Native libraries are no longer extracted on startup, which alleviates some
   false security alarms.
 - Baseline determination when mixing letter styles is no longer jumpy.
+- Raster pictures are now scaled by Lanczos, fixing the previously bad quality.
 - Translucent pixels in raster images are no longer tinted black in PDF exports.
 
 ### UI Fixes

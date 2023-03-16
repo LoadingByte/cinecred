@@ -17,7 +17,7 @@ import com.loadingbyte.cinecred.ui.helper.usableBounds
 import java.awt.*
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_INT_RGB
+import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
 import java.lang.Thread.sleep
 import java.nio.file.Files
 import java.nio.file.Path
@@ -169,14 +169,14 @@ private fun locate(window: Window, quadrant: Int, width: Int, height: Int) {
 
 
 private fun screenshot(component: Component) =
-    buildImage(component.width, component.height, TYPE_INT_RGB) { g2 ->
+    buildImage(component.width, component.height, TYPE_3BYTE_BGR) { g2 ->
         printWithPopups(component, g2)
     }
 
 private fun materialize(defImage: DeferredImage, scaling: Double, cropTop: Double, height: Int): BufferedImage {
     val scaled = defImage.copy(universeScaling = scaling)
     val width = scaled.width.toInt()
-    return buildImage(width, height, TYPE_INT_RGB) { g2 ->
+    return buildImage(width, height, TYPE_3BYTE_BGR) { g2 ->
         g2.setHighQuality()
         g2.color = Color.BLACK
         g2.fillRect(0, 0, width, height)

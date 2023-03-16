@@ -32,7 +32,7 @@ const val ICON_ICON_GAP = 4
 val WINDOW_ICON_IMAGES = run {
     val logo = SVGResource("/logo.svg")
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
-        BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB).withG2 { g2 ->
+        BufferedImage(size, size, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
             g2.setHighQuality()
             g2.scale(size / logo.width)
             logo.paint(g2)

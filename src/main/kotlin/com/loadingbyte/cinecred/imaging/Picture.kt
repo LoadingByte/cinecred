@@ -1,10 +1,13 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.withG2
 import mkl.testarea.pdfbox2.extract.BoundingBoxFinder
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.pdfbox.pdmodel.PDDocument
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
+import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR
 
 
 sealed class Picture {
@@ -15,7 +18,16 @@ sealed class Picture {
     open fun dispose() {}
 
 
-    class Raster(val img: BufferedImage, val scaling: Double = 1.0) : Picture() {
+    class Raster(img: BufferedImage, val scaling: Double = 1.0) : Picture() {
+
+        // Conform non-standard raster images to the 8-bit (A)BGR pixel format and the sRGB color space. This needs to
+        // be done at some point because some of our code expects (A)BGR, and we're compositing in sRGB.
+        val img =
+            if (img.colorModel.colorSpace.isCS_sRGB && img.type.let { it == TYPE_3BYTE_BGR || it == TYPE_4BYTE_ABGR })
+                img
+            else
+                BufferedImage(img.width, img.height, if (img.colorModel.hasAlpha()) TYPE_4BYTE_ABGR else TYPE_3BYTE_BGR)
+                    .withG2 { g2 -> g2.drawImage(img, 0, 0, null) }
 
         override val width get() = scaling * img.width
         override val height get() = scaling * img.height

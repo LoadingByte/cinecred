@@ -61,8 +61,8 @@ class WholePageSequenceRenderJob(
 
             when (format) {
                 Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
-                    val imageType = if (grounding == null) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
-                    val pageImage = BufferedImage(pageWidth, pageHeight, imageType)
+                    val imgType = if (grounding == null) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
+                    val pageImage = BufferedImage(pageWidth, pageHeight, imgType)
 
                     pageImage.withG2 { g2 ->
                         g2.setHighQuality()

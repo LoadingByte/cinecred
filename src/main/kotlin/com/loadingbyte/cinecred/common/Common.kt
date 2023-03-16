@@ -157,7 +157,7 @@ fun comprehensivelyApplyLocale(locale: Locale) {
 
 
 // This is a reference font render context used to measure the size of fonts.
-val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB)
+val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_3BYTE_BGR)
     .createGraphics()
     .apply { setHighQuality() }
     .fontRenderContext

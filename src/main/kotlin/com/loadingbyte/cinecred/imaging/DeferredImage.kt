@@ -187,7 +187,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 ceil(yFrac + bounds.height).toInt() + 2 * fullPad,
                 // If the image did not have premultiplied alpha, transparent pixels would have black color channels
                 // and would hence spill blackness when blurred into other pixels.
-                BufferedImage.TYPE_INT_ARGB_PRE
+                BufferedImage.TYPE_4BYTE_ABGR_PRE
             ).withG2 { g2 ->
                 g2.setHighQuality()
                 g2.color = color

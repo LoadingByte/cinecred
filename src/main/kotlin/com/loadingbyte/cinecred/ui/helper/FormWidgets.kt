@@ -1500,11 +1500,14 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         }
     }
 
+    private val layerPanels = mutableListOf<LayerPanel>()
     private val nameWidgets = mutableListOf<TextWidget>()
-    private val parts = mutableListOf<Pair<LayerPanel, AddButton>>()
+    private val addButtons = mutableListOf<AddButton>()
 
     init {
-        panel.add(AddButton(addAtIdx = 0))
+        val addBtn = AddButton(addAtIdx = 0)
+        panel.add(addBtn)
+        addButtons.add(addBtn)
         addInitialParts()
     }
 
@@ -1518,15 +1521,15 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         nameWidgets.add(nameWidget)
         val layerPanel = LayerPanel(idx, widget, nameWidget)
         panel.add(layerPanel, 0)
+        layerPanels.add(layerPanel)
         val addBtn = AddButton(addAtIdx = idx + 1)
         panel.add(addBtn, 0)
-        parts.add(Pair(layerPanel, addBtn))
+        addButtons.add(addBtn)
     }
 
     override fun setPartVisible(idx: Int, widget: W, isVisible: Boolean) {
-        val part = parts[idx]
-        part.first.isVisible = isVisible
-        part.second.isVisible = isVisible
+        layerPanels[idx].isVisible = isVisible
+        addButtons[idx + 1].isVisible = isVisible
     }
 
     override fun getPartElement(idx: Int, widget: W): E =
@@ -1605,6 +1608,21 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             widgetPanel.addMouseListener(object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
                     e.consume()
+                }
+            })
+            // Highlight the AddButton above/below when the user hovers over the top/bottom half during drag-and-drop.
+            dropTarget.addDropTargetListener(object : DropTargetAdapter() {
+                override fun dragOver(dtde: DropTargetDragEvent) {
+                    val above = dtde.location.y < height / 2
+                    addButtons[idx + if (above) 1 else 0].dndHoverExternal = true
+                    addButtons[idx + if (above) 0 else 1].dndHoverExternal = false
+                }
+
+                override fun dragExit(dte: DropTargetEvent) = unsetAddBtnDnDHoverExt()
+                override fun drop(dtde: DropTargetDropEvent) = unsetAddBtnDnDHoverExt()
+                private fun unsetAddBtnDnDHoverExt() {
+                    addButtons[idx].dndHoverExternal = false
+                    addButtons[idx + 1].dndHoverExternal = false
                 }
             })
         }
@@ -1692,9 +1710,17 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         private val focusedBackground = UIManager.getColor("Button.focusedBackground")
         private val hoverBackground = UIManager.getColor("Button.hoverBackground")
         private val pressedBackground = UIManager.getColor("Button.pressedBackground")
+        private val selectedBackground = UIManager.getColor("Button.selectedBackground")
         private val focusedBorderColor = UIManager.getColor("Button.focusedBorderColor")
 
         private var dndHover = false
+        var dndHoverExternal = false
+            set(dndHover) {
+                if (field == dndHover)
+                    return
+                field = dndHover
+                repaint()
+            }
 
         init {
             preferredSize = Dimension(0, 32)
@@ -1720,7 +1746,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             val x2 = width - w
             val y = (height - h) / 2
             g.color = when {
-                dndHover -> pressedBackground
+                dndHover || dndHoverExternal -> selectedBackground
                 FlatUIUtils.isPermanentFocusOwner(this) -> focusedBorderColor
                 else -> FlatButtonUI.buttonStateColor(
                     this, background, disabledBackground, focusedBackground, hoverBackground, pressedBackground
@@ -1740,6 +1766,14 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             override fun isDataFlavorSupported(flavor: DataFlavor) = flavor == LayerTransferData.FLAVOR
             override fun getTransferData(flavor: DataFlavor) = LayerTransferData(this@LayerListWidget, idx)
         }
+
+        override fun canImport(support: TransferSupport) = support.isDataFlavorSupported(LayerTransferData.FLAVOR)
+        override fun importData(support: TransferSupport): Boolean {
+            if (!canImport(support))
+                return false
+            val addAtIdx = idx + if (support.dropLocation.dropPoint.y < support.component.height / 2) 1 else 0
+            return importLayerTransferData(addAtIdx, support)
+        }
     }
 
 
@@ -1748,18 +1782,23 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         override fun importData(support: TransferSupport): Boolean {
             if (!canImport(support))
                 return false
-            val transferData = support.transferable.getTransferData(LayerTransferData.FLAVOR) as LayerTransferData
-            // Only permit drag-and-drop within the same widget.
-            if (transferData.widget !== this@LayerListWidget)
-                return false
-            val fromIdx = transferData.idx
-            when (support.dropAction) {
-                COPY -> userAdd(addAtIdx, value[fromIdx])
-                MOVE -> userMov(fromIdx, if (addAtIdx <= fromIdx) addAtIdx else addAtIdx - 1)
-                else -> return false
-            }
-            return true
+            return importLayerTransferData(addAtIdx, support)
         }
+    }
+
+
+    private fun importLayerTransferData(addAtIdx: Int, support: TransferHandler.TransferSupport): Boolean {
+        val transferData = support.transferable.getTransferData(LayerTransferData.FLAVOR) as LayerTransferData
+        // Only permit drag-and-drop within the same widget.
+        if (transferData.widget !== this@LayerListWidget)
+            return false
+        val fromIdx = transferData.idx
+        when (support.dropAction) {
+            TransferHandler.COPY -> userAdd(addAtIdx, value[fromIdx])
+            TransferHandler.MOVE -> userMov(fromIdx, if (addAtIdx <= fromIdx) addAtIdx else addAtIdx - 1)
+            else -> return false
+        }
+        return true
     }
 
 

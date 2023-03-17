@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.common.preserveTransform
 import java.awt.*
 import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
@@ -22,6 +23,8 @@ import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import javax.swing.event.PopupMenuEvent
+import javax.swing.event.PopupMenuListener
 import javax.swing.plaf.basic.BasicFileChooserUI
 import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
@@ -196,6 +199,67 @@ class LargeCheckBox(size: Int) : JCheckBox() {
             }
         }
 
+    }
+
+}
+
+
+class DropdownPopupMenu(
+    private val owner: Component,
+    private val preShow: (() -> Unit)? = null,
+    private val postShow: (() -> Unit)? = null
+) : JPopupMenu(), PopupMenuListener {
+
+    var lastOpenTime = 0L
+        private set
+    private var lastCloseTime = 0L
+
+    init {
+        // borderInsets: Based on Component.borderWidth, which is 1 by default.
+        // background: Should be ComboBox.popupBackground, but that's not set by default, and the fallback is List.
+        putClientProperty(STYLE, "borderInsets: 1,1,1,1; background: \$List.background")
+
+        addPopupMenuListener(this)
+    }
+
+    // @formatter:off
+    override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) { lastOpenTime = System.currentTimeMillis() }
+    override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) { lastCloseTime = System.currentTimeMillis() }
+    override fun popupMenuCanceled(e: PopupMenuEvent) {}
+    // @formatter:on
+
+    fun toggle() {
+        // When the user clicks on the box button while the popup is open, it first closes because the user clicked
+        // outside the popup, and then the button is informed, triggering this method. This would immediately re-open
+        // the popup. We avoid that via this hack.
+        if (System.currentTimeMillis() - lastCloseTime < 100)
+            return
+
+        if (isVisible)
+            isVisible = false
+        else if (componentCount != 0) {
+            preShow?.invoke()
+            val ownerY = owner.locationOnScreen.y
+            val ownerHeight = owner.height
+            val popupHeight = preferredSize.height
+            val screenBounds = owner.graphicsConfiguration.usableBounds
+            val popupYRelToOwnerY = when {
+                ownerY + ownerHeight + popupHeight <= screenBounds.y + screenBounds.height -> ownerHeight
+                ownerY - popupHeight >= screenBounds.y -> -popupHeight
+                else -> screenBounds.y + (screenBounds.height - popupHeight) / 2 - ownerY
+            }
+            show(owner, 0, popupYRelToOwnerY)
+            postShow?.invoke()
+        }
+    }
+
+    fun reactToOwnerKeyPressed(e: KeyEvent) {
+        val m = e.modifiersEx
+        val k = e.keyCode
+        if (m == 0 && k == VK_SPACE ||
+            m == ALT_DOWN_MASK && (k == VK_DOWN || k == VK_KP_DOWN || k == VK_UP || k == VK_KP_UP)
+        )
+            toggle()
     }
 
 }

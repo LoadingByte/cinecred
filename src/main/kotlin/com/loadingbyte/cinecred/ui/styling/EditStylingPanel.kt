@@ -49,10 +49,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val stylingTree = StylingTree()
 
-    // Cache the styling which is currently stored in the styling tree as well as its constraint violations,
-    // so that we don't have to repeatedly regenerate these three things.
+    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and all
+    // used colors, so that we don't have to repeatedly regenerate these three things.
     private var styling: Styling? = null
     private var constraintViolations: List<ConstraintViolation> = emptyList()
+    private var swatchColors: List<Color> = emptyList()
 
     // Keep track of the form which is currently open.
     private var openedForm: StyleForm<*>? = null
@@ -259,6 +260,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.setSingleton(styling.global)
         stylingTree.replaceAllListElements(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
         refreshConstraintViolations()
+        refreshSwatchColors()
 
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
         // which then updates the right panel. If the node is a style node, that callback will also in turn call
@@ -277,6 +279,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
         this.styling = styling
         refreshConstraintViolations()
+        refreshSwatchColors()
         adjustOpenedForm()
         ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
@@ -311,6 +314,22 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         })
     }
 
+    private fun refreshSwatchColors() {
+        val styling = styling ?: return
+
+        val colorSet = HashSet<Color>()
+        colorSet.add(styling.global.grounding)
+        for (letterStyle in styling.letterStyles)
+            for (layer in letterStyle.layers)
+                colorSet.add(layer.color)
+
+        swatchColors = colorSet.sortedWith { c1, c2 ->
+            val hsb1 = Color.RGBtoHSB(c1.red, c1.green, c1.blue, null)
+            val hsb2 = Color.RGBtoHSB(c2.red, c2.green, c2.blue, null)
+            Arrays.compare(hsb1, hsb2)
+        }
+    }
+
     private fun adjustOpenedForm() {
         val curStyle = (stylingTree.getSelected() ?: return) as Style
         adjustForm((openedForm ?: return).castToStyle(curStyle.javaClass), curStyle)
@@ -327,6 +346,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 val issue = Form.Notice(violation.severity, violation.msg)
                 curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
             }
+
+        curForm.setSwatchColors(swatchColors)
 
         for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
             is DynChoiceConstr<S, *> -> {

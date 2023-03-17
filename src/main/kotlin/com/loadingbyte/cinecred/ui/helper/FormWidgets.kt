@@ -850,7 +850,7 @@ class ColorWellWidget(
 
     private val btn = object : JButton(" ") {
         init {
-            toolTipText = l10n("ui.form.colorChooserTooltip")
+            toolTipText = l10n("ui.form.colorTooltip")
         }
 
         override fun paintComponent(g: Graphics) {
@@ -866,33 +866,40 @@ class ColorWellWidget(
         }
     }
 
-    init {
-        btn.addActionListener {
-            val oldColor = value
+    private val picker = ColorPicker(allowAlpha)
+    private val popup = DropdownPopupMenu(
+        btn,
+        preShow = { picker.swatchColors = swatchColors },
+        // Note: Without invokeLater(), the focus is not transferred.
+        postShow = { SwingUtilities.invokeLater { picker.requestFocusInWindow() } }
+    )
 
-            val chooser = JColorChooser(oldColor)
-            // Disable the horrible preview panel.
-            chooser.previewPanel = JPanel()
-            // Disable the ability to choose transparent colors if that is desired.
-            for (chooserPanel in chooser.chooserPanels)
-                chooserPanel.isColorTransparencySelectionEnabled = allowAlpha
-            // Whenever the user changes the color, call the change listener.
-            chooser.selectionModel.addChangeListener { value = chooser.color }
-            // Show the color chooser and wait for the user to close it.
-            // If he cancels the dialog, revert to the old color.
-            val cancelListener = { _: Any -> value = oldColor }
-            JColorChooser.createDialog(btn, l10n("ui.form.colorChooserTitle"), true, chooser, null, cancelListener)
-                .isVisible = true
-        }
+    init {
+        picker.addChangeListener { value = picker.value }
+        popup.add(picker)
+
+        // Note: We need invokeLater() here because otherwise, btn loses focus.
+        btn.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) = SwingUtilities.invokeLater { popup.reactToOwnerKeyPressed(e) }
+        })
+        btn.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (isEnabled && SwingUtilities.isLeftMouseButton(e))
+                    SwingUtilities.invokeLater { popup.toggle() }
+            }
+        })
     }
 
     override val components = listOf<JComponent>(btn)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
+    var swatchColors: List<Color> = emptyList()
+
     override var value: Color = Color.BLACK
         set(value) {
             field = value
             btn.background = value
+            withoutChangeListeners { picker.value = value }
             notifyChangeListeners()
         }
 

@@ -443,6 +443,12 @@ class StyleForm<S : Style>(
             widget.setSeverity(subjectIndex, issue.severity)
     }
 
+    fun setSwatchColors(swatchColors: List<Color>) {
+        val configurator = { w: Widget<*> -> if (w is ColorWellWidget) w.swatchColors = swatchColors }
+        for (widget in valueWidgets.values)
+            widget.applyConfigurator(configurator)
+    }
+
     fun setProjectFontFamilies(projectFamilies: FontFamilies) {
         val configurator = { w: Widget<*> -> if (w is FontChooserWidget) w.projectFamilies = projectFamilies }
         for (widget in valueWidgets.values)

@@ -15,6 +15,7 @@ import com.loadingbyte.cinecred.ui.helper.JobSlot
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Font
 import java.awt.GraphicsConfiguration
+import java.awt.Window
 import java.awt.event.KeyEvent
 import java.io.IOException
 import java.nio.file.Files
@@ -280,7 +281,13 @@ class ProjectController(
     }
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean {
-        val window = SwingUtilities.getRoot(event.component)
+        // Note that we cannot use getWindowAncestor() here as that would yield projectFrame if event.component already
+        // is a dialog, e.g., videoDialog.
+        var window = SwingUtilities.getRoot(event.component)
+        // If the event happened in a popup, check the parent window which owns the popup. We need this to properly
+        // process key events even inside the color picker popup.
+        while (window is Window && window.type == Window.Type.POPUP)
+            window = window.owner
         return when {
             window == videoDialog && videoDialog.panel.onKeyEvent(event) -> true
             (window == projectFrame || window == stylingDialog || window == videoDialog) &&

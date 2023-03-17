@@ -13,8 +13,6 @@ import java.awt.event.*
 import java.awt.event.KeyEvent.*
 import java.awt.event.KeyListener
 import javax.swing.*
-import javax.swing.event.PopupMenuEvent
-import javax.swing.event.PopupMenuListener
 
 
 class MultiComboBox<E : Any>(
@@ -37,13 +35,11 @@ class MultiComboBox<E : Any>(
 
     private val selectionLabel = JLabel(" ")
     private val arrowButton = CustomArrowButton()
-    private val popup = JPopupMenu()
+    private val popup = DropdownPopupMenu(this)
     private val overflowSeparator = JSeparator()
 
     private var hover = false
     private var pressed = false
-    private var lastOpenTime = 0L
-    private var lastCloseTime = 0L
 
     init {
         val arrowButtonPad = 3
@@ -58,9 +54,6 @@ class MultiComboBox<E : Any>(
         // The label is allowed to shrink (it automatically adds ellipsis when there is not enough space).
         selectionLabel.minimumSize = Dimension(0, selectionLabel.minimumSize.height)
 
-        // borderInsets: Based on Component.borderWidth, which is 1 by default.
-        // background: Should be ComboBox.popupBackground, but that's not set by default, and the fallback is List.
-        popup.putClientProperty(STYLE, "borderInsets: 1,1,1,1; background: \$List.background")
         if (noItemsMessage != null)
             popup.add(makeMessageMenuItem(noItemsMessage))
 
@@ -81,20 +74,13 @@ class MultiComboBox<E : Any>(
                 if (isEnabled && SwingUtilities.isLeftMouseButton(e)) {
                     if (isRequestFocusEnabled)
                         requestFocusInWindow()
-                    togglePopup()
+                    popup.toggle()
                 }
             }
         }
         addMouseListener(toggleMouseListener)
         arrowButton.addMouseListener(toggleMouseListener)
 
-        popup.addPopupMenuListener(object : PopupMenuListener {
-            // @formatter:off
-            override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) { lastOpenTime = System.currentTimeMillis() }
-            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) { lastCloseTime = System.currentTimeMillis() }
-            override fun popupMenuCanceled(e: PopupMenuEvent) {}
-            // @formatter:on
-        })
     }
 
     var toString: (E) -> String = toString
@@ -197,38 +183,6 @@ class MultiComboBox<E : Any>(
         selectionLabel.text = selectedItems.joinToString(transform = toString).ifEmpty { " " }
     }
 
-    private fun togglePopup() {
-        // When the user clicks on the box button while the popup is open, it first closes because the user clicked
-        // outside the popup, and then the button is informed, triggering this method. This would immediately re-open
-        // the popup. We avoid that via this hack.
-        if (System.currentTimeMillis() - lastCloseTime < 100)
-            return
-
-        if (popup.isVisible)
-            popup.isVisible = false
-        else if (popup.componentCount != 0) {
-            val boxY = locationOnScreen.y
-            val boxHeight = height
-            val popupHeight = popup.preferredSize.height
-            val screenBounds = graphicsConfiguration.usableBounds
-            val popupYRelToBoxY = when {
-                boxY + boxHeight + popupHeight <= screenBounds.y + screenBounds.height -> boxHeight
-                boxY - popupHeight >= screenBounds.y -> -popupHeight
-                else -> screenBounds.y + (screenBounds.height - popupHeight) / 2 - boxY
-            }
-            popup.show(this, 0, popupYRelToBoxY)
-        }
-    }
-
-    override fun keyPressed(e: KeyEvent) {
-        val m = e.modifiersEx
-        val k = e.keyCode
-        if (m == 0 && k == VK_SPACE ||
-            m == ALT_DOWN_MASK && (k == VK_DOWN || k == VK_KP_DOWN || k == VK_UP || k == VK_KP_UP)
-        )
-            togglePopup()
-    }
-
     // @formatter:off
     override fun focusGained(e: FocusEvent) { repaint() }
     override fun focusLost(e: FocusEvent) { repaint() }
@@ -238,6 +192,7 @@ class MultiComboBox<E : Any>(
     override fun mousePressed(e: MouseEvent) { pressed = true; arrowButton.repaint() }
     override fun mouseReleased(e: MouseEvent) { pressed = false; arrowButton.repaint() }
     override fun keyTyped(e: KeyEvent) {}
+    override fun keyPressed(e: KeyEvent) { popup.reactToOwnerKeyPressed(e) }
     override fun keyReleased(e: KeyEvent) {}
 
     override fun getSelectedObjects(): Array<Any> = (selectedItems as Set<Any>).toTypedArray()
@@ -321,7 +276,7 @@ class MultiComboBox<E : Any>(
             // immediately afterwards actually selects the item he's hovering over if he moved the mouse ever so
             // slightly. To avoid this undesired behavior, we cancel any item change that comes in too soon after the
             // popup has been opened.
-            if (System.currentTimeMillis() - lastOpenTime < 300) {
+            if (System.currentTimeMillis() - popup.lastOpenTime < 300) {
                 removeActionListener(this)
                 isSelected = !isSelected
                 addActionListener(this)

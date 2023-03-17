@@ -31,6 +31,7 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
     @Suppress("DEPRECATION")
     return listOf(
         Hint(l10n("ui.hints.welcomeTrack.welcome"), welcPanel, Side.NONE, goPrefsPnl),
+        Hint(l10n("ui.hints.welcomeTrack.project"), projPanel, Side.NONE, goProjStartPnl),
         Hint(l10n("ui.hints.welcomeTrack.create"), projPanel.leakedStartCreateButton, Side.BOTTOM, goProjStartPnl),
         Hint(l10n("ui.hints.welcomeTrack.open"), projPanel.leakedStartOpenButton, Side.BOTTOM, goProjStartPnl),
         Hint(l10n("ui.hints.welcomeTrack.drop"), projPanel.leakedStartDropLabel, Side.TOP, goProjStartPnl)

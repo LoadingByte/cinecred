@@ -94,7 +94,7 @@ class StyleForm<S : Style>(
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
-        val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*, *>>()
+        val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val simpleListWidgetSpec = settingWidgetSpecs.oneOf<SimpleListWidgetSpec<S, E>>()
         val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, *>>()
@@ -123,7 +123,7 @@ class StyleForm<S : Style>(
             }
             layerListWidgetSpec != null -> makeLayerListWidget(
                 @Suppress("UNCHECKED_CAST")
-                (setting as ListStyleSetting<S, NamedNestedStyle<S>>),
+                (setting as ListStyleSetting<S, NamedNestedStyle>),
                 settingWidgetSpecs
             )
             else -> SimpleListWidget(
@@ -136,7 +136,7 @@ class StyleForm<S : Style>(
         }
     }
 
-    private fun <E : NamedNestedStyle<S>> makeLayerListWidget(
+    private fun <E : NamedNestedStyle> makeLayerListWidget(
         setting: ListStyleSetting<S, E>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<*> {
@@ -144,7 +144,7 @@ class StyleForm<S : Style>(
 
         val siblingOrdinalSettings = buildList {
             for (constr in getStyleConstraints(setting.type))
-                if (constr is SiblingOrdinalConstr<E, *>)
+                if (constr is SiblingOrdinalConstr<E>)
                     addAll(constr.settings)
         }
 
@@ -356,28 +356,31 @@ class StyleForm<S : Style>(
             if (value is List<*>) value.toPersistentList() else value
         })
 
-    fun getNestedFormsAndStyles(style: S): List<Pair<StyleForm<*>, NestedStyle<*>>> {
-        val nested = mutableListOf<Pair<StyleForm<*>, NestedStyle<*>>>()
+    fun getNestedFormsAndStyles(style: S): Pair<List<StyleForm<*>>, List<NestedStyle>> {
+        val nestedForms = mutableListOf<StyleForm<*>>()
+        val nestedStyles = mutableListOf<NestedStyle>()
         for (setting in getStyleSettings(styleClass))
             if (NestedStyle::class.java.isAssignableFrom(setting.type))
                 when (setting) {
                     is DirectStyleSetting -> {
                         val formWidget = valueWidgets[setting] as NestedFormWidget
-                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style) as NestedStyle<*>))
+                        nestedForms.add(formWidget.form as StyleForm)
+                        nestedStyles.add(setting.get(style) as NestedStyle)
                     }
                     is OptStyleSetting -> {
                         val formWidget = (valueWidgets[setting] as OptWidget<*>).wrapped as NestedFormWidget
-                        nested.add(Pair(formWidget.form as StyleForm, setting.get(style).value as NestedStyle<*>))
+                        nestedForms.add(formWidget.form as StyleForm)
+                        nestedStyles.add(setting.get(style).value as NestedStyle)
                     }
                     is ListStyleSetting -> {
                         val formWidgets = (valueWidgets[setting] as AbstractListWidget<*, *>).elementWidgets
-                        for ((formWidget, nestedStyle) in formWidgets.zip(setting.get(style)))
-                            nested.add(
-                                Pair((formWidget as NestedFormWidget).form as StyleForm, nestedStyle as NestedStyle<*>)
-                            )
+                        for (formWidget in formWidgets)
+                            nestedForms.add((formWidget as NestedFormWidget).form as StyleForm)
+                        for (nestedStyle in setting.get(style))
+                            nestedStyles.add(nestedStyle as NestedStyle)
                     }
                 }
-        return nested
+        return Pair(nestedForms, nestedStyles)
     }
 
     var hiddenSettings: Set<StyleSetting<S, *>> = emptySet()

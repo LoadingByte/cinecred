@@ -335,7 +335,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         adjustForm((openedForm ?: return).castToStyle(curStyle.javaClass), curStyle)
     }
 
-    private fun <S : Style> adjustForm(curForm: StyleForm<S>, curStyle: S) {
+    private fun <S : Style> adjustForm(
+        curForm: StyleForm<S>, curStyle: S, curStyleIdx: Int = 0, siblingStyles: List<S> = emptyList()
+    ) {
         val styling = this.styling ?: return
 
         curForm.ineffectiveSettings = findIneffectiveSettings(ctrl.stylingCtx, styling, curStyle)
@@ -368,24 +370,19 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
             }
-            is SiblingOrdinalConstr<*, *> -> {
-                fun <S : NamedNestedStyle<P>, P : Style> withNestedTypeVars(curStyle: S) {
-                    @Suppress("UNCHECKED_CAST")
-                    constr as SiblingOrdinalConstr<S, P>
-                    val choices = LinkedHashMap<Int, String>()  // retains insertion order
-                    for ((idx, sibling) in constr.siblings.get(styling.getParentStyle(curStyle)).withIndex())
-                        if (sibling !== curStyle)
-                            choices[idx + 1] = sibling.name
-                    val toString = { choice: Int ->
-                        val choiceName = choices.getOrDefault(choice, "")
-                        if (choiceName.isBlank()) "$choice" else "$choice  $choiceName"
-                    }
-                    for (setting in constr.settings) {
-                        curForm.setChoices(setting, choices.keys.toList())
-                        curForm.setToStringFun(setting, toString)
-                    }
+            is SiblingOrdinalConstr -> {
+                val choices = LinkedHashMap<Int, String>()  // retains insertion order
+                for ((idx, sibling) in siblingStyles.withIndex())
+                    if (constr.permitSibling(ctrl.stylingCtx, styling, curStyle, curStyleIdx + 1, sibling, idx + 1))
+                        choices[idx + 1] = if (sibling is NamedStyle) sibling.name else ""
+                val toString = { choice: Int ->
+                    val choiceName = choices.getOrDefault(choice, "")
+                    if (choiceName.isBlank()) "$choice" else "$choice  $choiceName"
                 }
-                withNestedTypeVars(curStyle as NamedNestedStyle<*>)
+                for (setting in constr.settings) {
+                    curForm.setChoices(setting, choices.keys.toList())
+                    curForm.setToStringFun(setting, toString)
+                }
             }
             else -> {}
         }
@@ -414,8 +411,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             else -> {}
         }
 
-        for ((nestedForm, nestedStyle) in curForm.getNestedFormsAndStyles(curStyle))
-            adjustForm(nestedForm.castToStyle(nestedStyle.javaClass), nestedStyle)
+        val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
+        for (idx in nestedForms.indices)
+            adjustForm(nestedForms[idx].castToStyle(nestedStyles[idx].javaClass), nestedStyles[idx], idx, nestedStyles)
     }
 
 

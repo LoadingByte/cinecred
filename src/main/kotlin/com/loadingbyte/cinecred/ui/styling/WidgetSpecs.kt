@@ -166,7 +166,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
         Layer::contourThicknessRfh.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::clearingRfh.st(),
         Layer::blurRadiusRfh.st(),
         getMultiplier = { _, styling, style ->
-            val letterStyle = styling.getParentStyle(style)
+            val letterStyle = styling.getParentStyle(style) as LetterStyle
             letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
         }
     ),
@@ -317,7 +317,7 @@ class SimpleListWidgetSpec<S : Style, SUBJ : Any>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class LayerListWidgetSpec<S : Style, SUBJ : NamedNestedStyle<S>>(
+class LayerListWidgetSpec<S : Style, SUBJ : NamedNestedStyle>(
     setting: ListStyleSetting<S, SUBJ>,
     val newElement: SUBJ,
     val advancedSettings: Set<StyleSetting<SUBJ, Any>>

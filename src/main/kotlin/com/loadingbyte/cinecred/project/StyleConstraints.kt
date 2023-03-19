@@ -206,27 +206,31 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::cloneLayers.st()) { _, styling, style ->
         if (style.shape != LayerShape.CLONE || style.cloneLayers.isEmpty())
             return@JudgeConstr true
-        val layers = styling.getParentStyle(style).layers
+        val layers = (styling.getParentStyle(style) as LetterStyle).layers
         !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
     },
-    SiblingOrdinalConstr(ERROR, Layer::cloneLayers.st(), siblings = LetterStyle::layers.st()),
+    SiblingOrdinalConstr(ERROR, Layer::cloneLayers.st()) { _, _, _, styleOrdinal, _, siblingOrdinal ->
+        siblingOrdinal != styleOrdinal
+    },
     MinSizeConstr(WARN, Layer::cloneLayers.st(), minSize = 1),
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
     JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::clearingLayers.st()) { _, styling, style ->
         if (style.clearingLayers.isEmpty())
             return@JudgeConstr true
-        val layers = styling.getParentStyle(style).layers
+        val layers = (styling.getParentStyle(style) as LetterStyle).layers
         !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
     },
-    SiblingOrdinalConstr(ERROR, Layer::clearingLayers.st(), siblings = LetterStyle::layers.st()),
+    SiblingOrdinalConstr(ERROR, Layer::clearingLayers.st()) { _, _, _, styleOrdinal, _, siblingOrdinal ->
+        siblingOrdinal != styleOrdinal
+    },
     DoubleConstr(ERROR, Layer::clearingRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::blurRadiusRfh.st(), min = 0.0),
     JudgeConstr(
         ERROR, msg("project.styling.constr.excessiveBlurRadius", BLUR_RADIUS_LIMIT),
         Layer::blurRadiusRfh.st()
     ) { _, styling, style ->
-        val letterStyle = styling.getParentStyle(style)
+        val letterStyle = styling.getParentStyle(style) as LetterStyle
         val fontHeightPx = letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
         style.blurRadiusRfh * fontHeightPx <= BLUR_RADIUS_LIMIT
     }
@@ -358,10 +362,10 @@ class MinSizeConstr<S : Style>(
 ) : StyleConstraint<S, ListStyleSetting<S, Any>>(setting)
 
 
-class SiblingOrdinalConstr<S : NestedStyle<P>, P : Style>(
+class SiblingOrdinalConstr<S : NestedStyle>(
     val severity: Severity,
     setting: StyleSetting<S, Int>,
-    val siblings: ListStyleSetting<P, S>
+    val permitSibling: (StylingContext, Styling, S, Int, S, Int) -> Boolean
 ) : StyleConstraint<S, StyleSetting<S, Int>>(setting)
 
 
@@ -385,7 +389,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
         violations.add(ConstraintViolation(rootStyle, leafStyle, leafSetting, leafSubjectIndex, severity, msg))
     }
 
-    fun <S : Style> verifyStyle(rootStyle: Style, style: S) {
+    fun <S : Style> verifyStyle(rootStyle: Style, style: S, styleIdx: Int = 0, siblings: List<S> = emptyList()) {
         val ignoreSettings = findIneffectiveSettings(ctx, styling, style).keys
 
         for (cst in getStyleConstraints(style.javaClass))
@@ -524,31 +528,26 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, -1, cst.severity, msg)
                         }
                     }
-                is SiblingOrdinalConstr<*, *> -> {
-                    fun <S : NestedStyle<P>, P : Style> withNestedTypeVars(style: S) {
-                        @Suppress("UNCHECKED_CAST")
-                        val cst2 = cst as SiblingOrdinalConstr<S, P>
-                        val siblings = cst2.siblings.get(styling.getParentStyle(style))
-                        val ownOrdinal = 1 + siblings.indexOfFirst { sibling -> sibling === style }
-                        val largestOrdinal = siblings.size
-                        style.forEachRelevantSubject(cst2, ignoreSettings) { st, idx, ordinal ->
-                            if (ordinal !in 1..largestOrdinal) {
-                                val msg = l10n("project.styling.constr.siblingOrdinalOutOfBounds", largestOrdinal)
-                                log(rootStyle, style, st, idx, cst2.severity, msg)
-                            } else if (ordinal == ownOrdinal) {
-                                val msg = l10n("project.styling.constr.siblingOrdinalOwn", largestOrdinal)
-                                log(rootStyle, style, st, idx, cst2.severity, msg)
-                            }
+                is SiblingOrdinalConstr -> {
+                    val largestOrdinal = siblings.size
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, ord ->
+                        if (ord !in 1..largestOrdinal) {
+                            val msg = l10n("project.styling.constr.siblingOrdinalOutOfBounds", largestOrdinal)
+                            log(rootStyle, style, st, idx, cst.severity, msg)
+                        } else if (!cst.permitSibling(ctx, styling, style, styleIdx + 1, siblings[ord - 1], ord)) {
+                            val msg = l10n("project.styling.constr.siblingOrdinalIllegal")
+                            log(rootStyle, style, st, idx, cst.severity, msg)
                         }
                     }
-                    withNestedTypeVars(style as NestedStyle<*>)
                 }
             }
 
         for (setting in getStyleSettings(style.javaClass))
-            if (NestedStyle::class.java.isAssignableFrom(setting.type) && setting !in ignoreSettings)
-                for (subject in setting.extractSubjects(style))
-                    verifyStyle(rootStyle, subject as NestedStyle<*>)
+            if (NestedStyle::class.java.isAssignableFrom(setting.type) && setting !in ignoreSettings) {
+                val nestedStyles = setting.extractSubjects(style).requireIsInstance<NestedStyle>()
+                for ((idx, nestedStyle) in nestedStyles.withIndex())
+                    verifyStyle(rootStyle, nestedStyle, idx, nestedStyles)
+            }
     }
 
     verifyStyle(styling.global, styling.global)

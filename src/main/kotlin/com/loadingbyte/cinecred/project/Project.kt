@@ -24,7 +24,7 @@ data class Styling constructor(
     val letterStyles: PersistentList<LetterStyle>
 ) {
 
-    private val parentStyleLookup = IdentityHashMap<NestedStyle<*>, Style>().apply {
+    private val parentStyleLookup = IdentityHashMap<NestedStyle, Style>().apply {
         for (letterStyle in letterStyles)
             for (layer in letterStyle.layers)
                 put(layer, letterStyle)
@@ -38,9 +38,8 @@ data class Styling constructor(
         else -> throw IllegalArgumentException("${styleClass.name} is not a ListedStyle class.")
     } as PersistentList<S>
 
-    @Suppress("UNCHECKED_CAST")
-    fun <S : NestedStyle<P>, P : Style> getParentStyle(style: S): P =
-        parentStyleLookup[style] as P
+    fun getParentStyle(style: NestedStyle): Style =
+        parentStyleLookup.getValue(style)
 
 }
 
@@ -61,10 +60,10 @@ sealed interface ListedStyle : NamedStyle {
 }
 
 
-sealed interface NestedStyle<P : Style> : Style
+sealed interface NestedStyle : Style
 
 
-sealed interface NamedNestedStyle<P : Style> : NamedStyle, NestedStyle<P>
+sealed interface NamedNestedStyle : NamedStyle, NestedStyle
 
 
 data class Global(
@@ -240,7 +239,7 @@ data class Layer(
     val clearingRfh: Double,
     val clearingJoin: LineJoin,
     val blurRadiusRfh: Double
-) : NamedNestedStyle<LetterStyle>
+) : NamedNestedStyle
 
 
 enum class LayerShape { TEXT, STRIPE, CLONE }

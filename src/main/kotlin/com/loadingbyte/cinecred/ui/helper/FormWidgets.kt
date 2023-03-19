@@ -388,12 +388,11 @@ open class ComboBoxWidget<V : Any>(
     toString: (V) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
     private val scrollbar: Boolean = true,
-    decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
+    private val decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
 ) : Form.AbstractWidget<V>(), Form.Choice<V> {
 
     protected val cb = JComboBox<V>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass) { toString(it).ifEmpty { " " } })
         keySelectionManager = CustomToStringKeySelectionManager(valueClass, toString)
     }
 
@@ -413,6 +412,19 @@ open class ComboBoxWidget<V : Any>(
                 cb.maximumRowCount = items.size
         }
 
+    var toString: (V) -> String = toString
+        set(toString) {
+            if (field == toString)
+                return
+            field = toString
+            updateToString()
+        }
+
+    private fun updateToString() {
+        val toString = this.toString  // capture
+        cb.renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass) { toString(it).ifEmpty { " " } })
+    }
+
     protected open fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
         DefaultComboBoxModel(items).apply {
             if (oldSelectedItem in items)
@@ -426,6 +438,7 @@ open class ComboBoxWidget<V : Any>(
         }
 
     init {
+        updateToString()
         this.items = items
     }
 
@@ -459,7 +472,7 @@ class InconsistentComboBoxWidget<V : Any>(
 open class EditableComboBoxWidget<V : Any>(
     valueClass: Class<V>,
     items: List<V>,
-    private val toString: (V) -> String,
+    toString: (V) -> String,
     private val fromString: ((String) -> V),
     widthSpec: WidthSpec? = null
 ) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
@@ -1543,6 +1556,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
     override fun adjustElementOnReorder(element: E, mapping: IntArray): E =
         mapOrdinalsInElement(element) { ordinal ->
             val fromIdx = ordinal - 1
+            if (fromIdx !in mapping.indices) return@mapOrdinalsInElement null
             val toIdx = mapping[fromIdx]
             if (toIdx == -1) null else toIdx + 1
         }

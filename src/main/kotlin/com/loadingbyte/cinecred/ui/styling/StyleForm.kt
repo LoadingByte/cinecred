@@ -162,7 +162,8 @@ class StyleForm<S : Style>(
             setElementName = { style, name -> style.copy(NamedStyle::name.st().notarize(name)) },
             mapOrdinalsInElement = { nestedStyle, mapping ->
                 nestedStyle.copy(siblingOrdinalSettings.map { setting ->
-                    setting.repackSubjects(setting.extractSubjects(nestedStyle).mapNotNull(mapping))
+                    if (setting is DirectStyleSetting) setting.notarize(mapping(setting.get(nestedStyle)) ?: 0)
+                    else setting.repackSubjects(setting.extractSubjects(nestedStyle).mapNotNull(mapping))
                 })
             },
             toggleAdvanced = { widget, advanced ->
@@ -184,6 +185,7 @@ class StyleForm<S : Style>(
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
+        val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S, *>>()
@@ -198,7 +200,10 @@ class StyleForm<S : Style>(
                 val max = intConstr?.max
                 val step = numberWidgetSpec?.step ?: 1
                 val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
-                if (timecodeWidgetSpec != null)
+                if (siblingOrdinalConstr != null) {
+                    // See makeListWidget() for a comment on why we need an inconsistent widget for sibling ordinals.
+                    InconsistentComboBoxWidget(Int::class.javaObjectType, items = emptyList(), widthSpec = widthSpec)
+                } else if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
                 else
                     SpinnerWidget(Int::class.javaObjectType, model, widthSpec)
@@ -472,6 +477,9 @@ class StyleForm<S : Style>(
 
     fun setToStringFun(setting: StyleSetting<*, *>, toString: ((Nothing) -> String)) {
         valueWidgets[setting]!!.applyConfigurator { widget ->
+            if (widget is ComboBoxWidget<*>)
+                @Suppress("UNCHECKED_CAST")
+                (widget as ComboBoxWidget<Nothing>).toString = toString
             if (widget is MultiComboBoxWidget<*>)
                 @Suppress("UNCHECKED_CAST")
                 (widget as MultiComboBoxWidget<Nothing>).toString = toString

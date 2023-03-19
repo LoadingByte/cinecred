@@ -51,6 +51,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
 
         override var isVisible = true
             set(isVisible) {
+                if (field == isVisible)
+                    return
                 field = isVisible
                 for (comp in components)
                     comp.isVisible = isVisible
@@ -60,6 +62,8 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
 
         override var isEnabled = true
             set(isEnabled) {
+                if (field == isEnabled)
+                    return
                 field = isEnabled
                 for (comp in components)
                     comp.isEnabled = isEnabled
@@ -116,21 +120,15 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         val noticeIconComp = JLabel()
         val noticeMsgComp = newLabelTextArea()
 
-        var isVisible: Boolean
-            get() = widget.isVisible
-            set(isVisible) {
-                widget.isVisible = isVisible
-                labelComp.isVisible = isVisible
-                noticeIconComp.isVisible = isVisible
-                noticeMsgComp.isVisible = isVisible
-            }
+        fun setAffixVisible(visible: Boolean) {
+            labelComp.isVisible = visible
+            noticeIconComp.isVisible = visible
+            noticeMsgComp.isVisible = visible
+        }
 
-        var isEnabled: Boolean
-            get() = widget.isEnabled
-            set(isEnabled) {
-                widget.isEnabled = isEnabled
-                labelComp.isEnabled = isEnabled
-            }
+        fun setAffixEnabled(enabled: Boolean) {
+            labelComp.isEnabled = enabled
+        }
 
         var notice: Notice? = null
             set(notice) {

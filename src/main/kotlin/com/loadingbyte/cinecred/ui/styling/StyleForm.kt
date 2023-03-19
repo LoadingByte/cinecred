@@ -409,24 +409,23 @@ class StyleForm<S : Style>(
 
         for ((formRow, settings) in rootFormRows) {
             // First find the minimum status (2 invisible, 1 disabled, 0 regular) across all widgets in the form row
-            // (there can be multiple when a UnionWidget is used). Apply that minimum status to the whole row,
-            // including the label.
+            // (there can be multiple when a UnionWidget is used). Apply that minimum status to the row's label and
+            // notice area.
             val rowStatus = settings.minOf { st ->
                 if (st in hiddenSettings) 2
                 else status(ineffectiveSettings.getOrDefault(st, Effectivity.EFFECTIVE))
             }
-            formRow.isVisible = rowStatus != 2
-            formRow.isEnabled = rowStatus != 1
-            // If the status of any setting deviates from the minimum status, up that setting's status individually.
+            formRow.setAffixVisible(rowStatus != 2)
+            formRow.setAffixEnabled(rowStatus != 1)
+            // For each widget individually, find its status and apply it. Separating this from the row status is
+            // relevant for UnionWidgets.
             for (setting in settings) {
                 val settingStatus =
                     if (setting in hiddenSettings) 2
                     else status(ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE))
-                if (settingStatus != rowStatus) {
-                    val widget = valueWidgets.getValue(setting)
-                    widget.isVisible = settingStatus != 2
-                    widget.isEnabled = settingStatus != 1
-                }
+                val widget = valueWidgets.getValue(setting)
+                widget.isVisible = settingStatus != 2
+                widget.isEnabled = settingStatus != 1
             }
         }
     }

@@ -85,6 +85,8 @@ class MultiComboBox<E : Any>(
 
     var toString: (E) -> String = toString
         set(toString) {
+            if (field == toString)
+                return
             field = toString
             updateSelectionLabel()
             for (idx in 0 until popup.componentCount) {

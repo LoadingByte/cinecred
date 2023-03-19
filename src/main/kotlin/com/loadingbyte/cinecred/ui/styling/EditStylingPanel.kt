@@ -375,10 +375,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 for ((idx, sibling) in siblingStyles.withIndex())
                     if (constr.permitSibling(ctrl.stylingCtx, styling, curStyle, curStyleIdx + 1, sibling, idx + 1))
                         choices[idx + 1] = if (sibling is NamedStyle) sibling.name else ""
-                val toString = { choice: Int ->
-                    val choiceName = choices.getOrDefault(choice, "")
-                    if (choiceName.isBlank()) "$choice" else "$choice  $choiceName"
-                }
+                val toString = SiblingOrdinalToString(choices)
                 for (setting in constr.settings) {
                     curForm.setChoices(setting, choices.keys.toList())
                     curForm.setToStringFun(setting, toString)
@@ -414,6 +411,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
         for (idx in nestedForms.indices)
             adjustForm(nestedForms[idx].castToStyle(nestedStyles[idx].javaClass), nestedStyles[idx], idx, nestedStyles)
+    }
+
+    // This toString function is also a data class so that when a new instance is pushed into a widget, the widget can
+    // avoid updating itself in the common case where nothing has changed.
+    private data class SiblingOrdinalToString(val choices: Map<Int, String>) : (Int) -> String {
+        override fun invoke(choice: Int): String {
+            val choiceName = choices.getOrDefault(choice, "")
+            return if (choiceName.isBlank()) "$choice" else "$choice $choiceName"
+        }
     }
 
 

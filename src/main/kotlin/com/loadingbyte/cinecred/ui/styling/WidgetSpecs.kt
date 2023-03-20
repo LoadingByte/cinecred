@@ -330,7 +330,7 @@ class SimpleListWidgetSpec<S : Style, SUBJ : Any>(
 ) : StyleWidgetSpec<S>(setting)
 
 
-class LayerListWidgetSpec<S : Style, SUBJ : NamedNestedStyle>(
+class LayerListWidgetSpec<S : Style, SUBJ : LayerStyle>(
     setting: ListStyleSetting<S, SUBJ>,
     val newElement: SUBJ,
     val advancedSettings: Set<StyleSetting<SUBJ, Any>>

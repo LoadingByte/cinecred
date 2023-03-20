@@ -63,7 +63,9 @@ sealed interface ListedStyle : NamedStyle {
 sealed interface NestedStyle : Style
 
 
-sealed interface NamedNestedStyle : NamedStyle, NestedStyle
+sealed interface LayerStyle : NamedStyle, NestedStyle {
+    val collapsed: Boolean
+}
 
 
 data class Global(
@@ -210,6 +212,7 @@ data class FontFeature(
 
 data class Layer(
     override val name: String,
+    override val collapsed: Boolean,
     val coloring: LayerColoring,
     val color1: Color,
     val color2: Color,
@@ -245,7 +248,7 @@ data class Layer(
     val clearingRfh: Double,
     val clearingJoin: LineJoin,
     val blurRadiusRfh: Double
-) : NamedNestedStyle
+) : LayerStyle
 
 
 enum class LayerColoring { PLAIN, GRADIENT }

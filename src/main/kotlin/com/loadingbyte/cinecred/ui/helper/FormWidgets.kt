@@ -1500,7 +1500,8 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
     makeElementWidget: () -> W,
     newElement: E,
     private val getElementName: (E) -> String,
-    private val setElementName: (E, String) -> E,
+    private val getElementAdvanced: (E) -> Boolean,
+    private val setElementNameAndAdvanced: (E, String, Boolean) -> E,
     private val mapOrdinalsInElement: (E, mapping: (Int) -> Int?) -> E,
     private val toggleAdvanced: (W, Boolean) -> Unit
 ) : AbstractListWidget<E, W>(makeElementWidget, newElement, newElementIsLastElement = false) {
@@ -1514,7 +1515,6 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
     }
 
     private val layerPanels = mutableListOf<LayerPanel>()
-    private val nameWidgets = mutableListOf<TextWidget>()
     private val addButtons = mutableListOf<AddButton>()
 
     init {
@@ -1528,11 +1528,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
     override val constraints = listOf("growx, pushx")
 
     override fun addPart(idx: Int, widget: W) {
-        val nameWidget = TextWidget()
-        // When the name widget changes, notify this widget's change listeners that the name widget has changed.
-        nameWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
-        nameWidgets.add(nameWidget)
-        val layerPanel = LayerPanel(idx, widget, nameWidget)
+        val layerPanel = LayerPanel(idx, widget)
         panel.add(layerPanel, 0)
         layerPanels.add(layerPanel)
         val addBtn = AddButton(addAtIdx = idx + 1)
@@ -1545,12 +1541,19 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         addButtons[idx + 1].isVisible = isVisible
     }
 
-    override fun getPartElement(idx: Int, widget: W): E =
-        setElementName(super.getPartElement(idx, widget), nameWidgets[idx].value)
+    override fun getPartElement(idx: Int, widget: W): E {
+        val element = super.getPartElement(idx, widget)
+        val lp = layerPanels[idx]
+        return setElementNameAndAdvanced(element, lp.nameWidget.value, lp.advancedBtn.isSelected)
+    }
 
     override fun setPartElement(idx: Int, widget: W, element: E) {
         super.setPartElement(idx, widget, element)
-        withoutChangeListeners { nameWidgets[idx].value = getElementName(element) }
+        val lp = layerPanels[idx]
+        withoutChangeListeners {
+            lp.nameWidget.value = getElementName(element)
+            lp.advancedBtn.isSelected = getElementAdvanced(element)
+        }
     }
 
     override fun adjustElementOnReorder(element: E, mapping: IntArray): E =
@@ -1562,16 +1565,27 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
         }
 
 
-    private inner class LayerPanel(idx: Int, widget: W, nameWidget: TextWidget) : JPanel(MigLayout()) {
+    private inner class LayerPanel(idx: Int, widget: W) : JPanel() {
+
+        val nameWidget: TextWidget
+        val advancedBtn: JToggleButton
 
         init {
             putClientProperty(STYLE, "background: @componentBackground")
             border = FlatBorder()
 
-            val advancedBtn = JToggleButton(l10n("ui.form.layerAdvanced"), ADVANCED_ICON)
+            nameWidget = TextWidget()
+            // When the name widget changes, notify the LayerListWidget's change listeners.
+            nameWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+
+            advancedBtn = JToggleButton(l10n("ui.form.layerAdvanced"), ADVANCED_ICON)
             advancedBtn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
-            advancedBtn.addItemListener { toggleAdvanced(widget, it.stateChange == ItemEvent.SELECTED) }
-            // By default, the layer is collapsed.
+            advancedBtn.addItemListener {
+                toggleAdvanced(widget, it.stateChange == ItemEvent.SELECTED)
+                // When the advanced button is clicked, notify the LayerListWidget's change listener.
+                notifyChangeListeners()
+            }
+            // By default, advancedBtn is not selected, so inform the wrapped widget about that.
             toggleAdvanced(widget, false)
 
             val delBtn = JButton(l10n("ui.form.layerDelete"), REMOVE_ICON)
@@ -1582,6 +1596,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             for ((comp, constr) in widget.components.zip(widget.constraints))
                 widgetPanel.add(comp, constr)
 
+            layout = MigLayout()
             add(Grip(), "split 6, center, gap 20:40: 30")
             add(JLabel((idx + 1).toString()).apply { putClientProperty(STYLE, "font: bold") })
             add(nameWidget.components.single(), "width 100, growx, shrinkprio 50, gap 12 10")

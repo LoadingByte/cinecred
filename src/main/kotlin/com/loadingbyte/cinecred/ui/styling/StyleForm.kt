@@ -123,7 +123,7 @@ class StyleForm<S : Style>(
             }
             layerListWidgetSpec != null -> makeLayerListWidget(
                 @Suppress("UNCHECKED_CAST")
-                (setting as ListStyleSetting<S, NamedNestedStyle>),
+                (setting as ListStyleSetting<S, LayerStyle>),
                 settingWidgetSpecs
             )
             else -> SimpleListWidget(
@@ -136,7 +136,7 @@ class StyleForm<S : Style>(
         }
     }
 
-    private fun <E : NamedNestedStyle> makeLayerListWidget(
+    private fun <E : LayerStyle> makeLayerListWidget(
         setting: ListStyleSetting<S, E>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<*> {
@@ -151,7 +151,10 @@ class StyleForm<S : Style>(
         return LayerListWidget(
             makeElementWidget = {
                 val nestedForm = StyleForm(
-                    setting.type, constSettings = mapOf(NamedStyle::name.st() to ""),
+                    setting.type,
+                    // These settings are always overridden by setElementNameAndAdvanced and thus should be omitted from
+                    // the style form; the exact placeholder values we use here are completely irrelevant.
+                    constSettings = mapOf(LayerStyle::name.st() to "", LayerStyle::collapsed.st() to false),
                     // Horizontal space in nested forms is scarce, so save where we can.
                     insets = false, noticeArea = false, constLabelWidth = false
                 )
@@ -159,7 +162,10 @@ class StyleForm<S : Style>(
             },
             newElement = layerListWidgetSpec.newElement,
             getElementName = { style -> style.name },
-            setElementName = { style, name -> style.copy(NamedStyle::name.st().notarize(name)) },
+            getElementAdvanced = { style -> !style.collapsed },
+            setElementNameAndAdvanced = { style, name, advanced ->
+                style.copy(listOf(LayerStyle::name.st().notarize(name), LayerStyle::collapsed.st().notarize(!advanced)))
+            },
             mapOrdinalsInElement = { nestedStyle, mapping ->
                 nestedStyle.copy(siblingOrdinalSettings.map { setting ->
                     if (setting is DirectStyleSetting) setting.notarize(mapping(setting.get(nestedStyle)) ?: 0)

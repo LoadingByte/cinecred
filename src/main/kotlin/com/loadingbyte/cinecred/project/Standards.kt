@@ -105,6 +105,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 
 val PRESET_LAYER = Layer(
     name = "",
+    collapsed = true,
     coloring = LayerColoring.PLAIN,
     color1 = Color.WHITE,
     color2 = Color.GRAY,

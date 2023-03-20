@@ -33,7 +33,9 @@ fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
 private fun <S : Style> writeStyle(ctx: StylingContext, styling: Styling, style: S): Map<String, Any> {
     // The order of the settings should be preserved, hence we use a linked map.
     val toml = LinkedHashMap<String, Any>()
-    val excludedSettings = findIneffectiveSettings(ctx, styling, style)
+    val excludedSettings = findIneffectiveSettings(ctx, styling, style).keys +
+            // Don't store whether a layer is collapsed, as we don't want to persist UI information.
+            LayerStyle::collapsed.st()
     for (setting in getStyleSettings(style.javaClass))
         if (setting !in excludedSettings)
             when (setting) {

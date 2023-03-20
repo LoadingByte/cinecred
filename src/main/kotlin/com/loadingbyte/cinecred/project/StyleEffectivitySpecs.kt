@@ -197,6 +197,10 @@ private fun supportsNot(ctx: StylingContext, style: LetterStyle, feat: String): 
 
 private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
     StyleEffectivitySpec(
+        Layer::color2.st(), Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
+        isTotallyIneffective = { _, _, style -> style.coloring != LayerColoring.GRADIENT }
+    ),
+    StyleEffectivitySpec(
         Layer::stripePreset.st(), Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
         Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(),
         Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),

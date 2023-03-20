@@ -8,6 +8,7 @@ Cinecred Changelog
 ### Additions
 
 - Letter styles are now made of freely composable and customizable layers:
+    - Layers can either use a plain color or a gradient.
     - Layers can render the text, draw a stripe like a background or underline,
       or clone multiple other layers.
     - Stripes can also have rounded or bevelled corners.

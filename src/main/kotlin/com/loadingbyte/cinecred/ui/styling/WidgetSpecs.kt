@@ -160,6 +160,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
 
 private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     MultiplierWidgetSpec(
+        Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
         Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(), Layer::stripeWidenLeftRfh.st(),
         Layer::stripeWidenRightRfh.st(), Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
         Layer::stripeCornerRadiusRfh.st(), Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(),
@@ -169,6 +170,17 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
             val letterStyle = styling.getParentStyle(style) as LetterStyle
             letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
         }
+    ),
+    ToggleButtonGroupWidgetSpec(Layer::coloring.st(), ICON),
+    WidthWidgetSpec(Layer::color1.st(), WidthSpec.TINIER),
+    WidthWidgetSpec(Layer::color2.st(), WidthSpec.TINIER),
+    WidthWidgetSpec(Layer::gradientAngleDeg.st(), WidthSpec.TINY),
+    WidthWidgetSpec(Layer::gradientExtentRfh.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::gradientShiftRfh.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        Layer::coloring.st(), Layer::color1.st(), Layer::color2.st(),
+        Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
+        settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
     ),
     ToggleButtonGroupWidgetSpec(Layer::shape.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(Layer::stripePreset.st(), ICON),

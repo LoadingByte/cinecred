@@ -48,6 +48,7 @@ val X_16_TO_9_ICON = SVGIcon.load("/icons/16to9.svg")
 val X_4_TO_3_ICON = SVGIcon.load("/icons/4to3.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val ADVANCED_ICON = SVGIcon.load("/icons/advanced.svg")
+val ANGLE_ICON = SVGIcon.load("/icons/angle.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val CROSS_ICON = SVGIcon.load("/icons/cross.svg")
 val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
@@ -297,6 +298,16 @@ val StripePreset.icon
     }
 
 
+private val LAYER_COLORING_PLAIN_ICON = SVGIcon.load("/icons/layerColoring/plain.svg")
+private val LAYER_COLORING_GRADIENT_ICON = SVGIcon.load("/icons/layerColoring/gradient.svg")
+
+val LayerColoring.icon
+    get() = when (this) {
+        LayerColoring.PLAIN -> LAYER_COLORING_PLAIN_ICON
+        LayerColoring.GRADIENT -> LAYER_COLORING_GRADIENT_ICON
+    }
+
+
 private val LAYER_SHAPE_TEXT_ICON = SVGIcon.load("/icons/layerShape/text.svg")
 private val LAYER_SHAPE_STRIPE_ICON = SVGIcon.load("/icons/layerShape/stripe.svg")
 private val LAYER_SHAPE_CLONE_ICON = SVGIcon.load("/icons/layerShape/clone.svg")
@@ -337,6 +348,7 @@ val Enum<*>.icon
         is SmallCaps -> icon
         is Superscript -> icon
         is StripePreset -> icon
+        is LayerColoring -> icon
         is LayerShape -> icon
         is LineJoin -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")

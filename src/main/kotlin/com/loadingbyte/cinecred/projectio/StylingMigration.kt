@@ -179,7 +179,7 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
                 for (deco in decorations)
                     if (deco is Map<*, *>) {
                         val layer = mutableMapOf<String, Any>("shape" to "STRIPE")
-                        (deco["color"] ?: foreground)?.let { layer["color"] = it }
+                        (deco["color"] ?: foreground)?.let { layer["color1"] = it }
                         deco["preset"]?.let { layer["stripePreset"] = if (it == "OFF") "CUSTOM" else it }
                         deco["offsetPx"].letIfNumber { layer["stripeOffsetRfh"] = it / fontHeightPx }
                         deco["thicknessPx"].letIfNumber { layer["stripeHeightRfh"] = it / fontHeightPx }
@@ -195,7 +195,7 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
 
             // Create a layer for the background if that's configures.
             val bgLayer = if (background == null) null else {
-                val layer = mutableMapOf("color" to background, "shape" to "STRIPE", "stripePreset" to "BACKGROUND")
+                val layer = mutableMapOf("color1" to background, "shape" to "STRIPE", "stripePreset" to "BACKGROUND")
                 letterStyle["backgroundWidenLeftPx"].letIfNumber { layer["stripeWidenLeftRfh"] = it / fontHeightPx }
                 letterStyle["backgroundWidenRightPx"].letIfNumber { layer["stripeWidenRightRfh"] = it / fontHeightPx }
                 // In 1.3.1, the background included the custom leading, so include it in the converted bg as well.
@@ -214,7 +214,7 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
 
             // Create a layer for the main text.
             val textLayer = mutableMapOf<String, Any>("shape" to "TEXT")
-            foreground?.let { textLayer["color"] = it }
+            foreground?.let { textLayer["color1"] = it }
             hShearing?.let { textLayer["hShearing"] = it }
 
             // Collect all layers in the final layer list.

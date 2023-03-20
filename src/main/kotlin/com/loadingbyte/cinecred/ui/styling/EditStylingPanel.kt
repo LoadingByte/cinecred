@@ -320,8 +320,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val colorSet = HashSet<Color>()
         colorSet.add(styling.global.grounding)
         for (letterStyle in styling.letterStyles)
-            for (layer in letterStyle.layers)
-                colorSet.add(layer.color)
+            for (layer in letterStyle.layers) {
+                colorSet.add(layer.color1)
+                if (layer.coloring == LayerColoring.GRADIENT)
+                    colorSet.add(layer.color2)
+            }
 
         swatchColors = colorSet.sortedWith { c1, c2 ->
             val hsb1 = Color.RGBtoHSB(c1.red, c1.green, c1.blue, null)

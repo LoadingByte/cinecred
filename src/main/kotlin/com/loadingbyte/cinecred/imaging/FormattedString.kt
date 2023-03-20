@@ -11,9 +11,7 @@ import java.text.AttributedString
 import java.text.Bidi
 import java.text.BreakIterator
 import java.util.*
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.*
 
 
 class FormattedString private constructor(
@@ -283,9 +281,10 @@ class FormattedString private constructor(
 
         for ((layerIdx, layer) in design.layers.withIndex()) {
             val forms = formLayer(layerIdx)
+            val coat = makeCoat(layer.coloring, center)
             if (layer.blurRadiusPx == 0.0)
                 for (form in forms)
-                    form.drawTo(image, x, yBaseline, layer.color, imageLayer)
+                    form.drawTo(image, x, yBaseline, coat, imageLayer)
             else if (forms.isNotEmpty()) {
                 // Merge all forms into one shape and then blur all of them in one go. This makes a difference at points
                 // where two forms come very close to each other, and in those cases, we pursue the behavior of other
@@ -296,7 +295,7 @@ class FormattedString private constructor(
                         path.append(forms[i].awtShape, false)
                     path
                 }
-                image.drawShape(layer.color, mergedShape, x, yBaseline, fill = true, layer.blurRadiusPx, imageLayer)
+                image.drawShape(coat, mergedShape, x, yBaseline, fill = true, layer.blurRadiusPx, imageLayer)
             }
         }
     }
@@ -409,6 +408,24 @@ class FormattedString private constructor(
         return out
     }
 
+    private fun makeCoat(coloring: Layer.Coloring, center: Point2D.Double): DeferredImage.Coat =
+        when (coloring) {
+            is Layer.Coloring.Plain -> DeferredImage.Coat.Plain(coloring.color)
+            is Layer.Coloring.Gradient -> {
+                val angleRad = Math.toRadians(coloring.angleDeg)
+                val dx = -sin(angleRad)
+                val dy = cos(angleRad)
+                val ext = coloring.extentPx.coerceAtLeast(0.01)  // Otherwise, the gradient disappears.
+                val offset1 = coloring.shiftPx - ext / 2.0
+                val offset2 = coloring.shiftPx + ext / 2.0
+                DeferredImage.Coat.Gradient(
+                    coloring.color1, coloring.color2,
+                    point1 = Point2D.Double(center.x + offset1 * dx, center.y + offset1 * dy),
+                    point2 = Point2D.Double(center.x + offset2 * dx, center.y + offset2 * dy)
+                )
+            }
+        }
+
     private class GlyphSegment(
         private val gv: GlyphVector,
         val baseX: Double,
@@ -428,7 +445,7 @@ class FormattedString private constructor(
         val anchor: Point2D
         val awtShape: Shape
         fun transform(tx: AffineTransform): Form
-        fun drawTo(img: DeferredImage, x: Double, yBaseline: Y, color: Color, layer: DeferredImage.Layer)
+        fun drawTo(img: DeferredImage, x: Double, yBaseline: Y, coat: DeferredImage.Coat, layer: DeferredImage.Layer)
 
         class AWTShape(override val anchor: Point2D, override val awtShape: Shape) : Form {
 
@@ -437,8 +454,10 @@ class FormattedString private constructor(
                 awtShape = if (awtShape is Path2D.Float) Path2D.Float(awtShape, tx) else Path2D.Double(awtShape, tx)
             )
 
-            override fun drawTo(img: DeferredImage, x: Double, yBaseline: Y, color: Color, layer: DeferredImage.Layer) {
-                img.drawShape(color, awtShape, x, yBaseline, fill = true, layer = layer)
+            override fun drawTo(
+                img: DeferredImage, x: Double, yBaseline: Y, coat: DeferredImage.Coat, layer: DeferredImage.Layer
+            ) {
+                img.drawShape(coat, awtShape, x, yBaseline, fill = true, layer = layer)
             }
 
         }
@@ -467,14 +486,16 @@ class FormattedString private constructor(
                 transform = if (transform == null) tx else AffineTransform(tx).apply { concatenate(transform) }
             )
 
-            override fun drawTo(img: DeferredImage, x: Double, yBaseline: Y, color: Color, layer: DeferredImage.Layer) {
+            override fun drawTo(
+                img: DeferredImage, x: Double, yBaseline: Y, coat: DeferredImage.Coat, layer: DeferredImage.Layer
+            ) {
                 for (gs in gss) {
                     val postTx = if (transform == null) null else AffineTransform().apply {
                         translate(-gs.baseX, 0.0)
                         concatenate(transform)
                         translate(gs.baseX, 0.0)
                     }
-                    img.drawText(color, TextImpl(gs, postTx), x + gs.baseX, yBaseline, layer)
+                    img.drawText(coat, TextImpl(gs, postTx), x + gs.baseX, yBaseline, layer)
                 }
             }
 
@@ -760,7 +781,7 @@ class FormattedString private constructor(
 
 
     class Layer(
-        val color: Color,
+        val coloring: Coloring,
         val shape: Shape,
         val dilation: Dilation? = null,
         val contour: Contour? = null,
@@ -774,6 +795,22 @@ class FormattedString private constructor(
         val clearing: Clearing? = null,
         val blurRadiusPx: Double = 0.0
     ) {
+
+        sealed interface Coloring {
+
+            class Plain(
+                val color: Color
+            ) : Coloring
+
+            class Gradient(
+                val color1: Color,
+                val color2: Color,
+                val angleDeg: Double,
+                val extentPx: Double,
+                val shiftPx: Double = 0.0
+            ) : Coloring
+
+        }
 
         sealed interface Shape {
 

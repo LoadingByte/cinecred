@@ -543,7 +543,8 @@ private fun drawPage(
         // not contain a font weight attribute, or else the FormattedString would complain.
         val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
         val font = FormattedString.Font(Font(fontName, Font.PLAIN, 1), resolution.widthPx / 80.0)
-        val layer = FormattedString.Layer(STAGE_GUIDE_COLOR, FormattedString.Layer.Shape.Text)
+        val coloring = FormattedString.Layer.Coloring.Plain(STAGE_GUIDE_COLOR)
+        val layer = FormattedString.Layer(coloring, FormattedString.Layer.Shape.Text)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, FormattedString.Design(font, listOf(layer))))
         }.build()

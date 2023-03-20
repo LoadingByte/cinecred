@@ -210,7 +210,12 @@ data class FontFeature(
 
 data class Layer(
     override val name: String,
-    val color: Color,
+    val coloring: LayerColoring,
+    val color1: Color,
+    val color2: Color,
+    val gradientAngleDeg: Double,
+    val gradientExtentRfh: Double,
+    val gradientShiftRfh: Double,
     val shape: LayerShape,
     val stripePreset: StripePreset,
     val stripeHeightRfh: Double,
@@ -243,6 +248,7 @@ data class Layer(
 ) : NamedNestedStyle
 
 
+enum class LayerColoring { PLAIN, GRADIENT }
 enum class LayerShape { TEXT, STRIPE, CLONE }
 enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }

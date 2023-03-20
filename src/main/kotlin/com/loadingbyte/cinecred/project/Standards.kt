@@ -105,7 +105,12 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 
 val PRESET_LAYER = Layer(
     name = "",
-    color = Color.WHITE,
+    coloring = LayerColoring.PLAIN,
+    color1 = Color.WHITE,
+    color2 = Color.GRAY,
+    gradientAngleDeg = 0.0,
+    gradientExtentRfh = 1.0,
+    gradientShiftRfh = 0.0,
     shape = LayerShape.STRIPE,
     stripePreset = StripePreset.UNDERLINE,
     stripeHeightRfh = 0.05,
@@ -181,12 +186,12 @@ val PLACEHOLDER_LETTER_STYLE = PRESET_LETTER_STYLE.copy(
     name = l10n("project.placeholder"),
     layers = persistentListOf(
         PRESET_LAYER.copy(
-            color = Color.ORANGE,
+            color1 = Color.ORANGE,
             shape = LayerShape.STRIPE,
             stripePreset = StripePreset.BACKGROUND
         ),
         PRESET_LAYER.copy(
-            color = Color.BLACK,
+            color1 = Color.BLACK,
             shape = LayerShape.TEXT
         )
     )

@@ -248,6 +248,21 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
     val lm = stdFont.unscaledAWTFont.lineMetrics
 
     val fmtStrLayers = layers.map { layer ->
+        val coloring = when (layer.coloring) {
+            LayerColoring.PLAIN ->
+                FormattedString.Layer.Coloring.Plain(
+                    color = layer.color1
+                )
+            LayerColoring.GRADIENT ->
+                FormattedString.Layer.Coloring.Gradient(
+                    color1 = layer.color1,
+                    color2 = layer.color2,
+                    angleDeg = layer.gradientAngleDeg,
+                    extentPx = layer.gradientExtentRfh * fh,
+                    shiftPx = layer.gradientShiftRfh * fh
+                )
+        }
+
         val shape = when (layer.shape) {
             LayerShape.TEXT ->
                 FormattedString.Layer.Shape.Text
@@ -312,7 +327,7 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
             )
 
         FormattedString.Layer(
-            color = layer.color,
+            coloring = coloring,
             shape = shape,
             dilation = dilation,
             contour = contour,

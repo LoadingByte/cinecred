@@ -162,7 +162,7 @@ class WholePagePDFRenderJob(
                     cs.fill()
                     cs.restoreGraphicsState()
                 }
-                page.materialize(pdfDoc, cs, pageHeight, DELIVERED_LAYERS)
+                page.materialize(pdfDoc, pdfPage, cs, DELIVERED_LAYERS)
             }
 
             progressCallback(100 * (idx + 1) / pageDefImages.size)

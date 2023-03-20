@@ -8,17 +8,31 @@ import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
 import org.apache.fontbox.ttf.TTFParser
 import org.apache.fontbox.ttf.TrueTypeCollection
-import org.apache.pdfbox.cos.COSName
+import org.apache.pdfbox.contentstream.operator.OperatorName
+import org.apache.pdfbox.cos.*
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.PDResources
+import org.apache.pdfbox.pdmodel.common.PDRange
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2
 import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup
+import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroupAttributes
 import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import org.apache.pdfbox.pdmodel.graphics.pattern.PDShadingPattern
+import org.apache.pdfbox.pdmodel.graphics.shading.PDShading
+import org.apache.pdfbox.pdmodel.graphics.shading.PDShadingType2
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
+import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.util.Matrix
 import java.awt.*
@@ -61,8 +75,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     fun drawShape(
         color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
     ) {
-        if (color.alpha == 0) return
-        addInstruction(layer, Instruction.DrawShape(x, y, shape, color, fill, blurRadius))
+        drawShape(Coat.Plain(color), shape, x, y, fill, blurRadius, layer)
+    }
+
+    fun drawShape(
+        coat: Coat, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
+    ) {
+        if (!coat.isVisible()) return
+        addInstruction(layer, Instruction.DrawShape(x, y, shape, coat, fill, blurRadius))
     }
 
     fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, layer: Layer = FOREGROUND) {
@@ -77,9 +97,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
-    fun drawText(color: Color, text: Text, x: Double, yBaseline: Y, layer: Layer = FOREGROUND) {
-        if (color.alpha == 0) return
-        addInstruction(layer, Instruction.DrawText(x, yBaseline, text, color))
+    fun drawText(coat: Coat, text: Text, x: Double, yBaseline: Y, layer: Layer = FOREGROUND) {
+        if (!coat.isVisible()) return
+        addInstruction(layer, Instruction.DrawText(x, yBaseline, text, coat))
     }
 
     fun drawPicture(pic: Picture, x: Double, y: Y, layer: Layer = FOREGROUND) {
@@ -91,9 +111,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun materialize(
-        doc: PDDocument, cs: PDPageContentStream, csHeight: Float, layers: List<Layer>, culling: Rectangle2D? = null
+        doc: PDDocument, page: PDPage, cs: PDPageContentStream, layers: List<Layer>, culling: Rectangle2D? = null
     ) {
-        materializeDeferredImage(PDFBackend(doc, cs, csHeight), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
+        materializeDeferredImage(PDFBackend(doc, page, cs), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
     }
 
     private fun materializeDeferredImage(
@@ -119,22 +139,22 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             )
             is Instruction.DrawShape -> materializeShape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.shape, insn.color, insn.fill, universeScaling * insn.blurRadius
+                universeScaling, culling, insn.shape, insn.coat, insn.fill, universeScaling * insn.blurRadius
             )
             is Instruction.DrawLine -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
-                insn.color, fill = false, blurRadius = 0.0
+                Coat.Plain(insn.color), fill = false, blurRadius = 0.0
             )
             is Instruction.DrawRect -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Rectangle2D.Double(
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
-                ), insn.color, insn.fill, blurRadius = 0.0
+                ), Coat.Plain(insn.color), insn.fill, blurRadius = 0.0
             )
             is Instruction.DrawText -> materializeText(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.yBaseline.resolve(elasticScaling),
-                universeScaling, culling, insn.text, insn.color
+                universeScaling, culling, insn.text, insn.coat
             )
             is Instruction.DrawPicture -> materializePicture(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), culling,
@@ -146,7 +166,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeShape(
         backend: MaterializationBackend,
         x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        shape: Shape, color: Color, fill: Boolean, blurRadius: Double
+        shape: Shape, coat: Coat, fill: Boolean, blurRadius: Double
     ) {
         // It would be a bit complicated to exactly determine which pixels are affected after the blur, so instead, we
         // just add a safeguard buffer to better be sure that not a single blurred pixel is accidentally culled.
@@ -163,8 +183,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
         val transformedShape = if (shape is Path2D.Float) Path2D.Float(shape, tx) else Path2D.Double(shape, tx)
+        val transformedCoat = coat.transform(tx)
         if (blurRadius <= 0.0)
-            backend.materializeShape(transformedShape, color, fill)
+            backend.materializeShape(transformedShape, transformedCoat, fill)
         else {
             // For both backends, the only conceivable way to implement blurring appears to be to first draw the shape
             // to an image, blur that, and then to send it to the backend.
@@ -190,7 +211,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 BufferedImage.TYPE_4BYTE_ABGR_PRE
             ).withG2 { g2 ->
                 g2.setHighQuality()
-                g2.color = color
+                g2.paint = transformedCoat.toPaint()
                 g2.translate(fullPad - xWhole, fullPad - yWhole)
                 g2.fill(transformedShape)
             }
@@ -223,7 +244,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeText(
         backend: MaterializationBackend,
         x: Double, yBaseline: Double, scaling: Double, culling: Rectangle2D?,
-        text: Text, color: Color
+        text: Text, coat: Coat
     ) {
         if (culling != null &&
             !culling.intersects(
@@ -233,7 +254,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 (text.heightAboveBaseline + text.heightBelowBaseline) * scaling
             )
         ) return
-        backend.materializeText(x, yBaseline, scaling, text, color)
+        backend.materializeText(x, yBaseline, scaling, text, coat)
     }
 
     private fun materializePicture(
@@ -258,10 +279,42 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
 
+        private fun Coat.isVisible(): Boolean = when (this) {
+            is Coat.Plain -> color.alpha != 0
+            is Coat.Gradient -> color1.alpha != 0 || color2.alpha != 0
+        }
+
+        private fun Coat.transform(tx: AffineTransform): Coat = when (this) {
+            is Coat.Plain -> this
+            is Coat.Gradient -> Coat.Gradient(color1, color2, tx.transform(point1, null), tx.transform(point2, null))
+        }
+
+        private fun Coat.toPaint(): Paint = when (this) {
+            is Coat.Plain -> color
+            // Here, we use GradientPaint, which interpolates in the sRGB color space, instead of LinearGradientPaint,
+            // which would offer us to interpolate in the linear RGB color space, for a couple of reasons:
+            //   - Gradient interpolation in sRGB is pretty much the default at this point, for better or for worse.
+            //     Artists expect it when they specify a gradient.
+            //   - Implementing a gradient in linear RGB in a PDF or SVG file is surprisingly difficult. While it may be
+            //     possible for PDFs, it seems outright impossible at this point in SVGs; even though the standards are
+            //     in place, it's not supported by any browser or viewer.
+            //   - Apart from the famous red-to-green case, gradients in sRGB actually often look superior to those
+            //     interpolated in linear RGB. This is because sRGB's transfer characteristic kind of models the human
+            //     perception of light intensity, so gradients look more perceptually uniform. For examples, see:
+            //     https://aras-p.info/blog/2021/11/29/Gradients-in-linear-space-arent-better/
+            is Coat.Gradient -> GradientPaint(point1, color1, point2, color2)
+        }
+
     }
 
 
     class Layer
+
+
+    sealed interface Coat {
+        class Plain(val color: Color) : Coat
+        class Gradient(val color1: Color, val color2: Color, val point1: Point2D, val point2: Point2D) : Coat
+    }
 
 
     interface Text {
@@ -286,7 +339,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawShape(
-            val x: Double, val y: Y, val shape: Shape, val color: Color, val fill: Boolean, val blurRadius: Double
+            val x: Double, val y: Y, val shape: Shape, val coat: Coat, val fill: Boolean, val blurRadius: Double
         ) : Instruction
 
         class DrawLine(
@@ -298,7 +351,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawText(
-            val x: Double, val yBaseline: Y, val text: Text, val color: Color
+            val x: Double, val yBaseline: Y, val text: Text, val coat: Coat
         ) : Instruction
 
         class DrawPicture(
@@ -309,23 +362,23 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
 
     private interface MaterializationBackend {
-        fun materializeShape(shape: Shape, color: Color, fill: Boolean)
-        fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color)
+        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean)
+        fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat)
         fun materializePicture(x: Double, y: Double, pic: Picture)
     }
 
 
     private class Graphics2DBackend(private val g2: Graphics2D) : MaterializationBackend {
 
-        override fun materializeShape(shape: Shape, color: Color, fill: Boolean) {
-            g2.color = color
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean) {
+            g2.paint = coat.toPaint()
             if (fill)
                 g2.fill(shape)
             else
                 g2.draw(shape)
         }
 
-        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color) {
+        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
             // We render the text by first converting the string to a path via FormattedString and then
             // filling that path. This has the following vital advantages:
             //   - Native text rendering via TextLayout.draw() etc., which internally eventually calls
@@ -347,7 +400,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             g2.preserveTransform {
                 g2.translate(x, yBaseline)
                 g2.scale(scaling)
-                materializeShape(text.transformedOutline, color, fill = true)
+                materializeShape(text.transformedOutline, coat, fill = true)
             }
         }
 
@@ -412,10 +465,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private class PDFBackend(
         private val doc: PDDocument,
+        private val page: PDPage,
         private val cs: PDPageContentStream,
-        private val csHeight: Float
     ) : MaterializationBackend {
 
+        private val csHeight = page.mediaBox.height
         private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }
 
         private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
@@ -450,15 +504,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 cs.stroke()
         }
 
-        override fun materializeShape(shape: Shape, color: Color, fill: Boolean) {
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean) {
             cs.saveGraphicsState()
-            setColor(color, fill)
+            setCoat(coat, fill, shape.bounds2D)
             cs.transform(Matrix().apply { translate(0f, csHeight); scale(1f, -1f) })
             materializeShapeWithoutTransforming(shape, fill)
             cs.restoreGraphicsState()
         }
 
-        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, color: Color) {
+        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
             cs.saveGraphicsState()
             cs.beginText()
 
@@ -472,6 +526,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 actualWidth - wantedWidth
             }
 
+            val textBBox = Rectangle2D.Double(
+                x,
+                yBaseline - text.heightAboveBaseline * scaling,
+                text.width * scaling,
+                (text.heightAboveBaseline + text.heightBelowBaseline) * scaling
+            )
             val textTx = AffineTransform().apply {
                 translate(x, csHeight - yBaseline)
                 scale(scaling)
@@ -480,7 +540,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
 
             cs.setFont(pdFont, text.font.size2D)
-            setColor(color, fill = true)
+            setCoat(coat.transform(AffineTransform.getTranslateInstance(x, yBaseline)), fill = true, textBBox)
             cs.setTextMatrix(Matrix(textTx))
             cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
 
@@ -563,20 +623,115 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
         }
 
-        private fun setColor(color: Color, fill: Boolean) {
-            if (fill)
-                cs.setNonStrokingColor(color)
-            else
-                cs.setStrokingColor(color)
-
-            cs.setGraphicsStateParameters(docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.alpha)) {
-                PDExtendedGraphicsState().apply {
-                    if (fill)
-                        nonStrokingAlphaConstant = color.alpha / 255f
-                    else
-                        strokingAlphaConstant = color.alpha / 255f
+        /** This function expects both the Coat and the bound box to be in global coordinates (but Y is not flipped). */
+        private fun setCoat(coat: Coat, fill: Boolean, bbox: Rectangle2D) {
+            when (coat) {
+                is Coat.Plain -> {
+                    val color = coat.color
+                    if (fill) cs.setNonStrokingColor(color) else cs.setStrokingColor(color)
+                    val extGState = docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.alpha)) {
+                        PDExtendedGraphicsState().apply {
+                            val alpha = color.alpha / 255f
+                            if (fill) nonStrokingAlphaConstant = alpha else strokingAlphaConstant = alpha
+                        }
+                    }
+                    cs.setGraphicsStateParameters(extGState)
                 }
+                is Coat.Gradient -> {
+                    // Notice that we do not cache the COS objects we create for gradients. That is because pattern
+                    // coordinates are always global to the page irrespective of any user matrix, so we'd need a new
+                    // pattern for every place where we want to use it anyway.
+                    if (coat.color1.alpha != 255 || coat.color2.alpha != 255) {
+                        // First construct a form XObject.
+                        val bboxW = bbox.width.toFloat()
+                        val bboxH = bbox.height.toFloat()
+                        val bboxX = bbox.x.toFloat()
+                        val bboxY = csHeight - bbox.y.toFloat() - bboxH
+                        val pdTrGroupResources = PDResources()
+                        val pdTrGroupAttrs = PDTransparencyGroupAttributes().apply {
+                            cosObject.setItem(COSName.TYPE, COSName.GROUP)
+                            cosObject.setItem(COSName.CS, COSName.DEVICEGRAY)
+                        }
+                        val pdTrGroup = PDTransparencyGroup(doc).apply {
+                            formType = 1
+                            bBox = PDRectangle(bboxX, bboxY, bboxW, bboxH)
+                            resources = pdTrGroupResources
+                            cosObject.setItem(COSName.GROUP, pdTrGroupAttrs)
+                        }
+                        // Paint the alpha gradient into the XObject.
+                        val trGroupPatternName =
+                            pdTrGroupResources.add(makeShadingPattern(coat, forAlpha = true))
+                        PDPageContentStream(doc, pdTrGroup, pdTrGroup.stream.createOutputStream()).use { csTr ->
+                            csTr.saveGraphicsState()
+                            csTr.setPattern(trGroupPatternName, stroking = false)
+                            csTr.addRect(bboxX, bboxY, bboxW, bboxH)
+                            csTr.fill()
+                            csTr.restoreGraphicsState()
+                        }
+                        // Finally, construct an alpha mask ("soft mask") that uses the XObject we just created.
+                        val pdSoftMask = PDSoftMask(COSDictionary()).apply {
+                            cosObject.setItem(COSName.TYPE, COSName.MASK)
+                            cosObject.setItem(COSName.S, COSName.LUMINOSITY)
+                            cosObject.setItem(COSName.G, pdTrGroup)
+                        }
+                        // Now apply that alpha mask.
+                        val extGState = PDExtendedGraphicsState().apply {
+                            alphaSourceFlag = false
+                            cosObject.setItem(COSName.SMASK, pdSoftMask)
+                        }
+                        cs.setGraphicsStateParameters(extGState)
+                    }
+
+                    val patternName = page.resources.add(makeShadingPattern(coat, forAlpha = false))
+                    cs.setPattern(patternName, stroking = !fill)
+                }
+            }
+        }
+
+        private fun makeShadingPattern(coat: Coat.Gradient, forAlpha: Boolean): PDShadingPattern {
+            fun makeColorArray(color: Color) = COSArray().apply {
+                if (forAlpha)
+                    add(COSFloat(color.alpha / 255f))
+                else {
+                    add(COSFloat(color.red / 255f))
+                    add(COSFloat(color.green / 255f))
+                    add(COSFloat(color.blue / 255f))
+                }
+            }
+
+            val cosCoords = COSArray().apply {
+                add(COSFloat(coat.point1.x.toFloat()))
+                add(COSFloat(csHeight - coat.point1.y.toFloat()))
+                add(COSFloat(coat.point2.x.toFloat()))
+                add(COSFloat(csHeight - coat.point2.y.toFloat()))
+            }
+            val pdFunc = PDFunctionType2(COSDictionary().apply {
+                setInt(COSName.FUNCTION_TYPE, 2)
+                setInt(COSName.N, 1)
+                setItem(COSName.DOMAIN, PDRange())
+                setItem(COSName.C0, makeColorArray(coat.color1))
+                setItem(COSName.C1, makeColorArray(coat.color2))
             })
+            val pdShading = PDShadingType2(COSDictionary()).apply {
+                shadingType = PDShading.SHADING_TYPE2
+                extend = COSArray().apply { add(COSBoolean.TRUE); add(COSBoolean.TRUE) }
+                colorSpace = if (forAlpha) PDDeviceGray.INSTANCE else PDDeviceRGB.INSTANCE
+                coords = cosCoords
+                function = pdFunc
+            }
+            return PDShadingPattern().apply {
+                patternType = 2
+                shading = pdShading
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        private fun PDPageContentStream.setPattern(patternName: COSName, stroking: Boolean) {
+            val opCS = if (stroking) OperatorName.STROKING_COLORSPACE else OperatorName.NON_STROKING_COLORSPACE
+            val opSCN = if (stroking) OperatorName.STROKING_COLOR_N else OperatorName.NON_STROKING_COLOR_N
+            appendRawCommands("/Pattern $opCS\n")
+            appendCOSName(patternName)
+            appendRawCommands(" $opSCN\n")
         }
 
         private fun getPDFont(font: Font): PDFont {

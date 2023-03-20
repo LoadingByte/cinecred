@@ -21,6 +21,9 @@ Cinecred Changelog
   sharing the same design across related styles (e.g., normal and superscript).
 - All letter style lengths apart from tracking are now specified in pixels and
   still automatically scaled with the font size.
+- The slug duration after a page can now be negative, which blends two pages
+  together; for example, a final card could fade in before the preceding scroll
+  is fully out of frame.
 - Delivered videos now fully conform to the Rec. 709 or sRGB/sYCC color space
   specifications, depending on which one the user selects, and containerized
   formats also include color space metadata.

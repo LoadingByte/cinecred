@@ -317,6 +317,8 @@ class TimecodeWidget(
             updateFormatter()
         }
 
+    private val signed = model.minimum.let { it == null || (it as Int) < 0 }
+
     private val editor = object : JSpinner.DefaultEditor(spinner) {
         init {
             textField.isEditable = true
@@ -339,13 +341,14 @@ class TimecodeWidget(
     }
 
     private fun updateFormatter() {
-        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter(fps, timecodeFormat))
+        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter(fps, timecodeFormat, signed))
     }
 
 
     private class TimecodeFormatter(
         private val fps: FPS,
-        private val timecodeFormat: TimecodeFormat
+        private val timecodeFormat: TimecodeFormat,
+        private val signed: Boolean
     ) : DefaultFormatter() {
         init {
             valueClass = Int::class.javaObjectType
@@ -354,11 +357,16 @@ class TimecodeWidget(
 
         // We need to catch exceptions here because formatTimecode() throws some when using non-fractional FPS together
         // with a drop-frame timecode.
-        override fun valueToString(value: Any?): String =
-            runCatching { formatTimecode(fps, timecodeFormat, value as Int) }.getOrDefault("")
+        override fun valueToString(value: Any?): String = runCatching {
+            val tc = formatTimecode(fps, timecodeFormat, abs(value as Int))
+            if (value < 0) "-$tc" else if (signed) "+$tc" else tc
+        }.getOrDefault("")
 
-        override fun stringToValue(string: String?): Int =
-            runCatching { parseTimecode(fps, timecodeFormat, string!!) }.getOrElse { throw ParseException("", 0) }
+        override fun stringToValue(string: String?): Int = runCatching {
+            val c0 = string!![0]
+            val n = parseTimecode(fps, timecodeFormat, if (c0 == '+' || c0 == '-') string.substring(1) else string)
+            if (signed && c0 == '-') -n else n
+        }.getOrElse { throw ParseException("", 0) }
     }
 
 }

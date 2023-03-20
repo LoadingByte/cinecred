@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredVideo.Cache.Response
 import java.awt.AlphaComposite
-import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform.getTranslateInstance
 import java.awt.geom.Rectangle2D
@@ -28,58 +27,36 @@ class DeferredVideo(val resolution: Resolution) {
     private val instructions = ArrayList<Instruction>()
 
     val numFrames: Int
-        get() = instructions.run { if (isEmpty()) 0 else last().lastFrameIdx + 1 }
+        get() = instructions.maxOf { it.lastFrameIdx + 1 }
 
     fun copy(scaling: Double = 1.0): DeferredVideo {
         val copy = DeferredVideo(Resolution((width * scaling).roundToInt(), (height * scaling).roundToInt()))
         for (insn in instructions)
-            when (insn) {
-                is Instruction.PlayBlank ->
-                    copy.playBlank(insn.numFrames)
-                is Instruction.PlayDeferredImage ->
-                    copy.playDeferredImage(
-                        insn.image.copy(universeScaling = scaling),
-                        insn.shifts.mapToArray { shift -> shift * scaling },
-                        insn.alphas
-                    )
-            }
+            copy.playDeferredImage(
+                insn.firstFrameIdx,
+                insn.image.copy(universeScaling = scaling),
+                insn.shifts.mapToArray { shift -> shift * scaling },
+                insn.alphas
+            )
         return copy
     }
 
-    fun playBlank(numFrames: Int) {
-        instructions.add(Instruction.PlayBlank(firstFrameIdx = this.numFrames, numFrames))
-    }
-
-    fun playDeferredImage(image: DeferredImage, shifts: DoubleArray, alphas: DoubleArray) {
+    fun playDeferredImage(firstFrameIdx: Int, image: DeferredImage, shifts: DoubleArray, alphas: DoubleArray) {
         require(shifts.size == alphas.size)
-        instructions.add(Instruction.PlayDeferredImage(firstFrameIdx = this.numFrames, image, shifts, alphas))
+        instructions.add(Instruction(firstFrameIdx, image, shifts, alphas))
     }
 
 
-    private sealed interface Instruction {
-
-        val firstFrameIdx: Int
-        val lastFrameIdx: Int
-
-        class PlayBlank(
-            override val firstFrameIdx: Int, val numFrames: Int
-        ) : Instruction {
-            override val lastFrameIdx get() = firstFrameIdx + numFrames - 1
-        }
-
-        class PlayDeferredImage(
-            override val firstFrameIdx: Int, val image: DeferredImage, val shifts: DoubleArray, val alphas: DoubleArray
-        ) : Instruction {
-            override val lastFrameIdx get() = firstFrameIdx + shifts.size - 1
-        }
-
+    private class Instruction(
+        val firstFrameIdx: Int, val image: DeferredImage, val shifts: DoubleArray, val alphas: DoubleArray
+    ) {
+        val lastFrameIdx = firstFrameIdx + shifts.size - 1
     }
 
 
     abstract class Graphics2DBackend(
         private val video: DeferredVideo,
         private val layers: List<DeferredImage.Layer>,
-        private val grounding: Color?,
         draft: Boolean = false,
         sequentialAccess: Boolean = false,
         preloading: Boolean = false,
@@ -89,16 +66,13 @@ class DeferredVideo(val resolution: Resolution) {
             override fun createRender(image: DeferredImage, shift: Double, height: Int): BufferedImage =
                 createIntermediateImage(video.width, height).withG2 { g2 ->
                     g2.setHighQuality()
-                    // If the final image should not have an alpha channel, the intermediate images, which also
-                    // don't have alpha, need proper grounding, as otherwise their grounding would be black.
-                    g2.ground(video.width, height)
                     g2.drawDeferredImage(image, shift, height)
                 }
         }
 
         /**
          * This method must be overwritten by users of this class who exactly know onto what kind of [Graphics2D] object
-         * they will later draw their frames. The new image should support alpha if and only if [grounding] is null.
+         * they will later draw their frames. The new image must support alpha.
          */
         protected abstract fun createIntermediateImage(width: Int, height: Int): BufferedImage
 
@@ -107,9 +81,7 @@ class DeferredVideo(val resolution: Resolution) {
         }
 
         fun materializeFrame(g2: Graphics2D, frameIdx: Int) {
-            when (val resp = cache.query(frameIdx)) {
-                is Response.Blank ->
-                    g2.ground(video.width, video.height)
+            for (resp in cache.query(frameIdx)) when (resp) {
                 is Response.Image -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
                     g2.setHighQuality()
                     g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, resp.shift, video.height) }
@@ -121,16 +93,8 @@ class DeferredVideo(val resolution: Resolution) {
             }
         }
 
-        private fun Graphics2D.ground(width: Int, height: Int) {
-            if (grounding != null) {
-                color = grounding
-                fillRect(0, 0, width, height)
-            }
-        }
-
         private inline fun Graphics2D.blend(alpha: Double, block: () -> Unit) {
             val blend = alpha != 1.0
-            if (blend) ground(video.width, video.height)
             val prevComposite = composite
             if (blend) composite = AlphaComposite.SrcOver.derive(alpha.toFloat())
             block()
@@ -173,9 +137,6 @@ class DeferredVideo(val resolution: Resolution) {
 
             // Declare chunks for all instructions.
             for ((insnIdx, insn) in video.instructions.withIndex()) {
-                if (insn !is Instruction.PlayDeferredImage)
-                    continue
-
                 // Find the min and max shifts in the current instruction. Also collect all distinct micro shifts:
                 // a micro shift is the deviation from an integer shift, and hence lies between 0 and 1. In draft mode,
                 // we do not cache renders for all micro shifts, so instead, we just use only the 0 micro shift.
@@ -222,15 +183,13 @@ class DeferredVideo(val resolution: Resolution) {
 
         protected abstract fun createRender(image: DeferredImage, shift: Double, height: Int): R
 
-        fun query(frameIdx: Int): Response<R> {
-            val insnIdx = video.instructions.indexOfFirst { insn -> frameIdx in insn.firstFrameIdx..insn.lastFrameIdx }
-            return when (val insn = video.instructions[insnIdx]) {
-                is Instruction.PlayBlank -> Response.Blank()
-                is Instruction.PlayDeferredImage -> queryForInstruction(frameIdx, insnIdx, insn)
-            }
+        fun query(frameIdx: Int): List<Response<R>> = buildList {
+            for ((insnIdx, insn) in video.instructions.withIndex())
+                if (frameIdx in insn.firstFrameIdx..insn.lastFrameIdx)
+                    add(queryForInstruction(frameIdx, insnIdx, insn))
         }
 
-        private fun queryForInstruction(frameIdx: Int, insnIdx: Int, insn: Instruction.PlayDeferredImage): Response<R> {
+        private fun queryForInstruction(frameIdx: Int, insnIdx: Int, insn: Instruction): Response<R> {
             val relFrameIdx = frameIdx - insn.firstFrameIdx
             val shift = insn.shifts[relFrameIdx]
             val alpha = insn.alphas[relFrameIdx]
@@ -318,7 +277,6 @@ class DeferredVideo(val resolution: Resolution) {
 
 
         sealed interface Response<R> {
-            class Blank<R> : Response<R>
             class Image<R>(val image: DeferredImage, val shift: Double, val alpha: Double) : Response<R>
             class AlignedRender<R>(val render: R, val shift: Int, val alpha: Double) : Response<R>
             class UnalignedRender<R>(val render: R, val shift: Double, val alpha: Double) : Response<R>

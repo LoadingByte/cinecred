@@ -45,9 +45,10 @@ class VideoRenderJob(
 
         val scaledVideo = video.copy(scaling)
         val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-            scaledVideo, DELIVERED_LAYERS, grounding, sequentialAccess = true
+            scaledVideo, DELIVERED_LAYERS, sequentialAccess = true
         ) {
-            override fun createIntermediateImage(width: Int, height: Int) = BufferedImage(width, height, imageType)
+            override fun createIntermediateImage(width: Int, height: Int) =
+                BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
         }
         val resolution = scaledVideo.resolution
 
@@ -61,6 +62,10 @@ class VideoRenderJob(
             for (frameIdx in 0 until scaledVideo.numFrames) {
                 val frame = BufferedImage(resolution.widthPx, resolution.heightPx, imageType).withG2 { g2 ->
                     g2.setHighQuality()
+                    if (grounding != null) {
+                        g2.color = grounding
+                        g2.fillRect(0, 0, resolution.widthPx, resolution.heightPx)
+                    }
                     scaledVideoBackend.materializeFrame(g2, frameIdx)
                 }
                 videoWriter.writeFrame(frame)

@@ -9,8 +9,7 @@ import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.Graphics
-import java.awt.Graphics2D
+import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
@@ -39,6 +38,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
                 g as Graphics2D
                 g.translate((width - videoWidth / systemScaling) / 2.0, (height - videoHeight / systemScaling) / 2.0)
                 g.scale(1.0 / systemScaling)
+                g.color = grounding
+                g.fillRect(0, 0, videoWidth, videoHeight)
                 g.clipRect(0, 0, videoWidth, videoHeight)
                 videoBackend.materializeFrame(g, frameSlider.value)
             }
@@ -84,6 +85,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private val makeVideoBackendJobSlot = JobSlot()
     private var scaledVideo: DeferredVideo? = null
     private var scaledVideoBackend: DeferredVideo.Graphics2DBackend? = null
+    private var grounding = Color.BLACK
     private var systemScaling = 1.0
 
     private var playTimer: Timer? = null
@@ -251,12 +253,12 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         makeVideoBackendJobSlot.submit {
             val scaledVideo = video.copy(scaling)
             val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-                scaledVideo, DELIVERED_LAYERS, project.styling.global.grounding, draft = true, preloading = true
+                scaledVideo, DELIVERED_LAYERS, draft = true, preloading = true
             ) {
                 override fun createIntermediateImage(width: Int, height: Int) =
                     // If the canvas was disposed in the meantime, create a dummy image to avoid crashing.
-                    canvas.createImage(width, height) as BufferedImage?
-                        ?: BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
+                    canvas.graphicsConfiguration.createCompatibleImage(width, height, Transparency.TRANSLUCENT)
+                        ?: BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
             }
             // Simulate materializing the currently selected frame in the background thread. As expensive operations
             // are cached, the subsequent materialization of that frame in the EDT thread will be very fast.
@@ -264,6 +266,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             SwingUtilities.invokeLater {
                 this.scaledVideo = scaledVideo
                 this.scaledVideoBackend = scaledVideoBackend
+                this.grounding = project.styling.global.grounding
                 canvas.repaint()
             }
         }

@@ -215,6 +215,13 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     MinSizeConstr(WARN, Layer::cloneLayers.st(), minSize = 1),
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
+    DynChoiceConstr(WARN, Layer::anchor.st()) { _, _, style ->
+        if (style.shape == LayerShape.CLONE) LayerAnchor.values().toSortedSet()
+        else sortedSetOf(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
+    },
+    SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, _, style, _, sibling, siblingOrdinal ->
+        siblingOrdinal in style.cloneLayers && sibling.shape != LayerShape.CLONE
+    },
     JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::clearingLayers.st()) { _, styling, style ->
         if (style.clearingLayers.isEmpty())
             return@JudgeConstr true

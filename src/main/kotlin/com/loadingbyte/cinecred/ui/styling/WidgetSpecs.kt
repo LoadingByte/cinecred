@@ -151,8 +151,8 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
             Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(), Layer::dilationJoin.st(), Layer::contour.st(),
             Layer::contourThicknessRfh.st(), Layer::contourJoin.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
             Layer::hScaling.st(), Layer::vScaling.st(), Layer::hShearing.st(), Layer::vShearing.st(),
-            Layer::anchorInStripe.st(), Layer::clearingLayers.st(), Layer::clearingRfh.st(), Layer::clearingJoin.st(),
-            Layer::blurRadiusRfh.st()
+            Layer::anchor.st(), Layer::anchorSiblingLayer.st(), Layer::clearingLayers.st(), Layer::clearingRfh.st(),
+            Layer::clearingJoin.st(), Layer::blurRadiusRfh.st()
         )
     )
 )
@@ -230,6 +230,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
         Layer::hShearing.st(), Layer::vShearing.st(),
         unionName = "shearing", settingIcons = listOf(SHEARING_HORIZONTAL_ICON, SHEARING_VERTICAL_ICON)
     ),
+    UnionWidgetSpec(Layer::anchor.st(), Layer::anchorSiblingLayer.st()),
     WidthWidgetSpec(Layer::clearingRfh.st(), WidthSpec.LITTLE),
     NumberWidgetSpec(Layer::clearingRfh.st(), step = 0.1),
     ToggleButtonGroupWidgetSpec(Layer::clearingJoin.st(), ICON),

@@ -282,13 +282,13 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
                     widenRightPx = layer.stripeWidenRightRfh * fh,
                     cornerJoin = getLineJoinNumber(layer.stripeCornerJoin),
                     cornerRadiusPx = layer.stripeCornerRadiusRfh * fh,
-                    dashPatternPx = dashPatternPx,
-                    anchorInStripe = layer.anchorInStripe
+                    dashPatternPx = dashPatternPx
                 )
             }
             LayerShape.CLONE ->
                 FormattedString.Layer.Shape.Clone(
-                    layers = layer.cloneLayers.mapToIntArray { it - 1 }
+                    layers = layer.cloneLayers.mapToIntArray { it - 1 },
+                    anchorSiblingLayer = if (layer.anchor == LayerAnchor.SIBLING) layer.anchorSiblingLayer - 1 else -1
                 )
         }
 
@@ -322,6 +322,7 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
             vScaling = layer.vScaling,
             hShearing = layer.hShearing,
             vShearing = layer.vShearing,
+            anchorGlobal = layer.anchor == LayerAnchor.GLOBAL,
             clearing = clearing,
             blurRadiusPx = layer.blurRadiusRfh * fh
         )

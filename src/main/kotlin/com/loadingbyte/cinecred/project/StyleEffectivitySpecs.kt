@@ -201,11 +201,11 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
         Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(),
         Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
         Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
-        Layer::stripeDashPatternRfh.st(), Layer::anchorInStripe.st(),
+        Layer::stripeDashPatternRfh.st(),
         isTotallyIneffective = { _, _, style -> style.shape != LayerShape.STRIPE }
     ),
     StyleEffectivitySpec(
-        Layer::cloneLayers.st(),
+        Layer::cloneLayers.st(), Layer::anchorSiblingLayer.st(),
         isTotallyIneffective = { _, _, style -> style.shape != LayerShape.CLONE }
     ),
     StyleEffectivitySpec(
@@ -231,6 +231,16 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
     StyleEffectivitySpec(
         Layer::contourThicknessRfh.st(), Layer::contourJoin.st(),
         isAlmostEffective = { _, _, style -> !style.contour }
+    ),
+    StyleEffectivitySpec(
+        Layer::anchor.st(), Layer::anchorSiblingLayer.st(),
+        isAlmostEffective = { _, _, style ->
+            style.hScaling == 1.0 && style.vScaling == 1.0 && style.hShearing == 0.0 && style.vShearing == 0.0
+        }
+    ),
+    StyleEffectivitySpec(
+        Layer::anchorSiblingLayer.st(),
+        isAlmostEffective = { _, _, style -> style.anchor != LayerAnchor.SIBLING }
     ),
     StyleEffectivitySpec(
         Layer::clearingRfh.st(), Layer::clearingJoin.st(),

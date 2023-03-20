@@ -205,6 +205,8 @@ class FormattedString private constructor(
         val visitingLayers = BooleanArray(design.layers.size)
 
         fun formLayer(layerIdx: Int): List<Form> {
+            // Return early if this layer does not exist.
+            if (layerIdx !in design.layers.indices) return emptyList()
             // Return early if we have already formed this layer.
             formCache[layerIdx]?.let { return it }
             // Return early if we have detected a reference cycle between layers.
@@ -216,7 +218,7 @@ class FormattedString private constructor(
             // Compute the basic forms making up the layer.
             var forms = when (val shape = layer.shape) {
                 is Layer.Shape.Text -> sequenceOf(Form.GlyphSegments(anchor = center, gss, null))
-                is Layer.Shape.Stripe -> sequenceOf(makeStripeForm(shape, xLeft, xRight, center))
+                is Layer.Shape.Stripe -> sequenceOf(makeStripeForm(shape, xLeft, xRight))
                 is Layer.Shape.Clone -> shape.layers.flatMapToSequence(::formLayer)
             }
 
@@ -236,20 +238,29 @@ class FormattedString private constructor(
             val hasOffset = layer.hOffsetPx != 0.0 || layer.vOffsetPx != 0.0
             val hasScaling = layer.hScaling != 1.0 || layer.vScaling != 1.0
             val hasShearing = layer.hShearing != 0.0 || layer.vShearing != 0.0
-            if (hasOffset || hasScaling || hasShearing) {
+            if (hasScaling || hasShearing) {
                 val tx = AffineTransform()
-                if (hasOffset) tx.translate(layer.hOffsetPx, layer.vOffsetPx)
                 if (hasScaling) tx.scale(layer.hScaling, layer.vScaling)
                 if (hasShearing) tx.shear(layer.hShearing, layer.vShearing)
-                forms = forms.map { form ->
-                    val anchor = form.anchor
-                    val anchoredTx = AffineTransform().apply {
-                        translate(anchor.x, anchor.y)
-                        concatenate(tx)
-                        translate(-anchor.x, -anchor.y)
-                    }
-                    form.transform(anchoredTx)
+                if (layer.anchorGlobal) {
+                    val anchoredTx = anchor(tx, center, layer.hOffsetPx, layer.vOffsetPx, 0.0, 0.0)
+                    forms = forms.map { form -> form.transform(anchoredTx) }
+                } else {
+                    // For "clone" layers with the "sibling" anchor setting, use the anchor of that sibling layer.
+                    // If the sibling has multiple forms (a case which gives a warning in the UI), use the first form.
+                    val siblingAnchor = if (layer.shape !is Layer.Shape.Clone) null else
+                        formLayer(layer.shape.anchorSiblingLayer).firstOrNull()?.anchor
+                    if (siblingAnchor != null) {
+                        val anchoredTx = anchor(tx, siblingAnchor, 0.0, 0.0, layer.hOffsetPx, layer.vOffsetPx)
+                        forms = forms.map { form -> form.transform(anchoredTx) }
+                    } else
+                        forms = forms.map { form ->
+                            form.transform(anchor(tx, form.anchor, 0.0, 0.0, layer.hOffsetPx, layer.vOffsetPx))
+                        }
                 }
+            } else if (hasOffset) {
+                val tx = AffineTransform.getTranslateInstance(layer.hOffsetPx, layer.vOffsetPx)
+                forms = forms.map { form -> form.transform(tx) }
             }
 
             // Poke holes into the forms to clear around other layers if requested.
@@ -263,11 +274,6 @@ class FormattedString private constructor(
                     Form.AWTShape(form.anchor, Area(form.awtShape).apply { subtract(clearArea) })
                 }
             }
-
-            // If the layer is a stripe and has had its anchor centered inside itself, relocate the anchor to the design
-            // center now so that clone layers transform both the cloned text and cloned stripes uniformly.
-            if (layer.shape is Layer.Shape.Stripe && layer.shape.anchorInStripe)
-                forms = forms.map { form -> Form.AWTShape(center, form.awtShape) }
 
             val formList = forms.toList()
             formCache[layerIdx] = formList
@@ -298,7 +304,7 @@ class FormattedString private constructor(
     private fun capForJoin(join: Int): Int =
         if (join == BasicStroke.JOIN_ROUND) BasicStroke.CAP_ROUND else BasicStroke.CAP_SQUARE
 
-    private fun makeStripeForm(shape: Layer.Shape.Stripe, xLeft: Double, xRight: Double, center: Point2D): Form {
+    private fun makeStripeForm(shape: Layer.Shape.Stripe, xLeft: Double, xRight: Double): Form {
         val x0 = xLeft - shape.widenLeftPx
         val x1 = xRight + shape.widenRightPx
         val x = min(x0, x1)
@@ -307,7 +313,7 @@ class FormattedString private constructor(
         val h = shape.heightPx
         val r = min(shape.cornerRadiusPx, min(w, h) / 2.0)
 
-        val anchor = if (shape.anchorInStripe) Point2D.Double(x + w / 2.0, y + h / 2.0) else center
+        val anchor = Point2D.Double(x + w / 2.0, y + h / 2.0)
 
         val dashed = if (shape.dashPatternPx == null || shape.dashPatternPx.isEmpty()) null else
             BasicStroke(
@@ -337,6 +343,14 @@ class FormattedString private constructor(
 
         val awtShape = if (dashed == null) rect else Area(rect).apply { intersect(Area(dashed)) }
         return Form.AWTShape(anchor, awtShape)
+    }
+
+    private fun anchor(
+        transform: AffineTransform, anchor: Point2D, preTx: Double, preTy: Double, postTx: Double, postTy: Double
+    ) = AffineTransform().apply {
+        translate(anchor.x + postTx, anchor.y + postTy)
+        concatenate(transform)
+        translate(-anchor.x + preTx, -anchor.y + preTy)
     }
 
     /**
@@ -756,6 +770,7 @@ class FormattedString private constructor(
         val vScaling: Double = 1.0,
         val hShearing: Double = 0.0,
         val vShearing: Double = 0.0,
+        val anchorGlobal: Boolean = false,
         val clearing: Clearing? = null,
         val blurRadiusPx: Double = 0.0
     ) {
@@ -771,12 +786,12 @@ class FormattedString private constructor(
                 val widenRightPx: Double = 0.0,
                 val cornerJoin: Int = BasicStroke.JOIN_MITER,
                 val cornerRadiusPx: Double = 0.0,
-                val dashPatternPx: DoubleArray? = null,
-                val anchorInStripe: Boolean = false
+                val dashPatternPx: DoubleArray? = null
             ) : Shape
 
             class Clone(
-                val layers: IntArray
+                val layers: IntArray,
+                val anchorSiblingLayer: Int = -1
             ) : Shape
 
         }

@@ -234,7 +234,8 @@ data class Layer(
     val vScaling: Double,
     val hShearing: Double,
     val vShearing: Double,
-    val anchorInStripe: Boolean,
+    val anchor: LayerAnchor,
+    val anchorSiblingLayer: Int,
     val clearingLayers: PersistentList<Int>,
     val clearingRfh: Double,
     val clearingJoin: LineJoin,
@@ -245,6 +246,7 @@ data class Layer(
 enum class LayerShape { TEXT, STRIPE, CLONE }
 enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }
+enum class LayerAnchor { INDIVIDUAL, GLOBAL, SIBLING }
 
 
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)

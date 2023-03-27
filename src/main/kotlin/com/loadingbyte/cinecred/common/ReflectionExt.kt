@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.poi.util.LocaleID
 import sun.font.*
 import java.awt.Font
+import java.awt.Toolkit
 import java.awt.Window
 import java.awt.font.GlyphVector
 import java.awt.font.TextLayout
@@ -15,6 +16,7 @@ import java.io.OutputStream
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodType.methodType
+import java.lang.invoke.VarHandle
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.text.Bidi
@@ -209,6 +211,19 @@ fun GlyphLayout.LayoutEngineKey.getFont(): Font2D = font(this) as Font2D
 fun GlyphLayout.LayoutEngineKey.getScript(): Int = script(this) as Int
 
 
+fun changeLocaleOfToolkitResources(locale: Locale) {
+    fun forVarHandle(varHandle: VarHandle) {
+        val bundle = varHandle.get() as ResourceBundle?
+        if (bundle != null) {
+            val baseName = bundle.baseBundleName ?: bundle.javaClass.name.substringBefore('_')
+            varHandle.set(ResourceBundle.getBundle(baseName, locale, Toolkit::class.java.module))
+        }
+    }
+    forVarHandle(resources)
+    forVarHandle(platformResources)
+}
+
+
 fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: FloatArray, bytesPerGlyph: Int) {
     require(glyphs.size == shifts.size + 1)
 
@@ -248,6 +263,9 @@ private val LinuxFontPolicy = Class.forName("com.formdev.flatlaf.LinuxFontPolicy
 private val getGnomeFont = LinuxFontPolicy
     .findStatic("getGnomeFont", methodType(Font::class.java))
 
+private val resources = Toolkit::class.java.findStaticVar("resources", ResourceBundle::class.java)
+private val platformResources = Toolkit::class.java.findStaticVar("platformResources", ResourceBundle::class.java)
+
 private val getWeight = Font2D::class.java
     .findVirtual("getWeight", methodType(Int::class.java))
 private val getWidth = Font2D::class.java
@@ -286,6 +304,9 @@ private val get_output = PDPageContentStream::class.java.findGetter("output", Ou
 
 private fun Class<*>.findStatic(name: String, type: MethodType) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findStatic(this, name, type)
+
+private fun Class<*>.findStaticVar(name: String, type: Class<*>) =
+    MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findStaticVarHandle(this, name, type)
 
 private fun Class<*>.findVirtual(name: String, type: MethodType) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findVirtual(this, name, type)

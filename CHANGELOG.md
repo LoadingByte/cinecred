@@ -48,6 +48,7 @@ Cinecred Changelog
 - On macOS, the video preview controls remain responsive in full-screen mode.
 - Resolved rare crashes when closing a project while the previews are rendered.
 - The delivery file selection dialog now actually applies the selection.
+- Key modifiers in shortcut tooltips (e.g., Ctrl) now respect the chosen locale.
 
 ### Compatibility Notes
 

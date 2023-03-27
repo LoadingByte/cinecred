@@ -153,6 +153,7 @@ fun comprehensivelyApplyLocale(locale: Locale) {
     UIManager.getDefaults().defaultLocale = locale
     UIManager.getLookAndFeelDefaults().defaultLocale = locale
     JComponent.setDefaultLocale(locale)
+    changeLocaleOfToolkitResources(locale)
 }
 
 

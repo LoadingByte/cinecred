@@ -245,7 +245,8 @@ class StyleForm<S : Style>(
                 else -> TextWidget(widthSpec)
             }
             Locale::class.java -> InconsistentComboBoxWidget(
-                Locale::class.java, Locale.getAvailableLocales().sortedBy(Locale::getDisplayName),
+                Locale::class.java,
+                Locale.getAvailableLocales().filter { it != Locale.ROOT }.sortedBy(Locale::getDisplayName),
                 toString = Locale::getDisplayName, widthSpec
             )
             Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)

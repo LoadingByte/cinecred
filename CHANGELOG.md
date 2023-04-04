@@ -39,6 +39,7 @@ Cinecred Changelog
 - Baseline determination when mixing letter styles is no longer jumpy.
 - Raster pictures are now scaled by Lanczos, fixing the previously bad quality.
 - Translucent pixels in raster images are no longer tinted black in PDF exports.
+- CSV files that have rows with fewer columns no longer provoke crashes.
 
 ### UI Fixes
 

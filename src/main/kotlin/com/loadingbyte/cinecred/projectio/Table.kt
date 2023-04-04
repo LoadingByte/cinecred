@@ -104,15 +104,15 @@ class Table(
     private fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
 
     fun isEmpty(row: Int, l10nColName: String): Boolean =
-        colMap[l10nColName]?.let { col -> bodyRecords[row].cells[col].isBlank() } ?: true
+        colMap[l10nColName]?.let { col -> bodyRecords[row].cells.getOrNull(col).isNullOrBlank() } ?: true
 
     fun getString(row: Int, l10nColName: String): String? {
         val col = colMap[l10nColName]
         if (col != null) {
-            // If the column is present in the table, retrieve its value.
-            val str = bodyRecords[row].cells[col].trim()
-            // If the value is non-empty, return it.
-            if (str.isNotEmpty())
+            // If the column is present in the table, try to retrieve its value in this row.
+            val str = bodyRecords[row].cells.getOrNull(col)?.trim()
+            // If the column is present in this row and the value is non-empty, return it.
+            if (!str.isNullOrEmpty())
                 return str
         }
         // If the column is present but the cell is empty, or if the column is missing in the table, return null.

@@ -247,6 +247,7 @@ class VideoWriter(
         enc.width(resolution.widthPx)
         enc.height(resolution.heightPx)
         enc.pix_fmt(outPixelFormat)
+        enc.chroma_sample_location(AVCHROMA_LOC_LEFT)
 
         // Specify color space metadata.
         val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
@@ -632,6 +633,7 @@ class VideoWriter(
             zimg_image_format.`depth$set`(dstFmt, outDepth)
             zimg_image_format.`pixel_range$set`(srcFmt, ZIMG_RANGE_FULL())
             zimg_image_format.`pixel_range$set`(dstFmt, outRangeZimg)
+            zimg_image_format.`chroma_location$set`(dstFmt, ZIMG_CHROMA_LEFT())
             zimg_image_format.`alpha$set`(srcFmt, if (hasAlpha) ZIMG_ALPHA_STRAIGHT() else ZIMG_ALPHA_NONE())
             zimg_image_format.`alpha$set`(dstFmt, if (hasAlpha) ZIMG_ALPHA_STRAIGHT() else ZIMG_ALPHA_NONE())
             val params = zimg_graph_builder_params.allocate(scope)

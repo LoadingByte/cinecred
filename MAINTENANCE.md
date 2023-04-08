@@ -248,6 +248,7 @@ Finally, generate Java bindings using the following command:
         --include-macro ZIMG_ALPHA_STRAIGHT \
         --include-macro ZIMG_API_VERSION \
         --include-macro ZIMG_BUFFER_MAX \
+        --include-macro ZIMG_CHROMA_LEFT \
         --include-macro ZIMG_COLOR_RGB \
         --include-macro ZIMG_COLOR_YUV \
         --include-macro ZIMG_CPU_AUTO_64B \

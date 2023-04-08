@@ -51,6 +51,9 @@ public class zimg_h  {
     public static int ZIMG_ALPHA_STRAIGHT() {
         return (int)1L;
     }
+    public static int ZIMG_CHROMA_LEFT() {
+        return (int)0L;
+    }
     public static int ZIMG_MATRIX_RGB() {
         return (int)0L;
     }

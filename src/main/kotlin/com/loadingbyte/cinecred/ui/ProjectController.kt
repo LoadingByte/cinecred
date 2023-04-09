@@ -118,8 +118,11 @@ class ProjectController(
         val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
         projectFrame.panel.updateProject(drawnProject, log, error)
         stylingDialog.panel.updateProject(drawnProject)
-        videoDialog.panel.updateProject(drawnProject)
-        deliveryDialog.panel.configurationForm.updateProject(drawnProject)
+        // If the video has no frames at all, tell the video and delivery dialogs that no drawn project exists to avoid
+        // them having to handle this special case.
+        val safeDrawnProject = if (drawnProject?.video?.numFrames != 0) drawnProject else null
+        videoDialog.panel.updateProject(safeDrawnProject)
+        deliveryDialog.panel.configurationForm.updateProject(safeDrawnProject)
     }
 
     private fun tryReloadAuxFile(file: Path): Boolean {

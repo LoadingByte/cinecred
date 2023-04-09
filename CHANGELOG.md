@@ -47,6 +47,7 @@ Cinecred Changelog
 - Translucent pixels in raster images are no longer tinted black in PDF exports.
 - Spreadsheets that have no rows no longer provoke crashes.
 - CSV files that have rows with fewer columns no longer provoke crashes.
+- Credit sequences without a single frame no longer provoke crashes.
 
 ### UI Fixes
 

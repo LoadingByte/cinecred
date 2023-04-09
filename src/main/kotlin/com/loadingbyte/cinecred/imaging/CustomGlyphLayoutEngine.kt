@@ -175,10 +175,17 @@ class CustomGlyphLayoutEngine private constructor(
                         }
                     }, faceScope)
                     val face = hb_face_create_for_tables(tableFunc, NULL, destroyFunc(faceScope))
-                    hbFaceCleaner.register(font) { hb_face_destroy(face) }
+                    hbFaceCleaner.register(font, FaceCleanerAction(face))
                     face
                 }
             }
+
+        // Use a static class to absolutely ensure that no unwanted references leak into this object.
+        private class FaceCleanerAction(private val face: MemoryAddress) : Runnable {
+            override fun run() {
+                hb_face_destroy(face)
+            }
+        }
 
         private fun destroyFunc(scope: ResourceScope) =
             hb_destroy_func_t.allocate({

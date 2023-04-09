@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredVideo.Cache.Response
 import java.awt.AlphaComposite
+import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform.getTranslateInstance
 import java.awt.geom.Rectangle2D
@@ -47,6 +48,30 @@ class DeferredVideo(val resolution: Resolution) {
     }
 
 
+    companion object {
+
+        private inline fun Graphics2D.blend(alpha: Double, block: () -> Unit) {
+            val blend = alpha != 1.0
+            val prevComposite = composite
+            if (blend) composite = AlphaComposite.SrcOver.derive(alpha.toFloat())
+            block()
+            if (blend) composite = prevComposite
+        }
+
+        private fun Graphics2D.drawDeferredImage(
+            image: DeferredImage, layers: List<DeferredImage.Layer>, shift: Double, height: Int
+        ) {
+            translate(0.0, -shift)
+            // If the chunk doesn't contain the whole page, cull the rest to improve performance.
+            val culling = if (height < image.height.resolve()) null else
+                Rectangle2D.Double(0.0, shift, image.width, height.toDouble())
+            // Paint the deferred image onto the raster image.
+            image.materialize(this, layers, culling)
+        }
+
+    }
+
+
     private class Instruction(
         val firstFrameIdx: Int, val image: DeferredImage, val shifts: DoubleArray, val alphas: DoubleArray
     ) {
@@ -66,7 +91,7 @@ class DeferredVideo(val resolution: Resolution) {
             override fun createRender(image: DeferredImage, shift: Double, height: Int): BufferedImage =
                 createIntermediateImage(video.width, height).withG2 { g2 ->
                     g2.setHighQuality()
-                    g2.drawDeferredImage(image, shift, height)
+                    g2.drawDeferredImage(image, layers, shift, height)
                 }
         }
 
@@ -84,7 +109,7 @@ class DeferredVideo(val resolution: Resolution) {
             for (resp in cache.query(frameIdx)) when (resp) {
                 is Response.Image -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
                     g2.setHighQuality()
-                    g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, resp.shift, video.height) }
+                    g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, layers, resp.shift, video.height) }
                 }
                 is Response.AlignedRender ->
                     g2.blend(resp.alpha) { g2.drawImage(resp.render, 0, -resp.shift, null) }
@@ -93,21 +118,70 @@ class DeferredVideo(val resolution: Resolution) {
             }
         }
 
-        private inline fun Graphics2D.blend(alpha: Double, block: () -> Unit) {
-            val blend = alpha != 1.0
-            val prevComposite = composite
-            if (blend) composite = AlphaComposite.SrcOver.derive(alpha.toFloat())
-            block()
-            if (blend) composite = prevComposite
+    }
+
+
+    class VideoWriterBackend(
+        private val videoWriter: VideoWriter,
+        video: DeferredVideo,
+        private val layers: List<DeferredImage.Layer>,
+        private val grounding: Color?,
+        sequentialAccess: Boolean = false,
+        preloading: Boolean = false
+    ) {
+
+        private class Render(val bufImage: BufferedImage, val prepFrame: VideoWriter.PreparedFrame)
+
+        private val workWidth = VideoWriter.closestWorkResolution(video.width)
+        private val workHeight = VideoWriter.closestWorkResolution(video.height)
+
+        private val cache = object : Cache<Render>(video, draft = false, sequentialAccess, preloading) {
+            override fun createRender(image: DeferredImage, shift: Double, height: Int): Render {
+                val h = VideoWriter.closestWorkResolution(height)
+                val transparentBufImage = drawImage(workWidth, h, grounding = null) { g2 ->
+                    g2.drawDeferredImage(image, layers, shift, h)
+                }
+                val groundedBufImage = if (grounding == null) transparentBufImage else
+                    drawImage(workWidth, h, grounding) { g2 -> g2.drawImage(transparentBufImage, 0, 0, null) }
+                return Render(transparentBufImage, videoWriter.prepareFrame(groundedBufImage))
+            }
         }
 
-        private fun Graphics2D.drawDeferredImage(image: DeferredImage, shift: Double, height: Int) {
-            translate(0.0, -shift)
-            // If the chunk doesn't contain the whole page, cull the rest to improve performance.
-            val culling = if (height < image.height.resolve()) null else
-                Rectangle2D.Double(0.0, shift, video.width.toDouble(), height.toDouble())
-            // Paint the deferred image onto the raster image.
-            image.materialize(this, layers, culling)
+        private val blankPrepFrame = videoWriter.prepareFrame(drawImage(workWidth, workHeight, grounding) {})
+
+        fun writeFrame(frameIdx: Int) {
+            val responses = cache.query(frameIdx)
+            val r = responses.singleOrNull()
+            when {
+                responses.isEmpty() -> videoWriter.writeFrame(blankPrepFrame, 0)
+                r is Response.AlignedRender && r.alpha == 1.0 -> videoWriter.writeFrame(r.render.prepFrame, r.shift)
+                else -> videoWriter.writeFrame(drawResponsesImage(responses))
+            }
+        }
+
+        private fun drawResponsesImage(responses: List<Response<Render>>) =
+            drawImage(workWidth, workHeight, grounding) { g2 ->
+                for (resp in responses) when (resp) {
+                    is Response.Image ->
+                        g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, layers, resp.shift, workHeight) }
+                    is Response.AlignedRender ->
+                        g2.blend(resp.alpha) { g2.drawImage(resp.render.bufImage, 0, -resp.shift, null) }
+                    is Response.UnalignedRender -> throw IllegalStateException()
+                }
+            }
+
+        private inline fun drawImage(
+            width: Int, height: Int, grounding: Color?, block: (Graphics2D) -> Unit
+        ): BufferedImage {
+            val type = if (grounding == null) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
+            return BufferedImage(width, height, type).withG2 { g2 ->
+                g2.setHighQuality()
+                if (grounding != null) {
+                    g2.color = grounding
+                    g2.fillRect(0, 0, width, height)
+                }
+                block(g2)
+            }
         }
 
     }

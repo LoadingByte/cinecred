@@ -26,7 +26,7 @@ import org.bytedeco.ffmpeg.avformat.AVIOContext
 import org.bytedeco.ffmpeg.avformat.AVStream
 import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.avutil.AVFrame
-import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor
+import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
 import org.bytedeco.ffmpeg.avutil.AVRational
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avformat.*
@@ -40,6 +40,7 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
 import java.lang.invoke.VarHandle
+import java.lang.ref.Cleaner
 import java.nio.file.Path
 import kotlin.io.path.pathString
 
@@ -79,7 +80,7 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
  */
 class VideoWriter(
     fileOrDir: Path,
-    resolution: Resolution,
+    private val resolution: Resolution,
     fps: FPS,
     codecId: Int,
     outPixelFormat: Int,
@@ -94,6 +95,12 @@ class VideoWriter(
     enum class TransferCharacteristic { SRGB, BT709 }
     enum class YCbCrCoefficients { BT601, BT709 }
 
+    private val workResolution = Resolution(
+        closestWorkResolution(resolution.widthPx),
+        closestWorkResolution(resolution.heightPx)
+    )
+    private var vChromaSub = 0
+
     private val pipeProcs = mutableListOf<FrameProcessor>()
     private var pipe: FramePipeline? = null
 
@@ -105,18 +112,24 @@ class VideoWriter(
     private var frameCounter = 0L
 
     init {
-        callSetup(::release) {
+        try {
             setup(
-                fileOrDir, resolution, fps, codecId,
+                fileOrDir, fps, codecId,
                 outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients,
                 muxerOptions, codecOptions
             )
+        } catch (e: AVException) {
+            try {
+                release()
+            } catch (e2: AVException) {
+                e.addSuppressed(e2)
+            }
+            throw e
         }
     }
 
     private fun setup(
         fileOrDir: Path,
-        resolution: Resolution,
         fps: FPS,
         codecId: Int,
         outPixelFormat: Int,
@@ -126,8 +139,12 @@ class VideoWriter(
         muxerOptions: Map<String, String>,
         codecOptions: Map<String, String>
     ) {
+        // Remember the vertical chroma subsampling for the line-based writeFrame() operations.
+        vChromaSub = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+            .log2_chroma_h().toInt()
+
         // Build a pipeline that converts BufferedImages into the desired format.
-        configurePipeline(resolution, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
+        configurePipeline(outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
 
         // Allocate the output media context.
         val oc = AVFormatContext(null)
@@ -156,9 +173,7 @@ class VideoWriter(
         val enc = avcodec_alloc_context3(codec)
             .throwIfNull("delivery.ffmpeg.allocEncoderError")
         this.enc = enc
-        configureCodec(
-            resolution, fps, codecId, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients
-        )
+        configureCodec(fps, codecId, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
 
         // Now that all the parameters are set, we can open the video codec and allocate the necessary encode buffer.
         withOptionsDict(codecOptions) { codecOptionsDict ->
@@ -184,12 +199,12 @@ class VideoWriter(
     }
 
     private fun configurePipeline(
-        resolution: Resolution,
         outPixelFormat: Int,
         outRange: Range,
         outTransferCharacteristic: TransferCharacteristic,
         outYCbCrCoefficients: YCbCrCoefficients
     ) {
+        val width = workResolution.widthPx
         val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
         val hasAlpha = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
         val outPlanar = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_PLANAR.toLong() != 0L
@@ -217,21 +232,20 @@ class VideoWriter(
         //         0, 1 shl 16, 1 shl 16
         //     )
         //     sws_init_context(swsCtx, null, null)
-        pipeProcs += SwsFrameProcessor(resolution, inPixelFormat, if (sameCS) outPixelFormat else interPixelFormat)
+        pipeProcs += SwsFrameProcessor(width, inPixelFormat, if (sameCS) outPixelFormat else interPixelFormat)
         if (!sameCS) {
             pipeProcs += ZimgFrameProcessor(
-                resolution, interPixelFormat, if (outPlanar) outPixelFormat else interPixelFormat,
+                width, interPixelFormat, if (outPlanar) outPixelFormat else interPixelFormat,
                 outRange, outTransferCharacteristic, outYCbCrCoefficients
             )
             if (!outPlanar)
-                pipeProcs += SwsFrameProcessor(resolution, interPixelFormat, outPixelFormat)
+                pipeProcs += SwsFrameProcessor(width, interPixelFormat, outPixelFormat)
         }
 
-        pipe = FramePipeline(resolution, pipeProcs)
+        pipe = FramePipeline(width, pipeProcs)
     }
 
     private fun configureCodec(
-        resolution: Resolution,
         fps: FPS,
         codecId: Int,
         outPixelFormat: Int,
@@ -308,22 +322,72 @@ class VideoWriter(
     }
 
     /**
-     * Encodes one video frame and sends it to the muxer.
+     * Converts an image such that it can readily be sent to the muxer. The returned [PreparedFrame] can then be
+     * efficiently reused multiple times.
+     *
      * Images must be encoded as [BufferedImage.TYPE_3BYTE_BGR] or [BufferedImage.TYPE_4BYTE_ABGR],
      * depending on whether the outPixelFormat has an alpha channel. They must also use the sRGB color space.
      */
-    fun writeFrame(image: BufferedImage) {
-        // Convert the BufferedImage to a frame.
-        val frame = pipe!!.process(image)
-            .pts(frameCounter++)
-        writeFrame(frame)
+    fun prepareFrame(image: BufferedImage): PreparedFrame {
+        require(image.width == workResolution.widthPx) { "Image has wrong width." }
+        require(image.height == closestWorkResolution(image.height)) { "Image has illegal height." }
+        val frame = allocFrame(workResolution.widthPx, image.height, pipe!!.outPixelFormat, buf = true)
+        pipe!!.process(image, frame)
+        val preparedFrame = PreparedFrameImpl(frame)
+        preparedFrameCleaner.register(preparedFrame, FrameCleanerAction(frame))
+        return preparedFrame
     }
 
+    // Use a static class to absolutely ensure that no unwanted references leak into this object.
+    private class FrameCleanerAction(private val frame: AVFrame) : Runnable {
+        override fun run() {
+            av_frame_free(frame)
+        }
+    }
+
+    /**
+     * Prepares the given [BufferedImage] and then immediately encodes it.
+     *
+     * See [prepareFrame] for restrictions on the input image type and color space.
+     */
+    fun writeFrame(image: BufferedImage) {
+        require(image.width == workResolution.widthPx) { "Image has wrong width." }
+        require(image.height == workResolution.heightPx) { "Image has wrong height." }
+        withFrame(workResolution.widthPx, workResolution.heightPx, pipe!!.outPixelFormat, buf = true) { frame ->
+            pipe!!.process(image, frame)
+            writeWorkResolutionFrame(frame, 0)
+        }
+    }
+
+    /** Encodes a vertical slice starting at [shift] of the given [PreparedFrame]. */
+    fun writeFrame(preparedFrame: PreparedFrame, shift: Int) {
+        val frame = (preparedFrame as PreparedFrameImpl).frame
+        require(frame.height() - shift >= resolution.heightPx) { "Frame is not long enough." }
+        writeWorkResolutionFrame(frame, shift)
+    }
+
+    /** Writes a [frame] whose width conforms to [workResolution], optionally shifted down. */
+    private fun writeWorkResolutionFrame(frame: AVFrame, shift: Int) {
+        withFrame(resolution.widthPx, resolution.heightPx, pipe!!.outPixelFormat, buf = false) { ptrFrame ->
+            for (i in 0 until AV_NUM_DATA_POINTERS)
+                ptrFrame.buf(i, av_buffer_ref(frame.buf(i) ?: continue).throwIfNull("delivery.ffmpeg.refFrameBufError"))
+            for (i in 0 until 4) {
+                val realShift = if (vChromaSub != 0 && i != 0) shift shr vChromaSub else shift
+                val ls = frame.linesize(i)
+                ptrFrame.linesize(i, ls)
+                ptrFrame.data(i, frame.data(i)?.position(ls * realShift.toLong()))
+            }
+            writeFrame(ptrFrame)
+        }
+    }
+
+    /** Encodes one video frame and sends it to the muxer. */
     private fun writeFrame(frame: AVFrame?) {
         val st = this.st!!
         val enc = this.enc!!
 
         // Send the frame to the encoder.
+        frame?.pts(frameCounter++)
         avcodec_send_frame(enc, frame).throwIfErrnum("delivery.ffmpeg.sendFrameError")
 
         var ret = 0
@@ -382,22 +446,25 @@ class VideoWriter(
 
     companion object {
 
+        /**
+         * This function rounds odd numbers up to the next even number.
+         *
+         * When chroma subsampling is enabled, the respective image dimension must have an even size, or otherwise zimg
+         * would throw an error because it can't evenly divide the chroma samples by 2 along that dimension. Hence,
+         * while working on the image, its resolution should be even. This function needs to be called on the original
+         * image resolution to obtain one that is accepted by this class.
+         *
+         * Notice that all of this only affects the working stage. The final encode can exhibit odd resolutions if the
+         * codec permits that.
+         */
+        fun closestWorkResolution(size: Int): Int =
+            size + (size and 0x1)
+
         // SIMD instructions require the buffers to have certain alignment. The strictest of them all is AVX-512, which
         // requires 512-bit alignment.
         const val BYTE_ALIGNMENT = 64
 
-        private fun callSetup(release: () -> Unit, setup: () -> Unit) {
-            try {
-                setup()
-            } catch (e: AVException) {
-                try {
-                    release()
-                } catch (e2: AVException) {
-                    e.addSuppressed(e2)
-                }
-                throw e
-            }
-        }
+        private val preparedFrameCleaner = Cleaner.create()
 
         private inline fun <P : Pointer> P?.letIfNonNull(block: (P) -> Unit) {
             if (this != null && !this.isNull)
@@ -424,19 +491,51 @@ class VideoWriter(
             return string.string
         }
 
+        private fun allocFrame(width: Int, height: Int, format: Int, buf: Boolean): AVFrame {
+            // Allocate the frame struct.
+            val frame = av_frame_alloc().throwIfNull("delivery.ffmpeg.allocFrameError").apply {
+                width(width)
+                height(height)
+                format(format)
+            }
+            // If requested, allocate a buffer to hold the image data.
+            if (buf)
+                try {
+                    av_frame_get_buffer(frame, 8 * BYTE_ALIGNMENT).throwIfErrnum("delivery.ffmpeg.allocFrameBufError")
+                } catch (e: Throwable) {
+                    av_frame_free(frame)
+                    throw e
+                }
+            return frame
+        }
+
+        private inline fun withFrame(width: Int, height: Int, format: Int, buf: Boolean, block: (AVFrame) -> Unit) {
+            val frame = allocFrame(width, height, format, buf)
+            try {
+                block(frame)
+            } finally {
+                av_frame_free(frame)
+            }
+        }
+
     }
 
 
     private class AVException(message: String) : RuntimeException(message)
 
 
-    /** @see [VideoWriter.writeFrame] for restrictions on the input image type and color space. */
+    interface PreparedFrame
+    private class PreparedFrameImpl(val frame: AVFrame) : PreparedFrame
+
+
+    /** See [VideoWriter.prepareFrame] for restrictions on the input image type and color space. */
     private class FramePipeline(
-        private val resolution: Resolution,
+        private val width: Int,
         private val processors: List<FrameProcessor>
     ) {
 
         private val inPixelFormat = processors.first().inPixelFormat
+        val outPixelFormat = processors.last().outPixelFormat
 
         // We only accept BufferedImages whose format is equivalent to the input pixel format.
         private val permittedImageType = when (inPixelFormat) {
@@ -445,41 +544,33 @@ class VideoWriter(
             else -> throw AVException("Illegal pipeline input pixel format: $inPixelFormat")
         }
 
+        private var height = -1
         private val frames = mutableListOf<AVFrame>()
 
-        init {
-            callSetup(::release, ::setup)
-        }
-
         private fun setup() {
-            // Allocate reusable frames, which connect the processors with each other and with the input and output.
-            for (i in 0..processors.size) {
+            // Allocate reusable frames, which connect the processors with each other and with the input.
+            // In contrast, the output frame will be provided directly to the process() method.
+            for (i in processors.indices) {
                 // Ensure that the output format of a processor is equal to the input format of the following processor.
                 if (i < processors.size - 1)
                     require(processors[i].outPixelFormat == processors[i + 1].inPixelFormat)
-                // Allocate the frame struct.
-                val frame = av_frame_alloc().throwIfNull("delivery.ffmpeg.allocFrameError").apply {
-                    format(if (i < processors.size) processors[i].inPixelFormat else processors[i - 1].outPixelFormat)
-                    width(resolution.widthPx)
-                    height(resolution.heightPx)
-                }
-                // Allocate buffers to hold the image data.
-                av_frame_get_buffer(frame, 8 * BYTE_ALIGNMENT).throwIfErrnum("delivery.ffmpeg.allocFrameDataError")
-                frames += frame
+                // Allocate the frame struct and a buffer to hold the image data.
+                frames += allocFrame(width, height, processors[i].inPixelFormat, buf = true)
             }
         }
 
-        fun process(image: BufferedImage): AVFrame {
+        fun process(image: BufferedImage, outFrame: AVFrame) {
+            require(image.width == width)
             require(image.type == permittedImageType)
             require(image.colorModel.colorSpace.isCS_sRGB)
+            require(outFrame.format() == outPixelFormat)
 
-            val inFrame = frames.first()
-            val outFrame = frames.last()
-
-            // When we pass a frame to the encoder, it may keep a reference to it internally;
-            // make sure we do not overwrite it here.
-            if (processors.isNotEmpty())
-                av_frame_make_writable(outFrame).throwIfErrnum("delivery.ffmpeg.makeFrameWritableError")
+            // If the pipeline hasn't previously run at this height, (re)run the setup.
+            if (frames.isEmpty() || image.height != height) {
+                height = image.height
+                release()
+                setup()
+            }
 
             // Transfer the BufferedImage's data into the input frame. Two copies are necessary because:
             //   - JavaCPP cannot directly pass pointers to Java arrays on the heap to the native C code.
@@ -487,23 +578,20 @@ class VideoWriter(
             // We have empirically confirmed that two copies are just as fast as one copy in the grand scheme of things.
             val imageArray = ((image.raster.dataBuffer) as DataBufferByte).data
             val imageData = BytePointer(imageArray.size.toLong()).put(imageArray, 0, imageArray.size)
-            val imageLinesize = av_image_get_linesize(inPixelFormat, resolution.widthPx, 0)
-            av_image_copy_plane(
-                inFrame.data(0), inFrame.linesize(0), imageData, imageLinesize,
-                imageLinesize, resolution.heightPx
-            )
+            val imageLinesize = av_image_get_linesize(inPixelFormat, image.width, 0)
+            val inFrame = frames.first()
+            av_image_copy_plane(inFrame.data(0), inFrame.linesize(0), imageData, imageLinesize, imageLinesize, height)
 
             // Apply all processors in sequence.
             for ((i, processor) in processors.withIndex())
-                processor.process(frames[i], frames[i + 1])
-
-            return outFrame
+                processor.process(frames[i], frames.getOrElse(i + 1) { outFrame })
         }
 
         /** Warning: This method doesn't release the wrapped [processors]! */
         fun release() {
             for (frame in frames)
                 frame.letIfNonNull(::av_frame_free)
+            frames.clear()
         }
 
     }
@@ -518,33 +606,37 @@ class VideoWriter(
 
 
     private class SwsFrameProcessor(
-        private val resolution: Resolution,
+        private val width: Int,
         override val inPixelFormat: Int,
         override val outPixelFormat: Int
     ) : FrameProcessor {
 
+        private var height = -1
         private var swsCtx: SwsContext? = null
-
-        init {
-            callSetup(::release, ::setup)
-        }
 
         private fun setup() {
             swsCtx = sws_getContext(
-                resolution.widthPx, resolution.heightPx, inPixelFormat,
-                resolution.widthPx, resolution.heightPx, outPixelFormat,
+                width, height, inPixelFormat,
+                width, height, outPixelFormat,
                 0, null, null, null as DoublePointer?
             ).throwIfNull("delivery.ffmpeg.getConverterError")
         }
 
         override fun process(inFrame: AVFrame, outFrame: AVFrame) {
-            sws_scale(
-                swsCtx, inFrame.data(), inFrame.linesize(), 0, resolution.heightPx, outFrame.data(), outFrame.linesize()
-            )
+            require(inFrame.width() == width)
+            // If the processor hasn't previously run at this height, (re)run the setup.
+            if (swsCtx == null || inFrame.height() != height) {
+                height = inFrame.height()
+                release()
+                setup()
+            }
+
+            sws_scale(swsCtx, inFrame.data(), inFrame.linesize(), 0, height, outFrame.data(), outFrame.linesize())
         }
 
         override fun release() {
             swsCtx.letIfNonNull(::sws_freeContext)
+            swsCtx = null
         }
 
     }
@@ -557,39 +649,26 @@ class VideoWriter(
      *   - [outPixelFormat] is planar GBR(A) or planar YCbCr(A).
      */
     private class ZimgFrameProcessor(
-        resolution: Resolution,
+        private val width: Int,
         override val inPixelFormat: Int,
         override val outPixelFormat: Int,
-        outRange: Range,
-        outTransferCharacteristic: TransferCharacteristic,
-        outYCbCrCoefficients: YCbCrCoefficients
+        private val outRange: Range,
+        private val outTransferCharacteristic: TransferCharacteristic,
+        private val outYCbCrCoefficients: YCbCrCoefficients
     ) : FrameProcessor {
 
-        private var inPixFmtDesc: AVPixFmtDescriptor? = null
-        private var outPixFmtDesc: AVPixFmtDescriptor? = null
-        private var hasAlpha: Boolean = false
+        private val inPixFmtDesc = av_pix_fmt_desc_get(inPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+        private val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+        private val hasAlpha = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
 
+        private var height = -1
         private var scope: ResourceScope? = null
         private var graph: MemoryAddress? = null
         private var srcBuf: MemorySegment? = null
         private var dstBuf: MemorySegment? = null
         private var tmpBuf: MemorySegment? = null
 
-        init {
-            callSetup(::release) { setup(resolution, outRange, outTransferCharacteristic, outYCbCrCoefficients) }
-        }
-
-        fun setup(
-            resolution: Resolution,
-            outRange: Range,
-            outTransferCharacteristic: TransferCharacteristic,
-            outYCbCrCoefficients: YCbCrCoefficients
-        ) {
-            inPixFmtDesc = av_pix_fmt_desc_get(inPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
-            val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
-            this.outPixFmtDesc = outPixFmtDesc
-
-            hasAlpha = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
+        private fun setup() {
             val outRGB = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_RGB.toLong() != 0L
             val outDepth = outPixFmtDesc.comp(0).depth()
 
@@ -611,10 +690,10 @@ class VideoWriter(
             val dstFmt = zimg_image_format.allocate(scope)
             zimg_image_format_default(srcFmt, ZIMG_API_VERSION())
             zimg_image_format_default(dstFmt, ZIMG_API_VERSION())
-            zimg_image_format.`width$set`(srcFmt, resolution.widthPx)
-            zimg_image_format.`width$set`(dstFmt, resolution.widthPx)
-            zimg_image_format.`height$set`(srcFmt, resolution.heightPx)
-            zimg_image_format.`height$set`(dstFmt, resolution.heightPx)
+            zimg_image_format.`width$set`(srcFmt, width)
+            zimg_image_format.`width$set`(dstFmt, width)
+            zimg_image_format.`height$set`(srcFmt, height)
+            zimg_image_format.`height$set`(dstFmt, height)
             zimg_image_format.`pixel_type$set`(srcFmt, ZIMG_PIXEL_BYTE())
             zimg_image_format.`pixel_type$set`(dstFmt, if (outDepth > 8) ZIMG_PIXEL_WORD() else ZIMG_PIXEL_BYTE())
             if (!outRGB) {
@@ -656,10 +735,18 @@ class VideoWriter(
         }
 
         override fun process(inFrame: AVFrame, outFrame: AVFrame) {
+            require(inFrame.width() == width)
+            // If the processor hasn't previously run at this height, (re)run the setup.
+            if (graph == null || inFrame.height() != height) {
+                height = inFrame.height()
+                release()
+                setup()
+            }
+
             for (zimgPlane in 0 until if (hasAlpha) 4 else 3) {
                 val zimgPlaneL = zimgPlane.toLong()
-                val ffmpegInPlane = inPixFmtDesc!!.comp(zimgPlane).plane()
-                val ffmpegOutPlane = outPixFmtDesc!!.comp(zimgPlane).plane()
+                val ffmpegInPlane = inPixFmtDesc.comp(zimgPlane).plane()
+                val ffmpegOutPlane = outPixFmtDesc.comp(zimgPlane).plane()
                 ZIMG_BUF_CONST_DATA.set(srcBuf, zimgPlaneL, inFrame.data(ffmpegInPlane).address())
                 ZIMG_BUF_CONST_STRIDE.set(srcBuf, zimgPlaneL, inFrame.linesize(ffmpegInPlane).toLong())
                 ZIMG_BUF_DATA.set(dstBuf, zimgPlaneL, outFrame.data(ffmpegOutPlane).address())
@@ -672,6 +759,8 @@ class VideoWriter(
         override fun release() {
             graph?.let(::zimg_filter_graph_free)
             scope?.close()
+            scope = null
+            graph = null
         }
 
         private fun MemoryAddress?.zimgThrowIfNull(l10nKey: String): MemoryAddress =

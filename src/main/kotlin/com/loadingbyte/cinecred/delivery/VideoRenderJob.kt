@@ -2,8 +2,6 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.MuxerFormat
@@ -13,7 +11,6 @@ import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
-import java.awt.image.BufferedImage
 import java.nio.file.Path
 import kotlin.io.path.exists
 
@@ -41,37 +38,21 @@ class VideoRenderJob(
         fileOrPattern.parent.createDirectoriesSafely()
 
         val grounding = if (transparentGrounding) null else project.styling.global.grounding
-        val imageType = if (transparentGrounding) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
-
         val scaledVideo = video.copy(scaling)
-        val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-            scaledVideo, DELIVERED_LAYERS, sequentialAccess = true
-        ) {
-            override fun createIntermediateImage(width: Int, height: Int) =
-                BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
-        }
-        val resolution = scaledVideo.resolution
 
         VideoWriter(
-            fileOrPattern, resolution, project.styling.global.fps,
+            fileOrPattern, scaledVideo.resolution, project.styling.global.fps,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
             muxerOptions = emptyMap(),
             format.codecOptions
         ).use { videoWriter ->
+            val videoBackend = DeferredVideo.VideoWriterBackend(
+                videoWriter, scaledVideo, DELIVERED_LAYERS, grounding, sequentialAccess = true
+            )
             for (frameIdx in 0 until scaledVideo.numFrames) {
-                val frame = BufferedImage(resolution.widthPx, resolution.heightPx, imageType).withG2 { g2 ->
-                    g2.setHighQuality()
-                    if (grounding != null) {
-                        g2.color = grounding
-                        g2.fillRect(0, 0, resolution.widthPx, resolution.heightPx)
-                    }
-                    scaledVideoBackend.materializeFrame(g2, frameIdx)
-                }
-                videoWriter.writeFrame(frame)
-
+                videoBackend.writeFrame(frameIdx)
                 progressCallback(100 * (frameIdx + 1) / scaledVideo.numFrames)
-
                 if (Thread.interrupted())
                     throw InterruptedException()
             }

@@ -27,6 +27,8 @@ Cinecred Changelog
 - Delivered videos now fully conform to the Rec. 709 or sRGB/sYCC color space
   specifications, depending on which one the user selects, and containerized
   formats also include color space metadata.
+- Video rendering now converts whole pages and then sends slices directly to
+  the encoder, massively improving performance especially for Rec. 709.
 - Replaced the unwieldy color picker dialog with a compact popup, which
   additionally offers swatches for all colors used in the project.
 - New projects can now be created in 4K, which simply doubles all initial sizes.

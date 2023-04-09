@@ -302,7 +302,10 @@ class DeferredVideo private constructor(
         private val workWidth = VideoWriter.closestWorkResolution(video.width)
         private val workHeight = VideoWriter.closestWorkResolution(video.height)
 
-        private val cache = object : Cache<Render>(video, draft = false, sequentialAccess, preloading) {
+        private val cache = object : Cache<Render>(
+            video = if (videoWriter.scan == VideoWriter.Scan.PROGRESSIVE) video else video.copy(fpsScaling = 2),
+            draft = false, sequentialAccess, preloading
+        ) {
             override fun createRender(image: DeferredImage, shift: Double, height: Int): Render {
                 val h = VideoWriter.closestWorkResolution(height)
                 val transparentBufImage = drawImage(workWidth, h, grounding = null) { g2 ->
@@ -317,12 +320,35 @@ class DeferredVideo private constructor(
         private val blankPrepFrame = videoWriter.prepareFrame(drawImage(workWidth, workHeight, grounding) {})
 
         fun writeFrame(frameIdx: Int) {
-            val responses = cache.query(frameIdx)
+            if (videoWriter.scan == VideoWriter.Scan.PROGRESSIVE)
+                writeFrame(cache.query(frameIdx))
+            else {
+                val tff = videoWriter.scan == VideoWriter.Scan.INTERLACED_TOP_FIELD_FIRST
+                // It is important to query the earlier frame first, because if sequentialAccess is true, the cache is
+                // free to discard it as soon as later frame is queried.
+                val responses1 = cache.query(frameIdx * 2)
+                val responses2 = cache.query(frameIdx * 2 + 1)
+                val (topPrepFrame, topShift) = obtainPrepFrame(if (tff) responses1 else responses2)
+                val (botPrepFrame, botShift) = obtainPrepFrame(if (tff) responses2 else responses1)
+                videoWriter.writeFrame(topPrepFrame, topShift, botPrepFrame, botShift)
+            }
+        }
+
+        private fun writeFrame(responses: List<Response<Render>>) {
             val r = responses.singleOrNull()
             when {
                 responses.isEmpty() -> videoWriter.writeFrame(blankPrepFrame, 0)
                 r is Response.AlignedRender && r.alpha == 1.0 -> videoWriter.writeFrame(r.render.prepFrame, r.shift)
                 else -> videoWriter.writeFrame(drawResponsesImage(responses))
+            }
+        }
+
+        private fun obtainPrepFrame(responses: List<Response<Render>>): Pair<VideoWriter.PreparedFrame, Int> {
+            val r = responses.singleOrNull()
+            return when {
+                responses.isEmpty() -> Pair(blankPrepFrame, 0)
+                r is Response.AlignedRender && r.alpha == 1.0 -> Pair(r.render.prepFrame, r.shift)
+                else -> Pair(videoWriter.prepareFrame(drawResponsesImage(responses)), 0)
             }
         }
 

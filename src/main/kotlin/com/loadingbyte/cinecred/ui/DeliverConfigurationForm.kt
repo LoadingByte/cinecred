@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
+import com.loadingbyte.cinecred.imaging.VideoWriter.Scan
 import com.loadingbyte.cinecred.imaging.isRGBPixelFormat
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
@@ -111,6 +112,15 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         )
     }
 
+    private val scanWidget = addWidget(
+        l10n("ui.deliverConfig.scan"),
+        ComboBoxWidget(
+            Scan::class.java, Scan.values().asList(), widthSpec = WidthSpec.WIDER,
+            toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
+        ),
+        isEnabled = { formatWidget.value.let { it is VideoRenderJob.Format && it.interlacing } }
+    )
+
     private val colorSpaceWidget = addWidget(
         l10n("ui.deliverConfig.colorSpace"),
         ComboBoxWidget(
@@ -168,6 +178,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val format = formatWidget.value
         val resMult = 2.0.pow(resolutionMultWidget.value)
         val fpsMult = fpsMultWidget.value
+        val scan = if (format is VideoRenderJob.Format && format.interlacing) scanWidget.value else Scan.PROGRESSIVE
         val cs = if (format is VideoRenderJob.Format) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
 
         // Determine the scaled specs.
@@ -193,14 +204,19 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             panel.specsLabels[1].text = "\u2014"
             panel.specsLabels[3].text = "\u2014"
         } else {
-            panel.specsLabels[1].text = decFmt.format(scaledFPS) + "p"
+            panel.specsLabels[1].text = decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
             panel.specsLabels[3].text = if (scrollSpeeds.isEmpty()) "\u2014" else {
-                val speedsDesc = l10n("ui.delivery.scrollPxPerFrame")
+                val speedsDesc = when (scan) {
+                    Scan.PROGRESSIVE -> l10n("ui.delivery.scrollPxPerFrame")
+                    else -> l10n("ui.delivery.scrollPxPerFrameAndField")
+                }
                 val speedsCont = scrollSpeeds.entries.joinToString("   ") { (s1, s2) ->
                     buildString {
                         if (s1 != s2)
                             append(decFmt.format(s1)).append(" \u2192 ")
                         append(decFmt.format(s2))
+                        if (scan != Scan.PROGRESSIVE)
+                            append("/").append(decFmt.format(s2 / 2.0))
                     }
                 }
                 "$speedsDesc   $speedsCont"
@@ -225,8 +241,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
         }
         // Check for fractional scroll speeds.
-        if (format is VideoRenderJob.Format && scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
-            warn(l10n("ui.delivery.issues.fractionalFrameShift"))
+        if (format is VideoRenderJob.Format) {
+            if (scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
+                warn(l10n("ui.delivery.issues.fractionalFrameShift"))
+            if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
+                warn(l10n("ui.delivery.issues.fractionalFieldShift"))
+        }
 
         return !err
     }
@@ -254,6 +274,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val grounding = if (transparentGrounding) null else project.styling.global.grounding
             val resolutionScaling = 2.0.pow(resolutionMultWidget.value)
             val fpsScaling = fpsMultWidget.value
+            val scan = if (format is VideoRenderJob.Format && format.interlacing) scanWidget.value else Scan.PROGRESSIVE
             val colorSpace = colorSpaceWidget.value
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
@@ -329,7 +350,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     }
                     renderJob = VideoRenderJob(
                         project, video, transparentGrounding, resolutionScaling, fpsScaling,
-                        colorSpace, format, fileOrPattern
+                        scan, colorSpace, format, fileOrPattern
                     )
                 }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

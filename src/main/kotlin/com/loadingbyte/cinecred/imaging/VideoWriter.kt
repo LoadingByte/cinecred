@@ -85,7 +85,9 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
 class VideoWriter(
     fileOrDir: Path,
     private val resolution: Resolution,
+    /** Note: When `scan` is interlaced, `fps` still refers to the number of full (and not half) frames per second. */
     fps: FPS,
+    val scan: Scan,
     codecId: Int,
     outPixelFormat: Int,
     outRange: Range,
@@ -95,6 +97,7 @@ class VideoWriter(
     codecOptions: Map<String, String>
 ) : Closeable {
 
+    enum class Scan { PROGRESSIVE, INTERLACED_TOP_FIELD_FIRST, INTERLACED_BOT_FIELD_FIRST }
     enum class Range { FULL, LIMITED }
     enum class TransferCharacteristic { SRGB, BT709 }
     enum class YCbCrCoefficients { BT601, BT709 }
@@ -146,6 +149,8 @@ class VideoWriter(
         // Remember the vertical chroma subsampling for the line-based writeFrame() operations.
         vChromaSub = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
             .log2_chroma_h().toInt()
+        // Disallow interlacing when vertical chroma subsampling is enabled, as that introduces all kinds of problems.
+        require(scan == Scan.PROGRESSIVE || vChromaSub == 0) { "Interlacing can't be used with vertical subsampling." }
 
         // Build a pipeline that converts BufferedImages into the desired format.
         configurePipeline(outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
@@ -287,6 +292,16 @@ class VideoWriter(
         enc.colorspace(if (outRGB) AVCOL_SPC_RGB else outYCbCrCoeffsFFmpeg)
         enc.color_range(outRangeFFmpeg)
 
+        // Specify progressive or interlaced scan.
+        val fieldOrder = when (scan) {
+            Scan.PROGRESSIVE -> AV_FIELD_PROGRESSIVE
+            Scan.INTERLACED_TOP_FIELD_FIRST -> AV_FIELD_TT
+            Scan.INTERLACED_BOT_FIELD_FIRST -> AV_FIELD_BB
+        }
+        enc.field_order(fieldOrder)
+        if (scan != Scan.PROGRESSIVE)
+            enc.flags(AV_CODEC_FLAG_INTERLACED_DCT or AV_CODEC_FLAG_INTERLACED_ME)
+
         // Timebase: This is the fundamental unit of time (in seconds) in terms
         // of which frame timestamps are represented. For fixed-fps content,
         // timebase should be 1/framerate and timestamp increments should be
@@ -370,9 +385,41 @@ class VideoWriter(
         writeWorkResolutionFrame(frame, shift)
     }
 
+    /** Interleaves and then encodes two [PreparedFrame]s starting at the given shifts. */
+    fun writeFrame(topPreparedFrame: PreparedFrame, topShift: Int, botPreparedFrame: PreparedFrame, botShift: Int) {
+        require(vChromaSub == 0) { "Frames with vertical subsampling can't be interleaved." }
+        val topFrame = (topPreparedFrame as PreparedFrameImpl).frame
+        val botFrame = (botPreparedFrame as PreparedFrameImpl).frame
+        require(topFrame.height() - topShift >= resolution.heightPx - 1) { "Top frame is not long enough." }
+        require(botFrame.height() - botShift >= resolution.heightPx) { "Bottom frame is not long enough." }
+        withFrame(workResolution.widthPx, workResolution.heightPx, pipe!!.outPixelFormat, buf = true) { intFrame ->
+            for (i in 0 until 4) {
+                val intData = intFrame.data(i) ?: continue
+                val topData = topFrame.data(i)
+                val botData = botFrame.data(i)
+                val ls = intFrame.linesize(i).toLong()
+                var top = false
+                for (y in 0 until resolution.heightPx) {
+                    top = !top
+                    val src = if (top) topData.position((topShift + y) * ls) else botData.position((botShift + y) * ls)
+                    val dst = intData.position(y * ls)
+                    Pointer.memcpy(dst, src, ls)
+                }
+            }
+            writeWorkResolutionFrame(intFrame, 0)
+        }
+    }
+
     /** Writes a [frame] whose width conforms to [workResolution], optionally shifted down. */
     private fun writeWorkResolutionFrame(frame: AVFrame, shift: Int) {
         withFrame(resolution.widthPx, resolution.heightPx, pipe!!.outPixelFormat, buf = false) { ptrFrame ->
+            // If the video is interlaced, mark the frame that we send to the encoder accordingly.
+            // If the field order is bff, but we don't specify that for every single frame, the resulting file would
+            // have an additional (and wrong) metadata entry showing "original scan order = tff".
+            if (scan != Scan.PROGRESSIVE) {
+                ptrFrame.interlaced_frame(1)
+                ptrFrame.top_field_first(if (scan == Scan.INTERLACED_TOP_FIELD_FIRST) 1 else 0)
+            }
             for (i in 0 until AV_NUM_DATA_POINTERS)
                 ptrFrame.buf(i, av_buffer_ref(frame.buf(i) ?: continue).throwIfNull("delivery.ffmpeg.refFrameBufError"))
             for (i in 0 until 4) {

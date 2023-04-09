@@ -21,6 +21,7 @@ class VideoRenderJob(
     private val transparentGrounding: Boolean,
     private val resolutionScaling: Double,
     private val fpsScaling: Int,
+    private val scan: Scan,
     private val colorSpace: ColorSpace,
     private val format: Format,
     private val fileOrPattern: Path
@@ -42,7 +43,7 @@ class VideoRenderJob(
         val scaledVideo = video.copy(resolutionScaling, fpsScaling)
 
         VideoWriter(
-            fileOrPattern, scaledVideo.resolution, scaledVideo.fps,
+            fileOrPattern, scaledVideo.resolution, scaledVideo.fps, scan,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
             muxerOptions = emptyMap(),
@@ -82,7 +83,8 @@ class VideoRenderJob(
         val widthMod2: Boolean = false,
         val heightMod2: Boolean = false,
         val minWidth: Int? = null,
-        val minHeight: Int? = null
+        val minHeight: Int? = null,
+        val interlacing: Boolean = false
     ) : RenderFormat(fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaPixelFormat != null) {
 
         companion object {
@@ -118,7 +120,8 @@ class VideoRenderJob(
                 pixelFormat = pixelFormat,
                 alphaPixelFormat = alphaPixelFormat,
                 codecOptions = mapOf("profile" to profile),
-                widthMod2 = true
+                widthMod2 = true,
+                interlacing = true
             ) {
                 override val label get() = label
                 override val notice get() = null
@@ -151,7 +154,8 @@ class VideoRenderJob(
                 codecId = codecId,
                 pixelFormat = AV_PIX_FMT_RGB24,
                 alphaPixelFormat = AV_PIX_FMT_RGBA,
-                codecOptions = codecOptions
+                codecOptions = codecOptions,
+                interlacing = true
             ) {
                 override val label get() = l10n("delivery.imgSeq", fileExt.uppercase()) + labelSuffix
                 override val notice get() = l10nNotice?.let(::l10n)

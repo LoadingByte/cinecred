@@ -28,6 +28,8 @@ Cinecred Changelog
   specifications, depending on which one the user selects, and containerized
   formats also include color space metadata.
 - Videos can now be delivered with a higher frame rate than the project.
+- Videos can now be delivered with interlacing; the generated fields are proper,
+  that is, they are really sampled at double the frame rate.
 - Video rendering now converts whole pages and then sends slices directly to
   the encoder, massively improving performance especially for Rec. 709.
 - The delivery dialog now presents a summary of the most important specs.

@@ -108,6 +108,8 @@ class DeferredVideo private constructor(
                     list.add(insn)
                 }
             }
+        // This ordering is expected by the Cache. We must sort here because playBlank() accepts negative numFrames.
+        list.sortBy(Instruction::firstFrameIdx)
         list
     }
 
@@ -451,12 +453,13 @@ class DeferredVideo private constructor(
         protected abstract fun createRender(image: DeferredImage, shift: Double, height: Int): R
 
         fun query(frameIdx: Int): List<Response<R>> = buildList {
+            var first = true
             for ((insnIdx, insn) in video.instructions.withIndex())
                 if (frameIdx in insn.firstFrameIdx..insn.lastFrameIdx)
-                    add(queryForInstruction(frameIdx, insnIdx, insn))
+                    add(queryForInstruction(frameIdx, insnIdx, insn, first.also { first = false }))
         }
 
-        private fun queryForInstruction(frameIdx: Int, insnIdx: Int, insn: Instruction): Response<R> {
+        private fun queryForInstruction(frameIdx: Int, insnIdx: Int, insn: Instruction, first: Boolean): Response<R> {
             val relFrameIdx = frameIdx - insn.firstFrameIdx
             val shift = insn.shifts[relFrameIdx]
             val alpha = insn.alphas[relFrameIdx]
@@ -466,9 +469,23 @@ class DeferredVideo private constructor(
             val chunkIdx = (firstChunkIdx + ((floor(shift).toInt() - chunks[firstChunkIdx].shift) / chunkSpacing))
                 .coerceIn(firstChunkIdx, lastChunkIdx)  // Should not be necessary, but better be safe.
 
-            // In sequential mode, free the previous chunk's cached renders.
-            if (sequentialAccess)
-                chunks.getOrNull(chunkIdx - 1)?.let { chunk -> chunk.withLock { chunk.microShiftedRenders?.clear() } }
+            // In sequential mode, lower frame indices will no longer be queried. Also, recall that instructions are
+            // ordered by firstFrameIdx. Hence, if this is the first instruction that encompasses the current frame
+            // index, we know that previous instructions will no longer be queried. So we can free all data cached for
+            // the previous instructions.
+            // Because the chunks are in the same order as the instructions, it is similarly safe to free the previous
+            // chunks' cached renders. In addition to freeing chunks of the previous instructions, this also frees
+            // completed chunks of this instruction.
+            // As a final note, we cannot do all of this if "first" is false because instructions may overlap.
+            if (sequentialAccess && first)
+                for (i in chunkIdx - 1 downTo 0) {
+                    val chunk = chunks[i]
+                    val ref = chunk.withLock(chunk::microShiftedRenders)
+                    // Stop when we encounter a chunk that was once loaded but has since been freed before.
+                    if (ref != null && ref.refersTo(null))
+                        break
+                    ref?.clear()
+                }
 
             // In preloading mode, queue preloading of the surrounding chunks in a background thread.
             if (preloading) {

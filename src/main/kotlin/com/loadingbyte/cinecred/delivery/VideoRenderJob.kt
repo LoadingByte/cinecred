@@ -18,8 +18,9 @@ import kotlin.io.path.exists
 class VideoRenderJob(
     private val project: Project,
     private val video: DeferredVideo,
-    private val scaling: Double,
     private val transparentGrounding: Boolean,
+    private val resolutionScaling: Double,
+    private val fpsScaling: Int,
     private val colorSpace: ColorSpace,
     private val format: Format,
     private val fileOrPattern: Path
@@ -38,10 +39,10 @@ class VideoRenderJob(
         fileOrPattern.parent.createDirectoriesSafely()
 
         val grounding = if (transparentGrounding) null else project.styling.global.grounding
-        val scaledVideo = video.copy(scaling)
+        val scaledVideo = video.copy(resolutionScaling, fpsScaling)
 
         VideoWriter(
-            fileOrPattern, scaledVideo.resolution, project.styling.global.fps,
+            fileOrPattern, scaledVideo.resolution, scaledVideo.fps,
             format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
             muxerOptions = emptyMap(),

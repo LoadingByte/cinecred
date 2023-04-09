@@ -3,14 +3,16 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
+import com.loadingbyte.cinecred.imaging.isRGBPixelFormat
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path
+import java.text.DecimalFormat
 import javax.swing.JOptionPane.*
-import javax.swing.SpinnerNumberModel
 import kotlin.io.path.*
 import kotlin.math.floor
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 
@@ -49,8 +51,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         else -> emptyList()
                     }
                 }
-            })
-    ).apply { value = VideoRenderJob.Format.ALL.first() }
+            }
+        ).apply { value = VideoRenderJob.Format.ALL.first() }
+    )
 
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
@@ -67,7 +70,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     )
     private val seqFilenameSuffixWidget = addWidget(
         l10n("ui.deliverConfig.seqFilenameSuffix"),
-        FilenameWidget(widthSpec = WidthSpec.WIDER),
+        FilenameWidget(widthSpec = WidthSpec.WIDER).apply { value = ".#######" },
         // Reserve space even if invisible to keep the form from changing height when selecting different formats.
         invisibleSpace = true,
         isVisible = { formatWidget.value.fileSeq },
@@ -79,18 +82,35 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles"))
             else null
         }
-    ).apply { value = ".#######" }
-
-    private val resolutionMultWidget = addWidget(
-        l10n("ui.deliverConfig.resolutionMultiplier"),
-        SpinnerWidget(Double::class.javaObjectType, SpinnerNumberModel(1.0, 0.01, null, 1.0)),
-        verify = ::verifyResolutionMult
     )
+
     private val transparentGroundingWidget = addWidget(
         l10n("ui.deliverConfig.transparentGrounding"),
         CheckBoxWidget(),
         isEnabled = { formatWidget.value.supportsAlpha }
     )
+
+    private val resolutionMultWidget =
+        ComboBoxWidget(
+            Int::class.javaObjectType, listOf(-2, -1, 0, 1, 2), widthSpec = WidthSpec.LITTLE,
+            toString = { if (it >= 0) "\u00D7 ${1 shl it}" else "\u00F7 ${1 shl -it}" }
+        ).apply { value = 0 }
+    private val fpsMultWidget =
+        ComboBoxWidget(
+            Int::class.javaObjectType, listOf(1, 2, 3, 4), widthSpec = WidthSpec.LITTLE,
+            toString = { "\u00D7 $it" }
+        )
+
+    init {
+        addWidget(
+            l10n("ui.deliverConfig.resolutionMultiplier"),
+            UnionWidget(
+                listOf(resolutionMultWidget, fpsMultWidget),
+                labels = listOf(null, l10n("ui.deliverConfig.fpsMultiplier"))
+            )
+        )
+    }
+
     private val colorSpaceWidget = addWidget(
         l10n("ui.deliverConfig.colorSpace"),
         ComboBoxWidget(
@@ -125,11 +145,15 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         super.onChange(widget)
 
-        // Disable the add button if there are errors in the form.
+        // This isEnabled check is separate because the FPS multiplier is part of a UnionWidget.
+        fpsMultWidget.isEnabled = formatWidget.value is VideoRenderJob.Format
+
+        // Update the specs labels and determine whether the specs are valid.
+        // Then disable the add button if there are errors in the form or the specs are invalid.
         // We need the null-safe access because this method might be called before everything is initialized.
         val dialog = ctrl.deliveryDialog as DeliveryDialog?
         if (dialog != null)
-            dialog.panel.addButton.isEnabled = isErrorFree
+            dialog.panel.addButton.isEnabled = updateAndVerifySpecs(dialog.panel) && isErrorFree
     }
 
     private fun verifyFile(file: Path): Notice? = when {
@@ -138,47 +162,73 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         else -> null
     }
 
-    private fun verifyResolutionMult(resolutionMult: Double): Notice? {
-        val (project, _, _) = drawnProject ?: return null
+    private fun updateAndVerifySpecs(panel: DeliveryPanel): Boolean {
+        val (project, _, _) = drawnProject ?: return false
 
-        val resolution = project.styling.global.resolution
-        val scaledWidth = (resolutionMult * resolution.widthPx).roundToInt()
-        val scaledHeight = (resolutionMult * resolution.heightPx).roundToInt()
-        val yieldMsg = l10n("ui.deliverConfig.resolutionMultiplierYields", scaledWidth, scaledHeight)
-
-        fun warn(msg: String) = Notice(Severity.WARN, "$yieldMsg $msg")
-        fun err(msg: String) = Notice(Severity.ERROR, "$yieldMsg $msg")
-
-        // Check for violated restrictions of the currently selected format.
         val format = formatWidget.value
-        val forLabel = format.label
-        if (format is VideoRenderJob.Format)
-            if (format.widthMod2 && scaledWidth % 2 != 0)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierWidthMod2", forLabel))
-            else if (format.heightMod2 && scaledHeight % 2 != 0)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierHeightMod2", forLabel))
-            else if (format.minWidth != null && scaledWidth < format.minWidth)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierMinWidth", forLabel, format.minWidth))
-            else if (format.minHeight != null && scaledWidth < format.minHeight)
-                return err(l10n("ui.deliverConfig.resolutionMultiplierMinHeight", forLabel, format.minHeight))
+        val resMult = 2.0.pow(resolutionMultWidget.value)
+        val fpsMult = fpsMultWidget.value
+        val cs = if (format is VideoRenderJob.Format) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
 
-        // Check for fractional scroll speeds.
-        val scrollSpeeds = project.pages
+        // Determine the scaled specs.
+        val resolution = project.styling.global.resolution
+        val scaledWidth = (resMult * resolution.widthPx).roundToInt()
+        val scaledHeight = (resMult * resolution.heightPx).roundToInt()
+        val scaledFPS = project.styling.global.fps.frac * fpsMult
+        val scrollSpeeds = project.pages.asSequence()
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
-            .toSet()
-        val fractionalScrollSpeeds = buildSet {
-            for (scrollSpeed in scrollSpeeds) {
-                val scaledScrollSpeed = scrollSpeed * resolutionMult
-                if (floor(scrollSpeed) == scrollSpeed && floor(scaledScrollSpeed) != scaledScrollSpeed)
-                    add("%d \u2192 %.2f".format(scrollSpeed.toInt(), scaledScrollSpeed))
+            .associateWith { speed -> speed * resMult * fpsMult }
+
+        // Display the scaled specs in the specs labels.
+        val decFmt = DecimalFormat("0.###")
+        panel.specsLabels[0].text = "$scaledWidth \u00D7 $scaledHeight"
+        panel.specsLabels[2].text = when (cs) {
+            VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
+            VideoRenderJob.ColorSpace.SRGB ->
+                if (format !is VideoRenderJob.Format || isRGBPixelFormat(format.pixelFormat)) "sRGB" else "sYCC"
+        }
+        if (format !is VideoRenderJob.Format) {
+            panel.specsLabels[1].text = "\u2014"
+            panel.specsLabels[3].text = "\u2014"
+        } else {
+            panel.specsLabels[1].text = decFmt.format(scaledFPS) + "p"
+            panel.specsLabels[3].text = if (scrollSpeeds.isEmpty()) "\u2014" else {
+                val speedsDesc = l10n("ui.delivery.scrollPxPerFrame")
+                val speedsCont = scrollSpeeds.entries.joinToString("   ") { (s1, s2) ->
+                    buildString {
+                        if (s1 != s2)
+                            append(decFmt.format(s1)).append(" \u2192 ")
+                        append(decFmt.format(s2))
+                    }
+                }
+                "$speedsDesc   $speedsCont"
             }
         }
-        if (fractionalScrollSpeeds.isNotEmpty())
-            return warn(l10n("ui.deliverConfig.resolutionMultiplierFractional", fractionalScrollSpeeds.joinToString()))
 
-        return Notice(Severity.INFO, yieldMsg)
+        // Clear all previous issues and create new ones if applicable.
+        panel.clearIssues()
+        var err = false
+        fun warn(msg: String) = panel.addIssue(WARN_ICON, msg)
+        fun error(msg: String) = panel.addIssue(ERROR_ICON, msg).also { err = true }
+        // Check for violated restrictions of the currently selected format.
+        val forLabel = format.label
+        if (format is VideoRenderJob.Format) {
+            if (format.widthMod2 && scaledWidth % 2 != 0)
+                error(l10n("ui.delivery.issues.widthMod2", forLabel))
+            if (format.heightMod2 && scaledHeight % 2 != 0)
+                error(l10n("ui.delivery.issues.heightMod2", forLabel))
+            if (format.minWidth != null && scaledWidth < format.minWidth)
+                error(l10n("ui.delivery.issues.minWidth", forLabel, format.minWidth))
+            if (format.minHeight != null && scaledWidth < format.minHeight)
+                error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
+        }
+        // Check for fractional scroll speeds.
+        if (format is VideoRenderJob.Format && scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
+            warn(l10n("ui.delivery.issues.fractionalFrameShift"))
+
+        return !err
     }
 
     private fun onFormatChange() {
@@ -200,9 +250,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
-            val scaling = resolutionMultWidget.value
             val transparentGrounding = transparentGroundingWidget.value && format.supportsAlpha
             val grounding = if (transparentGrounding) null else project.styling.global.grounding
+            val resolutionScaling = 2.0.pow(resolutionMultWidget.value)
+            val fpsScaling = fpsMultWidget.value
             val colorSpace = colorSpaceWidget.value
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
@@ -244,7 +295,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         return
             }
 
-            fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = scaling) }
+            fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = resolutionScaling) }
             fun getFilenameHashPattern() = fileOrDir.name + seqFilenameSuffixWidget.value
             fun hashPatternToFormatStr(pat: String) = pat.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
 
@@ -277,7 +328,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         destination = fileOrDir.pathString
                     }
                     renderJob = VideoRenderJob(
-                        project, video, scaling, transparentGrounding, colorSpace, format, fileOrPattern
+                        project, video, transparentGrounding, resolutionScaling, fpsScaling,
+                        colorSpace, format, fileOrPattern
                     )
                 }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")

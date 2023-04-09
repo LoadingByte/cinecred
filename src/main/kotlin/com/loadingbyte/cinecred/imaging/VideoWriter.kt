@@ -45,6 +45,10 @@ import java.nio.file.Path
 import kotlin.io.path.pathString
 
 
+fun isRGBPixelFormat(pixelFormat: Int): Boolean =
+    av_pix_fmt_desc_get(pixelFormat).flags() and AV_PIX_FMT_FLAG_RGB.toLong() != 0L
+
+
 class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensions: List<String>) {
     companion object {
         val ALL: List<MuxerFormat>

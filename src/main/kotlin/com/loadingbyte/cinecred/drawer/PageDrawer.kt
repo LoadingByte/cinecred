@@ -249,7 +249,7 @@ private fun layoutStages(
                 val frames = safeCeil(fracFrames)
                 nextScrollInitAdvance = (-fracFrames).mod(1.0)  // Using mod() ensures that the result is positive.
                 // Construct the info object.
-                DrawnStageInfo.Scroll(scrollStartY, ownedScrollHeight, frames, initAdvance)
+                DrawnStageInfo.Scroll(scrollStartY, scrollStopY, ownedScrollHeight, frames, initAdvance)
             }
         }
     }

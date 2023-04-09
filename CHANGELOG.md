@@ -27,8 +27,10 @@ Cinecred Changelog
 - Delivered videos now fully conform to the Rec. 709 or sRGB/sYCC color space
   specifications, depending on which one the user selects, and containerized
   formats also include color space metadata.
+- Videos can now be delivered with a higher frame rate than the project.
 - Video rendering now converts whole pages and then sends slices directly to
   the encoder, massively improving performance especially for Rec. 709.
+- The delivery dialog now presents a summary of the most important specs.
 - Replaced the unwieldy color picker dialog with a compact popup, which
   additionally offers swatches for all colors used in the project.
 - New projects can now be created in 4K, which simply doubles all initial sizes.

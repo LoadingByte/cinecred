@@ -11,40 +11,119 @@ import java.awt.image.BufferedImage
 import java.lang.ref.SoftReference
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.collections.sumOf
 import kotlin.concurrent.withLock
 import kotlin.math.*
 
 
 /**
- * The implementation assumes that no [DeferredImage] is drawn more than once and is optimized accordingly. If this
- * assumption is violated, the image will be materialized more often than it needs to be.
+ * The implementation assumes that once a [DeferredImage] has stopped playing, it will never play again. The code is
+ * optimized accordingly. If this assumption is violated, the image will be materialized more often than it needs to be.
  */
-class DeferredVideo(val resolution: Resolution) {
+class DeferredVideo private constructor(
+    private val origResolution: Resolution,
+    private val origFPS: FPS,
+    private val resolutionScaling: Double,
+    private val fpsScaling: Int,
+    private val flows: MutableList<Flow>
+) {
+
+    val resolution: Resolution = if (resolutionScaling == 1.0) origResolution else Resolution(
+        (origResolution.widthPx * resolutionScaling).roundToInt(),
+        (origResolution.heightPx * resolutionScaling).roundToInt()
+    )
+    val fps: FPS = if (fpsScaling == 1) origFPS else origFPS.copy(numerator = origFPS.numerator * fpsScaling)
 
     // Convenient accessors:
     private val width get() = resolution.widthPx
     private val height get() = resolution.heightPx
 
-    private val instructions = ArrayList<Instruction>()
+    var numFrames: Int = -1
+        get() {
+            if (field == -1)
+                field = flows.sumOf { it.numFrames(fpsScaling) }
+            return field
+        }
+        private set
 
-    val numFrames: Int
-        get() = instructions.maxOf { it.lastFrameIdx + 1 }
+    constructor(resolution: Resolution, fps: FPS) : this(resolution, fps, 1.0, 1, ArrayList())
 
-    fun copy(scaling: Double = 1.0): DeferredVideo {
-        val copy = DeferredVideo(Resolution((width * scaling).roundToInt(), (height * scaling).roundToInt()))
-        for (insn in instructions)
-            copy.playDeferredImage(
-                insn.firstFrameIdx,
-                insn.image.copy(universeScaling = scaling),
-                insn.shifts.mapToArray { shift -> shift * scaling },
-                insn.alphas
-            )
-        return copy
+    fun copy(resolutionScaling: Double = 1.0, fpsScaling: Int = 1): DeferredVideo {
+        require(resolutionScaling > 0.0)
+        require(fpsScaling >= 1)
+        return DeferredVideo(
+            origResolution, origFPS,
+            this.resolutionScaling * resolutionScaling, this.fpsScaling * fpsScaling,
+            ArrayList(flows)
+        )
     }
 
-    fun playDeferredImage(firstFrameIdx: Int, image: DeferredImage, shifts: DoubleArray, alphas: DoubleArray) {
-        require(shifts.size == alphas.size)
-        instructions.add(Instruction(firstFrameIdx, image, shifts, alphas))
+    /** Note that [numFrames] can be negative. */
+    fun playBlank(numFrames: Int) {
+        flows.add(Flow.Blank(numFrames))
+        this.numFrames = -1
+    }
+
+    fun playStatic(image: DeferredImage, numFrames: Int, shift: Double, alpha: Double) {
+        playPhase(image, Phase.Static(numFrames, shift, alpha))
+        this.numFrames = -1
+    }
+
+    fun playFade(image: DeferredImage, numFrames: Int, shift: Double, startAlpha: Double, stopAlpha: Double) {
+        playPhase(image, Phase.Fade(numFrames, shift, startAlpha, stopAlpha))
+        this.numFrames = -1
+    }
+
+    fun playScroll(
+        image: DeferredImage, numFrames: Int, speed: Double, startShift: Double, stopShift: Double,
+        initialAdvance: Double, alpha: Double
+    ) {
+        val newSection = Phase.Scroll.Section(numFrames, speed, startShift, stopShift, initialAdvance)
+        val curFlow = flows.lastOrNull() as? Flow.DefImg
+        if (image == curFlow?.image)
+            (curFlow.phases.lastOrNull() as? Phase.Scroll)?.let { it.addSection(newSection); return }
+        playPhase(image, Phase.Scroll(alpha).apply { addSection(newSection) })
+        this.numFrames = -1
+    }
+
+    private fun playPhase(image: DeferredImage, phase: Phase) {
+        val curFlow = flows.lastOrNull() as? Flow.DefImg
+        if (image == curFlow?.image)
+            curFlow.phases.add(phase)
+        else
+            flows.add(Flow.DefImg(image, mutableListOf(phase)))
+    }
+
+    private val instructions: List<Instruction> by lazy {
+        val list = mutableListOf<Instruction>()
+        var firstFrameIdx = 0
+        for (flow in flows)
+            when (flow) {
+                is Flow.Blank ->
+                    firstFrameIdx += flow.numFrames(fpsScaling)
+                is Flow.DefImg -> {
+                    val insnImage = flow.image.copy(universeScaling = resolutionScaling)
+                    val insn = makeInstruction(firstFrameIdx, insnImage, flow.phases)
+                    firstFrameIdx = insn.lastFrameIdx + 1
+                    list.add(insn)
+                }
+            }
+        list
+    }
+
+    private fun makeInstruction(firstFrameIdx: Int, image: DeferredImage, phases: List<Phase>): Instruction {
+        val numFramesPerPhase = IntArray(phases.size) { phaseIdx -> phases[phaseIdx].numFrames(fpsScaling) }
+        val insnNumFrames = numFramesPerPhase.sum()
+        val insnShifts = DoubleArray(insnNumFrames)
+        val insnAlphas = DoubleArray(insnNumFrames)
+        var i = 0
+        for ((phaseIdx, phase) in phases.withIndex())
+            for (frameIdx in 0 until numFramesPerPhase[phaseIdx]) {
+                insnShifts[i] = phase.shift(fpsScaling, frameIdx) * resolutionScaling
+                insnAlphas[i] = phase.alpha(fpsScaling, frameIdx)
+                i++
+            }
+        return Instruction(firstFrameIdx, firstFrameIdx + insnNumFrames - 1, image, insnShifts, insnAlphas)
     }
 
 
@@ -72,11 +151,99 @@ class DeferredVideo(val resolution: Resolution) {
     }
 
 
-    private class Instruction(
-        val firstFrameIdx: Int, val image: DeferredImage, val shifts: DoubleArray, val alphas: DoubleArray
-    ) {
-        val lastFrameIdx = firstFrameIdx + shifts.size - 1
+    private sealed interface Flow {
+
+        fun numFrames(fpsScaling: Int): Int
+
+        class Blank(private val numFrames: Int) : Flow {
+            override fun numFrames(fpsScaling: Int) = numFrames * fpsScaling
+        }
+
+        class DefImg(val image: DeferredImage, val phases: MutableList<Phase>) : Flow {
+            override fun numFrames(fpsScaling: Int) = phases.sumOf { it.numFrames(fpsScaling) }
+        }
+
     }
+
+
+    private interface Phase {
+
+        fun numFrames(fpsScaling: Int): Int
+        fun shift(fpsScaling: Int, frameIdx: Int): Double
+        fun alpha(fpsScaling: Int, frameIdx: Int): Double
+
+        class Static(
+            private val numFrames: Int,
+            private val shift: Double,
+            private val alpha: Double
+        ) : Phase {
+            override fun numFrames(fpsScaling: Int) = numFrames * fpsScaling
+            override fun shift(fpsScaling: Int, frameIdx: Int) = shift
+            override fun alpha(fpsScaling: Int, frameIdx: Int) = alpha
+        }
+
+        class Fade(
+            private val numFrames: Int,
+            private val shift: Double,
+            private val startAlpha: Double,
+            private val stopAlpha: Double
+        ) : Phase {
+            override fun numFrames(fpsScaling: Int) = numFrames * fpsScaling
+            override fun shift(fpsScaling: Int, frameIdx: Int) = shift
+            // Choose alpha such that the fade sequence contains neither full startAlpha nor full stopAlpha.
+            override fun alpha(fpsScaling: Int, frameIdx: Int) =
+                startAlpha + (stopAlpha - startAlpha) * (frameIdx + 1) / (numFrames(fpsScaling) + 1)
+        }
+
+        class Scroll(private val alpha: Double) : Phase {
+
+            class Section(
+                val numFrames: Int,
+                val speed: Double,
+                val startShift: Double,
+                val stopShift: Double,
+                val initialAdvance: Double
+            ) {
+                var startFrames = 0.0
+            }
+
+            private val sections = mutableListOf<Section>()
+
+            fun addSection(section: Section) {
+                section.startFrames = sections.sumOf(Section::numFrames) - section.initialAdvance
+                sections.add(section)
+            }
+
+            override fun numFrames(fpsScaling: Int): Int {
+                var n = sections.sumOf(Section::numFrames) * fpsScaling
+                if (fpsScaling != 1) {
+                    val stopShift = sections.last().stopShift
+                    while (shift(fpsScaling, n + 1) < stopShift - 0.001)
+                        n++
+                }
+                return n
+            }
+
+            override fun shift(fpsScaling: Int, frameIdx: Int): Double {
+                val unscaledFrameIdx = (frameIdx - (fpsScaling - 1)) / fpsScaling.toDouble()
+                val sec = sections.firstOrNull { unscaledFrameIdx < it.startFrames + it.numFrames } ?: sections.last()
+                return sec.startShift + sec.speed * (unscaledFrameIdx - sec.startFrames)
+            }
+
+            override fun alpha(fpsScaling: Int, frameIdx: Int) = alpha
+
+        }
+
+    }
+
+
+    private class Instruction(
+        val firstFrameIdx: Int,
+        val lastFrameIdx: Int,
+        val image: DeferredImage,
+        val shifts: DoubleArray,
+        val alphas: DoubleArray
+    )
 
 
     abstract class Graphics2DBackend(

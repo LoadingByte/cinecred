@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnStageInfo
@@ -8,79 +7,32 @@ import com.loadingbyte.cinecred.project.Project
 
 
 fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
-    val video = DeferredVideo(project.styling.global.resolution)
+    val video = DeferredVideo(project.styling.global.resolution, project.styling.global.fps)
 
     // Write frames for each page as has been configured.
-    var firstFrameIdx = 0
     for ((pageIdx, page) in project.pages.withIndex()) {
         val drawnPage = drawnPages[pageIdx]
-        val builder = DeferredImageInstructionBuilder(drawnPage.defImage, firstFrameIdx)
         for ((stageIdx, stage) in page.stages.withIndex())
             when (val stageInfo = drawnPage.stageInfo[stageIdx]) {
                 is DrawnStageInfo.Card -> {
                     val shift = stageInfo.middleY.resolve() - video.resolution.heightPx / 2.0
                     if (stageIdx == 0)
-                        builder.playFade(shift, stage.style.cardFadeInFrames, fadeOut = false)
-                    builder.playStatic(shift, stage.style.cardDurationFrames)
+                        video.playFade(drawnPage.defImage, stage.style.cardFadeInFrames, shift, 0.0, 1.0)
+                    video.playStatic(drawnPage.defImage, stage.style.cardDurationFrames, shift, 1.0)
                     if (stageIdx == page.stages.lastIndex)
-                        builder.playFade(shift, stage.style.cardFadeOutFrames, fadeOut = true)
+                        video.playFade(drawnPage.defImage, stage.style.cardFadeOutFrames, shift, 1.0, 0.0)
                 }
                 is DrawnStageInfo.Scroll ->
-                    builder.playScroll(
-                        shiftStart = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
-                        stageInfo.frames, stageInfo.initialAdvance, stage.style.scrollPxPerFrame
+                    video.playScroll(
+                        drawnPage.defImage, stageInfo.frames, stage.style.scrollPxPerFrame,
+                        startShift = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
+                        stopShift = stageInfo.scrollStopY.resolve() - video.resolution.heightPx / 2.0,
+                        stageInfo.initialAdvance, alpha = 1.0
                     )
             }
-        builder.build(video)
-        firstFrameIdx += builder.numFrames + page.stages.last().style.afterwardSlugFrames
+        if (pageIdx != project.pages.lastIndex)
+            video.playBlank(page.stages.last().style.afterwardSlugFrames)
     }
 
     return video
-}
-
-
-private class DeferredImageInstructionBuilder(private val image: DeferredImage, private val firstFrameIdx: Int) {
-
-    var numFrames = 0
-        private set
-
-    private var shifts = DoubleArray(16384)
-    private var alphas = DoubleArray(16384)
-
-    private fun playFrame(shift: Double, alpha: Double) {
-        if (shifts.size == numFrames) {
-            shifts = shifts.copyOf(numFrames * 2)
-            alphas = alphas.copyOf(numFrames * 2)
-        }
-        shifts[numFrames] = shift
-        alphas[numFrames] = alpha
-        numFrames++
-    }
-
-    fun playStatic(shift: Double, numFrames: Int) {
-        for (frame in 0 until numFrames)
-            playFrame(shift, 1.0)
-    }
-
-    fun playFade(shift: Double, numFrames: Int, fadeOut: Boolean) {
-        for (frame in 0 until numFrames) {
-            // Choose alpha such that the fade sequence doesn't contain a fully empty or fully opaque frame.
-            var alpha = (frame + 1).toDouble() / (numFrames + 1)
-            if (fadeOut)
-                alpha = 1.0 - alpha
-            playFrame(shift, alpha)
-        }
-    }
-
-    fun playScroll(shiftStart: Double, numFrames: Int, initialAdvance: Double, scrollPxPerFrame: Double) {
-        for (frame in 0 until numFrames) {
-            val shift = shiftStart + (frame + initialAdvance) * scrollPxPerFrame
-            playFrame(shift, 1.0)
-        }
-    }
-
-    fun build(video: DeferredVideo) {
-        video.playDeferredImage(firstFrameIdx, image, shifts.copyOf(numFrames), alphas.copyOf(numFrames))
-    }
-
 }

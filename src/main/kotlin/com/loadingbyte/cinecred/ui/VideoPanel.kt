@@ -251,7 +251,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         val currentFrameIdx = frameSlider.value
 
         makeVideoBackendJobSlot.submit {
-            val scaledVideo = video.copy(scaling)
+            val scaledVideo = video.copy(resolutionScaling = scaling)
             val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
                 scaledVideo, DELIVERED_LAYERS, draft = true, preloading = true
             ) {

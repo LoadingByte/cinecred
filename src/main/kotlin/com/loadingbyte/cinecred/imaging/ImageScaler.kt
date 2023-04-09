@@ -53,7 +53,9 @@ fun scaleImageLanczos(inImage: BufferedImage, outW: Int, outH: Int): BufferedIma
     // Allocate input and output memory, and fill the input memory with the image's data.
     val inMem = BytePointer(av_malloc(inSizeWithPadding.toLong()))
     val outMem = BytePointer(av_malloc(outSize.toLong()))
-    inMem.put(((inImage.raster.dataBuffer) as DataBufferByte).data, 0, inSize)
+    val inImageBuffer = inImage.raster.dataBuffer as DataBufferByte
+    require(inImageBuffer.size == inSize) { "Scaling doesn't support subimages." }
+    inMem.put(inImageBuffer.data, 0, inSize)
 
     // Do the scaling.
     val swsCtx = sws_getContext(

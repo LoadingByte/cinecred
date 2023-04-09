@@ -627,8 +627,9 @@ class VideoWriter(
             //   - JavaCPP cannot directly pass pointers to Java arrays on the heap to the native C code.
             //   - We need av_image_copy_plane() to insert padding between lines according to inFrame's linesize.
             // We have empirically confirmed that two copies are just as fast as one copy in the grand scheme of things.
-            val imageArray = ((image.raster.dataBuffer) as DataBufferByte).data
-            val imageData = BytePointer(imageArray.size.toLong()).put(imageArray, 0, imageArray.size)
+            val imageBuffer = image.raster.dataBuffer as DataBufferByte
+            require(imageBuffer.size == image.width * image.height * image.colorModel.numComponents) { "Subimage" }
+            val imageData = BytePointer(imageBuffer.size.toLong()).put(imageBuffer.data, 0, imageBuffer.size)
             val imageLinesize = av_image_get_linesize(inPixelFormat, image.width, 0)
             val inFrame = frames.first()
             av_image_copy_plane(inFrame.data(0), inFrame.linesize(0), imageData, imageLinesize, imageLinesize, height)

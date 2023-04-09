@@ -50,7 +50,7 @@ class Table(
             val rawBodyRecords = spreadsheet.drop(headerRecordNo + 1)
             bodyRecords =
                 rawBodyRecords.subList(
-                    rawBodyRecords.indexOfFirst(Spreadsheet.Record::isNotEmpty),
+                    rawBodyRecords.indexOfFirst(Spreadsheet.Record::isNotEmpty).coerceAtLeast(0), // avoid crash upon -1
                     rawBodyRecords.indexOfLast(Spreadsheet.Record::isNotEmpty) + 1
                 )
             numRows = bodyRecords.size

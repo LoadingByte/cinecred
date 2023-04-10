@@ -237,7 +237,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
 
         // @formatter:off
         override fun getSelectionY(h: Int) = (hue * (h - 1)).roundToInt()
-        override fun setSelectionY(h: Int, selectionY: Int) { hue = selectionY / (h - 1).toDouble() }
+        override fun setSelectionY(h: Int, selY: Int) { withoutOnChange { hue = selY / (h - 1).toDouble() } }
         override fun onSelectionChange() { onHueChange() }
         // @formatter:on
 
@@ -260,9 +260,9 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
 
         // @formatter:off
         override fun getSelectionX(w: Int) = (sat * (w - 1)).roundToInt()
-        override fun setSelectionX(w: Int, selectionX: Int) { sat = selectionX / (w - 1).toDouble() }
+        override fun setSelectionX(w: Int, selX: Int) { withoutOnChange { sat = selX / (w - 1).toDouble() } }
         override fun getSelectionY(h: Int) = ((1.0 - bri) * (h - 1)).roundToInt()
-        override fun setSelectionY(h: Int, selectionY: Int) { bri = 1.0 - selectionY / (h - 1).toDouble() }
+        override fun setSelectionY(h: Int, selY: Int) { withoutOnChange { bri = 1.0 - selY / (h - 1).toDouble() } }
         override fun onSelectionChange() { onSatBriChange() }
         // @formatter:on
 
@@ -338,9 +338,9 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
 
         protected abstract fun renderImage(w: Int, h: Int, out: IntArray)
         protected open fun getSelectionX(w: Int): Int = throw UnsupportedOperationException()
-        protected open fun setSelectionX(w: Int, selectionX: Int): Unit = throw UnsupportedOperationException()
+        protected open fun setSelectionX(w: Int, selX: Int): Unit = throw UnsupportedOperationException()
         protected abstract fun getSelectionY(h: Int): Int
-        protected abstract fun setSelectionY(h: Int, selectionY: Int)
+        protected abstract fun setSelectionY(h: Int, selY: Int)
         protected abstract fun onSelectionChange()
 
     }

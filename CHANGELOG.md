@@ -54,6 +54,7 @@ Cinecred Changelog
 - Rapidly scrolling a very long page no longer causes flicker.
 - Rapidly changing a style no longer makes it flicker gray in the tree.
 - Styles with an empty name now have the correct height in the dropdown.
+- The video preview's 1:1 mode now targets physical, not scaled pixels.
 - On macOS, the video preview controls remain responsive in full-screen mode.
 - Resolved rare crashes when closing a project while the previews are rendered.
 - The delivery file selection dialog now actually applies the selection.

@@ -236,9 +236,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         val graphics = canvas.graphics as Graphics2D? ?: return
 
         systemScaling = UIScale.getSystemScaleFactor(graphics)
-        var scaling = systemScaling
-        if (!actualSizeButton.isSelected)
-            scaling *= min(
+        val scaling = if (actualSizeButton.isSelected) 1.0 else
+            systemScaling * min(
                 canvas.width.toDouble() / project.styling.global.resolution.widthPx,
                 canvas.height.toDouble() / project.styling.global.resolution.heightPx
             )

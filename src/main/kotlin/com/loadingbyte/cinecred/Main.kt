@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.demo.demo
+import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
 import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
 import com.loadingbyte.cinecred.ui.helper.tryMail
 import com.oracle.si.Singleton
@@ -129,6 +130,8 @@ private fun mainSwing(args: Array<String>) {
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
     // Fix the slightly offset vertical centering of text in text fields.
     fixTextFieldVerticalCentering()
+    // Fix the inability to get a dock progress bar to appear on macOS.
+    fixTaskbarProgressBarOnMacOS()
 
     masterCtrl = UIFactory().master()
 

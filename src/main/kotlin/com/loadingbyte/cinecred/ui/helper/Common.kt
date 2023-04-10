@@ -525,6 +525,18 @@ private fun openFallback(uri: URI) {
 }
 
 
+/**
+ * On macOS, one is unable to show a progress bar on top of the app's icon in the dock as soon as the app is launched
+ * via a jpackage-built binary. Fortunately, updating the icon once on startup with this function resolves the issue.
+ *
+ * This bug will hopefully be fixed in a future version of the JDK. It is tracked here:
+ * https://bugs.openjdk.org/browse/JDK-8300037
+ */
+fun fixTaskbarProgressBarOnMacOS() {
+    if (SystemInfo.isMacOS && Taskbar.Feature.ICON_IMAGE.isSupported)
+        taskbar!!.iconImage = taskbar.iconImage
+}
+
 fun trySetTaskbarIconBadge(badge: Int) {
     if (Taskbar.Feature.ICON_BADGE_NUMBER.isSupported)
         taskbar!!.setIconBadge(if (badge == 0) null else badge.toString())

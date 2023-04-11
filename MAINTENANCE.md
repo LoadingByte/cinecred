@@ -58,21 +58,20 @@ update, which means:
 
 ### HarfBuzz
 
-The compilations currently present in this repository stem from version 3.0.0.
+The compilations currently present in this repository stem from version 7.1.0.
 
 Download the prepared source code tarball of the latest
 [HarfBuzz release](https://github.com/harfbuzz/harfbuzz/releases) and unpack it.
-Compile it on each supported platform using the following commands, which have
-proven to produce the smallest binaries possible:
+Compile it on each supported platform using the following commands:
 
     Windows x86_64 (using MSVC):
-    cl /LD /O2s /GL /GR- /D"HB_EXTERN=__declspec(dllexport)" <MACROS> <HB_DIR>\src\harfbuzz.cc
+    cl /LD /O2 /GL /GR- /D"HB_EXTERN=__declspec(dllexport)" <MACROS> <HB_DIR>\src\harfbuzz.cc
 
     macOS x86_64:
-    clang -dynamiclib -std=c++11 -Os -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
+    clang -dynamiclib -s -std=c++11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
 
     Linux x86_64:
-    clang -shared -fuse-ld=lld -Os -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.so
+    gcc -shared -s -std=c++11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.so
 
 Point `<HB_DIR>` to the unpacked Harfbuzz release tarball. Define the following
 `<MACROS>`, which, among other things, disable unnecessary calls to OS libraries

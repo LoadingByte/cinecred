@@ -141,7 +141,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     init {
         // Set the directory-related fields to the project dir.
         val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
-        val outputLoc = ctrl.projectDir.toAbsolutePath().resolve(defaultFilename)
+        val outputLoc = ctrl.projectDir.toAbsolutePath().parent.resolve(defaultFilename)
         singleFileWidget.value = outputLoc
         seqDirWidget.value = outputLoc
         // This ensures that file extensions are sensible.

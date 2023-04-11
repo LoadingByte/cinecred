@@ -56,6 +56,9 @@ Cinecred Changelog
 - Styles with an empty name now have the correct height in the dropdown.
 - The video preview's 1:1 mode now targets physical, not scaled pixels.
 - On macOS, the video preview controls remain responsive in full-screen mode.
+- If the project folder contains a very large amount of files, auto updates of
+  the preview are no longer massively delayed, and after closing the project,
+  the new welcome window is no longer unresponsive for a couple of seconds.
 - Resolved rare crashes when closing a project while the previews are rendered.
 - The delivery file selection dialog now actually applies the selection.
 - On macOS, a progress bar is now shown in the dock while rendering.

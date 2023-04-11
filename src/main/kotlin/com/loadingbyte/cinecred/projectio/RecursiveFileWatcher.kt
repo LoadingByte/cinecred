@@ -32,8 +32,11 @@ object RecursiveFileWatcher {
     private var pollingTick: Long = 0
 
     init {
+        // We schedule the polling with a fixed delay (as opposed to at a fixed rate) to guarantee that there is some
+        // breathing time between poll() calls, even in cases where poll() always takes very long to complete. In that
+        // breathing time, the lock is free, so calls to watch() and unwatch() actually have a chance to run.
         Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "FileWatcher-Poller").apply { isDaemon = true } }
-            .scheduleAtFixedRate(::poll, 1, 1, TimeUnit.SECONDS)
+            .scheduleWithFixedDelay(::poll, 1, 1, TimeUnit.SECONDS)
 
         Thread({
             while (true) {
@@ -161,12 +164,6 @@ object RecursiveFileWatcher {
 
 
     private fun potentialModification(order: Order, file: Path, setLastSeenTick: Boolean) {
-        // Sometimes, the same file is changed multiple times within the same millisecond. If we didn't wait for a
-        // couple of milliseconds here, the first change would correctly be forwarded to the listener, but the second
-        // change would not because the file modification time stayed the same after the first change. By waiting, we
-        // ensure that the second change has already taken place when the function continues.
-        Thread.sleep(5)
-
         val memoryEntry = order.memory.computeIfAbsent(file) { MemoryEntry(-1, -1) }
         val lastModMillis = try {
             file.getLastModifiedTime().toMillis()
@@ -176,7 +173,16 @@ object RecursiveFileWatcher {
             return
         }
         if (memoryEntry.lastModMillis != lastModMillis) {
-            memoryEntry.lastModMillis = lastModMillis
+            // Sometimes, the same file is changed multiple times within the same millisecond. If we didn't wait for
+            // a couple of milliseconds here, the first change would correctly be forwarded to the listener, but the
+            // second change would not because the file modification time stayed the same after the first change.
+            // By waiting, we ensure that the second change has already taken place when the function continues.
+            Thread.sleep(5)
+            memoryEntry.lastModMillis = try {
+                file.getLastModifiedTime().toMillis()
+            } catch (_: NoSuchFileException) {
+                return
+            }
             order.listener(Event.MODIFY, file)
         }
         if (setLastSeenTick)

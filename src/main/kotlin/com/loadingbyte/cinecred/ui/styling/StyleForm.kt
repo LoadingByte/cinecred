@@ -463,10 +463,17 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setProjectFontFamilies(projectFamilies: FontFamilies) {
-        val configurator = { w: Widget<*> -> if (w is FontChooserWidget) w.projectFamilies = projectFamilies }
+    fun setProjectFontFamilies(projectFamilies: FontFamilies): Boolean {
+        var updatedImmediately = false
+        val configurator = { w: Widget<*> ->
+            if (w is FontChooserWidget) {
+                w.projectFamilies = projectFamilies
+                updatedImmediately = true
+            }
+        }
         for (widget in valueWidgets.values)
             widget.applyConfigurator(configurator)
+        return updatedImmediately
     }
 
     fun setChoices(setting: StyleSetting<*, *>, choices: List<Any>, unique: Boolean = false) {

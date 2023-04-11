@@ -49,14 +49,17 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val stylingTree = StylingTree()
 
-    // Cache the styling which is currently stored in the styling tree as well as its constraint violations and all
-    // used colors, so that we don't have to repeatedly regenerate these three things.
-    private var styling: Styling? = null
-    private var constraintViolations: List<ConstraintViolation> = emptyList()
-    private var swatchColors: List<Color> = emptyList()
+    // Wire up an adjuster that we can call when various events happen, upon which it will update the StyleForms.
+    private val formAdjuster = StyleFormAdjuster(
+        listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm),
+        getStylingCtx = ctrl::stylingCtx,
+        getCurrentStyling = ::styling,
+        getCurrentStyleInActiveForm = { stylingTree.getSelected() as Style? },
+        notifyConstraintViolations = ::updateConstraintViolations
+    )
 
-    // Keep track of the form which is currently open.
-    private var openedForm: StyleForm<*>? = null
+    // Cache the Styling which is currently stored in the tree, so that we don't have to repeatedly regenerate it.
+    private var styling: Styling? = null
 
     // We increase this counter each time a new form is opened. It is used to tell apart multiple edits
     // of the same widget but in different styles.
@@ -197,7 +200,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun openBlank() {
-        openedForm = null
+        formAdjuster.activeForm = null
         rightPanelCards.show(rightPanel, "Blank")
     }
 
@@ -241,9 +244,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun <S : Style> openStyle(style: S, form: StyleForm<S>, cardName: String) {
         form.open(style)
-        openedForm = form
         openCounter++
-        adjustOpenedForm()
+        formAdjuster.activeForm = form
+        formAdjuster.onLoadStyleIntoActiveForm()
         rightPanelCards.show(rightPanel, cardName)
     }
 
@@ -259,8 +262,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         stylingTree.setSingleton(styling.global)
         stylingTree.replaceAllListElements(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
-        refreshConstraintViolations()
-        refreshSwatchColors()
+        formAdjuster.onLoadStyling()
 
         // Simulate the user selecting the node which is already selected currently. This triggers a callback
         // which then updates the right panel. If the node is a style node, that callback will also in turn call
@@ -269,18 +271,12 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
-        letterStyleForm.setProjectFontFamilies(projectFamilies)
-        if (openedForm === letterStyleForm) {
-            refreshConstraintViolations()
-            adjustOpenedForm()
-        }
+        formAdjuster.updateProjectFontFamilies(projectFamilies)
     }
 
     private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
         this.styling = styling
-        refreshConstraintViolations()
-        refreshSwatchColors()
-        adjustOpenedForm()
+        formAdjuster.onChangeInActiveForm()
         ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
@@ -300,9 +296,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         mostRecentRuntime = drawnProject?.video?.numFrames ?: 0
     }
 
-    private fun refreshConstraintViolations() {
-        constraintViolations = verifyConstraints(ctrl.stylingCtx, styling ?: return)
-
+    private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {
         val severityPerStyle = IdentityHashMap<Style, Severity>()
         for (violation in constraintViolations)
             severityPerStyle[violation.rootStyle] =
@@ -312,117 +306,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             val severity = severityPerStyle[style]
             if (severity == null || severity == Severity.INFO) emptyList() else listOf(severity.icon)
         })
-    }
-
-    private fun refreshSwatchColors() {
-        val styling = styling ?: return
-
-        val colorSet = HashSet<Color>()
-        colorSet.add(styling.global.grounding)
-        for (letterStyle in styling.letterStyles)
-            for (layer in letterStyle.layers) {
-                colorSet.add(layer.color1)
-                if (layer.coloring == LayerColoring.GRADIENT)
-                    colorSet.add(layer.color2)
-            }
-
-        swatchColors = colorSet.sortedWith { c1, c2 ->
-            val hsb1 = Color.RGBtoHSB(c1.red, c1.green, c1.blue, null)
-            val hsb2 = Color.RGBtoHSB(c2.red, c2.green, c2.blue, null)
-            Arrays.compare(hsb1, hsb2)
-        }
-    }
-
-    private fun adjustOpenedForm() {
-        val curStyle = (stylingTree.getSelected() ?: return) as Style
-        adjustForm((openedForm ?: return).castToStyle(curStyle.javaClass), curStyle)
-    }
-
-    private fun <S : Style> adjustForm(
-        curForm: StyleForm<S>, curStyle: S, curStyleIdx: Int = 0, siblingStyles: List<S> = emptyList()
-    ) {
-        val styling = this.styling ?: return
-
-        curForm.ineffectiveSettings = findIneffectiveSettings(ctrl.stylingCtx, styling, curStyle)
-
-        curForm.clearIssues()
-        for (violation in constraintViolations)
-            if (violation.leafStyle == curStyle) {
-                val issue = Form.Notice(violation.severity, violation.msg)
-                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
-            }
-
-        curForm.setSwatchColors(swatchColors)
-
-        for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
-            is DynChoiceConstr<S, *> -> {
-                val choices = constr.choices(ctrl.stylingCtx, styling, curStyle).toList()
-                for (setting in constr.settings)
-                    curForm.setChoices(setting, choices)
-            }
-            is StyleNameConstr<S, *> -> {
-                val choiceSet = constr.choices(ctrl.stylingCtx, styling, curStyle).mapTo(TreeSet(), ListedStyle::name)
-                if (constr.clustering)
-                    choiceSet.remove((curStyle as ListedStyle).name)
-                val choices = choiceSet.toList()
-                for (setting in constr.settings)
-                    curForm.setChoices(setting, choices)
-            }
-            is FontFeatureConstr -> {
-                val availableTags = constr.getAvailableTags(ctrl.stylingCtx, styling, curStyle).toList()
-                for (setting in constr.settings)
-                    curForm.setChoices(setting, availableTags, unique = true)
-            }
-            is SiblingOrdinalConstr -> {
-                val choices = LinkedHashMap<Int, String>()  // retains insertion order
-                for ((idx, sibling) in siblingStyles.withIndex())
-                    if (constr.permitSibling(ctrl.stylingCtx, styling, curStyle, curStyleIdx + 1, sibling, idx + 1))
-                        choices[idx + 1] = if (sibling is NamedStyle) sibling.name else ""
-                val toString = SiblingOrdinalToString(choices)
-                for (setting in constr.settings) {
-                    curForm.setChoices(setting, choices.keys.toList())
-                    curForm.setToStringFun(setting, toString)
-                }
-            }
-            else -> {}
-        }
-
-        for (spec in getStyleWidgetSpecs(curStyle.javaClass)) when (spec) {
-            is ToggleButtonGroupWidgetSpec<S, *> -> {
-                fun <SUBJ : Any> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
-                    spec.getDynIcon?.let { return fun(item: SUBJ) = it(ctrl.stylingCtx, styling, curStyle, item) }
-
-                val toIcon = makeToIcon(spec)
-                if (toIcon != null)
-                    for (setting in spec.settings)
-                        curForm.setToIconFun(setting, toIcon)
-            }
-            is MultiplierWidgetSpec -> {
-                val multiplier = spec.getMultiplier(ctrl.stylingCtx, styling, curStyle)
-                for (setting in spec.settings)
-                    curForm.setMultiplier(setting, multiplier)
-            }
-            is TimecodeWidgetSpec -> {
-                val fps = spec.getFPS(ctrl.stylingCtx, styling, curStyle)
-                val timecodeFormat = spec.getTimecodeFormat(ctrl.stylingCtx, styling, curStyle)
-                for (setting in spec.settings)
-                    curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
-            }
-            else -> {}
-        }
-
-        val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
-        for (idx in nestedForms.indices)
-            adjustForm(nestedForms[idx].castToStyle(nestedStyles[idx].javaClass), nestedStyles[idx], idx, nestedStyles)
-    }
-
-    // This toString function is also a data class so that when a new instance is pushed into a widget, the widget can
-    // avoid updating itself in the common case where nothing has changed.
-    private data class SiblingOrdinalToString(val choices: Map<Int, String>) : (Int) -> String {
-        override fun invoke(choice: Int): String {
-            val choiceName = choices.getOrDefault(choice, "")
-            return if (choiceName.isBlank()) "$choice" else "$choice $choiceName"
-        }
     }
 
 

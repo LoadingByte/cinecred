@@ -103,7 +103,9 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             }
             playTimer?.stop()
             playTimer = if (playRate == 0) null else {
-                val frameSpacing /* ms */ = 1000.0 / (abs(playRate) * project!!.styling.global.fps.frac)
+                // The speed increases exponentially with playRate, but is capped at 64x.
+                val speed = 1 shl min(6, abs(playRate) - 1)
+                val frameSpacing /* ms */ = 1000.0 / (speed * project!!.styling.global.fps.frac)
                 // We presume that we cannot draw faster than roughly 80 frames per second, and hence increase the step
                 // size once that framerate is exceeded.
                 val stepSize = ceil(12.0 / frameSpacing).roundToInt()

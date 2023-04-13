@@ -45,6 +45,7 @@ Cinecred Changelog
 - Baseline determination when mixing letter styles is no longer jumpy.
 - Raster pictures are now scaled by Lanczos, fixing the previously bad quality.
 - Translucent pixels in raster images are no longer tinted black in PDF exports.
+- ProRes 4444 (XQ) exports with alpha now work in most editing software.
 - Spreadsheets that have no rows no longer provoke crashes.
 - CSV files that have rows with fewer columns no longer provoke crashes.
 - Credit sequences without a single frame no longer provoke crashes.

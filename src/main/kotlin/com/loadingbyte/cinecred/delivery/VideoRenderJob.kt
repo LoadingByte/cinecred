@@ -47,7 +47,8 @@ class VideoRenderJob(
             fileOrPattern, scaledVideo.resolution, scaledVideo.fps, scan,
             if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
-            format.codecName, format.codecProfile, format.codecOptions, muxerOptions = emptyMap()
+            if (transparentGrounding) format.alphaCodecName!! else format.codecName,
+            format.codecProfile, format.codecOptions, muxerOptions = emptyMap()
         ).use { videoWriter ->
             val videoBackend = DeferredVideo.VideoWriterBackend(
                 videoWriter, scaledVideo, DELIVERED_LAYERS, grounding, sequentialAccess = true
@@ -77,6 +78,7 @@ class VideoRenderJob(
         fileExts: Set<String>,
         defaultFileExt: String,
         val codecName: String,
+        val alphaCodecName: String? = null,
         val codecProfile: Int = FF_PROFILE_UNKNOWN,
         val codecOptions: Map<String, String> = emptyMap(),
         val pixelFormat: Int,
@@ -86,7 +88,7 @@ class VideoRenderJob(
         val minWidth: Int? = null,
         val minHeight: Int? = null,
         val interlacing: Boolean = false
-    ) : RenderFormat(fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaPixelFormat != null) {
+    ) : RenderFormat(fileSeq, fileExts, defaultFileExt, supportsAlpha = alphaCodecName != null) {
 
         companion object {
 
@@ -114,7 +116,9 @@ class VideoRenderJob(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_PRORES),
                 defaultFileExt = "mov",
+                // prores_aw is faster, but only prores_ks supports 4444 alpha content that is universally compatible.
                 codecName = "prores_aw",
+                alphaCodecName = "prores_ks",
                 codecProfile = profile,
                 pixelFormat = pixelFormat,
                 alphaPixelFormat = alphaPixelFormat,
@@ -149,6 +153,7 @@ class VideoRenderJob(
                 fileExts = setOf(fileExt),
                 defaultFileExt = fileExt,
                 codecName = fileExt,
+                alphaCodecName = fileExt,
                 codecOptions = codecOptions,
                 pixelFormat = AV_PIX_FMT_RGB24,
                 alphaPixelFormat = AV_PIX_FMT_RGBA,

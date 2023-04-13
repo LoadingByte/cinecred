@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.imaging.VideoWriter
 import com.loadingbyte.cinecred.imaging.VideoWriter.*
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext.*
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
@@ -44,10 +45,9 @@ class VideoRenderJob(
 
         VideoWriter(
             fileOrPattern, scaledVideo.resolution, scaledVideo.fps, scan,
-            format.codecId, if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
+            if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat,
             colorSpace.range, colorSpace.transferCharacteristic, colorSpace.yCbCrCoefficients,
-            muxerOptions = emptyMap(),
-            format.codecOptions
+            format.codecName, format.codecProfile, format.codecOptions, muxerOptions = emptyMap()
         ).use { videoWriter ->
             val videoBackend = DeferredVideo.VideoWriterBackend(
                 videoWriter, scaledVideo, DELIVERED_LAYERS, grounding, sequentialAccess = true
@@ -76,10 +76,11 @@ class VideoRenderJob(
         fileSeq: Boolean,
         fileExts: Set<String>,
         defaultFileExt: String,
-        val codecId: Int,
+        val codecName: String,
+        val codecProfile: Int = FF_PROFILE_UNKNOWN,
+        val codecOptions: Map<String, String> = emptyMap(),
         val pixelFormat: Int,
         val alphaPixelFormat: Int? = null,
-        val codecOptions: Map<String, String> = emptyMap(),
         val widthMod2: Boolean = false,
         val heightMod2: Boolean = false,
         val minWidth: Int? = null,
@@ -98,7 +99,9 @@ class VideoRenderJob(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_H264),
                 defaultFileExt = "mp4",
-                codecId = AV_CODEC_ID_H264,
+                codecName = "libx264",
+                // Use the main profile so that renders play back on virtually all devices.
+                codecProfile = FF_PROFILE_H264_MAIN,
                 pixelFormat = AV_PIX_FMT_YUV420P,
                 widthMod2 = true,
                 heightMod2 = true
@@ -107,19 +110,14 @@ class VideoRenderJob(
                 override val notice get() = l10n("delivery.reducedQuality")
             }
 
-            private fun prores(
-                label: String,
-                pixelFormat: Int,
-                alphaPixelFormat: Int?,
-                profile: String
-            ) = object : Format(
+            private fun prores(label: String, pixelFormat: Int, alphaPixelFormat: Int?, profile: Int) = object : Format(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_PRORES),
                 defaultFileExt = "mov",
-                codecId = AV_CODEC_ID_PRORES,
+                codecName = "prores_aw",
+                codecProfile = profile,
                 pixelFormat = pixelFormat,
                 alphaPixelFormat = alphaPixelFormat,
-                codecOptions = mapOf("profile" to profile),
                 widthMod2 = true,
                 interlacing = true
             ) {
@@ -131,7 +129,7 @@ class VideoRenderJob(
                 fileSeq = false,
                 fileExts = muxerFileExts(AV_CODEC_ID_DNXHD),
                 defaultFileExt = "mxf",
-                codecId = AV_CODEC_ID_DNXHD,
+                codecName = "dnxhd",
                 pixelFormat = pixelFormat,
                 codecOptions = mapOf("profile" to profile),
                 minWidth = 256,
@@ -143,7 +141,6 @@ class VideoRenderJob(
 
             private fun rgbSeqWithOptionalAlpha(
                 fileExt: String,
-                codecId: Int,
                 codecOptions: Map<String, String> = emptyMap(),
                 labelSuffix: String = "",
                 l10nNotice: String? = null
@@ -151,10 +148,10 @@ class VideoRenderJob(
                 fileSeq = true,
                 fileExts = setOf(fileExt),
                 defaultFileExt = fileExt,
-                codecId = codecId,
+                codecName = fileExt,
+                codecOptions = codecOptions,
                 pixelFormat = AV_PIX_FMT_RGB24,
                 alphaPixelFormat = AV_PIX_FMT_RGBA,
-                codecOptions = codecOptions,
                 interlacing = true
             ) {
                 override val label get() = l10n("delivery.imgSeq", fileExt.uppercase()) + labelSuffix
@@ -163,23 +160,22 @@ class VideoRenderJob(
 
             val ALL = listOf(
                 h264(),
-                prores("ProRes 422 Proxy", AV_PIX_FMT_YUV422P10LE, null, "0"),
-                prores("ProRes 422 LT", AV_PIX_FMT_YUV422P10LE, null, "1"),
-                prores("ProRes 422", AV_PIX_FMT_YUV422P10LE, null, "2"),
-                prores("ProRes 422 HQ", AV_PIX_FMT_YUV422P10LE, null, "3"),
-                prores("ProRes 4444", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, "4"),
-                prores("ProRes 4444 XQ", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, "5"),
+                prores("ProRes 422 Proxy", AV_PIX_FMT_YUV422P10LE, null, FF_PROFILE_PRORES_PROXY),
+                prores("ProRes 422 LT", AV_PIX_FMT_YUV422P10LE, null, FF_PROFILE_PRORES_LT),
+                prores("ProRes 422", AV_PIX_FMT_YUV422P10LE, null, FF_PROFILE_PRORES_STANDARD),
+                prores("ProRes 422 HQ", AV_PIX_FMT_YUV422P10LE, null, FF_PROFILE_PRORES_HQ),
+                prores("ProRes 4444", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, FF_PROFILE_PRORES_4444),
+                prores("ProRes 4444 XQ", AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUVA444P10LE, FF_PROFILE_PRORES_XQ),
                 dnxhr("DNxHR LB", AV_PIX_FMT_YUV422P, "dnxhr_lb"),
                 dnxhr("DNxHR SQ", AV_PIX_FMT_YUV422P, "dnxhr_sq"),
                 dnxhr("DNxHR HQ", AV_PIX_FMT_YUV422P, "dnxhr_hq"),
                 dnxhr("DNxHR HQX", AV_PIX_FMT_YUV422P10LE, "dnxhr_hqx"),
                 dnxhr("DNxHR 444", AV_PIX_FMT_YUV444P10LE, "dnxhr_444"),
-                rgbSeqWithOptionalAlpha("png", AV_CODEC_ID_PNG),
+                rgbSeqWithOptionalAlpha("png"),
                 // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
                 // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
                 rgbSeqWithOptionalAlpha(
                     fileExt = "tiff",
-                    codecId = AV_CODEC_ID_TIFF,
                     codecOptions = mapOf("compression_algo" to "packbits"),
                     labelSuffix = " (PackBits)",
                     l10nNotice = "delivery.packBits"
@@ -189,12 +185,11 @@ class VideoRenderJob(
                 // Deflate compression.
                 rgbSeqWithOptionalAlpha(
                     fileExt = "tiff",
-                    codecId = AV_CODEC_ID_TIFF,
                     codecOptions = mapOf("compression_algo" to "deflate"),
                     labelSuffix = " (Deflate)",
                     l10nNotice = "delivery.deflate"
                 ),
-                rgbSeqWithOptionalAlpha("dpx", AV_CODEC_ID_DPX)
+                rgbSeqWithOptionalAlpha("dpx")
             )
 
         }

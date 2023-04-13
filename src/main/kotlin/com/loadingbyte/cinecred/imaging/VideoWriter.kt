@@ -19,7 +19,6 @@ import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.ResourceScope
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_CONSTRAINED_BASELINE
 import org.bytedeco.ffmpeg.avcodec.AVPacket
 import org.bytedeco.ffmpeg.avformat.AVFormatContext
 import org.bytedeco.ffmpeg.avformat.AVIOContext
@@ -88,13 +87,14 @@ class VideoWriter(
     /** Note: When `scan` is interlaced, `fps` still refers to the number of full (and not half) frames per second. */
     fps: FPS,
     val scan: Scan,
-    codecId: Int,
     outPixelFormat: Int,
     outRange: Range,
     outTransferCharacteristic: TransferCharacteristic,
     outYCbCrCoefficients: YCbCrCoefficients,
-    muxerOptions: Map<String, String>,
-    codecOptions: Map<String, String>
+    codecName: String,
+    codecProfile: Int,
+    codecOptions: Map<String, String>,
+    muxerOptions: Map<String, String>
 ) : Closeable {
 
     enum class Scan { PROGRESSIVE, INTERLACED_TOP_FIELD_FIRST, INTERLACED_BOT_FIELD_FIRST }
@@ -121,9 +121,9 @@ class VideoWriter(
     init {
         try {
             setup(
-                fileOrDir, fps, codecId,
+                fileOrDir, fps,
                 outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients,
-                muxerOptions, codecOptions
+                codecName, codecProfile, codecOptions, muxerOptions
             )
         } catch (e: AVException) {
             try {
@@ -138,13 +138,14 @@ class VideoWriter(
     private fun setup(
         fileOrDir: Path,
         fps: FPS,
-        codecId: Int,
         outPixelFormat: Int,
         outRange: Range,
         outTransferCharacteristic: TransferCharacteristic,
         outYCbCrCoefficients: YCbCrCoefficients,
-        muxerOptions: Map<String, String>,
-        codecOptions: Map<String, String>
+        codecName: String,
+        codecProfile: Int,
+        codecOptions: Map<String, String>,
+        muxerOptions: Map<String, String>
     ) {
         // Remember the vertical chroma subsampling for the line-based writeFrame() operations.
         vChromaSub = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
@@ -168,8 +169,8 @@ class VideoWriter(
         })
 
         // Find the encoder.
-        val codec = avcodec_find_encoder(codecId)
-            .throwIfNull("delivery.ffmpeg.unknownCodecError", avcodec_get_name(codecId).string)
+        val codec = avcodec_find_encoder_by_name(codecName)
+            .throwIfNull("delivery.ffmpeg.unknownCodecError", codecName)
 
         // Add the video stream.
         val st = avformat_new_stream(oc, null)
@@ -182,7 +183,7 @@ class VideoWriter(
         val enc = avcodec_alloc_context3(codec)
             .throwIfNull("delivery.ffmpeg.allocEncoderError")
         this.enc = enc
-        configureCodec(fps, codecId, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
+        configureCodec(fps, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients, codecProfile)
 
         // Now that all the parameters are set, we can open the video codec and allocate the necessary encode buffer.
         withOptionsDict(codecOptions) { codecOptionsDict ->
@@ -256,17 +257,17 @@ class VideoWriter(
 
     private fun configureCodec(
         fps: FPS,
-        codecId: Int,
         outPixelFormat: Int,
         outRange: Range,
         outTransferCharacteristic: TransferCharacteristic,
-        outYCbCrCoefficients: YCbCrCoefficients
+        outYCbCrCoefficients: YCbCrCoefficients,
+        codecProfile: Int
     ) {
         val oc = this.oc!!
         val st = this.st!!
         val enc = this.enc!!
 
-        enc.codec_id(codecId)
+        enc.profile(codecProfile)
         enc.width(resolution.widthPx)
         enc.height(resolution.heightPx)
         enc.pix_fmt(outPixelFormat)
@@ -313,16 +314,6 @@ class VideoWriter(
         // Some muxers, for example MKV, require the framerate to be set directly on the stream.
         // Otherwise, they infer it incorrectly.
         st.avg_frame_rate(AVRational().apply { num(fps.numerator); den(fps.denominator) })
-
-        when (codecId) {
-            // Needed to avoid using macroblocks in which some coeffs overflow.
-            // This does not happen with normal video, it just happens here as
-            // the motion of the chroma plane does not match the luma plane.
-            AV_CODEC_ID_MPEG1VIDEO -> enc.mb_decision(2)
-            // Default to constrained baseline to produce content that plays back on anything,
-            // without any significant tradeoffs for most use cases.
-            AV_CODEC_ID_H264 -> enc.profile(FF_PROFILE_H264_CONSTRAINED_BASELINE)
-        }
 
         // Some formats want stream headers to be separate.
         if (oc.oformat().flags() and AVFMT_GLOBALHEADER != 0)

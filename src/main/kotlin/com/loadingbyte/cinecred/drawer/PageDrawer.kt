@@ -131,13 +131,13 @@ private fun drawSpine(
     val spineImage = DeferredImage(width = spineImageWidth)
     var y = 0.0.toY()
     for ((blockIdx, block) in spine.blocks.withIndex()) {
-        y += block.style.vMarginPx.toElasticY()
         val drawnBlock = drawnBlocks.getValue(block)
         val x = spineXInSpineImage - drawnBlock.spineXInImage
         spineImage.drawDeferredImage(drawnBlock.defImage, x, y)
         y += drawnBlock.defImage.height
         if (blockIdx != spine.blocks.lastIndex)
-            y += (block.style.vMarginPx + block.vGapAfterPx).toElasticY()
+            y += maxOf(block.vGapAfterPx, block.style.vMarginPx, spine.blocks[blockIdx + 1].style.vMarginPx)
+                .toElasticY()
     }
     // Set the spine image's height.
     spineImage.height = y

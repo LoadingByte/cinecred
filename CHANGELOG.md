@@ -68,6 +68,9 @@ Cinecred Changelog
 
 ### Compatibility Notes
 
+- The vertical margin defined in content styles now specifies minimum spacing
+  and is no longer additive; it is also no longer applied above the first block
+  of a spine.
 - Stripes of adjacent letter styles in the same cell are no longer automatically
   merged. As a replacement, layer inheritance is a more robust and explicit way
   of sharing and merging designs.

@@ -1347,8 +1347,8 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
         // The new widget should start out with the requested value.
         val fillElement = when {
             element != null -> element
-            newElementIsLastElement && elementCount >= 2 ->
-                getPartElement(elementCount - 2, partWidgets[elementCount - 2])
+            newElementIsLastElement && elementCount >= 1 ->
+                getPartElement(elementCount - 1, partWidgets[elementCount - 1])
             newElement != null -> newElement
             else -> throw IllegalStateException("No way to choose value of new ListWidget element.")
         }

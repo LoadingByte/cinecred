@@ -174,6 +174,7 @@ class VideoRenderJob(
                 dnxhr("DNxHR HQ", AV_PIX_FMT_YUV422P, "dnxhr_hq"),
                 dnxhr("DNxHR HQX", AV_PIX_FMT_YUV422P10LE, "dnxhr_hqx"),
                 dnxhr("DNxHR 444", AV_PIX_FMT_YUV444P10LE, "dnxhr_444"),
+                rgbSeqWithOptionalAlpha("png", AV_CODEC_ID_PNG),
                 // In the standard TIFF option, we use the PackBits compression algo, which is part of Baseline TIFF
                 // and hence supported by every TIFF reader. This is actually also FFmpeg's implicit default.
                 rgbSeqWithOptionalAlpha(
@@ -193,8 +194,7 @@ class VideoRenderJob(
                     labelSuffix = " (Deflate)",
                     l10nNotice = "delivery.deflate"
                 ),
-                rgbSeqWithOptionalAlpha("dpx", AV_CODEC_ID_DPX),
-                rgbSeqWithOptionalAlpha("png", AV_CODEC_ID_PNG)
+                rgbSeqWithOptionalAlpha("dpx", AV_CODEC_ID_DPX)
             )
 
         }

@@ -673,6 +673,7 @@ class ToggleButtonGroupWidget<V : Any>(
                 if (oldSelIdx == -1)
                     notifyChangeListeners()
             }
+            panel.revalidate()
         }
 
     var toIcon: ((V) -> Icon)? = toIcon
@@ -730,6 +731,7 @@ class ToggleButtonGroupWidget<V : Any>(
         }
         panel.add(btn)
         btnGroup.add(btn)
+        panel.revalidate()
     }
 
     private fun removeOverflow() {
@@ -737,6 +739,7 @@ class ToggleButtonGroupWidget<V : Any>(
         val overflowBtn = btnGroup.elements.asSequence().last()
         panel.remove(overflowBtn)
         btnGroup.remove(overflowBtn)
+        panel.revalidate()
     }
 
     private class GroupPanel : JPanel(GroupPanelLayout()) {

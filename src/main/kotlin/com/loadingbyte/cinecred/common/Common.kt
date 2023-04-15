@@ -207,7 +207,8 @@ fun Graphics2D.setHighQuality() {
     setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
     setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
     setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
-    setRenderingHint(KEY_STROKE_CONTROL, VALUE_STROKE_PURE)
+    // With pure strokes, layout guides turn out to look very uneven and often too dark.
+    setRenderingHint(KEY_STROKE_CONTROL, VALUE_STROKE_NORMALIZE)
     setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
     // Note that we not only activate fractional font metrics because the result obviously looks better, but also
     // because if we don't, the getStringWidth() method sometimes yields incorrect results.

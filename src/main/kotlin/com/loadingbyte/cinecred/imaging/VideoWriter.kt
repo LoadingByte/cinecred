@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.VERSION
-import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.natives.zimg.zimg_graph_builder_params
 import com.loadingbyte.cinecred.natives.zimg.zimg_h.*
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_buffer
@@ -148,8 +147,7 @@ class VideoWriter(
         muxerOptions: Map<String, String>
     ) {
         // Remember the vertical chroma subsampling for the line-based writeFrame() operations.
-        vChromaSub = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
-            .log2_chroma_h().toInt()
+        vChromaSub = pixelFormatDesc(outPixelFormat).log2_chroma_h().toInt()
         // Disallow interlacing when vertical chroma subsampling is enabled, as that introduces all kinds of problems.
         require(scan == Scan.PROGRESSIVE || vChromaSub == 0) { "Interlacing can't be used with vertical subsampling." }
 
@@ -160,7 +158,7 @@ class VideoWriter(
         val oc = AVFormatContext(null)
         this.oc = oc
         avformat_alloc_output_context2(oc, null, null, fileOrDir.pathString)
-            .throwIfErrnum("delivery.ffmpeg.unknownMuxerError")
+            .ffmpegThrowIfErrnum("Could not deduce output muxer from file extension")
         // Will be freed by avformat_free_context().
         oc.metadata(AVDictionary().also { metaDict ->
             av_dict_set(metaDict, "encoding_tool", "Cinecred $VERSION", 0)
@@ -170,41 +168,43 @@ class VideoWriter(
 
         // Find the encoder.
         val codec = avcodec_find_encoder_by_name(codecName)
-            .throwIfNull("delivery.ffmpeg.unknownCodecError", codecName)
+            .ffmpegThrowIfNull("Could not find encoder '$codecName'")
 
         // Add the video stream.
         val st = avformat_new_stream(oc, null)
-            .throwIfNull("delivery.ffmpeg.allocStreamError")
+            .ffmpegThrowIfNull("Could not allocate stream")
         this.st = st
         // Assigning the stream ID dynamically is technically unnecessary because we only have one stream.
         st.id(oc.nb_streams() - 1)
 
         // Allocate and configure the codec.
         val enc = avcodec_alloc_context3(codec)
-            .throwIfNull("delivery.ffmpeg.allocEncoderError")
+            .ffmpegThrowIfNull("Could not allocate encoding context")
         this.enc = enc
         configureCodec(fps, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients, codecProfile)
 
         // Now that all the parameters are set, we can open the video codec and allocate the necessary encode buffer.
         withOptionsDict(codecOptions) { codecOptionsDict ->
             avcodec_open2(enc, codec, codecOptionsDict)
-                .throwIfErrnum("delivery.ffmpeg.openEncoderError")
+                .ffmpegThrowIfErrnum("Could not open encoder")
         }
 
         // Copy the stream parameters to the muxer.
-        avcodec_parameters_from_context(st.codecpar(), enc).throwIfErrnum("delivery.ffmpeg.copyParamsError")
+        avcodec_parameters_from_context(st.codecpar(), enc)
+            .ffmpegThrowIfErrnum("Could not copy the stream parameters to the muxer")
 
         withOptionsDict(muxerOptions) { muxerOptionsDict ->
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
                 avio_open2(pb, fileOrDir.pathString, AVIO_FLAG_WRITE, null, muxerOptionsDict)
-                    .throwIfErrnum("delivery.ffmpeg.openFileError", fileOrDir)
+                    .ffmpegThrowIfErrnum("Could not open output file '$fileOrDir'")
                 oc.pb(pb)
             }
 
             // Write the stream header, if any.
-            avformat_write_header(oc, muxerOptionsDict).throwIfErrnum("delivery.ffmpeg.openFileError", fileOrDir)
+            avformat_write_header(oc, muxerOptionsDict)
+                .ffmpegThrowIfErrnum("Could not write stream header")
         }
     }
 
@@ -215,7 +215,7 @@ class VideoWriter(
         outYCbCrCoefficients: YCbCrCoefficients
     ) {
         val width = workResolution.widthPx
-        val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+        val outPixFmtDesc = pixelFormatDesc(outPixelFormat)
         val hasAlpha = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
         val outPlanar = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_PLANAR.toLong() != 0L
         val sameCS = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_RGB.toLong() != 0L &&
@@ -274,7 +274,7 @@ class VideoWriter(
         enc.chroma_sample_location(AVCHROMA_LOC_LEFT)
 
         // Specify color space metadata.
-        val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+        val outPixFmtDesc = pixelFormatDesc(outPixelFormat)
         val outRGB = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_RGB.toLong() != 0L
         val outRangeFFmpeg = when (outRange) {
             Range.FULL -> AVCOL_RANGE_JPEG
@@ -411,8 +411,11 @@ class VideoWriter(
                 ptrFrame.interlaced_frame(1)
                 ptrFrame.top_field_first(if (scan == Scan.INTERLACED_TOP_FIELD_FIRST) 1 else 0)
             }
-            for (i in 0 until AV_NUM_DATA_POINTERS)
-                ptrFrame.buf(i, av_buffer_ref(frame.buf(i) ?: continue).throwIfNull("delivery.ffmpeg.refFrameBufError"))
+            for (i in 0 until AV_NUM_DATA_POINTERS) {
+                val bufRef = av_buffer_ref(frame.buf(i) ?: continue)
+                    .ffmpegThrowIfNull("Could not create reference to an existing frame buffer")
+                ptrFrame.buf(i, bufRef)
+            }
             for (i in 0 until 4) {
                 val realShift = if (vChromaSub != 0 && i != 0) shift shr vChromaSub else shift
                 val ls = frame.linesize(i)
@@ -430,7 +433,8 @@ class VideoWriter(
 
         // Send the frame to the encoder.
         frame?.pts(frameCounter++)
-        avcodec_send_frame(enc, frame).throwIfErrnum("delivery.ffmpeg.sendFrameError")
+        avcodec_send_frame(enc, frame)
+            .ffmpegThrowIfErrnum("Error while sending a frame to the encoder")
 
         var ret = 0
         while (ret >= 0) {
@@ -439,7 +443,7 @@ class VideoWriter(
                 ret = avcodec_receive_packet(enc, pkt)
                 if (ret == AVERROR_EAGAIN() || ret == AVERROR_EOF)
                     break
-                ret.throwIfErrnum("delivery.ffmpeg.encodeFrameError")
+                ret.ffmpegThrowIfErrnum("Error while receiving an encoded packet from the encoder")
 
                 // Inform the packet about which stream it should be written to.
                 pkt.stream_index(st.index())
@@ -452,7 +456,8 @@ class VideoWriter(
                 av_packet_rescale_ts(pkt, enc.time_base(), st.time_base())
 
                 // Write the compressed frame to the media file.
-                ret = av_interleaved_write_frame(oc, pkt).throwIfErrnum("delivery.ffmpeg.writeFrameError")
+                ret = av_interleaved_write_frame(oc, pkt)
+                    .ffmpegThrowIfErrnum("Error while writing an encoded packet to the stream")
             } finally {
                 av_packet_unref(pkt)
             }
@@ -465,7 +470,8 @@ class VideoWriter(
             writeFrame(null)
 
             // Write the trailer, if any.
-            av_write_trailer(oc).throwIfErrnum("delivery.ffmpeg.closeFileError")
+            av_write_trailer(oc)
+                .ffmpegThrowIfErrnum("Could not write stream trailer and close output file")
         } finally {
             release()
         }
@@ -513,16 +519,14 @@ class VideoWriter(
                 block(this)
         }
 
-        private fun <P : Pointer> P?.throwIfNull(l10nKey: String, vararg l10nArgs: Any?): P =
+        private fun <P : Pointer> P?.ffmpegThrowIfNull(message: String): P =
             if (this == null || this.isNull)
-                throw AVException(l10n(l10nKey, *l10nArgs) + ".")
+                throw AVException("$message.")
             else this
 
-        private fun Int.throwIfErrnum(l10nKey: String, vararg l10nArgs: Any?): Int =
+        private fun Int.ffmpegThrowIfErrnum(message: String): Int =
             if (this < 0)
-                throw AVException(
-                    "${l10n(l10nKey, *l10nArgs)}: ${err2str(this)} (${l10n("delivery.ffmpeg.errorNumber")} $this)."
-                )
+                throw AVException("$message: ${err2str(this)} (FFmpeg error number $this).")
             else this
 
         // Replicates the macro of the same name from error.h.
@@ -533,9 +537,13 @@ class VideoWriter(
             return string.string
         }
 
+        private fun pixelFormatDesc(pixelFormat: Int) =
+            av_pix_fmt_desc_get(pixelFormat)
+                .ffmpegThrowIfNull("Could not retrieve pixel format descriptor")
+
         private fun allocFrame(width: Int, height: Int, format: Int, buf: Boolean): AVFrame {
             // Allocate the frame struct.
-            val frame = av_frame_alloc().throwIfNull("delivery.ffmpeg.allocFrameError").apply {
+            val frame = av_frame_alloc().ffmpegThrowIfNull("Could not allocate frame struct").apply {
                 width(width)
                 height(height)
                 format(format)
@@ -543,7 +551,8 @@ class VideoWriter(
             // If requested, allocate a buffer to hold the image data.
             if (buf)
                 try {
-                    av_frame_get_buffer(frame, 8 * BYTE_ALIGNMENT).throwIfErrnum("delivery.ffmpeg.allocFrameBufError")
+                    av_frame_get_buffer(frame, 8 * BYTE_ALIGNMENT)
+                        .ffmpegThrowIfErrnum("Could not allocate frame buffer")
                 } catch (e: Throwable) {
                     av_frame_free(frame)
                     throw e
@@ -662,7 +671,7 @@ class VideoWriter(
                 width, height, inPixelFormat,
                 width, height, outPixelFormat,
                 0, null, null, null as DoublePointer?
-            ).throwIfNull("delivery.ffmpeg.getConverterError")
+            ).ffmpegThrowIfNull("Could not initialize SWS context")
         }
 
         override fun process(inFrame: AVFrame, outFrame: AVFrame) {
@@ -700,8 +709,8 @@ class VideoWriter(
         private val outYCbCrCoefficients: YCbCrCoefficients
     ) : FrameProcessor {
 
-        private val inPixFmtDesc = av_pix_fmt_desc_get(inPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
-        private val outPixFmtDesc = av_pix_fmt_desc_get(outPixelFormat).throwIfNull("delivery.ffmpeg.getPixFmtError")
+        private val inPixFmtDesc = pixelFormatDesc(inPixelFormat)
+        private val outPixFmtDesc = pixelFormatDesc(outPixelFormat)
         private val hasAlpha = outPixFmtDesc.flags() and AV_PIX_FMT_FLAG_ALPHA.toLong() != 0L
 
         private var height = -1
@@ -761,7 +770,8 @@ class VideoWriter(
             val params = zimg_graph_builder_params.allocate(scope)
             zimg_graph_builder_params_default(params, ZIMG_API_VERSION())
             zimg_graph_builder_params.`cpu_type$set`(params, ZIMG_CPU_AUTO_64B())
-            graph = zimg_filter_graph_build(srcFmt, dstFmt, params).zimgThrowIfNull("delivery.zimg.buildGraphError")
+            graph = zimg_filter_graph_build(srcFmt, dstFmt, params)
+                .zimgThrowIfNull("Could not build zimg graph")
 
             srcBuf = zimg_image_buffer_const.allocate(scope)
             dstBuf = zimg_image_buffer.allocate(scope)
@@ -773,7 +783,8 @@ class VideoWriter(
             }
 
             val tmpSize = MemorySegment.allocateNative(JAVA_LONG, scope)
-            zimg_filter_graph_get_tmp_size(graph, tmpSize).zimgThrowIfErrnum("delivery.zimg.getTmpSizeError")
+            zimg_filter_graph_get_tmp_size(graph, tmpSize)
+                .zimgThrowIfErrnum("Could not obtain size of temporary zimg buffer")
             tmpBuf = MemorySegment.allocateNative(tmpSize.toLongArray().single(), BYTE_ALIGNMENT.toLong(), scope)
         }
 
@@ -796,7 +807,7 @@ class VideoWriter(
                 ZIMG_BUF_STRIDE.set(dstBuf, zimgPlaneL, outFrame.linesize(ffmpegOutPlane).toLong())
             }
             zimg_filter_graph_process(graph, srcBuf, dstBuf, tmpBuf, NULL, NULL, NULL, NULL)
-                .zimgThrowIfErrnum("delivery.zimg.processError")
+                .zimgThrowIfErrnum("Error while converting a frame with zimg")
         }
 
         override fun release() {
@@ -806,20 +817,20 @@ class VideoWriter(
             graph = null
         }
 
-        private fun MemoryAddress?.zimgThrowIfNull(l10nKey: String): MemoryAddress =
+        private fun MemoryAddress?.zimgThrowIfNull(message: String): MemoryAddress =
             if (this == null || this.toRawLongValue() == 0L)
-                throw AVException(zimgExcStr(l10nKey))
+                throw AVException(zimgExcStr(message))
             else this
 
-        private fun Int.zimgThrowIfErrnum(l10nKey: String): Int =
+        private fun Int.zimgThrowIfErrnum(message: String): Int =
             if (this < 0)
-                throw AVException(zimgExcStr(l10nKey))
+                throw AVException(zimgExcStr(message))
             else this
 
-        private fun zimgExcStr(l10nKey: String): String {
+        private fun zimgExcStr(message: String): String {
             val string = MemorySegment.allocateNative(1024, scope)
             val errnum = zimg_get_last_error(string, string.byteSize())
-            return "${l10n(l10nKey)}: ${CLinker.toJavaString(string)} (${l10n("delivery.zimg.errorNumber")} $errnum)."
+            return "$message: ${CLinker.toJavaString(string)} (zimg error number $errnum)."
         }
 
         companion object {

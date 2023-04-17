@@ -212,6 +212,7 @@ class FileWidget(
 open class SpinnerWidget<V : Number>(
     private val valueClass: Class<V>,
     model: SpinnerNumberModel,
+    decimalFormatPattern: String? = null,
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
@@ -231,7 +232,10 @@ open class SpinnerWidget<V : Number>(
             }
         }
 
-        ((spinner.editor as JSpinner.DefaultEditor).textField.formatter as DefaultFormatter).makeSafe()
+        spinner.editor = when (decimalFormatPattern) {
+            null -> JSpinner.NumberEditor(spinner)
+            else -> JSpinner.NumberEditor(spinner, decimalFormatPattern)
+        }.apply { (textField.formatter as DefaultFormatter).makeSafe() }
     }
 
     override val components = listOf(spinner)
@@ -248,8 +252,9 @@ open class SpinnerWidget<V : Number>(
 
 class MultipliedSpinnerWidget(
     model: SpinnerNumberModel,
+    decimalFormatPattern: String? = null,
     widthSpec: WidthSpec? = null
-) : SpinnerWidget<Double>(Double::class.javaObjectType, model, widthSpec) {
+) : SpinnerWidget<Double>(Double::class.javaObjectType, model, decimalFormatPattern, widthSpec) {
 
     private val step = model.stepSize as Double
 
@@ -299,7 +304,7 @@ class TimecodeWidget(
     fps: FPS,
     timecodeFormat: TimecodeFormat,
     widthSpec: WidthSpec? = null
-) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec ?: WidthSpec.FIT) {
+) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec = widthSpec ?: WidthSpec.FIT) {
 
     var fps: FPS = fps
         set(fps) {
@@ -970,13 +975,12 @@ class ResolutionWidget(
         }
     )
 
-    private val widthWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(defaultCustom.widthPx, 1, null, 10), WidthSpec.LITTLE
-    )
-    private val heightWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(defaultCustom.heightPx, 1, null, 10), WidthSpec.LITTLE
-    )
+    private val widthWidget = makeDimensionSpinner(defaultCustom.widthPx)
+    private val heightWidget = makeDimensionSpinner(defaultCustom.heightPx)
     private val timesLabel = JLabel("\u00D7")
+
+    private fun makeDimensionSpinner(value: Int) =
+        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(value, 1, null, 10), "#", WidthSpec.LITTLE)
 
     init {
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
@@ -1219,7 +1223,7 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
 
     private val tagWidget = InconsistentComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.TINY)
     private val valWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(1, 0, null, 1), WidthSpec.TINIER
+        Int::class.javaObjectType, SpinnerNumberModel(1, 0, null, 1), widthSpec = WidthSpec.TINIER
     )
 
     init {

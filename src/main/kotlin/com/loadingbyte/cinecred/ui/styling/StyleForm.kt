@@ -212,7 +212,7 @@ class StyleForm<S : Style>(
                 } else if (timecodeWidgetSpec != null)
                     TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
                 else
-                    SpinnerWidget(Int::class.javaObjectType, model, widthSpec)
+                    SpinnerWidget(Int::class.javaObjectType, model, widthSpec = widthSpec)
             }
             Double::class.javaPrimitiveType, Double::class.javaObjectType -> {
                 val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01) }
@@ -220,9 +220,9 @@ class StyleForm<S : Style>(
                 val step = numberWidgetSpec?.step ?: 1.0
                 val model = SpinnerNumberModel(min ?: max ?: 0.0, min, max, step)
                 if (multiplierWidgetSpec != null)
-                    MultipliedSpinnerWidget(model, widthSpec)
+                    MultipliedSpinnerWidget(model, widthSpec = widthSpec)
                 else
-                    SpinnerWidget(Double::class.javaObjectType, model, widthSpec)
+                    SpinnerWidget(Double::class.javaObjectType, model, widthSpec = widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> when {
                 toggleButtonGroupWidgetSpec != null -> makeToggleButtonGroupWidget(

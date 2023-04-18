@@ -49,6 +49,7 @@ Cinecred Changelog
 - Spreadsheets that have no rows no longer provoke crashes.
 - CSV files that have rows with fewer columns no longer provoke crashes.
 - Credit sequences without a single frame no longer provoke crashes.
+- When an empty list setting is saved, it is no longer repopulated upon loading.
 
 ### UI Fixes
 

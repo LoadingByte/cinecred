@@ -36,6 +36,7 @@ private fun <S : Style> writeStyle(ctx: StylingContext, styling: Styling, style:
     val excludedSettings = findIneffectiveSettings(ctx, styling, style).keys +
             // Don't store whether a layer is collapsed, as we don't want to persist UI information.
             LayerStyle::collapsed.st()
+    val preset = getPreset(style.javaClass)
     for (setting in getStyleSettings(style.javaClass))
         if (setting !in excludedSettings)
             when (setting) {
@@ -48,7 +49,10 @@ private fun <S : Style> writeStyle(ctx: StylingContext, styling: Styling, style:
                 }
                 is ListStyleSetting -> {
                     val list = setting.get(style)
-                    if (list.isNotEmpty())
+                    // If the list is empty, we can skip writing an empty list only if the preset list is empty too.
+                    // Otherwise, the previously empty list would suddenly be filled with the preset list when reading
+                    // the style later on.
+                    if (list.isNotEmpty() || setting.get(preset).isNotEmpty())
                         toml[setting.name] = list.map { convert(ctx, styling, it) }
                 }
             }

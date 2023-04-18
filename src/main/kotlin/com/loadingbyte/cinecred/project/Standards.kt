@@ -168,32 +168,35 @@ val PRESET_LETTER_STYLE = LetterStyle(
 )
 
 
-val PLACEHOLDER_PAGE_STYLE = PRESET_PAGE_STYLE.copy(
-    name = l10n("project.placeholder")
-)
+val PLACEHOLDER_PAGE_STYLE
+    get() = PRESET_PAGE_STYLE.copy(
+        name = l10n("project.placeholder")
+    )
 
 
-val PLACEHOLDER_CONTENT_STYLE = PRESET_CONTENT_STYLE.copy(
-    name = l10n("project.placeholder"),
-    blockOrientation = BlockOrientation.HORIZONTAL,
-    hasHead = true,
-    headGapPx = 32.0,
-    hasTail = true,
-    tailGapPx = 32.0
-)
+val PLACEHOLDER_CONTENT_STYLE
+    get() = PRESET_CONTENT_STYLE.copy(
+        name = l10n("project.placeholder"),
+        blockOrientation = BlockOrientation.HORIZONTAL,
+        hasHead = true,
+        headGapPx = 32.0,
+        hasTail = true,
+        tailGapPx = 32.0
+    )
 
 
-val PLACEHOLDER_LETTER_STYLE = PRESET_LETTER_STYLE.copy(
-    name = l10n("project.placeholder"),
-    layers = persistentListOf(
-        PRESET_LAYER.copy(
-            color1 = Color.ORANGE,
-            shape = LayerShape.STRIPE,
-            stripePreset = StripePreset.BACKGROUND
-        ),
-        PRESET_LAYER.copy(
-            color1 = Color.BLACK,
-            shape = LayerShape.TEXT
+val PLACEHOLDER_LETTER_STYLE
+    get() = PRESET_LETTER_STYLE.copy(
+        name = l10n("project.placeholder"),
+        layers = persistentListOf(
+            PRESET_LAYER.copy(
+                color1 = Color.ORANGE,
+                shape = LayerShape.STRIPE,
+                stripePreset = StripePreset.BACKGROUND
+            ),
+            PRESET_LAYER.copy(
+                color1 = Color.BLACK,
+                shape = LayerShape.TEXT
+            )
         )
     )
-)

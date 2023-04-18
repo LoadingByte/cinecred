@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.SuperscriptMetrics
 import com.loadingbyte.cinecred.common.getSuperscriptMetrics
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.lineMetrics
 import com.loadingbyte.cinecred.project.StylingContext
 import java.awt.Font
@@ -179,6 +180,10 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
                 for (deco in decorations)
                     if (deco is Map<*, *>) {
                         val layer = mutableMapOf<String, Any>("shape" to "STRIPE")
+                        layer["name"] = when (val preset = deco["preset"]) {
+                            "UNDERLINE", "STRIKETHROUGH" -> l10n("project.StripePreset.$preset")
+                            else -> l10n("project.LayerShape.STRIPE")
+                        }
                         (deco["color"] ?: foreground)?.let { layer["color1"] = it }
                         deco["preset"]?.let { layer["stripePreset"] = if (it == "OFF") "CUSTOM" else it }
                         deco["offsetPx"].letIfNumber { layer["stripeOffsetRfh"] = it / fontHeightPx }
@@ -195,7 +200,12 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
 
             // Create a layer for the background if that's configures.
             val bgLayer = if (background == null) null else {
-                val layer = mutableMapOf("color1" to background, "shape" to "STRIPE", "stripePreset" to "BACKGROUND")
+                val layer = mutableMapOf(
+                    "name" to l10n("project.StripePreset.BACKGROUND"),
+                    "color1" to background,
+                    "shape" to "STRIPE",
+                    "stripePreset" to "BACKGROUND"
+                )
                 letterStyle["backgroundWidenLeftPx"].letIfNumber { layer["stripeWidenLeftRfh"] = it / fontHeightPx }
                 letterStyle["backgroundWidenRightPx"].letIfNumber { layer["stripeWidenRightRfh"] = it / fontHeightPx }
                 // In 1.3.1, the background included the custom leading, so include it in the converted bg as well.
@@ -213,7 +223,10 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
                     decoLayer["clearingLayers"] = listOf(textLayerOrdinal)
 
             // Create a layer for the main text.
-            val textLayer = mutableMapOf<String, Any>("shape" to "TEXT")
+            val textLayer = mutableMapOf<String, Any>(
+                "name" to l10n("project.LayerShape.TEXT"),
+                "shape" to "TEXT"
+            )
             foreground?.let { textLayer["color1"] = it }
             hShearing?.let { textLayer["hShearing"] = it }
 

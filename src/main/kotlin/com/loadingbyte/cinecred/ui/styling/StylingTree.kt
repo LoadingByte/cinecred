@@ -72,10 +72,39 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         listTypeInfos[type] = TypeInfo.List(icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String)
     }
 
-    fun getSelected(): Any? {
-        val selectedNodeUserObj = (selectedNode ?: return null).userObject
-        return if (selectedNodeUserObj is StoredObj) return selectedNodeUserObj.obj else null
-    }
+    var selected: Any?
+        get() {
+            val selectedNodeUserObj = (selectedNode ?: return null).userObject
+            return if (selectedNodeUserObj is StoredObj) return selectedNodeUserObj.obj else null
+        }
+        set(selected) {
+            fun getSelNode(): DefaultMutableTreeNode? {
+                if (selected == null)
+                    return null
+                val singletonTypeInfo = singletonTypeInfos[selected.javaClass]
+                if (singletonTypeInfo != null && (singletonTypeInfo.node.userObject as StoredObj).obj === selected)
+                    return singletonTypeInfo.node
+                val listTypeInfo = listTypeInfos[selected.javaClass]
+                if (listTypeInfo != null)
+                    for (leaf in listTypeInfo.node.children()) {
+                        leaf as DefaultMutableTreeNode
+                        if ((leaf.userObject as StoredObj).obj === selected)
+                            return leaf
+                    }
+                throw IllegalArgumentException("Object for selection not found in StylingTree.")
+            }
+
+            val selPath = getSelNode()?.path?.let(::TreePath)
+            selPath?.let(::scrollPathToVisible)
+            selectionPath = selPath
+        }
+
+    var selectedRow: Int
+        get() = minSelectionRow
+        set(selectedRow) {
+            scrollRowToVisible(selectedRow)
+            setSelectionRow(selectedRow)
+        }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> getSingleton(type: Class<T>): T =
@@ -92,20 +121,26 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             .map { leaf -> ((leaf as DefaultMutableTreeNode).userObject as StoredObj).obj as T }
             .toList()
 
-    fun addListElement(element: Any, select: Boolean = false) {
+    fun addListElement(element: Any) {
         val typeInfo = listTypeInfos.getValue(element.javaClass)
-        val newLeaf = insertSortedLeaf(typeInfo.node, StoredObj(typeInfo, element))
-        if (select) {
-            val newLeafPath = TreePath(newLeaf.path)
-            scrollPathToVisible(newLeafPath)
-            selectionPath = newLeafPath
+        insertSortedLeaf(typeInfo.node, StoredObj(typeInfo, element))
+    }
+
+    fun removeListElement(element: Any) {
+        val typeInfo = listTypeInfos.getValue(element.javaClass)
+        for (leaf in typeInfo.node.children()) {
+            leaf as DefaultMutableTreeNode
+            if ((leaf.userObject as StoredObj).obj === element) {
+                withoutSelectionListener { model.removeNodeFromParent(leaf) }
+                return
+            }
         }
+        throw IllegalArgumentException("Element for removal not found.")
     }
 
     /**
      * This method uses reference equality to locate the old element. This behavior is expected by the client of this
-     * method and should not be changed. Also, this method does not re-sort the list because the client does not update
-     * the name of the list element.
+     * method and should not be changed.
      */
     fun <T : Any> updateListElement(oldElement: T, newElement: T) {
         val oldTypeInfo = listTypeInfos.getValue(oldElement.javaClass)
@@ -116,39 +151,14 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             val leafUserObj = (leaf as DefaultMutableTreeNode).userObject as StoredObj
             if (leafUserObj.obj === oldElement) {
                 leafUserObj.obj = newElement
+                // If the node's name has not changed, there is no need to change the current ordering. Having this explicit
+                // exception also ensures that nodes with duplicate names do not jump around when editing them.
+                if (!oldTypeInfo.objToString(oldElement).equals(oldTypeInfo.objToString(newElement), ignoreCase = true))
+                    sortNode(leaf)
                 return
             }
         }
         throw IllegalArgumentException("Old element not found.")
-    }
-
-    fun removeSelectedListElement(selectNext: Boolean = false): Any? {
-        val selectedNode = this.selectedNode ?: return null
-        val selectedNodeUserObj = selectedNode.userObject
-        if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
-            val selectedRow = minSelectionRow
-            model.removeNodeFromParent(selectedNode)
-            if (selectNext) {
-                scrollRowToVisible(selectedRow)
-                setSelectionRow(selectedRow)
-            }
-            return selectedNodeUserObj.obj
-        }
-        return null
-    }
-
-    fun updateSelectedListElement(newElement: Any) {
-        val selectedNode = selectedNode ?: throw IllegalStateException()
-        val selectedNodeUserObj = selectedNode.userObject
-        if (selectedNodeUserObj is StoredObj && selectedNodeUserObj.typeInfo is TypeInfo.List) {
-            val prevNodeStr = selectedNodeUserObj.toString()
-            selectedNodeUserObj.obj = newElement
-            // If the node's name has not changed, there is no need to change the current ordering. Having this explicit
-            // exception also ensures that nodes with duplicate names do not jump around when editing them.
-            if (!selectedNodeUserObj.toString().equals(prevNodeStr, ignoreCase = true))
-                sortNode(selectedNode)
-        } else
-            throw IllegalStateException()
     }
 
     fun replaceAllListElements(newElements: Iterable<Any>) {
@@ -255,11 +265,10 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
-    private fun insertSortedLeaf(parent: MutableTreeNode, userObject: Any): DefaultMutableTreeNode {
+    private fun insertSortedLeaf(parent: MutableTreeNode, userObject: Any) {
         val node = DefaultMutableTreeNode(userObject, false)
         model.insertNodeInto(node, parent, 0)
         sortNode(node)
-        return node
     }
 
     private val selectedNode

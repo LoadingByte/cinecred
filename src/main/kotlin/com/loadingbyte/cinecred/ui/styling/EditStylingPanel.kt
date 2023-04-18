@@ -54,7 +54,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm),
         getStylingCtx = ctrl::stylingCtx,
         getCurrentStyling = ::styling,
-        getCurrentStyleInActiveForm = { stylingTree.getSelected() as Style? },
+        getCurrentStyleInActiveForm = { stylingTree.selected as Style? },
         notifyConstraintViolations = ::updateConstraintViolations
     )
 
@@ -95,22 +95,19 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON), l10n("ui.styling.addPageStyleTooltip"),
             VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
-            stylingTree.addListElement(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")), true)
-            onChange()
+            addAndSelectStyle(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")))
         }
         val addContentStyleButton = newToolbarButtonWithKeyListener(
             SVGIcon.Dual(ADD_ICON, LAYOUT_ICON), l10n("ui.styling.addContentStyleTooltip"),
             VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
-            stylingTree.addListElement(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")), true)
-            onChange()
+            addAndSelectStyle(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")))
         }
         val addLetterStyleButton = newToolbarButtonWithKeyListener(
             SVGIcon.Dual(ADD_ICON, LETTERS_ICON), l10n("ui.styling.addLetterStyleTooltip"),
             VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
-            stylingTree.addListElement(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")), true)
-            onChange()
+            addAndSelectStyle(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")))
         }
         val duplicateStyleButton = newToolbarButton(
             DUPLICATE_ICON, l10n("ui.styling.duplicateStyleTooltip"), VK_D, CTRL_DOWN_MASK, ::duplicateStyle
@@ -174,8 +171,20 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         return newToolbarButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, listener)
     }
 
+    private fun addAndSelectStyle(style: Style) {
+        // Add the style.
+        stylingTree.addListElement(style)
+        // Rebuild the styling object and subsequently update the UI.
+        styling = buildStyling()
+        formAdjuster.onLoadStyling()
+        // Select the new style in the tree. This will cause it to be opened.
+        stylingTree.selected = style
+        // Add an undo state.
+        ctrl.stylingHistory.editedAndRedraw(styling!!, Pair(null, openCounter))
+    }
+
     private fun duplicateStyle() {
-        val style = stylingTree.getSelected()
+        val style = stylingTree.selected
         if (style !is ListedStyle)
             return
         val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
@@ -183,18 +192,34 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
         for ((oldStyle, newStyle) in updates)
             if (oldStyle === copiedStyle) copiedStyle = newStyle else stylingTree.updateListElement(oldStyle, newStyle)
-        stylingTree.addListElement(copiedStyle, select = true)
-        onChange()
+        addAndSelectStyle(copiedStyle)
     }
 
     private fun removeStyle() {
-        val removedStyle = stylingTree.removeSelectedListElement(selectNext = true)
-        if (removedStyle != null) {
-            removedStyle as ListedStyle
-            val updates = ensureConsistencyAfterRemoval(stylingTree.getList(removedStyle.javaClass), removedStyle)
-            updates.forEach(stylingTree::updateListElement)
-            onChange()
-        }
+        val style = stylingTree.selected
+        if (style !is ListedStyle)
+            return
+        val selRow = stylingTree.selectedRow
+        // Remove the style.
+        stylingTree.removeListElement(style)
+        // Update other styles to retain consistency.
+        val updates = ensureConsistencyAfterRemoval(stylingTree.getList(style.javaClass), style)
+        updates.forEach(stylingTree::updateListElement)
+        // Rebuild the styling object and subsequently update the UI.
+        styling = buildStyling()
+        formAdjuster.onLoadStyling()
+        // Select the neighboring row in the tree. This will cause another style to be opened.
+        stylingTree.selectedRow = selRow.coerceAtMost(stylingTree.rowCount - 1)
+        // Add an undo state.
+        ctrl.stylingHistory.editedAndRedraw(styling!!, Pair(null, openCounter))
+    }
+
+    private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
+        // Rebuild the styling object and subsequently update the UI.
+        this.styling = styling
+        formAdjuster.onChangeInActiveForm()
+        // Add an undo state.
+        ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
     private fun openBlank() {
@@ -225,7 +250,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             val newStyle = form.save()
-            stylingTree.updateSelectedListElement(newStyle)
+            stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
             val newStyling = buildStyling()
             val updates = consistencyRetainer.ensureConsistencyAfterEdit(ctrl.stylingCtx, newStyling, newStyle)
             if (updates.isEmpty()) {
@@ -262,20 +287,13 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.replaceAllListElements(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
         formAdjuster.onLoadStyling()
 
-        // Simulate the user selecting the node which is already selected currently. This triggers a callback
-        // which then updates the right panel. If the node is a style node, that callback will also in turn call
-        // postOpenForm(), which will in turn call adjustOpenedForm().
+        // Simulate the user selecting the node which is already selected currently. This will cause the selected style
+        // to be reopened.
         stylingTree.triggerOnSelectOrOnDeselect()
     }
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
         formAdjuster.updateProjectFontFamilies(projectFamilies)
-    }
-
-    private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
-        this.styling = styling
-        formAdjuster.onChangeInActiveForm()
-        ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
     }
 
     fun updateProject(drawnProject: DrawnProject?) {

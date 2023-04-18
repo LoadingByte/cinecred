@@ -103,6 +103,31 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 )
 
 
+val PRESET_LETTER_STYLE
+    get() = LetterStyle(
+        name = "???",
+        fontName = "Archivo Narrow Regular",
+        heightPx = 32.0,
+        leadingTopRh = 0.0,
+        leadingBottomRh = 0.0,
+        trackingEm = 0.0,
+        kerning = true,
+        ligatures = true,
+        uppercase = false,
+        useUppercaseExceptions = true,
+        useUppercaseSpacing = true,
+        smallCaps = SmallCaps.OFF,
+        superscript = Superscript.OFF,
+        superscriptScaling = 1.0,
+        superscriptHOffsetRfh = 0.0,
+        superscriptVOffsetRfh = 0.0,
+        hScaling = 1.0,
+        features = persistentListOf(),
+        inheritLayersFromStyle = Opt(false, ""),
+        layers = persistentListOf(PRESET_LAYER.copy(shape = LayerShape.TEXT, name = l10n("project.LayerShape.TEXT")))
+    )
+
+
 val PRESET_LAYER = Layer(
     name = "",
     collapsed = true,
@@ -141,30 +166,6 @@ val PRESET_LAYER = Layer(
     clearingRfh = 0.0,
     clearingJoin = LineJoin.MITER,
     blurRadiusRfh = 0.0
-)
-
-
-val PRESET_LETTER_STYLE = LetterStyle(
-    name = "???",
-    fontName = "Archivo Narrow Regular",
-    heightPx = 32.0,
-    leadingTopRh = 0.0,
-    leadingBottomRh = 0.0,
-    trackingEm = 0.0,
-    kerning = true,
-    ligatures = true,
-    uppercase = false,
-    useUppercaseExceptions = true,
-    useUppercaseSpacing = true,
-    smallCaps = SmallCaps.OFF,
-    superscript = Superscript.OFF,
-    superscriptScaling = 1.0,
-    superscriptHOffsetRfh = 0.0,
-    superscriptVOffsetRfh = 0.0,
-    hScaling = 1.0,
-    features = persistentListOf(),
-    inheritLayersFromStyle = Opt(false, ""),
-    layers = persistentListOf(PRESET_LAYER.copy(shape = LayerShape.TEXT))
 )
 
 

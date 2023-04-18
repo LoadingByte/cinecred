@@ -180,8 +180,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             return
         val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
         var copiedStyle = style.copy(ListedStyle::name.st().notarize(newName))
-        if (copiedStyle is LetterStyle && !copiedStyle.inheritLayersFromStyle.isActive)
-            copiedStyle = copiedStyle.copy(inheritLayersFromStyle = Opt(true, style.name))
         val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
         for ((oldStyle, newStyle) in updates)
             if (oldStyle === copiedStyle) copiedStyle = newStyle else stylingTree.updateListElement(oldStyle, newStyle)

@@ -1221,7 +1221,14 @@ class FontChooserWidget(
 
 class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
 
-    private val tagWidget = InconsistentComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.TINY)
+    private val tagWidget = InconsistentComboBoxWidget(
+        String::class.java, emptyList(),
+        // By enabling HTML in the JLabel that renders the strings, a branch that doesn't add ellipsis but instead clips
+        // the string is taken in SwingUtilities.layoutCompoundLabelImpl(). This is much nicer, since ellipsis take up
+        // the majority of the space in a label as narrow as this one.
+        toString = { "<html>$it</html>" },
+        widthSpec = WidthSpec.LITTLE
+    )
     private val valWidget = SpinnerWidget(
         Int::class.javaObjectType, SpinnerNumberModel(1, 0, null, 1), widthSpec = WidthSpec.TINIER
     )

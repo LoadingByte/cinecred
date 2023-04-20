@@ -140,7 +140,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
         settingNewlines = listOf(1)
     ),
     NumberWidgetSpec(LetterStyle::hScaling.st(), step = 0.01),
-    SimpleListWidgetSpec(LetterStyle::features.st(), newElement = FontFeature("", 1), elementsPerRow = 2),
+    SimpleListWidgetSpec(LetterStyle::features.st(), newElement = FontFeature("", 1)),
     NewSectionWidgetSpec(LetterStyle::layers.st()),
     LayerListWidgetSpec(
         LetterStyle::layers.st(),

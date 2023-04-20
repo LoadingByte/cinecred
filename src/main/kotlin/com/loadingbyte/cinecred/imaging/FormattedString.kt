@@ -413,7 +413,7 @@ class FormattedString private constructor(
             is Layer.Coloring.Plain -> DeferredImage.Coat.Plain(coloring.color)
             is Layer.Coloring.Gradient -> {
                 val angleRad = Math.toRadians(coloring.angleDeg)
-                val dx = -sin(angleRad)
+                val dx = sin(angleRad)
                 val dy = cos(angleRad)
                 val ext = coloring.extentPx.coerceAtLeast(0.01)  // Otherwise, the gradient disappears.
                 val offset1 = coloring.shiftPx - ext / 2.0

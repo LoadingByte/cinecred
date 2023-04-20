@@ -252,8 +252,12 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
         isAlmostEffective = { _, _, style -> style.anchor != LayerAnchor.SIBLING }
     ),
     StyleEffectivitySpec(
-        Layer::clearingRfh.st(), Layer::clearingJoin.st(),
+        Layer::clearingRfh.st(),
         isAlmostEffective = { _, _, style -> style.clearingLayers.isEmpty() }
+    ),
+    StyleEffectivitySpec(
+        Layer::clearingJoin.st(),
+        isAlmostEffective = { _, _, style -> style.clearingLayers.isEmpty() || style.clearingRfh == 0.0 }
     )
 )
 

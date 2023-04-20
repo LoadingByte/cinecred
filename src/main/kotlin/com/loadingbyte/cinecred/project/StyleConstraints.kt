@@ -217,7 +217,7 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
     DynChoiceConstr(WARN, Layer::anchor.st()) { _, _, style ->
-        if (style.shape == LayerShape.CLONE) LayerAnchor.values().toSortedSet()
+        if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) LayerAnchor.values().toSortedSet()
         else sortedSetOf(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
     },
     SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, _, style, _, sibling, siblingOrdinal ->

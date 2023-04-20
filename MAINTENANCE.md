@@ -233,6 +233,10 @@ process is extremely cumbersome on Windows when it comes to dependencies added
 by MinGW-w64, we decided to instead manually employ Window's native CL compiler,
 without a proper build system.
 
+Side note 2: On Linux, the compiled libraries will depend on `libstdc++`
+and `libgcc_s`. We are fine with these dependencies because the FFmpeg libraries
+would declare them anyway.
+
 Finally, generate Java bindings using the following command:
 
     jextract --source -d <OUT_DIR> --target-package com.loadingbyte.cinecred.natives.zimg <ZIMG_DIR>/src/zimg/api/zimg.h \

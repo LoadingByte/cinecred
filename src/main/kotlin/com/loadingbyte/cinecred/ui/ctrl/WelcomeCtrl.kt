@@ -132,8 +132,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
      */
     private fun tryCheckForUpdates() {
         fun afterFetch() {
-            if (latestStableVersion.get().let { it != null && it != VERSION })
-                welcomeView.setUpdate(latestStableVersion.get())
+            val version = latestStableVersion.get()
+            if (version != null && version != VERSION)
+                welcomeView.setUpdate(version)
         }
 
         if (latestStableVersion.get() != null)

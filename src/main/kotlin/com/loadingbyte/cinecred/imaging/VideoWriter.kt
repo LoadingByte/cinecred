@@ -52,15 +52,15 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
         val ALL: List<MuxerFormat>
 
         init {
-            val codecIds = collect { av_codec_iterate(it)?.id() }
+            val codecIds = collect { av_codec_iterate(it)?.id() }.toSet()
             val avMuxerFormats = collect { av_muxer_iterate(it) }
 
             ALL = avMuxerFormats.map { avMuxerFormat ->
                 MuxerFormat(
                     name = avMuxerFormat.name().string,
-                    supportedCodecIds = codecIds.filter { codecId ->
+                    supportedCodecIds = codecIds.filterTo(HashSet()) { codecId ->
                         avformat_query_codec(avMuxerFormat, codecId, FF_COMPLIANCE_STRICT) == 1
-                    }.toSet(),
+                    },
                     extensions = avMuxerFormat.extensions()?.string?.split(',').orEmpty()
                 )
             }
@@ -124,10 +124,10 @@ class VideoWriter(
                 outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients,
                 codecName, codecProfile, codecOptions, muxerOptions
             )
-        } catch (e: AVException) {
+        } catch (e: Throwable) {
             try {
                 release()
-            } catch (e2: AVException) {
+            } catch (e2: Throwable) {
                 e.addSuppressed(e2)
             }
             throw e
@@ -489,6 +489,12 @@ class VideoWriter(
 
             avformat_free_context(oc)
         }
+
+        // Protect against multiple calls to release().
+        pipeProcs.clear()
+        pipe = null
+        oc = null
+        enc = null
     }
 
 
@@ -510,7 +516,7 @@ class VideoWriter(
 
         // SIMD instructions require the buffers to have certain alignment. The strictest of them all is AVX-512, which
         // requires 512-bit alignment.
-        const val BYTE_ALIGNMENT = 64
+        private const val BYTE_ALIGNMENT = 64
 
         private val preparedFrameCleaner = Cleaner.create()
 

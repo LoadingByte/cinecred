@@ -86,7 +86,7 @@ dependencies {
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.1")
 }
 
-configurations.all {
+configurations.configureEach {
     // POI:
     // We don't re-evaluate formulas, and as only that code calls Commons Math, we can omit the dependency.
     exclude("org.apache.commons", "commons-math3")
@@ -164,7 +164,7 @@ Platform.values().map { platform ->
     tasks.register<JavaExec>("runOn${platform.uppercaseLabel}") {
         group = "Execution"
         description = "Runs the program on ${platform.uppercaseLabel}."
-        dependsOn(tasks.processResources, platformNatives)
+        dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
         mainClass.set(mainClass_)
         jvmArgs = listOf(

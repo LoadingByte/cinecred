@@ -114,9 +114,9 @@ private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcutKeyCode:
     btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
     btn.isFocusable = false
 
-    var shortcutHint = KeyEvent.getKeyText(shortcutKeyCode)
+    var shortcutHint = getKeyText(shortcutKeyCode)
     if (shortcutModifiers != 0)
-        shortcutHint = KeyEvent.getModifiersExText(shortcutModifiers) + "+" + shortcutHint
+        shortcutHint = getModifiersExText(shortcutModifiers) + "+" + shortcutHint
     btn.toolTipText = if ("<br>" !in tooltip) "$tooltip ($shortcutHint)" else {
         val idx = tooltip.indexOf("<br>")
         tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
@@ -489,7 +489,7 @@ class KeyListener(
     private val listener: () -> Unit
 ) {
     fun onKeyEvent(e: KeyEvent): Boolean {
-        val match = e.id == KeyEvent.KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
+        val match = e.id == KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
         if (match)
             listener()
         return match

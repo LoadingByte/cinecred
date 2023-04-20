@@ -217,7 +217,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         formRows.add(formRow)
     }
 
-    fun addSeparator() {
+    protected fun addSeparator() {
         add(JSeparator(), "newline, span, growx")
     }
 

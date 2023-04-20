@@ -253,7 +253,7 @@ class DeferredVideo private constructor(
         private val layers: List<DeferredImage.Layer>,
         draft: Boolean = false,
         sequentialAccess: Boolean = false,
-        preloading: Boolean = false,
+        preloading: Boolean = false
     ) {
 
         private val cache = object : Cache<BufferedImage>(video, draft, sequentialAccess, preloading) {
@@ -576,7 +576,7 @@ class DeferredVideo private constructor(
             private val lock = if (preloading) ReentrantLock() else null
             var microShiftedRenders: SoftReference<List<R>>? = null
 
-            fun <T> withLock(block: () -> T): T = if (lock == null) block() else lock.withLock(block)
+            inline fun <T> withLock(block: () -> T): T = if (lock == null) block() else lock.withLock(block)
         }
 
     }

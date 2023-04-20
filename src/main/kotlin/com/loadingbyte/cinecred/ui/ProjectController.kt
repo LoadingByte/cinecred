@@ -380,9 +380,13 @@ class ProjectController(
         }
 
         fun resetAndRedraw() {
-            if (saved != current) {
-                editedAndRedraw(saved, null)
-                stylingDialog.panel.setStyling(saved)
+            loadAndRedraw(saved)
+        }
+
+        fun loadAndRedraw(new: Styling) {
+            if (new != current) {
+                editedAndRedraw(new, null)
+                stylingDialog.panel.setStyling(new)
             }
         }
 

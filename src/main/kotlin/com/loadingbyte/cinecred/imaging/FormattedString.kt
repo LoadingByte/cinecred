@@ -264,10 +264,15 @@ class FormattedString private constructor(
             // Poke holes into the forms to clear around other layers if requested.
             layer.clearing?.let { clearing ->
                 val clearArea = Area()
-                val dilStroke =
-                    BasicStroke((clearing.radiusPx * 2.0).toFloat(), capForJoin(clearing.join), clearing.join)
-                for (clearForm in clearing.layers.flatMapToSequence(::formLayer))
-                    clearArea.add(Area(dilate(clearForm.awtShape, dilStroke)))
+                if (clearing.radiusPx == 0.0)
+                    for (clearForm in clearing.layers.flatMapToSequence(::formLayer))
+                        clearArea.add(Area(clearForm.awtShape))
+                else {
+                    val dilStroke =
+                        BasicStroke((clearing.radiusPx * 2.0).toFloat(), capForJoin(clearing.join), clearing.join)
+                    for (clearForm in clearing.layers.flatMapToSequence(::formLayer))
+                        clearArea.add(Area(dilate(clearForm.awtShape, dilStroke)))
+                }
                 forms = forms.map { form ->
                     Form.AWTShape(form.anchor, Area(form.awtShape).apply { subtract(clearArea) })
                 }

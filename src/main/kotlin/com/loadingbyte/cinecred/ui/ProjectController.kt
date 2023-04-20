@@ -328,7 +328,7 @@ class ProjectController(
         }
 
         fun editedAndRedraw(new: Styling, editedId: Any?) {
-            if (new != current) {
+            if (!semanticallyEqual(new, current)) {
                 // If the user edits the styling after having undoed some steps, those steps are now dropped.
                 while (history.lastIndex != currentIdx)
                     history.removeAt(history.lastIndex)
@@ -348,7 +348,7 @@ class ProjectController(
                     // from before the rapid succession edits by the current state; we do this despite them being
                     // equivalent to ensure that the current state is always reference-equivalent to the objects stored
                     // in the UI's styling tree.
-                    if (history.size >= 2 && history[currentIdx - 1] == new) {
+                    if (history.size >= 2 && semanticallyEqual(new, history[currentIdx - 1])) {
                         history.removeAt(currentIdx--)
                         lastEditedId = null
                     }
@@ -384,7 +384,7 @@ class ProjectController(
         }
 
         fun loadAndRedraw(new: Styling) {
-            if (new != current) {
+            if (!semanticallyEqual(new, current)) {
                 editedAndRedraw(new, null)
                 stylingDialog.panel.setStyling(new)
             }
@@ -398,14 +398,16 @@ class ProjectController(
         }
 
         private fun onStylingChange() {
-            val isUnsaved = !current.equalsIgnoreStyleOrderAndIneffectiveSettings(stylingCtx, saved)
             projectFrame.panel.onStylingChange(
-                isUnsaved,
+                isUnsaved = !semanticallyEqual(current, saved),
                 isUndoable = currentIdx != 0,
                 isRedoable = currentIdx != history.lastIndex
             )
             tryReadCreditsAndRedraw()
         }
+
+        private fun semanticallyEqual(a: Styling, b: Styling) =
+            a.equalsIgnoreStyleOrderAndIneffectiveSettings(stylingCtx, b)
 
     }
 

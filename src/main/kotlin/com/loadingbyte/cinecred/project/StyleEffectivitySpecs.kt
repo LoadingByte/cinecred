@@ -196,6 +196,11 @@ private fun supportsNot(ctx: StylingContext, style: LetterStyle, feat: String): 
 
 
 private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
+    // Don't store whether a layer is collapsed, as we don't want to persist UI information.
+    StyleEffectivitySpec(
+        Layer::collapsed.st(),
+        isTotallyIneffective = { _, _, _ -> true }
+    ),
     StyleEffectivitySpec(
         Layer::color2.st(), Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
         isTotallyIneffective = { _, _, style -> style.coloring != LayerColoring.GRADIENT }

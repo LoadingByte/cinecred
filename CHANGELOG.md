@@ -55,6 +55,8 @@ Cinecred Changelog
 
 - Rapidly scrolling a very long page no longer causes flicker.
 - Rapidly changing a style no longer makes it flicker gray in the tree.
+- Loading a styling with non-alphabetical style order and then editing it no
+  longer creates a phantom undo state.
 - Styles with an empty name now have the correct height in the dropdown.
 - The video preview's playback now speeds up exponentially.
 - The video preview's 1:1 mode now targets physical, not scaled pixels.

@@ -38,6 +38,7 @@ Cinecred Changelog
 - Added a button to quickly open the project folder in the OS's file explorer.
 - New projects can now be created in 4K, which simply doubles all initial sizes.
 - On macOS, all project windows now support native full-screen mode.
+- Added ZIP and TAR.GZ distribution packages for Windows and macOS.
 
 ### Fixes
 

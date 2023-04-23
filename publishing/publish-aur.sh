@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version=$(echo *.tar.gz | cut -d'-' -f2)
+version=$(echo *linux*.tar.gz | cut -d'-' -f2)
 
 git clone ssh://aur@aur.archlinux.org/cinecred.git
 cp PKGBUILD cinecred/

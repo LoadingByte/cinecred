@@ -44,6 +44,9 @@ echo "Collecting installation image..."
 if [[ "$os" == mac ]]; then
   cp resources/universal/LEGAL work/image/Cinecred.app/Contents/
 
+  echo "Assembling TAR.GZ archive..."
+  tar -czf out/cinecred-@VERSION@-mac-x86_64.tar.gz -C work/image/ Cinecred.app/
+
   echo "Assembling PKG package..."
   pkgbuild --root work/image/ --component-plist resources/pkg/component.plist --identifier Cinecred --install-location /Applications work/Cinecred.pkg
   productbuild --distribution resources/pkg/distribution.dist --package-path work/ --resources images/ out/cinecred-@VERSION@-x86_64.pkg

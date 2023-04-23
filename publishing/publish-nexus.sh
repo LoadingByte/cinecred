@@ -5,14 +5,14 @@ read -sp 'Nexus password: ' pass
 echo
 
 # Upload to Maven repository
-version=$(echo *.tar.gz | cut -d'-' -f2)
+version=$(echo *.msi | cut -d'-' -f2)
 mvn_args=""
-mvn_exts=(msi pkg tar.gz)
-for idx0 in "${!mvn_exts[@]}"; do
-  idx1=$((idx0 + 1))
-  ext=${mvn_exts[$idx0]}
-  file=$(echo *.$ext)
-  mvn_args="$mvn_args -F maven2.asset$idx1=@$file -F maven2.asset$idx1.extension=$ext -Fmaven2.asset$idx1.classifier=$(basename $file .$ext | cut -d'-' -f3-)"
+mvn_idx=1
+for ext in msi pkg zip tar.gz; do
+  for file in *.$ext; do
+    mvn_args="$mvn_args -F maven2.asset$mvn_idx=@$file -F maven2.asset$mvn_idx.extension=$ext -Fmaven2.asset$mvn_idx.classifier=$(basename $file .$ext | cut -d'-' -f3-)"
+    ((mvn_idx+=1))
+  done
 done
 curl -u $user:$pass \
   POST 'https://repo.loadingbyte.com/service/rest/v1/components?repository=maven-releases' \

@@ -27,6 +27,9 @@ echo Collecting installation image...
 del work\image\cinecred\cinecred.ico
 copy resources\universal\LEGAL work\image\cinecred\
 
+echo Assembling ZIP archive...
+powershell Compress-Archive work\image\Cinecred -DestinationPath out\cinecred-@VERSION@-windows-x86_64.zip
+
 echo Assembling MSI package...
 work\wix\heat.exe dir work\image\cinecred\ -nologo -ag -cg Files -dr INSTALLDIR -srd -sfrag -scom -sreg -indent 2 -o work\Files.wxs
 work\wix\candle.exe resources\msi\*.wxs work\Files.wxs -nologo -arch x64 -o work\wixobj\

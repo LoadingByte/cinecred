@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.*
 import java.beans.PropertyChangeListener
 import java.io.File
 import java.nio.file.Path
@@ -64,10 +65,14 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
 
         val startPanel = JPanel(MigLayout("insets 15, wrap")).apply {
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(10, 10, 10, 10),
-                BorderFactory.createDashedBorder(Color(80, 80, 80), 5f, 4f, 4f, false)
-            )
+            fun setHover(hover: Boolean) {
+                val color = if (hover) Color(120, 120, 120) else Color(80, 80, 80)
+                border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10),
+                    BorderFactory.createDashedBorder(color, 5f, 4f, 4f, false)
+                )
+            }
+            setHover(false)
             background = null
             add(startCreateButton, "split 2, center")
             add(startOpenButton)
@@ -76,6 +81,12 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(startDropLabel, "center, gaptop 20, gapbottom 20")
             // Add the drag-and-drop handler.
             transferHandler = OpenTransferHandler()
+            // Highlight the area when the user hovers over it during drag-and-drop.
+            dropTarget.addDropTargetListener(object : DropTargetAdapter() {
+                override fun dragEnter(dtde: DropTargetDragEvent) = setHover(true)
+                override fun dragExit(dte: DropTargetEvent) = setHover(false)
+                override fun drop(dtde: DropTargetDropEvent) = setHover(false)
+            })
         }
 
         openBrowseFileChooser = makeProjectDirChooser()

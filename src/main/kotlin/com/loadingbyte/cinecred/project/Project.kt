@@ -255,7 +255,7 @@ enum class LayerColoring { PLAIN, GRADIENT }
 enum class LayerShape { TEXT, STRIPE, CLONE }
 enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }
-enum class LayerAnchor { INDIVIDUAL, GLOBAL, SIBLING }
+enum class LayerAnchor { INDIVIDUAL, SIBLING, GLOBAL }
 
 
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)

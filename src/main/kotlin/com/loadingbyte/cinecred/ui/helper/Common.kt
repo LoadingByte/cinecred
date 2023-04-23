@@ -18,6 +18,7 @@ import java.awt.geom.RoundRectangle2D
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.nio.file.Path
 import javax.swing.*
 import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
@@ -497,22 +498,11 @@ class KeyListener(
 }
 
 
-fun tryBrowse(uri: URI) {
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))
-        Desktop.getDesktop().browse(uri)
-    else
-        openFallback(uri)
-}
+fun tryOpen(file: Path) = openCascade(file.toUri(), Desktop.Action.OPEN) { Desktop.getDesktop().open(file.toFile()) }
+fun tryBrowse(uri: URI) = openCascade(uri, Desktop.Action.BROWSE) { Desktop.getDesktop().browse(uri) }
+fun tryMail(uri: URI) = openCascade(uri, Desktop.Action.MAIL) { Desktop.getDesktop().mail(uri) }
 
-fun tryMail(uri: URI) {
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.MAIL))
-        Desktop.getDesktop().mail(uri)
-    else
-        openFallback(uri)
-}
-
-// This fallback is required by, e.g., KDE, which is not supported by Desktop.browse()/mail() at the moment.
-private fun openFallback(uri: URI) {
+private fun openCascade(uri: URI, desktopAction: Desktop.Action, desktopFunction: () -> Unit) {
     fun tryExec(cmd: Array<String>) = try {
         Runtime.getRuntime().exec(cmd)
         true
@@ -520,8 +510,15 @@ private fun openFallback(uri: URI) {
         false
     }
 
-    if (!SystemInfo.isKDE || !tryExec(arrayOf("kde-open", uri.toString())))
-        tryExec(arrayOf("xdg-open", uri.toString()))
+    // This cascade is required because:
+    //   - Desktop.open() doesn't always open the actually configured file browser on KDE.
+    //   - KDE is not supported by Desktop.browse()/mail().
+    if (SystemInfo.isKDE && tryExec(arrayOf("kde-open", uri.toString())))
+        return
+    if (SystemInfo.isLinux && tryExec(arrayOf("xdg-open", uri.toString())))
+        return
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(desktopAction))
+        desktopFunction()
 }
 
 

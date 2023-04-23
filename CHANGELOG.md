@@ -35,6 +35,7 @@ Cinecred Changelog
 - The delivery dialog now presents a summary of the most important specs.
 - Replaced the unwieldy color picker dialog with a compact popup, which
   additionally offers swatches for all colors used in the project.
+- Added a button to quickly open the project folder in the OS's file explorer.
 - New projects can now be created in 4K, which simply doubles all initial sizes.
 - On macOS, all project windows now support native full-screen mode.
 

@@ -85,8 +85,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
         ctrl.stylingHistory.resetAndRedraw()
     }
-    private val unsavedStylingLabel = JLabel(l10n("ui.edit.unsavedChanges")).apply {
+    // By enabling HTML in the JLabel, a branch that doesn't add ellipsis but instead clips the string is taken in
+    // SwingUtilities.layoutCompoundLabelImpl(). This is much nicer for a very short string like this one.
+    private val unsavedStylingLabel = JLabel("<html>" + l10n("ui.edit.unsavedChanges") + "</html>").apply {
         isVisible = false
+        toolTipText = text
         putClientProperty(STYLE_CLASS, "small")
     }
 
@@ -104,9 +107,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     private val guidesToggleButton = newToolbarToggleButtonWithKeyListener(
         GUIDES_ICON, tooltip = l10n(
             "ui.edit.guidesTooltip",
-            STAGE_GUIDE_COLOR.toHex24(), SPINE_GUIDE_COLOR.toHex24(),
-            BODY_CELL_GUIDE_COLOR.brighter().toHex24(), BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
-            HEAD_TAIL_GUIDE_COLOR.brighter().toHex24()
+            STAGE_GUIDE_COLOR.brighter().toHex24(),
+            SPINE_GUIDE_COLOR.brighter().toHex24(),
+            BODY_CELL_GUIDE_COLOR.brighter().brighter().toHex24(),
+            BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
+            HEAD_TAIL_GUIDE_COLOR.brighter().brighter().toHex24()
         ), VK_G, CTRL_DOWN_MASK, isSelected = true
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) }
@@ -152,6 +157,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.DELIVERY, selected)
     }
+    private val browseProjectDirButton = newToolbarButtonWithKeyListener(
+        FOLDER_ICON, l10n("ui.edit.browseProjectDir"),
+        VK_F, CTRL_DOWN_MASK
+    ) {
+        tryOpen(ctrl.projectDir)
+    }
+
     private val homeButton = newToolbarButtonWithKeyListener(
         HOME_ICON, l10n("ui.edit.home"),
         VK_W, CTRL_DOWN_MASK
@@ -216,10 +228,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
 
-        val autoReloadLabel = JLabel(l10n("ui.edit.autoReloadActive")).apply {
-            toolTipText = text
-            putClientProperty(STYLE_CLASS, "small")
-        }
         val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {
             toolTipText = text
         }
@@ -227,25 +235,23 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Note: The shrink group with shrinkprio 200 appears to implicitly include shrinkable gaps.
         val topPanelCols = """
                 []push
-                [shrinkprio 200]
-                0:unrel:[shrinkprio 100]rel
-                []0[]0[]0[]rel[]
-                unrel[]unrel
+                []0[]0[]0[]rel[shrinkprio 200]
+                0:unrel:[]unrel
                 []rel[]rel[]0[]0[]0[]
-                rel[]unrel
+                rel[]rel:unrel:
                 [shrinkprio 300]0:rel:[]
-                unrel[]rel
+                rel:unrel:[]rel
                 []0[]0[]0[]
+                0:rel:[shrinkprio 200]0:rel-1:
+                []
                 push[]
         """
         val topPanel = JPanel(MigLayout("", topPanelCols)).apply {
-            add(autoReloadLabel, "skip 1, wmin 0")
-            add(JSeparator(JSeparator.VERTICAL), "growy")
-            add(undoStylingButton)
+            add(undoStylingButton, "skip 1")
             add(redoStylingButton)
             add(saveStylingButton)
             add(resetStylingButton)
-            add(unsavedStylingLabel)
+            add(unsavedStylingLabel, "wmin 15")
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
             add(zoomSlider, "width 50!")
@@ -260,6 +266,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(stylingDialogToggleButton)
             add(videoDialogToggleButton)
             add(deliveryDialogToggleButton)
+            add(browseProjectDirButton)
+            add(JSeparator(JSeparator.VERTICAL), "growy")
             add(homeButton)
             add(JSeparator(), "newline, span, growx")
             add(pagePanel, "newline, span, grow, push")

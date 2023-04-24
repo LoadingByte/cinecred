@@ -8,14 +8,14 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "1.8.0"
+    kotlin("jvm") version "1.8.20"
 }
 
 group = "com.loadingbyte"
 version = "1.4.0-SNAPSHOT"
 
 val jdkVersion = 17
-val slf4jVersion = "2.0.6"
+val slf4jVersion = "2.0.7"
 val poiVersion = "5.2.3"
 val batikVersion = "1.16"
 val javacppVersion = "1.5.8"
@@ -62,13 +62,13 @@ dependencies {
     // Redirect other logging frameworks to slf4j.
     // Batik & PDFBox use Jakarta Commons Logging. POI uses log4j2.
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
-    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.19.0")
+    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.20.0")
 
     // Spreadsheet Reading and Writing
     implementation("org.apache.poi", "poi", poiVersion)
     implementation("org.apache.poi", "poi-ooxml", poiVersion)
-    implementation("com.github.miachm.sods", "SODS", "1.4.0")
-    implementation("org.apache.commons", "commons-csv", "1.9.0")
+    implementation("com.github.miachm.sods", "SODS", "1.5.4")
+    implementation("org.apache.commons", "commons-csv", "1.10.0")
 
     // SVG Reading and Writing
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
@@ -77,7 +77,7 @@ dependencies {
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
     // PDF Reading and Writing
-    implementation("org.apache.pdfbox", "pdfbox", "2.0.27")
+    implementation("org.apache.pdfbox", "pdfbox", "2.0.28")
     implementation("de.rototor.pdfbox", "graphics2d", "0.42")
 
     // Video Encoding
@@ -89,12 +89,12 @@ dependencies {
     }
 
     // UI
-    implementation("com.miglayout", "miglayout-swing", "11.0")
+    implementation("com.miglayout", "miglayout-swing", "11.1")
     implementationAndNatives("com.formdev", "flatlaf", "2.6")
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.1")
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.2")
 }
 
 configurations.configureEach {

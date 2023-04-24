@@ -68,7 +68,6 @@ headGapPx = 0.0
 name = "{project.template.contentStyleLogos}"
 bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "FLOW"
-flowSquareCells = true
 flowLineWidthPx = <1200>
 flowLineGapPx = <32>
 flowHGapPx = <32>
@@ -115,9 +114,7 @@ shape = "TEXT"
 [[letterStyle.layers]]
 name = "{project.StripePreset.UNDERLINE}"
 shape = "STRIPE"
-stripePreset = "CUSTOM"
-stripeHeightRfh = 0.0625
-stripeOffsetRfh = 0.15625
+stripePreset = "UNDERLINE"
 
 [[letterStyle]]
 name = "{project.template.letterStyleName}"

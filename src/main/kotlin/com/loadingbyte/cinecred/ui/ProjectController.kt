@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 import kotlin.io.path.name
 
 
@@ -84,7 +85,8 @@ class ProjectController(
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
-            SwingUtilities.invokeLater {
+            // Wait a moment to be sure the file has been fully written.
+            Timer(100) {
                 when {
                     hasCreditsFileName(file) -> {
                         val creditsFile = this.creditsFile
@@ -103,7 +105,7 @@ class ProjectController(
                     event == RecursiveFileWatcher.Event.DELETE ->
                         if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw()
                 }
-            }
+            }.apply { isRepeats = false; start() }
         }
     }
 

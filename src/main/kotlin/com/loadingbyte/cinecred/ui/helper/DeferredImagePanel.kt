@@ -30,8 +30,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK")
-    fun leakedViewportCenterYSetter(value: Double) {
-        viewportCenterY = value
+    fun leakedViewportCenterSetter(x: Double = viewportCenterX, y: Double = viewportCenterY) {
+        viewportCenterX = x
+        viewportCenterY = y
         canvas.repaint()
     }
     // =========================================

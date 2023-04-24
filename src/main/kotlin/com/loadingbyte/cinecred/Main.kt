@@ -11,7 +11,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
-import com.loadingbyte.cinecred.ui.demo.demo
 import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
 import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
 import com.loadingbyte.cinecred.ui.helper.tryMail
@@ -37,6 +36,8 @@ import kotlin.io.path.*
 
 
 private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
+
+var demoCallback: (() -> Unit)? = null
 
 private lateinit var masterCtrl: MasterCtrlComms
 
@@ -133,6 +134,9 @@ private fun mainSwing(args: Array<String>) {
     // Fix the inability to get a dock progress bar to appear on macOS.
     fixTaskbarProgressBarOnMacOS()
 
+    // Run the demo code if configured, and then abort the regular startup.
+    demoCallback?.let { it(); return }
+
     masterCtrl = UIFactory().master()
 
     // Globally listen to all key events.
@@ -156,10 +160,6 @@ private fun mainSwing(args: Array<String>) {
             else
                 response.cancelQuit()
         }
-
-    // Run a demo if configured, and then abort the regular startup.
-    if (demo(masterCtrl))
-        return
 
     // Finally open the UI.
     openUI(args)

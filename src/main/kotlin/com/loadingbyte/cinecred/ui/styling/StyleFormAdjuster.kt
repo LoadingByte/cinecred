@@ -13,8 +13,19 @@ class StyleFormAdjuster(
     private val getStylingCtx: () -> StylingContext,
     private val getCurrentStyling: () -> Styling?,
     private val getCurrentStyleInActiveForm: () -> Style?,
-    private val notifyConstraintViolations: (List<ConstraintViolation>) -> Unit
+    private val notifyConstraintViolations: (List<ConstraintViolation>) -> Unit,
+    // ========== ENCAPSULATION LEAKS ==========
+    @Suppress("DEPRECATION")
+    private val styleIdxAndSiblingsOverride: StyleIdxAndSiblingsOverride? = null
+    // =========================================
 ) {
+
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK")
+    interface StyleIdxAndSiblingsOverride {
+        fun <S : Style> getStyleIdxAndSiblings(style: S): Pair<Int, List<S>>
+    }
+    // =========================================
 
     // Cache the current Styling's constraint violations and all colors used in the current Styling.
     private var constraintViolations: List<ConstraintViolation> = emptyList()
@@ -83,6 +94,15 @@ class StyleFormAdjuster(
         curForm: StyleForm<S>, curStyle: S, curStyleIdx: Int = 0, siblingStyles: List<S> = emptyList()
     ) {
         val styling = getCurrentStyling() ?: return
+
+        // Support for the leaking override.
+        @Suppress("NAME_SHADOWING") var curStyleIdx = curStyleIdx
+        @Suppress("NAME_SHADOWING") var siblingStyles = siblingStyles
+        if (styleIdxAndSiblingsOverride != null) {
+            val pair = styleIdxAndSiblingsOverride.getStyleIdxAndSiblings(curStyle)
+            curStyleIdx = pair.first
+            siblingStyles = pair.second
+        }
 
         curForm.ineffectiveSettings = findIneffectiveSettings(getStylingCtx(), styling, curStyle)
 

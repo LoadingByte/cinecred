@@ -35,8 +35,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedUndoStylingButton get() = undoStylingButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedRedoStylingButton get() = redoStylingButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedSaveStylingButton get() = saveStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedGuidesButton get() = guidesToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedUniformSafeAreasButton get() = uniformSafeAreasToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCutSafeArea16to9Button get() = cutSafeArea16to9ToggleButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCutSafeArea4to3Button get() = cutSafeArea4to3ToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = stylingDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedVideoDialogButton get() = videoDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton

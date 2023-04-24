@@ -29,6 +29,14 @@ val splashScreen = javaProperties.getProperty("splashScreen")!!
 val javaOptions = javaProperties.getProperty("javaOptions")!!
 
 
+sourceSets {
+    register("demo") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+}
+
+
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(jdkVersion))
 }
@@ -38,6 +46,9 @@ val implementationAndNatives by configurations.creating {
     configurations.implementation.get().extendsFrom(this)
     natives.extendsFrom(this)
 }
+
+val demoImplementation by configurations.getting { extendsFrom(configurations.implementation.get()) }
+val demoRuntimeOnly by configurations.getting { extendsFrom(configurations.runtimeOnly.get()) }
 
 repositories {
     mavenCentral()
@@ -161,17 +172,26 @@ val platformNativesTasks = Platform.values().map { platform ->
 Platform.values().map { platform ->
     val platformNatives = platformNativesTasks[platform.ordinal]
     val mainClass_ = mainClass
+    val jvmArgs_ = listOf(
+        "-Djava.library.path=${platformNatives.get().destinationDir}",
+        "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
+        "--add-modules", addModules.joinToString(",")
+    ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
     tasks.register<JavaExec>("runOn${platform.uppercaseLabel}") {
         group = "Execution"
         description = "Runs the program on ${platform.uppercaseLabel}."
         dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
         mainClass.set(mainClass_)
-        jvmArgs = listOf(
-            "-Djava.library.path=${platformNatives.get().destinationDir}",
-            "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
-            "--add-modules", addModules.joinToString(",")
-        ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
+        jvmArgs = jvmArgs_
+    }
+    tasks.register<JavaExec>("runDemoOn${platform.uppercaseLabel}") {
+        group = "Execution"
+        description = "Runs the demo on ${platform.uppercaseLabel}."
+        dependsOn(platformNatives)
+        classpath(sourceSets.named("demo").map { it.runtimeClasspath })
+        mainClass.set("com.loadingbyte.cinecred.DemoMain")
+        jvmArgs = jvmArgs_ + listOf("--add-opens", "java.desktop/javax.swing=ALL-UNNAMED")
     }
 }
 

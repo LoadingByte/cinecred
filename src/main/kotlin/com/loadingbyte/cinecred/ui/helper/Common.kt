@@ -416,8 +416,10 @@ class CustomToStringKeySelectionManager<E>(
 }
 
 
+var minimumWindowSize = Dimension(600, 450)
+
 fun Window.setup() {
-    minimumSize = Dimension(600, 450)
+    minimumSize = minimumWindowSize
     when (this) {
         is JFrame -> defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
         is JDialog -> defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE

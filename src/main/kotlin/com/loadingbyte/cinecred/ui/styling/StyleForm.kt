@@ -341,6 +341,9 @@ class StyleForm<S : Style>(
     fun getWidgetFor(setting: StyleSetting<S, *>): Widget<*> =
         valueWidgets.getValue(setting)
 
+    fun getFormRowFor(setting: StyleSetting<S, *>): FormRow =
+        rootFormRowLookup.getValue(setting)
+
     override fun open(stored /* style */: S) {
         disableOnChange = true
         try {

@@ -1,22 +1,14 @@
-package com.loadingbyte.cinecred.ui.demo
+package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.common.preserveTransform
-import java.awt.Component
-import java.awt.Graphics2D
-import java.awt.Window
+import com.loadingbyte.cinecred.ui.helper.usableBounds
+import java.awt.*
 import java.awt.image.BufferedImage
-import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.swing.SwingUtilities
 import kotlin.concurrent.withLock
-import kotlin.io.path.Path
 
-
-val OUTPUT_DIR = Path("demoOutput/")
-
-fun l10nDemo(key: String): String =
-    ResourceBundle.getBundle("l10n.demo").getString(key)
 
 inline fun buildImage(width: Int, height: Int, type: Int, draw: (Graphics2D) -> Unit): BufferedImage {
     val image = BufferedImage(width, height, type)
@@ -26,6 +18,9 @@ inline fun buildImage(width: Int, height: Int, type: Int, draw: (Graphics2D) -> 
     return image
 }
 
+
+val gCfg: GraphicsConfiguration =
+    GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
 
 fun edt(block: () -> Unit) {
     val lock = ReentrantLock()
@@ -41,6 +36,11 @@ fun edt(block: () -> Unit) {
     }
 }
 
+
+fun printWithPopups(component: Component): BufferedImage =
+    buildImage(component.width, component.height, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
+        printWithPopups(component, g2)
+    }
 
 fun printWithPopups(component: Component, g2: Graphics2D) {
     edt {
@@ -60,4 +60,23 @@ inline fun forEachVisiblePopupOf(window: Window, action: (Window) -> Unit) {
     for (popup in Window.getWindows())
         if (popup.isVisible && popup.type == Window.Type.POPUP && popup.owner == window)
             action(popup)
+}
+
+
+fun reposition(window: Window, width: Int, height: Int) {
+    edt {
+        window.minimumSize = Dimension(0, 0)
+
+        // Add the window decorations to the size.
+        val insets = window.insets
+        val winWidth = width + insets.left + insets.right
+        val winHeight = height + insets.top + insets.bottom
+
+        val screenBounds = gCfg.usableBounds
+        window.setBounds(
+            screenBounds.x + (screenBounds.width - winWidth) / 2,
+            screenBounds.y + (screenBounds.height - winHeight) / 2,
+            winWidth, winHeight
+        )
+    }
 }

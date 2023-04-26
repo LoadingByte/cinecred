@@ -3,14 +3,12 @@ package com.loadingbyte.cinecred.drawer
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.isTTFOrOTF
 import com.loadingbyte.cinecred.common.useResourcePath
+import com.loadingbyte.cinecred.common.walkSafely
 import java.awt.Font
 import java.awt.GraphicsEnvironment
-import java.nio.file.FileVisitOption
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.*
-import kotlin.streams.asSequence
 
 
 // Load the fonts that are bundled with this program.
@@ -38,7 +36,7 @@ val SYSTEM_FONTS: List<Font> =
             Path(System.getProperty("user.home")).resolve("Library/Fonts")
         )
             .filter(Path::exists)
-            .flatMap { Files.walk(it, FileVisitOption.FOLLOW_LINKS).asSequence() }
+            .flatMap(Path::walkSafely)
             .filter(Path::isRegularFile)
             // The createFonts() method can only successfully read TrueType/OpenType fonts, which is desired.
             // If a FontFormatException or IOException occurs, just skip over the problematic font file.

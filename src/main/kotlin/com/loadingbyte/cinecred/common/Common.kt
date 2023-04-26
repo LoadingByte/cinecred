@@ -14,10 +14,10 @@ import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
-import java.nio.file.FileSystems
-import java.nio.file.InvalidPathException
-import java.nio.file.Path
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
 import java.util.*
 import javax.swing.JComponent
@@ -124,6 +124,46 @@ fun File.toPathSafely(): Path? =
 fun Path.createDirectoriesSafely() {
     if (!isDirectory() /* follows symlinks */)
         createDirectories()
+}
+
+
+/**
+ * The implementation of [Files.walk] will throw exceptions when encountering various failure conditions, for example
+ * when looping back on itself. We instead want our walker to swallow (but log) errors and continue scanning the rest of
+ * the file tree as if nothing happened.
+ */
+fun Path.walkSafely(): List<Path> {
+    val list = ArrayList<Path>(1024)
+    val root = this
+    val opts = EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+    Files.walkFileTree(root, opts, Int.MAX_VALUE, object : FileVisitor<Path> {
+        override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+            list.add(dir)
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+            list.add(file)
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
+            logExc(file, exc)
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
+            if (exc != null)
+                logExc(dir, exc)
+            return FileVisitResult.CONTINUE
+        }
+
+        private fun logExc(file: Path, exc: IOException) {
+            val msg = "Exception thrown at '{}' while walking the file tree starting at '{}': {}"
+            LOGGER.warn(msg, file, root, exc.toString())
+        }
+    })
+    return list
 }
 
 

@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
-import com.loadingbyte.cinecred.common.VERSION
-import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
-import com.loadingbyte.cinecred.common.useResourcePath
-import com.loadingbyte.cinecred.common.useResourceStream
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.isAllowedToBeProjectDir
 import com.loadingbyte.cinecred.projectio.isProjectDir
@@ -20,7 +17,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.FileVisitOption
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -339,7 +335,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
         private val LICENSES = run {
             val rawAppLicenses = useResourcePath("/licenses") { appLicensesDir ->
-                Files.walk(appLicensesDir).toList().filter(Files::isRegularFile).map { file ->
+                appLicensesDir.walkSafely().filter(Files::isRegularFile).map { file ->
                     val relPath = appLicensesDir.relativize(file).pathString
                     val splitIdx = relPath.indexOfAny(listOf("LICENSE", "NOTICE", "COPYING", "COPYRIGHT", "README"))
                     Triple(relPath.substring(0, splitIdx - 1), relPath.substring(splitIdx), file.readText())
@@ -354,10 +350,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
             val jdkLicensesDir = Path(System.getProperty("java.home")).resolve("legal")
             val jdkLicenses = if (jdkLicensesDir.notExists()) emptyList() else
-                Files.walk(
-                    jdkLicensesDir,
-                    FileVisitOption.FOLLOW_LINKS
-                ).toList().filter(Files::isRegularFile).mapNotNull { file ->
+                jdkLicensesDir.walkSafely().filter(Files::isRegularFile).mapNotNull { file ->
                     val relFile = jdkLicensesDir.relativize(file)
                     when {
                         file.name.endsWith(".md") -> " \u2192 " + file.nameWithoutExtension

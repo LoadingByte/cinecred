@@ -3,14 +3,15 @@ package com.loadingbyte.cinecred.demo
 import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.useResourcePath
+import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.readLines
 import kotlin.io.path.writeLines
 
@@ -101,8 +102,9 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         val spreadsheet = CsvFormat.read(creditsFile).first
         val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), BundledFontsStylingContext)
         val pictureLoaders = buildMap {
-            for (file in Files.walk(projectDir))
-                tryReadPictureLoader(file)?.let { put(file, it) }
+            for (file in projectDir.walkSafely())
+                if (file.isRegularFile())
+                    tryReadPictureLoader(file)?.let { put(file, it) }
         }
         val (pages, runtimeGroups, _) = readCredits(spreadsheet, styling, pictureLoaders)
         for (pl in pictureLoaders.values)

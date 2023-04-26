@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.drawer.getBundledFont
@@ -23,6 +24,7 @@ import java.nio.file.Path
 import java.util.*
 import javax.swing.SwingUtilities
 import javax.swing.Timer
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
 
@@ -70,8 +72,9 @@ class ProjectController(
             makeProjectHintTrack(this).play(onPass = { PersistentStorage.projectHintTrackPending = false })
 
         // Load the initially present auxiliary files (project fonts and pictures).
-        for (projectFile in Files.walk(projectDir))
-            tryReloadAuxFile(projectFile)
+        for (projectFile in projectDir.walkSafely())
+            if (projectFile.isRegularFile())
+                tryReloadAuxFile(projectFile)
 
         // Load the initial state of the styling from disk.
         stylingHistory = StylingHistory(readStyling(stylingFile, stylingCtx))

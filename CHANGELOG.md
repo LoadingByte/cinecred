@@ -7,6 +7,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Problems while scanning file trees, e.g., loops, are now gracefully ignored.
 - Crash reports now include the version of Cinecred as well as OS information.
 
 

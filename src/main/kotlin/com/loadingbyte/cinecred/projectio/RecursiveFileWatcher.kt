@@ -1,11 +1,14 @@
 package com.loadingbyte.cinecred.projectio
 
-import java.nio.file.*
+import com.loadingbyte.cinecred.common.walkSafely
+import java.nio.file.FileSystems
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.*
+import java.nio.file.WatchKey
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import java.util.stream.Stream
 import kotlin.concurrent.withLock
 import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isDirectory
@@ -47,6 +50,7 @@ object RecursiveFileWatcher {
         }, "FileWatcher-Native").apply { isDaemon = true }.start()
     }
 
+    /** Notice: The [listener] is only notified about regular files, not directories. */
     fun watch(rootDir: Path, listener: (Event, Path) -> Unit) {
         lock.withLock {
             val order = Order(listener)
@@ -71,7 +75,7 @@ object RecursiveFileWatcher {
                     order.onetimePolling = false
                     // Check whether the modification time of any file in the file tree has changed (including new
                     // files!), and if so, notify the listener. Also refresh the last seen tick of every existing file.
-                    for (file in safeWalk(rootDir))
+                    for (file in rootDir.walkSafely())
                         if (file.isRegularFile())
                             potentialModification(order, file, setLastSeenTick = true)
                     // De-memorize all files which have not been seen this tick, and notify the listener about them.
@@ -132,7 +136,7 @@ object RecursiveFileWatcher {
 
     private fun setupFileTree(order: Order, dir: Path, notifyListener: Boolean) {
         // Memorize all regular files and their current modification times.
-        for (file in safeWalk(dir))
+        for (file in dir.walkSafely())
             if (file.isRegularFile()) {
                 try {
                     order.memory[file] = MemoryEntry(file.getLastModifiedTime().toMillis(), -1)
@@ -147,19 +151,13 @@ object RecursiveFileWatcher {
             }
 
         // Only after the memorization is complete, register a file watcher in each directory of the file tree.
-        for (file in safeWalk(dir))
+        for (file in dir.walkSafely())
             if (file.isDirectory())
                 try {
                     order.watchKeys.add(file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY))
                 } catch (_: NoSuchFileException) {
                     // Once again, unlucky timing.
                 }
-    }
-
-    private fun safeWalk(dir: Path) = try {
-        Files.walk(dir, FileVisitOption.FOLLOW_LINKS)
-    } catch (_: NoSuchFileException) {
-        Stream.empty()
     }
 
 

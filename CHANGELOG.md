@@ -5,6 +5,10 @@ Cinecred Changelog
 1.4.1-SNAPSHOT
 --------------
 
+### Fixes
+
+- Crash reports now include the version of Cinecred as well as OS information.
+
 
 1.4.0
 -----

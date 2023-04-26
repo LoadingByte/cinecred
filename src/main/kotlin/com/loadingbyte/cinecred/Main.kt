@@ -204,7 +204,8 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
             val address = encodeMailURIComponent("crashes@cinecred.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
             // We replace tabs by four dots because some email programs trim leading tabs and spaces.
-            val body = encodeMailURIComponent(log.replace("\t", "...."))
+            val header = "Cinecred: $VERSION\nOS: ${System.getProperty("os.name")} ${System.getProperty("os.version")}"
+            val body = encodeMailURIComponent(header + "\n\n" + log.replace("\t", "...."))
             tryMail(URI("mailto:$address?Subject=$subject&Body=$body"))
         }
     }

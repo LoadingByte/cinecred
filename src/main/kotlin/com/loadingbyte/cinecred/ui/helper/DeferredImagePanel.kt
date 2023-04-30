@@ -449,6 +449,9 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                         // dictated by the current viewport). This is necessary because Java2D completely refuses to
                         // draw an image if the y translation exceeds 2^16.
                         val cut = (viewportStartY / invertedLowResScaling).toInt()
+                            // Some users experienced "cut" exceeding the image height for some reason. We guard against
+                            // those crashes by simply clamping "cut".
+                            .coerceIn(0, lowResMaterialized.height - 1)
                         val subLowResMat = lowResMaterialized.getSubimage(
                             0, cut, lowResMaterialized.width, lowResMaterialized.height - cut
                         )

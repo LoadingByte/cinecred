@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
 import com.loadingbyte.cinecred.ui.helper.ICON_ICON_GAP
 import com.loadingbyte.cinecred.ui.helper.SVGIcon
 import java.awt.Component
@@ -334,7 +335,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
                 isEnabled = !userObj.isGrayedOut
                 extraIcons = userObj.extraIcons
             } else {
-                // Icon has already been set by super call.
+                icon = FOLDER_ICON
                 isEnabled = true
                 extraIcons = emptyList()
             }

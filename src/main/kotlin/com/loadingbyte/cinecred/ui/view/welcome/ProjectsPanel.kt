@@ -206,11 +206,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         fc.minimumSize = Dimension(0, 0)
 
-        // Workaround for FlatLaf's issue #604.
-        fc.remove(0)
-
         // Remove the file type selection.
-        val bottomPanel = (fc.getComponent(0) as JPanel).getComponent(2) as JPanel
+        val bottomPanel = (fc.getComponent(0) as JPanel).getComponent(3) as JPanel
         bottomPanel.remove(2)  // Remove the file type panel.
         bottomPanel.remove(1)  // Remove the vertical strut.
 
@@ -262,7 +259,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         addPropertyChangeListener(JFileChooser.SELECTED_FILE_CHANGED_PROPERTY, eventHandler)
         addPropertyChangeListener(JFileChooser.DIRECTORY_CHANGED_PROPERTY, eventHandler)
 
-        val bottomPanel = (getComponent(0) as JPanel).getComponent(2) as JPanel
+        val bottomPanel = (getComponent(0) as JPanel).getComponent(3) as JPanel
         val fileNameTextField = (bottomPanel.getComponent(0) as JPanel).getComponent(1) as JTextField
         fileNameTextField.document.addDocumentListener { listener() }
     }

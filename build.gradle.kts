@@ -90,7 +90,7 @@ dependencies {
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.1")
-    implementationAndNatives("com.formdev", "flatlaf", "2.6")
+    implementationAndNatives("com.formdev", "flatlaf", "3.1.1")
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing

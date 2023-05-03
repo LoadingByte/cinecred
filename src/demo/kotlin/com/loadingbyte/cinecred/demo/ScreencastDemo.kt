@@ -224,9 +224,6 @@ class Screencast(
         private val CAPTION_FONT = BUNDLED_FONTS
             .first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }
             .deriveFont(48f)
-        private val CAPTION_QUOTES_FONT = BUNDLED_FONTS
-            .first { it.getFontName(Locale.ROOT) == "Roboto Condensed" }
-            .deriveFont(48f)
     }
 
     private val width = desktop.width
@@ -325,14 +322,7 @@ class Screencast(
             TextAttribute.KERNING to TextAttribute.KERNING_ON,
             TextAttribute.LIGATURES to TextAttribute.LIGATURES_ON
         )
-        val attrStr = AttributedString(text, attrs)
-        // Sadly, the lower quotes of "Titillium Upright" are bugged. As a fix, we just use quote glyphs from another
-        // font which closely resembles the one used by "Titillium Upright".
-        if ('\u201E' in text)
-            for (idx in text.indices)
-                if (text[idx].let { it == '\u201C' || it == '\u201D' || it == '\u201E' })
-                    attrStr.addAttribute(TextAttribute.FONT, CAPTION_QUOTES_FONT, idx, idx + 1)
-        val lbm = LineBreakMeasurer(attrStr.iterator, REF_FRC)
+        val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, REF_FRC)
         while (lbm.position != text.length)
             caption.add(lbm.nextLayout(width / 2f))
         check(caption.size <= 2) { "Caption '$l10nKey' has ${caption.size} lines (only 2 are allowed)." }

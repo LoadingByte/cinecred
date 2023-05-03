@@ -14,6 +14,7 @@ Cinecred Changelog
 
 - Fixed rare crashes caused by numerical inaccuracies when shifting a low-res
   page preview image.
+- Clicking a link in the missing Ghostscript dialog no longer causes a crash.
 
 
 1.4.0

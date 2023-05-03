@@ -77,14 +77,18 @@ abstract class DrawImages : DefaultTask() {
                 // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
                 // properly parsed by macOS. We have to leave out those sizes to avoid glitches.
                 logo.transcode(128, 256, 512, 1024, margin = 0.055, file = outputDir.resolve("icon.icns"))
-                buildImage(outputDir.resolve("background.png"), 182, 180, BufferedImage.TYPE_INT_ARGB) { g2 ->
-                    g2.drawImage(logo.rasterize(80), 51, 0, null)
-                    g2.color = Color.WHITE
-                    g2.font = semiFont.deriveFont(24f)
-                    g2.drawCenteredString("Cinecred", 0, 110, 182)
-                    g2.font = boldFont.deriveFont(16f)
-                    g2.drawCenteredString(version, 0, 130, 182)
+                fun buildBgImage(to: File, textColor: Color) {
+                    buildImage(to, 182, 180, BufferedImage.TYPE_INT_ARGB) { g2 ->
+                        g2.drawImage(logo.rasterize(80), 51, 0, null)
+                        g2.color = textColor
+                        g2.font = semiFont.deriveFont(24f)
+                        g2.drawCenteredString("Cinecred", 0, 110, 182)
+                        g2.font = boldFont.deriveFont(16f)
+                        g2.drawCenteredString(version, 0, 130, 182)
+                    }
                 }
+                buildBgImage(outputDir.resolve("background-light.png"), Color.BLACK)
+                buildBgImage(outputDir.resolve("background-dark.png"), Color.WHITE)
             }
             Platform.LINUX -> {
                 logoFile.copyTo(outputDir.resolve("cinecred.svg"), overwrite = true)

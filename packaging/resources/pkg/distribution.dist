@@ -9,6 +9,6 @@
   <choices-outline>
     <line choice="Cinecred"/>
   </choices-outline>
-  <background file="background.png" mime-type="image/png" alignment="bottomleft" scaling="none"/>
-  <background-darkAqua file="background.png" mime-type="image/png" alignment="bottomleft" scaling="none"/>
+  <background file="background-light.png" mime-type="image/png" alignment="bottomleft" scaling="none"/>
+  <background-darkAqua file="background-dark.png" mime-type="image/png" alignment="bottomleft" scaling="none"/>
 </installer-gui-script>

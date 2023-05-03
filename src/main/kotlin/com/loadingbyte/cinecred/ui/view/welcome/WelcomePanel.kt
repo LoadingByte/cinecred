@@ -71,6 +71,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             viewport.background = null
         }
         licenseComboBox = JComboBox<License>().apply {
+            maximumRowCount = 30
             renderer = CustomToStringListCellRenderer(License::class.java, License::name)
         }
         licenseComboBox.addItemListener { e ->

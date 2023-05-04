@@ -72,13 +72,11 @@ fun DeferredImage.drawJustifiedString(
 
 fun DeferredImage.drawJustifiedString(
     fmtStr: FormattedString, hJustify: HJustify, vJustify: VJustify,
-    areaX: Double, areaY: Y, areaWidth: Double, areaHeight: Y,
-    referenceHeight: Y? = null
+    areaX: Double, areaY: Y, areaWidth: Double, areaHeight: Y
 ) {
     val strHeight = fmtStr.height.toY()
-    val diff = if (referenceHeight == null) 0.0.toY() else referenceHeight - strHeight
     drawJustified(
-        hJustify, vJustify, areaX, areaY + diff / 2.0, areaWidth, areaHeight - diff,
+        hJustify, vJustify, areaX, areaY, areaWidth, areaHeight,
         fmtStr.width, strHeight
     ) { strX, strY ->
         drawString(fmtStr, strX, strY)

@@ -239,6 +239,17 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
             }
         }
     }
+
+    // 1.4.1 -> 1.5.0: Vertical head/tail justification is now more fine-grained.
+    for (contentStyle in rawStyling.contentStyles) {
+        fun patch(vJustify: String) = when (vJustify) {
+            "TOP" -> "FIRST_MIDDLE"
+            "BOTTOM" -> "LAST_MIDDLE"
+            else -> vJustify
+        }
+        (contentStyle["headVJustify"] as? String)?.let { contentStyle["headVJustify"] = patch(it) }
+        (contentStyle["tailVJustify"] as? String)?.let { contentStyle["tailVJustify"] = patch(it) }
+    }
 }
 
 

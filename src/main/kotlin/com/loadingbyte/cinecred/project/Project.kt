@@ -137,14 +137,14 @@ data class ContentStyle(
     val headMatchWidth: MatchExtent,
     val headMatchWidthAcrossStyles: PersistentList<String>,
     val headHJustify: HJustify,
-    val headVJustify: VJustify,
+    val headVJustify: HeadTailVJustify,
     val headGapPx: Double,
     val hasTail: Boolean,
     val tailLetterStyleName: String,
     val tailMatchWidth: MatchExtent,
     val tailMatchWidthAcrossStyles: PersistentList<String>,
     val tailHJustify: HJustify,
-    val tailVJustify: VJustify,
+    val tailVJustify: HeadTailVJustify,
     val tailGapPx: Double
 ) : ListedStyle
 
@@ -164,6 +164,13 @@ enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
+
+enum class HeadTailVJustify {
+    FIRST_TOP, FIRST_MIDDLE, FIRST_BOTTOM,
+    OVERALL_MIDDLE,
+    LAST_TOP, LAST_MIDDLE, LAST_BOTTOM
+}
+
 enum class MatchExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
 enum class GridStructure { FREE, EQUAL_WIDTH_COLS, SQUARE_CELLS }

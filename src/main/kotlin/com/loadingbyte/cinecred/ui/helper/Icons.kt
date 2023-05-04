@@ -174,6 +174,26 @@ val LineHJustify.icon
     }
 
 
+private val HEAD_TAIL_V_JUSTIFY_FIRST_TOP_ICON = SVGIcon.load("/icons/headTailVJustify/firstTop.svg")
+private val HEAD_TAIL_V_JUSTIFY_FIRST_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/firstMiddle.svg")
+private val HEAD_TAIL_V_JUSTIFY_FIRST_BOTTOM_ICON = SVGIcon.load("/icons/headTailVJustify/firstBottom.svg")
+private val HEAD_TAIL_V_JUSTIFY_OVERALL_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/overallMiddle.svg")
+private val HEAD_TAIL_V_JUSTIFY_LAST_TOP_ICON = SVGIcon.load("/icons/headTailVJustify/lastTop.svg")
+private val HEAD_TAIL_V_JUSTIFY_LAST_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/lastMiddle.svg")
+private val HEAD_TAIL_V_JUSTIFY_LAST_BOTTOM_ICON = SVGIcon.load("/icons/headTailVJustify/lastBottom.svg")
+
+val HeadTailVJustify.icon
+    get() = when (this) {
+        HeadTailVJustify.FIRST_TOP -> HEAD_TAIL_V_JUSTIFY_FIRST_TOP_ICON
+        HeadTailVJustify.FIRST_MIDDLE -> HEAD_TAIL_V_JUSTIFY_FIRST_MIDDLE_ICON
+        HeadTailVJustify.FIRST_BOTTOM -> HEAD_TAIL_V_JUSTIFY_FIRST_BOTTOM_ICON
+        HeadTailVJustify.OVERALL_MIDDLE -> HEAD_TAIL_V_JUSTIFY_OVERALL_MIDDLE_ICON
+        HeadTailVJustify.LAST_TOP -> HEAD_TAIL_V_JUSTIFY_LAST_TOP_ICON
+        HeadTailVJustify.LAST_MIDDLE -> HEAD_TAIL_V_JUSTIFY_LAST_MIDDLE_ICON
+        HeadTailVJustify.LAST_BOTTOM -> HEAD_TAIL_V_JUSTIFY_LAST_BOTTOM_ICON
+    }
+
+
 private val MATCH_EXTENT_WITHIN_BLOCK_ICON = SVGIcon.load("/icons/matchExtent/withinBlock.svg")
 private val MATCH_EXTENT_ACROSS_BLOCKS_ICON = SVGIcon.load("/icons/matchExtent/acrossBlocks.svg")
 
@@ -340,6 +360,7 @@ val Enum<*>.icon
         is HJustify -> icon
         is VJustify -> icon
         is LineHJustify -> icon
+        is HeadTailVJustify -> icon
         is MatchExtent -> icon
         is GridFillingOrder -> icon
         is GridStructure -> icon

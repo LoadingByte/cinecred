@@ -5,6 +5,10 @@ Cinecred Changelog
 1.5.0-SNAPSHOT
 --------------
 
+### Additions
+
+- Added more fine-grained controls for vertical head and tail justification.
+
 
 1.4.1
 -----

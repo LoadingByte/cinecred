@@ -19,7 +19,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 
-class DrawnBody(val defImage: DeferredImage, val firstRowHeight: Double, val lastRowHeight: Double)
+class DrawnBody(val defImage: DeferredImage, val numRows: Int, val firstRowHeight: Double, val lastRowHeight: Double)
 
 
 fun drawBodies(
@@ -203,7 +203,7 @@ private fun drawBodyImageWithGridBodyLayout(
     // Set the width of the body image.
     bodyImage.width = x
 
-    return DrawnBody(bodyImage, rowHeights.first(), rowHeights.last())
+    return DrawnBody(bodyImage, rowHeights.size, rowHeights.first(), rowHeights.last())
 }
 
 
@@ -427,7 +427,7 @@ private fun drawBodyImageWithFlowBodyLayout(
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0.0, 0.0.toY(), 0.0, y, layer = GUIDES)
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0.0.toY(), bodyImageWidth, y, layer = GUIDES)
 
-    return DrawnBody(bodyImage, getLineHeight(lines.first()), getLineHeight(lines.last()))
+    return DrawnBody(bodyImage, lines.size, getLineHeight(lines.first()), getLineHeight(lines.last()))
 }
 
 
@@ -487,11 +487,13 @@ private fun drawBodyImageWithParagraphsBodyLayout(
 
     val bodyImage = DeferredImage(width = bodyImageWidth)
 
-    // Use this to remember the height of the first and the last body row.
+    // Use this to remember the number of body rows and the height of the first and the last body row.
     // Later return these two values alongside the created body image.
+    var numRows = 0
     var firstRowHeight = 0.0
     var lastRowHeight = 0.0
     fun recordRowHeight(h: Double) {
+        numRows++
         if (firstRowHeight == 0.0)
             firstRowHeight = h
         lastRowHeight = h
@@ -550,7 +552,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, 0.0, 0.0.toY(), 0.0, y, layer = GUIDES)
     bodyImage.drawLine(BODY_WIDTH_GUIDE_COLOR, bodyImageWidth, 0.0.toY(), bodyImageWidth, y, layer = GUIDES)
 
-    return DrawnBody(bodyImage, firstRowHeight, lastRowHeight)
+    return DrawnBody(bodyImage, numRows, firstRowHeight, lastRowHeight)
 }
 
 

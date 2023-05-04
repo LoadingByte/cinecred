@@ -85,9 +85,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawShape(x, y, shape, coat, fill, blurRadius))
     }
 
-    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, layer: Layer = FOREGROUND) {
+    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, dash: Boolean = false, layer: Layer = FOREGROUND) {
         if (color.alpha == 0) return
-        addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color))
+        addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, dash))
     }
 
     fun drawRect(
@@ -139,18 +139,18 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             )
             is Instruction.DrawShape -> materializeShape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.shape, insn.coat, insn.fill, universeScaling * insn.blurRadius
+                universeScaling, culling, insn.shape, insn.coat, insn.fill, false, universeScaling * insn.blurRadius
             )
             is Instruction.DrawLine -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
-                Coat.Plain(insn.color), fill = false, blurRadius = 0.0
+                Coat.Plain(insn.color), fill = false, insn.dash, blurRadius = 0.0
             )
             is Instruction.DrawRect -> materializeShape(
                 backend, x, y, universeScaling, culling,
                 Rectangle2D.Double(
                     insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
-                ), Coat.Plain(insn.color), insn.fill, blurRadius = 0.0
+                ), Coat.Plain(insn.color), insn.fill, dash = false, blurRadius = 0.0
             )
             is Instruction.DrawText -> materializeText(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.yBaseline.resolve(elasticScaling),
@@ -166,7 +166,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeShape(
         backend: MaterializationBackend,
         x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        shape: Shape, coat: Coat, fill: Boolean, blurRadius: Double
+        shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double
     ) {
         // It would be a bit complicated to exactly determine which pixels are affected after the blur, so instead, we
         // just add a safeguard buffer to better be sure that not a single blurred pixel is accidentally culled.
@@ -185,7 +185,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val transformedShape = if (shape is Path2D.Float) Path2D.Float(shape, tx) else Path2D.Double(shape, tx)
         val transformedCoat = coat.transform(tx)
         if (blurRadius <= 0.0)
-            backend.materializeShape(transformedShape, transformedCoat, fill)
+            backend.materializeShape(transformedShape, transformedCoat, fill, dash)
         else {
             // For both backends, the only conceivable way to implement blurring appears to be to first draw the shape
             // to an image, blur that, and then to send it to the backend.
@@ -343,7 +343,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawLine(
-            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color
+            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color, val dash: Boolean
         ) : Instruction
 
         class DrawRect(
@@ -362,7 +362,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
 
     private interface MaterializationBackend {
-        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean)
+        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean)
         fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat)
         fun materializePicture(x: Double, y: Double, pic: Picture)
     }
@@ -370,11 +370,17 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private class Graphics2DBackend(private val g2: Graphics2D) : MaterializationBackend {
 
-        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean) {
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
             g2.paint = coat.toPaint()
             if (fill)
                 g2.fill(shape)
-            else
+            else if (dash) {
+                val oldStroke = g2.stroke
+                g2.stroke =
+                    BasicStroke(1f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 8f), 0f)
+                g2.draw(shape)
+                g2.stroke = oldStroke
+            } else
                 g2.draw(shape)
         }
 
@@ -400,7 +406,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             g2.preserveTransform {
                 g2.translate(x, yBaseline)
                 g2.scale(scaling)
-                materializeShape(text.transformedOutline, coat, fill = true)
+                materializeShape(text.transformedOutline, coat, fill = true, dash = false)
             }
         }
 
@@ -504,7 +510,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 cs.stroke()
         }
 
-        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean) {
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
+            check(!dash) { "The PDF backend does not support dashing." }
             cs.saveGraphicsState()
             setCoat(coat, fill, shape.bounds2D)
             cs.transform(Matrix().apply { translate(0f, csHeight); scale(1f, -1f) })

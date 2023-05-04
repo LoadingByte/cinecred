@@ -1,7 +1,5 @@
-import com.loadingbyte.cinecred.DrawImages
-import com.loadingbyte.cinecred.MergeServices
+import com.loadingbyte.cinecred.*
 import com.loadingbyte.cinecred.Platform
-import com.loadingbyte.cinecred.WriteFile
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
@@ -134,8 +132,17 @@ val writeVersionFile by tasks.registering(WriteFile::class) {
     outputFile.set(layout.buildDirectory.file("generated/version/version"))
 }
 
+val drawSplash by tasks.registering(DrawSplash::class) {
+    version.set(project.version.toString())
+    logoFile.set(mainResource("logo.svg"))
+    reguFontFile.set(mainResource("fonts/Titillium-RegularUpright.otf"))
+    semiFontFile.set(mainResource("fonts/Titillium-SemiboldUpright.otf"))
+    outputFile.set(layout.buildDirectory.file("generated/splash/splash.png"))
+}
+
 tasks.processResources {
     from(writeVersionFile)
+    from(drawSplash)
     from("CHANGELOG.md")
     into("licenses") {
         from("LICENSE")
@@ -292,6 +299,9 @@ val allJar by tasks.registering(Jar::class) {
     }
 }
 
+
+fun mainResource(path: String): Provider<RegularFile> =
+    sourceSets.main.map { layout.projectDirectory.file(it.resources.matching { include("/$path") }.singleFile.path) }
 
 // We need to retrofit this property in a hacky and not entirely compliant way because it's sadly not migrated yet.
 val Copy.destDirProvider: Directory

@@ -16,6 +16,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- Launching multiple instances no longer duplicates the welcome hints.
 - While the crash dialog is open, launching another instance no longer brings up
   a new welcome window.
 - Fixed rare crashes caused by numerical inaccuracies when shifting a low-res

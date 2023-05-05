@@ -35,6 +35,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     private lateinit var welcomeView: WelcomeViewComms
 
+    /*
+     * The [commence] method can be called multiple times on the same object. However, some things should only be run
+     * once, for example the hint track. These variables are used to enforce that.
+     */
+    private var alreadyStartedInitialConfiguration = false
+    private var alreadyRanOpenActions = false
     /**
      * When the user clicks on a project opening button multiple times while he is waiting for the project window to
      * open, we do not want this to really trigger multiple project openings, because that would confront him with
@@ -172,6 +178,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         return false
     }
 
+    // Be aware that this method might be called multiple times on the same object!
+    // For example, it happens if a user opens the welcome window multiple times.
     override fun commence(openProjectDir: Path?) {
         fun finishInit(initConfigChangedUILocaleWish: Boolean) {
             // If the program was started for the first time and the user changed the locale during the initial
@@ -185,8 +193,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             // If the user dragged a folder onto the program, try opening that. If opening closed the window, stop here.
             if (openProjectDir != null && tryOpenOrCreateProject(openProjectDir))
                 return
-            // Otherwise, show the welcome window if it is not visible yet and complete its regular initialization.
+            // Otherwise, show the welcome window or, if it is already visible, bring it to the front.
             welcomeView.display()
+            // If the welcome window was previously open, stop now. Otherwise, complete its regular initialization.
+            if (alreadyRanOpenActions)
+                return
+            alreadyRanOpenActions = true
             tryCheckForUpdates()
             if (PersistentStorage.welcomeHintTrackPending)
                 welcomeView.playHintTrack()
@@ -194,7 +206,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
         if (PersistentStorage.havePreferencesBeenSet())
             finishInit(false)
-        else {
+        else if (!alreadyStartedInitialConfiguration) {
+            alreadyStartedInitialConfiguration = true
             // If we are here, the program is started for the first time as no preferences have been saved previously.
             // Lock all other tabs and let the user initially configure all preferences. This lets him specify whether
             // he wants update checks and hints before the program actually contacts the server or starts a hint track.

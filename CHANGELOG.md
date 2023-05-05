@@ -19,6 +19,7 @@ Cinecred Changelog
 - Launching multiple instances no longer duplicates the welcome hints.
 - While the crash dialog is open, launching another instance no longer brings up
   a new welcome window.
+- When a window is too tiny, a hint inside it no longer causes a crash.
 - Fixed rare crashes caused by numerical inaccuracies when shifting a low-res
   page preview image.
 - Clicking a link in the missing Ghostscript dialog no longer causes a crash.

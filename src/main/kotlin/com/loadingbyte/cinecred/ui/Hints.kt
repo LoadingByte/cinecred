@@ -15,6 +15,8 @@ import java.awt.geom.Area
 import java.awt.geom.Path2D
 import java.awt.geom.Rectangle2D
 import javax.swing.*
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 
@@ -143,9 +145,10 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
             Side.NONE -> Point(centeredX, centeredY)
         }
         // Ensure that the popup stays inside the window.
+        // We use min+max instead of coerceIn so that a negative upper bound doesn't cause an exception.
         popup.location = Point(
-            loc.x.coerceIn(0, layeredPane.width - popupSize.width),
-            loc.y.coerceIn(0, layeredPane.height - popupSize.height)
+            max(0, min(loc.x, layeredPane.width - popupSize.width)),
+            max(0, min(loc.y, layeredPane.height - popupSize.height))
         )
     }
 

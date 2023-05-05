@@ -29,6 +29,7 @@ import java.awt.*
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.*
 import java.util.logging.Formatter
 import javax.swing.*
@@ -40,6 +41,7 @@ private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
 var demoCallback: (() -> Unit)? = null
 
 private lateinit var masterCtrl: MasterCtrlComms
+private val hasCrashed = AtomicBoolean()
 
 
 fun main(args: Array<String>) {
@@ -167,6 +169,10 @@ private fun mainSwing(args: Array<String>) {
 
 
 private fun openUI(args: Array<String>) {
+    // If the program has crashed and the crash dialog is still open, launching another instance (which results in a
+    // call to this method) should no longer open the welcome window.
+    if (hasCrashed.get())
+        return
     // If the user dragged a folder onto the program, try opening that, otherwise show the regular welcome window.
     val openProjectDir = if (args.isEmpty()) null else args[0].toPathSafely()?.absolute()
     masterCtrl.showWelcomeFrame(openProjectDir)
@@ -176,6 +182,7 @@ private fun openUI(args: Array<String>) {
 private object UncaughtHandler : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(t: Thread, e: Throwable) {
+        hasCrashed.set(true)
         LOGGER.error("Uncaught exception. Will terminate the program.", e)
         SwingUtilities.invokeLater {
             sendReport()

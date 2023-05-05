@@ -5,6 +5,10 @@ Cinecred Changelog
 1.4.1-SNAPSHOT
 --------------
 
+### Additions
+
+- Added a native ARM version for macOS.
+
 ### Fixes
 
 - Problems while scanning file trees, e.g., loops, are now gracefully ignored.

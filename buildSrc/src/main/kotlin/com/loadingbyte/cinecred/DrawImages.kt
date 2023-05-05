@@ -26,7 +26,7 @@ abstract class DrawImages : DefaultTask() {
     @get:Input
     abstract val version: Property<String>
     @get:Input
-    abstract val forPlatform: Property<Platform>
+    abstract val forOS: Property<Platform.OS>
     @get:InputFile
     abstract val logoFile: RegularFileProperty
     @get:InputFile
@@ -46,8 +46,8 @@ abstract class DrawImages : DefaultTask() {
         val semiFont = Font.createFonts(semiFontFile.get().asFile)[0]!!
         val boldFont = Font.createFonts(boldFontFile.get().asFile)[0]!!
 
-        when (forPlatform.get()) {
-            Platform.WINDOWS -> {
+        when (forOS.get()) {
+            Platform.OS.WINDOWS -> {
                 logo.transcode(16, 20, 24, 32, 40, 48, 64, 256, file = outputDir.resolve("icon.ico"))
                 buildImage(outputDir.resolve("banner.bmp"), 493, 58, BufferedImage.TYPE_INT_RGB) { g2 ->
                     g2.color = Color.WHITE
@@ -64,7 +64,7 @@ abstract class DrawImages : DefaultTask() {
                     g2.drawCenteredString(version, 0, 204, 165)
                 }
             }
-            Platform.MAC_OS -> {
+            Platform.OS.MAC -> {
                 // Note: Currently, icons smaller than 128 written into an ICNS file by TwelveMonkeys cannot be
                 // properly parsed by macOS. We have to leave out those sizes to avoid glitches.
                 logo.transcode(128, 256, 512, 1024, margin = 0.055, file = outputDir.resolve("icon.icns"))
@@ -81,7 +81,7 @@ abstract class DrawImages : DefaultTask() {
                 buildBgImage(outputDir.resolve("background-light.png"), Color.BLACK)
                 buildBgImage(outputDir.resolve("background-dark.png"), Color.WHITE)
             }
-            Platform.LINUX -> {
+            Platform.OS.LINUX -> {
                 logoFile.copyTo(outputDir.resolve("cinecred.svg"), overwrite = true)
                 logo.transcode(48, file = outputDir.resolve("cinecred.png"))
             }

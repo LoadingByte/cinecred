@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <installer-gui-script minSpecVersion="1">
   <title>Cinecred</title>
-  <options customize="never" require-scripts="false" hostArchitectures="x86_64"/>
+  <options customize="never" require-scripts="false" hostArchitectures="@ARCH@"/>
   <pkg-ref id="Cinecred" version="@VERSION">Cinecred.pkg</pkg-ref>
   <choice id="Cinecred" visible="false">
     <pkg-ref id="Cinecred"/>

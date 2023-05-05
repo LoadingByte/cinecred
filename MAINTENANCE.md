@@ -12,8 +12,9 @@ Cinecred requires JDK 17. Gradle's toolchain mechanism enforces that version,
 but automatic JDK downloading is disabled.
 
 Depending on your platform, use the command `gradle runOnWindows`,
-`gradle runOnMacOS`, or `gradle runOnLinux` to build the software, collect all
-native libraries for the platform, and then run it with the necessary arguments.
+`gradle runOnMacX86`, `gradle runOnMacARM`, or `gradle runOnLinux` to build the
+software, collect all native libraries for the platform, and then run it with
+the necessary arguments.
 
 
 Releasing
@@ -26,8 +27,8 @@ to the various distribution channels.
    This will create three folders in `build/packaging/`, one for each OS.
 2. Now copy the Windows folder onto a Windows machine and run the `package.bat`
    script there to build a Windows installer.
-   Analogously proceed with macOS and Linux, but use the `package.sh` script for
-   these.
+   Analogously proceed with macOS x86, macOS ARM, and Linux, but use the
+   `package.sh` script for these.
     * On Linux, you need the following tools to build DEB and RPM
       packages: `dpkg-deb`, `rpmbuild`, `rpmsign`
     * To sign the RPM, you need the `repo.loadingbyte.com` PGP key and the
@@ -35,7 +36,8 @@ to the various distribution channels.
       file: `%_signature gpg`, `%_gpg_name repo.loadingbyte.com`
 3. Collect the resulting packaged files from the respective `out/` folders into
    the `publishing/` folder in this repository.
-   There are 2 files for Windows, 2 files for macOS, and 4 files for Linux.
+   There are 2 files for Windows, 2 files for macOS x86, 2 files for macOS ARM,
+   and 4 files for Linux.
 4. Run the `publish-nexus.sh` script to upload all binaries
    to `repo.loadingbyte.com`.
 5. Run the `publish-aur.sh` script to prepare an update of the PKGBUILD script
@@ -52,6 +54,8 @@ come with JAR dependencies, but others need to be rebuilt manually for each
 update, which means:
 
 - Building a dynamic library for each platform, which goes into `src/natives`.
+    - For macOS, we build on and for macOS 11 because JavaCPP does that too.
+    - Also on macOS, cross-compiling for ARM on x86 works flawlessly.
 - Generating Java bindings using jextract, which go into `src/main/java`.
 - Updating the license file in `src/main/resources/licenses/libraries`.
 
@@ -67,7 +71,10 @@ Compile it on each supported platform using the following commands:
     cl /LD /O2 /GL /GR- /D"HB_EXTERN=__declspec(dllexport)" <MACROS> <HB_DIR>\src\harfbuzz.cc
 
     macOS x86_64:
-    clang -dynamiclib -s -std=c++11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
+    clang -dynamiclib -s -std=c++11 -target x86_64-apple-macos11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
+
+    macOS arm64:
+    clang -dynamiclib -s -std=c++11 -target arm64-apple-macos11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.dylib
 
     Linux x86_64:
     gcc -shared -s -std=c++11 -O2 -fPIC -flto -fno-rtti -fno-exceptions -DHAVE_PTHREAD <MACROS> <HB_DIR>/src/harfbuzz.cc -o libharfbuzz.so
@@ -191,12 +198,14 @@ Change that definition to `#define __declspec(dllexport)`. This will make the
 Windows DLL actually export symbols.
 
 Next, navigate a bash shell to `src/zimg/`. There, run the following bash script
-three times with the arguments `windows`/`mac`/`linux`. Each time, you obtain a
-series of commands that build the library on that platform. Those commands need
-to be executed in a command prompt on that platform again in `src/zimg/`.
+four times with the arguments `windows`/`mac`/`mac arm64`/`linux`. Each time,
+you obtain a series of commands that build the library on that platform. Those
+commands need to be executed in a command prompt on that platform again in
+`src/zimg/`.
 
     #!/bin/bash
 
+    ARCH="${2:-x86_64}"
     if [[ "$1" == windows ]]; then
       COMP="clang-cl /c /EHsc /O2 /GS- -flto /DZIMG_X86 /DZIMG_X86_AVX512 /DNDEBUG /I. -Wno-assume"
       LINK="lld-link /DLL /OUT:zimg.dll"
@@ -205,20 +214,22 @@ to be executed in a command prompt on that platform again in `src/zimg/`.
       declare -A SIMD_FLAVORS=([sse]="" [sse2]="" [avx]="/arch:AVX" [f16c_ivb]="/arch:AVX -mf16c" [avx2]="/arch:AVX2" [avx512]="/arch:AVX512" [avx512_vnni]="/arch:AVX512 -mavx512vnni")
     else
       if [[ "$1" == mac ]]; then
-        COMP="clang++"
-        LINK="clang++ -dynamiclib -o libzimg.dylib"
+        COMP="clang++ -target $ARCH-apple-macos11"
+        LINK="clang++ -target $ARCH-apple-macos11 -dynamiclib -o libzimg.dylib"
       elif [[ "$1" == linux ]]; then
         COMP="g++"
         LINK="g++ -shared -o libzimg.so"
       fi
-      COMP="$COMP -c -std=c++14 -O2 -fPIC -flto -fvisibility=hidden -DZIMG_X86 -DZIMG_X86_AVX512 -DNDEBUG -I."
+      COMP="$COMP -c -std=c++14 -O2 -fPIC -flto -fvisibility=hidden $([[ "$ARCH" == x86_64 ]] && echo "-DZIMG_X86 -DZIMG_X86_AVX512" || echo "-DZIMG_ARM") -DNDEBUG -I."
       LINK="$LINK -s"
       OBJ="o"
-      declare -A SIMD_FLAVORS=([sse]="-msse" [sse2]="-msse2" [avx]="-mavx -mtune=sandybridge" [f16c_ivb]="-mavx -mf16c -mtune=ivybridge" [avx2]="-mavx2 -mf16c -mfma -mtune=haswell" [avx512]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mtune=skylake-avx512" [avx512_vnni]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512vnni -mtune=cascadelake")
+      if [[ "$ARCH" == x86_64 ]]; then
+        declare -A SIMD_FLAVORS=([sse]="-msse" [sse2]="-msse2" [avx]="-mavx -mtune=sandybridge" [f16c_ivb]="-mavx -mf16c -mtune=ivybridge" [avx2]="-mavx2 -mf16c -mfma -mtune=haswell" [avx512]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mtune=skylake-avx512" [avx512_vnni]="-mavx512f -mavx512cd -mavx512vl -mavx512bw -mavx512dq -mavx512vnni -mtune=cascadelake")
+      fi
     fi
 
     shopt -s expand_aliases
-    alias FINDCPP="find -not -path '*/arm/*' -name '*.cpp'"
+    alias FINDCPP="find -not -path '*/$([[ "$ARCH" == x86_64 ]] && echo "arm" || echo "x86")/*' -name '*.cpp'"
 
     echo $COMP $(FINDCPP $(for flavor in ${!SIMD_FLAVORS[@]}; do echo -not -name "*$flavor.cpp"; done))
     for flavor in ${!SIMD_FLAVORS[@]}; do

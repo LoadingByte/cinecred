@@ -3,11 +3,11 @@ pkgname=cinecred
 pkgver=@VERSION@
 pkgrel=1
 pkgdesc="@DESCRIPTION@"
-arch=('x86_64')
+arch=('@ARCH@')
 url="@URL@"
 license=('GPL3')
-source=("https://repo.loadingbyte.com/repository/maven-public/com/loadingbyte/cinecred\
-/$pkgver/cinecred-$pkgver-linux-x86_64.tar.gz")
+source=("https://repo.loadingbyte.com/repository/maven-releases/com/loadingbyte/cinecred\
+/$pkgver/cinecred-$pkgver-linux-@ARCH@.tar.gz")
 sha256sums=('{{SHA_256_HASH}}')
 
 package() {

@@ -1,6 +1,7 @@
 import com.loadingbyte.cinecred.*
 import com.loadingbyte.cinecred.Platform
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
 
@@ -82,8 +83,8 @@ dependencies {
     implementation("org.bytedeco", "javacpp", javacppVersion)
     implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
     for (platform in Platform.values()) {
-        natives("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slug)
-        natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slug}-gpl")
+        natives("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slugDeps)
+        natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugDeps}-gpl")
     }
 
     // UI
@@ -159,14 +160,14 @@ tasks.processResources {
 }
 
 
-val platformNativesTasks = Platform.values().map { platform ->
-    tasks.register<Sync>("${platform.lowercaseLabel}Natives") {
+val platformNativesTasks = Platform.values().associateWith { platform ->
+    tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory
         from(layout.projectDirectory.dir("src/main/natives/${platform.slug}"))
         for (dep in natives.resolvedConfiguration.resolvedArtifacts)
             from(zipTree(dep.file)) {
-                include("**/*${platform.slug}*/**/*.${platform.nativesExt}*")
-                include("**/*${platform.slug}*.${platform.nativesExt}*")
+                include("**/*${platform.slugDeps}*/**/*.${platform.os.nativesExt}*")
+                include("**/*${platform.slugDeps}*.${platform.os.nativesExt}*")
                 exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
             }
         into(layout.buildDirectory.dir("natives/${platform.slug}"))
@@ -176,25 +177,25 @@ val platformNativesTasks = Platform.values().map { platform ->
 }
 
 
-Platform.values().map { platform ->
-    val platformNatives = platformNativesTasks[platform.ordinal]
+for (platform in Platform.values()) {
+    val platformNatives = platformNativesTasks.getValue(platform)
     val mainClass_ = mainClass
     val jvmArgs_ = listOf(
         "-Djava.library.path=${platformNatives.get().destinationDir}",
         "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
         "--add-modules", addModules.joinToString(",")
     ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
-    tasks.register<JavaExec>("runOn${platform.uppercaseLabel}") {
+    tasks.register<JavaExec>("runOn${platform.label.capitalized()}") {
         group = "Execution"
-        description = "Runs the program on ${platform.uppercaseLabel}."
+        description = "Runs the program on ${platform.label.capitalized()}."
         dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
         mainClass.set(mainClass_)
         jvmArgs = jvmArgs_
     }
-    tasks.register<JavaExec>("runDemoOn${platform.uppercaseLabel}") {
+    tasks.register<JavaExec>("runDemoOn${platform.label.capitalized()}") {
         group = "Execution"
-        description = "Runs the demo on ${platform.uppercaseLabel}."
+        description = "Runs the demo on ${platform.label.capitalized()}."
         dependsOn(platformNatives)
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
         mainClass.set("com.loadingbyte.cinecred.DemoMain")
@@ -203,25 +204,28 @@ Platform.values().map { platform ->
 }
 
 
-val preparePlatformPackagingTasks = Platform.values().map { platform ->
-    // Draw the images that are needed for the platform.
-    val drawPlatformImages = tasks.register<DrawImages>("draw${platform.uppercaseLabel}Images") {
+val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
+    // Draw the images that are needed for the OS.
+    tasks.register<DrawImages>("draw${os.slug.capitalized()}Images") {
         version.set(project.version.toString())
-        forPlatform.set(platform)
-        logoFile.set(tasks.processResources.map { it.destDirProvider.file("logo.svg") })
-        semiFontFile.set(tasks.processResources.map { it.destDirProvider.file("fonts/Titillium-SemiboldUpright.otf") })
-        boldFontFile.set(tasks.processResources.map { it.destDirProvider.file("fonts/Titillium-BoldUpright.otf") })
-        outputDir.set(layout.buildDirectory.dir("generated/packaging/${platform.slug}"))
+        forOS.set(os)
+        logoFile.set(mainResource("logo.svg"))
+        semiFontFile.set(mainResource("fonts/Titillium-SemiboldUpright.otf"))
+        boldFontFile.set(mainResource("fonts/Titillium-BoldUpright.otf"))
+        outputDir.set(layout.buildDirectory.dir("generated/packaging/${os.slug}"))
     }
+}
 
+
+val preparePlatformPackagingTasks = Platform.values().map { platform ->
     // Collect all files needed for packaging in a folder.
-    val preparePlatformPackaging = tasks.register<Sync>("prepare${platform.uppercaseLabel}Packaging") {
+    val preparePlatformPackaging = tasks.register<Sync>("prepare${platform.label.capitalized()}Packaging") {
         doFirst {
             if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
                 throw GradleException("Non-release versions cannot be packaged.")
         }
         group = "Packaging Preparation"
-        description = "Prepares files for building a ${platform.uppercaseLabel} package on that platform."
+        description = "Prepares files for building a ${platform.label.capitalized()} package on that platform."
         into(layout.buildDirectory.dir("packaging/${platform.slug}"))
         // Copy the packaging scripts and fill in some variables. Note that we
         // don't select the scripts by platform here because that's not worth the effort.
@@ -235,20 +239,25 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                         " --add-modules ${addModules.joinToString(",")} " +
                         addOpens.joinToString(" ") { "--add-opens $it=ALL-UNNAMED" } +
                         " -splash:\$APPDIR/$splashScreen $javaOptions",
+                "OS" to platform.os.slug,
+                "ARCH" to platform.arch.slug,
+                "ARCH_TEMURIN" to platform.arch.slugTemurin,
+                "ARCH_WIX" to platform.arch.slugWix,
+                "ARCH_DEBIAN" to platform.arch.slugDebian,
                 "DESCRIPTION" to "Create beautiful film credits without the pain",
                 "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
                 "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "felix@cinecred.com",
-                "LEGAL_PATH_RUNTIME" to when (platform) {
-                    Platform.WINDOWS -> "runtime\\legal"
-                    Platform.MAC_OS -> "runtime/Contents/Home/legal"
-                    Platform.LINUX -> "lib/runtime/legal"
+                "LEGAL_PATH_RUNTIME" to when (platform.os) {
+                    Platform.OS.WINDOWS -> "runtime\\legal"
+                    Platform.OS.MAC -> "runtime/Contents/Home/legal"
+                    Platform.OS.LINUX -> "lib/runtime/legal"
                 },
-                "LEGAL_PATH_APP" to when (platform) {
-                    Platform.WINDOWS -> "app\\$mainJarName"
-                    Platform.MAC_OS -> "app/$mainJarName"
-                    Platform.LINUX -> "lib/app/$mainJarName"
+                "LEGAL_PATH_APP" to when (platform.os) {
+                    Platform.OS.WINDOWS -> "app\\$mainJarName"
+                    Platform.OS.MAC -> "app/$mainJarName"
+                    Platform.OS.LINUX -> "lib/app/$mainJarName"
                 }
             )
             filter<ReplaceTokens>("tokens" to tokens)
@@ -256,11 +265,11 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
         into("app") {
             from(tasks.jar)
             from(configurations.runtimeClasspath)
-            from(platformNativesTasks[platform.ordinal])
+            from(platformNativesTasks[platform])
             from(tasks.processResources.map { it.destDirProvider.file(splashScreen) })
         }
         into("images") {
-            from(drawPlatformImages)
+            from(drawOSImagesTasks[platform.os])
         }
     }
 

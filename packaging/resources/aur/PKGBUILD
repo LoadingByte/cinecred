@@ -20,4 +20,7 @@ package() {
 	mv "$pkgdir/opt/cinecred/cinecred.svg" "$_"
 	mkdir -p "$pkgdir/usr/share/icons/hicolor/48x48/apps/"
 	mv "$pkgdir/opt/cinecred/cinecred.png" "$_"
+
+	mkdir -p "$pkgdir/usr/bin/"
+	ln -s /opt/cinecred/bin/cinecred "$_"
 }

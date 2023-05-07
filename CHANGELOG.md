@@ -8,6 +8,7 @@ Cinecred Changelog
 ### Additions
 
 - Added a native ARM version for macOS.
+- Added a launcher to `/usr/bin` on Linux.
 
 ### Fixes
 

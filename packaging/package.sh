@@ -64,6 +64,8 @@ elif [[ "@OS@" == linux ]]; then
   cp images/cinecred.svg "$_"
   mkdir -p work/tree/usr/share/icons/hicolor/48x48/apps/
   cp images/cinecred.png "$_"
+  mkdir -p work/tree/usr/bin/
+  ln -s /opt/cinecred/bin/cinecred "$_"
 
   echo "Assembling DEB package..."
   cp -r work/tree/ work/deb/

@@ -277,21 +277,40 @@ class Page(
 )
 
 
-class Stage(
-    val style: PageStyle,
-    val segments: PersistentList<Segment>,
+sealed interface Stage {
+
+    val style: PageStyle
     val vGapAfterPx: Double
+
+    class Card(
+        override val style: PageStyle,
+        val compounds: PersistentList<Compound>,
+        override val vGapAfterPx: Double
+    ) : Stage
+
+    class Scroll(
+        override val style: PageStyle,
+        val laterals: PersistentList<Lateral>,
+        override val vGapAfterPx: Double
+    ) : Stage
+
+}
+
+
+class Compound(
+    val vOffsetPx: Double,
+    val laterals: PersistentList<Lateral>
 )
 
 
-class Segment(
+class Lateral(
     val spines: PersistentList<Spine>,
     val vGapAfterPx: Double
 )
 
 
 class Spine(
-    val posOffsetPx: Double,
+    val hOffsetPx: Double,
     val blocks: PersistentList<Block>
 )
 

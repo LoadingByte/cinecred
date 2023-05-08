@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
-import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
@@ -22,7 +21,6 @@ import kotlin.math.floor
 
 
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
-private class DrawnSpine(val defImage: DeferredImage, val spineXInImage: Double)
 
 
 fun drawPages(project: Project): List<DrawnPage> {
@@ -38,20 +36,31 @@ fun drawPages(project: Project): List<DrawnPage> {
     val blocks = buildList {
         for (page in pages)
             for (stage in page.stages)
-                for (segment in stage.segments)
-                    for (spine in segment.spines)
-                        addAll(spine.blocks)
+                when (stage) {
+                    is Stage.Card ->
+                        for (compound in stage.compounds)
+                            for (lateral in compound.laterals)
+                                for (spine in lateral.spines)
+                                    addAll(spine.blocks)
+                    is Stage.Scroll ->
+                        for (lateral in stage.laterals)
+                            for (spine in lateral.spines)
+                                addAll(spine.blocks)
+                }
     }
     val drawnBodies = drawBodies(project.styling.contentStyles, project.styling.letterStyles, textCtx, blocks)
     val drawnBlocks = drawBlocks(project.styling.contentStyles, textCtx, drawnBodies, blocks)
 
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
-    var stageImages: MutableMap<Stage, DeferredImage> = HashMap()
+    var drawnStages: MutableMap<Stage, DrawnStage> = HashMap()
     for (page in pages)
-        page.stages.withIndex().associateTo(stageImages) { (stageIdx, stage) ->
+        for ((stageIdx, stage) in page.stages.withIndex()) {
             val prevStage = page.stages.getOrNull(stageIdx - 1)
             val nextStage = page.stages.getOrNull(stageIdx + 1)
-            stage to drawStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
+            drawnStages[stage] = when (stage) {
+                is Stage.Card -> drawCardStage(global.resolution, drawnBlocks, stage)
+                is Stage.Scroll -> drawScrollStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
+            }
         }
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
@@ -62,10 +71,10 @@ fun drawPages(project: Project): List<DrawnPage> {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
         val prelimStageLayouts = HashMap<Stage, StageLayout>()
         for (page in pages)
-            prelimStageLayouts.putAll(layoutStages(global.resolution, stageImages, page).second)
+            prelimStageLayouts.putAll(layoutStages(global.resolution, drawnStages, page).second)
         // Use that information to scale the vertical gaps.
-        stageImages = matchRuntime(
-            pages, stageImages, prelimStageLayouts, pageTopStages, pageBotStages,
+        drawnStages = matchRuntime(
+            pages, drawnStages, prelimStageLayouts, pageTopStages, pageBotStages,
             global.runtimeFrames, runtimeGroups
         )
     }
@@ -73,109 +82,42 @@ fun drawPages(project: Project): List<DrawnPage> {
     // Finally, do the real layout pass with potentially changed stage images and combine the stage images
     // to page images.
     return pages.map { page ->
-        val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, stageImages, page)
-        val pageImage = drawPage(global, stageImages, stageLayouts, pageTopStages, pageBotStages, page, pageImageHeight)
+        val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, drawnStages, page)
+        val pageImage = drawPage(global, drawnStages, stageLayouts, pageTopStages, pageBotStages, page, pageImageHeight)
         DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
 }
 
 
-private fun drawStage(
-    resolution: Resolution,
-    drawnBlocks: Map<Block, DrawnBlock>,
-    stage: Stage,
-    prevStage: Stage?,
-    nextStage: Stage?
-): DeferredImage {
-    val stageImage = DeferredImage(width = resolution.widthPx.toDouble())
-    var y = 0.0.toY()
-
-    // If this stage is a scroll stage is preceded by a card stage, add the vertical gap behind the card stage to the
-    // front of this stage because card stage images are not allowed to have extremal vertical gaps baked into them.
-    if (stage.style.behavior != CARD && prevStage != null && prevStage.style.behavior == CARD)
-        y += prevStage.vGapAfterPx.toElasticY()
-
-    for ((segmentIdx, segment) in stage.segments.withIndex()) {
-        var maxHeight = 0.0.toY()
-        for (spine in segment.spines) {
-            val drawnSpine = drawSpine(drawnBlocks, spine)
-            val spineXInPageImage = resolution.widthPx / 2.0 + spine.posOffsetPx
-            val x = spineXInPageImage - drawnSpine.spineXInImage
-            stageImage.drawDeferredImage(drawnSpine.defImage, x, y)
-            maxHeight = maxHeight.max(drawnSpine.defImage.height)
-        }
-        y += maxHeight
-        if (segmentIdx != stage.segments.lastIndex)
-            y += segment.vGapAfterPx.toElasticY()
-    }
-
-    // If this stage is a scroll stage and not the last stage on the page, add the gap behind it to its image.
-    if (stage.style.behavior != CARD && nextStage != null)
-        y += stage.vGapAfterPx.toElasticY()
-
-    // Set the stage image's height.
-    stageImage.height = y
-
-    return stageImage
-}
-
-
-private fun drawSpine(
-    drawnBlocks: Map<Block, DrawnBlock>,
-    spine: Spine
-): DrawnSpine {
-    // Combine the block images of the blocks that are attached to the spine to a spine image.
-    val spineXInSpineImage = spine.blocks.maxOf { block -> drawnBlocks.getValue(block).spineXInImage }
-    val spineImageWidth = spineXInSpineImage +
-            spine.blocks.maxOf { block -> drawnBlocks.getValue(block).run { defImage.width - spineXInImage } }
-    val spineImage = DeferredImage(width = spineImageWidth)
-    var y = 0.0.toY()
-    for ((blockIdx, block) in spine.blocks.withIndex()) {
-        val drawnBlock = drawnBlocks.getValue(block)
-        val x = spineXInSpineImage - drawnBlock.spineXInImage
-        spineImage.drawDeferredImage(drawnBlock.defImage, x, y)
-        y += drawnBlock.defImage.height
-        if (blockIdx != spine.blocks.lastIndex)
-            y += maxOf(block.vGapAfterPx, block.style.vMarginPx, spine.blocks[blockIdx + 1].style.vMarginPx)
-                .toElasticY()
-    }
-    // Set the spine image's height.
-    spineImage.height = y
-
-    // Draw a guide that shows the spine position.
-    spineImage.drawLine(SPINE_GUIDE_COLOR, spineXInSpineImage, 0.0.toY(), spineXInSpineImage, y, layer = GUIDES)
-
-    return DrawnSpine(spineImage, spineXInSpineImage)
-}
-
-
 private fun layoutStages(
     resolution: Resolution,
-    stageImages: Map<Stage, DeferredImage>,
+    drawnStages: Map<Stage, DrawnStage>,
     page: Page
 ): Pair<Y, Map<Stage, StageLayout>> {
+    data class StageRange(val top: Y, val bot: Y)
+
     // Determine each stage's top and bottom y coordinates in the future page image.
     // Also find the height of the whole future page image if that is given explicitly.
-    val stageImageBounds = mutableListOf<Pair<Y, Y>>()
+    val stageRanges = mutableListOf<StageRange>()
     var pageImageHeight = 0.0.toY()
     var y = 0.0.toY()
     for ((stageIdx, stage) in page.stages.withIndex()) {
-        val stageHeight = stageImages.getValue(stage).height
-        // Special handling for card stages...
+        val drawnStage = drawnStages.getValue(stage)
+        val stageHeight = drawnStage.defImage.height
+        // Special handling for card stages:
+        // If this card stage is the first and/or the last stage, make sure that there is extra padding below and above
+        // the card stage such that its content is vertically positioned as requested by the user.
+        // Notice that as scrolling from/to a card starts/ends at the card's center, the padding is irrelevant for
+        // runtime matching and can hence be rigid.
         if (stage.style.behavior == CARD) {
-            // The amount of padding that needs to be added above and below the card's stage image such that
-            // it is centered on the screen. Notice that as scrolling from/to a card starts/ends at the card's center,
-            // the padding is irrelevant for runtime matching and can hence be rigid.
-            val cardPaddingHeight = (resolution.heightPx - stageHeight.resolve()) / 2.0
-            // If this card stage is the first and/or the last stage, make sure that there is extra padding below
-            // and above the card stage such that its content is centered vertically.
+            val middleY = drawnStage.middleYInImage!!.resolve()
             if (stageIdx == 0)
-                y += cardPaddingHeight
+                y += resolution.heightPx / 2.0 - middleY
             if (stageIdx == page.stages.lastIndex)
-                pageImageHeight += cardPaddingHeight
+                pageImageHeight += resolution.heightPx / 2.0 - (stageHeight.resolve() - middleY)
         }
         // Record the stage content's tightest top and bottom y coordinates in the overall page image.
-        stageImageBounds.add(Pair(y, y + stageHeight))
+        stageRanges.add(StageRange(y, y + stageHeight))
         // Advance to the next stage image.
         y += stageHeight
     }
@@ -193,19 +135,21 @@ private fun layoutStages(
     //         the beginning of the scroll.
     var nextScrollInitAdvance = Double.NaN
     val stageInfo = page.stages.mapIndexed { stageIdx, stage ->
-        val (topY, botY) = stageImageBounds[stageIdx]
+        val (topY, botY) = stageRanges[stageIdx]
         when (stage.style.behavior) {
-            CARD -> DrawnStageInfo.Card((topY + botY) / 2.0)
+            CARD -> DrawnStageInfo.Card(topY + drawnStages.getValue(stage).middleYInImage!!)
             SCROLL -> {
-                val prevStageBehavior = page.stages.getOrNull(stageIdx - 1)?.run { style.behavior }
-                val nextStageBehavior = page.stages.getOrNull(stageIdx + 1)?.run { style.behavior }
+                val prevStage = page.stages.getOrNull(stageIdx - 1)
+                val nextStage = page.stages.getOrNull(stageIdx + 1)
+                val prevStageBehavior = prevStage?.style?.behavior
+                val nextStageBehavior = nextStage?.style?.behavior
                 // Find the scroll start and end y coordinates.
                 val scrollStartY = when (prevStageBehavior) {
-                    CARD -> stageImageBounds[stageIdx - 1].let { (aTopY, aBotY) -> (aTopY + aBotY) / 2.0 }
+                    CARD -> stageRanges[stageIdx - 1].top + drawnStages.getValue(prevStage).middleYInImage!!
                     SCROLL, null -> topY - resolution.heightPx / 2.0
                 }
                 val scrollStopY = when (nextStageBehavior) {
-                    CARD -> stageImageBounds[stageIdx + 1].let { (bTopY, bBotY) -> (bTopY + bBotY) / 2.0 }
+                    CARD -> stageRanges[stageIdx + 1].top + drawnStages.getValue(nextStage).middleYInImage!!
                     SCROLL -> botY - resolution.heightPx / 2.0
                     null -> botY + resolution.heightPx / 2.0
                 }
@@ -255,7 +199,7 @@ private fun layoutStages(
     }
 
     val stageLayouts = page.stages.indices.associate { stageIdx ->
-        page.stages[stageIdx] to StageLayout(stageImageBounds[stageIdx].first, stageInfo[stageIdx])
+        page.stages[stageIdx] to StageLayout(stageRanges[stageIdx].top, stageInfo[stageIdx])
     }
     return Pair(pageImageHeight, stageLayouts)
 }
@@ -263,13 +207,13 @@ private fun layoutStages(
 
 private fun matchRuntime(
     pages: List<Page>,
-    stageImages: Map<Stage, DeferredImage>,
+    drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
     pageTopStages: Set<Stage>,
     pageBotStages: Set<Stage>,
     globalDesiredFrames: Opt<Int>,
     runtimeGroups: List<RuntimeGroup>
-): MutableMap<Stage, DeferredImage> {
+): MutableMap<Stage, DrawnStage> {
     // Prepare two maps which enable simple access to the two stages before and after any scroll stage.
     val prevStages = HashMap<Stage, Stage>()
     val nextStages = HashMap<Stage, Stage>()
@@ -328,12 +272,12 @@ private fun matchRuntime(
     }
 
     // Run the runtime matching.
-    val (adjustedStageImages, shortfall) =
-        matchRuntime(pages, stageImages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups)
+    val (adjustedDrawnStages, shortfall) =
+        matchRuntime(pages, drawnStages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups)
     // If there is no global runtime adjustment happening (either because it is deactivated or because there are no
     // scroll stages remaining), or if all runtimes were matched perfectly, return the result
     if (globalGroup == null || shortfall == 0)
-        return adjustedStageImages
+        return adjustedDrawnStages
 
     // If we are here, shortfall is non-zero, which means that some stages did not exactly attain their desired runtime.
     // Apart from some very rare situations where an exact match is impossible, this means that some runtime groups have
@@ -343,19 +287,19 @@ private fun matchRuntime(
     shrinkGroups.remove(globalGroup)
     expandGroups.remove(globalGroup)
     addGroup(remStages, globalGroupFrames + shortfall)
-    return matchRuntime(pages, stageImages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups).first
+    return matchRuntime(pages, drawnStages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups).first
 }
 
 
 private fun matchRuntime(
     pages: List<Page>,
-    stageImages: Map<Stage, DeferredImage>,
+    drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
     prevStages: Map<Stage, Stage>,
     nextStages: Map<Stage, Stage>,
     shrinkGroups: Set<RuntimeGroup>,
     expandGroups: Set<RuntimeGroup>
-): Pair<MutableMap<Stage, DeferredImage>, Int> {
+): Pair<MutableMap<Stage, DrawnStage>, Int> {
     // Naturally, we do not modify the vertical gaps of standalone cards. Further, we only adjust the gaps of a melted
     // card if it either borders exactly one scroll stage (in which case it is basically treated exactly the same as the
     // scroll stage) or if it borders two scroll stages which both need to shrink or both need to expand (in which case
@@ -378,14 +322,14 @@ private fun matchRuntime(
                     (prevStage !in expandGroups || nextStage !in expandGroups)
                 ) {
                     frozenCards.add(card)
-                    stageImages.getValue(card).apply { height = height.resolve().toY() }
+                    drawnStages.getValue(card).defImage.apply { height = height.resolve().toY() }
                 }
             }
         }
 
     // Now comes the real deal: for the groups which shrink and for those who expand separately, we collectively match
     // the desired runtime.
-    val img = HashMap(stageImages)
+    val img = HashMap(drawnStages)
     var shortfall = 0
     shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(shrinkGroups), frozenCards)
     shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(expandGroups), frozenCards)
@@ -398,7 +342,7 @@ private fun matchRuntimeInOneDir(
     prevStages: Map<Stage, Stage>,
     nextStages: Map<Stage, Stage>,
     // Manipulated collections:
-    stageImages: MutableMap<Stage, DeferredImage>,
+    drawnStages: MutableMap<Stage, DrawnStage>,
     groups: MutableSet<RuntimeGroup>,
     frozenCards: MutableSet<Stage>
 ): Int {
@@ -410,8 +354,11 @@ private fun matchRuntimeInOneDir(
     fun tryFreezeCard(card: Stage, elasticScaling: Double) {
         if (card !in frozenCards) {
             frozenCards.add(card)
-            stageImages[card] = stageImages.getValue(card).copy(elasticScaling = elasticScaling)
-                .apply { height = height.resolve().toY() }
+            val drawnCard = drawnStages.getValue(card)
+            drawnStages[card] = DrawnStage(
+                drawnCard.defImage.copy(elasticScaling = elasticScaling).apply { height = height.resolve().toY() },
+                drawnCard.middleYInImage!!.resolve(elasticScaling).toY()
+            )
         }
     }
 
@@ -437,13 +384,15 @@ private fun matchRuntimeInOneDir(
                 if (prevStage == null || prevStage.style.behavior != SCROLL || prevStage !in group.stages)
                     stretchFrames.add(0.0.toY())
                 // The number of frames needed for this scroll stage is the vertical scrolled distance divided by the
-                // scrolling speed. Apart from space owned by the scroll stage itself, the distance includes half the
+                // scrolling speed. Apart from space owned by the scroll stage itself, the distance includes additional
                 // space of adjacent cards. Although the precomputed scrollStartY and scrollStopY values could already
                 // provide access to this distance, we need to account for the dynamically frozen card heights. As such,
                 // we manually collect the scrolled distance here.
                 var scrolledDist = (stageLayouts.getValue(scroll).info as DrawnStageInfo.Scroll).ownedScrollHeight
-                prevCard(scroll)?.let { prevCard -> scrolledDist += stageImages.getValue(prevCard).height / 2.0 }
-                nextCard(scroll)?.let { nextCard -> scrolledDist += stageImages.getValue(nextCard).height / 2.0 }
+                prevCard(scroll)?.let { prevCard ->
+                    scrolledDist += drawnStages.getValue(prevCard).run { defImage.height - middleYInImage!! }
+                }
+                nextCard(scroll)?.let { nextCard -> scrolledDist += drawnStages.getValue(nextCard).middleYInImage!! }
                 var frames = stretchFrames.last() + scrolledDist / scroll.style.scrollPxPerFrame
                 // The scroll frames we just computed do not contain the frame at DrawnStageInfo.Scroll.scrollStopY.
                 // For example, if there is a scroll height "scrollStopY - scrollStartY" of 10 pixels, and we scroll
@@ -509,7 +458,8 @@ private fun matchRuntimeInOneDir(
         // unfrozen card stages, freeze those cards, and take the group out of the equation as it's now matched.
         groups.remove(modestGroup)
         for (scroll in modestGroup!!.stages) {
-            stageImages[scroll] = stageImages.getValue(scroll).copy(elasticScaling = modestElasticScaling)
+            val drawnScroll = drawnStages.getValue(scroll)
+            drawnStages[scroll] = DrawnStage(drawnScroll.defImage.copy(elasticScaling = modestElasticScaling), null)
             prevCard(scroll)?.let { prevCard -> tryFreezeCard(prevCard, modestElasticScaling) }
             nextCard(scroll)?.let { nextCard -> tryFreezeCard(nextCard, modestElasticScaling) }
         }
@@ -526,7 +476,7 @@ private fun matchRuntimeInOneDir(
 
 private fun drawPage(
     global: Global,
-    stageImages: Map<Stage, DeferredImage>,
+    drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
     pageTopStages: Set<Stage>,
     pageBotStages: Set<Stage>,
@@ -552,7 +502,7 @@ private fun drawPage(
     }
 
     for ((stageIdx, stage) in page.stages.withIndex()) {
-        val stageImage = stageImages.getValue(stage)
+        val stageImage = drawnStages.getValue(stage).defImage
         val stageLayout = stageLayouts.getValue(stage)
         if (stageLayout.info is DrawnStageInfo.Card) {
             val cardTopY = stageLayout.info.middleY - resolution.heightPx / 2.0

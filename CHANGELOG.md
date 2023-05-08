@@ -7,6 +7,8 @@ Cinecred Changelog
 
 ### Additions
 
+- Content can now be freely vertically arranged on cards instead of just
+  centered using a new spine position option.
 - Added more fine-grained controls for vertical head and tail justification.
 
 

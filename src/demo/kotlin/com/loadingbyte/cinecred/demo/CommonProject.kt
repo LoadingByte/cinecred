@@ -22,8 +22,11 @@ fun extractStyling(global: Global, page: Page): Styling {
     val letterStyles = HashSet<LetterStyle>()
     for (stage in page.stages) {
         pageStyles.add(stage.style)
-        for (segment in stage.segments)
-            for (spine in segment.spines)
+        for (lateral in when (stage) {
+            is Stage.Card -> stage.compounds.asSequence().flatMap(Compound::laterals)
+            is Stage.Scroll -> stage.laterals.asSequence()
+        })
+            for (spine in lateral.spines)
                 for (block in spine.blocks) {
                     contentStyles.add(block.style)
                     for (elem in block.body)

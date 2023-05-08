@@ -37,7 +37,7 @@ private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: Spread
             0 to SpreadsheetFormat.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
             1 to SpreadsheetFormat.RowLook(bold = true, borderBottom = true)
         ),
-        colWidths = listOf(48, 48, 32, 16, 28, 20, 24, 24, 36)
+        colWidths = listOf(48, 48, 32, 16, 28, 20, 24, 16, 24, 36)
     )
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")

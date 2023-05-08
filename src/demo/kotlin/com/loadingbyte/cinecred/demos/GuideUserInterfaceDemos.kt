@@ -180,7 +180,7 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
         val creditsFile = projectDir.resolve("Credits.csv")
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
             size = Dimension(600, 350)
-            colWidths = intArrayOf(100, 100, 50, 100, 100, 50, 50, 50, 50)
+            colWidths = intArrayOf(100, 100, 50, 100, 100, 50, 50, 50, 50, 50)
         }
         dt.add(spreadsheetEditorWin)
         dt.center(spreadsheetEditorWin)

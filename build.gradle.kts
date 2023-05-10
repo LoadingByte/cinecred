@@ -7,7 +7,7 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "1.8.20"
+    kotlin("jvm") version "1.8.21"
 }
 
 group = "com.loadingbyte"
@@ -93,7 +93,7 @@ dependencies {
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.2")
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.9.3")
 }
 
 configurations.configureEach {

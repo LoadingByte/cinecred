@@ -54,6 +54,8 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
         },
         Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.leakedResetStylingButton, Side.BOTTOM),
         Hint(l10n("ui.hints.projectTrack.guides"), editPanel.leakedGuidesButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.video"), editPanel.leakedVideoDialogButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.delivery"), editPanel.leakedDeliveryDialogButton, Side.BOTTOM),
         Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE)
     )
 }

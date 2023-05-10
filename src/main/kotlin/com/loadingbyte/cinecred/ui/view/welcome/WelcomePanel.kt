@@ -36,7 +36,8 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val updateMessageTextPane: JTextPane
 
     init {
-        val brandPanel = JPanel(MigLayout("center, wrap", "[center]", "15[][]-3[]20")).apply {
+        // We force the whole panel to have an even width so that the logo is guaranteed to be centered in the tab bar.
+        val brandPanel = JPanel(MigLayout("center, wrap", "[80, center]", "15[][]-3[]20")).apply {
             add(JLabel(SVGIcon.load("/logo.svg").getScaledIcon(0.25)))
             add(JLabel("Cinecred").apply {
                 font = TITILLIUM_SEMI.deriveFont(H2)
@@ -112,6 +113,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
             putClientProperty(TABBED_PANE_TAB_ICON_PLACEMENT, TOP)
             putClientProperty(TABBED_PANE_TAB_INSETS, Insets(10, 14, 10, 14))
+            putClientProperty(TABBED_PANE_MINIMUM_TAB_WIDTH, 110)
             putClientProperty(TABBED_PANE_LEADING_COMPONENT, brandPanel)
             addTab(l10n("ui.welcome.projects"), FOLDER_ICON, projectsPanel)
             addTab(l10n("ui.welcome.preferences"), PREFERENCES_ICON, preferencesPanel)

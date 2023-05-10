@@ -137,7 +137,8 @@ abstract class ScreencastDemo(
     fun addOptionPaneDialog() {
         sleep(2000)
         optionPaneDialog = Window.getWindows()
-            .filterIsInstance<JDialog>().first { it.contentPane.getComponent(0) is JOptionPane }
+            .filterIsInstance<JDialog>()
+            .first { it.contentPane.run { componentCount == 1 && getComponent(0) is JOptionPane } }
         optionPaneWin = BackedVirtualWindow(optionPaneDialog)
         dt.add(optionPaneWin)
         dt.center(optionPaneWin)

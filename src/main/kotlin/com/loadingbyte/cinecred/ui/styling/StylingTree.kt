@@ -285,25 +285,25 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
 
-    private sealed class TypeInfo {
+    private sealed interface TypeInfo {
 
-        abstract val icon: Icon
-        abstract val node: DefaultMutableTreeNode
-        abstract val onSelect: (Any) -> Unit
+        val icon: Icon
+        val node: DefaultMutableTreeNode
+        val onSelect: (Any) -> Unit
 
         class Singleton(
             override val icon: Icon,
             override val node: DefaultMutableTreeNode,
             override val onSelect: (Any) -> Unit,
             val label: String
-        ) : TypeInfo()
+        ) : TypeInfo
 
         class List(
             override val icon: Icon,
             override val node: DefaultMutableTreeNode,
             override val onSelect: (Any) -> Unit,
             val objToString: (Any) -> String,
-        ) : TypeInfo()
+        ) : TypeInfo
 
     }
 

@@ -56,9 +56,9 @@ fun StyledString.formatted(textCtx: TextContext): FormattedString =
 fun makeTextCtx(styling: Styling, stylingCtx: StylingContext): TextContext =
     TextContextImpl(styling, stylingCtx)
 
-sealed class TextContext
+sealed interface TextContext
 
-private class TextContextImpl(private val styling: Styling, val stylingCtx: StylingContext) : TextContext() {
+private class TextContextImpl(private val styling: Styling, val stylingCtx: StylingContext) : TextContext {
 
     val locale: Locale
         get() = styling.global.locale

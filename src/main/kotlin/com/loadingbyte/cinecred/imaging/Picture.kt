@@ -10,15 +10,15 @@ import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
 import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR
 
 
-sealed class Picture {
+sealed interface Picture {
 
-    abstract val width: Double
-    abstract val height: Double
-    abstract fun scaled(scaling: Double): Picture
-    open fun dispose() {}
+    val width: Double
+    val height: Double
+    fun scaled(scaling: Double): Picture
+    fun dispose() {}
 
 
-    class Raster(img: BufferedImage, val scaling: Double = 1.0) : Picture() {
+    class Raster(img: BufferedImage, val scaling: Double = 1.0) : Picture {
 
         // Conform non-standard raster images to the 8-bit (A)BGR pixel format and the sRGB color space. This needs to
         // be done at some point because some of our code expects (A)BGR, and we're compositing in sRGB.
@@ -40,7 +40,7 @@ sealed class Picture {
     class SVG(
         val gvtRoot: GraphicsNode, private val docWidth: Double, private val docHeight: Double,
         val scaling: Double = 1.0, val isCropped: Boolean = false
-    ) : Picture() {
+    ) : Picture {
 
         override val width get() = scaling * (if (isCropped) gvtRoot.bounds.width else docWidth)
         override val height get() = scaling * (if (isCropped) gvtRoot.bounds.height else docHeight)
@@ -53,7 +53,7 @@ sealed class Picture {
 
     class PDF private constructor(
         private val aDoc: AugmentedDoc, val scaling: Double, val isCropped: Boolean
-    ) : Picture() {
+    ) : Picture {
 
         constructor(doc: PDDocument) : this(AugmentedDoc(doc), 1.0, false)
 

@@ -40,7 +40,7 @@ object GuideGlobalStylingResolutionAndFrameRateDemo : StyleSettingsDemo<Global>(
 
 
 object GuideGlobalStylingTimecodeFormatDemo : StyleSettingsDemo<Global>(
-    Global::class.java, "$DIR/timecode-format", Format.STEP_GIF,
+    Global::class.java, "$DIR/timecode-format", Format.SLOW_STEP_GIF,
     listOf(Global::fps.st(), Global::timecodeFormat.st(), Global::runtimeFrames.st())
 ) {
     override fun styles() = buildList<Global> {
@@ -105,7 +105,7 @@ object GuideGlobalStylingLocaleDemo : StyleSettingsDemo<Global>(
 
 
 object GuideGlobalStylingUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
-    Global::class.java, "$DIR/uppercase-exceptions", Format.STEP_GIF,
+    Global::class.java, "$DIR/uppercase-exceptions", Format.SLOW_STEP_GIF,
     listOf(Global::uppercaseExceptions.st())
 ) {
     override fun styles() = buildList<Global> {

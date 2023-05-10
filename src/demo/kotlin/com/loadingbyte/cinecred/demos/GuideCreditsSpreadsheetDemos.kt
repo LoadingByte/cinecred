@@ -87,11 +87,11 @@ object GuideCreditsSpreadsheetContentStylesDemo : PageDemo("$DIR/content-styles"
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(
         """
-@Head,@Body,@Vertical Gap,@Content Style
-,Crew,,Heading
-,,1.5,
-1st Assistant Director,Sarah Supervisor,,Gutter
-2nd Assistant Director,Sandro Scheduler,,
+@Head,@Body,@Content Style
+,Crew,Heading
+,,
+1st Assistant Director,Sarah Supervisor,Gutter
+2nd Assistant Director,Sandro Scheduler,
         """.parseCreditsCS()
     )
 }

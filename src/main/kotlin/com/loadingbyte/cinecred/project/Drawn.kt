@@ -12,11 +12,11 @@ data class DrawnProject(val project: Project, val drawnPages: PersistentList<Dra
 class DrawnPage(val defImage: DeferredImage, val stageInfo: PersistentList<DrawnStageInfo>)
 
 
-sealed class DrawnStageInfo {
+sealed interface DrawnStageInfo {
 
     class Card(
         val middleY: Y
-    ) : DrawnStageInfo()
+    ) : DrawnStageInfo
 
     class Scroll(
         val scrollStartY: Y,
@@ -24,6 +24,6 @@ sealed class DrawnStageInfo {
         val ownedScrollHeight: Y,
         val frames: Int,
         val initialAdvance: Double
-    ) : DrawnStageInfo()
+    ) : DrawnStageInfo
 
 }

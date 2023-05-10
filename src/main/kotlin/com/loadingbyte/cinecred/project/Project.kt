@@ -305,10 +305,10 @@ class Block(
 
 typealias StyledString = List<Pair<String, LetterStyle>>
 
-sealed class BodyElement {
-    class Nil(val sty: LetterStyle) : BodyElement()
-    class Str(val str: StyledString) : BodyElement()
-    class Pic(val pic: Picture) : BodyElement()
+sealed interface BodyElement {
+    class Nil(val sty: LetterStyle) : BodyElement
+    class Str(val str: StyledString) : BodyElement
+    class Pic(val pic: Picture) : BodyElement
 }
 
 

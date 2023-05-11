@@ -323,6 +323,7 @@ private val LAYER_COLORING_GRADIENT_ICON = SVGIcon.load("/icons/layerColoring/gr
 
 val LayerColoring.icon
     get() = when (this) {
+        LayerColoring.OFF -> CROSS_ICON
         LayerColoring.PLAIN -> LAYER_COLORING_PLAIN_ICON
         LayerColoring.GRADIENT -> LAYER_COLORING_GRADIENT_ICON
     }

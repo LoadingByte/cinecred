@@ -285,6 +285,13 @@ class FormattedString private constructor(
         }
 
         for ((layerIdx, layer) in design.layers.withIndex()) {
+            // Skip invisible (likely helper) layers early for improved performance.
+            val invisible = when (val c = layer.coloring) {
+                is Layer.Coloring.Plain -> c.color.alpha == 0
+                is Layer.Coloring.Gradient -> c.color1.alpha == 0 && c.color2.alpha == 0
+            }
+            if (invisible)
+                continue
             val forms = formLayer(layerIdx)
             val coat = makeCoat(layer.coloring, center)
             if (layer.blurRadiusPx == 0.0)

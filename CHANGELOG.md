@@ -10,6 +10,7 @@ Cinecred Changelog
 - Content can now be freely vertically arranged on cards instead of just
   centered using a new spine position option.
 - Added more fine-grained controls for vertical head and tail justification.
+- Added a dedicated coloring option for hiding helper layers.
 
 
 1.4.1

@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
+import java.awt.Color
 import java.awt.Font
 import java.util.*
 import kotlin.math.abs
@@ -249,6 +250,10 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
 
     val fmtStrLayers = layers.map { layer ->
         val coloring = when (layer.coloring) {
+            LayerColoring.OFF ->
+                FormattedString.Layer.Coloring.Plain(
+                    color = Color(0, 0, 0, 0)
+                )
             LayerColoring.PLAIN ->
                 FormattedString.Layer.Coloring.Plain(
                     color = layer.color1

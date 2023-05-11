@@ -199,6 +199,23 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
 private const val BLUR_RADIUS_LIMIT = 200
 
 private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
+    JudgeConstr(
+        WARN, msg("project.styling.constr.unusedHiddenLayer"),
+        Layer::coloring.st(), Layer::color1.st(), Layer::color2.st()
+    ) { _, styling, style ->
+        val visible = when (style.coloring) {
+            LayerColoring.OFF -> false
+            LayerColoring.PLAIN -> style.color1.alpha != 0
+            LayerColoring.GRADIENT -> style.color1.alpha != 0 || style.color2.alpha != 0
+        }
+        if (visible)
+            return@JudgeConstr true
+        val layers = (styling.getParentStyle(style) as LetterStyle).layers
+        val ord = layers.indexOfFirst { it === style } + 1
+        layers.any { layer ->
+            layer.shape == LayerShape.CLONE && layer.cloneLayers.contains(ord) || layer.clearingLayers.contains(ord)
+        }
+    },
     DoubleConstr(ERROR, Layer::gradientAngleDeg.st(), min = -90.0, max = 90.0),
     DoubleConstr(ERROR, Layer::gradientExtentRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::stripeHeightRfh.st(), min = 0.0, minInclusive = false),

@@ -72,7 +72,8 @@ class StyleFormAdjuster(
         colorSet.add(styling.global.grounding)
         for (letterStyle in styling.letterStyles)
             for (layer in letterStyle.layers) {
-                colorSet.add(layer.color1)
+                if (layer.coloring != LayerColoring.OFF)
+                    colorSet.add(layer.color1)
                 if (layer.coloring == LayerColoring.GRADIENT)
                     colorSet.add(layer.color2)
             }

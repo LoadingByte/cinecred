@@ -258,7 +258,7 @@ data class Layer(
 ) : LayerStyle
 
 
-enum class LayerColoring { PLAIN, GRADIENT }
+enum class LayerColoring { OFF, PLAIN, GRADIENT }
 enum class LayerShape { TEXT, STRIPE, CLONE }
 enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }

@@ -202,6 +202,10 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
         isTotallyIneffective = { _, _, _ -> true }
     ),
     StyleEffectivitySpec(
+        Layer::color1.st(),
+        isTotallyIneffective = { _, _, style -> style.coloring == LayerColoring.OFF }
+    ),
+    StyleEffectivitySpec(
         Layer::color2.st(), Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
         isTotallyIneffective = { _, _, style -> style.coloring != LayerColoring.GRADIENT }
     ),

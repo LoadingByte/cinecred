@@ -898,7 +898,7 @@ class ColorWellWidget(
     private val picker = ColorPicker(allowAlpha)
     private val popup = DropdownPopupMenu(
         btn,
-        preShow = { picker.swatchColors = swatchColors },
+        preShow = { picker.resetUI(); picker.swatchColors = swatchColors },
         // Note: Without invokeLater(), the focus is not transferred.
         postShow = { SwingUtilities.invokeLater { picker.requestFocusInWindow() } }
     )

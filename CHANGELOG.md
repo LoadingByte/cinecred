@@ -11,6 +11,8 @@ Cinecred Changelog
   centered using a new spine position option.
 - Added more fine-grained controls for vertical head and tail justification.
 - Added a dedicated coloring option for hiding helper layers.
+- The opacity setting in the color picker now has a slider and supports the
+  0-100 range often found in specs.
 - Added the option to specify a layer's offset in polar coordinates.
 
 

@@ -13,12 +13,14 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
 import java.awt.image.DirectColorModel
 import java.awt.image.Raster
+import java.text.DecimalFormat
 import java.text.ParseException
 import javax.swing.*
 import javax.swing.JSpinner.NumberEditor
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
 import javax.swing.text.DefaultFormatter
+import javax.swing.text.DefaultFormatterFactory
 import kotlin.math.roundToInt
 
 
@@ -31,8 +33,14 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
     private val redSpinner = makeSpinner(SpinnerNumberModel(0, 0, 255, 1), ::onRGBChange)
     private val grnSpinner = makeSpinner(SpinnerNumberModel(0, 0, 255, 1), ::onRGBChange)
     private val bluSpinner = makeSpinner(SpinnerNumberModel(0, 0, 255, 1), ::onRGBChange)
-    private val alphaSpinner = makeSpinner(SpinnerNumberModel(255, 0, 255, 1), ::onAlphaChange)
     private val hexTextField = makeHexTextField()
+
+    private val alphaSlider = JSlider(0, 255, 0).apply { addChangeListener { onAlphaChange(true) } }
+    private val alphaSpinner = makeSpinner(SpinnerNumberModel(0, 0, 255, 1)) { onAlphaChange(false) }
+    private val alphaRangeButton = JButton().apply {
+        addActionListener { nextAlphaRange() }
+        toolTipText = l10n("ui.form.colorAlphaRangeTooltip")
+    }
 
     private val hueDiagram = HueDiagram().apply { border = FlatBorder() }
     private val satBriDiagram = SatBriDiagram().apply { border = FlatBorder() }
@@ -54,6 +62,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
             .apply { addPropertyChangeListener("value") { onHexChange() } }
 
     init {
+        resetUI()
         updateHexFromRGBAndAlpha()
 
         layout = MigLayout(
@@ -63,8 +72,8 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         )
         add(JLabel(l10n("ui.form.colorSwatches")), "spanx, split 2")
         add(swatches, "growx")
-        add(satBriDiagram, "spany, growy, width " + if (allowAlpha) "220" else "200")
-        add(hueDiagram, "spany, growy, width 24")
+        add(satBriDiagram, "spany 7, growy, width 210")
+        add(hueDiagram, "spany 7, growy, width 24")
         add(JLabel(l10n("ui.form.colorHue")).apply { toolTipText = l10n("ui.form.colorHueTooltip") })
         add(hueSpinner)
         add(JLabel(l10n("ui.form.colorSaturation")).apply { toolTipText = l10n("ui.form.colorSaturationTooltip") })
@@ -77,12 +86,14 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         add(grnSpinner)
         add(JLabel(l10n("ui.form.colorBlue")))
         add(bluSpinner)
-        if (allowAlpha) {
-            add(JLabel("Alpha").apply { toolTipText = l10n("ui.form.colorAlphaTooltip") })
-            add(alphaSpinner)
-        }
         add(JLabel("Hex"))
         add(hexTextField)
+        if (allowAlpha) {
+            add(JLabel(l10n("ui.form.colorAlpha")), "spanx, split 4")
+            add(alphaSlider, "width 0, growx")
+            add(alphaSpinner)
+            add(alphaRangeButton)
+        }
     }
 
     // @formatter:off
@@ -94,7 +105,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
     private var grn: Int get() = grnSpinner.value as Int; set(v) { grnSpinner.value = v }
     private var blu: Int get() = bluSpinner.value as Int; set(v) { bluSpinner.value = v }
 
-    private var alpha: Int get() = alphaSpinner.value as Int; set(v) { alphaSpinner.value = v }
+    private var alpha: Int get() = alphaSlider.value; set(v) { alphaSlider.value = v; alphaSpinner.value = v }
     // @formatter:on
 
     private fun updateHSBFromRGB() {
@@ -167,14 +178,6 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         fireStateChanged()
     }
 
-    private fun onAlphaChange() {
-        if (disableOnChange) return
-        withoutOnChange {
-            updateHexFromRGBAndAlpha()
-        }
-        fireStateChanged()
-    }
-
     private fun onHexChange() {
         if (disableOnChange) return
         withoutOnChange {
@@ -184,6 +187,38 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         hueDiagram.repaint()
         satBriDiagram.rerenderImageAndRepaint()
         fireStateChanged()
+    }
+
+    private fun onAlphaChange(slider: Boolean) {
+        if (disableOnChange) return
+        withoutOnChange {
+            if (slider)
+                alphaSpinner.value = alphaSlider.value
+            else
+                alphaSlider.value = alphaSpinner.value as Int
+            updateHexFromRGBAndAlpha()
+        }
+        fireStateChanged()
+    }
+
+    private var alphaRange = AlphaRange.RANGE_255
+        set(alphaRange) {
+            field = alphaRange
+            alphaRangeButton.text = alphaRange.label
+            val newEditor = when (alphaRange) {
+                AlphaRange.RANGE_255 -> NumberEditor(alphaSpinner)
+                AlphaRange.RANGE_100 -> NumberEditor(alphaSpinner).apply {
+                    textField.isEditable = true
+                    textField.formatterFactory = DefaultFormatterFactory(Alpha100Formatter())
+                }
+            }
+            withoutOnChange {
+                alphaSpinner.editor = newEditor
+            }
+        }
+
+    private fun nextAlphaRange() {
+        alphaRange = AlphaRange.values().let { it[(alphaRange.ordinal + 1) % it.size] }
     }
 
     private var disableOnChange = false
@@ -211,6 +246,10 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
     fun addChangeListener(listener: ChangeListener) { listenerList.add(ChangeListener::class.java, listener) }
     fun removeChangeListener(listener: ChangeListener) { listenerList.remove(ChangeListener::class.java, listener) }
     // @formatter:on
+
+    fun resetUI() {
+        alphaRange = AlphaRange.RANGE_255
+    }
 
     private fun fireStateChanged() {
         val e = ChangeEvent(this)
@@ -466,6 +505,24 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
             throw ParseException("", 0)
         }
 
+    }
+
+
+    private class Alpha100Formatter : DefaultFormatter() {
+
+        private val format = DecimalFormat("#.#")
+
+        override fun valueToString(value: Any?): String =
+            value?.let { format.format(it as Int * 100 / 255.0) } ?: ""
+
+        override fun stringToValue(string: String?): Int =
+            (format.parse(string).toDouble() * 255.0 / 100.0).roundToInt()
+
+    }
+
+
+    private enum class AlphaRange(val label: String) {
+        RANGE_255("0\u2013255"), RANGE_100("0\u2013100")
     }
 
 }

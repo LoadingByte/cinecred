@@ -182,8 +182,9 @@ private fun openUI(args: Array<String>) {
 private object UncaughtHandler : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(t: Thread, e: Throwable) {
-        hasCrashed.set(true)
         LOGGER.error("Uncaught exception. Will terminate the program.", e)
+        if (hasCrashed.getAndSet(true))
+            return
         SwingUtilities.invokeLater {
             sendReport()
             // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.

@@ -1868,6 +1868,7 @@ class UnionWidget(
     private val wrapped: List<Form.Widget<*>>,
     labels: List<String?>? = null,
     icons: List<Icon?>? = null,
+    gaps: List<String?>? = null,
     newlines: List<Int> = emptyList()
 ) : Form.AbstractWidget<List<Any>>() {
 
@@ -1876,6 +1877,8 @@ class UnionWidget(
             require(wrapped.size == labels.size)
         if (icons != null)
             require(wrapped.size == icons.size)
+        if (gaps != null)
+            require(wrapped.size == gaps.size + 1)
 
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
         // When a wrapped widget becomes invisible or disabled, also modify its corresponding label or icon.
@@ -1906,16 +1909,18 @@ class UnionWidget(
             val hasLabel = labels?.get(idx) != null
             val hasIcon = icons?.get(idx) != null
             val hasNewline = idx in newlines
+            var gapLeft = if (idx == 0 || hasNewline) "0" else gaps?.get(idx - 1)
             if (hasLabel || hasIcon) {
-                val gapLeft = if (idx == 0 || hasNewline) "0" else if (hasLabel) "unrel" else "10"
+                if (gapLeft == null)
+                    gapLeft = if (hasLabel) "unrel" else "10"
                 val gapRight = if (hasLabel) "rel" else "3"
                 add("gapx $gapLeft $gapRight" + if (hasNewline) ", newline" else "")
                 addAll(widget.constraints)
-            } else if (hasNewline) {
-                add(widget.constraints[0] + ", newline")
-                addAll(widget.constraints.drop(1))
-            } else
-                addAll(widget.constraints)
+            } else {
+                val constr = (if (gapLeft != null) ", gapleft $gapLeft" else "") + if (hasNewline) ", newline" else ""
+                add(widget.constraints[0] + constr)
+                addAll(widget.constraints.subList(1, widget.constraints.size))
+            }
         }
     }
 

@@ -8,6 +8,8 @@ import java.awt.Color
 import java.awt.Font
 import java.util.*
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
@@ -331,13 +333,28 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
                 join = getLineJoinNumber(layer.clearingJoin)
             )
 
+        val hOffsetPx: Double
+        val vOffsetPx: Double
+        when (layer.offsetCoordinateSystem) {
+            CoordinateSystem.CARTESIAN -> {
+                hOffsetPx = layer.hOffsetRfh * fh
+                vOffsetPx = layer.vOffsetRfh * fh
+            }
+            CoordinateSystem.POLAR -> {
+                val angleRad = Math.toRadians(layer.offsetAngleDeg)
+                val distancePx = layer.offsetDistanceRfh * fh
+                hOffsetPx = cos(angleRad) * distancePx
+                vOffsetPx = -sin(angleRad) * distancePx
+            }
+        }
+
         FormattedString.Layer(
             coloring = coloring,
             shape = shape,
             dilation = dilation,
             contour = contour,
-            hOffsetPx = layer.hOffsetRfh * fh,
-            vOffsetPx = layer.vOffsetRfh * fh,
+            hOffsetPx = hOffsetPx,
+            vOffsetPx = vOffsetPx,
             hScaling = layer.hScaling,
             vScaling = layer.vScaling,
             hShearing = layer.hShearing,

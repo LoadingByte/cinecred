@@ -62,7 +62,9 @@ class StyleForm<S : Style>(
             valueWidgets[setting] = valueWidget
             wrappedLabels?.add(if (idx in spec.settingLabels) l10n(l10nKey(setting.name)) else null)
         }
-        val unionWidget = UnionWidget(wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingNewlines)
+        val unionWidget = UnionWidget(
+            wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingGaps, spec.settingNewlines
+        )
         val unionName = spec.unionName ?: spec.settings.first().name
         val formRow = makeFormRow(unionName, unionWidget)
         rootFormRows.add(Pair(formRow, spec.settings))

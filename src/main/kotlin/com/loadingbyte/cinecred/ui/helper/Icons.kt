@@ -86,6 +86,8 @@ val ARROW_UP_ICON = SVGIcon.load("/icons/arrow/up.svg")
 val ARROW_DOWN_ICON = SVGIcon.load("/icons/arrow/down.svg")
 val ARROW_LEFT_RIGHT_ICON = SVGIcon.load("/icons/arrow/leftRight.svg")
 val ARROW_UP_DOWN_ICON = SVGIcon.load("/icons/arrow/upDown.svg")
+val ARROW_DIAGONAL_ICON = SVGIcon.load("/icons/arrow/diagonal.svg")
+val ARROW_ALL_ICON = SVGIcon.load("/icons/arrow/all.svg")
 
 val BEARING_LEFT_ICON = SVGIcon.load("/icons/bearing/left.svg")
 val BEARING_CENTER_ICON = SVGIcon.load("/icons/bearing/center.svg")
@@ -353,6 +355,13 @@ val LineJoin.icon
     }
 
 
+val CoordinateSystem.icon
+    get() = when (this) {
+        CoordinateSystem.CARTESIAN -> ARROW_ALL_ICON
+        CoordinateSystem.POLAR -> ANGLE_ICON
+    }
+
+
 val Enum<*>.icon
     get() = when (this) {
         is Severity -> icon
@@ -373,6 +382,7 @@ val Enum<*>.icon
         is LayerColoring -> icon
         is LayerShape -> icon
         is LineJoin -> icon
+        is CoordinateSystem -> icon
         else -> throw IllegalArgumentException("No icons defined for enum class ${javaClass}.")
     }
 

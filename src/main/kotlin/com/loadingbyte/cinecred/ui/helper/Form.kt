@@ -186,21 +186,20 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
             // in the row. This "x2" will be used later when positioning the notice components. Because of the syntax,
             // we also need to assign each field a unique ID (after the dot), but it's not used by us anywhere.
             fieldConstraints.add("id $endlineGroupId.f_${formRows.size}_$fieldIdx")
+            // Add a split constraint to make sure all components are located in the same cell horizontally.
+            // We add it to every single field (as opposed to just the first one of each row) so that even when the
+            // first field is made invisible, the cell is still split.
+            fieldConstraints.add("split")
             // If this field starts the first line, and we don't have a row label, start the new form row here.
             if (wholeWidth && fieldIdx == 0)
                 fieldConstraints.add("newline")
             // If this field starts a new line, add a skip constraint to skip the label column.
             if (!wholeWidth && "newline" in fieldConstraints[0])
                 fieldConstraints.add("skip 1")
-            // If this field starts the first or a later line, add a split constraint to make sure all components
-            // are located in the same cell horizontally.
-            if (fieldIdx == 0 || "newline" in fieldConstraints[0]) {
-                fieldConstraints.add("split")
-                // If the row doesn't have a label and doesn't reserve a notice area, make the cell which contains
-                // the fields span from the label to the final dummy column.
-                if (wholeWidth)
-                    fieldConstraints.add("span")
-            }
+            // If this field starts the first or a later line, and if the row doesn't have a label and doesn't reserve a
+            // notice area, make the cell which contains the fields span from the label to the final dummy column.
+            if ((fieldIdx == 0 || "newline" in fieldConstraints[0]) && wholeWidth)
+                fieldConstraints.add("span")
             if (invisibleSpace)
                 fieldConstraints.add("hidemode 0")
             add(field, fieldConstraints.joinToString())

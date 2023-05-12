@@ -243,8 +243,11 @@ data class Layer(
     val contour: Boolean,
     val contourThicknessRfh: Double,
     val contourJoin: LineJoin,
+    val offsetCoordinateSystem: CoordinateSystem,
     val hOffsetRfh: Double,
     val vOffsetRfh: Double,
+    val offsetAngleDeg: Double,
+    val offsetDistanceRfh: Double,
     val hScaling: Double,
     val vScaling: Double,
     val hShearing: Double,
@@ -262,6 +265,7 @@ enum class LayerColoring { OFF, PLAIN, GRADIENT }
 enum class LayerShape { TEXT, STRIPE, CLONE }
 enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }
+enum class CoordinateSystem { CARTESIAN, POLAR }
 enum class LayerAnchor { INDIVIDUAL, SIBLING, GLOBAL }
 
 

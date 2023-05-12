@@ -226,6 +226,14 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
         isTotallyIneffective = { _, _, style -> style.shape != LayerShape.TEXT && style.shape != LayerShape.CLONE }
     ),
     StyleEffectivitySpec(
+        Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
+        isTotallyIneffective = { _, _, style -> style.offsetCoordinateSystem != CoordinateSystem.CARTESIAN }
+    ),
+    StyleEffectivitySpec(
+        Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
+        isTotallyIneffective = { _, _, style -> style.offsetCoordinateSystem != CoordinateSystem.POLAR }
+    ),
+    StyleEffectivitySpec(
         Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
         isAlmostEffective = { _, _, style -> style.stripePreset != StripePreset.CUSTOM }
     ),

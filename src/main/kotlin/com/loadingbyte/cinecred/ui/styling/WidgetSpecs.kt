@@ -149,7 +149,8 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
             Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(), Layer::stripeWidenTopRfh.st(),
             Layer::stripeWidenBottomRfh.st(), Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
             Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(), Layer::dilationJoin.st(), Layer::contour.st(),
-            Layer::contourThicknessRfh.st(), Layer::contourJoin.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
+            Layer::contourThicknessRfh.st(), Layer::contourJoin.st(), Layer::offsetCoordinateSystem.st(),
+            Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
             Layer::hScaling.st(), Layer::vScaling.st(), Layer::hShearing.st(), Layer::vShearing.st(),
             Layer::anchor.st(), Layer::anchorSiblingLayer.st(), Layer::clearingLayers.st(), Layer::clearingRfh.st(),
             Layer::clearingJoin.st(), Layer::blurRadiusRfh.st()
@@ -164,8 +165,8 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
         Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(), Layer::stripeWidenLeftRfh.st(),
         Layer::stripeWidenRightRfh.st(), Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
         Layer::stripeCornerRadiusRfh.st(), Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(),
-        Layer::contourThicknessRfh.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::clearingRfh.st(),
-        Layer::blurRadiusRfh.st(),
+        Layer::contourThicknessRfh.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::offsetDistanceRfh.st(),
+        Layer::clearingRfh.st(), Layer::blurRadiusRfh.st(),
         getMultiplier = { _, styling, style ->
             val letterStyle = styling.getParentStyle(style) as LetterStyle
             letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
@@ -180,7 +181,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     UnionWidgetSpec(
         Layer::coloring.st(), Layer::color1.st(), Layer::color2.st(),
         Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
-        settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
+        settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_DIAGONAL_ICON)
     ),
     ToggleButtonGroupWidgetSpec(Layer::shape.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(Layer::stripePreset.st(), ICON),
@@ -220,11 +221,18 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     WidthWidgetSpec(Layer::contourThicknessRfh.st(), WidthSpec.LITTLE),
     ToggleButtonGroupWidgetSpec(Layer::contourJoin.st(), ICON),
     UnionWidgetSpec(Layer::contour.st(), Layer::contourThicknessRfh.st(), Layer::contourJoin.st()),
+    ToggleButtonGroupWidgetSpec(Layer::offsetCoordinateSystem.st(), ICON),
     WidthWidgetSpec(Layer::hOffsetRfh.st(), WidthSpec.LITTLE),
     WidthWidgetSpec(Layer::vOffsetRfh.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::offsetAngleDeg.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(Layer::offsetDistanceRfh.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
-        unionName = "offsetRfh", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+        Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
+        Layer::offsetCoordinateSystem.st(),
+        unionName = "offset",
+        settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON, ANGLE_ICON, ARROW_DIAGONAL_ICON, null),
+        settingGaps = listOf(null, "0", null, "unrel")
     ),
     WidthWidgetSpec(Layer::hScaling.st(), WidthSpec.LITTLE),
     WidthWidgetSpec(Layer::vScaling.st(), WidthSpec.LITTLE),
@@ -311,6 +319,7 @@ class UnionWidgetSpec<S : Style>(
     val unionName: String? = null,
     val settingLabels: List<Int> = emptyList(),
     val settingIcons: List<Icon?>? = null,
+    val settingGaps: List<String?>? = null,
     val settingNewlines: List<Int> = emptyList()
 ) : StyleWidgetSpec<S>(*settings) {
     init {
@@ -318,6 +327,8 @@ class UnionWidgetSpec<S : Style>(
         require(settingNewlines.all(settings.indices::contains))
         if (settingIcons != null)
             require(settings.size == settingIcons.size)
+        if (settingGaps != null)
+            require(settings.size == settingGaps.size + 1)
     }
 }
 

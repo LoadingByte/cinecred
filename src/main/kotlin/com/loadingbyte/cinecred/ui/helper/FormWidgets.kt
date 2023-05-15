@@ -1498,7 +1498,7 @@ class SimpleListWidget<E : Any>(
     override val constraints = listOf("aligny top, gapy 1 1", "")
 
     override fun addPart(idx: Int, widget: Form.Widget<E>) {
-        val delBtn = JButton(REMOVE_ICON)
+        val delBtn = JButton(TRASH_ICON)
         delBtn.addActionListener { userDel(delBtns.indexOfFirst { it === delBtn }) }
         var delBtnConstraint = "aligny top, gapleft 6, gaptop 1"
         if (idx != 0 && idx % elementsPerRow == 0)
@@ -1610,7 +1610,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             // By default, advancedBtn is not selected, so inform the wrapped widget about that.
             toggleAdvanced(widget, false)
 
-            val delBtn = JButton(l10n("ui.form.layerDelete"), REMOVE_ICON)
+            val delBtn = JButton(l10n("ui.form.layerDelete"), TRASH_ICON)
             delBtn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
             delBtn.addActionListener { userDel(idx) }
 

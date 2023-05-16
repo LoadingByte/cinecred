@@ -15,6 +15,10 @@ Cinecred Changelog
   0-100 range often found in specs.
 - Added the option to specify a layer's offset in polar coordinates.
 
+### Fixes
+
+- Crash reports now include more context and ask users to state what they did.
+
 
 1.4.1
 -----

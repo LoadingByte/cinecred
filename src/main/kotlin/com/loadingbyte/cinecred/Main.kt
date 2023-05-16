@@ -26,6 +26,7 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.*
+import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
@@ -182,20 +183,43 @@ private fun openUI(args: Array<String>) {
 private object UncaughtHandler : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(t: Thread, e: Throwable) {
+        // Immediately collect contextual information before we do anything else.
+        val header = collectReportHeader()
         LOGGER.error("Uncaught exception. Will terminate the program.", e)
         if (hasCrashed.getAndSet(true))
             return
         SwingUtilities.invokeLater {
-            sendReport()
+            sendReport(header)
             // Once all frames have been disposed, no more non-daemon threads are running and hence Java will terminate.
             if (::masterCtrl.isInitialized)
                 masterCtrl.tryCloseProjectsAndDisposeAllFrames(force = true)
         }
     }
 
-    private fun sendReport() {
+    private fun collectReportHeader(): String {
+        val rt = Runtime.getRuntime()
+        val freeMem = rt.freeMemory()
+        val totalMem = rt.totalMemory()
+        val maxMem = rt.maxMemory()
+        val mb = 1024 * 1024
+        return """---- SYSTEM INFO ----
+Cinecred: $VERSION
+JVM: ${System.getProperty("java.vm.vendor")} ${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}
+OS: ${System.getProperty("os.name")} ${System.getProperty("os.arch")} ${System.getProperty("os.version")}
+Memory: Used ${(totalMem - freeMem) / mb} MB, Reserved ${totalMem / mb} MB, Max ${maxMem / mb} MB
+Cores: ${rt.availableProcessors()}
+Locale: ${Locale.getDefault().toLanguageTag()}
+
+---- JVM ARGS ----
+${ManagementFactory.getRuntimeMXBean().inputArguments.joinToString("\n")}
+
+---- LOG ----
+"""
+    }
+
+    private fun sendReport(header: String) {
         val log = JULBuilderHandler.log.toString()
-        val logComp = JTextArea(log).apply {
+        val logComp = JTextArea("$header$log").apply {
             isEditable = false
             putClientProperty(STYLE_CLASS, "monospaced")
         }
@@ -211,9 +235,10 @@ private object UncaughtHandler : Thread.UncaughtExceptionHandler {
         if (send) {
             val address = encodeMailURIComponent("crashes@cinecred.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")
-            // We replace tabs by four dots because some email programs trim leading tabs and spaces.
-            val header = "Cinecred: $VERSION\nOS: ${System.getProperty("os.name")} ${System.getProperty("os.version")}"
-            val body = encodeMailURIComponent(header + "\n\n" + log.replace("\t", "...."))
+            val report = "[If possible, please describe what you did leading up to this crash.]\n\n\n$header" +
+                    // We replace tabs by four dots because some email programs trim leading tabs and spaces.
+                    log.replace("\t", "....")
+            val body = encodeMailURIComponent(report)
             tryMail(URI("mailto:$address?Subject=$subject&Body=$body"))
         }
     }

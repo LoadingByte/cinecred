@@ -58,9 +58,6 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         setViewportView(jobTable)
     }
 
-    val renderJobs: Sequence<RenderJob>
-        get() = jobTableModel.rows.asSequence().map { it.job }
-
     private val hasUnfinishedRenderJobs: Boolean
         get() = jobTableModel.rows.any { row -> !row.isFinished }
 
@@ -128,7 +125,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
     }
 
     private fun tryUpdateTaskbarBadge() {
-        trySetTaskbarIconBadge(RenderQueue.getRemainingJobs().size)
+        trySetTaskbarIconBadge(RenderQueue.getNumberOfRemainingJobs())
     }
 
     fun onTryCloseProject(force: Boolean): Boolean {

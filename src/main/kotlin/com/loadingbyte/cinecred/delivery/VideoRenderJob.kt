@@ -28,10 +28,11 @@ class VideoRenderJob(
     private val fileOrPattern: Path
 ) : RenderJob {
 
-    override fun generatesFile(file: Path) = when {
-        format.fileSeq -> file.startsWith(fileOrPattern.parent)
-        else -> file == fileOrPattern
-    }
+    override val prefix: Path
+        get() = when {
+            format.fileSeq -> fileOrPattern.parent
+            else -> fileOrPattern
+        }
 
     override fun render(progressCallback: (Int) -> Unit) {
         // If we have an image sequence, delete the sequence directory if it already exists.

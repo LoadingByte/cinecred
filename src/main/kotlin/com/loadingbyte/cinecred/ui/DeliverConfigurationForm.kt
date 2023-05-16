@@ -300,7 +300,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 } else if (fileOrDir == ctrl.projectDir) {
                     overwriteProjectDirDialog()
                     return
-                } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
+                } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))
                         return
                 } else if (fileOrDir.isDirectory() && fileOrDir.useDirectoryEntries { seq -> seq.any() })
@@ -310,10 +310,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 if (fileOrDir.isDirectory()) {
                     wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.dir", fileOrDir))
                     return
-                } else if (RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) }) {
+                } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", fileOrDir)))
                         return
-                } else if (fileOrDir.exists() || RenderQueue.getRemainingJobs().any { it.generatesFile(fileOrDir) })
+                } else if (fileOrDir.exists())
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileExists", fileOrDir)))
                         return
             }

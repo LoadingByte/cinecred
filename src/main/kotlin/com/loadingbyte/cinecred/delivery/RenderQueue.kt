@@ -4,13 +4,14 @@ import com.loadingbyte.cinecred.common.LOGGER
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 
 interface RenderJob {
-    fun generatesFile(file: Path): Boolean
+    val prefix: Path
     fun render(progressCallback: (Int) -> Unit)
 }
 
@@ -32,6 +33,8 @@ object RenderQueue {
 
     private val pollJobLock = ReentrantLock()
     private var runningJob: SubmittedJob? = null
+
+    private val prefixHistory = CopyOnWriteArrayList<Path>()
 
     init {
         thread = Thread({
@@ -92,15 +95,27 @@ object RenderQueue {
         }
     }
 
-    fun getRemainingJobs(): List<RenderJob> =
+    fun getNumberOfRemainingJobs(): Int =
         pollJobLock.withLock {
-            val remJobs = ArrayList<RenderJob>()
-            runningJob?.let { remJobs.add(it.job) }
+            var n = 0
+            if (runningJob != null) n++
+            for (queue in queuedJobs.values) n += queue.size
+            n
+        }
+
+    fun isRenderedFileOfRemainingJob(file: Path): Boolean {
+        pollJobLock.withLock {
+            runningJob?.let { if (file.startsWith(it.job.prefix)) return true }
             for (queue in queuedJobs.values)
                 for (job in queue)
-                    remJobs.add(job.job)
-            remJobs
+                    if (file.startsWith(job.job.prefix))
+                        return true
+            return false
         }
+    }
+
+    fun isRenderedFile(file: Path): Boolean =
+        prefixHistory.any(file::startsWith)
 
     fun submitJob(
         category: Any,
@@ -110,6 +125,7 @@ object RenderQueue {
     ) {
         val queue = queuedJobs.computeIfAbsent(category) { ConcurrentLinkedQueue() }
         queue.add(SubmittedJob(category, job, progressCallback, finishCallback))
+        prefixHistory.add(job.prefix)
     }
 
     fun cancelJob(category: Any, job: RenderJob) {

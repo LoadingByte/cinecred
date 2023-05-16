@@ -37,7 +37,8 @@ class WholePageSequenceRenderJob(
     val filenamePattern: String
 ) : RenderJob {
 
-    override fun generatesFile(file: Path) = file.startsWith(dir)
+    override val prefix: Path
+        get() = dir
 
     override fun render(progressCallback: (Int) -> Unit) {
         if (dir.exists())
@@ -138,7 +139,8 @@ class WholePagePDFRenderJob(
     val file: Path
 ) : RenderJob {
 
-    override fun generatesFile(file: Path) = file == this.file
+    override val prefix: Path
+        get() = file
 
     override fun render(progressCallback: (Int) -> Unit) {
         file.parent.createDirectoriesSafely()

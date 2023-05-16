@@ -122,7 +122,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     }
 
     private class DummyRenderJob : RenderJob {
-        override fun generatesFile(file: Path) = throw UnsupportedOperationException()
+        override val prefix get() = throw UnsupportedOperationException()
         override fun render(progressCallback: (Int) -> Unit) = throw UnsupportedOperationException()
     }
 }

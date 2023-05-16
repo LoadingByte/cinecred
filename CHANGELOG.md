@@ -17,6 +17,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Improved stability by letting Cinecred use up to 75% of the installed memory.
 - Crash reports now include more context and ask users to state what they did.
 
 

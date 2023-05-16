@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.common
 
 import com.electronwill.toml.Toml
 import com.electronwill.toml.TomlWriter
+import com.formdev.flatlaf.util.SystemInfo
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
@@ -182,6 +183,19 @@ fun writeToml(file: Path, toml: Map<String, Any?>) {
     }.toString()
     // Then write the string to the file.
     file.writeText(text)
+}
+
+
+val CONFIG_DIR: Path = when {
+    SystemInfo.isWindows -> Path(System.getenv("APPDATA"), "Cinecred")
+    SystemInfo.isMacOS -> Path(System.getProperty("user.home"), "Library", "Application Support", "Cinecred")
+    else /* Linux & fallback */ -> {
+        val cfgDir = System.getenv("XDG_CONFIG_HOME")
+        if (cfgDir.isNullOrEmpty())
+            Path(System.getProperty("user.home"), ".config", "cinecred")
+        else
+            Path(cfgDir, "cinecred")
+    }
 }
 
 

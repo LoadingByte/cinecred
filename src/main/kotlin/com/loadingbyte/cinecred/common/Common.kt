@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.common
 
+import com.electronwill.toml.Toml
+import com.electronwill.toml.TomlWriter
 import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
@@ -16,6 +18,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.StringWriter
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
@@ -25,6 +28,7 @@ import javax.swing.UIManager
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.isDirectory
+import kotlin.io.path.writeText
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -164,6 +168,20 @@ fun Path.walkSafely(): List<Path> {
         }
     })
     return list
+}
+
+
+fun readToml(file: Path): MutableMap<String, Any> =
+    Toml.read(file.toFile())
+
+fun writeToml(file: Path, toml: Map<String, Any?>) {
+    // First write to a string and not directly to the file so that it's not corrupted if the TOML writer crashes.
+    val text = StringWriter().also { writer ->
+        // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
+        TomlWriter(writer, 1, false, "\n").write(toml)
+    }.toString()
+    // Then write the string to the file.
+    file.writeText(text)
 }
 
 

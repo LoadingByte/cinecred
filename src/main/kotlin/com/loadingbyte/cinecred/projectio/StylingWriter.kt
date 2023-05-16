@@ -1,13 +1,10 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.electronwill.toml.TomlWriter
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import java.awt.Color
-import java.io.StringWriter
 import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.writeText
 
 
 fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
@@ -18,15 +15,8 @@ fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
         "letterStyle" to styling.letterStyles.map { writeStyle(ctx, styling, it) }
     )
 
-    // First write the text to a string and not directly to the file so that the file is not corrupted
-    // if TomlWriter happens to crash the program.
-    val text = StringWriter().also { writer ->
-        // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
-        TomlWriter(writer, 1, false, "\n").write(toml)
-    }.toString()
-
     stylingFile.parent.createDirectoriesSafely()
-    stylingFile.writeText(text)
+    writeToml(stylingFile, toml)
 }
 
 

@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.electronwill.toml.Toml
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
@@ -11,7 +10,7 @@ import java.util.*
 
 
 fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
-    val toml = Toml.read(stylingFile.toFile()) as MutableMap<String, Any>
+    val toml = readToml(stylingFile)
 
     val rawStyling = RawStyling(
         readMap(toml["global"]),

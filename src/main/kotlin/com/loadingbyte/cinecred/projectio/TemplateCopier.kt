@@ -28,7 +28,7 @@ private fun tryCopyStylingTemplate(destDir: Path, locale: Locale, scale: Int) {
 
 
 private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
-    if (locateCreditsFile(destDir).first != null)
+    if (ProjectIntake.locateCreditsFile(destDir).first != null)
         return
 
     val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }

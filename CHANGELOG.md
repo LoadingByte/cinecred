@@ -23,6 +23,8 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- When the credits or styling is erroneous, the last fine version is now shown,
+  and all error messages are collected in the log table.
 - Instead of hanging, a waiting screen is now displayed during project creation.
 
 

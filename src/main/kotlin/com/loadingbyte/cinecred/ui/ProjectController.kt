@@ -1,13 +1,11 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
-import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
@@ -20,13 +18,11 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
-import javax.swing.Timer
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
 
@@ -40,48 +36,72 @@ class ProjectController(
 
     class ProjectInitializationAbortedException : Exception()
 
+    // START OF INITIALIZATION PROCEDURE
+
     val projectName: String = projectDir.name
 
-    val stylingCtx: StylingContext
+    val stylingCtx: StylingContext get() = currentInput.get().stylingCtx!!
     val stylingHistory: StylingHistory
+
+    private data class Input(
+        val creditsSpreadsheet: Spreadsheet?,
+        val ioLog: List<ParserMsg>,
+        val stylingCtx: StylingContext?,
+        val pictureLoaders: Collection<PictureLoader>?,
+        val styling: Styling?
+    )
+
+    private val currentInput = AtomicReference(Input(null, emptyList(), null, null, null))
+    private val processingJobSlot = JobSlot()
+    private var processingLog = emptyList<ParserMsg>()
+
+    // STEP 1:
+    // Create and open the project UI.
 
     val projectFrame = ProjectFrame(this)
     val stylingDialog = StylingDialog(this)
     val videoDialog = VideoDialog(this)
     val deliveryDialog = DeliveryDialog(this)
 
-    private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
-    private var creditsFile: Path? = null
-
-    private var creditsSpreadsheet = Spreadsheet(emptyList())
-    private val fonts = HashMap<Path, List<Font>>()
-    private val fontsByName = HashMap<String, Font>()
-    private val pictureLoadersByRelPath = HashMap<Path, Lazy<Picture?>>()
-
-    // The state that is relevant for pushStateIntoUI().
-    private var creditsFileLocatingLog: List<ParserMsg> = emptyList()
-    private var creditsFileLoadingLog: List<ParserMsg> = emptyList()
-    private var creditsFileReadingLog: List<ParserMsg> = emptyList()
-    private var error: Error? = null
-    private var drawnProject: DrawnProject? = null
-
-    private val readCreditsAndRedrawJobSlot = JobSlot()
-
     init {
-        stylingCtx = StylingContextImpl(fontsByName)
-
         projectFrame.isVisible = true
         stylingDialog.isVisible = true
 
         if (PersistentStorage.projectHintTrackPending)
             makeProjectHintTrack(this).play(onPass = { PersistentStorage.projectHintTrackPending = false })
+    }
 
-        // Load the initially present auxiliary files (project fonts and pictures).
-        for (projectFile in projectDir.walkSafely())
-            if (projectFile.isRegularFile())
-                tryReloadAuxFile(projectFile)
+    // STEP 2:
+    // Set up the project intake, which will notify us about changes to the credits spreadsheet and auxiliary files.
+    // Upon construction, the intake will immediately push the project fonts and picture loaders from this thread.
+    // This in turn means that the styling context will be initialized before the constructor returns.
 
-        // Load the initial state of the styling from disk.
+    private val projectIntake = ProjectIntake(projectDir, object : ProjectIntake.Callbacks {
+
+        override fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>) {
+            process(currentInput.updateAndGet { it.copy(creditsSpreadsheet = creditsSpreadsheet, ioLog = log) })
+        }
+
+        override fun pushProjectFonts(projectFonts: Collection<Font>) {
+            val projectFontsByName = projectFonts.associateBy { font -> font.getFontName(Locale.ROOT) }
+            val projectFamilies = FontFamilies(projectFonts)
+            process(currentInput.updateAndGet { it.copy(stylingCtx = StylingContextImpl(projectFontsByName)) })
+            SwingUtilities.invokeLater { stylingDialog.panel.updateProjectFontFamilies(projectFamilies) }
+        }
+
+        override fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>) {
+            process(currentInput.updateAndGet { it.copy(pictureLoaders = pictureLoaders) })
+        }
+
+    })
+
+    // STEP 3:
+    // Load the initial state of the styling from disk. Then render the credits if the credits spreadsheet has already
+    // arrived; otherwise, its arrival later on will trigger the render.
+
+    private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
+
+    init {
         val styling = try {
             readStyling(stylingFile, stylingCtx)
         } catch (e: IOException) {
@@ -93,176 +113,63 @@ class ProjectController(
             throw ProjectInitializationAbortedException()
         }
         stylingHistory = StylingHistory(styling)
-
-        // Try to find a credits file.
-        tryLocateCreditsFile()
-        // If present, load the initial credits spreadsheet from disk.
-        tryReloadCreditsFile()
-        // If present, read and draw the credits.
-        tryReadCreditsAndRedraw()
-
-        // Watch for future changes in the new project dir.
-        RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
-            // Wait a moment to be sure the file has been fully written.
-            Timer(100) {
-                when {
-                    hasCreditsFileName(file) -> {
-                        val creditsFile = this.creditsFile
-                        tryLocateCreditsFile()
-                        val newCreditsFile = this.creditsFile
-                        if (file == newCreditsFile || newCreditsFile == null ||
-                            (creditsFile != null && !safeIsSameFile(creditsFile, newCreditsFile))
-                        ) {
-                            tryReloadCreditsFile()
-                            tryReadCreditsAndRedraw()
-                        } else
-                            pushStateIntoUI()  // Update the log entry regarding multiple credits files.
-                    }
-                    event == RecursiveFileWatcher.Event.MODIFY ->
-                        if (tryReloadAuxFile(file)) tryReadCreditsAndRedraw()
-                    event == RecursiveFileWatcher.Event.DELETE ->
-                        if (tryRemoveAuxFile(file)) tryReadCreditsAndRedraw()
-                }
-            }.apply { isRepeats = false; start() }
-        }
+        process(currentInput.updateAndGet { it.copy(styling = styling) })
     }
 
-    private fun safeIsSameFile(p1: Path, p2: Path) =
-        try {
-            Files.isSameFile(p1, p2)
-        } catch (_: IOException) {
-            false
-        }
+    // END OF INITIALIZATION PROCEDURE
 
-    private fun pushStateIntoUI() {
-        val log = creditsFileLocatingLog + creditsFileLoadingLog + creditsFileReadingLog
-        projectFrame.panel.updateProject(drawnProject, log, error)
-        stylingDialog.panel.updateProject(drawnProject)
-        // If the video has no frames at all, tell the video and delivery dialogs that no drawn project exists to avoid
-        // them having to handle this special case.
-        val safeDrawnProject = if (drawnProject?.video?.numFrames != 0) drawnProject else null
-        videoDialog.panel.updateProject(safeDrawnProject)
-        deliveryDialog.panel.configurationForm.updateProject(safeDrawnProject)
-    }
-
-    private fun tryReloadAuxFile(file: Path): Boolean {
-        // If the file has been generated by a render job, don't reload the project. Otherwise, generating image
-        // sequences would be very expensive because we would constantly reload the project. Note that we do not
-        // only consider the current render job, but all render jobs in the render job list. This ensures that even
-        // the last file generated by a render job doesn't reload the project even when the render job has already
-        // been marked as complete by the time the OS notifies us about the newly generated file.
-        if (RenderQueue.isRenderedFile(file))
-            return false
-
-        val newFonts = tryReadFonts(file)
-        if (newFonts.isNotEmpty()) {
-            fonts[file] = newFonts
-            newFonts.associateByTo(fontsByName) { font -> font.getFontName(Locale.ROOT) }
-            stylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
-            return true
-        }
-
-        tryReadPictureLoader(file)?.let { pictureLoader ->
-            val prevPictureLoader = pictureLoadersByRelPath.put(projectDir.relativize(file), pictureLoader)
-            if (prevPictureLoader != null && prevPictureLoader.isInitialized())
-                prevPictureLoader.value?.dispose()
-            return true
-        }
-
-        return false
-    }
-
-    private fun tryRemoveAuxFile(file: Path): Boolean {
-        val remFonts = fonts.remove(file)
-        if (remFonts != null) {
-            fontsByName.values.removeAll(remFonts)
-            stylingDialog.panel.updateProjectFontFamilies(FontFamilies(fonts.values.flatten()))
-            return true
-        }
-        val pictureLoader = pictureLoadersByRelPath.remove(projectDir.relativize(file))
-        if (pictureLoader != null) {
-            if (pictureLoader.isInitialized())
-                pictureLoader.value?.dispose()
-            return true
-        }
-        return false
-    }
-
-    private fun tryLocateCreditsFile() {
-        val (file, log) = locateCreditsFile(projectDir)
-        creditsFile = file
-        creditsFileLocatingLog = log
-    }
-
-    private fun tryReloadCreditsFile() {
-        creditsSpreadsheet = Spreadsheet(emptyList())
-        creditsFileLoadingLog = emptyList()
-
-        creditsFile?.let { creditsFile ->
-            try {
-                val (spreadsheet, log) = loadCreditsFile(creditsFile)
-                creditsSpreadsheet = spreadsheet
-                creditsFileLoadingLog = log
-            } catch (_: IOException) {
-                // An IO exception can occur if the credits file has disappeared in the meantime.
-                // If that happens, the file watcher will quickly trigger a locating and then a reloading call.
-            }
-        }
-    }
-
-    private fun tryReadCreditsAndRedraw() {
-        // Capture these variables in the state they are in when the function is called.
-        val styling = stylingHistory.current
-        val creditsSpreadsheet = this.creditsSpreadsheet
-
-        // Reset these variables. We will set some of them in the following code, depending on which problems occur.
-        creditsFileReadingLog = emptyList()
-        error = null
-        drawnProject = null
-
-        // If the credits file could not be located or loaded, abort and notify the UI about the error.
-        if (creditsFileLocatingLog.any { it.severity == ERROR } || creditsFileLoadingLog.any { it.severity == ERROR })
-            return pushStateIntoUI()
-
-        // Freeze the font and picture loader maps so that they do not change while processing the project.
-        val stylingCtx = StylingContextImpl(HashMap(fontsByName))
-        val pictureLoadersByRelPath = HashMap(this.pictureLoadersByRelPath)
+    private fun process(input: Input) {
+        val (creditsSpreadsheet, _, stylingCtx, pictureLoaders, styling) = input
+        // If something hasn't been initialized yet, abort reading and drawing the credits.
+        if (creditsSpreadsheet == null || stylingCtx == null || pictureLoaders == null || styling == null)
+            return doneProcessing(input, null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
-        readCreditsAndRedrawJobSlot.submit {
+        processingJobSlot.submit {
+            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoaders)
+
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
-            if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR })
-                return@submit SwingUtilities.invokeLater { error = Error.STYLING; pushStateIntoUI() }
-
-            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoadersByRelPath)
+            if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR }) {
+                val error = ParserMsg(null, null, null, ERROR, l10n("ui.edit.stylingError"))
+                return@submit doneProcessing(input, log + error, null)
+            }
 
             // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
             if (log.any { it.severity == ERROR })
-                return@submit SwingUtilities.invokeLater { creditsFileReadingLog = log; pushStateIntoUI() }
-
-            // Also abort if the spreadsheet doesn't contain a single page.
-            if (pages.isEmpty())
-                return@submit SwingUtilities.invokeLater {
-                    creditsFileReadingLog = log; error = Error.NO_PAGES; pushStateIntoUI()
-                }
+                return@submit doneProcessing(input, log, null)
 
             val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
             val drawnPages = drawPages(project)
 
             // Limit each page's height to prevent the program from crashing due to misconfiguration.
-            if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 })
-                return@submit SwingUtilities.invokeLater {
-                    creditsFileReadingLog = log; error = Error.EXCESSIVE_PAGE_SIZE; pushStateIntoUI()
-                }
+            if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 }) {
+                val error = ParserMsg(null, null, null, ERROR, l10n("ui.edit.excessivePageSizeError"))
+                return@submit doneProcessing(input, log + error, null)
+            }
 
             val video = drawVideo(project, drawnPages)
             val drawnProject = DrawnProject(project, drawnPages.toPersistentList(), video)
+            doneProcessing(input, log, drawnProject)
+        }
+    }
 
-            SwingUtilities.invokeLater {
-                creditsFileReadingLog = log
-                this.drawnProject = drawnProject
-                pushStateIntoUI()
+    private fun doneProcessing(input: Input, processingLog: List<ParserMsg>?, drawnProject: DrawnProject?) {
+        SwingUtilities.invokeLater {
+            if (processingLog == null)
+                projectFrame.panel.updateLog(input.ioLog + this.processingLog)
+            else {
+                this.processingLog = processingLog
+                projectFrame.panel.updateLog(input.ioLog + processingLog)
+                if (drawnProject != null) {
+                    projectFrame.panel.updateProject(drawnProject)
+                    stylingDialog.panel.updateProject(drawnProject)
+                    // If the video has no frames at all, tell the video and delivery dialogs that no drawn project
+                    // exists to avoid them having to handle this special case.
+                    val safeDrawnProject = if (drawnProject.video.numFrames != 0) drawnProject else null
+                    videoDialog.panel.updateProject(safeDrawnProject)
+                    deliveryDialog.panel.configurationForm.updateProject(safeDrawnProject)
+                }
             }
         }
     }
@@ -279,13 +186,7 @@ class ProjectController(
         for (type in ProjectDialogType.values())
             getDialog(type).dispose()
 
-        // Cancel the previous project dir change watching order.
-        RecursiveFileWatcher.unwatch(projectDir)
-
-        // Dispose of all loaded pictures.
-        for (pictureLoader in pictureLoadersByRelPath.values)
-            if (pictureLoader.isInitialized())
-                pictureLoader.value?.dispose()
+        projectIntake.close()
 
         return true
     }
@@ -320,9 +221,6 @@ class ProjectController(
             else -> false
         }
     }
-
-
-    enum class Error { STYLING, NO_PAGES, EXCESSIVE_PAGE_SIZE }
 
 
     private class StylingContextImpl(private val fontsByName: Map<String, Font>) : StylingContext {
@@ -430,7 +328,7 @@ class ProjectController(
                 isUndoable = currentIdx != 0,
                 isRedoable = currentIdx != history.lastIndex
             )
-            tryReadCreditsAndRedraw()
+            process(currentInput.updateAndGet { it.copy(styling = current) })
         }
 
         private fun semanticallyEqual(a: Styling, b: Styling) =

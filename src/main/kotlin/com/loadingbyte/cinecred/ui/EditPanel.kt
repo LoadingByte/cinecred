@@ -16,7 +16,6 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Dimension
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*
@@ -184,15 +183,12 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
         putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
     }
-    private val pageErrorLabel = JLabel().apply {
-        putClientProperty(STYLE, "font: bold \$h0.font; foreground: $PALETTE_RED")
-    }
     private val pagePanelCards = CardLayout()
     private val pagePanel = JPanel(pagePanelCards).apply {
+        val loadingLabel = JLabel(l10n("ui.edit.loading")).apply { putClientProperty(STYLE, "font: bold \$h0.font") }
+        add(JPanel(MigLayout()).apply { add(loadingLabel, "push, center") }, "Loading")
+        add(JPanel(MigLayout()).apply { add(JLabel(ERROR_ICON.getScaledIcon(4.0)), "push, center") }, "Error")
         add(pageTabs, "Pages")
-        add(JPanel(MigLayout()).apply {
-            add(pageErrorLabel, "push, center")
-        }, "Error")
     }
 
     private val logTableModel = LogTableModel()
@@ -203,6 +199,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             for (tabIdx in 0 until pageTabs.tabCount)
                 add(pageTabs.getComponentAt(tabIdx) as EditPagePreviewPanel)
         }
+
+    private var updatedProjectOnce = false
 
     private fun newToolbarButtonWithKeyListener(
         icon: Icon,
@@ -375,47 +373,32 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         rootPane.putClientProperty("Window.documentModified", isUnsaved)
     }
 
-    fun updateProject(drawnProject: DrawnProject?, log: List<ParserMsg>, error: ProjectController.Error?) {
-        // Adjust the total runtime label.
-        if (drawnProject == null) {
-            runtimeLabel.preferredSize = Dimension(runtimeLabel.width, 0)
-            runtimeLabel.text = "\u2014"
-            runtimeLabel.toolTipText = null
-        } else {
-            val global = drawnProject.project.styling.global
-            val runtime = drawnProject.video.numFrames
-            val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
-            val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
-            runtimeLabel.preferredSize = null
-            runtimeLabel.text = tc
-            runtimeLabel.toolTipText = tooltip
-        }
-
-        // Update the pages tabs or show a big error notice.
-        val errorText = when {
-            log.any { it.severity == Severity.ERROR } -> l10n("ui.edit.creditsError")
-            else -> when (error) {
-                ProjectController.Error.STYLING -> l10n("ui.edit.stylingError")
-                ProjectController.Error.NO_PAGES -> l10n("ui.edit.noPagesError")
-                ProjectController.Error.EXCESSIVE_PAGE_SIZE -> l10n("ui.edit.excessivePageSizeError")
-                null -> null
-            }
-        }
-        if (errorText != null) {
-            pageErrorLabel.text = errorText
-            pagePanelCards.show(pagePanel, "Error")
-        } else {
-            pagePanelCards.show(pagePanel, "Pages")
-            updatePageTabs(drawnProject)
-        }
-
+    fun updateLog(log: List<ParserMsg>) {
         // Put the new parser log messages into the log table.
         logTableModel.log = log.sortedWith(compareByDescending(ParserMsg::severity).thenBy(ParserMsg::recordNo))
+        // If there are errors in the log and updateProject() isn't called, an erroneous project has been opened.
+        // In that case, show the big error mark.
+        if (log.any { it.severity == Severity.ERROR } && !updatedProjectOnce)
+            pagePanelCards.show(pagePanel, "Error")
     }
 
-    private fun updatePageTabs(drawnProject: DrawnProject?) {
+    fun updateProject(drawnProject: DrawnProject) {
+        updatedProjectOnce = true
+        // Update the pages tabs.
+        pagePanelCards.show(pagePanel, "Pages")
+        updatePageTabs(drawnProject)
+        // Adjust the total runtime label
+        val global = drawnProject.project.styling.global
+        val runtime = drawnProject.video.numFrames
+        val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
+        val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
+        runtimeLabel.text = tc
+        runtimeLabel.toolTipText = tooltip
+    }
+
+    private fun updatePageTabs(drawnProject: DrawnProject) {
         // First adjust the number of tabs to the number of pages.
-        val numPages = drawnProject?.drawnPages?.size ?: 0
+        val numPages = drawnProject.drawnPages.size
         while (pageTabs.tabCount > numPages)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
         while (pageTabs.tabCount < numPages) {
@@ -432,9 +415,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             pageTabs.addTab(tabTitle, PAGE_ICON, previewPanel)
         }
         // Then fill each tab with its corresponding page.
-        if (drawnProject != null)
-            for ((drawnPage, previewPanel) in drawnProject.drawnPages.zip(previewPanels))
-                previewPanel.setContent(drawnProject.project.styling.global, drawnPage)
+        for ((drawnPage, previewPanel) in drawnProject.drawnPages.zip(previewPanels))
+            previewPanel.setContent(drawnProject.project.styling.global, drawnPage)
     }
 
 

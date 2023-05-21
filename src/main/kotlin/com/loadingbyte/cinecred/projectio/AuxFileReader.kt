@@ -46,20 +46,36 @@ private val RASTER_PICTURE_EXTS = ImageIO.getReaderFileSuffixes().toSet()
 private val POSTSCRIPT_EXTS = listOf("ai", "eps", "ps")
 
 /** Doesn't throw; instead, the picture loader returns null when loaded. */
-fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
+fun tryReadPictureLoader(pictureFile: Path): PictureLoader? {
     val ext = pictureFile.extension
     if (pictureFile.isRegularFile())
         when {
             ext.equalsAny(RASTER_PICTURE_EXTS, ignoreCase = true) ->
-                return lazy { runCatching { loadRaster(pictureFile) }.getOrNull() }
+                return PictureLoader(pictureFile, ::loadRaster)
             ext.equals("svg", ignoreCase = true) ->
-                return lazy { runCatching { loadSVG(pictureFile) }.getOrNull() }
+                return PictureLoader(pictureFile, ::loadSVG)
             ext.equals("pdf", ignoreCase = true) ->
-                return lazy { runCatching { loadPDF(pictureFile) }.getOrNull() }
+                return PictureLoader(pictureFile, ::loadPDF)
             ext.equalsAny(POSTSCRIPT_EXTS, ignoreCase = true) ->
-                return lazy { runCatching { loadPostScript(pictureFile) }.getOrNull() }
+                return PictureLoader(pictureFile, ::loadPostScript)
         }
     return null
+}
+
+class PictureLoader(file: Path, initializer: (Path) -> Picture) {
+    private val lazy = lazy {
+        try {
+            initializer(file)
+        } catch (e: Exception) {
+            LOGGER.error("Skipping picture '{}' because it is corrupt or cannot be read.", file, e)
+            null
+        }
+    }
+    val filename: String = file.name
+    val picture: Picture? get() = lazy.value
+    fun dispose() {
+        if (lazy.isInitialized()) lazy.value?.dispose()
+    }
 }
 
 

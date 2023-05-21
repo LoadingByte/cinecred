@@ -7,57 +7,13 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.*
-
-
-fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-    fun availExtsStr() = SPREADSHEET_FORMATS.joinToString { fmt -> fmt.fileExt }
-
-    var creditsFile: Path? = null
-    val log = mutableListOf<ParserMsg>()
-
-    val candidates = getCreditsFileCandidates(projectDir)
-    if (candidates.isEmpty())
-        log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.noCreditsFile", availExtsStr())))
-    else {
-        creditsFile = candidates.first()
-        if (candidates.size > 1) {
-            val msg = l10n("projectIO.credits.multipleCreditsFiles", availExtsStr(), creditsFile.fileName)
-            log.add(ParserMsg(null, null, null, WARN, msg))
-        }
-    }
-
-    return Pair(creditsFile, log)
-}
-
-private fun getCreditsFileCandidates(projectDir: Path): List<Path> =
-    projectDir
-        .runCatching(Path::listDirectoryEntries).getOrDefault(emptyList())
-        .filter { file -> file.isRegularFile() && hasCreditsFileName(file) }
-        .sortedBy { file ->
-            val fileExt = file.extension
-            SPREADSHEET_FORMATS.indexOfFirst { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-        }
-
-fun hasCreditsFileName(file: Path): Boolean {
-    val fileExt = file.extension
-    return file.nameWithoutExtension.equals("Credits", ignoreCase = true) &&
-            SPREADSHEET_FORMATS.any { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-}
-
-fun loadCreditsFile(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
-    val fileExt = file.extension
-    val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-    return fmt.read(file)
-}
 
 
 fun readCredits(
     spreadsheet: Spreadsheet,
     styling: Styling,
-    pictureLoaders: Map<Path, Lazy<Picture?>>
+    pictureLoaders: Collection<PictureLoader>
 ): Triple<List<Page>, List<RuntimeGroup>, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
@@ -82,7 +38,7 @@ fun readCredits(
 private class CreditsReader(
     val table: Table,
     val styling: Styling,
-    pictureLoaders: Map<Path, Lazy<Picture?>>
+    pictureLoaders: Collection<PictureLoader>
 ) {
 
     /* ************************************
@@ -98,14 +54,14 @@ private class CreditsReader(
 
     // Put the picture loaders into a map whose keys are the picture filenames. Also record all duplicate filenames.
     // Once again use a map with case-insensitive keys.
-    val pictureLoaderMap: Map<String, Lazy<Picture?>>
+    val pictureLoaderMap: Map<String, PictureLoader>
     val duplicatePictures: Set<String>
 
     init {
-        val loaderMap = TreeMap<String, Lazy<Picture?>>(String.CASE_INSENSITIVE_ORDER)
+        val loaderMap = TreeMap<String, PictureLoader>(String.CASE_INSENSITIVE_ORDER)
         val dupSet = TreeSet(String.CASE_INSENSITIVE_ORDER)
-        for ((path, pictureLoader) in pictureLoaders) {
-            val filename = path.name
+        for (pictureLoader in pictureLoaders) {
+            val filename = pictureLoader.filename
             if (filename !in dupSet)
                 if (filename !in loaderMap)
                     loaderMap[filename] = pictureLoader
@@ -340,6 +296,10 @@ private class CreditsReader(
             concludeCompound()
         concludeStage(0.0)
         concludePage()
+
+        // If there is not a single page, that's an error.
+        if (pages.isEmpty())
+            table.log(null, null, ERROR, l10n("projectIO.credits.noPages"))
 
         // Collect the runtime groups. Warn about those which only contain card stages.
         val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
@@ -675,7 +635,7 @@ private class CreditsReader(
             }
 
             pictureLoaderMap[picName]?.let { picLoader ->
-                val origPic = picLoader.value
+                val origPic = picLoader.picture
                 if (origPic == null) {
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.pictureCorrupt", picName))
                     return null

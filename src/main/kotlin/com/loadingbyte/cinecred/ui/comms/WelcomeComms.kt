@@ -42,6 +42,8 @@ interface WelcomeCtrlComms {
     fun projects_createConfigure_onClickBack()
     fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int)
 
+    fun projects_createWait_onClickCancel()
+
     fun <V> onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V)
 
 }
@@ -90,7 +92,7 @@ interface WelcomeViewComms {
 
 
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
-enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE }
+enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
 
 
 interface Preferences {

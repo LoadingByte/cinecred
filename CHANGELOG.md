@@ -20,6 +20,10 @@ Cinecred Changelog
 - Improved stability by letting Cinecred use up to 75% of the installed memory.
 - Crash reports now include more context and ask users to state what they did.
 
+### UI Fixes
+
+- Instead of hanging, a waiting screen is now displayed during project creation.
+
 
 1.4.1
 -----

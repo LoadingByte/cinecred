@@ -173,10 +173,20 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(createConfigureDoneButton)
         }
 
+        val createWaitCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.projects_createWait_onClickCancel() }
+        }
+        val createWaitPanel = JPanel(MigLayout("insets 20, wrap", "", "[]push[]")).apply {
+            background = null
+            add(newLabelTextArea(l10n("ui.projects.create.wait")), "growx, pushx")
+            add(createWaitCancelButton, "right")
+        }
+
         add(startPanel, ProjectsCard.START.name)
         add(openBrowsePanel, ProjectsCard.OPEN_BROWSE.name)
         add(createBrowsePanel, ProjectsCard.CREATE_BROWSE.name)
         add(createConfigurePanel, ProjectsCard.CREATE_CONFIGURE.name)
+        add(createWaitPanel, ProjectsCard.CREATE_WAIT.name)
 
         @Suppress("DEPRECATION")
         leakedStartPanel = startPanel

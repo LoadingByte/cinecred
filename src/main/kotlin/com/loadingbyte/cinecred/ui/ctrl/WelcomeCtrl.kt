@@ -52,6 +52,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private var openBrowseSelection: Path? = null
     private var newBrowseSelection: Path? = null
 
+    private val createProjectThread = AtomicReference<Thread?>()
+
     private var cachePrefs: PreferencesDTO? = null
 
     fun supplyView(welcomeView: WelcomeViewComms) {
@@ -230,6 +232,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun close() {
+        createProjectThread.getAndSet(null)?.interrupt()
         welcomeView.close()
         masterCtrl.onCloseWelcomeFrame()
     }
@@ -305,8 +308,21 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int) {
         val projectDir = newBrowseSelection ?: return
-        tryCopyTemplate(projectDir, locale, format, scale)
-        tryOpenProject(projectDir)
+        welcomeView.projects_setCard(ProjectsCard.CREATE_WAIT)
+        createProjectThread.set(Thread({
+            try {
+                tryCopyTemplate(projectDir, locale, format, scale)
+                SwingUtilities.invokeLater { tryOpenProject(projectDir) }
+            } catch (_: InterruptedException) {
+                // Let the thread come to a stop.
+            }
+            createProjectThread.set(null)
+        }, "CreateProject").apply { isDaemon = true; start() })
+    }
+
+    override fun projects_createWait_onClickCancel() {
+        createProjectThread.getAndSet(null)?.interrupt()
+        welcomeView.projects_setCard(ProjectsCard.START)
     }
 
     override fun <V> onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V) {

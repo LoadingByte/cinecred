@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import java.nio.file.FileSystemException
+import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.name
@@ -22,7 +22,7 @@ fun isAllowedToBeProjectDir(path: Path): Boolean {
         try {
             path.useDirectoryEntries { }
             true
-        } catch (_: FileSystemException) {
+        } catch (_: IOException) {
             false
         }
 }

@@ -5,10 +5,12 @@ import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
+import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 
 
+/** @throws IOException */
 fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
     val toml = readToml(stylingFile)
 

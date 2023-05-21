@@ -124,10 +124,10 @@ class VideoWriter(
                 outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients,
                 codecName, codecProfile, codecOptions, muxerOptions
             )
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             try {
                 release()
-            } catch (e2: Throwable) {
+            } catch (e2: Exception) {
                 e.addSuppressed(e2)
             }
             throw e
@@ -559,7 +559,7 @@ class VideoWriter(
                 try {
                     av_frame_get_buffer(frame, 8 * BYTE_ALIGNMENT)
                         .ffmpegThrowIfErrnum("Could not allocate frame buffer")
-                } catch (e: Throwable) {
+                } catch (e: Exception) {
                     av_frame_free(frame)
                     throw e
                 }

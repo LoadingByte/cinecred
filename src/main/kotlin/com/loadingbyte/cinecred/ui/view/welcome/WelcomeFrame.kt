@@ -95,6 +95,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.projectsPanel.projects_createBrowse_setNextEnabled(enabled)
     override fun projects_createConfigure_setProjectDir(projectDir: Path) =
         panel.projectsPanel.projects_createConfigure_setProjectDir(projectDir)
+    override fun projects_createWait_setError(error: String?) =
+        panel.projectsPanel.projects_createWait_setError(error)
 
     override fun setPreferences(preferences: Preferences) =
         panel.preferencesPanel.form.setPreferences(preferences)

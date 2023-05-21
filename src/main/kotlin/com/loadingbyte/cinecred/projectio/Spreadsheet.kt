@@ -9,6 +9,7 @@ import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.FormulaError
 import org.apache.poi.ss.usermodel.IndexedColors
+import java.io.IOException
 import java.io.StringReader
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
@@ -45,10 +46,12 @@ interface SpreadsheetFormat {
 
     val fileExt: String
 
+    /** @throws Exception */
     fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>>
 
     /**
      * @param colWidths Width of some columns, in characters.
+     * @throws IOException
      */
     fun write(file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, RowLook>, colWidths: List<Int>)
 

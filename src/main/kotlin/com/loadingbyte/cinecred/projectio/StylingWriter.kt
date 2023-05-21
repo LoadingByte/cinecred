@@ -3,10 +3,12 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import java.awt.Color
+import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 
 
+/** @throws IOException */
 fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
     val toml = mapOf(
         "global" to writeStyle(ctx, styling, styling.global),

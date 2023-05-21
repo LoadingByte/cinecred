@@ -74,19 +74,14 @@ fun main(args: Array<String>) {
 
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")
-    // Load FFmpeg.
-    try {
-        // Load the FFmpeg libs that we require.
-        Loader.load(avutil::class.java)
-        Loader.load(avcodec::class.java)
-        Loader.load(avformat::class.java)
-        Loader.load(swscale::class.java)
-        avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
-        // Redirect FFmpeg's logging output to slf4j.
-        avutil.setLogCallback(FFmpegLogCallback)
-    } catch (t: Throwable) {
-        LOGGER.error("Failed to load FFmpeg", t)
-    }
+    // Load the FFmpeg libs that we require.
+    Loader.load(avutil::class.java)
+    Loader.load(avcodec::class.java)
+    Loader.load(avformat::class.java)
+    Loader.load(swscale::class.java)
+    avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
+    // Redirect FFmpeg's logging output to slf4j.
+    avutil.setLogCallback(FFmpegLogCallback)
 
     SwingUtilities.invokeLater { mainSwing(args) }
 }

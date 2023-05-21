@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.formdev.flatlaf.util.SystemInfo
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.isTTFOrOTF
 import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.common.walkSafely
@@ -40,7 +41,14 @@ val SYSTEM_FONTS: List<Font> =
             .filter(Path::isRegularFile)
             // The createFonts() method can only successfully read TrueType/OpenType fonts, which is desired.
             // If a FontFormatException or IOException occurs, just skip over the problematic font file.
-            .flatMap { runCatching { Font.createFonts(it.toFile()).asSequence() }.getOrDefault(emptySequence()) }
+            .flatMap {
+                try {
+                    Font.createFonts(it.toFile()).asSequence()
+                } catch (e: Exception) {
+                    LOGGER.error("Skipping system font '{}' because it is corrupt or cannot be read.", it, e)
+                    emptySequence()
+                }
+            }
             // Internal macOS fonts start with a dot; we do not want to include those.
             .filter { !it.getFamily(Locale.ROOT).startsWith('.') && !it.getFontName(Locale.ROOT).startsWith('.') }
             .toList()

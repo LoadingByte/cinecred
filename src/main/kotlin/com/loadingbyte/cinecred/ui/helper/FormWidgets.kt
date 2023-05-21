@@ -362,16 +362,20 @@ class TimecodeWidget(
 
         // We need to catch exceptions here because formatTimecode() throws some when using non-fractional FPS together
         // with a drop-frame timecode.
-        override fun valueToString(value: Any?): String = runCatching {
+        override fun valueToString(value: Any?): String = try {
             val tc = formatTimecode(fps, timecodeFormat, abs(value as Int))
             if (value < 0) "-$tc" else if (signed) "+$tc" else tc
-        }.getOrDefault("")
+        } catch (_: IllegalArgumentException) {
+            ""
+        }
 
-        override fun stringToValue(string: String?): Int = runCatching {
+        override fun stringToValue(string: String?): Int = try {
             val c0 = string!![0]
             val n = parseTimecode(fps, timecodeFormat, if (c0 == '+' || c0 == '-') string.substring(1) else string)
             if (signed && c0 == '-') -n else n
-        }.getOrElse { throw ParseException("", 0) }
+        } catch (_: Exception) {
+            throw ParseException("", 0)
+        }
     }
 
 }
@@ -525,7 +529,11 @@ open class EditableComboBoxWidget<V : Any>(
             value?.let { toString(this@EditableComboBoxWidget.valueClass.cast(it)) } ?: ""
 
         override fun stringToValue(string: String?): Any =
-            runCatching { fromString(string!!) }.getOrElse { throw ParseException("", 0) }
+            try {
+                fromString(string!!)
+            } catch (_: Exception) {
+                throw ParseException("", 0)
+            }
     }
 
 }
@@ -563,10 +571,13 @@ class FPSWidget(
         }
 
         private fun fromDisplayString(str: String): FPS {
-            runCatching { NumberFormat.getNumberInstance().parse(str) }.onSuccess { frac ->
+            try {
+                val frac = NumberFormat.getNumberInstance().parse(str)
                 SUGGESTED_FRAC_FPS.find { it.first == frac }?.let { return it.second }
+            } catch (_: ParseException) {
+                // Try the next parser.
             }
-            runCatching(str::toInt).onSuccess { return FPS(it, 1) }
+            str.toIntOrNull()?.let { return FPS(it, 1) }
             return fpsFromFraction(str)
         }
 

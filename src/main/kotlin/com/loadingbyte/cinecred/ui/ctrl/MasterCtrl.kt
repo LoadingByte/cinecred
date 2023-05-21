@@ -56,8 +56,10 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
     }
 
     override fun openProject(projectDir: Path, openOnScreen: GraphicsConfiguration) {
-        lateinit var projectCtrl: ProjectController
-        projectCtrl = ProjectController(this, projectDir, openOnScreen, onClose = { onCloseProject(projectCtrl) })
+        var projectCtrl: ProjectController? = null
+        projectCtrl = ProjectController(
+            this, projectDir, openOnScreen, onClose = { projectCtrl?.let(::onCloseProject) }
+        )
         projectCtrls.add(projectCtrl)
     }
 

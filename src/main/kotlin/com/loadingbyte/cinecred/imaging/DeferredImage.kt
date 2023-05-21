@@ -756,7 +756,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             if (psName !in docRes.pdFonts) {
                                 val msg = "Successfully loaded the font file '{}' for PDF embedding, but the font " +
                                         "'{}' which lead to that file can for some reason not be found in there."
-                                LOGGER.warn(msg, fontFile, psName)
+                                LOGGER.error(msg, fontFile, psName)
                                 // Memoize the fallback font to avoid trying to load the font file again.
                                 docRes.pdFonts[psName] = PDType1Font.HELVETICA
                             }
@@ -774,7 +774,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             docRes.pdFonts[psName] = PDType0Font.load(doc, TTFParser().parse(fontFile), false)
                     }
                 } catch (e: Exception) {
-                    LOGGER.warn("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
+                    LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
                     // Memoize the fallback font to avoid trying to load the font file again.
                     docRes.pdFonts[psName] = PDType1Font.HELVETICA
                 }

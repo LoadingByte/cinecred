@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.formdev.flatlaf.util.SystemInfo
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
@@ -13,7 +14,6 @@ import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.slf4j.LoggerFactory
 import java.awt.Font
-import java.awt.FontFormatException
 import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executors
@@ -29,13 +29,14 @@ private fun String.equalsAny(other: Collection<String>, ignoreCase: Boolean = fa
 
 private val FONT_FILE_EXTS = listOf("ttf", "ttc", "otf", "otc")
 
+/** Doesn't throw, instead returns an empty list. */
 fun tryReadFonts(fontFile: Path): List<Font> {
     val ext = fontFile.extension
     if (fontFile.isRegularFile() && ext.equalsAny(FONT_FILE_EXTS, ignoreCase = true))
         try {
             return Font.createFonts(fontFile.toFile()).toList()
-        } catch (_: FontFormatException) {
-            // Skip fonts that are corrupt.
+        } catch (e: Exception) {
+            LOGGER.error("Skipping font '{}' because it is corrupt or cannot be read.", fontFile, e)
         }
     return emptyList()
 }
@@ -44,6 +45,7 @@ fun tryReadFonts(fontFile: Path): List<Font> {
 private val RASTER_PICTURE_EXTS = ImageIO.getReaderFileSuffixes().toSet()
 private val POSTSCRIPT_EXTS = listOf("ai", "eps", "ps")
 
+/** Doesn't throw; instead, the picture loader returns null when loaded. */
 fun tryReadPictureLoader(pictureFile: Path): Lazy<Picture?>? {
     val ext = pictureFile.extension
     if (pictureFile.isRegularFile())
@@ -127,10 +129,11 @@ private val GS_EXECUTABLE: Path? by lazy {
                     return@lazy gs
             }
         }
-    } catch (_: IOException) {
+    } catch (e: IOException) {
         // This block shouldn't run, but maybe we have overlooked something or the operating system behaves in a
         // strange way. In either case, ignore the exception, as its most likely just another indication that
         // Ghostscript is not installed.
+        LOGGER.warn("Encountered unexpected exception while looking for the Ghostscript executable.", e)
     }
 
     val linkWin = "https://ghostscript.com/releases/gsdnld.html"
@@ -191,8 +194,9 @@ private fun loadPostScript(psFile: Path): Picture.PDF {
 private fun tryDeleteFile(file: Path) {
     try {
         file.deleteExisting()
-    } catch (_: IOException) {
+    } catch (e: IOException) {
         // Ignore; don't bother the user when a probably tiny PDF file can't be deleted that will be deleted
         // by the OS the next time the user restarts his system anyways.
+        LOGGER.error("Cannot delete temporary PDF file '{}' created by Ghostscript.", file, e)
     }
 }

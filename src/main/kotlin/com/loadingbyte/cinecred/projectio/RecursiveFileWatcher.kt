@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.projectio
 
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.walkSafely
+import java.io.IOException
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -15,6 +17,7 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
 
+/** No method in this class throws exceptions. Instead, file watching is maintained on a best-effort basis. */
 object RecursiveFileWatcher {
 
     enum class Event { MODIFY, DELETE }
@@ -144,6 +147,10 @@ object RecursiveFileWatcher {
                     // The file was deleted right after isRegularFile() returned true. Unlucky timing, but do
                     // not add the memory entry then.
                     continue
+                } catch (e: IOException) {
+                    // If we can't get the last modified time for some other reason, do not watch this file.
+                    LOGGER.error("Cannot get the initial last modified time of file '{}'; will not watch it.", file, e)
+                    continue
                 }
                 // If the file was instead successfully memorized, notify the listener about it if requested.
                 if (notifyListener)
@@ -157,6 +164,11 @@ object RecursiveFileWatcher {
                     order.watchKeys.add(file.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY))
                 } catch (_: NoSuchFileException) {
                     // Once again, unlucky timing.
+                } catch (e: IOException) {
+                    // While we will not receive notifications from the OS for this directory, the alternative polling
+                    // mechanism could potentially still work (unless we fail to watch only some but not all dirs, which
+                    // would however be a very strange error condition, so we don't implement special cases for that).
+                    LOGGER.error("Cannot register directory '{}' with the OS file watcher.", file, e)
                 }
     }
 
@@ -169,6 +181,10 @@ object RecursiveFileWatcher {
             // The file was deleted between it being detected and this code being reached. Abort this method and let the
             // deletion detector notify the listener in a moment.
             return
+        } catch (e: IOException) {
+            // If we can't get the last modified time for some other reason, hope that maybe it'll work again next time.
+            LOGGER.error("Cannot get the last modified time required to check file '{}' for changes.", file, e)
+            return
         }
         if (memoryEntry.lastModMillis != lastModMillis) {
             // Sometimes, the same file is changed multiple times within the same millisecond. If we didn't wait for
@@ -178,7 +194,7 @@ object RecursiveFileWatcher {
             Thread.sleep(5)
             memoryEntry.lastModMillis = try {
                 file.getLastModifiedTime().toMillis()
-            } catch (_: NoSuchFileException) {
+            } catch (_: IOException /* includes NoSuchFileException */) {
                 return
             }
             order.listener(Event.MODIFY, file)

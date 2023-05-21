@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourceStream
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -10,6 +11,7 @@ import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 
+/** @throws IOException */
 fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
     destDir.createDirectoriesSafely()
     tryCopyStylingTemplate(destDir, locale, scale)

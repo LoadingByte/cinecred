@@ -42,6 +42,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val createBrowseFileChooser: JFileChooser
     private val createBrowseNextButton: JButton
     private val createConfigureProjectDirLabel = JLabel()
+    private val createWaitErrorTextArea: JTextArea
+    private val createWaitResponseTextArea: JTextArea
 
     init {
         val startCreateButton = makeOpenButton(l10n("ui.projects.create"), ADD_ICON).apply {
@@ -173,12 +175,20 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(createConfigureDoneButton)
         }
 
+        createWaitErrorTextArea = newLabelTextArea(l10n("ui.projects.create.error")).apply {
+            putClientProperty(STYLE, "foreground: $PALETTE_RED")
+        }
+        createWaitResponseTextArea = newLabelTextArea().apply {
+            putClientProperty(STYLE, "foreground: $PALETTE_RED")
+        }
         val createWaitCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
             addActionListener { welcomeCtrl.projects_createWait_onClickCancel() }
         }
-        val createWaitPanel = JPanel(MigLayout("insets 20, wrap", "", "[]push[]")).apply {
+        val createWaitPanel = JPanel(MigLayout("insets 20, wrap", "", "[][][]push[]")).apply {
             background = null
             add(newLabelTextArea(l10n("ui.projects.create.wait")), "growx, pushx")
+            add(createWaitErrorTextArea, "growx")
+            add(createWaitResponseTextArea, "growx")
             add(createWaitCancelButton, "right")
         }
 
@@ -318,6 +328,13 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     fun projects_createBrowse_setNextEnabled(enabled: Boolean) { createBrowseNextButton.isEnabled = enabled }
     fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.pathString }
     // @formatter:on
+
+    fun projects_createWait_setError(error: String?) {
+        val hasError = error != null
+        createWaitErrorTextArea.isVisible = hasError
+        createWaitResponseTextArea.isVisible = hasError
+        createWaitResponseTextArea.text = error ?: ""
+    }
 
 
     private inner class OpenTransferHandler : TransferHandler() {

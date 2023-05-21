@@ -165,7 +165,7 @@ fun Path.walkSafely(): List<Path> {
 
         private fun logExc(file: Path, exc: IOException) {
             val msg = "Exception thrown at '{}' while walking the file tree starting at '{}': {}"
-            LOGGER.warn(msg, file, root, exc.toString())
+            LOGGER.error(msg, file, root, exc.toString())
         }
     })
     return list

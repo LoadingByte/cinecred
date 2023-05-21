@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.ctrl
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.comms.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.Preferences
+import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.exists
@@ -18,7 +19,15 @@ object PersistentStorage : Preferences {
     private const val PROJECT_DIRS_KEY = "projectDirs"
 
     private val prefsFile = CONFIG_DIR.resolve("preferences.toml")
-    private val prefs = if (prefsFile.exists()) readToml(prefsFile) else HashMap()
+    private val prefs = run {
+        try {
+            if (prefsFile.exists())
+                return@run readToml(prefsFile)
+        } catch (e: IOException) {
+            LOGGER.error("Cannot read the preferences file '{}'.", prefsFile, e)
+        }
+        HashMap()
+    }
 
     init {
         // 1.4.1 -> 1.5.0: Preferences are now stored in a TOML file instead of Java's Preferences mechanism.
@@ -47,8 +56,12 @@ object PersistentStorage : Preferences {
     }
 
     private fun save() {
-        prefsFile.parent.createDirectoriesSafely()
-        writeToml(prefsFile, prefs)
+        try {
+            prefsFile.parent.createDirectoriesSafely()
+            writeToml(prefsFile, prefs)
+        } catch (e: IOException) {
+            LOGGER.error("Cannot write the preferences file '{}'.", prefsFile, e)
+        }
     }
 
     fun havePreferencesBeenSet() = prefsFile.exists()

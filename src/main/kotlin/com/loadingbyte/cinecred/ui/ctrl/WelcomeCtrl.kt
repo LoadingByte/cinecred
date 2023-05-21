@@ -6,12 +6,14 @@ import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.isAllowedToBeProjectDir
 import com.loadingbyte.cinecred.projectio.isProjectDir
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
+import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.*
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
+import java.io.IOException
 import java.io.StringReader
 import java.net.URI
 import java.net.http.HttpClient
@@ -112,7 +114,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             add(0, projectDir)
         }
 
-        masterCtrl.openProject(projectDir, openOnScreen = welcomeView.getMostOccupiedScreen())
+        try {
+            masterCtrl.openProject(projectDir, openOnScreen = welcomeView.getMostOccupiedScreen())
+        } catch (_: ProjectController.ProjectInitializationAbortedException) {
+            blockOpening = false
+            return false
+        }
         close()
         return true
     }
@@ -308,11 +315,14 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int) {
         val projectDir = newBrowseSelection ?: return
+        welcomeView.projects_createWait_setError(null)
         welcomeView.projects_setCard(ProjectsCard.CREATE_WAIT)
         createProjectThread.set(Thread({
             try {
                 tryCopyTemplate(projectDir, locale, format, scale)
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
+            } catch (e: IOException) {
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.toString()) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             }

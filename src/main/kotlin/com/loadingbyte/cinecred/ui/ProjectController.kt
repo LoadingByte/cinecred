@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.walkSafely
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.drawer.getBundledFont
@@ -22,18 +23,22 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
 
+/** @throws ProjectController.ProjectInitializationAbortedException */
 class ProjectController(
     val masterCtrl: MasterCtrlComms,
     val projectDir: Path,
     val openOnScreen: GraphicsConfiguration,
     private val onClose: () -> Unit
 ) {
+
+    class ProjectInitializationAbortedException : Exception()
 
     val projectName: String = projectDir.name
 
@@ -77,7 +82,17 @@ class ProjectController(
                 tryReloadAuxFile(projectFile)
 
         // Load the initial state of the styling from disk.
-        stylingHistory = StylingHistory(readStyling(stylingFile, stylingCtx))
+        val styling = try {
+            readStyling(stylingFile, stylingCtx)
+        } catch (e: IOException) {
+            JOptionPane.showMessageDialog(
+                projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.toString()),
+                l10n("ui.edit.cannotLoadStyling.title"), JOptionPane.ERROR_MESSAGE
+            )
+            tryCloseProject(force = true)
+            throw ProjectInitializationAbortedException()
+        }
+        stylingHistory = StylingHistory(styling)
 
         // Try to find a credits file.
         tryLocateCreditsFile()
@@ -396,7 +411,14 @@ class ProjectController(
         }
 
         fun save() {
-            writeStyling(stylingFile, stylingCtx, current)
+            try {
+                writeStyling(stylingFile, stylingCtx, current)
+            } catch (e: IOException) {
+                JOptionPane.showMessageDialog(
+                    projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.toString()),
+                    l10n("ui.edit.cannotSaveStyling.title"), JOptionPane.ERROR_MESSAGE
+                )
+            }
             saved = current
             lastEditedId = null  // Saving should always create a new undo state.
             projectFrame.panel.onStylingSave()

@@ -74,6 +74,8 @@ interface WelcomeViewComms {
 
     fun projects_createConfigure_setProjectDir(projectDir: Path)
 
+    fun projects_createWait_setError(error: String?)
+
     fun setPreferences(preferences: Preferences)
     fun setPreferencesSubmitButton(listener: (() -> Unit)?)
 

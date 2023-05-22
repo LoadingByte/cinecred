@@ -68,24 +68,22 @@ class Table(
                         continue@outer
                     }
                 }
-                // Prepare the column names which will be shown in a warning message.
-                val primaryColName = "@${l10n(key)}"
-                val alternativeColNames = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }
-                    .joinToString { "@${l10n(key, it)}" }
+                // Prepare the column name which will be shown in a warning message.
+                val colName = "@${l10n(key)}"
                 // The column might be missing, but first look for a legacy column name. Emit a warning if we find one.
                 val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList()).map { "@$it" }
                 for (legacyColName in possibleLegacyColNames) {
                     val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
                     if (col != -1) {
                         colMap[l10nColName] = col
-                        val msg = l10n("projectIO.table.legacyColumnName", primaryColName, alternativeColNames)
+                        val msg = l10n("projectIO.table.legacyColumnName", colName)
                         log.add(ParserMsg(headerRecordNo, legacyColName, null, WARN, msg))
                         continue@outer
                     }
                 }
                 // The column is missing. Emit a warning.
-                val msg = l10n("projectIO.table.missingExpectedColumn", alternativeColNames)
-                log.add(ParserMsg(headerRecordNo, primaryColName, null, WARN, msg))
+                val msg = l10n("projectIO.table.missingExpectedColumn")
+                log.add(ParserMsg(headerRecordNo, colName, null, WARN, msg))
             }
 
             // 2. Emit a warning for each unexpected column name.
@@ -153,11 +151,8 @@ class Table(
 
         if (unknown.isNotEmpty()) {
             val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
-            val primaryOpts = keys.joinToString { l10n(it) }
-            val altOpts = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { locale ->
-                keys.joinToString { key -> l10n(key, locale) }
-            }
-            val msg = l10n("projectIO.table.illFormattedManyOf", unknown.joinToString(" "), primaryOpts, altOpts)
+            val opts = keys.joinToString { l10n(it) }
+            val msg = l10n("projectIO.table.illFormattedManyOf", unknown.joinToString(" "), opts)
             log(row, l10nColName, WARN, msg)
         }
 

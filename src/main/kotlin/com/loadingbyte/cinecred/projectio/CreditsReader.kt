@@ -398,7 +398,7 @@ private class CreditsReader(
                 } else
                     posOffsetPx = str.toFiniteDouble()
             } catch (_: IllegalArgumentException) {
-                val msg = l10n("projectIO.credits.illFormattedSpinePos", PARALLEL_KW.msgPrimary, PARALLEL_KW.msgAlt)
+                val msg = l10n("projectIO.credits.illFormattedSpinePos", l10n(PARALLEL_KW.key))
                 table.log(row, "spinePos", WARN, msg)
             }
 
@@ -530,9 +530,7 @@ private class CreditsReader(
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", tagKey,
-            "{{${BLANK_KW.msgPrimary}}}, {{${STYLE_KW.msgPrimary}}}, {{${PIC_KW.msgPrimary}}}",
-            BLANK_KW.msgAltList.zip(STYLE_KW.msgAltList).zip(PIC_KW.msgAltList)
-                .joinToString { (bs, p) -> val (b, s) = bs; "{{$b}}, {{$s}}, {{$p}}" }
+            "{{${l10n(BLANK_KW.key)}}}, {{${l10n(STYLE_KW.key)}}}, {{${l10n(PIC_KW.key)}}}"
         )
 
         val str = table.getString(row, l10nColName) ?: return null
@@ -607,10 +605,10 @@ private class CreditsReader(
         }
     }
 
-    fun getPicture(l10nColName: String, tagKy: String, tagVal: String?): Picture? {
-        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", CROP_KW.msgPrimary, CROP_KW.msgAlt, tagKy)
+    fun getPicture(l10nColName: String, tagKey: String, tagVal: String?): Picture? {
+        fun illFormattedMsg() = l10n("projectIO.credits.pictureIllFormatted", l10n(CROP_KW.key), tagKey)
         fun notFoundMsg() = l10n("projectIO.credits.pictureNotFound") + " " + illFormattedMsg()
-        fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", CROP_KW.msgPrimary, CROP_KW.msgAlt)
+        fun rasterCropMsg() = l10n("projectIO.credits.pictureRasterCrop", l10n(CROP_KW.key))
         fun hintsUnknownMsg(hints: List<String>) =
             l10n("projectIO.credits.pictureHintsUnknown", hints.joinToString(" ")) + " " + illFormattedMsg()
 
@@ -765,19 +763,9 @@ private class CreditsReader(
     }
 
 
-    class Keyword(private val key: String) {
-
+    class Keyword(val key: String) {
         private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { l10n(key, it) }
-
         operator fun contains(str: String) = str in kwSet
-
-        val msgPrimary
-            get() = l10n(key)
-        val msgAltList: List<String>
-            get() = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.map { l10n(key, it) }
-        val msgAlt: String
-            get() = TRANSLATED_LOCALES.filter { it != Locale.getDefault() }.joinToString { l10n(key, it) }
-
     }
 
 }

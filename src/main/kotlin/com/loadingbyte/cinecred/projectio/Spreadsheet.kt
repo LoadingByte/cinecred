@@ -10,9 +10,9 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.FormulaError
 import org.apache.poi.ss.usermodel.IndexedColors
 import java.io.IOException
+import java.io.OutputStream
 import java.io.StringReader
 import java.nio.file.Path
-import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 
@@ -49,11 +49,17 @@ interface SpreadsheetFormat {
     /** @throws Exception */
     fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>>
 
-    /**
-     * @param colWidths Width of some columns, in characters.
-     * @throws IOException
-     */
-    fun write(file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, RowLook>, colWidths: List<Int>)
+    /** @throws IOException */
+    fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook)
+
+}
+
+
+class SpreadsheetLook(
+    val rowLooks: Map<Int, RowLook>,
+    /** Width of the columns, in characters. */
+    val colWidths: List<Int>
+) {
 
     class RowLook(
         val height: Int = -1,
@@ -98,13 +104,11 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
         close = { workbook -> workbook.close() }
     )
 
-    override fun write(
-        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
-    ) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
         val xlsx = fileExt == "xlsx"
         val workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(xlsx)
-        val sheet = workbook.createSheet(file.nameWithoutExtension)
-        val rowStyles = createDeduplicatedRowStyles(workbook, rowLooks)
+        val sheet = workbook.createSheet(name)
+        val rowStyles = createDeduplicatedRowStyles(workbook, look.rowLooks)
 
         for (record in spreadsheet) {
             val rowIdx = record.recordNo
@@ -123,13 +127,13 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
                 rowStyle?.let(cell::setCellStyle)
             }
 
-            rowLooks[rowIdx]?.let { look ->
-                if (look.height != -1)
-                    row.height = (look.height * 56).toShort()
+            look.rowLooks[rowIdx]?.let { rowLook ->
+                if (rowLook.height != -1)
+                    row.height = (rowLook.height * 56).toShort()
             }
         }
 
-        for ((col, width) in colWidths.withIndex())
+        for ((col, width) in look.colWidths.withIndex())
             sheet.setColumnWidth(col, width * 138)
 
         file.outputStream().use(workbook::write)
@@ -137,7 +141,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
 
     private fun createDeduplicatedRowStyles(
         workbook: org.apache.poi.ss.usermodel.Workbook,
-        rowLooks: Map<Int, SpreadsheetFormat.RowLook>
+        rowLooks: Map<Int, SpreadsheetLook.RowLook>
     ): Map<Int, org.apache.poi.ss.usermodel.CellStyle> {
         data class FontKey(val size: Int, val bold: Boolean, val italic: Boolean)
         data class StyleKey(val font: FontKey, val wrap: Boolean, val borderBottom: Boolean)
@@ -193,41 +197,43 @@ object OdsFormat : SpreadsheetFormat {
         close = { }
     )
 
-    override fun write(
-        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
-    ) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
+        file.outputStream().use { write(it, spreadsheet, name, look) }
+    }
+
+    fun write(stream: OutputStream, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
         val numRows = spreadsheet.numRecords
         val numCols = spreadsheet.numColumns
 
-        val sheet = com.github.miachm.sods.Sheet(file.nameWithoutExtension, numRows, numCols)
+        val sheet = com.github.miachm.sods.Sheet(name, numRows, numCols)
         val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].preprocess() } }
         sheet.dataRange.values = cellMatrix
 
         for (record in spreadsheet) {
             val row = record.recordNo
             val style = com.github.miachm.sods.Style()
-            rowLooks[row]?.let { look ->
-                if (look.fontSize != -1)
-                    style.fontSize = look.fontSize
-                style.isBold = look.bold
-                style.isItalic = look.italic
-                style.isWrap = look.wrap
-                if (look.borderBottom)
+            look.rowLooks[row]?.let { rowLook ->
+                if (rowLook.fontSize != -1)
+                    style.fontSize = rowLook.fontSize
+                style.isBold = rowLook.bold
+                style.isItalic = rowLook.italic
+                style.isWrap = rowLook.wrap
+                if (rowLook.borderBottom)
                     style.borders = Borders(false, null, true, "0.75pt solid #000000", false, null, false, null)
             }
             for (col in record.cells.indices)
                 sheet.getRange(row, col).style = style
         }
 
-        for ((row, look) in rowLooks)
-            if (look.height != -1)
-                sheet.setRowHeight(row, look.height.toDouble())
-        for ((col, width) in colWidths.withIndex())
+        for ((row, rowLook) in look.rowLooks)
+            if (rowLook.height != -1)
+                sheet.setRowHeight(row, rowLook.height.toDouble())
+        for ((col, width) in look.colWidths.withIndex())
             sheet.setColumnWidth(col, width.toDouble())
 
         val workbook = com.github.miachm.sods.SpreadSheet()
         workbook.appendSheet(sheet)
-        workbook.save(file.toFile())
+        workbook.save(stream)
     }
 
     private fun String.preprocess(): Any? =
@@ -259,9 +265,7 @@ object CsvFormat : SpreadsheetFormat {
         return Spreadsheet(csvRecords.map { rec -> ArrayList<String>(rec.size()).apply { addAll(rec) } })
     }
 
-    override fun write(
-        file: Path, spreadsheet: Spreadsheet, rowLooks: Map<Int, SpreadsheetFormat.RowLook>, colWidths: List<Int>
-    ) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
         CSVFormat.DEFAULT.print(file, Charsets.UTF_8).use { printer ->
             for (record in spreadsheet)
                 printer.printRecord(record.cells.map { it.ifEmpty { null } })

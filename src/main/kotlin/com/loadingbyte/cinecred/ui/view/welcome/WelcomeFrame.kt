@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
+import com.loadingbyte.cinecred.projectio.service.Service
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
 import com.loadingbyte.cinecred.ui.helper.center
@@ -95,13 +96,25 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.projectsPanel.projects_createBrowse_setNextEnabled(enabled)
     override fun projects_createConfigure_setProjectDir(projectDir: Path) =
         panel.projectsPanel.projects_createConfigure_setProjectDir(projectDir)
+    override fun projects_createConfigure_setServices(services: List<Service>) =
+        panel.projectsPanel.projects_createConfigure_setServices(services)
+    override fun projects_createConfigure_setCreditsName(name: String) =
+        panel.projectsPanel.projects_createConfigure_setCreditsName(name)
     override fun projects_createWait_setError(error: String?) =
         panel.projectsPanel.projects_createWait_setError(error)
 
-    override fun setPreferences(preferences: Preferences) =
-        panel.preferencesPanel.form.setPreferences(preferences)
-    override fun setPreferencesSubmitButton(listener: (() -> Unit)?) =
-        panel.preferencesPanel.form.setPreferencesSubmitButton(listener)
+    override fun preferences_setCard(card: PreferencesCard) =
+        panel.preferencesPanel.preferences_setCard(card)
+    override fun preferences_start_setPreferences(preferences: Preferences) =
+        panel.preferencesPanel.preferences_start_setPreferences(preferences)
+    override fun preferences_start_setInitialSetup(initialSetup: Boolean, doneListener: (() -> Unit)?) =
+        panel.preferencesPanel.preferences_start_setInitialSetup(initialSetup, doneListener)
+    override fun preferences_start_setServices(services: List<Service>) =
+        panel.preferencesPanel.preferences_start_setServices(services)
+    override fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean) =
+        panel.preferencesPanel.preferences_start_setServiceRemovalLocked(service, locked)
+    override fun preferences_authorizeService_setError(error: String?) =
+        panel.preferencesPanel.preferences_authorizeService_setError(error)
     // @formatter:on
 
     override fun setChangelog(changelog: String) = panel.setChangelog(changelog)
@@ -148,6 +161,13 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             this, l10n("ui.preferences.restartUILocale.msg", newLocale),
             l10n("ui.preferences.restartUILocale.title"), JOptionPane.OK_CANCEL_OPTION
         ) == JOptionPane.OK_OPTION
+    }
+
+    override fun showCannotRemoveServiceMessage(service: Service, error: String) {
+        JOptionPane.showMessageDialog(
+            this, arrayOf(l10n("ui.preferences.services.cannotRemove.msg", service.id), error),
+            l10n("ui.preferences.services.cannotRemove.title"), JOptionPane.ERROR_MESSAGE
+        )
     }
 
 

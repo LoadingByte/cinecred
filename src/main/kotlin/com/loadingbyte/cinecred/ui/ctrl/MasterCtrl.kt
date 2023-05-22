@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
+import com.loadingbyte.cinecred.projectio.service.addServiceListListener
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.UIFactoryComms
@@ -11,6 +12,7 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.nio.file.Path
+import javax.swing.SwingUtilities
 
 
 class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
@@ -22,6 +24,10 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
 
     private var welcomeCtrl: WelcomeCtrlComms? = null
     private val projectCtrls = mutableListOf<ProjectController>()
+
+    init {
+        addServiceListListener { SwingUtilities.invokeLater { welcomeCtrl?.onServiceListChange() } }
+    }
 
     override fun onGlobalKeyEvent(event: KeyEvent) =
         welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }

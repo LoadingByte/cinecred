@@ -6,6 +6,8 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
+import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.ui.comms.CreditsLocation
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
@@ -42,6 +44,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val createBrowseFileChooser: JFileChooser
     private val createBrowseNextButton: JButton
     private val createConfigureProjectDirLabel = JLabel()
+    private val createConfigureForm: CreateConfigureForm
     private val createWaitErrorTextArea: JTextArea
     private val createWaitResponseTextArea: JTextArea
 
@@ -151,7 +154,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(createBrowseNextButton)
         }
 
-        val createConfigureForm = CreateConfigureForm().apply { background = null }
+        createConfigureForm = CreateConfigureForm().apply { background = null }
         val createConfigureBackButton = JButton(l10n("back"), ARROW_LEFT_ICON).apply {
             addActionListener { welcomeCtrl.projects_createConfigure_onClickBack() }
         }
@@ -159,8 +162,11 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             addActionListener {
                 welcomeCtrl.projects_createConfigure_onClickDone(
                     createConfigureForm.localeWidget.value,
-                    createConfigureForm.formatWidget.value,
-                    createConfigureForm.scaleWidget.value
+                    createConfigureForm.scaleWidget.value,
+                    createConfigureForm.creditsLocationWidget.value,
+                    createConfigureForm.creditsFormatWidget.value,
+                    createConfigureForm.creditsServiceWidget.value,
+                    createConfigureForm.creditsNameWidget.value
                 )
             }
         }
@@ -207,7 +213,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         @Suppress("DEPRECATION")
         leakedStartDropLabel = startDropLabel
         @Suppress("DEPRECATION")
-        leakedCreCfgFormatWidget = createConfigureForm.formatWidget
+        leakedCreCfgFormatWidget = createConfigureForm.creditsFormatWidget
         @Suppress("DEPRECATION")
         leakedCreCfgDoneButton = createConfigureDoneButton
     }
@@ -318,15 +324,15 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     fun projects_openBrowse_setCurrentDir(dir: Path) { openBrowseFileChooser.currentDirectory = dir.toFile() }
     fun projects_openBrowse_setDoneEnabled(enabled: Boolean) { openBrowseDoneButton.isEnabled = enabled }
     fun projects_createBrowse_setCurrentDir(dir: Path) { createBrowseFileChooser.currentDirectory = dir.toFile() }
-    // @formatter:on
-
     fun projects_createBrowse_setSelection(dir: Path) {
         createBrowseFileChooser.fullySetSelectedFile(dir.toFile())
     }
-
-    // @formatter:off
     fun projects_createBrowse_setNextEnabled(enabled: Boolean) { createBrowseNextButton.isEnabled = enabled }
     fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.pathString }
+    fun projects_createConfigure_setServices(services: List<Service>) {
+        createConfigureForm.creditsServiceWidget.items = services
+    }
+    fun projects_createConfigure_setCreditsName(name: String) { createConfigureForm.creditsNameWidget.value = name }
     // @formatter:on
 
     fun projects_createWait_setError(error: String?) {
@@ -365,18 +371,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val localeWidget = addWidget(
             l10n("ui.projects.create.locale"),
             ComboBoxWidget(
-                Locale::class.java, TRANSLATED_LOCALES,
-                toString = { it.displayName },
-                WidthSpec.WIDE
-            )
-        )
-
-        val formatWidget = addWidget(
-            l10n("ui.projects.create.format"),
-            ComboBoxWidget(
-                SpreadsheetFormat::class.java, SPREADSHEET_FORMATS,
-                toString = { l10n("ui.projects.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" },
-                WidthSpec.WIDE
+                Locale::class.java, TRANSLATED_LOCALES, widthSpec = WidthSpec.WIDE,
+                toString = { it.displayName }
             )
         )
 
@@ -386,6 +382,38 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 listOf(1, 2),
                 toLabel = { "${it * 2}K" }
             )
+        )
+
+        val creditsLocationWidget = addWidget(
+            l10n("ui.projects.create.creditsLocation"),
+            ToggleButtonGroupWidget(
+                CreditsLocation.values().asList(),
+                toLabel = { l10n("ui.projects.create.creditsLocation.${it.name.lowercase()}") }
+            )
+        )
+
+        val creditsFormatWidget = addWidget(
+            l10n("ui.projects.create.creditsFormat"),
+            ComboBoxWidget(
+                SpreadsheetFormat::class.java, SPREADSHEET_FORMATS, widthSpec = WidthSpec.WIDE,
+                toString = { l10n("ui.projects.create.format.${it.fileExt}") + " (Credits.${it.fileExt})" }
+            ),
+            isVisible = { creditsLocationWidget.value == CreditsLocation.LOCAL }
+        )
+
+        val creditsServiceWidget = addWidget(
+            l10n("ui.projects.create.creditsService"),
+            ComboBoxWidget(
+                Service::class.java, emptyList(), widthSpec = WidthSpec.WIDE,
+                toString = { "${it.provider.label} \u2013 ${it.id}" }
+            ),
+            isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
+        )
+
+        val creditsNameWidget = addWidget(
+            l10n("ui.projects.create.creditsName"),
+            TextWidget(),
+            isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
         )
 
         init {

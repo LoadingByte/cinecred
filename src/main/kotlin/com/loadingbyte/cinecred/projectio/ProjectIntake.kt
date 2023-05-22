@@ -7,6 +7,9 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.projectio.ProjectIntake.Callbacks
+import com.loadingbyte.cinecred.projectio.service.ProviderAndLinkCoords
+import com.loadingbyte.cinecred.projectio.service.SERVICE_PROVIDERS
+import com.loadingbyte.cinecred.projectio.service.ServiceProvider
 import java.awt.Font
 import java.io.IOException
 import java.nio.file.Files
@@ -14,6 +17,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.*
 
 
@@ -38,6 +42,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     }
 
     private var currentCreditsFile: Path? = null
+    private var linkedCreditsLoader: LinkedCreditsLoader? = null
 
     private val projectFonts = HashMap<Path, List<Font>>()
     private val pictureLoaders = HashMap<Path, PictureLoader>()
@@ -76,6 +81,10 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             // Dispose of all loaded pictures.
             for (pictureLoader in pictureLoaders.values)
                 pictureLoader.dispose()
+
+            // Stop watching for online changes.
+            linkedCreditsLoader?.cancel()
+            linkedCreditsLoader = null
         }
 
         executor.shutdown()
@@ -86,11 +95,18 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         if (activeFile != null &&
             (changedFile == activeFile || currentCreditsFile.let { it == null || !safeIsSameFile(it, activeFile) })
         ) {
+            linkedCreditsLoader?.cancel()
+            linkedCreditsLoader = null
             val fileExt = activeFile.extension
             try {
-                val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-                val (spreadsheet, loadingLog) = fmt.read(activeFile)
-                callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog + loadingLog)
+                if (fileExt == ProviderAndLinkCoords.FILE_EXT) {
+                    val coords = ProviderAndLinkCoords.read(activeFile)
+                    linkedCreditsLoader = LinkedCreditsLoader(callbacks, coords, locatingLog)
+                } else {
+                    val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
+                    val (spreadsheet, loadingLog) = fmt.read(activeFile)
+                    callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog + loadingLog)
+                }
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
                 // An IO exception can occur if the credits file has disappeared in the meantime. If that happens,
@@ -148,7 +164,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     companion object {
 
-        private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt)
+        private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + ProviderAndLinkCoords.FILE_EXT
 
         fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
             fun availExtsStr() = CREDITS_EXTS.joinToString()
@@ -199,6 +215,44 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } catch (_: IOException) {
                 false
             }
+
+    }
+
+
+    private class LinkedCreditsLoader(
+        callbacks: Callbacks,
+        coords: ProviderAndLinkCoords,
+        private val locatingLog: List<ParserMsg>
+    ) : ServiceProvider.WatcherCallbacks {
+
+        private val callbacks = AtomicReference<Callbacks?>(callbacks)
+        private val watcher: ServiceProvider.Watcher
+
+        init {
+            val provider = SERVICE_PROVIDERS.find { it.id == coords.providerId }
+                ?: throw IOException("Unknown service provider: ${coords.providerId}")
+            watcher = provider.watch(coords.linkCoords, this)
+        }
+
+        fun cancel() {
+            callbacks.set(null)
+            watcher.cancel()
+        }
+
+        override fun content(spreadsheet: Spreadsheet) {
+            callbacks.get()?.pushCreditsSpreadsheet(spreadsheet, locatingLog)
+        }
+
+        override fun status(down: Boolean) {
+            val loadingLog = if (!down) emptyList() else
+                listOf(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.serviceUnresponsive")))
+            callbacks.get()?.pushCreditsSpreadsheet(null, locatingLog + loadingLog)
+        }
+
+        override fun inaccessible() {
+            val loadingLog = listOf(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.noServiceGrantsAccess")))
+            callbacks.get()?.pushCreditsSpreadsheet(null, locatingLog + loadingLog)
+        }
 
     }
 

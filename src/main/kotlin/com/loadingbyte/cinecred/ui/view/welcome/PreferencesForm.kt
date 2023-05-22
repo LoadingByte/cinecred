@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
 import com.loadingbyte.cinecred.ui.helper.EasyForm
 import java.util.*
+import kotlin.reflect.KMutableProperty1
 
 
 class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
@@ -61,17 +62,21 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
     }
 
     override fun onChange(widget: Widget<*>) {
+        fun <V> forward(pref: KMutableProperty1<Preferences, V>, value: V) {
+            welcomeCtrl.preferences_start_onChangePreference(pref, value)
+        }
+
         if (disableOnChange)
             return
         when (widget) {
             uiLocaleWishWidget ->
-                welcomeCtrl.onChangePreference(Preferences::uiLocaleWish, uiLocaleWishWidget.value)
+                forward(Preferences::uiLocaleWish, uiLocaleWishWidget.value)
             checkForUpdatesWidget ->
-                welcomeCtrl.onChangePreference(Preferences::checkForUpdates, checkForUpdatesWidget.value)
+                forward(Preferences::checkForUpdates, checkForUpdatesWidget.value)
             welcomeHintTrckPendingWidget ->
-                welcomeCtrl.onChangePreference(Preferences::welcomeHintTrackPending, welcomeHintTrckPendingWidget.value)
+                forward(Preferences::welcomeHintTrackPending, welcomeHintTrckPendingWidget.value)
             projectHintTrckPendingWidget ->
-                welcomeCtrl.onChangePreference(Preferences::projectHintTrackPending, projectHintTrckPendingWidget.value)
+                forward(Preferences::projectHintTrackPending, projectHintTrckPendingWidget.value)
             else -> throw IllegalStateException("Unknown widget, should never happen.")
         }
         super.onChange(widget)

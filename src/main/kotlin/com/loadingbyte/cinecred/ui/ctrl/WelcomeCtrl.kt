@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.isAllowedToBeProjectDir
 import com.loadingbyte.cinecred.projectio.isProjectDir
+import com.loadingbyte.cinecred.projectio.service.*
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.*
@@ -55,6 +56,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private var newBrowseSelection: Path? = null
 
     private val createProjectThread = AtomicReference<Thread?>()
+    private val addServiceThread = AtomicReference<Thread?>()
 
     private var cachePrefs: PreferencesDTO? = null
 
@@ -76,6 +78,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         val dir = memProjectDirs.firstOrNull()?.parent ?: FileSystemView.getFileSystemView().defaultDirectory.toPath()
         welcomeView.projects_openBrowse_setCurrentDir(dir)
         welcomeView.projects_createBrowse_setCurrentDir(dir)
+
+        // Retrieve the current service list.
+        onServiceListChange()
 
         welcomeView.setChangelog(CHANGELOG_HTML)
         welcomeView.setLicenses(LICENSES)
@@ -187,6 +192,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         return false
     }
 
+    override fun onServiceListChange() {
+        val services = SERVICE_PROVIDERS.flatMap(ServiceProvider::services)
+        welcomeView.projects_createConfigure_setServices(services)
+        welcomeView.preferences_start_setServices(services)
+    }
+
     // Be aware that this method might be called multiple times on the same object!
     // For example, it happens if a user opens the welcome window multiple times.
     override fun commence(openProjectDir: Path?) {
@@ -226,12 +237,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             val initPrefs = PreferencesDTO(PersistentStorage)
             cachePrefs = initPrefs
             val defaultUILocaleWish = initPrefs.uiLocaleWish
-            welcomeView.setPreferencesSubmitButton {
+            welcomeView.preferences_start_setInitialSetup(true) {
                 PersistentStorage.setFrom(initPrefs)
                 cachePrefs = null
                 comprehensivelyApplyLocale(initPrefs.uiLocaleWish.locale)
                 welcomeView.setTabsLocked(false)
-                welcomeView.setPreferencesSubmitButton(null)
+                welcomeView.preferences_start_setInitialSetup(false, null)
                 finishInit(initConfigChangedUILocaleWish = initPrefs.uiLocaleWish != defaultUILocaleWish)
             }
             welcomeView.display()
@@ -240,6 +251,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun close() {
         createProjectThread.getAndSet(null)?.interrupt()
+        addServiceThread.getAndSet(null)?.interrupt()
         welcomeView.close()
         masterCtrl.onCloseWelcomeFrame()
     }
@@ -254,7 +266,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun onChangeTab(tab: WelcomeTab) {
         if (tab == WelcomeTab.PREFERENCES)
-            welcomeView.setPreferences(PersistentStorage)
+            welcomeView.preferences_start_setPreferences(PersistentStorage)
     }
 
     override fun projects_start_onClickOpen() = welcomeView.projects_setCard(ProjectsCard.OPEN_BROWSE)
@@ -309,18 +321,38 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             if (!welcomeView.showNotEmptyQuestion(projectDir))
                 return
         }
+        val creditsName = l10n("ui.projects.create.defaultCreditsName", projectDir.name)
         welcomeView.projects_createConfigure_setProjectDir(projectDir)
+        welcomeView.projects_createConfigure_setCreditsName(creditsName)
         welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 
-    override fun projects_createConfigure_onClickDone(locale: Locale, format: SpreadsheetFormat, scale: Int) {
+    override fun projects_createConfigure_onClickDone(
+        locale: Locale,
+        scale: Int,
+        creditsLocation: CreditsLocation,
+        creditsFormat: SpreadsheetFormat,
+        creditsService: Service,
+        creditsName: String
+    ) {
         val projectDir = newBrowseSelection ?: return
         welcomeView.projects_createWait_setError(null)
         welcomeView.projects_setCard(ProjectsCard.CREATE_WAIT)
         createProjectThread.set(Thread({
             try {
-                tryCopyTemplate(projectDir, locale, format, scale)
+                when (creditsLocation) {
+                    CreditsLocation.LOCAL ->
+                        tryCopyTemplate(projectDir, locale, scale, creditsFormat)
+                    CreditsLocation.SERVICE ->
+                        tryCopyTemplate(projectDir, locale, scale, creditsService, creditsName)
+                }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
+            } catch (e: ForbiddenException) {
+                val error = l10n("ui.projects.create.error.access")
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
+            } catch (e: DownException) {
+                val error = l10n("ui.projects.create.error.unresponsive")
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
             } catch (e: IOException) {
                 SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.toString()) }
             } catch (_: InterruptedException) {
@@ -335,7 +367,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.projects_setCard(ProjectsCard.START)
     }
 
-    override fun <V> onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V) {
+    override fun <V> preferences_start_onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V) {
         val cachePrefs = cachePrefs
         if (cachePrefs != null)
             pref.set(cachePrefs, value)
@@ -343,6 +375,55 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             pref.set(PersistentStorage, value)
             pref.set(PreferenceListener(), value)
         }
+    }
+
+    override fun preferences_start_onClickAddService() =
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_SERVICE)
+
+    override fun preferences_start_onClickRemoveService(service: Service) {
+        welcomeView.preferences_start_setServiceRemovalLocked(service, true)
+        val provider = SERVICE_PROVIDERS.first { service in it.services }
+        Thread({
+            try {
+                provider.removeService(service)
+            } catch (e: IOException) {
+                SwingUtilities.invokeLater {
+                    welcomeView.showCannotRemoveServiceMessage(service, e.toString())
+                    welcomeView.preferences_start_setServiceRemovalLocked(service, false)
+                }
+            }
+        }, "RemoveService").apply { isDaemon = true; start() }
+    }
+
+    override fun preferences_verifyLabel(label: String) = when {
+        label.isBlank() ->
+            l10n("blank")
+        SERVICE_PROVIDERS.any { provider -> provider.services.any { service -> service.id == label } } ->
+            l10n("ui.preferences.services.configure.labelAlreadyInUse")
+        else -> null
+    }
+
+    override fun preferences_configureService_onClickCancel() = welcomeView.preferences_setCard(PreferencesCard.START)
+
+    override fun preferences_configureService_onClickAuthorize(label: String, provider: ServiceProvider) {
+        welcomeView.preferences_authorizeService_setError(null)
+        welcomeView.preferences_setCard(PreferencesCard.AUTHORIZE_SERVICE)
+        addServiceThread.set(Thread({
+            try {
+                provider.addService(label)
+                SwingUtilities.invokeLater { welcomeView.preferences_setCard(PreferencesCard.START) }
+            } catch (e: IOException) {
+                SwingUtilities.invokeLater { welcomeView.preferences_authorizeService_setError(e.toString()) }
+            } catch (_: InterruptedException) {
+                // Let the thread come to a stop.
+            }
+            addServiceThread.set(null)
+        }, "AddService").apply { isDaemon = true; start() })
+    }
+
+    override fun preferences_authorizeService_onClickCancel() {
+        addServiceThread.getAndSet(null)?.interrupt()
+        welcomeView.preferences_setCard(PreferencesCard.START)
     }
 
 

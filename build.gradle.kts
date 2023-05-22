@@ -87,6 +87,9 @@ dependencies {
         natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugDeps}-gpl")
     }
 
+    implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.34.1")
+    implementation("com.google.apis", "google-api-services-drive", "v3-rev20230423-2.0.0")
+
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.1")
     implementationAndNatives("com.formdev", "flatlaf", "3.1.1")

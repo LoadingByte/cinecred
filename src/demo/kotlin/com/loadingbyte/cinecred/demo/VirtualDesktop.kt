@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.Spreadsheet
+import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import java.awt.*
@@ -670,7 +671,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
     )
 
     fun save() {
-        CsvFormat.write(file, Spreadsheet(matrix), emptyMap(), emptyList())
+        CsvFormat.write(file, Spreadsheet(matrix), "", SpreadsheetFormat.Formatting(emptyMap(), emptyList()))
     }
 
     private fun cellX(colIdx: Int) = INSET_L + colIdx * SEP_THICKNESS + colWidths.sumBetween(0, colIdx)

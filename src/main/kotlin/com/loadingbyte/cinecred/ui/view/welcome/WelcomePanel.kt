@@ -176,18 +176,4 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     }
 
-
-    class PreferencesPanel(welcomeCtrl: WelcomeCtrlComms) : JPanel(MigLayout("insets 20, wrap")) {
-
-        val form = PreferencesForm(welcomeCtrl)
-
-        init {
-            form.background = null
-            for (line in l10n("ui.preferences.msg").split("\n"))
-                add(newLabelTextArea(line), "width 100%")
-            add(form, "gaptop para")
-        }
-
-    }
-
 }

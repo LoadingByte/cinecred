@@ -3,6 +3,10 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourceStream
+import com.loadingbyte.cinecred.projectio.service.DownException
+import com.loadingbyte.cinecred.projectio.service.ForbiddenException
+import com.loadingbyte.cinecred.projectio.service.ProviderAndLinkCoords
+import com.loadingbyte.cinecred.projectio.service.Service
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,10 +16,32 @@ import kotlin.io.path.writeText
 
 
 /** @throws IOException */
-fun tryCopyTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
-    destDir.createDirectoriesSafely()
+fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsFormat: SpreadsheetFormat) {
+    tryCopyTemplate(destDir, locale, scale, creditsFormat, null, null)
+}
+
+/**
+ * @throws ForbiddenException
+ * @throws DownException
+ * @throws IOException
+ */
+fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsService: Service?, creditsName: String) {
+    tryCopyTemplate(destDir, locale, scale, null, creditsService, creditsName)
+}
+
+
+private fun tryCopyTemplate(
+    destDir: Path,
+    locale: Locale,
+    scale: Int,
+    creditsFormat: SpreadsheetFormat?,
+    creditsService: Service?,
+    creditsName: String?
+) {
+    // First try to write the credits file, so that if something goes wrong (which is likely with online services),
+    // the project folder just isn't created at all, instead of being half-created.
+    tryCopyCreditsTemplate(destDir, locale, scale, creditsFormat, creditsService, creditsName)
     tryCopyStylingTemplate(destDir, locale, scale)
-    tryCopyCreditsTemplate(destDir, locale, format, scale)
 }
 
 
@@ -27,20 +53,43 @@ private fun tryCopyStylingTemplate(destDir: Path, locale: Locale, scale: Int) {
 }
 
 
-private fun tryCopyCreditsTemplate(destDir: Path, locale: Locale, format: SpreadsheetFormat, scale: Int) {
+private fun tryCopyCreditsTemplate(
+    destDir: Path,
+    locale: Locale,
+    scale: Int,
+    creditsFormat: SpreadsheetFormat?,
+    creditsService: Service?,
+    creditsName: String?
+) {
     if (ProjectIntake.locateCreditsFile(destDir).first != null)
         return
 
     val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
     val spreadsheet = CsvFormat.read(csv).map { filt(it, locale, scale) }
-    format.write(
-        destDir.resolve("Credits.${format.fileExt}"), spreadsheet,
+    val look = SpreadsheetLook(
         rowLooks = mapOf(
-            0 to SpreadsheetFormat.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
-            1 to SpreadsheetFormat.RowLook(bold = true, borderBottom = true)
+            0 to SpreadsheetLook.RowLook(height = 60, fontSize = 8, italic = true, wrap = true),
+            1 to SpreadsheetLook.RowLook(bold = true, borderBottom = true)
         ),
         colWidths = listOf(48, 48, 32, 16, 28, 20, 24, 16, 24, 36)
     )
+    when {
+        creditsFormat != null -> {
+            destDir.createDirectoriesSafely()
+            creditsFormat.write(destDir.resolve("Credits.${creditsFormat.fileExt}"), spreadsheet, "Credits", look)
+        }
+        creditsService != null && creditsName != null -> {
+            val linkCoords = creditsService.upload(creditsName, spreadsheet, look)
+            // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
+            // actually not interrupted. So instead, we detect interruption here and stop project initialization.
+            if (Thread.interrupted())
+                throw InterruptedException()
+            destDir.createDirectoriesSafely()
+            ProviderAndLinkCoords(creditsService.provider.id, linkCoords)
+                .write(destDir.resolve("Credits.${ProviderAndLinkCoords.FILE_EXT}"))
+        }
+        else -> throw IllegalArgumentException()
+    }
 
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {

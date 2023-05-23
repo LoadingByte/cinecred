@@ -415,18 +415,21 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 is Picture.Raster -> g2.preserveTransform {
                     g2.translate(x, y)
                     val trans = g2.transform
+                    val tx = trans.translateX
+                    val ty = trans.translateY
                     val sx = trans.scaleX
                     val sy = trans.scaleY
-                    g2.transform = trans.apply { scale(1.0 / sx, 1.0 / sy) }
+                    g2.transform = AffineTransform()
                     // Note: Directly drawing with bilinear or bicubic interpolation exhibits poor quality when
                     // downscaling by more than a factor of two, and Image.getScaledInstance() with SCALE_AREA_AVERAGING
                     // is way too slow, so we use swscale with the Lanczos algorithm instead.
+                    // Then draw at integer coordinates so that no further interpolation is done.
                     val scaledImg = scaleImageLanczos(
                         pic.img,
                         (pic.img.width * sx * pic.scaling).roundToInt(),
                         (pic.img.height * sy * pic.scaling).roundToInt()
                     )
-                    g2.drawImage(scaledImg, 0, 0, null)
+                    g2.drawImage(scaledImg, tx.roundToInt(), ty.roundToInt(), null)
                 }
                 is Picture.SVG -> g2.preserveTransform {
                     g2.translate(x, y)

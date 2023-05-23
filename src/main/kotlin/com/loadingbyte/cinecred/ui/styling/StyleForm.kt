@@ -268,10 +268,10 @@ class StyleForm<S : Style>(
                     fixedChoiceConstr != null || dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type,
                         items = fixedChoiceConstr?.run { choices.toList() } ?: emptyList(),
-                        toString = { l10nEnum(it as Enum<*>) }, widthSpec
+                        toString = { (it as Enum<*>).label }, widthSpec
                     )
                     else -> ComboBoxWidget(
-                        setting.type, setting.type.enumConstants.asList(), toString = { l10nEnum(it as Enum<*>) },
+                        setting.type, setting.type.enumConstants.asList(), toString = { (it as Enum<*>).label },
                         widthSpec
                     )
                 }
@@ -315,7 +315,7 @@ class StyleForm<S : Style>(
         show,
         items?.requireIsInstance(enumClass) ?: if (inconsistent) emptyList() else enumClass.enumConstants.asList(),
         getIcon = getFixedIcon ?: if (dynIcons) null else Enum<*>::icon,
-        getLabel = ::l10nEnum,
+        getLabel = Enum<*>::label,
         inconsistent
     )
 
@@ -546,9 +546,6 @@ class StyleForm<S : Style>(
                         found = elem
             return found
         }
-
-        private fun l10nEnum(enumConst: Enum<*>) =
-            l10n("project.${enumConst.javaClass.simpleName}.${enumConst.name}")
 
     }
 

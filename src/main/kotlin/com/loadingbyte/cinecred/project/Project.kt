@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Picture
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Color
@@ -343,3 +344,11 @@ sealed interface BodyElement {
 
 
 class RuntimeGroup(val stages: PersistentList<Stage>, val runtimeFrames: Int)
+
+
+val Enum<*>.label: String
+    get() = when (this) {
+        TimecodeFormat.SMPTE_NON_DROP_FRAME -> "SMPTE Non Drop-Frame"
+        TimecodeFormat.SMPTE_DROP_FRAME -> "SMPTE Drop-Frame"
+        else -> l10n("project.${javaClass.simpleName}.${name}")
+    }

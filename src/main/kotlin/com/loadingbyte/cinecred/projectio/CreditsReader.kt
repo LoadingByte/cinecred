@@ -359,7 +359,7 @@ private class CreditsReader(
                     } else
                         nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
                 } catch (_: IllegalArgumentException) {
-                    val f = l10n("project.${TimecodeFormat::class.java.simpleName}.${styling.global.timecodeFormat}")
+                    val f = styling.global.timecodeFormat.label
                     val sampleTc = formatTimecode(fps, timecodeFormat, 7127)
                     table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", f, sampleTc))
                 }

@@ -1,13 +1,17 @@
 package com.loadingbyte.cinecred.projectio.service
 
+import com.dd.plist.NSDictionary
+import com.dd.plist.PropertyListParser
 import com.loadingbyte.cinecred.common.CONFIG_DIR
-import com.loadingbyte.cinecred.common.readToml
-import com.loadingbyte.cinecred.common.writeToml
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import java.io.IOException
+import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.io.path.extension
+import kotlin.io.path.readLines
+import kotlin.io.path.writeText
 
 
 val SERVICE_CONFIG_DIR: Path = CONFIG_DIR.resolve("services")
@@ -27,7 +31,6 @@ fun invokeServiceListListeners() {
 
 interface ServiceProvider {
 
-    val id: String
     val label: String
     val services: List<Service>
 
@@ -36,18 +39,10 @@ interface ServiceProvider {
     /** @throws IOException */
     fun removeService(service: Service)
 
-    /** @throws IOException Only if the coordinates are ill-formatted. Otherwise, calls the appropriate callback. */
-    fun watch(linkCoords: LinkCoords, callbacks: WatcherCallbacks): Watcher
+    fun canWatch(link: URI): Boolean
 
-    interface Watcher {
-        fun cancel()
-    }
-
-    interface WatcherCallbacks {
-        fun content(spreadsheet: Spreadsheet)
-        fun status(down: Boolean)
-        fun inaccessible()
-    }
+    /** Asynchronously watches the given link. Doesn't throw [IOException], instead calls the problem callback. */
+    fun watch(link: URI, callbacks: ServiceWatcher.Callbacks): ServiceWatcher
 
 }
 
@@ -62,7 +57,24 @@ interface Service {
      * @throws DownException
      * @throws IOException
      */
-    fun upload(name: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): LinkCoords
+    fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
+
+}
+
+
+interface ServiceWatcher {
+
+    /** Asynchronously polls for changes. */
+    fun poll()
+    /** Once this method returns, it is guaranteed that no more calls to the [Callbacks] will be made. */
+    fun cancel()
+
+    interface Callbacks {
+        fun content(spreadsheet: Spreadsheet)
+        fun problem(problem: Problem)
+    }
+
+    enum class Problem { INACCESSIBLE, DOWN }
 
 }
 
@@ -71,38 +83,28 @@ class ForbiddenException : IOException()
 class DownException : IOException()
 
 
-typealias LinkCoords = Map<String, String>
+const val WRITTEN_SERVICE_LINK_EXT = "url"
+val SERVICE_LINK_EXTS = listOf("url", "webloc")
 
-
-data class ProviderAndLinkCoords(val providerId: String, val linkCoords: LinkCoords) {
-
-    /** @throws IOException */
-    fun write(file: Path) {
-        val toml = mapOf(
-            "provider" to providerId,
-            "link" to linkCoords
-        )
-        writeToml(file, toml)
-    }
-
-
-    companion object {
-
-        const val FILE_EXT = "cinecredlink"
-
-        /** @throws IOException */
-        fun read(file: Path): ProviderAndLinkCoords {
-            val toml = readToml(file)
-            val providerId = toml["provider"] as? String ?: ""
-            val linkCoords = buildMap {
-                (toml["link"] as? Map<*, *>)?.forEach { (k, v) ->
-                    if (k is String && v is String)
-                        put(k, v)
-                }
-            }
-            return ProviderAndLinkCoords(providerId, linkCoords)
+/** @throws Exception */
+fun readServiceLink(file: Path): URI =
+    when (val fileExt = file.extension) {
+        "url" -> {
+            val line = file.readLines().find { it.startsWith("URL=", ignoreCase = true) }
+                ?: throw IllegalArgumentException("Missing URL= entry in .url file.")
+            URI(line.substring(4))
         }
-
+        "webloc" -> {
+            val plist = PropertyListParser.parse(file)
+            require(plist is NSDictionary) { "Top-level element in .webloc file must be an NSDictionary." }
+            val rawURI = plist["URL"]?.toString()
+                ?: throw IllegalArgumentException("Missing URL entry in .webloc file.")
+            URI(rawURI)
+        }
+        else -> throw IllegalArgumentException("Not a link file extension: .$fileExt")
     }
 
+/** @throws IOException */
+fun writeServiceLink(file: Path, link: URI) {
+    file.writeText("[InternetShortcut]\r\nURL=$link")
 }

@@ -10,7 +10,6 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.FormulaError
 import org.apache.poi.ss.usermodel.IndexedColors
 import java.io.IOException
-import java.io.OutputStream
 import java.io.StringReader
 import java.nio.file.Path
 import kotlin.io.path.outputStream
@@ -198,10 +197,6 @@ object OdsFormat : SpreadsheetFormat {
     )
 
     override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
-        file.outputStream().use { write(it, spreadsheet, name, look) }
-    }
-
-    fun write(stream: OutputStream, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
         val numRows = spreadsheet.numRecords
         val numCols = spreadsheet.numColumns
 
@@ -233,7 +228,7 @@ object OdsFormat : SpreadsheetFormat {
 
         val workbook = com.github.miachm.sods.SpreadSheet()
         workbook.appendSheet(sheet)
-        workbook.save(stream)
+        workbook.save(file.toFile())
     }
 
     private fun String.preprocess(): Any? =

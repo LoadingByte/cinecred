@@ -7,9 +7,10 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.projectio.ProjectIntake.Callbacks
-import com.loadingbyte.cinecred.projectio.service.ProviderAndLinkCoords
+import com.loadingbyte.cinecred.projectio.service.SERVICE_LINK_EXTS
 import com.loadingbyte.cinecred.projectio.service.SERVICE_PROVIDERS
-import com.loadingbyte.cinecred.projectio.service.ServiceProvider
+import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
+import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.awt.Font
 import java.io.IOException
 import java.nio.file.Files
@@ -17,7 +18,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.*
 
 
@@ -32,6 +32,7 @@ import kotlin.io.path.*
 class ProjectIntake(private val projectDir: Path, private val callbacks: Callbacks) {
 
     interface Callbacks {
+        fun creditsPolling(possible: Boolean)
         fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>)
         fun pushProjectFonts(projectFonts: Collection<Font>)
         fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>)
@@ -42,7 +43,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     }
 
     private var currentCreditsFile: Path? = null
-    private var linkedCreditsLoader: LinkedCreditsLoader? = null
+    private var linkedCreditsWatcher: ServiceWatcher? = null
 
     private val projectFonts = HashMap<Path, List<Font>>()
     private val pictureLoaders = HashMap<Path, PictureLoader>()
@@ -73,6 +74,10 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         }
     }
 
+    fun pollCredits() {
+        linkedCreditsWatcher?.poll()
+    }
+
     fun close() {
         // Cancel the previous project dir change watching order.
         RecursiveFileWatcher.unwatch(projectDir)
@@ -83,8 +88,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 pictureLoader.dispose()
 
             // Stop watching for online changes.
-            linkedCreditsLoader?.cancel()
-            linkedCreditsLoader = null
+            linkedCreditsWatcher?.cancel()
+            linkedCreditsWatcher = null
         }
 
         executor.shutdown()
@@ -95,13 +100,34 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         if (activeFile != null &&
             (changedFile == activeFile || currentCreditsFile.let { it == null || !safeIsSameFile(it, activeFile) })
         ) {
-            linkedCreditsLoader?.cancel()
-            linkedCreditsLoader = null
+            linkedCreditsWatcher?.cancel()
+            linkedCreditsWatcher = null
+            callbacks.creditsPolling(false)
             val fileExt = activeFile.extension
             try {
-                if (fileExt == ProviderAndLinkCoords.FILE_EXT) {
-                    val coords = ProviderAndLinkCoords.read(activeFile)
-                    linkedCreditsLoader = LinkedCreditsLoader(callbacks, coords, locatingLog)
+                if (fileExt in SERVICE_LINK_EXTS) {
+                    val link = readServiceLink(activeFile)
+                    val provider = SERVICE_PROVIDERS.find { it.canWatch(link) }
+                    if (provider == null) {
+                        val msg = l10n("projectIO.credits.unsupportedServiceLink", link)
+                        callbacks.pushCreditsSpreadsheet(null, locatingLog + ParserMsg(null, null, null, ERROR, msg))
+                    } else {
+                        linkedCreditsWatcher = provider.watch(link, object : ServiceWatcher.Callbacks {
+                            override fun content(spreadsheet: Spreadsheet) {
+                                callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog)
+                            }
+
+                            override fun problem(problem: ServiceWatcher.Problem) {
+                                val key = when (problem) {
+                                    ServiceWatcher.Problem.INACCESSIBLE -> "projectIO.credits.noServiceGrantsAccess"
+                                    ServiceWatcher.Problem.DOWN -> "projectIO.credits.serviceUnresponsive"
+                                }
+                                val msg = ParserMsg(null, null, null, ERROR, l10n(key))
+                                callbacks.pushCreditsSpreadsheet(null, locatingLog + msg)
+                            }
+                        })
+                        callbacks.creditsPolling(true)
+                    }
                 } else {
                     val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
                     val (spreadsheet, loadingLog) = fmt.read(activeFile)
@@ -164,7 +190,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     companion object {
 
-        private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + ProviderAndLinkCoords.FILE_EXT
+        private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + SERVICE_LINK_EXTS
 
         fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
             fun availExtsStr() = CREDITS_EXTS.joinToString()
@@ -215,44 +241,6 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } catch (_: IOException) {
                 false
             }
-
-    }
-
-
-    private class LinkedCreditsLoader(
-        callbacks: Callbacks,
-        coords: ProviderAndLinkCoords,
-        private val locatingLog: List<ParserMsg>
-    ) : ServiceProvider.WatcherCallbacks {
-
-        private val callbacks = AtomicReference<Callbacks?>(callbacks)
-        private val watcher: ServiceProvider.Watcher
-
-        init {
-            val provider = SERVICE_PROVIDERS.find { it.id == coords.providerId }
-                ?: throw IOException("Unknown service provider: ${coords.providerId}")
-            watcher = provider.watch(coords.linkCoords, this)
-        }
-
-        fun cancel() {
-            callbacks.set(null)
-            watcher.cancel()
-        }
-
-        override fun content(spreadsheet: Spreadsheet) {
-            callbacks.get()?.pushCreditsSpreadsheet(spreadsheet, locatingLog)
-        }
-
-        override fun status(down: Boolean) {
-            val loadingLog = if (!down) emptyList() else
-                listOf(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.serviceUnresponsive")))
-            callbacks.get()?.pushCreditsSpreadsheet(null, locatingLog + loadingLog)
-        }
-
-        override fun inaccessible() {
-            val loadingLog = listOf(ParserMsg(null, null, null, ERROR, l10n("projectIO.credits.noServiceGrantsAccess")))
-            callbacks.get()?.pushCreditsSpreadsheet(null, locatingLog + loadingLog)
-        }
 
     }
 

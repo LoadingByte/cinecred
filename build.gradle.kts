@@ -69,6 +69,11 @@ dependencies {
     implementation("com.github.miachm.sods", "SODS", "1.5.4")
     implementation("org.apache.commons", "commons-csv", "1.10.0")
 
+    // Spreadsheet Services
+    implementation("com.googlecode.plist", "dd-plist", "1.27")
+    implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.34.1")
+    implementation("com.google.apis", "google-api-services-sheets", "v4-rev20230227-2.0.0")
+
     // SVG Reading and Writing
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
     implementation("org.apache.xmlgraphics", "batik-svggen", batikVersion)
@@ -86,9 +91,6 @@ dependencies {
         natives("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slugDeps)
         natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugDeps}-gpl")
     }
-
-    implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.34.1")
-    implementation("com.google.apis", "google-api-services-drive", "v3-rev20230423-2.0.0")
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.1")

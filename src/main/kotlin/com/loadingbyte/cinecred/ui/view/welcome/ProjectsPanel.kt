@@ -166,7 +166,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
                     createConfigureForm.creditsServiceWidget.value,
-                    createConfigureForm.creditsNameWidget.value
+                    createConfigureForm.creditsFilenameWidget.value
                 )
             }
         }
@@ -332,7 +332,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     fun projects_createConfigure_setServices(services: List<Service>) {
         createConfigureForm.creditsServiceWidget.items = services
     }
-    fun projects_createConfigure_setCreditsName(name: String) { createConfigureForm.creditsNameWidget.value = name }
+    fun projects_createConfigure_setCreditsFilename(filename: String) {
+        createConfigureForm.creditsFilenameWidget.value = filename
+    }
     // @formatter:on
 
     fun projects_createWait_setError(error: String?) {
@@ -410,8 +412,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
         )
 
-        val creditsNameWidget = addWidget(
-            l10n("ui.projects.create.creditsName"),
+        val creditsFilenameWidget = addWidget(
+            l10n("ui.projects.create.creditsFilename"),
             TextWidget(),
             isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
         )

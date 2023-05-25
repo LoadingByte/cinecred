@@ -115,6 +115,10 @@ private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcutKeyCode:
     btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
     btn.isFocusable = false
 
+    if (shortcutKeyCode == 0) {
+        btn.toolTipText = tooltip
+        return
+    }
     var shortcutHint = getKeyText(shortcutKeyCode)
     if (shortcutModifiers != 0)
         shortcutHint = getModifiersExText(shortcutModifiers) + "+" + shortcutHint

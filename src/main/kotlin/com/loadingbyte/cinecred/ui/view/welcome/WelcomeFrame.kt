@@ -98,8 +98,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.projectsPanel.projects_createConfigure_setProjectDir(projectDir)
     override fun projects_createConfigure_setServices(services: List<Service>) =
         panel.projectsPanel.projects_createConfigure_setServices(services)
-    override fun projects_createConfigure_setCreditsName(name: String) =
-        panel.projectsPanel.projects_createConfigure_setCreditsName(name)
+    override fun projects_createConfigure_setCreditsFilename(filename: String) =
+        panel.projectsPanel.projects_createConfigure_setCreditsFilename(filename)
     override fun projects_createWait_setError(error: String?) =
         panel.projectsPanel.projects_createWait_setError(error)
 

@@ -49,7 +49,7 @@ interface WelcomeCtrlComms {
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
         creditsService: Service,
-        creditsName: String
+        creditsFilename: String
     )
 
     fun projects_createWait_onClickCancel()
@@ -92,7 +92,7 @@ interface WelcomeViewComms {
 
     fun projects_createConfigure_setProjectDir(projectDir: Path)
     fun projects_createConfigure_setServices(services: List<Service>)
-    fun projects_createConfigure_setCreditsName(name: String)
+    fun projects_createConfigure_setCreditsFilename(filename: String)
 
     fun projects_createWait_setError(error: String?)
 

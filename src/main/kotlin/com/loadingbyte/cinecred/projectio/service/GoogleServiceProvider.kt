@@ -6,21 +6,17 @@ import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInsta
 import com.google.api.client.extensions.java6.auth.oauth2.VerificationCodeReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
-import com.google.api.client.googleapis.batch.BatchCallback
-import com.google.api.client.googleapis.batch.BatchRequest
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.googleapis.json.GoogleJsonErrorContainer
-import com.google.api.client.http.*
+import com.google.api.client.http.GenericUrl
+import com.google.api.client.http.HttpResponseException
+import com.google.api.client.http.UrlEncodedContent
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
-import com.google.api.services.drive.Drive
-import com.google.api.services.drive.DriveRequest
-import com.google.api.services.drive.DriveScopes
-import com.google.api.services.drive.model.File
-import com.google.api.services.drive.model.RevisionList
+import com.google.api.services.sheets.v4.Sheets
+import com.google.api.services.sheets.v4.SheetsRequest
+import com.google.api.services.sheets.v4.SheetsScopes
+import com.google.api.services.sheets.v4.model.*
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.projectio.CsvFormat
-import com.loadingbyte.cinecred.projectio.OdsFormat
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -29,22 +25,25 @@ import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import kotlinx.collections.immutable.toPersistentList
 import org.apache.http.client.utils.URLEncodedUtils
-import java.io.*
+import java.io.IOException
+import java.io.OutputStreamWriter
+import java.io.StringReader
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.URI
 import java.util.*
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import kotlin.math.min
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 
 object GoogleServiceProvider : ServiceProvider {
 
-    override val id get() = "google"
     override val label get() = "Google"
     override val services: List<Service> get() = _services.get()
 
@@ -54,14 +53,13 @@ object GoogleServiceProvider : ServiceProvider {
     private var _services =
         AtomicReference(credentialDataStore.keySet().sorted().map(::GoogleService).toPersistentList())
 
-    private val watchers = mutableListOf<GoogleWatcher>()
-    private var watchersPoller: Thread? = null
-    private val watchersLock = ReentrantLock()
+    private val watchersForPolling = LinkedBlockingQueue<GoogleWatcher>()
+    private val watchersPoller = AtomicReference<Thread?>()
 
     override fun addService(serviceId: String) {
         require(_services.get().none { it.id == serviceId }) { "Service ID already in use." }
         val service = GoogleService(serviceId)
-        service.drive(authorizeIfNeeded = true)
+        service.sheets(authorizeIfNeeded = true)
         _services.updateAndGet { it.add(service) }
         invokeServiceListListeners()
     }
@@ -98,15 +96,22 @@ object GoogleServiceProvider : ServiceProvider {
         invokeServiceListListeners()
     }
 
-    override fun watch(linkCoords: LinkCoords, callbacks: ServiceProvider.WatcherCallbacks): ServiceProvider.Watcher {
-        val fileId = linkCoords["file"] ?: throw IOException("Missing 'file' entry in link coordinates.")
+    private fun fileIdFromLink(link: URI): String? {
+        if (link.scheme != "http" && link.scheme != "https" || link.host != "docs.google.com")
+            return null
+        val path = link.path.split('/')
+        if (path[1] != "spreadsheets" || path[2] != "d") return null
+        return path[3]
+    }
+
+    override fun canWatch(link: URI): Boolean =
+        fileIdFromLink(link) != null
+
+    override fun watch(link: URI, callbacks: ServiceWatcher.Callbacks): ServiceWatcher {
         // Just add an uninitialized watcher. All the work will be done by the poller.
-        val watcher = GoogleWatcher(fileId, callbacks, null, null)
-        watchersLock.withLock {
-            watchers.add(watcher)
-            if (watchersPoller == null)
-                watchersPoller = Thread(::pollerLoop, "GooglePoller").apply { isDaemon = true; start() }
-        }
+        val watcher = GoogleWatcher(fileIdFromLink(link)!!, callbacks)
+        watchersPoller.updateAndGet { it ?: Thread(::pollerLoop, "GooglePoller").apply { isDaemon = true; start() } }
+        watchersForPolling.add(watcher)
         return watcher
     }
 
@@ -114,25 +119,29 @@ object GoogleServiceProvider : ServiceProvider {
         try {
             val minSleep = 2
             val maxSleep = 16
-            var sleep = minSleep
-            var wasDown = false
+            var sleep = -1
+            val dirtyWatchers = mutableSetOf<GoogleWatcher>()
             while (!Thread.interrupted()) {
-                val watchers = watchersLock.withLock { ArrayList(watchers) }
+                // If there are still dirty watchers from the previous round, try those again, otherwise wait for any
+                // watcher to become dirty.
+                if (dirtyWatchers.isEmpty())
+                    dirtyWatchers.add(watchersForPolling.take())
+                watchersForPolling.drainTo(dirtyWatchers)
+                // Get rid of cancelled watchers.
+                dirtyWatchers.removeIf { watcher -> watcher.callbacks.get() == null }
+                if (dirtyWatchers.isEmpty())
+                    continue
+                // Try polling the dirty watchers.
                 try {
-                    poll(watchers)
-                    if (sleep > minSleep) sleep--
-                    // If the API was down but is no longer, notify the watchers.
-                    if (wasDown) {
-                        wasDown = false
-                        for (watcher in watchers) watcher.callbacks.status(down = false)
-                    }
+                    poll(dirtyWatchers)
+                    // Space out repeated requests to prevent a single user from using up too much of the API quota.
+                    sleep = 2
                 } catch (_: DownException) {
-                    sleep = min(sleep * 2, maxSleep)
-                    // If the API is now down, notify the watchers.
-                    if (!wasDown) {
-                        wasDown = true
-                        for (watcher in watchers) watcher.callbacks.status(down = true)
-                    }
+                    // All the watchers that are still dirty haven't been fully polled before the outage happened.
+                    // Notify them about the outage and try again in a bit, after having backed off exponentially.
+                    for (watcher in dirtyWatchers)
+                        watcher.callbacks.get()?.problem(ServiceWatcher.Problem.DOWN)
+                    sleep = (sleep * 2).coerceIn(minSleep, maxSleep)
                 }
                 Thread.sleep(sleep * 1000L)
             }
@@ -141,109 +150,90 @@ object GoogleServiceProvider : ServiceProvider {
         }
     }
 
-    private fun poll(watchers: List<GoogleWatcher>) {
+    private fun poll(dirtyWatchers: MutableSet<GoogleWatcher>) {
         val services = _services.get()
 
-        // We use revision lists to check whether a file has changed in the cloud. We don't use the actual change
-        // polling mechanism provided by the Drive API because that often lags behind considerably. We also don't use
-        // the headRevisionId field of files.get because that's not available for Google Docs.
-        // Here, we first get the revision list for each watched file.
-        val revRequester = Requester()
-        val revResponses = watchers.associateWith { watcher ->
-            // If a service has been removed, make sure to remove it from the watcher as well.
+        // Sadly, the sheets API doesn't provide a way of tracking changes, and even if it did, the pretty low rate
+        // limits would probably prevent us from using it. Therefore, we don't automatically poll for changes, but
+        // instead require the user to manually initiate polling.
+        // If we were to use the Drive API (which we don't, because it severely restricts reading to files the app has
+        // created itself, making it extremely inconvenient for the user), we would use revision lists to check whether
+        // a file has changed in the cloud. We couldn't use the actual change polling mechanism provided by the Drive
+        // API because that often lags behind considerably. We also couldn't use the headRevisionId field of files.get
+        // because that's not available for Google Docs.
+
+        // Try to get the cells of each watched file.
+        for (watcher in dirtyWatchers) {
+            var response: ValueRange? = null
+
+            // If a service has been removed, make sure to remove it from the watcher's currentService field as well.
             if (watcher.currentService !in services)
                 watcher.currentService = null
             val curService = watcher.currentService
             if (curService == null) {
-                // For watchers for which we don't know a working service, ask all available services for the revisions.
-                buildList {
-                    for (service in services)
-                        service.drive(false)?.let { drive ->
-                            add(revRequester.queue(service, makeRevRequest(drive, watcher.fileId)))
+                // For watchers for which we don't know a working service, ask all available services for the cells.
+                for (service in services) {
+                    val sheets = service.sheets(false)
+                    if (sheets != null)
+                        try {
+                            response = service.send(makeReadRequest(sheets, watcher.fileId))
+                            // If we've found a service that has access, remember it.
+                            watcher.currentService = service
+                            break
+                        } catch (_: ForbiddenException) {
+                            // Try the next service.
                         }
                 }
-            } else {
-                // For watchers for which a service worked previously, use that service to get the current revisions.
-                // Note: At this point, we know that drive() can't return null because we successfully used curService
-                // before in this session, so its drive cache must be populated.
-                listOf(revRequester.queue(curService, makeRevRequest(curService.drive(false)!!, watcher.fileId)))
-            }
-        }
-        revRequester.execute()
-
-        // For each watcher, process the response(s) to the revision list requests.
-        for ((watcher, watcherRevResponses) in revResponses) {
-            val curService = watcher.currentService
-            if (curService == null) {
-                // For watchers for which we don't know a working service, find the first service which has access to
-                // the watched file, and use it to download the current version of the file.
-                // If no service has access, let the watcher know it's inaccessible and then remove it. There's no point
-                // in repeatedly trying again and wasting API quota.
-                val revResponse = watcherRevResponses.find { !it.forbidden }
-                if (revResponse == null) {
-                    watcher.callbacks.inaccessible()
-                    watcher.cancel()
-                } else {
-                    watcher.currentService = revResponse.service
-                    downloadIfChanged(watcher, revResponse)
+                // If no service has access, let the watcher know it's inaccessible. Also remove it from the dirty list
+                // so that it is only polled again when the user explicitly requests that.
+                if (response == null) {
+                    watcher.callbacks.get()?.problem(ServiceWatcher.Problem.INACCESSIBLE)
+                    dirtyWatchers.remove(watcher)
                 }
             } else {
-                // For watchers for which a service worked previously, use it to download the current version of the
-                // watched file if that changed. If however access to the file is no longer granted, mark the watcher
-                // as service-less, which will trigger a new service search in the next polling pass.
-                val revResponse = watcherRevResponses.single()
-                if (revResponse.forbidden) {
+                // For watchers for which a service worked previously, use that service to get the current cells.
+                // Note: At this point, we know that sheets() can't return null because we successfully used curService
+                // before in this session, so its sheets cache must be populated.
+                try {
+                    response = curService.send(makeReadRequest(curService.sheets(false)!!, watcher.fileId))
+                } catch (_: ForbiddenException) {
+                    // If access to the file is no longer granted, mark the watcher as service-less, which will trigger
+                    // a new service search in the next polling pass.
                     watcher.currentService = null
-                    watcher.currentHeadRevisionId = null
-                } else
-                    downloadIfChanged(watcher, revResponse)
+                }
+            }
+
+            // If we successfully retrieved the cells for a watcher, push them to the callback and remove the watcher
+            // from the dirty list, so that it is no longer polled until that is explicitly requested again.
+            if (response != null) {
+                val spreadsheet = Spreadsheet(response.getValues().map { row -> row.map(Any::toString) })
+                watcher.callbacks.get()?.content(spreadsheet)
+                dirtyWatchers.remove(watcher)
             }
         }
     }
 
-    private fun makeRevRequest(drive: Drive, fileId: String) =
-        drive.revisions().list(fileId).setFields("revisions(id)")
-
-    private fun downloadIfChanged(watcher: GoogleWatcher, revResponse: Requester.Response<RevisionList>) {
-        // Download the file only if it changed since the previous download, as indicated by a changed head revision ID.
-        val headRevisionId = revResponse.result!!.revisions.last().id
-        if (watcher.currentHeadRevisionId != headRevisionId) {
-            val service = watcher.currentService!!
-            val requester = Requester()
-            // We know that drive() isn't null because we successfully used the service before to get revision lists.
-            val response = requester.queue(service, service.drive(false)!!.files().export(watcher.fileId, "text/csv"))
-            val bos = ByteArrayOutputStream()
-            requester.executeAndDownloadTo(bos)
-            if (response.forbidden) {
-                // If access to the file is no longer granted, mark the watcher as service-less, which will trigger a
-                // new service search in the next polling pass.
-                watcher.currentService = null
-                watcher.currentHeadRevisionId = null
-            } else {
-                // Only remember the new head revision ID after we successfully downloaded the file to ensure that the
-                // download is retried if something went wrong.
-                watcher.currentHeadRevisionId = headRevisionId
-                watcher.callbacks.content(CsvFormat.read(bos.toString()))
-            }
-        }
-    }
+    private fun makeReadRequest(sheets: Sheets, fileId: String) =
+        // Trailing rows and columns are clipped, so we can just request a very large range.
+        sheets.spreadsheets().values().get(fileId, "A1:Z10000")
 
 
     private class GoogleWatcher(
         val fileId: String,
-        val callbacks: ServiceProvider.WatcherCallbacks,
-        var currentService: GoogleService?,
-        var currentHeadRevisionId: String?
-    ) : ServiceProvider.Watcher {
-        override fun cancel() {
-            watchersLock.withLock {
-                watchers.remove(this)
-                if (watchers.isEmpty()) {
-                    watchersPoller?.interrupt()
-                    watchersPoller = null
-                }
-            }
+        callbacks: ServiceWatcher.Callbacks
+    ) : ServiceWatcher {
+
+        val callbacks = AtomicReference<ServiceWatcher.Callbacks?>(callbacks)
+        var currentService: GoogleService? = null
+
+        override fun poll() {
+            watchersForPolling.add(this)
         }
+
+        override fun cancel() {
+            callbacks.set(null)
+        }
+
     }
 
 
@@ -251,11 +241,11 @@ object GoogleServiceProvider : ServiceProvider {
 
         override val provider get() = GoogleServiceProvider
 
-        private var cachedDrive: Drive? = null
-        private val cachedDriveLock = ReentrantLock()
+        private var cachedSheets: Sheets? = null
+        private val cachedSheetsLock = ReentrantLock()
 
-        fun drive(authorizeIfNeeded: Boolean): Drive? = cachedDriveLock.withLock {
-            cachedDrive?.let { return it }
+        fun sheets(authorizeIfNeeded: Boolean): Sheets? = cachedSheetsLock.withLock {
+            cachedSheets?.let { return it }
 
             val data1 = "pUyTmJ2ei5aWj45MZKVMjZaTj5ieiZOOTGRMXF1jYF5cXWJhX1xhV5mOi2GMoJ2RmpeZXZKNn1yMlplej5SWkFycnYyf" +
                     "YlxfWIuamp1YkZmZkZaPn52PnI2ZmJ6PmJ5YjZmXTFZMmpyZlI+NnomTjkxkTI2TmI+NnI+OTFZMi5+ekomfnJNMZEySnp6a" +
@@ -270,7 +260,7 @@ object GoogleServiceProvider : ServiceProvider {
             val transport = GoogleNetHttpTransport.newTrustedTransport()
             val jsonFactory = GsonFactory.getDefaultInstance()
             val clientSecrets = GoogleClientSecrets.load(jsonFactory, StringReader(data3))
-            val scopes = setOf(DriveScopes.DRIVE_FILE)
+            val scopes = setOf(SheetsScopes.SPREADSHEETS)
             val flow = GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, clientSecrets, scopes)
                 .setCredentialDataStore(credentialDataStore)
                 .setAccessType("offline")
@@ -289,144 +279,87 @@ object GoogleServiceProvider : ServiceProvider {
                     return null
                 }
 
-            val drive = Drive.Builder(transport, jsonFactory, credential)
+            val sheets = Sheets.Builder(transport, jsonFactory, credential)
                 .setApplicationName("Cinecred")
                 .build()
-            cachedDrive = drive
-            return drive
+            cachedSheets = sheets
+            return sheets
         }
 
-        override fun upload(name: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): LinkCoords {
-            // Get the drive object.
-            val drive = drive(false) ?: throw IOException("Service is missing credentials.")
+        override fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
+            // Get the sheets object.
+            val sheets = sheets(false) ?: throw IOException("Service is missing credentials.")
             // Construct the request object.
-            val bos = ByteArrayOutputStream()
-            OdsFormat.write(bos, spreadsheet, name, look)
-            val content = ByteArrayContent("application/vnd.oasis.opendocument.spreadsheet", bos.toByteArray())
-            val metadata = File().setName(name).setMimeType("application/vnd.google-apps.spreadsheet")
-            val request = drive.files().create(metadata, content).setFields("id")
+            val rowData = mutableListOf<RowData>()
+            for (row in 0 until max(200, spreadsheet.numRecords)) {
+                val record = if (row < spreadsheet.numRecords) spreadsheet[row] else null
+                var cellFormat: CellFormat? = null
+                look.rowLooks[record?.recordNo]?.let { rowLook ->
+                    val textFormat = TextFormat()
+                        .setFontSize(if (rowLook.fontSize == -1) null else rowLook.fontSize)
+                        .setBold(rowLook.bold)
+                        .setItalic(rowLook.italic)
+                    cellFormat = CellFormat()
+                        .setTextFormat(textFormat)
+                        .setWrapStrategy(if (rowLook.wrap) "WRAP" else null)
+                        .setBorders(if (rowLook.borderBottom) Borders().setBottom(Border().setStyle("SOLID")) else null)
+                }
+                val cellData = mutableListOf<CellData>()
+                for (col in 0 until spreadsheet.numColumns)
+                    cellData += CellData()
+                        .setUserEnteredFormat(cellFormat)
+                        .setUserEnteredValue(record?.let { ExtendedValue().setStringValue(it.cells[col]) })
+                rowData += RowData().setValues(cellData)
+            }
+            val gridData = GridData().setRowData(rowData)
+            if (look.rowLooks.isNotEmpty())
+                gridData.rowMetadata = buildList {
+                    for (row in 0..look.rowLooks.asSequence().filter { it.value.height != -1 }.maxOf { it.key }) {
+                        val rowLook = look.rowLooks[row]
+                        val pixelHeight = if (rowLook == null || rowLook.height == -1) null else
+                            (rowLook.height * 3.75).roundToInt()
+                        add(DimensionProperties().setPixelSize(pixelHeight))
+                    }
+                }
+            if (look.colWidths.isNotEmpty())
+                gridData.columnMetadata = look.colWidths.map { DimensionProperties().setPixelSize(it * 4) }
+            val gridProps = GridProperties()
+                .setRowCount(rowData.size)
+                .setColumnCount(spreadsheet.numColumns)
+            val sheet = Sheet()
+                .setProperties(SheetProperties().setTitle(sheetName).setGridProperties(gridProps))
+                .setData(listOf(gridData))
+            val sSheet = Spreadsheet()
+                .setProperties(SpreadsheetProperties().setTitle(filename))
+                .setSheets(listOf(sheet))
+            val request = sheets.spreadsheets().create(sSheet).setFields("spreadsheetUrl")
             // Send the request object.
-            val requester = Requester()
-            val response = requester.queue(this, request)
-            requester.execute()
-            if (response.forbidden)
-                throw ForbiddenException()
-            return mapOf("file" to response.result!!.id)
+            return URI(send(request).spreadsheetUrl)
         }
 
-    }
-
-
-    /**
-     * This class abstracts requests to the Google Drive API. It lets you queue requests and then execute them. Multiple
-     * requests are automatically batched to improve performance. The class also handles errors in a unified way,
-     * throwing a [DownException] if the API can't be reached and marking for every request whether access is forbidden.
-     */
-    private class Requester {
-
-        private var single: Single<*>? = null
-        private var batch: BatchRequest? = null
-
-        inline fun <reified T : Any> queue(service: GoogleService, request: DriveRequest<T>): Response<T> =
-            queue(service, request, T::class.java)
-
-        private fun <T : Any> queue(service: GoogleService, request: DriveRequest<T>, cls: Class<T>): Response<T> {
-            val response = Response<T>(service)
-            if (single == null && batch == null)
-                single = Single(request, cls, response)
-            else {
-                single?.let { s ->
-                    batch = s.request.abstractGoogleClient.batch()
-                    batchQueue(s)
-                    single = null
-                }
-                batchQueue(Single(request, cls, response))
-            }
-            return response
-        }
-
-        private fun <T : Any> batchQueue(s: Single<T>) {
-            val httpRequest = s.request.buildHttpRequest()
-            httpRequest.interceptor?.let { origInterceptor ->
-                httpRequest.setInterceptor { r ->
-                    try {
-                        origInterceptor.intercept(r)
-                    } catch (e: IOException) {
-                        handleException(s, e)
-                    }
-                }
-            }
-            batch!!.queue(httpRequest, s.dataClass, GoogleJsonErrorContainer::class.java,
-                object : BatchCallback<T, GoogleJsonErrorContainer> {
-                    override fun onSuccess(t: T, responseHeaders: HttpHeaders) {
-                        s.response.result = t
-                    }
-
-                    override fun onFailure(e: GoogleJsonErrorContainer, responseHeaders: HttpHeaders) {
-                        handleNonSuccessfulStatusCode(s, e.error.code)
-                    }
-                })
-        }
-
-        /** @throws DownException */
-        fun execute() {
-            single?.let { executeSingle(it, null) }
-            batch?.let { executeBatch(it) }
-        }
-
-        /** @throws DownException */
-        fun executeAndDownloadTo(stream: OutputStream) {
-            val single = this.single
-            requireNotNull(single) { "Only supported with a single queued request." }
-            executeSingle(single, stream)
-        }
-
-        private fun <T : Any> executeSingle(s: Single<T>, downloadTo: OutputStream?) {
+        /**
+         * @throws ForbiddenException
+         * @throws DownException
+         */
+        fun <T> send(request: SheetsRequest<T>): T {
             try {
+                return request.execute()
+            } catch (e: IOException) {
                 when {
-                    downloadTo != null -> s.request.executeAndDownloadTo(downloadTo)
-                    else -> s.response.result = s.request.execute()
+                    e is TokenResponseException && e.details != null && e.details.error == "invalid_grant" -> {
+                        // If the refresh token is revoked, the service is no longer authorized, so we can remove it.
+                        forceRemoveService(this)
+                        throw ForbiddenException()
+                    }
+                    e is HttpResponseException -> when (e.statusCode) {
+                        408, 429, 500, 502, 503, 504 -> throw DownException()
+                        else -> throw ForbiddenException()
+                    }
+                    else -> throw DownException()
                 }
-            } catch (e: IOException) {
-                handleException(s, e)
             }
-        }
 
-        private fun executeBatch(b: BatchRequest) {
-            try {
-                b.execute()
-            } catch (e: IOException) {
-                throw DownException()
-            }
         }
-
-        private fun handleException(s: Single<*>, e: IOException) {
-            when {
-                e is TokenResponseException && e.details != null && e.details.error == "invalid_grant" -> {
-                    // If the refresh token has been revoked, the service is no longer authorized, so we can remove it.
-                    forceRemoveService(s.response.service)
-                    s.response.forbidden = true
-                }
-                e is HttpResponseException -> handleNonSuccessfulStatusCode(s, e.statusCode)
-                else -> throw DownException()
-            }
-        }
-
-        private fun handleNonSuccessfulStatusCode(s: Single<*>, code: Int) {
-            when (code) {
-                // https://developers.google.com/drive/api/guides/limits
-                // https://cloud.google.com/storage/docs/retry-strategy
-                403, 408, 429, 500, 502, 503, 504 -> throw DownException()
-                else -> s.response.forbidden = true
-            }
-        }
-
-        class Response<T : Any>(val service: GoogleService) {
-            var result: T? = null
-            var forbidden: Boolean = false
-        }
-
-        private class Single<T : Any>(val request: DriveRequest<T>, val dataClass: Class<T>, val response: Response<T>)
 
     }
 

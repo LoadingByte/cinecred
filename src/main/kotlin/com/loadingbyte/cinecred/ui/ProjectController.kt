@@ -78,6 +78,10 @@ class ProjectController(
 
     private val projectIntake = ProjectIntake(projectDir, object : ProjectIntake.Callbacks {
 
+        override fun creditsPolling(possible: Boolean) {
+            SwingUtilities.invokeLater { projectFrame.panel.updateCreditsPolling(possible) }
+        }
+
         override fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>) {
             process(currentInput.updateAndGet { it.copy(creditsSpreadsheet = creditsSpreadsheet, ioLog = log) })
         }
@@ -220,6 +224,10 @@ class ProjectController(
                     stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event) -> true
             else -> false
         }
+    }
+
+    fun pollCredits() {
+        projectIntake.pollCredits()
     }
 
 

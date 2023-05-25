@@ -321,9 +321,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             if (!welcomeView.showNotEmptyQuestion(projectDir))
                 return
         }
-        val creditsName = l10n("ui.projects.create.defaultCreditsName", projectDir.name)
+        val creditsFilename = l10n("ui.projects.create.defaultCreditsFilename", projectDir.name)
         welcomeView.projects_createConfigure_setProjectDir(projectDir)
-        welcomeView.projects_createConfigure_setCreditsName(creditsName)
+        welcomeView.projects_createConfigure_setCreditsFilename(creditsFilename)
         welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 
@@ -333,7 +333,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
         creditsService: Service,
-        creditsName: String
+        creditsFilename: String
     ) {
         val projectDir = newBrowseSelection ?: return
         welcomeView.projects_createWait_setError(null)
@@ -344,7 +344,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                     CreditsLocation.LOCAL ->
                         tryCopyTemplate(projectDir, locale, scale, creditsFormat)
                     CreditsLocation.SERVICE ->
-                        tryCopyTemplate(projectDir, locale, scale, creditsService, creditsName)
+                        tryCopyTemplate(projectDir, locale, scale, creditsService, creditsFilename)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
             } catch (e: ForbiddenException) {

@@ -56,6 +56,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     fun onKeyEvent(event: KeyEvent): Boolean =
         keyListeners.any { it.onKeyEvent(event) }
 
+    private val pollCreditsButton = newToolbarButtonWithKeyListener(
+        REFRESH_ICON, l10n("ui.edit.pollCredits"),
+        VK_F5, 0
+    ) {
+        ctrl.pollCredits()
+    }
+
     private val undoStylingButton = newToolbarButtonWithKeyListener(
         UNDO_ICON, l10n("ui.edit.undoStyling"),
         VK_Z, CTRL_DOWN_MASK
@@ -227,6 +234,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     init {
+        // Credits polling is usually disabled; it will be enabled when it's available.
+        updateCreditsPolling(false)
+
         val zoomTooltip = l10n("ui.edit.zoom") + " (" + intArrayOf(VK_PLUS, VK_MINUS, VK_0).joinToString {
             getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
         } + ")"
@@ -239,6 +249,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Note: The shrink group with shrinkprio 200 appears to implicitly include shrinkable gaps.
         val topPanelCols = """
                 []push
+                []
+                rel[]rel
                 []0[]0[]0[]rel[shrinkprio 200]
                 0:unrel:[]unrel
                 []rel[]rel[]0[]0[]0[]
@@ -251,7 +263,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 push[]
         """
         val topPanel = JPanel(MigLayout("", topPanelCols)).apply {
-            add(undoStylingButton, "skip 1")
+            add(pollCreditsButton, "skip 1")
+            add(JSeparator(JSeparator.VERTICAL), "growy")
+            add(undoStylingButton)
             add(redoStylingButton)
             add(saveStylingButton)
             add(resetStylingButton)
@@ -371,6 +385,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         resetStylingButton.isEnabled = isUnsaved
         // On macOS, show an unsaved indicator inside the "close window" button.
         rootPane.putClientProperty("Window.documentModified", isUnsaved)
+    }
+
+    fun updateCreditsPolling(possible: Boolean) {
+        pollCreditsButton.isEnabled = possible
     }
 
     fun updateLog(log: List<ParserMsg>) {

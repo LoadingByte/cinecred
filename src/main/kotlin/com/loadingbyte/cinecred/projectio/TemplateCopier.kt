@@ -3,10 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourceStream
-import com.loadingbyte.cinecred.projectio.service.DownException
-import com.loadingbyte.cinecred.projectio.service.ForbiddenException
-import com.loadingbyte.cinecred.projectio.service.ProviderAndLinkCoords
-import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.projectio.service.*
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -25,8 +22,8 @@ fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsFormat: Sp
  * @throws DownException
  * @throws IOException
  */
-fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsService: Service?, creditsName: String) {
-    tryCopyTemplate(destDir, locale, scale, null, creditsService, creditsName)
+fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsService: Service, creditsFilename: String) {
+    tryCopyTemplate(destDir, locale, scale, null, creditsService, creditsFilename)
 }
 
 
@@ -36,11 +33,11 @@ private fun tryCopyTemplate(
     scale: Int,
     creditsFormat: SpreadsheetFormat?,
     creditsService: Service?,
-    creditsName: String?
+    creditsFilename: String?
 ) {
     // First try to write the credits file, so that if something goes wrong (which is likely with online services),
     // the project folder just isn't created at all, instead of being half-created.
-    tryCopyCreditsTemplate(destDir, locale, scale, creditsFormat, creditsService, creditsName)
+    tryCopyCreditsTemplate(destDir, locale, scale, creditsFormat, creditsService, creditsFilename)
     tryCopyStylingTemplate(destDir, locale, scale)
 }
 
@@ -59,7 +56,7 @@ private fun tryCopyCreditsTemplate(
     scale: Int,
     creditsFormat: SpreadsheetFormat?,
     creditsService: Service?,
-    creditsName: String?
+    creditsFilename: String?
 ) {
     if (ProjectIntake.locateCreditsFile(destDir).first != null)
         return
@@ -78,15 +75,14 @@ private fun tryCopyCreditsTemplate(
             destDir.createDirectoriesSafely()
             creditsFormat.write(destDir.resolve("Credits.${creditsFormat.fileExt}"), spreadsheet, "Credits", look)
         }
-        creditsService != null && creditsName != null -> {
-            val linkCoords = creditsService.upload(creditsName, spreadsheet, look)
+        creditsService != null && creditsFilename != null -> {
+            val link = creditsService.upload(creditsFilename, "Credits", spreadsheet, look)
             // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
             // actually not interrupted. So instead, we detect interruption here and stop project initialization.
             if (Thread.interrupted())
                 throw InterruptedException()
             destDir.createDirectoriesSafely()
-            ProviderAndLinkCoords(creditsService.provider.id, linkCoords)
-                .write(destDir.resolve("Credits.${ProviderAndLinkCoords.FILE_EXT}"))
+            writeServiceLink(destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT"), link)
         }
         else -> throw IllegalArgumentException()
     }

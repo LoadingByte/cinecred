@@ -3,7 +3,10 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.delivery.*
+import com.loadingbyte.cinecred.delivery.RenderFormat
+import com.loadingbyte.cinecred.delivery.RenderJob
+import com.loadingbyte.cinecred.delivery.VideoRenderJob
+import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Opt
@@ -11,7 +14,6 @@ import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.ProjectDialogType
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
-import java.nio.file.Path
 import javax.swing.JTree
 import kotlin.io.path.readLines
 import kotlin.io.path.writeLines

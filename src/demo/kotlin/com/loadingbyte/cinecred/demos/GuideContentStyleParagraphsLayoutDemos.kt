@@ -75,7 +75,7 @@ private val PARAGRAPHS_SPREADSHEET by lazy {
     """
 @Body,@Content Style
 "${TEMPLATE_SPREADSHEET[row, 1]}",Demo
-{{Pic Logo.svg x100}}
+{{Pic logo.svg x100}}
 "${TEMPLATE_SPREADSHEET[row + 1, 1]}"
     """
 }

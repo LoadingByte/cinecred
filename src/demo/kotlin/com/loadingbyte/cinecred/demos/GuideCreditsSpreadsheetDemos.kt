@@ -49,7 +49,7 @@ object GuideCreditsSpreadsheetPicTagDemo : PageDemo("$DIR/pic-tag", Format.PNG, 
     override fun credits() = listOf(
         """
 @Body
-{{Pic Cinecred.svg 100x}}
+{{Pic cinecred.svg 100x}}
         """.parseCreditsCS()
     )
 }
@@ -60,11 +60,11 @@ object GuideCreditsSpreadsheetPicCropDemo : PageDemo("$DIR/pic-crop", Format.STE
     override fun credits() = listOf(
         """
 @Body
-{{Pic Logo.svg 100x}}
+{{Pic logo.svg 100x}}
         """.parseCreditsCS(),
         """
 @Body
-{{Pic Logo.svg 100x Crop}}
+{{Pic logo.svg 100x Crop}}
         """.parseCreditsCS()
     )
 }

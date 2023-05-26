@@ -146,7 +146,7 @@ object GuideContentStyleGridLayoutMatchRowHeightDemo : StyleSettingsDemo<Content
     override fun credits(style: ContentStyle) = """
 @Body,@Vertical Gap,@Content Style
 Benjamin Backer,,Demo
-{{Pic Logo.svg x50}},,
+{{Pic logo.svg x50}},,
 Christoph Caterer,,
 Dominic Donor,,
 Draco Driver,,
@@ -196,7 +196,7 @@ object GuideContentStyleGridLayoutCellVJustifyDemo : StyleSettingsDemo<ContentSt
     override fun credits(style: ContentStyle) = """
 @Body,@Content Style
 Benjamin Backer,Demo
-{{Pic Logo.svg x100}},
+{{Pic logo.svg x100}},
 Brady “Bar” Owner,
 Christoph Caterer,
         """.parseCreditsCS(style)

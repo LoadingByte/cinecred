@@ -6,11 +6,9 @@ import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
 import com.loadingbyte.cinecred.demo.Demo
-import com.loadingbyte.cinecred.demos.*
 import com.loadingbyte.cinecred.ui.helper.disableSnapToSide
 import com.loadingbyte.cinecred.ui.helper.minimumWindowSize
 import java.awt.Dimension
-import java.util.*
 import kotlin.system.exitProcess
 
 

@@ -1,19 +1,22 @@
 package com.loadingbyte.cinecred.demos
 
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.VideoRenderJob
-import com.loadingbyte.cinecred.demo.*
+import com.loadingbyte.cinecred.demo.FileBrowserVirtualWindow
+import com.loadingbyte.cinecred.demo.ScreencastDemo
+import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
+import com.loadingbyte.cinecred.demo.edt
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
-import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
-import java.awt.*
-import java.awt.event.KeyEvent.*
+import java.awt.Dimension
+import java.awt.KeyboardFocusManager
+import java.awt.Point
 import java.lang.Thread.sleep
 import java.text.NumberFormat
-import java.util.*
-import javax.swing.*
-import kotlin.io.path.*
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 
 
 private const val DIR = "screencast"

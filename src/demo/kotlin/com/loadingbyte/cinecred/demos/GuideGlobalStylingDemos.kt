@@ -129,6 +129,6 @@ private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, u
         val styledString = persistentListOf(BodyElement.Str(listOf(Pair(text, letterStyle))))
         Block(PRESET_CONTENT_STYLE, null, styledString, null, vGap * global.unitVGapPx, Any(), Any(), Any())
     }.toPersistentList()
-    val lateral = Lateral(persistentListOf(Spine(0.0, blocks)), 0.0)
+    val lateral = Lateral(persistentListOf(Spine.Scroll(0.0, blocks)), 0.0)
     return Page(persistentListOf(Stage.Scroll(PRESET_PAGE_STYLE, persistentListOf(lateral), 0.0)))
 }

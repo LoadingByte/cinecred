@@ -81,7 +81,7 @@ abstract class ScreencastDemo(
         dlvWinSize: Dimension? = null
     ) {
         projectCtrl = masterCtrl!!.leakedProjectCtrls.lastOrNull() ?: run {
-            tryCopyTemplate(projectDir, locale, CsvFormat, 1)
+            tryCopyTemplate(projectDir, locale, 1, CsvFormat)
             edt { masterCtrl!!.openProject(projectDir, openOnScreen = gCfg) }
             sleep(1500)
             masterCtrl!!.leakedProjectCtrls.last()

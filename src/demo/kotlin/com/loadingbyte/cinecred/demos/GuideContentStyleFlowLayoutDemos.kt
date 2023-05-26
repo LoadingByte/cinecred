@@ -102,7 +102,7 @@ object GuideContentStyleFlowLayoutMatchCellWidthAndHeightDemo : StyleSettingsDem
 
     override fun credits(style: ContentStyle) = """
 @Body,@Vertical Gap,@Content Style
-{{Pic Logo.svg x50}},,Demo
+{{Pic logo.svg x50}},,Demo
 Emil Eater,,
 Megan Muncher,,
 Dylan Delicious,,
@@ -142,7 +142,7 @@ object GuideContentStyleFlowLayoutCellHJustifyAndVJustifyDemo : StyleSettingsDem
     override fun credits(style: ContentStyle) = """
 @Body,@Content Style
 Emil Eater,Demo
-{{Pic Logo.svg x100}},
+{{Pic logo.svg x100}},
 Dylan Delicious,
         """.parseCreditsCS(style)
 }

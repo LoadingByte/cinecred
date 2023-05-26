@@ -18,7 +18,7 @@ abstract class ProjectDemo(filename: String, format: Format) : Demo(filename, fo
         val masterCtrl = UIFactory().master() as MasterCtrl
         this.masterCtrl = masterCtrl
         withDemoProjectDir { projectDir ->
-            tryCopyTemplate(projectDir, locale, CsvFormat, 1)
+            tryCopyTemplate(projectDir, locale, 1, CsvFormat)
             edt {
                 masterCtrl.openProject(projectDir, openOnScreen = gCfg)
                 projectCtrl.setDialogVisible(ProjectDialogType.STYLING, false)

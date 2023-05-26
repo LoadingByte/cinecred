@@ -64,8 +64,8 @@ object BundledFontsStylingContext : StylingContext {
 
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, CsvFormat, 1)
-        CsvFormat.read(locateCreditsFile(projectDir).first!!).first
+        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, 1, CsvFormat)
+        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first
     }
 }
 
@@ -99,20 +99,19 @@ val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
 
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, CsvFormat, 1)
-        val creditsFile = locateCreditsFile(projectDir).first!!
+        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, 1, CsvFormat)
+        val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile).first
         val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), BundledFontsStylingContext)
-        val pictureLoaders = buildMap {
+        val pictureLoaders = buildList {
             for (file in projectDir.walkSafely())
                 if (file.isRegularFile())
-                    tryReadPictureLoader(file)?.let { put(file, it) }
+                    tryReadPictureLoader(file)?.let(::add)
         }
         val (pages, runtimeGroups, _) = readCredits(spreadsheet, styling, pictureLoaders)
-        for (pl in pictureLoaders.values)
-            if (pl.isInitialized())
-                pl.value?.dispose()
+        for (pl in pictureLoaders)
+            pl.dispose()
         Project(styling, BundledFontsStylingContext, pages.toPersistentList(), runtimeGroups.toPersistentList())
     }
 
@@ -124,10 +123,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle): Pair<Global, Page
     val spreadsheet = CsvFormat.read(this)
     val (pages, _, _) = useResourcePath("/logo.svg") { logoSvg ->
         useResourcePath("/template/cinecred.svg") { cinecredSvg ->
-            val pictureLoaders = mapOf(
-                Path("Logo.svg") to tryReadPictureLoader(logoSvg)!!,
-                Path("Cinecred.svg") to tryReadPictureLoader(cinecredSvg)!!
-            )
+            val pictureLoaders = listOf(tryReadPictureLoader(logoSvg)!!, tryReadPictureLoader(cinecredSvg)!!)
             readCredits(spreadsheet, styling, pictureLoaders)
         }
     }
@@ -138,6 +134,6 @@ fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> 
     val styling =
         Styling(PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList())
     val spreadsheet = CsvFormat.read(this)
-    val (pages, _, _) = readCredits(spreadsheet, styling, emptyMap())
+    val (pages, _, _) = readCredits(spreadsheet, styling, emptyList())
     return Pair(styling.global, pages.single())
 }

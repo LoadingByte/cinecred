@@ -982,7 +982,7 @@ class ResolutionWidget(
         toString = { p ->
             when (p) {
                 is Preset.Choice -> "${p.label} (${p.resolution.widthPx} \u00D7 ${p.resolution.heightPx})"
-                is Preset.Custom -> l10n("ui.form.resolutionCustom")
+                is Preset.Custom -> l10n("custom")
             }
         }
     )

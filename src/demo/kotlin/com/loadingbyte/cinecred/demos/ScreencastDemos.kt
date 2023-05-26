@@ -219,7 +219,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.hold()
 
         sc.caption("screencast.caption.styling.styles")
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.pageStyleScroll")))
+        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.PageBehavior.SCROLL")))
         sc.click()
         sc.caption("screencast.caption.styling.page")
         sc.mouseTo(styWin.desktopPosOfSetting(styPageForm, PageStyle::scrollMeltWithNext.st()))

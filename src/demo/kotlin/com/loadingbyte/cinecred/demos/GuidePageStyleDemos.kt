@@ -27,7 +27,7 @@ object GuidePageStyleNameDemo : StyleSettingsDemo<PageStyle>(
     listOf(PageStyle::name.st())
 ) {
     override fun styles() = buildList<PageStyle> {
-        this += PRESET_PAGE_STYLE.copy(name = l10n("project.template.pageStyleScroll"))
+        this += PRESET_PAGE_STYLE.copy(name = l10n("project.PageBehavior.SCROLL"))
     }
 }
 

@@ -21,6 +21,8 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
 
 
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
+    UnitWidgetSpec(Global::resolution.st(), Global::unitVGapPx.st(), unit = "px"),
+    UnitWidgetSpec(Global::fps.st(), unit = "fps"),
     TimecodeWidgetSpec(
         Global::runtimeFrames.st(),
         getFPS = { _, _, global -> global.fps },
@@ -37,11 +39,19 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
         PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
         getFPS = { _, styling, _ -> styling.global.fps },
         getTimecodeFormat = { _, styling, _ -> styling.global.timecodeFormat }
-    )
+    ),
+    UnitWidgetSpec(PageStyle::scrollPxPerFrame.st(), unit = "px")
 )
 
 
 private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = listOf(
+    UnitWidgetSpec(
+        ContentStyle::vMarginPx.st(), ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(),
+        ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(),
+        ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
+        ContentStyle::paragraphsLineGapPx.st(), ContentStyle::headGapPx.st(), ContentStyle::tailGapPx.st(),
+        unit = "px"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(
         ContentStyle::spineAttachment.st(), ICON,
@@ -102,6 +112,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
+    UnitWidgetSpec(LetterStyle::heightPx.st(), unit = "px"),
     WidthWidgetSpec(LetterStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         LetterStyle::heightPx.st(),
@@ -115,8 +126,10 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     ),
     UnionWidgetSpec(
         LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st(),
-        unionName = "leadingRh", settingIcons = listOf(FONT_HEIGHT_LEADING_TOP_ICON, FONT_HEIGHT_LEADING_BOTTOM_ICON)
+        unionName = "leadingRh", unionUnit = "px",
+        settingIcons = listOf(FONT_HEIGHT_LEADING_TOP_ICON, FONT_HEIGHT_LEADING_BOTTOM_ICON)
     ),
+    UnitWidgetSpec(LetterStyle::trackingEm.st(), unit = "em"),
     NewSectionWidgetSpec(LetterStyle::trackingEm.st()),
     NumberWidgetSpec(LetterStyle::trackingEm.st(), step = 0.01),
     UnionWidgetSpec(
@@ -136,6 +149,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     UnionWidgetSpec(
         LetterStyle::superscript.st(), LetterStyle::superscriptScaling.st(),
         LetterStyle::superscriptHOffsetRfh.st(), LetterStyle::superscriptVOffsetRfh.st(),
+        unionUnit = "px",
         settingIcons = listOf(null, ZOOM_ICON, ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON),
         settingNewlines = listOf(1)
     ),
@@ -181,7 +195,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     UnionWidgetSpec(
         Layer::coloring.st(), Layer::color1.st(), Layer::color2.st(),
         Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
-        settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_DIAGONAL_ICON)
+        unionUnit = "px", settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_DIAGONAL_ICON)
     ),
     ToggleButtonGroupWidgetSpec(Layer::shape.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(Layer::stripePreset.st(), ICON),
@@ -189,7 +203,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     WidthWidgetSpec(Layer::stripeOffsetRfh.st(), WidthSpec.TINY),
     UnionWidgetSpec(
         Layer::stripePreset.st(), Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
-        settingIcons = listOf(null, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
+        unionUnit = "px", settingIcons = listOf(null, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
     ),
     WidthWidgetSpec(Layer::stripeWidenLeftRfh.st(), WidthSpec.TINY),
     WidthWidgetSpec(Layer::stripeWidenRightRfh.st(), WidthSpec.TINY),
@@ -198,15 +212,16 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     UnionWidgetSpec(
         Layer::stripeWidenLeftRfh.st(), Layer::stripeWidenRightRfh.st(),
         Layer::stripeWidenTopRfh.st(), Layer::stripeWidenBottomRfh.st(),
-        unionName = "stripeWidenRfh",
+        unionName = "stripeWidenRfh", unionUnit = "px",
         settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON, BEARING_TOP_ICON, BEARING_BOTTOM_ICON)
     ),
     ToggleButtonGroupWidgetSpec(Layer::stripeCornerJoin.st(), ICON),
     WidthWidgetSpec(Layer::stripeCornerRadiusRfh.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         Layer::stripeCornerJoin.st(), Layer::stripeCornerRadiusRfh.st(),
-        settingLabels = listOf(1)
+        settingLabels = listOf(1), settingUnits = listOf(null, "px")
     ),
+    UnitWidgetSpec(Layer::stripeDashPatternRfh.st(), unit = "px"),
     WidthWidgetSpec(Layer::stripeDashPatternRfh.st(), WidthSpec.LITTLE),
     SimpleListWidgetSpec(
         Layer::stripeDashPatternRfh.st(),
@@ -216,11 +231,14 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     ToggleButtonGroupWidgetSpec(Layer::dilationJoin.st(), ICON),
     UnionWidgetSpec(
         Layer::dilationRfh.st(), Layer::dilationJoin.st(),
-        unionName = "dilation"
+        unionName = "dilation", unionUnit = "px"
     ),
     WidthWidgetSpec(Layer::contourThicknessRfh.st(), WidthSpec.LITTLE),
     ToggleButtonGroupWidgetSpec(Layer::contourJoin.st(), ICON),
-    UnionWidgetSpec(Layer::contour.st(), Layer::contourThicknessRfh.st(), Layer::contourJoin.st()),
+    UnionWidgetSpec(
+        Layer::contour.st(), Layer::contourThicknessRfh.st(), Layer::contourJoin.st(),
+        unionUnit = "px"
+    ),
     ToggleButtonGroupWidgetSpec(Layer::offsetCoordinateSystem.st(), ICON),
     WidthWidgetSpec(Layer::hOffsetRfh.st(), WidthSpec.LITTLE),
     WidthWidgetSpec(Layer::vOffsetRfh.st(), WidthSpec.LITTLE),
@@ -230,7 +248,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
         Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(),
         Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
         Layer::offsetCoordinateSystem.st(),
-        unionName = "offset",
+        unionName = "offset", unionUnit = "px",
         settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON, ANGLE_ICON, ARROW_DIAGONAL_ICON, null),
         settingGaps = listOf(null, "0", null, "unrel")
     ),
@@ -256,8 +274,9 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
     ToggleButtonGroupWidgetSpec(Layer::clearingJoin.st(), ICON),
     UnionWidgetSpec(
         Layer::clearingLayers.st(), Layer::clearingRfh.st(), Layer::clearingJoin.st(),
-        unionName = "clearing"
-    )
+        unionName = "clearing", unionUnit = "px"
+    ),
+    UnitWidgetSpec(Layer::blurRadiusRfh.st(), unit = "px")
 )
 
 
@@ -271,6 +290,12 @@ sealed class StyleWidgetSpec<S : Style>(
 class NewSectionWidgetSpec<S : Style>(
     setting: StyleSetting<S, Any>
 ) : StyleWidgetSpec<S>(setting)
+
+
+class UnitWidgetSpec<S : Style>(
+    vararg settings: StyleSetting<S, Any>,
+    val unit: String
+) : StyleWidgetSpec<S>(*settings)
 
 
 class WidthWidgetSpec<S : Style>(
@@ -317,7 +342,9 @@ class TimecodeWidgetSpec<S : Style>(
 class UnionWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Any>,
     val unionName: String? = null,
+    val unionUnit: String? = null,
     val settingLabels: List<Int> = emptyList(),
+    val settingUnits: List<String?>? = null,
     val settingIcons: List<Icon?>? = null,
     val settingGaps: List<String?>? = null,
     val settingNewlines: List<Int> = emptyList()
@@ -325,6 +352,8 @@ class UnionWidgetSpec<S : Style>(
     init {
         require(settingLabels.all(settings.indices::contains))
         require(settingNewlines.all(settings.indices::contains))
+        if (settingUnits != null)
+            require(settings.size == settingUnits.size)
         if (settingIcons != null)
             require(settings.size == settingIcons.size)
         if (settingGaps != null)

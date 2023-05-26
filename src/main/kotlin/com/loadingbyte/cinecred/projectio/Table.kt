@@ -20,7 +20,7 @@ data class ParserMsg(
 
 class Table(
     spreadsheet: Spreadsheet,
-    val l10nPrefix: String,
+    l10nPrefix: String,
     l10nColNames: List<String>,
     legacyColNames: Map<String, List<String>>
 ) {
@@ -122,41 +122,15 @@ class Table(
         return try {
             str.toFiniteDouble(nonNeg, non0)
         } catch (_: NumberFormatException) {
-            val restriction = when {
-                nonNeg && non0 -> " > 0"
-                nonNeg && !non0 -> " \u2265 0"
-                !nonNeg && non0 -> " \u2260 0"
-                else -> ""
+            val msg = when {
+                nonNeg && non0 -> l10n("projectIO.table.illFormattedDoubleGT0")
+                nonNeg && !non0 -> l10n("projectIO.table.illFormattedDoubleGTE0")
+                !nonNeg && non0 -> l10n("projectIO.table.illFormattedDoubleNEQ0")
+                else -> l10n("projectIO.table.illFormattedDouble")
             }
-            log(row, l10nColName, WARN, l10n("projectIO.table.illFormattedDouble", restriction).trim())
+            log(row, l10nColName, WARN, msg)
             null
         }
-    }
-
-    inline fun <reified T : Enum<T>> getEnumList(row: Int, l10nColName: String): List<T> {
-        val str = getString(row, l10nColName) ?: return emptyList()
-
-        val result = mutableListOf<T>()
-        val unknown = mutableListOf<String>()
-        val keyBase = "$l10nPrefix${T::class.java.simpleName}."
-        for (part in str.split(' ')) {
-            val enumConst = enumValues<T>().find { enumConst ->
-                TRANSLATED_LOCALES.any { loc -> l10n(keyBase + enumConst.name, loc).equals(part, ignoreCase = true) }
-            }
-            if (enumConst != null)
-                result.add(enumConst)
-            else
-                unknown.add(part)
-        }
-
-        if (unknown.isNotEmpty()) {
-            val keys = enumValues<T>().map { "$l10nPrefix${it.javaClass.simpleName}.${it.name}" }
-            val opts = keys.joinToString { l10n(it) }
-            val msg = l10n("projectIO.table.illFormattedManyOf", unknown.joinToString(" "), opts)
-            log(row, l10nColName, WARN, msg)
-        }
-
-        return result
     }
 
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {

@@ -106,10 +106,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     init {
         addWidget(
-            l10n("ui.deliverConfig.resolutionMultiplier"),
+            l10n("ui.styling.global.resolution"),
             UnionWidget(
                 listOf(resolutionMultWidget, fpsMultWidget),
-                labels = listOf(null, l10n("ui.deliverConfig.fpsMultiplier"))
+                labels = listOf(null, l10n("ui.styling.global.fps"))
             )
         )
     }
@@ -142,8 +142,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     init {
         // Set the directory-related fields to the project dir.
-        val defaultFilename = l10n("ui.deliverConfig.defaultFilename", ctrl.projectDir.fileName)
-        val outputLoc = ctrl.projectDir.toAbsolutePath().parent.resolve(defaultFilename)
+        val outputLoc = ctrl.projectDir.toAbsolutePath().parent.resolve("${ctrl.projectDir.fileName} Render")
         singleFileWidget.value = outputLoc
         seqDirWidget.value = outputLoc
         // This ensures that file extensions are sensible.

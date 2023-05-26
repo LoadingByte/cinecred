@@ -407,7 +407,6 @@ private class CreditsReader(
             if (nss == null && stageStyle?.behavior == PageBehavior.CARD || nss?.behavior == PageBehavior.CARD) {
                 var hook = false
                 var warn = false
-                val l = 1
                 val u = compoundSpines.size + 1
                 try {
                     hook = parts[0] in HOOK_KW
@@ -418,10 +417,10 @@ private class CreditsReader(
                         }
                         if (parts.size > 1) {
                             val i = parts[1].toInt()
-                            if (i in l..u)
+                            if (i in 1..u)
                                 nextSpineHookTo = i - 1
                             else
-                                table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, l, u))
+                                table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, u))
                         }
                         if (parts.size > 2) {
                             val anchors = parts[2].split('-')
@@ -466,7 +465,7 @@ private class CreditsReader(
                 if (warn) {
                     val msg = when {
                         hook -> l10n(
-                            "projectIO.credits.illFormattedSpinePosCardHook", parts[0], l, u,
+                            "projectIO.credits.illFormattedSpinePosCardHook", parts[0], u,
                             l10n(TOP_KW.key), l10n(MIDDLE_KW.key), l10n(BOTTOM_KW.key)
                         )
                         else -> l10n(
@@ -512,13 +511,23 @@ private class CreditsReader(
 
         // If the break match cell is non-empty, start a new matching partition for the head, body, and/or tail,
         // and mark the previous block for conclusion (if there was any).
-        for (breakMatch in table.getEnumList<BreakMatch>(row, "breakMatch")) {
-            when (breakMatch) {
-                BreakMatch.HEAD -> matchHeadPartitionId++
-                BreakMatch.BODY -> matchBodyPartitionId++
-                BreakMatch.TAIL -> matchTailPartitionId++
+        table.getString(row, "breakMatch")?.let { str ->
+            val parts = str.split(' ')
+            val unknown = mutableListOf<String>()
+            for (part in parts)
+                when (part) {
+                    in HEAD_KW -> matchHeadPartitionId++
+                    in BODY_KW -> matchBodyPartitionId++
+                    in TAIL_KW -> matchTailPartitionId++
+                    else -> unknown.add(part)
+                }
+            if (unknown.size != parts.size)
+                isBlockConclusionMarked = true
+            if (unknown.isNotEmpty()) {
+                val opts = "${l10n(HEAD_KW.key)}, ${l10n(BODY_KW.key)}, ${l10n(TAIL_KW.key)}"
+                val msg = l10n("projectIO.credits.unknownBreakMatchKeyword", unknown.joinToString(" "), opts)
+                table.log(row, "breakMatch", WARN, msg)
             }
-            isBlockConclusionMarked = true
         }
 
         // Get the body element, which may either be a styled string or a (optionally scaled) picture.
@@ -785,8 +794,6 @@ private class CreditsReader(
        ********** MISCELLANEOUS **********
        *********************************** */
 
-    enum class BreakMatch { HEAD, BODY, TAIL }
-
 
     companion object {
 
@@ -797,8 +804,11 @@ private class CreditsReader(
         val MIDDLE_KW = Keyword("projectIO.credits.table.middle")
         val BOTTOM_KW = Keyword("projectIO.credits.table.bottom")
         val PARALLEL_KW = Keyword("projectIO.credits.table.parallel")
+        val HEAD_KW = Keyword("projectIO.credits.table.head")
+        val BODY_KW = Keyword("projectIO.credits.table.body")
+        val TAIL_KW = Keyword("projectIO.credits.table.tail")
         val CROP_KW = Keyword("projectIO.credits.table.crop")
-        val BLANK_KW = Keyword("projectIO.credits.table.blank")
+        val BLANK_KW = Keyword("blank")
         val STYLE_KW = Keyword("projectIO.credits.table.style")
         val PIC_KW = Keyword("projectIO.credits.table.pic")
 

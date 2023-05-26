@@ -114,7 +114,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
         }
 
         layout = MigLayout("insets dialog", "[:300:]", "[]para[]")
-        add(JLabel("<html>${hint.message}</html>").style(), "growx")
+        add(JLabel("<html>" + hint.message.replace("\n", "<br>") + "</html>").style(), "growx")
         if (idx == track.lastIndex) {
             add(JButton(l10n("ui.hints.notPassed")).style().apply {
                 addActionListener { removePopup() }
@@ -123,7 +123,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
                 addActionListener { removePopup(); onPass() }
             })
         } else
-            add(JButton(l10n("ui.hints.next")).style().apply {
+            add(JButton(l10n("next")).style().apply {
                 addActionListener { removePopup(); showHint(track, idx + 1, onPass) }
             }, "newline, right")
     }

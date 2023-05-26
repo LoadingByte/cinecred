@@ -322,9 +322,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             if (!welcomeView.showNotEmptyQuestion(projectDir))
                 return
         }
-        val creditsFilename = l10n("ui.projects.create.defaultCreditsFilename", projectDir.name)
         welcomeView.projects_createConfigure_setProjectDir(projectDir)
-        welcomeView.projects_createConfigure_setCreditsFilename(creditsFilename)
+        welcomeView.projects_createConfigure_setCreditsFilename("${projectDir.name} Credits")
         welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 

@@ -12,7 +12,6 @@ import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
-import java.text.NumberFormat
 import java.util.*
 import kotlin.math.floor
 
@@ -308,7 +307,6 @@ class IntConstr<S : Style>(
 class DoubleConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, Double>,
-    val finite: Boolean = true,
     val min: Double? = null,
     val minInclusive: Boolean = true,
     val max: Double? = null,
@@ -425,29 +423,27 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
             when (cst) {
                 is IntConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
-                        if (cst.min != null && value < cst.min || cst.max != null && value > cst.max) {
-                            val minRestr = cst.min?.let { "\u2265 $it" }
-                            val maxRestr = cst.max?.let { "\u2264 $it" }
-                            val restr = combineNumberRestrictions(minRestr, maxRestr)
-                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.number", restr))
-                        }
+                        val min = cst.min
+                        val max = cst.max
+                        if (min != null && value < min)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberGTE", min))
+                        if (max != null && value > max)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberLTE", max))
                     }
                 is DoubleConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
-                        if (cst.finite && !value.isFinite() ||
-                            cst.min != null && (if (cst.minInclusive) value < cst.min else value <= cst.min) ||
-                            cst.max != null && (if (cst.maxInclusive) value > cst.max else value >= cst.max)
-                        ) {
-                            fun fmt(f: Double) = NumberFormat.getCompactNumberInstance().format(f)
-                            val minRestr = cst.min?.let { (if (cst.minInclusive) "\u2265 " else "> ") + fmt(it) }
-                            val maxRestr = cst.max?.let { (if (cst.maxInclusive) "\u2264 " else "< ") + fmt(it) }
-                            val restr = combineNumberRestrictions(minRestr, maxRestr)
-                            val key = when {
-                                cst.finite -> "project.styling.constr.finiteNumber"
-                                else -> "project.styling.constr.number"
-                            }
-                            log(rootStyle, style, st, idx, cst.severity, l10n(key, restr))
-                        }
+                        val min = cst.min
+                        val max = cst.max
+                        if (!value.isFinite())
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberFinite"))
+                        if (min != null && cst.minInclusive && value < min)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberGTE", min))
+                        if (min != null && !cst.minInclusive && value <= min)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberGT", min))
+                        if (max != null && cst.maxInclusive && value > max)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberLTE", max))
+                        if (max != null && !cst.maxInclusive && value >= max)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberLT", max))
                     }
                 is FixedChoiceConstr<S, *> ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
@@ -606,14 +602,6 @@ private inline fun <S : Style, SS : StyleSetting<S, SUBJ>, SUBJ : Any> S.forEach
         if (setting !in ignoreSettings)
             setting.extractSubjects(this).forEachIndexed { idx, subject -> action(setting, idx, subject) }
 }
-
-private fun combineNumberRestrictions(minRestr: String?, maxRestr: String?): String =
-    when {
-        minRestr != null && maxRestr != null -> " $minRestr & $maxRestr"
-        minRestr != null -> " $minRestr"
-        maxRestr != null -> " $maxRestr"
-        else -> ""
-    }
 
 
 private fun msg(key: String): () -> String = { l10n(key) }

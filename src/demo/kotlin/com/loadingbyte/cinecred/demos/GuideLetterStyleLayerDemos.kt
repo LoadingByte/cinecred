@@ -84,7 +84,7 @@ object GuideLetterStyleLayerInheritDemo : StyleSettingsDemo<LetterStyle>(
     LetterStyle::class.java, "$DIR/inherit", Format.STEP_GIF,
     listOf(LetterStyle::inheritLayersFromStyle.st())
 ) {
-    private val oneStyleName get() = l10nDemo("one")
+    private val oneStyleName get() = l10nDemo("styleOne")
 
     override fun styles() = buildList<LetterStyle> {
         this += PRESET_LETTER_STYLE.copy(name = "Two")

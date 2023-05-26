@@ -370,5 +370,8 @@ val Enum<*>.label: String
     get() = when (this) {
         TimecodeFormat.SMPTE_NON_DROP_FRAME -> "SMPTE Non Drop-Frame"
         TimecodeFormat.SMPTE_DROP_FRAME -> "SMPTE Drop-Frame"
+        GridStructure.SQUARE_CELLS -> l10n("ui.styling.content.flowSquareCells")
+        SmallCaps.OFF, Superscript.OFF -> l10n("off")
+        Superscript.CUSTOM, StripePreset.CUSTOM -> l10n("custom")
         else -> l10n("project.${javaClass.simpleName}.${name}")
     }

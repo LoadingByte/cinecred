@@ -89,7 +89,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             val options = arrayOf(l10n("ui.edit.resetUnsavedChangesWarning.discard"), l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.resetUnsavedChangesWarning.msg"),
-                l10n("ui.edit.resetUnsavedChangesWarning.title"),
+                l10n("ui.edit.unsavedChangesWarnings.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options, options[0]
             )
             if (selectedOption == CLOSED_OPTION || selectedOption == 1)
@@ -116,31 +116,35 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val guidesToggleButton = newToolbarToggleButtonWithKeyListener(
-        GUIDES_ICON, tooltip = l10n(
-            "ui.edit.guidesTooltip",
-            STAGE_GUIDE_COLOR.brighter().toHex24(),
-            SPINE_GUIDE_COLOR.brighter().toHex24(),
-            BODY_CELL_GUIDE_COLOR.brighter().brighter().toHex24(),
-            BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24(),
-            HEAD_TAIL_GUIDE_COLOR.brighter().brighter().toHex24()
-        ), VK_G, CTRL_DOWN_MASK, isSelected = true
+        GUIDES_ICON, tooltip = "<html>" + l10n("ui.edit.guidesTooltip.title") + "<br>" +
+                "<font color=\"${STAGE_GUIDE_COLOR.brighter().toHex24()}\">\u2014</font> " +
+                l10n("ui.edit.guidesTooltip.page") + "<br>" +
+                "<font color=\"${SPINE_GUIDE_COLOR.brighter().toHex24()}\">\u2014</font> " +
+                l10n("ui.edit.guidesTooltip.spine") + "<br>" +
+                "<font color=\"${BODY_CELL_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
+                l10n("ui.edit.guidesTooltip.bodyCell") + "<br>" +
+                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
+                l10n("ui.edit.guidesTooltip.bodyWidth") + "<br>" +
+                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
+                l10n("ui.edit.guidesTooltip.headTail") + "</html>",
+        VK_G, CTRL_DOWN_MASK, isSelected = true
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) }
     }
     private val uniformSafeAreasToggleButton = newToolbarToggleButtonWithKeyListener(
-        UNIFORM_SAFE_AREAS_ICON, l10n("ui.edit.uniformSafeAreasTooltip"),
+        UNIFORM_SAFE_AREAS_ICON, "<html>" + l10n("ui.edit.uniformSafeAreasTooltip").replace("\n", "<br>") + "</html>",
         VK_M, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) }
     }
     private val cutSafeArea16to9ToggleButton = newToolbarToggleButtonWithKeyListener(
-        X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16:9"),
+        X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16", "9"),
         VK_9, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) }
     }
     private val cutSafeArea4to3ToggleButton = newToolbarToggleButtonWithKeyListener(
-        X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4:3"),
+        X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4", "3"),
         VK_3, CTRL_DOWN_MASK, isSelected = false
     ) { isSelected ->
         previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
@@ -356,7 +360,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 options.add(l10n("cancel"))
             val selectedOption = showOptionDialog(
                 ctrl.projectFrame, l10n("ui.edit.openUnsavedChangesWarning.msg"),
-                l10n("ui.edit.openUnsavedChangesWarning.title"),
+                l10n("ui.edit.unsavedChangesWarnings.title"),
                 DEFAULT_OPTION, WARNING_MESSAGE, null, options.toTypedArray(), options[0]
             )
             when (selectedOption) {

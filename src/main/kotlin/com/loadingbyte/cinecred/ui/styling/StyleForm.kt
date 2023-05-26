@@ -46,11 +46,21 @@ class StyleForm<S : Style>(
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val valueWidget = makeSettingWidget(setting)
         val wholeWidth = valueWidget is LayerListWidget<*, *>
-        val formRow = if (wholeWidth) FormRow("", valueWidget) else makeFormRow(setting.name, valueWidget)
+        val formRow = when {
+            wholeWidth -> FormRow("", valueWidget)
+            else -> makeFormRow(setting.name, getUnit(setting), valueWidget)
+        }
         valueWidgets[setting] = valueWidget
         rootFormRows.add(Pair(formRow, listOf(setting)))
         rootFormRowLookup[setting] = formRow
         addFormRow(formRow, wholeWidth = wholeWidth)
+    }
+
+    private fun getUnit(setting: StyleSetting<S, *>): String? {
+        for (widgetSpec in getStyleWidgetSpecs(styleClass))
+            if (widgetSpec is UnitWidgetSpec && setting in widgetSpec.settings)
+                return widgetSpec.unit
+        return null
     }
 
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
@@ -60,13 +70,17 @@ class StyleForm<S : Style>(
             val valueWidget = makeSettingWidget(setting)
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
-            wrappedLabels?.add(if (idx in spec.settingLabels) l10n(l10nKey(setting.name)) else null)
+            wrappedLabels?.add(if (idx !in spec.settingLabels) null else {
+                var wrappedLabel = l10n(l10nKey(setting.name))
+                spec.settingUnits?.getOrNull(idx)?.let { wrappedLabel += " [$it]" }
+                wrappedLabel
+            })
         }
         val unionWidget = UnionWidget(
             wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingGaps, spec.settingNewlines
         )
         val unionName = spec.unionName ?: spec.settings.first().name
-        val formRow = makeFormRow(unionName, unionWidget)
+        val formRow = makeFormRow(unionName, spec.unionUnit, unionWidget)
         rootFormRows.add(Pair(formRow, spec.settings))
         for (setting in spec.settings)
             rootFormRowLookup[setting] = formRow
@@ -319,9 +333,12 @@ class StyleForm<S : Style>(
         inconsistent
     )
 
-    private fun makeFormRow(name: String, widget: Widget<*>): FormRow {
+    private fun makeFormRow(name: String, unit: String?, widget: Widget<*>): FormRow {
         val l10nKey = l10nKey(name)
-        val formRow = FormRow(l10n(l10nKey), widget)
+        var label = l10n(l10nKey)
+        if (unit != null)
+            label += " [$unit]"
+        val formRow = FormRow(label, widget)
         try {
             formRow.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
         } catch (_: MissingResourceException) {

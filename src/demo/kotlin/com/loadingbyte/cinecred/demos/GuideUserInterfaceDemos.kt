@@ -247,7 +247,7 @@ object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.P
 
         edt { prjPnl.leakedGuidesButton.isSelected = false }
         val oldStyling = projectCtrl.stylingHistory.current
-        val oldCardStyle = oldStyling.contentStyles.first { it.name == l10n("project.template.contentStyleCard") }
+        val oldCardStyle = oldStyling.contentStyles.first { it.name == l10n("project.PageBehavior.CARD") }
         val newCardStyle = oldCardStyle.copy(hasTail = false)
         val newStyling = oldStyling.copy(
             contentStyles = oldStyling.contentStyles.remove(oldCardStyle).add(newCardStyle),

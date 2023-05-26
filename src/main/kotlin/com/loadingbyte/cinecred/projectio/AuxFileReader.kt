@@ -158,7 +158,7 @@ private val GS_EXECUTABLE: Path? by lazy {
         SystemInfo.isMacOS -> l10n("projectIO.ghostscriptMissing.msg.macos", "https://pages.uoregon.edu/koch/")
         else -> l10n("projectIO.ghostscriptMissing.msg.linux")
     }
-    val msg = l10n("projectIO.ghostscriptMissing.msg", osSpecific)
+    val msg = "<html>" + l10n("projectIO.ghostscriptMissing.msg", osSpecific).replace("\n", "<br>") + "</html>"
     val ep = newLabelEditorPane("text/html", msg)
     ep.addHyperlinkListener { e ->
         if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)

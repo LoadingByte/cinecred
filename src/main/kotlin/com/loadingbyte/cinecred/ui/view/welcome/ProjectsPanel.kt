@@ -374,7 +374,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private class CreateConfigureForm : EasyForm(insets = false, noticeArea = false, constLabelWidth = false) {
 
         val localeWidget = addWidget(
-            l10n("ui.projects.create.locale"),
+            l10n("ui.styling.global.locale"),
             ComboBoxWidget(
                 Locale::class.java, TRANSLATED_LOCALES, widthSpec = WidthSpec.WIDE,
                 toString = { it.displayName }
@@ -382,7 +382,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         )
 
         val scaleWidget = addWidget(
-            l10n("ui.projects.create.scale"),
+            l10n("ui.styling.global.resolution"),
             ToggleButtonGroupWidget(
                 listOf(1, 2),
                 toLabel = { "${it * 2}K" }

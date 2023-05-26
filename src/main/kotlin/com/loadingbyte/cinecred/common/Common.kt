@@ -23,6 +23,7 @@ import java.io.StringWriter
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
+import java.text.NumberFormat
 import java.util.*
 import javax.swing.JComponent
 import javax.swing.UIManager
@@ -216,8 +217,17 @@ private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(Resourc
 private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
 
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
-fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String =
-    MessageFormat.format(l10n(key, locale), *args)
+
+fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String {
+    val effArgs = if (args.none { it is Float || it is Double }) args else {
+        val fmt = NumberFormat.getCompactNumberInstance()
+        Array(args.size) { idx ->
+            val arg = args[idx]
+            if (arg is Float || arg is Double) fmt.format(arg) else arg
+        }
+    }
+    return MessageFormat.format(l10n(key, locale), *effArgs)
+}
 
 fun comprehensivelyApplyLocale(locale: Locale) {
     SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.

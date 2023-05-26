@@ -34,7 +34,8 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
 
     private val checkForUpdatesWidget = addWidget(
         l10n("ui.preferences.checkForUpdates"),
-        CheckBoxWidget()
+        CheckBoxWidget(),
+        description = l10n("ui.preferences.checkForUpdates.desc")
     )
 
     private val welcomeHintTrckPendingWidget = addWidget(

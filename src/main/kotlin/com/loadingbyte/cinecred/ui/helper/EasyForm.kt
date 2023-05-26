@@ -27,12 +27,15 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
     fun <W : Widget<V>, V> addWidget(
         label: String,
         widget: W,
+        description: String? = null,
         invisibleSpace: Boolean = false,
         isVisible: (() -> Boolean)? = null,
         isEnabled: (() -> Boolean)? = null,
         verify: ((V) -> Notice?)? = null
     ): W {
         val formRow = FormRow(label, widget)
+        if (description != null)
+            formRow.notice = Notice(Severity.INFO, description)
         addFormRow(formRow, invisibleSpace = invisibleSpace)
         val doVerify = verify?.let { { it(widget.value) } }
         extFormRows.add(ExtFormRow(formRow, isVisible, isEnabled, doVerify))

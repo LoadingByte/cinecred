@@ -61,8 +61,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
         val startPanel = JPanel(MigLayout("insets 20, wrap")).apply {
             background = null
-            for (line in l10n("ui.preferences.msg").split("\n"))
-                add(newLabelTextArea(line), "hmin pref, growx")
+            add(newLabelTextArea(l10n("ui.preferences.msg")), "hmin pref, growx")
             add(startScrollPane, "grow, push, gaptop para")
         }
 

@@ -28,6 +28,7 @@ Cinecred Changelog
 - When the credits or styling is erroneous, the last fine version is now shown,
   and all error messages are collected in the log table.
 - Instead of hanging, a waiting screen is now displayed during project creation.
+- The movable dividers are no longer sometimes strangely positioned.
 
 ### Compatibility Notes
 

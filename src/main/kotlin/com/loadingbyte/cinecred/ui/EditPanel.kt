@@ -320,6 +320,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
         SwingUtilities.invokeLater {
             splitPane.setDividerLocation(0.85)
+            SwingUtilities.invokeLater { splitPane.setDividerLocation(0.85) }
         }
 
         // Use BorderLayout to maximize the size of the split pane.

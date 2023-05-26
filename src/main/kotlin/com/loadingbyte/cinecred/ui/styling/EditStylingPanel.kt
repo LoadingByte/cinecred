@@ -151,7 +151,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         // Put everything together in a split pane.
         val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, leftPanel, rightPanel)
         // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
-        SwingUtilities.invokeLater { splitPane.setDividerLocation(0.25) }
+        SwingUtilities.invokeLater {
+            splitPane.setDividerLocation(0.25)
+            SwingUtilities.invokeLater { splitPane.setDividerLocation(0.25) }
+        }
 
         layout = MigLayout()
         add(splitPane, "grow, push")

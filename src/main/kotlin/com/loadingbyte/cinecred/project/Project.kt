@@ -303,21 +303,41 @@ sealed interface Stage {
 
 
 class Compound(
+    val vAnchor: VAnchor,
+    val hOffsetPx: Double,
     val vOffsetPx: Double,
-    val laterals: PersistentList<Lateral>
+    val spines: PersistentList<Spine.Card>
 )
 
 
 class Lateral(
-    val spines: PersistentList<Spine>,
+    val spines: PersistentList<Spine.Scroll>,
     val vGapAfterPx: Double
 )
 
 
-class Spine(
-    val hOffsetPx: Double,
+sealed interface Spine {
+
     val blocks: PersistentList<Block>
-)
+
+    class Card(
+        val hookTo: Spine.Card?,
+        val hookVAnchor: VAnchor,
+        val selfVAnchor: VAnchor,
+        val hOffsetPx: Double,
+        val vOffsetPx: Double,
+        override val blocks: PersistentList<Block>
+    ) : Spine
+
+    class Scroll(
+        val hOffsetPx: Double,
+        override val blocks: PersistentList<Block>
+    ) : Spine
+
+}
+
+
+enum class VAnchor { TOP, MIDDLE, BOTTOM }
 
 
 typealias PartitionId = Any

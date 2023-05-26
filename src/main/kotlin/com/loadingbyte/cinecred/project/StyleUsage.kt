@@ -30,11 +30,11 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
         for (stage in page.stages) {
             // Add the stage's page style.
             usedStyles.add(stage.style)
-            for (lateral in when (stage) {
-                is Stage.Card -> stage.compounds.asSequence().flatMap(Compound::laterals)
-                is Stage.Scroll -> stage.laterals.asSequence()
+            for (spines in when (stage) {
+                is Stage.Card -> stage.compounds.asSequence().map(Compound::spines)
+                is Stage.Scroll -> stage.laterals.asSequence().map(Lateral::spines)
             })
-                for (spine in lateral.spines)
+                for (spine in spines)
                     for (block in spine.blocks) {
                         // Add the block's content style.
                         usedStyles.add(block.style)

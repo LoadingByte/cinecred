@@ -8,8 +8,8 @@ Cinecred Changelog
 ### Additions
 
 - A Google Sheet may now be used as the credits table.
-- Content can now be freely vertically arranged on cards instead of just
-  centered using a new spine position option.
+- Card content can now be freely arranged horizontally and vertically using new
+  spine positioning options.
 - Added more fine-grained controls for vertical head and tail justification.
 - Added a dedicated coloring option for hiding helper layers.
 - The opacity setting in the color picker now has a slider and supports the
@@ -28,6 +28,12 @@ Cinecred Changelog
 - When the credits or styling is erroneous, the last fine version is now shown,
   and all error messages are collected in the log table.
 - Instead of hanging, a waiting screen is now displayed during project creation.
+
+### Compatibility Notes
+
+- On cards, subsequent spines are no longer automatically placed beneath each
+  other, and the parallel keyword is no longer supported; use the new spine
+  positioning options instead.
 
 
 1.4.1

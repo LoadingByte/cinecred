@@ -39,9 +39,8 @@ fun drawPages(project: Project): List<DrawnPage> {
                 when (stage) {
                     is Stage.Card ->
                         for (compound in stage.compounds)
-                            for (lateral in compound.laterals)
-                                for (spine in lateral.spines)
-                                    addAll(spine.blocks)
+                            for (spine in compound.spines)
+                                addAll(spine.blocks)
                     is Stage.Scroll ->
                         for (lateral in stage.laterals)
                             for (spine in lateral.spines)

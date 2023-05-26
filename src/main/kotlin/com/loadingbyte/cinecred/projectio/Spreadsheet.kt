@@ -44,6 +44,7 @@ val SPREADSHEET_FORMATS = listOf(ExcelFormat("xlsx"), ExcelFormat("xls"), OdsFor
 interface SpreadsheetFormat {
 
     val fileExt: String
+    val label: String
 
     /** @throws Exception */
     fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>>
@@ -73,6 +74,13 @@ class SpreadsheetLook(
 
 
 class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
+
+    override val label
+        get() = when (fileExt) {
+            "xlsx" -> "Microsoft Excel 2007+"
+            "xls" -> "Microsoft Excel 97-2003"
+            else -> throw IllegalArgumentException("Only xlsx and xls allowed, not $fileExt.")
+        }
 
     override fun read(file: Path) = readOfficeDocument(
         file,
@@ -184,6 +192,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
 object OdsFormat : SpreadsheetFormat {
 
     override val fileExt = "ods"
+    override val label get() = "OpenOffice/LibreOffice Calc"
 
     override fun read(file: Path) = readOfficeDocument(
         file,
@@ -244,6 +253,7 @@ object OdsFormat : SpreadsheetFormat {
 object CsvFormat : SpreadsheetFormat {
 
     override val fileExt = "csv"
+    override val label get() = l10n("projectIO.spreadsheet.csv")
 
     override fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
         return Pair(read(file.readText()), emptyList())

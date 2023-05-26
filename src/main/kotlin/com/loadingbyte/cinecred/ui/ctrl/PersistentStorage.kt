@@ -69,7 +69,10 @@ object PersistentStorage : Preferences {
     override var uiLocaleWish: LocaleWish
         get() = when (val str = prefs[UI_LOCALE_KEY] as? String) {
             null, "system" -> LocaleWish.System
-            else -> LocaleWish.Specific(Locale.forLanguageTag(str))
+            else -> {
+                val locale = Locale.forLanguageTag(str)
+                if (locale in TRANSLATED_LOCALES) LocaleWish.Specific(locale) else LocaleWish.System
+            }
         }
         set(wish) {
             val value = when (wish) {

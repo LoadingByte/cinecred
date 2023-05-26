@@ -191,7 +191,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
 
 object OdsFormat : SpreadsheetFormat {
 
-    override val fileExt = "ods"
+    override val fileExt get() = "ods"
     override val label get() = "OpenOffice/LibreOffice Calc"
 
     override fun read(file: Path) = readOfficeDocument(
@@ -252,7 +252,7 @@ object OdsFormat : SpreadsheetFormat {
 
 object CsvFormat : SpreadsheetFormat {
 
-    override val fileExt = "csv"
+    override val fileExt get() = "csv"
     override val label get() = l10n("projectIO.spreadsheet.csv")
 
     override fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>> {

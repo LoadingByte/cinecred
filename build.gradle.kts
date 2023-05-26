@@ -20,7 +20,7 @@ val batikVersion = "1.16"
 val javacppVersion = "1.5.8"
 val ffmpegVersion = "5.1.2-$javacppVersion"
 
-val javaProperties = Properties().apply { file("java.properties").reader().use { load(it) } }
+val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
 val addModules = javaProperties.getProperty("addModules").split(' ')
 val addOpens = javaProperties.getProperty("addOpens").split(' ')

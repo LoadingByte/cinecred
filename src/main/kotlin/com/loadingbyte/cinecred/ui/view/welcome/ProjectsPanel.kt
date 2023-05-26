@@ -14,7 +14,10 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.*
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDragEvent
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.dnd.DropTargetEvent
 import java.beans.PropertyChangeListener
 import java.io.File
 import java.nio.file.Path

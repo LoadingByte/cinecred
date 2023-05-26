@@ -10,7 +10,6 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.ItemSelectable
 import java.awt.event.*
-import java.awt.event.KeyEvent.*
 import java.awt.event.KeyListener
 import javax.swing.*
 

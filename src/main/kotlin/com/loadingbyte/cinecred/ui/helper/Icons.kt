@@ -578,7 +578,7 @@ class SVGIcon private constructor(
     }
 
 
-    class Dual constructor(private val left: SVGIcon, private val right: SVGIcon) :
+    class Dual(private val left: SVGIcon, private val right: SVGIcon) :
         FlatAbstractIcon(left.width + ICON_ICON_GAP + right.width, max(left.height, right.height), null),
         FlatLaf.DisabledIconProvider {
 

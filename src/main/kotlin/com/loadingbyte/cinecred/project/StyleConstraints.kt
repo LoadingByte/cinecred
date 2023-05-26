@@ -2,10 +2,14 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
-import com.loadingbyte.cinecred.project.BlockOrientation.*
-import com.loadingbyte.cinecred.project.BodyLayout.*
-import com.loadingbyte.cinecred.project.GridStructure.*
-import com.loadingbyte.cinecred.project.MatchExtent.*
+import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
+import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
+import com.loadingbyte.cinecred.project.BodyLayout.FLOW
+import com.loadingbyte.cinecred.project.BodyLayout.GRID
+import com.loadingbyte.cinecred.project.GridStructure.FREE
+import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
+import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.awt.Color
 import java.text.NumberFormat

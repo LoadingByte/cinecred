@@ -19,7 +19,8 @@ import java.text.NumberFormat
 import java.text.ParseException
 import java.util.*
 import javax.swing.*
-import javax.swing.JScrollPane.*
+import javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+import javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
 import javax.swing.Timer
 import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.plaf.basic.BasicComboBoxEditor
@@ -1234,10 +1235,8 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
 
     private val tagWidget = InconsistentComboBoxWidget(
         String::class.java, emptyList(),
-        // By enabling HTML in the JLabel that renders the strings, a branch that doesn't add ellipsis but instead clips
-        // the string is taken in SwingUtilities.layoutCompoundLabelImpl(). This is much nicer, since ellipsis take up
-        // the majority of the space in a label as narrow as this one.
-        toString = { "<html>$it</html>" },
+        // Clip the string because ellipsis would take up the majority of the space in a label as narrow as this one.
+        toString = ::noEllipsisLabel,
         widthSpec = WidthSpec.LITTLE
     )
     private val valWidget = SpinnerWidget(

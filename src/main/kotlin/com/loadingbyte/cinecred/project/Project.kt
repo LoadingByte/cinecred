@@ -18,7 +18,7 @@ class Project(
 )
 
 
-data class Styling constructor(
+data class Styling(
     val global: Global,
     val pageStyles: PersistentList<PageStyle>,
     val contentStyles: PersistentList<ContentStyle>,

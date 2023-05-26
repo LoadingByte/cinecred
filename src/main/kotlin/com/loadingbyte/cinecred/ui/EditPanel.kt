@@ -97,9 +97,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         }
         ctrl.stylingHistory.resetAndRedraw()
     }
-    // By enabling HTML in the JLabel, a branch that doesn't add ellipsis but instead clips the string is taken in
-    // SwingUtilities.layoutCompoundLabelImpl(). This is much nicer for a very short string like this one.
-    private val unsavedStylingLabel = JLabel("<html>" + l10n("ui.edit.unsavedChanges") + "</html>").apply {
+    // Clipping the string instead of having ellipsis is much nicer for a very short string like this one.
+    private val unsavedStylingLabel = JLabel(noEllipsisLabel(l10n("ui.edit.unsavedChanges"))).apply {
         isVisible = false
         toolTipText = text
         putClientProperty(STYLE_CLASS, "small")

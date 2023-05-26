@@ -325,6 +325,7 @@ class StyleForm<S : Style>(
         try {
             formRow.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
         } catch (_: MissingResourceException) {
+            // No desc specified for this row.
         }
         return formRow
     }

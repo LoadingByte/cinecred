@@ -7,9 +7,11 @@ import com.loadingbyte.cinecred.common.getSupportedFeatures
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.*
-import com.loadingbyte.cinecred.project.Effectivity.*
-import com.loadingbyte.cinecred.project.GridStructure.*
-import com.loadingbyte.cinecred.project.MatchExtent.*
+import com.loadingbyte.cinecred.project.Effectivity.ALMOST_EFFECTIVE
+import com.loadingbyte.cinecred.project.Effectivity.TOTALLY_INEFFECTIVE
+import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
+import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
 

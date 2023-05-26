@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -44,13 +43,8 @@ class JobSlot {
     }
 
     companion object {
-        private val executor: ExecutorService
-
-        init {
-            var threadCount = 0
-            executor = Executors.newFixedThreadPool(3) { runnable ->
-                Thread(runnable, "JobSlotRunner-${threadCount++}").apply { isDaemon = true }
-            }
+        private val executor = Executors.newFixedThreadPool(3) { runnable ->
+            Thread(runnable, "JobSlotRunner").apply { isDaemon = true }
         }
     }
 

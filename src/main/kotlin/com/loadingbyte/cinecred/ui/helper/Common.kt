@@ -40,6 +40,13 @@ val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
 val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
 
 
+/**
+ * By enabling HTML in the JLabel, a branch that doesn't add ellipsis but instead clips the string is taken in
+ * SwingUtilities.layoutCompoundLabelImpl().
+ */
+fun noEllipsisLabel(text: String) = "<html>$text</html>"
+
+
 fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : JTextArea(text) {
     init {
         background = null

@@ -4,7 +4,6 @@ import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withNewG2
-import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
@@ -43,12 +42,13 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel
     val stylingPanel = ctrl.stylingDialog.panel
+    val styleTag = l10n("projectIO.credits.table.style")
     @Suppress("DEPRECATION")
     return listOf(
         Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedPageTabs, Side.NONE),
         Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.leakedCreditsLog, Side.TOP),
         Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.leakedStylingDialogButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.stylingTree"), stylingPanel.leakedStylingTree, Side.RIGHT) {
+        Hint(l10n("ui.hints.projectTrack.stylingTree", styleTag), stylingPanel.leakedStylingTree, Side.RIGHT) {
             ctrl.setDialogVisible(ProjectDialogType.STYLING, true)
         },
         Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.leakedResetStylingButton, Side.BOTTOM),

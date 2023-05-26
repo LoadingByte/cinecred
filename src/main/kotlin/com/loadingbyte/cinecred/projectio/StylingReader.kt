@@ -15,10 +15,10 @@ fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
     val toml = readToml(stylingFile)
 
     val rawStyling = RawStyling(
-        readMap(toml["global"]),
-        readMapList(toml["pageStyle"]),
-        readMapList(toml["contentStyle"]),
-        readMapList(toml["letterStyle"])
+        asMap(toml["global"]),
+        asMaps(toml["pageStyle"]),
+        asMaps(toml["contentStyle"]),
+        asMaps(toml["letterStyle"])
     )
 
     migrateStyling(ctx, rawStyling)
@@ -41,11 +41,11 @@ class RawStyling(
 
 
 @Suppress("UNCHECKED_CAST")
-private fun readMap(map: Any?): MutableMap<String, Any> =
-    if (map !is Map<*, *>) mutableMapOf()
-    else map.toMutableMap() as MutableMap<String, Any>
+private fun asMap(map: Any?): MutableMap<String, Any> =
+    if (map !is MutableMap<*, *>) mutableMapOf()
+    else map as MutableMap<String, Any>
 
-private fun readMapList(mapList: Any?): MutableList<MutableMap<String, Any>> =
+private fun asMaps(mapList: Any?): MutableList<MutableMap<String, Any>> =
     if (mapList !is List<*>) mutableListOf()
     else mapList.filterIsInstanceTo(mutableListOf())
 

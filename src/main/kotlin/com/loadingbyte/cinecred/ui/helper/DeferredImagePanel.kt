@@ -1,7 +1,10 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.scale
+import com.loadingbyte.cinecred.common.setHighQuality
+import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
 import net.miginfocom.swing.MigLayout

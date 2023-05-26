@@ -13,7 +13,8 @@ import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.*
+import java.awt.event.KeyEvent.KEY_PRESSED
+import java.awt.event.KeyEvent.VK_ESCAPE
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI

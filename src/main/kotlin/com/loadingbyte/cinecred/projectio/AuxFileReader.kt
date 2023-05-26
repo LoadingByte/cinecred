@@ -86,8 +86,8 @@ private fun loadRaster(rasterFile: Path): Picture.Raster =
 // Look here for references:
 // https://github.com/apache/xmlgraphics-batik/blob/trunk/batik-transcoder/src/main/java/org/apache/batik/transcoder/SVGAbstractTranscoder.java
 private fun loadSVG(svgFile: Path): Picture.SVG {
-    val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-        .createDocument(svgFile.toUri().toString(), svgFile.bufferedReader()) as SVGOMDocument
+    val factory = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
+    val doc = svgFile.bufferedReader().use { factory.createDocument(svgFile.toUri().toString(), it) as SVGOMDocument }
     val docRoot = doc.rootElement
     val ctx = when {
         doc.isSVG12 -> SVG12BridgeContext(UserAgentAdapter())

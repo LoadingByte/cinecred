@@ -25,7 +25,10 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import java.awt.*
+import java.awt.Desktop
+import java.awt.Font
+import java.awt.KeyboardFocusManager
+import java.awt.RenderingHints
 import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
@@ -34,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.*
 import java.util.logging.Formatter
 import javax.swing.*
-import kotlin.io.path.*
+import kotlin.io.path.absolute
 
 
 private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"

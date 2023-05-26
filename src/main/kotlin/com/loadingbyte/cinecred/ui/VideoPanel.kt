@@ -1,15 +1,20 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.FlatClientProperties.*
+import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.formatTimecode
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.scale
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.*
+import java.awt.Color
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Transparency
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent

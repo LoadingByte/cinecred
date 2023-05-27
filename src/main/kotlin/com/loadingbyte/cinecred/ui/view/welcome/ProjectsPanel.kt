@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.formdev.flatlaf.FlatClientProperties.*
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
@@ -36,7 +37,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget: ComboBoxWidget<SpreadsheetFormat>
-    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgDoneButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgDoneButton get() = createConfigureDoneButton
     // =========================================
 
     private val cards = CardLayout().also { layout = it }
@@ -48,6 +49,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val createBrowseNextButton: JButton
     private val createConfigureProjectDirLabel = JLabel()
     private val createConfigureForm: CreateConfigureForm
+    private val createConfigureDoneButton: JButton
     private val createWaitErrorTextArea: JTextArea
     private val createWaitResponseTextArea: JTextArea
 
@@ -157,22 +159,22 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(createBrowseNextButton)
         }
 
-        createConfigureForm = CreateConfigureForm().apply { background = null }
         val createConfigureBackButton = JButton(l10n("back"), ARROW_LEFT_ICON).apply {
             addActionListener { welcomeCtrl.projects_createConfigure_onClickBack() }
         }
-        val createConfigureDoneButton = JButton(l10n("ui.projects.create"), ADD_ICON).apply {
-            addActionListener {
+        createConfigureDoneButton = JButton(l10n("ui.projects.create"), ADD_ICON)
+        createConfigureForm = CreateConfigureForm().apply { background = null }
+        createConfigureDoneButton
+            .addActionListener {
                 welcomeCtrl.projects_createConfigure_onClickDone(
                     createConfigureForm.localeWidget.value,
                     createConfigureForm.scaleWidget.value,
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
-                    createConfigureForm.creditsServiceWidget.value,
+                    createConfigureForm.creditsServiceWidget.value.get(),
                     createConfigureForm.creditsFilenameWidget.value
                 )
             }
-        }
 
         val createConfigurePanel = JPanel(MigLayout("insets 20, gapy 10, wrap")).apply {
             background = null
@@ -217,8 +219,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         leakedStartDropLabel = startDropLabel
         @Suppress("DEPRECATION")
         leakedCreCfgFormatWidget = createConfigureForm.creditsFormatWidget
-        @Suppress("DEPRECATION")
-        leakedCreCfgDoneButton = createConfigureDoneButton
     }
 
     private fun makeOpenButton(text: String, icon: Icon) = JButton(text, icon).apply {
@@ -371,7 +371,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    private class CreateConfigureForm : EasyForm(insets = false, noticeArea = false, constLabelWidth = false) {
+    private inner class CreateConfigureForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
 
         val localeWidget = addWidget(
             l10n("ui.styling.global.locale"),
@@ -408,11 +408,12 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         val creditsServiceWidget = addWidget(
             l10n("ui.projects.create.creditsService"),
-            ComboBoxWidget(
+            OptionalComboBoxWidget(
                 Service::class.java, emptyList(), widthSpec = WidthSpec.WIDE,
                 toString = { "${it.provider.label} \u2013 ${it.id}" }
             ),
-            isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
+            isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE },
+            verify = { if (it.isEmpty) Notice(Severity.ERROR, l10n("ui.projects.create.noServices")) else null }
         )
 
         val creditsFilenameWidget = addWidget(
@@ -423,6 +424,11 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         init {
             localeWidget.value = Locale.getDefault()
+        }
+
+        override fun onChange(widget: Widget<*>) {
+            super.onChange(widget)
+            createConfigureDoneButton.isEnabled = isErrorFree
         }
 
     }

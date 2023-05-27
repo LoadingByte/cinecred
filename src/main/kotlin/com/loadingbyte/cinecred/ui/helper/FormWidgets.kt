@@ -27,6 +27,7 @@ import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.*
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -400,29 +401,29 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 }
 
 
-open class ComboBoxWidget<V : Any>(
-    protected val valueClass: Class<V>,
-    items: List<V>,
-    toString: (V) -> String = { it.toString() },
-    widthSpec: WidthSpec? = null,
+abstract class AbstractComboBoxWidget<V : Any, E : Any>(
+    protected val itemClass: Class<E>,
+    items: List<E>,
+    toString: (E) -> String,
+    widthSpec: WidthSpec?,
     private val scrollbar: Boolean = true,
-    private val decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
-) : Form.AbstractWidget<V>(), Form.Choice<V> {
+    private val decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
+) : Form.AbstractWidget<V>(), Form.Choice<E> {
 
-    protected val cb = JComboBox<V>().apply {
+    protected val cb = JComboBox<E>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        keySelectionManager = CustomToStringKeySelectionManager(valueClass, toString)
+        keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
     }
 
     override val components = listOf(cb)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
-    final override var items: List<V> = listOf()
+    final override var items: List<E> = listOf()
         set(items) {
             if (field == items)
                 return
             field = items
-            val oldSelectedItem = cb.selectedItem?.let(valueClass::cast)
+            val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
             cb.model = makeModel(Vector(items), oldSelectedItem)
             if (cb.selectedItem != oldSelectedItem)
                 notifyChangeListeners()
@@ -430,7 +431,7 @@ open class ComboBoxWidget<V : Any>(
                 cb.maximumRowCount = items.size
         }
 
-    var toString: (V) -> String = toString
+    var toString: (E) -> String = toString
         set(toString) {
             if (field == toString)
                 return
@@ -440,25 +441,37 @@ open class ComboBoxWidget<V : Any>(
 
     private fun updateToString() {
         val toString = this.toString  // capture
-        cb.renderer = decorateRenderer(CustomToStringListCellRenderer(valueClass) { toString(it).ifEmpty { " " } })
+        cb.renderer = decorateRenderer(CustomToStringListCellRenderer(itemClass) { toString(it).ifEmpty { " " } })
     }
 
-    protected open fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
+    protected open fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
         DefaultComboBoxModel(items).apply {
             if (oldSelectedItem in items)
                 selectedItem = oldSelectedItem
-        }
-
-    override var value: V
-        get() = valueClass.cast(cb.selectedItem!!)
-        set(value) {
-            cb.selectedItem = value
         }
 
     init {
         updateToString()
         this.items = items
     }
+
+}
+
+
+open class ComboBoxWidget<V : Any>(
+    valueClass: Class<V>,
+    items: List<V>,
+    toString: (V) -> String = { it.toString() },
+    widthSpec: WidthSpec? = null,
+    scrollbar: Boolean = true,
+    decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
+) : AbstractComboBoxWidget<V, V>(valueClass, items, toString, widthSpec, scrollbar, decorateRenderer) {
+
+    override var value: V
+        get() = itemClass.cast(cb.selectedItem!!)
+        set(value) {
+            cb.selectedItem = value
+        }
 
 }
 
@@ -527,7 +540,7 @@ open class EditableComboBoxWidget<V : Any>(
         }
 
         override fun valueToString(value: Any?): String =
-            value?.let { toString(this@EditableComboBoxWidget.valueClass.cast(it)) } ?: ""
+            value?.let { toString(itemClass.cast(it)) } ?: ""
 
         override fun stringToValue(string: String?): Any =
             try {
@@ -536,6 +549,22 @@ open class EditableComboBoxWidget<V : Any>(
                 throw ParseException("", 0)
             }
     }
+
+}
+
+
+class OptionalComboBoxWidget<E : Any>(
+    itemClass: Class<E>,
+    items: List<E>,
+    toString: (E) -> String = { it.toString() },
+    widthSpec: WidthSpec? = null
+) : AbstractComboBoxWidget<Optional<E>, E>(itemClass, items, toString, widthSpec) {
+
+    override var value: Optional<E>
+        get() = Optional.ofNullable(itemClass.cast(cb.selectedItem))
+        set(value) {
+            cb.selectedItem = value.getOrNull()
+        }
 
 }
 

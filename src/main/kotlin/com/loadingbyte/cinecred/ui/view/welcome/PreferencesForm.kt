@@ -25,7 +25,7 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
                     is LocaleWish.System -> l10n("ui.preferences.uiLocaleWishSystem")
                     is LocaleWish.Specific ->
                         if (Locale.getDefault() != wish.locale)
-                            "${wish.locale.getDisplayName(wish.locale)} (${wish.locale.displayName})"
+                            "${wish.locale.getDisplayName(wish.locale)} \u2013 ${wish.locale.displayName}"
                         else
                             wish.locale.displayName
                 }

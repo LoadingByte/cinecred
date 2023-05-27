@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="zh-CN" Codepage="936">
+  <String Id="LanguageCode">2052</String>
+  <String Id="ShortcutDlg_Title">[ProductName] 安装程序</String>
+  <String Id="ShortcutDlgTitle">{\WixUI_Font_Title}快捷方式</String>
+  <String Id="ShortcutDlgDescription">选择要创建的快捷方式。</String>
+  <String Id="ShortcutDlgDesktop">创建桌面快捷方式</String>
+  <String Id="ShortcutDlgStartMenu">创建开始菜单快捷方式</String>
+</WixLocalization>

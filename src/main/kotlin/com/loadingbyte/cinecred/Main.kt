@@ -134,6 +134,12 @@ private fun mainSwing(args: Array<String>) {
     fixTextFieldVerticalCentering()
     // Fix the inability to get a dock progress bar to appear on macOS.
     fixTaskbarProgressBarOnMacOS()
+    // At the moment, FlatLaf only supports four locales, not including Chinese. However, the Metal LaF supports Chinese
+    // and uses the same keys and translations as FlatLaf, so we can fix the problem by adding Metal's ResourceBundle.
+    // The following issue tracks progress on integrating the remaining locales into FlatLaf:
+    // https://github.com/JFormDesigner/FlatLaf/issues/680
+    UIDefaults::class.java.getDeclaredMethod("addInternalBundle", String::class.java).apply { isAccessible = true }
+        .invoke(UIManager.getDefaults(), "com.sun.swing.internal.plaf.metal.resources.metal")
 
     // Run the demo code if configured, and then abort the regular startup.
     demoCallback?.let { it(); return }

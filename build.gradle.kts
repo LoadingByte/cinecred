@@ -204,7 +204,7 @@ for (platform in Platform.values()) {
         dependsOn(platformNatives)
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
         mainClass.set("com.loadingbyte.cinecred.DemoMain")
-        jvmArgs = jvmArgs_ + listOf("--add-opens", "java.desktop/javax.swing=ALL-UNNAMED")
+        jvmArgs = jvmArgs_
     }
 }
 
@@ -251,6 +251,7 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "ARCH_DEBIAN" to platform.arch.slugDebian,
                 "DESCRIPTION" to "Create beautiful film credits without the pain",
                 "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
+                "DESCRIPTION_ZH_CN" to "高效简洁且功能多样的电影片尾字幕处理方案",
                 "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "felix@cinecred.com",

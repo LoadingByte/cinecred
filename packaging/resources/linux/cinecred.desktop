@@ -2,6 +2,7 @@
 Name=Cinecred
 Comment=@DESCRIPTION@
 Comment[de]=@DESCRIPTION_DE@
+Comment[zh_CN]=@DESCRIPTION_ZH_CN@
 Exec=/opt/cinecred/bin/cinecred
 Icon=cinecred
 Terminal=false

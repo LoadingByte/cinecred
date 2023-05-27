@@ -200,7 +200,7 @@ val CONFIG_DIR: Path = when {
 }
 
 
-val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN)
+val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN, Locale.SIMPLIFIED_CHINESE)
 val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
 /**
@@ -208,9 +208,10 @@ val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
  * before the default locale is changed for the first time, which is fulfilled by a read prior to that action.
  */
 val SYSTEM_LOCALE: Locale = run {
-    // Our detection algorithm is very primitive, so ensure that all translated locales solely specify a language.
-    check(TRANSLATED_LOCALES.all { '_' !in it.toString() })
-    TRANSLATED_LOCALES.find { it.language == Locale.getDefault().language } ?: FALLBACK_TRANSLATED_LOCALE
+    val def = Locale.getDefault()
+    TRANSLATED_LOCALES.find { it.language == def.language && it.country == def.country }
+        ?: TRANSLATED_LOCALES.find { it.language == def.language }
+        ?: FALLBACK_TRANSLATED_LOCALE
 }
 
 private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)

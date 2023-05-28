@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
+import com.loadingbyte.cinecred.projectio.Template
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.ProjectDialogType
@@ -81,7 +82,7 @@ abstract class ScreencastDemo(
         dlvWinSize: Dimension? = null
     ) {
         projectCtrl = masterCtrl!!.leakedProjectCtrls.lastOrNull() ?: run {
-            tryCopyTemplate(projectDir, locale, 1, CsvFormat)
+            tryCopyTemplate(projectDir, Template(locale, 1, true), CsvFormat)
             edt { masterCtrl!!.openProject(projectDir, openOnScreen = gCfg) }
             sleep(1500)
             masterCtrl!!.leakedProjectCtrls.last()

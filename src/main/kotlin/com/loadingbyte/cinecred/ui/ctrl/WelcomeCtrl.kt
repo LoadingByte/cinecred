@@ -2,11 +2,8 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
-import com.loadingbyte.cinecred.projectio.isAllowedToBeProjectDir
-import com.loadingbyte.cinecred.projectio.isProjectDir
+import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
-import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.*
 import org.commonmark.parser.Parser
@@ -330,21 +327,25 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun projects_createConfigure_onClickDone(
         locale: Locale,
         scale: Int,
+        sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
         creditsService: Service?,
         creditsFilename: String
     ) {
         val projectDir = newBrowseSelection ?: return
+        val template = Template(locale, scale, sample = if (creditsLocation == CreditsLocation.SKIP) false else sample)
         welcomeView.projects_createWait_setError(null)
         welcomeView.projects_setCard(ProjectsCard.CREATE_WAIT)
         createProjectThread.set(Thread({
             try {
                 when (creditsLocation) {
                     CreditsLocation.LOCAL ->
-                        tryCopyTemplate(projectDir, locale, scale, creditsFormat)
+                        tryCopyTemplate(projectDir, template, creditsFormat)
                     CreditsLocation.SERVICE ->
-                        tryCopyTemplate(projectDir, locale, scale, creditsService!!, creditsFilename)
+                        tryCopyTemplate(projectDir, template, creditsService!!, creditsFilename)
+                    CreditsLocation.SKIP ->
+                        tryCopyTemplate(projectDir, template)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
             } catch (e: ForbiddenException) {

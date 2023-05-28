@@ -46,6 +46,7 @@ interface WelcomeCtrlComms {
     fun projects_createConfigure_onClickDone(
         locale: Locale,
         scale: Int,
+        sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
         creditsService: Service?,
@@ -122,7 +123,7 @@ interface WelcomeViewComms {
 
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
 enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
-enum class CreditsLocation { LOCAL, SERVICE }
+enum class CreditsLocation { LOCAL, SERVICE, SKIP }
 enum class PreferencesCard { START, CONFIGURE_SERVICE, AUTHORIZE_SERVICE }
 
 

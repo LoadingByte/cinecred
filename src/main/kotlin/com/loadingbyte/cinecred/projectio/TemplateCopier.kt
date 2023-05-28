@@ -13,8 +13,13 @@ import kotlin.io.path.writeText
 
 
 /** @throws IOException */
-fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsFormat: SpreadsheetFormat) {
-    tryCopyTemplate(destDir, locale, scale, creditsFormat, null, null)
+fun tryCopyTemplate(destDir: Path, template: Template) {
+    tryCopyTemplate(destDir, template, null, null, null)
+}
+
+/** @throws IOException */
+fun tryCopyTemplate(destDir: Path, template: Template, creditsFormat: SpreadsheetFormat) {
+    tryCopyTemplate(destDir, template, creditsFormat, null, null)
 }
 
 /**
@@ -22,38 +27,37 @@ fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsFormat: Sp
  * @throws DownException
  * @throws IOException
  */
-fun tryCopyTemplate(destDir: Path, locale: Locale, scale: Int, creditsService: Service, creditsFilename: String) {
-    tryCopyTemplate(destDir, locale, scale, null, creditsService, creditsFilename)
+fun tryCopyTemplate(destDir: Path, template: Template, creditsService: Service, creditsFilename: String) {
+    tryCopyTemplate(destDir, template, null, creditsService, creditsFilename)
 }
+
+class Template(
+    val locale: Locale,
+    val scale: Int,
+    val sample: Boolean
+)
 
 
 private fun tryCopyTemplate(
     destDir: Path,
-    locale: Locale,
-    scale: Int,
+    template: Template,
     creditsFormat: SpreadsheetFormat?,
     creditsService: Service?,
     creditsFilename: String?
 ) {
     // First try to write the credits file, so that if something goes wrong (which is likely with online services),
     // the project folder just isn't created at all, instead of being half-created.
-    tryCopyCreditsTemplate(destDir, locale, scale, creditsFormat, creditsService, creditsFilename)
-    tryCopyStylingTemplate(destDir, locale, scale)
-}
-
-
-private fun tryCopyStylingTemplate(destDir: Path, locale: Locale, scale: Int) {
-    val text = filt(useResourceStream("/template/styling.toml") { it.bufferedReader().readText() }, locale, scale)
-    val file = destDir.resolve(STYLING_FILE_NAME)
-    if (file.notExists())
-        file.writeText(text)
+    if (creditsFormat != null || creditsService != null)
+        tryCopyCreditsTemplate(destDir, template, creditsFormat, creditsService, creditsFilename)
+    tryCopyStylingTemplate(destDir, template)
+    if (template.sample)
+        tryCopyAuxiliaryFiles(destDir)
 }
 
 
 private fun tryCopyCreditsTemplate(
     destDir: Path,
-    locale: Locale,
-    scale: Int,
+    template: Template,
     creditsFormat: SpreadsheetFormat?,
     creditsService: Service?,
     creditsFilename: String?
@@ -61,8 +65,11 @@ private fun tryCopyCreditsTemplate(
     if (ProjectIntake.locateCreditsFile(destDir).first != null)
         return
 
-    val csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readText() }
-    val spreadsheet = CsvFormat.read(csv).map { filt(it, locale, scale) }
+    var csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readLines() }
+    // If desired, cut off the sample credits and only keep the table header.
+    if (!template.sample)
+        csv = csv.subList(0, 2)
+    val spreadsheet = CsvFormat.read(csv.joinToString("\n")).map { fillIn(it, template) }
     val look = SpreadsheetLook(
         rowLooks = mapOf(
             0 to SpreadsheetLook.RowLook(height = 80, fontSize = 8, italic = true, wrap = true),
@@ -86,7 +93,23 @@ private fun tryCopyCreditsTemplate(
         }
         else -> throw IllegalArgumentException()
     }
+}
 
+
+private fun tryCopyStylingTemplate(destDir: Path, template: Template) {
+    val file = destDir.resolve(STYLING_FILE_NAME)
+    if (file.notExists()) {
+        var lines = useResourceStream("/template/styling.toml") { it.bufferedReader().readLines() }
+        // If desired, cut off the template where the first sample style declaration starts.
+        if (!template.sample)
+            lines = lines.subList(0, lines.indexOfFirst { "[[" in it })
+        destDir.createDirectoriesSafely()
+        file.writeText(fillIn(lines.joinToString("\n"), template))
+    }
+}
+
+
+private fun tryCopyAuxiliaryFiles(destDir: Path) {
     val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
     if (logoFile.notExists()) {
         logoFile.parent.createDirectoriesSafely()
@@ -95,14 +118,14 @@ private fun tryCopyCreditsTemplate(
 }
 
 
-private fun filt(string: String, locale: Locale, scale: Int): String = string
+private fun fillIn(string: String, template: Template): String = string
     .replace(PLACEHOLDER_REGEX) { match ->
         val key = match.groups[1]!!.value
-        if (key == "locale") locale.toLanguageTag() else l10n(key, locale)
+        if (key == "locale") template.locale.toLanguageTag() else l10n(key, template.locale)
     }
     .replace(SCALING_REGEX) { match ->
         val num = match.groups[1]!!.value
-        (num.toInt() * scale).toString()
+        (num.toInt() * template.scale).toString()
     }
 
 private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")

@@ -64,7 +64,7 @@ object BundledFontsStylingContext : StylingContext {
 
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, 1, CsvFormat)
+        tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
         CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first
     }
 }
@@ -99,7 +99,7 @@ val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
 
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, FALLBACK_TRANSLATED_LOCALE, 1, CsvFormat)
+        tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile).first

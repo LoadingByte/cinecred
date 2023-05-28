@@ -8,6 +8,7 @@ Cinecred Changelog
 ### Additions
 
 - A Google Sheet may now be used as the credits table.
+- New projects may now omit the sample credits or the credits file altogether.
 - Card content can now be freely arranged horizontally and vertically using new
   spine positioning options.
 - Added more fine-grained controls for vertical head and tail justification.

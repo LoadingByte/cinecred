@@ -170,6 +170,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 welcomeCtrl.projects_createConfigure_onClickDone(
                     createConfigureForm.localeWidget.value,
                     createConfigureForm.scaleWidget.value,
+                    createConfigureForm.contentWidget.value,
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
                     createConfigureForm.creditsServiceWidget.value.getOrNull(),
@@ -388,6 +389,20 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 listOf(1, 2),
                 toLabel = { "${it * 2}K" }
             )
+        )
+
+        val contentWidget = addWidget(
+            l10n("ui.projects.create.content"),
+            ToggleButtonGroupWidget(
+                listOf(true, false),
+                toLabel = {
+                    when (it) {
+                        true -> l10n("ui.projects.create.content.sample")
+                        false -> l10n("ui.projects.create.content.blank")
+                    }
+                }
+            ),
+            isEnabled = { creditsLocationWidget.value != CreditsLocation.SKIP }
         )
 
         val creditsLocationWidget = addWidget(

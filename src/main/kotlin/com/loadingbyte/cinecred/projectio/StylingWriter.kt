@@ -10,12 +10,15 @@ import java.util.*
 
 /** @throws IOException */
 fun writeStyling(stylingFile: Path, ctx: StylingContext, styling: Styling) {
-    val toml = mapOf(
-        "global" to writeStyle(ctx, styling, styling.global),
-        "pageStyle" to styling.pageStyles.map { writeStyle(ctx, styling, it) },
-        "contentStyle" to styling.contentStyles.map { writeStyle(ctx, styling, it) },
-        "letterStyle" to styling.letterStyles.map { writeStyle(ctx, styling, it) }
-    )
+    val toml = buildMap {
+        put("global", writeStyle(ctx, styling, styling.global))
+        if (styling.pageStyles.isNotEmpty())
+            put("pageStyle", styling.pageStyles.map { writeStyle(ctx, styling, it) })
+        if (styling.contentStyles.isNotEmpty())
+            put("contentStyle", styling.contentStyles.map { writeStyle(ctx, styling, it) })
+        if (styling.letterStyles.isNotEmpty())
+            put("letterStyle", styling.letterStyles.map { writeStyle(ctx, styling, it) })
+    }
 
     stylingFile.parent.createDirectoriesSafely()
     writeToml(stylingFile, toml)

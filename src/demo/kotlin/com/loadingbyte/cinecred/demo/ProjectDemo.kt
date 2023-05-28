@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.projectio.CsvFormat
+import com.loadingbyte.cinecred.projectio.Template
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.ProjectDialogType
 import com.loadingbyte.cinecred.ui.UIFactory
@@ -18,7 +19,7 @@ abstract class ProjectDemo(filename: String, format: Format) : Demo(filename, fo
         val masterCtrl = UIFactory().master() as MasterCtrl
         this.masterCtrl = masterCtrl
         withDemoProjectDir { projectDir ->
-            tryCopyTemplate(projectDir, locale, 1, CsvFormat)
+            tryCopyTemplate(projectDir, Template(locale, 1, true), CsvFormat)
             edt {
                 masterCtrl.openProject(projectDir, openOnScreen = gCfg)
                 projectCtrl.setDialogVisible(ProjectDialogType.STYLING, false)

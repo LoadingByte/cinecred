@@ -27,6 +27,7 @@ import javax.swing.*
 import javax.swing.filechooser.FileView
 import javax.swing.plaf.basic.BasicFileChooserUI
 import kotlin.io.path.pathString
+import kotlin.jvm.optionals.getOrNull
 
 
 class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
@@ -171,7 +172,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                     createConfigureForm.scaleWidget.value,
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
-                    createConfigureForm.creditsServiceWidget.value.get(),
+                    createConfigureForm.creditsServiceWidget.value.getOrNull(),
                     createConfigureForm.creditsFilenameWidget.value
                 )
             }

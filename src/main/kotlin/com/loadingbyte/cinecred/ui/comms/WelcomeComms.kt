@@ -48,7 +48,7 @@ interface WelcomeCtrlComms {
         scale: Int,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
-        creditsService: Service,
+        creditsService: Service?,
         creditsFilename: String
     )
 

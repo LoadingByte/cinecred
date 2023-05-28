@@ -332,7 +332,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         scale: Int,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
-        creditsService: Service,
+        creditsService: Service?,
         creditsFilename: String
     ) {
         val projectDir = newBrowseSelection ?: return
@@ -344,7 +344,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                     CreditsLocation.LOCAL ->
                         tryCopyTemplate(projectDir, locale, scale, creditsFormat)
                     CreditsLocation.SERVICE ->
-                        tryCopyTemplate(projectDir, locale, scale, creditsService, creditsFilename)
+                        tryCopyTemplate(projectDir, locale, scale, creditsService!!, creditsFilename)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
             } catch (e: ForbiddenException) {

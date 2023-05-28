@@ -157,7 +157,11 @@ class VideoWriter(
         // Allocate the output media context.
         val oc = AVFormatContext(null)
         this.oc = oc
-        avformat_alloc_output_context2(oc, null, null, fileOrDir.pathString)
+        // When we let JavaCPP convert the string to a byte array by directly passing it to the FFmpeg function, it
+        // doesn't use the UTF-8 encoding on Windows. However, this encoding seems to be assumed by FFmpeg, so we get
+        // crashes when non-ASCII characters are used. Hence, we force UTF-8 encoding here.
+        val encodedFilename = BytePointer(fileOrDir.pathString, Charsets.UTF_8)
+        avformat_alloc_output_context2(oc, null, null, encodedFilename)
             .ffmpegThrowIfErrnum("Could not deduce output muxer from file extension")
         // Will be freed by avformat_free_context().
         oc.metadata(AVDictionary().also { metaDict ->
@@ -197,7 +201,7 @@ class VideoWriter(
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
-                avio_open2(pb, fileOrDir.pathString, AVIO_FLAG_WRITE, null, muxerOptionsDict)
+                avio_open2(pb, encodedFilename, AVIO_FLAG_WRITE, null, muxerOptionsDict)
                     .ffmpegThrowIfErrnum("Could not open output file '$fileOrDir'")
                 oc.pb(pb)
             }

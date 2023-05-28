@@ -23,6 +23,10 @@ fun addServiceListListener(listener: () -> Unit) {
     SERVICE_LIST_LISTENERS.add(listener)
 }
 
+fun removeServiceListListener(listener: () -> Unit) {
+    SERVICE_LIST_LISTENERS.remove(listener)
+}
+
 fun invokeServiceListListeners() {
     for (listener in SERVICE_LIST_LISTENERS)
         listener()

@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
-import com.loadingbyte.cinecred.projectio.service.addServiceListListener
+import com.loadingbyte.cinecred.ui.PROJECT_HINT_TRACK_PENDING_PREFERENCE
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.UIFactoryComms
@@ -12,7 +12,6 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.nio.file.Path
-import javax.swing.SwingUtilities
 
 
 class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
@@ -26,7 +25,11 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
     private val projectCtrls = mutableListOf<ProjectController>()
 
     init {
-        addServiceListListener { SwingUtilities.invokeLater { welcomeCtrl?.onServiceListChange() } }
+        PROJECT_HINT_TRACK_PENDING_PREFERENCE.addListener { pending ->
+            if (pending) projectCtrls.firstOrNull()?.let { projectCtrl ->
+                makeProjectHintTrack(projectCtrl).play(onPass = { PROJECT_HINT_TRACK_PENDING_PREFERENCE.set(false) })
+            }
+        }
     }
 
     override fun onGlobalKeyEvent(event: KeyEvent) =
@@ -78,10 +81,5 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
 
     override fun isProjectDirOpen(projectDir: Path): Boolean =
         projectCtrls.any { it.projectDir == projectDir }
-
-    override fun tryPlayProjectHintTrack() {
-        val projectCtrl = projectCtrls.firstOrNull() ?: return
-        makeProjectHintTrack(projectCtrl).play { PersistentStorage.projectHintTrackPending = false }
-    }
 
 }

@@ -1,14 +1,14 @@
 package com.loadingbyte.cinecred.ui.comms
 
-import com.loadingbyte.cinecred.common.SYSTEM_LOCALE
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Service
 import com.loadingbyte.cinecred.projectio.service.ServiceProvider
+import com.loadingbyte.cinecred.ui.LocaleWish
+import com.loadingbyte.cinecred.ui.Preference
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
 import java.nio.file.Path
 import java.util.*
-import kotlin.reflect.KMutableProperty1
 
 
 interface WelcomeCtrlComms {
@@ -18,14 +18,12 @@ interface WelcomeCtrlComms {
     // ========== FOR MASTER CTRL ==========
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean
-    fun onServiceListChange()
     fun commence(openProjectDir: Path? = null)
     fun setTab(tab: WelcomeTab)
 
     // ========== FOR WELCOME VIEW ==========
 
     fun onPassHintTrack()
-    fun onChangeTab(tab: WelcomeTab)
 
     fun projects_start_onClickOpen()
     fun projects_start_onClickCreate()
@@ -55,7 +53,7 @@ interface WelcomeCtrlComms {
 
     fun projects_createWait_onClickCancel()
 
-    fun <V> preferences_start_onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V)
+    fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P)
     fun preferences_start_onClickAddService()
     fun preferences_start_onClickRemoveService(service: Service)
 
@@ -99,8 +97,11 @@ interface WelcomeViewComms {
 
     fun preferences_setCard(card: PreferencesCard)
 
-    fun preferences_start_setPreferences(preferences: Preferences)
     fun preferences_start_setInitialSetup(initialSetup: Boolean, doneListener: (() -> Unit)?)
+    fun preferences_start_setUILocaleWish(wish: LocaleWish)
+    fun preferences_start_setCheckForUpdates(check: Boolean)
+    fun preferences_start_setWelcomeHintTrackPending(pending: Boolean)
+    fun preferences_start_setProjectHintTrackPending(pending: Boolean)
     fun preferences_start_setServices(services: List<Service>)
     fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean)
 
@@ -125,36 +126,6 @@ enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
 enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
 enum class PreferencesCard { START, CONFIGURE_SERVICE, AUTHORIZE_SERVICE }
-
-
-interface Preferences {
-
-    var uiLocaleWish: LocaleWish
-    var checkForUpdates: Boolean
-    var welcomeHintTrackPending: Boolean
-    var projectHintTrackPending: Boolean
-
-    fun setFrom(other: Preferences) {
-        uiLocaleWish = other.uiLocaleWish
-        checkForUpdates = other.checkForUpdates
-        welcomeHintTrackPending = other.welcomeHintTrackPending
-        projectHintTrackPending = other.projectHintTrackPending
-    }
-
-}
-
-
-sealed interface LocaleWish {
-
-    val locale: Locale
-
-    object System : LocaleWish {
-        override val locale = SYSTEM_LOCALE
-    }
-
-    data class Specific(override val locale: Locale) : LocaleWish
-
-}
 
 
 class License(val name: String, val body: String)

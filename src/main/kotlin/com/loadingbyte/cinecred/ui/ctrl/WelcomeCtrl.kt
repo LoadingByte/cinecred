@@ -4,7 +4,7 @@ import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
-import com.loadingbyte.cinecred.ui.ProjectController
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.*
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileSystemView
 import kotlin.io.path.*
-import kotlin.reflect.KMutableProperty1
 
 
 class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
@@ -35,6 +34,35 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     // =========================================
 
     private lateinit var welcomeView: WelcomeViewComms
+
+    private val uiLocaleListener = { wish: LocaleWish ->
+        welcomeView.preferences_start_setUILocaleWish(wish)
+        SwingUtilities.invokeLater {
+            if (welcomeView.showRestartUILocaleQuestion(newLocale = wish.locale)) {
+                masterCtrl.tryCloseProjectsAndDisposeAllFrames()
+                masterCtrl.showWelcomeFrame()
+            }
+        }
+    }
+    private val checkForUpdatesListener = { check: Boolean ->
+        welcomeView.preferences_start_setCheckForUpdates(check)
+        tryCheckForUpdates()
+    }
+    private val welcomeHintTrackPendingListener = { pending: Boolean ->
+        welcomeView.preferences_start_setWelcomeHintTrackPending(pending)
+        if (pending)
+            welcomeView.playHintTrack()
+    }
+    private val projectHintTrackPendingListener = { pending: Boolean ->
+        welcomeView.preferences_start_setProjectHintTrackPending(pending)
+    }
+    private val serviceListListener = {
+        SwingUtilities.invokeLater {
+            val services = SERVICE_PROVIDERS.flatMap(ServiceProvider::services)
+            welcomeView.projects_createConfigure_setServices(services)
+            welcomeView.preferences_start_setServices(services)
+        }
+    }
 
     /*
      * The [commence] method can be called multiple times on the same object. However, some things should only be run
@@ -56,17 +84,27 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private val createProjectThread = AtomicReference<Thread?>()
     private val addServiceThread = AtomicReference<Thread?>()
 
-    private var cachePrefs: PreferencesDTO? = null
+    private var withheldPrefChanges: MutableMap<Preference<*>, () -> Unit>? = null
 
     fun supplyView(welcomeView: WelcomeViewComms) {
         check(!::welcomeView.isInitialized)
         this.welcomeView = welcomeView
 
+        // Register the service listener.
+        addServiceListListener(serviceListListener)
+
+        // Retrieve the current preferences and services.
+        welcomeView.preferences_start_setUILocaleWish(UI_LOCALE_PREFERENCE.get())
+        welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
+        welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
+        welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
+        serviceListListener()
+
         // Remove all memorized directories which are no longer project directories.
-        val memProjectDirs = PersistentStorage.memorizedProjectDirs.toMutableList()
+        val memProjectDirs = PROJECT_DIRS_PREFERENCE.get().toMutableList()
         val modified = memProjectDirs.removeAll { dir -> !isProjectDir(dir) }
         if (modified)
-            PersistentStorage.memorizedProjectDirs = memProjectDirs
+            PROJECT_DIRS_PREFERENCE.set(memProjectDirs)
 
         // Show "open" buttons for the memorized projects.
         welcomeView.projects_start_setMemorized(memProjectDirs)
@@ -76,9 +114,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         val dir = memProjectDirs.firstOrNull()?.parent ?: FileSystemView.getFileSystemView().defaultDirectory.toPath()
         welcomeView.projects_openBrowse_setCurrentDir(dir)
         welcomeView.projects_createBrowse_setCurrentDir(dir)
-
-        // Retrieve the current service list.
-        onServiceListChange()
 
         welcomeView.setChangelog(CHANGELOG_HTML)
         welcomeView.setLicenses(LICENSES)
@@ -112,10 +147,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         blockOpening = true
 
         // Memorize the opened project directory at the first position in the list.
-        PersistentStorage.memorizedProjectDirs = PersistentStorage.memorizedProjectDirs.toMutableList().apply {
+        PROJECT_DIRS_PREFERENCE.set(PROJECT_DIRS_PREFERENCE.get().toMutableList().apply {
             remove(projectDir)
             add(0, projectDir)
-        }
+        })
 
         try {
             masterCtrl.openProject(projectDir, openOnScreen = welcomeView.getMostOccupiedScreen())
@@ -153,7 +188,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
         if (latestStableVersion.get() != null)
             afterFetch()
-        else if (PersistentStorage.checkForUpdates) {
+        else if (CHECK_FOR_UPDATES_PREFERENCE.get()) {
             val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
             val req = HttpRequest.newBuilder(URI.create("https://cinecred.com/dl/api/v1/components"))
                 .setHeader("User-Agent", "Cinecred/$VERSION").build()
@@ -190,12 +225,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         return false
     }
 
-    override fun onServiceListChange() {
-        val services = SERVICE_PROVIDERS.flatMap(ServiceProvider::services)
-        welcomeView.projects_createConfigure_setServices(services)
-        welcomeView.preferences_start_setServices(services)
-    }
-
     // Be aware that this method might be called multiple times on the same object!
     // For example, it happens if a user opens the welcome window multiple times.
     override fun commence(openProjectDir: Path?) {
@@ -217,12 +246,18 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             if (alreadyRanOpenActions)
                 return
             alreadyRanOpenActions = true
+            // Register the preference listeners.
+            UI_LOCALE_PREFERENCE.addListener(uiLocaleListener)
+            CHECK_FOR_UPDATES_PREFERENCE.addListener(checkForUpdatesListener)
+            WELCOME_HINT_TRACK_PENDING_PREFERENCE.addListener(welcomeHintTrackPendingListener)
+            PROJECT_HINT_TRACK_PENDING_PREFERENCE.addListener(projectHintTrackPendingListener)
+            // If enabled, check for updates and run the welcome hint track.
             tryCheckForUpdates()
-            if (PersistentStorage.welcomeHintTrackPending)
+            if (WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
                 welcomeView.playHintTrack()
         }
 
-        if (PersistentStorage.havePreferencesBeenSet())
+        if (SET_UP_PREFERENCE.get())
             finishInit(false)
         else if (!alreadyStartedInitialConfiguration) {
             alreadyStartedInitialConfiguration = true
@@ -232,22 +267,27 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             // Also, it lets him directly set his preferred locale in case that differs from the system locale.
             welcomeView.setTab(WelcomeTab.PREFERENCES)
             welcomeView.setTabsLocked(true)
-            val initPrefs = PreferencesDTO(PersistentStorage)
-            cachePrefs = initPrefs
-            val defaultUILocaleWish = initPrefs.uiLocaleWish
+            withheldPrefChanges = HashMap()
+            val defaultUILocaleWish = UI_LOCALE_PREFERENCE.get()
             welcomeView.preferences_start_setInitialSetup(true) {
-                PersistentStorage.setFrom(initPrefs)
-                cachePrefs = null
-                comprehensivelyApplyLocale(initPrefs.uiLocaleWish.locale)
+                SET_UP_PREFERENCE.set(true)
+                withheldPrefChanges?.values?.forEach { it() }
+                withheldPrefChanges = null
                 welcomeView.setTabsLocked(false)
                 welcomeView.preferences_start_setInitialSetup(false, null)
-                finishInit(initConfigChangedUILocaleWish = initPrefs.uiLocaleWish != defaultUILocaleWish)
+                finishInit(initConfigChangedUILocaleWish = UI_LOCALE_PREFERENCE.get() != defaultUILocaleWish)
             }
             welcomeView.display()
         }
     }
 
     override fun close() {
+        UI_LOCALE_PREFERENCE.removeListener(uiLocaleListener)
+        CHECK_FOR_UPDATES_PREFERENCE.removeListener(checkForUpdatesListener)
+        WELCOME_HINT_TRACK_PENDING_PREFERENCE.removeListener(welcomeHintTrackPendingListener)
+        PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
+        removeServiceListListener(serviceListListener)
+
         createProjectThread.getAndSet(null)?.interrupt()
         addServiceThread.getAndSet(null)?.interrupt()
         welcomeView.close()
@@ -259,12 +299,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun onPassHintTrack() {
-        PersistentStorage.welcomeHintTrackPending = false
-    }
-
-    override fun onChangeTab(tab: WelcomeTab) {
-        if (tab == WelcomeTab.PREFERENCES)
-            welcomeView.preferences_start_setPreferences(PersistentStorage)
+        WELCOME_HINT_TRACK_PENDING_PREFERENCE.set(false)
     }
 
     override fun projects_start_onClickOpen() = welcomeView.projects_setCard(ProjectsCard.OPEN_BROWSE)
@@ -368,15 +403,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.projects_setCard(ProjectsCard.START)
     }
 
-    override fun <V> preferences_start_onChangePreference(pref: KMutableProperty1<Preferences, V>, value: V) {
-        val cachePrefs = cachePrefs
-        if (cachePrefs != null)
-            pref.set(cachePrefs, value)
-        else {
-            pref.set(PersistentStorage, value)
-            pref.set(PreferenceListener(), value)
-        }
-    }
+    override fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P) =
+        withheldPrefChanges?.let { it[preference] = { preference.set(value) } } ?: preference.set(value)
 
     override fun preferences_start_onClickAddService() =
         welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_SERVICE)
@@ -484,58 +512,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         }
 
         private val latestStableVersion = AtomicReference<String>()
-
-    }
-
-
-    private class PreferencesDTO(
-        override var uiLocaleWish: LocaleWish,
-        override var checkForUpdates: Boolean,
-        override var welcomeHintTrackPending: Boolean,
-        override var projectHintTrackPending: Boolean
-    ) : Preferences {
-        constructor(other: Preferences) : this(
-            other.uiLocaleWish,
-            other.checkForUpdates,
-            other.welcomeHintTrackPending,
-            other.projectHintTrackPending
-        )
-    }
-
-
-    private inner class PreferenceListener : Preferences {
-
-        override var uiLocaleWish: LocaleWish
-            get() = throw NotImplementedError()
-            set(wish) {
-                comprehensivelyApplyLocale(wish.locale)
-                SwingUtilities.invokeLater {
-                    if (welcomeView.showRestartUILocaleQuestion(newLocale = wish.locale)) {
-                        masterCtrl.tryCloseProjectsAndDisposeAllFrames()
-                        masterCtrl.showWelcomeFrame()
-                    }
-                }
-            }
-
-        override var checkForUpdates: Boolean
-            get() = throw NotImplementedError()
-            set(_) {
-                tryCheckForUpdates()
-            }
-
-        override var welcomeHintTrackPending: Boolean
-            get() = throw NotImplementedError()
-            set(pending) {
-                if (pending)
-                    welcomeView.playHintTrack()
-            }
-
-        override var projectHintTrackPending: Boolean
-            get() = throw NotImplementedError()
-            set(pending) {
-                if (pending)
-                    masterCtrl.tryPlayProjectHintTrack()
-            }
 
     }
 

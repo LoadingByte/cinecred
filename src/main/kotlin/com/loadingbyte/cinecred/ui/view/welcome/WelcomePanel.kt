@@ -119,7 +119,6 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             addTab(l10n("ui.welcome.preferences"), PREFERENCES_ICON, preferencesPanel)
             addTab(l10n("ui.welcome.changelog"), GIFT_ICON, changelogPanel)
             addTab(l10n("ui.welcome.licenses"), PAGE_ICON, licensesPanel)
-            addChangeListener { welcomeCtrl.onChangeTab(WelcomeTab.values()[selectedIndex]) }
         }
         layout = BorderLayout()
         add(tabPane, BorderLayout.CENTER)

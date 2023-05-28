@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.view.welcome
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
 import com.loadingbyte.cinecred.ui.helper.center
@@ -105,10 +106,16 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
 
     override fun preferences_setCard(card: PreferencesCard) =
         panel.preferencesPanel.preferences_setCard(card)
-    override fun preferences_start_setPreferences(preferences: Preferences) =
-        panel.preferencesPanel.preferences_start_setPreferences(preferences)
     override fun preferences_start_setInitialSetup(initialSetup: Boolean, doneListener: (() -> Unit)?) =
         panel.preferencesPanel.preferences_start_setInitialSetup(initialSetup, doneListener)
+    override fun preferences_start_setUILocaleWish(wish: LocaleWish) =
+        panel.preferencesPanel.startPreferencesForm.preferences_start_setUILocaleWish(wish)
+    override fun preferences_start_setCheckForUpdates(check: Boolean) =
+        panel.preferencesPanel.startPreferencesForm.preferences_start_setCheckForUpdates(check)
+    override fun preferences_start_setWelcomeHintTrackPending(pending: Boolean) =
+        panel.preferencesPanel.startPreferencesForm.preferences_start_setWelcomeHintTrackPending(pending)
+    override fun preferences_start_setProjectHintTrackPending(pending: Boolean) =
+        panel.preferencesPanel.startPreferencesForm.preferences_start_setProjectHintTrackPending(pending)
     override fun preferences_start_setServices(services: List<Service>) =
         panel.preferencesPanel.preferences_start_setServices(services)
     override fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean) =

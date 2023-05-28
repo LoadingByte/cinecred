@@ -9,8 +9,8 @@ import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
+import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
-import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
 import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
 import com.loadingbyte.cinecred.ui.helper.tryMail
@@ -149,8 +149,9 @@ private fun mainSwing(args: Array<String>) {
     // Globally listen to all key events.
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::onGlobalKeyEvent)
 
-    // Apply the locale configured by the user, if any.
-    comprehensivelyApplyLocale(PersistentStorage.uiLocaleWish.locale)
+    // Apply the locale configured by the user. If it changes in the future, re-apply it.
+    comprehensivelyApplyLocale(UI_LOCALE_PREFERENCE.get().locale)
+    UI_LOCALE_PREFERENCE.addListener { wish -> comprehensivelyApplyLocale(wish.locale) }
 
     // On macOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))

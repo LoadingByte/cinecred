@@ -2,14 +2,12 @@ package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.comms.LocaleWish
-import com.loadingbyte.cinecred.ui.comms.Preferences
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
 import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
 import com.loadingbyte.cinecred.ui.helper.EasyForm
 import java.util.*
-import kotlin.reflect.KMutableProperty1
 
 
 class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
@@ -50,34 +48,31 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
 
     private var disableOnChange = false
 
-    fun setPreferences(preferences: Preferences) {
+    private fun <V : Any> load(widget: Widget<V>, value: V) {
         disableOnChange = true
         try {
-            uiLocaleWishWidget.value = preferences.uiLocaleWish
-            checkForUpdatesWidget.value = preferences.checkForUpdates
-            welcomeHintTrckPendingWidget.value = preferences.welcomeHintTrackPending
-            projectHintTrckPendingWidget.value = preferences.projectHintTrackPending
+            widget.value = value
         } finally {
             disableOnChange = false
         }
     }
 
     override fun onChange(widget: Widget<*>) {
-        fun <V> forward(pref: KMutableProperty1<Preferences, V>, value: V) {
-            welcomeCtrl.preferences_start_onChangePreference(pref, value)
+        fun <P : Any> forward(preference: Preference<P>, value: P) {
+            welcomeCtrl.preferences_start_onChangeTopPreference(preference, value)
         }
 
         if (disableOnChange)
             return
         when (widget) {
             uiLocaleWishWidget ->
-                forward(Preferences::uiLocaleWish, uiLocaleWishWidget.value)
+                forward(UI_LOCALE_PREFERENCE, uiLocaleWishWidget.value)
             checkForUpdatesWidget ->
-                forward(Preferences::checkForUpdates, checkForUpdatesWidget.value)
+                forward(CHECK_FOR_UPDATES_PREFERENCE, checkForUpdatesWidget.value)
             welcomeHintTrckPendingWidget ->
-                forward(Preferences::welcomeHintTrackPending, welcomeHintTrckPendingWidget.value)
+                forward(WELCOME_HINT_TRACK_PENDING_PREFERENCE, welcomeHintTrckPendingWidget.value)
             projectHintTrckPendingWidget ->
-                forward(Preferences::projectHintTrackPending, projectHintTrckPendingWidget.value)
+                forward(PROJECT_HINT_TRACK_PENDING_PREFERENCE, projectHintTrckPendingWidget.value)
             else -> throw IllegalStateException("Unknown widget, should never happen.")
         }
         super.onChange(widget)
@@ -88,5 +83,15 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
         if (listener != null)
             addSubmitButton(l10n("ui.preferences.finishInitialSetup"), listener)
     }
+
+
+    /* ***************************
+       ********** COMMS **********
+       *************************** */
+
+    fun preferences_start_setUILocaleWish(wish: LocaleWish) = load(uiLocaleWishWidget, wish)
+    fun preferences_start_setCheckForUpdates(check: Boolean) = load(checkForUpdatesWidget, check)
+    fun preferences_start_setWelcomeHintTrackPending(pending: Boolean) = load(welcomeHintTrckPendingWidget, pending)
+    fun preferences_start_setProjectHintTrackPending(pending: Boolean) = load(projectHintTrckPendingWidget, pending)
 
 }

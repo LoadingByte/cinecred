@@ -19,6 +19,5 @@ interface MasterCtrlComms {
     /** @throws ProjectController.ProjectInitializationAbortedException */
     fun openProject(projectDir: Path, openOnScreen: GraphicsConfiguration)
     fun isProjectDirOpen(projectDir: Path): Boolean
-    fun tryPlayProjectHintTrack()
 
 }

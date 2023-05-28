@@ -9,7 +9,6 @@ import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
-import com.loadingbyte.cinecred.ui.ctrl.PersistentStorage
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import kotlinx.collections.immutable.toPersistentList
@@ -67,8 +66,8 @@ class ProjectController(
         projectFrame.isVisible = true
         stylingDialog.isVisible = true
 
-        if (PersistentStorage.projectHintTrackPending)
-            makeProjectHintTrack(this).play(onPass = { PersistentStorage.projectHintTrackPending = false })
+        if (PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
+            makeProjectHintTrack(this).play(onPass = { PROJECT_HINT_TRACK_PENDING_PREFERENCE.set(false) })
     }
 
     // STEP 2:

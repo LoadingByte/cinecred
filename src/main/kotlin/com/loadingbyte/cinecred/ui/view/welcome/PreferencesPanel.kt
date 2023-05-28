@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.service.SERVICE_PROVIDERS
 import com.loadingbyte.cinecred.projectio.service.Service
 import com.loadingbyte.cinecred.projectio.service.ServiceProvider
-import com.loadingbyte.cinecred.ui.comms.Preferences
 import com.loadingbyte.cinecred.ui.comms.PreferencesCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
@@ -18,9 +17,10 @@ import javax.swing.*
 
 class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
+    val startPreferencesForm: PreferencesForm
+
     private val cards = CardLayout().also { layout = it }
 
-    private val startPreferencesForm: PreferencesForm
     private val startLowerPanel: JPanel
     private val startServicesPanel: JPanel
     private val startServicesRemovalButtons = HashMap<Service, JButton>()
@@ -117,10 +117,6 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         if (card == PreferencesCard.CONFIGURE_SERVICE)
             configureServiceForm.labelWidget.value = ""
         cards.show(this, card.name)
-    }
-
-    fun preferences_start_setPreferences(preferences: Preferences) {
-        startPreferencesForm.setPreferences(preferences)
     }
 
     fun preferences_start_setInitialSetup(initialSetup: Boolean, doneListener: (() -> Unit)?) {

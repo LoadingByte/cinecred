@@ -6,6 +6,8 @@ import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
+import com.loadingbyte.cinecred.projectio.service.GoogleService
+import com.loadingbyte.cinecred.projectio.service.Service
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
 import org.apache.batik.bridge.BridgeContext
@@ -493,6 +495,15 @@ private class SpineAttachmentIcon(
     }
 
 }
+
+
+private val SERVICE_GOOGLE_ICON = SVGIcon.load("/icons/service/google.svg")
+
+val Service.icon
+    get() = when (this) {
+        is GoogleService -> SERVICE_GOOGLE_ICON
+        else -> throw IllegalArgumentException()
+    }
 
 
 private class SVGResource(name: String) {

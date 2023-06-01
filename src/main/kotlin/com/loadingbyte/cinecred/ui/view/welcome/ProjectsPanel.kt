@@ -7,7 +7,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
-import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.ui.comms.CreditsLocation
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
@@ -173,7 +173,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                     createConfigureForm.contentWidget.value,
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
-                    createConfigureForm.creditsServiceWidget.value.getOrNull(),
+                    createConfigureForm.creditsAccountWidget.value.getOrNull(),
                     createConfigureForm.creditsFilenameWidget.value
                 )
             }
@@ -334,8 +334,8 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
     fun projects_createBrowse_setNextEnabled(enabled: Boolean) { createBrowseNextButton.isEnabled = enabled }
     fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.pathString }
-    fun projects_createConfigure_setServices(services: List<Service>) {
-        createConfigureForm.creditsServiceWidget.items = services
+    fun projects_createConfigure_setAccounts(accounts: List<Account>) {
+        createConfigureForm.creditsAccountWidget.items = accounts
     }
     fun projects_createConfigure_setCreditsFilename(filename: String) {
         createConfigureForm.creditsFilenameWidget.value = filename
@@ -422,14 +422,14 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             isVisible = { creditsLocationWidget.value == CreditsLocation.LOCAL }
         )
 
-        val creditsServiceWidget = addWidget(
-            l10n("ui.projects.create.creditsService"),
+        val creditsAccountWidget = addWidget(
+            l10n("ui.projects.create.creditsAccount"),
             OptionalComboBoxWidget(
-                Service::class.java, emptyList(), widthSpec = WidthSpec.WIDE,
-                toString = { "${it.provider.label} \u2013 ${it.id}" }
+                Account::class.java, emptyList(), widthSpec = WidthSpec.WIDE,
+                toString = { "${it.service.product} \u2013 ${it.id}" }
             ),
             isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE },
-            verify = { if (it.isEmpty) Notice(Severity.ERROR, l10n("ui.projects.create.noServices")) else null }
+            verify = { if (it.isEmpty) Notice(Severity.ERROR, l10n("ui.projects.create.noAccount")) else null }
         )
 
         val creditsFilenameWidget = addWidget(

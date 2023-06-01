@@ -2,7 +2,7 @@ package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
-import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
@@ -97,8 +97,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.projectsPanel.projects_createBrowse_setNextEnabled(enabled)
     override fun projects_createConfigure_setProjectDir(projectDir: Path) =
         panel.projectsPanel.projects_createConfigure_setProjectDir(projectDir)
-    override fun projects_createConfigure_setServices(services: List<Service>) =
-        panel.projectsPanel.projects_createConfigure_setServices(services)
+    override fun projects_createConfigure_setAccounts(accounts: List<Account>) =
+        panel.projectsPanel.projects_createConfigure_setAccounts(accounts)
     override fun projects_createConfigure_setCreditsFilename(filename: String) =
         panel.projectsPanel.projects_createConfigure_setCreditsFilename(filename)
     override fun projects_createWait_setError(error: String?) =
@@ -116,12 +116,14 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.startPreferencesForm.preferences_start_setWelcomeHintTrackPending(pending)
     override fun preferences_start_setProjectHintTrackPending(pending: Boolean) =
         panel.preferencesPanel.startPreferencesForm.preferences_start_setProjectHintTrackPending(pending)
-    override fun preferences_start_setServices(services: List<Service>) =
-        panel.preferencesPanel.preferences_start_setServices(services)
-    override fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean) =
-        panel.preferencesPanel.preferences_start_setServiceRemovalLocked(service, locked)
-    override fun preferences_authorizeService_setError(error: String?) =
-        panel.preferencesPanel.preferences_authorizeService_setError(error)
+    override fun preferences_start_setAccounts(accounts: List<Account>) =
+        panel.preferencesPanel.preferences_start_setAccounts(accounts)
+    override fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) =
+        panel.preferencesPanel.preferences_start_setAccountRemovalLocked(account, locked)
+    override fun preferences_configureAccount_resetForm() =
+        panel.preferencesPanel.preferences_configureAccount_resetForm()
+    override fun preferences_authorizeAccount_setError(error: String?) =
+        panel.preferencesPanel.preferences_authorizeAccount_setError(error)
     // @formatter:on
 
     override fun setChangelog(changelog: String) = panel.setChangelog(changelog)
@@ -170,10 +172,10 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         ) == JOptionPane.OK_OPTION
     }
 
-    override fun showCannotRemoveServiceMessage(service: Service, error: String) {
+    override fun showCannotRemoveAccountMessage(account: Account, error: String) {
         JOptionPane.showMessageDialog(
-            this, arrayOf(l10n("ui.preferences.services.cannotRemove.msg", service.id), error),
-            l10n("ui.preferences.services.cannotRemove.title"), JOptionPane.ERROR_MESSAGE
+            this, arrayOf(l10n("ui.preferences.accounts.cannotRemove.msg", account.id), error),
+            l10n("ui.preferences.accounts.cannotRemove.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 

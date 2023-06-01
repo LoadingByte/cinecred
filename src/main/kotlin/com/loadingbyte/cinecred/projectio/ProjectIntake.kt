@@ -8,7 +8,7 @@ import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.projectio.ProjectIntake.Callbacks
 import com.loadingbyte.cinecred.projectio.service.SERVICE_LINK_EXTS
-import com.loadingbyte.cinecred.projectio.service.SERVICE_PROVIDERS
+import com.loadingbyte.cinecred.projectio.service.SERVICES
 import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
 import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.awt.Font
@@ -107,19 +107,19 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             try {
                 if (fileExt in SERVICE_LINK_EXTS) {
                     val link = readServiceLink(activeFile)
-                    val provider = SERVICE_PROVIDERS.find { it.canWatch(link) }
-                    if (provider == null) {
+                    val service = SERVICES.find { it.canWatch(link) }
+                    if (service == null) {
                         val msg = l10n("projectIO.credits.unsupportedServiceLink", link)
                         callbacks.pushCreditsSpreadsheet(null, locatingLog + ParserMsg(null, null, null, ERROR, msg))
                     } else {
-                        linkedCreditsWatcher = provider.watch(link, object : ServiceWatcher.Callbacks {
+                        linkedCreditsWatcher = service.watch(link, object : ServiceWatcher.Callbacks {
                             override fun content(spreadsheet: Spreadsheet) {
                                 callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog)
                             }
 
                             override fun problem(problem: ServiceWatcher.Problem) {
                                 val key = when (problem) {
-                                    ServiceWatcher.Problem.INACCESSIBLE -> "projectIO.credits.noServiceGrantsAccess"
+                                    ServiceWatcher.Problem.INACCESSIBLE -> "projectIO.credits.noAccountGrantsAccess"
                                     ServiceWatcher.Problem.DOWN -> "projectIO.credits.serviceUnresponsive"
                                 }
                                 val msg = ParserMsg(null, null, null, ERROR, l10n(key))

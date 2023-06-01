@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui.comms
 
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
+import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
-import com.loadingbyte.cinecred.projectio.service.ServiceProvider
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.Preference
 import java.awt.GraphicsConfiguration
@@ -47,21 +47,21 @@ interface WelcomeCtrlComms {
         sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
-        creditsService: Service?,
+        creditsAccount: Account?,
         creditsFilename: String
     )
 
     fun projects_createWait_onClickCancel()
 
     fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P)
-    fun preferences_start_onClickAddService()
-    fun preferences_start_onClickRemoveService(service: Service)
+    fun preferences_start_onClickAddAccount()
+    fun preferences_start_onClickRemoveAccount(account: Account)
 
-    fun preferences_verifyLabel(label: String): String? // Returns an error.
-    fun preferences_configureService_onClickCancel()
-    fun preferences_configureService_onClickAuthorize(label: String, provider: ServiceProvider)
+    fun preferences_configureAccount_verifyLabel(label: String): String? // Returns an error.
+    fun preferences_configureAccount_onClickCancel()
+    fun preferences_configureAccount_onClickAuthorize(label: String, service: Service)
 
-    fun preferences_authorizeService_onClickCancel()
+    fun preferences_authorizeAccount_onClickCancel()
 
 }
 
@@ -90,7 +90,7 @@ interface WelcomeViewComms {
     fun projects_createBrowse_setNextEnabled(enabled: Boolean)
 
     fun projects_createConfigure_setProjectDir(projectDir: Path)
-    fun projects_createConfigure_setServices(services: List<Service>)
+    fun projects_createConfigure_setAccounts(accounts: List<Account>)
     fun projects_createConfigure_setCreditsFilename(filename: String)
 
     fun projects_createWait_setError(error: String?)
@@ -102,10 +102,12 @@ interface WelcomeViewComms {
     fun preferences_start_setCheckForUpdates(check: Boolean)
     fun preferences_start_setWelcomeHintTrackPending(pending: Boolean)
     fun preferences_start_setProjectHintTrackPending(pending: Boolean)
-    fun preferences_start_setServices(services: List<Service>)
-    fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean)
+    fun preferences_start_setAccounts(accounts: List<Account>)
+    fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean)
 
-    fun preferences_authorizeService_setError(error: String?)
+    fun preferences_configureAccount_resetForm()
+
+    fun preferences_authorizeAccount_setError(error: String?)
 
     fun setChangelog(changelog: String)
     fun setLicenses(licenses: List<License>)
@@ -117,7 +119,7 @@ interface WelcomeViewComms {
     fun showAlreadyOpenMessage(projectDir: Path)
     fun showNotEmptyQuestion(projectDir: Path): Boolean
     fun showRestartUILocaleQuestion(newLocale: Locale): Boolean
-    fun showCannotRemoveServiceMessage(service: Service, error: String)
+    fun showCannotRemoveAccountMessage(account: Account, error: String)
 
 }
 
@@ -125,7 +127,7 @@ interface WelcomeViewComms {
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
 enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
-enum class PreferencesCard { START, CONFIGURE_SERVICE, AUTHORIZE_SERVICE }
+enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT }
 
 
 class License(val name: String, val body: String)

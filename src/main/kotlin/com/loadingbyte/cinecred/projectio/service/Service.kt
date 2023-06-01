@@ -15,33 +15,35 @@ import kotlin.io.path.writeText
 
 
 val SERVICE_CONFIG_DIR: Path = CONFIG_DIR.resolve("services")
-val SERVICE_PROVIDERS: List<ServiceProvider> = listOf(GoogleServiceProvider)
+val SERVICES: List<Service> = listOf(GoogleService)
 
-private val SERVICE_LIST_LISTENERS = CopyOnWriteArrayList<() -> Unit>()
+private val ACCOUNT_LIST_LISTENERS = CopyOnWriteArrayList<() -> Unit>()
 
-fun addServiceListListener(listener: () -> Unit) {
-    SERVICE_LIST_LISTENERS.add(listener)
+fun addAccountListListener(listener: () -> Unit) {
+    ACCOUNT_LIST_LISTENERS.add(listener)
 }
 
-fun removeServiceListListener(listener: () -> Unit) {
-    SERVICE_LIST_LISTENERS.remove(listener)
+fun removeAccountListListener(listener: () -> Unit) {
+    ACCOUNT_LIST_LISTENERS.remove(listener)
 }
 
-fun invokeServiceListListeners() {
-    for (listener in SERVICE_LIST_LISTENERS)
+fun invokeAccountListListeners() {
+    for (listener in ACCOUNT_LIST_LISTENERS)
         listener()
 }
 
 
-interface ServiceProvider {
+interface Service {
 
-    val label: String
-    val services: List<Service>
+    val product: String
+    val authenticator: String
+
+    val accounts: List<Account>
 
     /** @throws IOException */
-    fun addService(serviceId: String)
+    fun addAccount(accountId: String)
     /** @throws IOException */
-    fun removeService(service: Service)
+    fun removeAccount(account: Account)
 
     fun canWatch(link: URI): Boolean
 
@@ -51,10 +53,10 @@ interface ServiceProvider {
 }
 
 
-interface Service {
+interface Account {
 
     val id: String
-    val provider: ServiceProvider
+    val service: Service
 
     /**
      * @throws ForbiddenException

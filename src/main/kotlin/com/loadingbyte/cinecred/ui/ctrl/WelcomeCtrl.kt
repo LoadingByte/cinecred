@@ -56,11 +56,11 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private val projectHintTrackPendingListener = { pending: Boolean ->
         welcomeView.preferences_start_setProjectHintTrackPending(pending)
     }
-    private val serviceListListener = {
+    private val accountListListener = {
         SwingUtilities.invokeLater {
-            val services = SERVICE_PROVIDERS.flatMap(ServiceProvider::services)
-            welcomeView.projects_createConfigure_setServices(services)
-            welcomeView.preferences_start_setServices(services)
+            val accounts = SERVICES.flatMap(Service::accounts)
+            welcomeView.projects_createConfigure_setAccounts(accounts)
+            welcomeView.preferences_start_setAccounts(accounts)
         }
     }
 
@@ -82,7 +82,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private var newBrowseSelection: Path? = null
 
     private val createProjectThread = AtomicReference<Thread?>()
-    private val addServiceThread = AtomicReference<Thread?>()
+    private val addAccountThread = AtomicReference<Thread?>()
 
     private var withheldPrefChanges: MutableMap<Preference<*>, () -> Unit>? = null
 
@@ -90,15 +90,15 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         check(!::welcomeView.isInitialized)
         this.welcomeView = welcomeView
 
-        // Register the service listener.
-        addServiceListListener(serviceListListener)
+        // Register the accounts listener.
+        addAccountListListener(accountListListener)
 
-        // Retrieve the current preferences and services.
+        // Retrieve the current preferences and accounts.
         welcomeView.preferences_start_setUILocaleWish(UI_LOCALE_PREFERENCE.get())
         welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
-        serviceListListener()
+        accountListListener()
 
         // Remove all memorized directories which are no longer project directories.
         val memProjectDirs = PROJECT_DIRS_PREFERENCE.get().toMutableList()
@@ -286,10 +286,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         CHECK_FOR_UPDATES_PREFERENCE.removeListener(checkForUpdatesListener)
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.removeListener(welcomeHintTrackPendingListener)
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
-        removeServiceListListener(serviceListListener)
+        removeAccountListListener(accountListListener)
 
         createProjectThread.getAndSet(null)?.interrupt()
-        addServiceThread.getAndSet(null)?.interrupt()
+        addAccountThread.getAndSet(null)?.interrupt()
         welcomeView.close()
         masterCtrl.onCloseWelcomeFrame()
     }
@@ -365,7 +365,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
-        creditsService: Service?,
+        creditsAccount: Account?,
         creditsFilename: String
     ) {
         val projectDir = newBrowseSelection ?: return
@@ -378,7 +378,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                     CreditsLocation.LOCAL ->
                         tryCopyTemplate(projectDir, template, creditsFormat)
                     CreditsLocation.SERVICE ->
-                        tryCopyTemplate(projectDir, template, creditsService!!, creditsFilename)
+                        tryCopyTemplate(projectDir, template, creditsAccount!!, creditsFilename)
                     CreditsLocation.SKIP ->
                         tryCopyTemplate(projectDir, template)
                 }
@@ -406,52 +406,54 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P) =
         withheldPrefChanges?.let { it[preference] = { preference.set(value) } } ?: preference.set(value)
 
-    override fun preferences_start_onClickAddService() =
-        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_SERVICE)
-
-    override fun preferences_start_onClickRemoveService(service: Service) {
-        welcomeView.preferences_start_setServiceRemovalLocked(service, true)
-        val provider = SERVICE_PROVIDERS.first { service in it.services }
-        Thread({
-            try {
-                provider.removeService(service)
-            } catch (e: IOException) {
-                SwingUtilities.invokeLater {
-                    welcomeView.showCannotRemoveServiceMessage(service, e.toString())
-                    welcomeView.preferences_start_setServiceRemovalLocked(service, false)
-                }
-            }
-        }, "RemoveService").apply { isDaemon = true; start() }
+    override fun preferences_start_onClickAddAccount() {
+        welcomeView.preferences_configureAccount_resetForm()
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_ACCOUNT)
     }
 
-    override fun preferences_verifyLabel(label: String) = when {
+    override fun preferences_start_onClickRemoveAccount(account: Account) {
+        welcomeView.preferences_start_setAccountRemovalLocked(account, true)
+        val service = SERVICES.first { account in it.accounts }
+        Thread({
+            try {
+                service.removeAccount(account)
+            } catch (e: IOException) {
+                SwingUtilities.invokeLater {
+                    welcomeView.showCannotRemoveAccountMessage(account, e.toString())
+                    welcomeView.preferences_start_setAccountRemovalLocked(account, false)
+                }
+            }
+        }, "RemoveAccount").apply { isDaemon = true; start() }
+    }
+
+    override fun preferences_configureAccount_verifyLabel(label: String) = when {
         label.isBlank() ->
             l10n("blank")
-        SERVICE_PROVIDERS.any { provider -> provider.services.any { service -> service.id == label } } ->
-            l10n("ui.preferences.services.configure.labelAlreadyInUse")
+        SERVICES.any { service -> service.accounts.any { account -> account.id == label } } ->
+            l10n("ui.preferences.accounts.configure.labelAlreadyInUse")
         else -> null
     }
 
-    override fun preferences_configureService_onClickCancel() = welcomeView.preferences_setCard(PreferencesCard.START)
+    override fun preferences_configureAccount_onClickCancel() = welcomeView.preferences_setCard(PreferencesCard.START)
 
-    override fun preferences_configureService_onClickAuthorize(label: String, provider: ServiceProvider) {
-        welcomeView.preferences_authorizeService_setError(null)
-        welcomeView.preferences_setCard(PreferencesCard.AUTHORIZE_SERVICE)
-        addServiceThread.set(Thread({
+    override fun preferences_configureAccount_onClickAuthorize(label: String, service: Service) {
+        welcomeView.preferences_authorizeAccount_setError(null)
+        welcomeView.preferences_setCard(PreferencesCard.AUTHORIZE_ACCOUNT)
+        addAccountThread.set(Thread({
             try {
-                provider.addService(label)
+                service.addAccount(label)
                 SwingUtilities.invokeLater { welcomeView.preferences_setCard(PreferencesCard.START) }
             } catch (e: IOException) {
-                SwingUtilities.invokeLater { welcomeView.preferences_authorizeService_setError(e.toString()) }
+                SwingUtilities.invokeLater { welcomeView.preferences_authorizeAccount_setError(e.toString()) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             }
-            addServiceThread.set(null)
-        }, "AddService").apply { isDaemon = true; start() })
+            addAccountThread.set(null)
+        }, "AddAccount").apply { isDaemon = true; start() })
     }
 
-    override fun preferences_authorizeService_onClickCancel() {
-        addServiceThread.getAndSet(null)?.interrupt()
+    override fun preferences_authorizeAccount_onClickCancel() {
+        addAccountThread.getAndSet(null)?.interrupt()
         welcomeView.preferences_setCard(PreferencesCard.START)
     }
 

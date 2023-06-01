@@ -17,6 +17,7 @@ import com.google.api.services.sheets.v4.SheetsRequest
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -32,6 +33,7 @@ import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.URI
+import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
@@ -42,36 +44,38 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 
-object GoogleServiceProvider : ServiceProvider {
+object GoogleService : Service {
 
-    override val label get() = "Google"
-    override val services: List<Service> get() = _services.get()
+    override val product get() = "Google Sheets"
+    override val authenticator get() = "Google"
+
+    override val accounts: List<Account> get() = _accounts.get()
 
     private val credentialDataStore by lazy {
         StoredCredential.getDefaultDataStore(FileDataStoreFactory(SERVICE_CONFIG_DIR.resolve("google").toFile()))
     }
-    private var _services =
-        AtomicReference(credentialDataStore.keySet().sorted().map(::GoogleService).toPersistentList())
+    private var _accounts =
+        AtomicReference(credentialDataStore.keySet().sorted().map(::GoogleAccount).toPersistentList())
 
     private val watchersForPolling = LinkedBlockingQueue<GoogleWatcher>()
     private val watchersPoller = AtomicReference<Thread?>()
 
-    override fun addService(serviceId: String) {
-        require(_services.get().none { it.id == serviceId }) { "Service ID already in use." }
-        val service = GoogleService(serviceId)
-        service.sheets(authorizeIfNeeded = true)
-        _services.updateAndGet { it.add(service) }
-        invokeServiceListListeners()
+    override fun addAccount(accountId: String) {
+        require(_accounts.get().none { it.id == accountId }) { "Account ID already in use." }
+        val account = GoogleAccount(accountId)
+        account.sheets(authorizeIfNeeded = true)
+        _accounts.updateAndGet { it.add(account) }
+        invokeAccountListListeners()
     }
 
-    override fun removeService(service: Service) {
-        require(service is GoogleService && service in _services.get()) { "This provider is not responsible." }
+    override fun removeAccount(account: Account) {
+        require(account is GoogleAccount && account in _accounts.get()) { "This service is not responsible." }
 
-        // Try to revoke the refresh token. If this fails, do not remove the service. We don't want non-revoked refresh
+        // Try to revoke the refresh token. If this fails, do not remove the account. We don't want non-revoked refresh
         // tokens floating around.
         // This request is manual as revocation is missing from the client library:
         // https://github.com/googleapis/google-oauth-java-client/issues/250
-        val refreshToken = credentialDataStore.get(service.id)?.refreshToken
+        val refreshToken = credentialDataStore.get(account.id)?.refreshToken
         if (refreshToken != null) {
             val request = GoogleNetHttpTransport.newTrustedTransport().createRequestFactory().buildPostRequest(
                 GenericUrl("https://oauth2.googleapis.com/revoke"),
@@ -87,13 +91,13 @@ object GoogleServiceProvider : ServiceProvider {
             }
         }
 
-        forceRemoveService(service)
+        forceRemoveAccount(account)
     }
 
-    private fun forceRemoveService(service: GoogleService) {
-        credentialDataStore.delete(service.id)
-        _services.updateAndGet { it.remove(service) }
-        invokeServiceListListeners()
+    private fun forceRemoveAccount(account: GoogleAccount) {
+        credentialDataStore.delete(account.id)
+        _accounts.updateAndGet { it.remove(account) }
+        invokeAccountListListeners()
     }
 
     private fun fileIdFromLink(link: URI): String? {
@@ -151,7 +155,7 @@ object GoogleServiceProvider : ServiceProvider {
     }
 
     private fun poll(dirtyWatchers: MutableSet<GoogleWatcher>) {
-        val services = _services.get()
+        val accounts = _accounts.get()
 
         // Sadly, the sheets API doesn't provide a way of tracking changes, and even if it did, the pretty low rate
         // limits would probably prevent us from using it. Therefore, we don't automatically poll for changes, but
@@ -166,40 +170,40 @@ object GoogleServiceProvider : ServiceProvider {
         for (watcher in dirtyWatchers) {
             var response: ValueRange? = null
 
-            // If a service has been removed, make sure to remove it from the watcher's currentService field as well.
-            if (watcher.currentService !in services)
-                watcher.currentService = null
-            val curService = watcher.currentService
-            if (curService == null) {
-                // For watchers for which we don't know a working service, ask all available services for the cells.
-                for (service in services) {
-                    val sheets = service.sheets(false)
+            // If an account has been removed, make sure to remove it from the watcher's currentAccount field as well.
+            if (watcher.currentAccount !in accounts)
+                watcher.currentAccount = null
+            val curAccount = watcher.currentAccount
+            if (curAccount == null) {
+                // For watchers for which we don't know a working account, ask all available accounts for the cells.
+                for (account in accounts) {
+                    val sheets = account.sheets(false)
                     if (sheets != null)
                         try {
-                            response = service.send(makeReadRequest(sheets, watcher.fileId))
-                            // If we've found a service that has access, remember it.
-                            watcher.currentService = service
+                            response = account.send(makeReadRequest(sheets, watcher.fileId))
+                            // If we've found an account that has access, remember it.
+                            watcher.currentAccount = account
                             break
                         } catch (_: ForbiddenException) {
-                            // Try the next service.
+                            // Try the next account.
                         }
                 }
-                // If no service has access, let the watcher know it's inaccessible. Also remove it from the dirty list
+                // If no account has access, let the watcher know it's inaccessible. Also remove it from the dirty list
                 // so that it is only polled again when the user explicitly requests that.
                 if (response == null) {
                     watcher.callbacks.get()?.problem(ServiceWatcher.Problem.INACCESSIBLE)
                     dirtyWatchers.remove(watcher)
                 }
             } else {
-                // For watchers for which a service worked previously, use that service to get the current cells.
-                // Note: At this point, we know that sheets() can't return null because we successfully used curService
+                // For watchers for which an account worked previously, use that account to get the current cells.
+                // Note: At this point, we know that sheets() can't return null because we successfully used curAccount
                 // before in this session, so its sheets cache must be populated.
                 try {
-                    response = curService.send(makeReadRequest(curService.sheets(false)!!, watcher.fileId))
+                    response = curAccount.send(makeReadRequest(curAccount.sheets(false)!!, watcher.fileId))
                 } catch (_: ForbiddenException) {
-                    // If access to the file is no longer granted, mark the watcher as service-less, which will trigger
-                    // a new service search in the next polling pass.
-                    watcher.currentService = null
+                    // If access to the file is no longer granted, mark the watcher as account-less, which will trigger
+                    // a new account search in the next polling pass.
+                    watcher.currentAccount = null
                 }
             }
 
@@ -224,7 +228,7 @@ object GoogleServiceProvider : ServiceProvider {
     ) : ServiceWatcher {
 
         val callbacks = AtomicReference<ServiceWatcher.Callbacks?>(callbacks)
-        var currentService: GoogleService? = null
+        var currentAccount: GoogleAccount? = null
 
         override fun poll() {
             watchersForPolling.add(this)
@@ -237,9 +241,9 @@ object GoogleServiceProvider : ServiceProvider {
     }
 
 
-    private class GoogleService(override val id: String) : Service {
+    private class GoogleAccount(override val id: String) : Account {
 
-        override val provider get() = GoogleServiceProvider
+        override val service get() = GoogleService
 
         private var cachedSheets: Sheets? = null
         private val cachedSheetsLock = ReentrantLock()
@@ -273,9 +277,9 @@ object GoogleServiceProvider : ServiceProvider {
                 if (authorizeIfNeeded)
                     credential = AuthorizationCodeInstalledApp(flow, Receiver()) { tryBrowse(URI(it)) }.authorize(id)
                 else {
-                    // The service doesn't have tokens stored locally, so we can remove it (without revoking, as we
+                    // The account doesn't have tokens stored locally, so we can remove it (without revoking, as we
                     // don't have any tokens to revoke).
-                    forceRemoveService(this)
+                    forceRemoveAccount(this)
                     return null
                 }
 
@@ -288,7 +292,7 @@ object GoogleServiceProvider : ServiceProvider {
 
         override fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
             // Get the sheets object.
-            val sheets = sheets(false) ?: throw IOException("Service is missing credentials.")
+            val sheets = sheets(false) ?: throw IOException("Account is missing credentials.")
             // Construct the request object.
             val rowData = mutableListOf<RowData>()
             for (row in 0 until max(200, spreadsheet.numRecords)) {
@@ -347,8 +351,8 @@ object GoogleServiceProvider : ServiceProvider {
             } catch (e: IOException) {
                 when {
                     e is TokenResponseException && e.details != null && e.details.error == "invalid_grant" -> {
-                        // If the refresh token is revoked, the service is no longer authorized, so we can remove it.
-                        forceRemoveService(this)
+                        // If the refresh token is revoked, the account is no longer authorized, so we can remove it.
+                        forceRemoveAccount(this)
                         throw ForbiddenException()
                     }
                     e is HttpResponseException -> when (e.statusCode) {
@@ -390,8 +394,7 @@ object GoogleServiceProvider : ServiceProvider {
         override fun waitForCode(): String? {
             // In contrast to the official implementation, this one can be interrupted while waiting.
             semaphore.acquire()
-            if (error != null)
-                throw IOException("Authorization failed: $error")
+            error?.let { throw IOException(it) }
             return code
         }
 
@@ -419,18 +422,19 @@ object GoogleServiceProvider : ServiceProvider {
                 }
             }
 
-            private fun landingHtml(error: String?): String = StringBuilder().apply {
+            private fun landingHtml(error: String?): String {
+                val html = useResourceStream("/accountAuthorization.html") { it.bufferedReader().readText() }
                 val title = when (error) {
-                    null -> l10n("ui.preferences.services.authorizationSuccess.title")
-                    else -> l10n("ui.preferences.services.authorizationFailure.title")
+                    null -> l10n("ui.preferences.accounts.authorize.success.title")
+                    else -> l10n("ui.preferences.accounts.authorize.failure.title")
                 }
-                val msg = when (error) {
-                    null -> l10n("ui.preferences.services.authorizationSuccess.msg")
-                    else -> l10n("ui.preferences.services.authorizationFailure.msg", error)
+                val msg1 = when (error) {
+                    null -> l10n("ui.preferences.accounts.authorize.success.msg", product)
+                    else -> l10n("ui.preferences.accounts.authorize.failure.msg", error)
                 }
-                append("<html><head><meta charset=\"utf-8\"><title>$title</title></head>")
-                append("<body><h1>$title</h1><p>$msg</p></body></html>")
-            }.toString()
+                val msg2 = l10n("ui.preferences.accounts.authorize.return")
+                return MessageFormat.format(html, Locale.getDefault().toLanguageTag(), title, msg1, msg2)
+            }
 
         }
 

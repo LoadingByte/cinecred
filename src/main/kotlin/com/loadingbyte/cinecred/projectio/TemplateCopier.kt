@@ -27,8 +27,8 @@ fun tryCopyTemplate(destDir: Path, template: Template, creditsFormat: Spreadshee
  * @throws DownException
  * @throws IOException
  */
-fun tryCopyTemplate(destDir: Path, template: Template, creditsService: Service, creditsFilename: String) {
-    tryCopyTemplate(destDir, template, null, creditsService, creditsFilename)
+fun tryCopyTemplate(destDir: Path, template: Template, creditsAccount: Account, creditsFilename: String) {
+    tryCopyTemplate(destDir, template, null, creditsAccount, creditsFilename)
 }
 
 class Template(
@@ -42,13 +42,13 @@ private fun tryCopyTemplate(
     destDir: Path,
     template: Template,
     creditsFormat: SpreadsheetFormat?,
-    creditsService: Service?,
+    creditsAccount: Account?,
     creditsFilename: String?
 ) {
     // First try to write the credits file, so that if something goes wrong (which is likely with online services),
     // the project folder just isn't created at all, instead of being half-created.
-    if (creditsFormat != null || creditsService != null)
-        tryCopyCreditsTemplate(destDir, template, creditsFormat, creditsService, creditsFilename)
+    if (creditsFormat != null || creditsAccount != null)
+        tryCopyCreditsTemplate(destDir, template, creditsFormat, creditsAccount, creditsFilename)
     tryCopyStylingTemplate(destDir, template)
     if (template.sample)
         tryCopyAuxiliaryFiles(destDir)
@@ -59,7 +59,7 @@ private fun tryCopyCreditsTemplate(
     destDir: Path,
     template: Template,
     creditsFormat: SpreadsheetFormat?,
-    creditsService: Service?,
+    creditsAccount: Account?,
     creditsFilename: String?
 ) {
     if (ProjectIntake.locateCreditsFile(destDir).first != null)
@@ -82,8 +82,8 @@ private fun tryCopyCreditsTemplate(
             destDir.createDirectoriesSafely()
             creditsFormat.write(destDir.resolve("Credits.${creditsFormat.fileExt}"), spreadsheet, "Credits", look)
         }
-        creditsService != null && creditsFilename != null -> {
-            val link = creditsService.upload(creditsFilename, "Credits", spreadsheet, look)
+        creditsAccount != null && creditsFilename != null -> {
+            val link = creditsAccount.upload(creditsFilename, "Credits", spreadsheet, look)
             // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
             // actually not interrupted. So instead, we detect interruption here and stop project initialization.
             if (Thread.interrupted())

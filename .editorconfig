@@ -21,7 +21,7 @@ ij_kotlin_field_annotation_wrap = off
 [*.bat]
 end_of_line = crlf
 
-[{*.sh,*.svg}]
+[{*.html,*.sh,*.svg}]
 indent_size = 2
 tab_width = 2
 

@@ -1,18 +1,22 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE
+import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
+import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.formdev.flatlaf.ui.FlatRoundBorder
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.projectio.service.SERVICE_PROVIDERS
+import com.loadingbyte.cinecred.projectio.service.Account
+import com.loadingbyte.cinecred.projectio.service.SERVICES
 import com.loadingbyte.cinecred.projectio.service.Service
-import com.loadingbyte.cinecred.projectio.service.ServiceProvider
 import com.loadingbyte.cinecred.ui.comms.PreferencesCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.CardLayout
+import java.awt.*
+import java.util.*
 import javax.swing.*
+import kotlin.jvm.optionals.getOrNull
 
 
 class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
@@ -22,30 +26,32 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val cards = CardLayout().also { layout = it }
 
     private val startLowerPanel: JPanel
-    private val startServicesPanel: JPanel
-    private val startServicesRemovalButtons = HashMap<Service, JButton>()
-    private val configureServiceForm: ConfigureServiceForm
-    private val configureServiceAuthorizeButton: JButton
-    private val authorizeServiceErrorTextArea: JTextArea
-    private val authorizeServiceResponseTextArea: JTextArea
+    private val startAccountsPanel: JPanel
+    private val startAccountsRemovalButtons = HashMap<Account, JButton>()
+
+    private val configureAccountForm: ConfigureAccountForm
+    private val configureAccountAuthorizeButton: JButton
+
+    private val authorizeAccountErrorTextArea: JTextArea
+    private val authorizeAccountResponseTextArea: JTextArea
 
     init {
         startPreferencesForm = PreferencesForm(welcomeCtrl).apply {
             background = null
         }
 
-        val startAddServiceButton = JButton(l10n("ui.preferences.services.add"), ADD_ICON).apply {
-            addActionListener { welcomeCtrl.preferences_start_onClickAddService() }
+        val startAddAccountButton = JButton(l10n("ui.preferences.accounts.add"), ADD_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_start_onClickAddAccount() }
         }
-        startServicesPanel = JPanel(MigLayout("insets 0, wrap 2, fillx", "[sg, fill][sg, fill]")).apply {
+        startAccountsPanel = JPanel(MigLayout("insets 0, wrap 2, fillx", "[sg, fill][sg, fill]")).apply {
             background = null
         }
 
         startLowerPanel = JPanel(MigLayout("insets 0, wrap")).apply {
             background = null
-            add(JSeparator(), "growx, gapy unrel unrel")
-            add(startAddServiceButton)
-            add(startServicesPanel, "grow, push, gaptop rel")
+            add(JSeparator(), "growx, pushx, gapy unrel unrel")
+            add(startAddAccountButton)
+            add(startAccountsPanel, "growx, pushx, gaptop rel")
         }
         val startWidgetsPanel = JPanel(MigLayout("insets 0, wrap, gapy 0")).apply {
             background = null
@@ -65,47 +71,52 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(startScrollPane, "grow, push, gaptop para")
         }
 
-        configureServiceForm = ConfigureServiceForm().apply {
+        configureAccountForm = ConfigureAccountForm().apply {
             background = null
         }
-        val configureServiceCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
-            addActionListener { welcomeCtrl.preferences_configureService_onClickCancel() }
+        val configureAccountCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_configureAccount_onClickCancel() }
         }
-        configureServiceAuthorizeButton = JButton(l10n("ui.preferences.services.configure.authorize"), ARROW_RIGHT_ICON)
-        configureServiceAuthorizeButton.addActionListener {
-            welcomeCtrl.preferences_configureService_onClickAuthorize(
-                configureServiceForm.labelWidget.value,
-                configureServiceForm.providerWidget.value
+        configureAccountAuthorizeButton = JButton().apply {
+            margin = Insets(1, 1, 1, margin.right)
+            iconTextGap = margin.right
+            putClientProperty(STYLE_CLASS, "large")
+        }
+        configureAccountAuthorizeButton.addActionListener {
+            welcomeCtrl.preferences_configureAccount_onClickAuthorize(
+                configureAccountForm.labelWidget.value,
+                configureAccountForm.serviceWidget.value.get()
             )
         }
-        val configureServicePanel = JPanel(MigLayout("insets 20, wrap")).apply {
+        configureAccountForm.onChange(configureAccountForm.labelWidget)  // Run validation
+        val configureAccountPanel = JPanel(MigLayout("insets 20, wrap")).apply {
             background = null
-            add(newLabelTextArea(l10n("ui.preferences.services.configure.prompt")), "growx")
-            add(configureServiceForm, "grow, push, gaptop para")
-            add(configureServiceCancelButton, "split 2, right")
-            add(configureServiceAuthorizeButton)
+            add(newLabelTextArea(l10n("ui.preferences.accounts.configure.prompt")), "growx")
+            add(configureAccountForm, "grow, push, gaptop para")
+            add(configureAccountCancelButton, "split 2, right, bottom")
+            add(configureAccountAuthorizeButton, "gapleft unrel, hidemode 3")
         }
 
-        authorizeServiceErrorTextArea = newLabelTextArea(l10n("ui.preferences.services.authorize.error")).apply {
+        authorizeAccountErrorTextArea = newLabelTextArea(l10n("ui.preferences.accounts.authorize.error")).apply {
             putClientProperty(STYLE, "foreground: $PALETTE_RED")
         }
-        authorizeServiceResponseTextArea = newLabelTextArea().apply {
+        authorizeAccountResponseTextArea = newLabelTextArea().apply {
             putClientProperty(STYLE, "foreground: $PALETTE_RED")
         }
-        val authorizeServiceCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
-            addActionListener { welcomeCtrl.preferences_authorizeService_onClickCancel() }
+        val authorizeAccountCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_authorizeAccount_onClickCancel() }
         }
-        val authorizeServicePanel = JPanel(MigLayout("insets 20, wrap", "", "[][][]push[]")).apply {
+        val authorizeAccountPanel = JPanel(MigLayout("insets 20, wrap", "", "[][][]push[]")).apply {
             background = null
-            add(newLabelTextArea(l10n("ui.preferences.services.authorize.msg")), "growx, pushx")
-            add(authorizeServiceErrorTextArea, "growx")
-            add(authorizeServiceResponseTextArea, "growx")
-            add(authorizeServiceCancelButton, "right")
+            add(newLabelTextArea(l10n("ui.preferences.accounts.authorize.msg")), "growx, pushx")
+            add(authorizeAccountErrorTextArea, "growx")
+            add(authorizeAccountResponseTextArea, "growx")
+            add(authorizeAccountCancelButton, "right")
         }
 
         add(startPanel, PreferencesCard.START.name)
-        add(configureServicePanel, PreferencesCard.CONFIGURE_SERVICE.name)
-        add(authorizeServicePanel, PreferencesCard.AUTHORIZE_SERVICE.name)
+        add(configureAccountPanel, PreferencesCard.CONFIGURE_ACCOUNT.name)
+        add(authorizeAccountPanel, PreferencesCard.AUTHORIZE_ACCOUNT.name)
     }
 
 
@@ -114,8 +125,6 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
        *************************** */
 
     fun preferences_setCard(card: PreferencesCard) {
-        if (card == PreferencesCard.CONFIGURE_SERVICE)
-            configureServiceForm.labelWidget.value = ""
         cards.show(this, card.name)
     }
 
@@ -125,55 +134,87 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         startPreferencesForm.setPreferencesSubmitButton(doneListener)
     }
 
-    fun preferences_start_setServices(services: List<Service>) {
-        startServicesPanel.removeAll()
-        startServicesRemovalButtons.keys.retainAll(services)
-        for (service in services) {
+    fun preferences_start_setAccounts(accounts: List<Account>) {
+        startAccountsPanel.removeAll()
+        startAccountsRemovalButtons.keys.retainAll(accounts)
+        for (account in accounts) {
             val removeButton = JButton(TRASH_ICON).apply {
-                addActionListener { welcomeCtrl.preferences_start_onClickRemoveService(service) }
+                addActionListener { welcomeCtrl.preferences_start_onClickRemoveAccount(account) }
             }
-            val servicePanel = JPanel(MigLayout("", "[]push[]")).apply {
+            val accountPanel = JPanel(MigLayout("", "[]push[]")).apply {
                 border = FlatRoundBorder()
-                add(JLabel(service.provider.label, GLOBE_ICON, JLabel.LEADING), "split 2, flowy")
-                add(JLabel(service.id, LABEL_ICON, JLabel.LEADING))
+                add(JLabel(account.service.product, GLOBE_ICON, JLabel.LEADING), "split 2, flowy")
+                add(JLabel(account.id, LABEL_ICON, JLabel.LEADING).apply { toolTipText = account.id }, "wmax 230")
                 add(removeButton)
             }
-            startServicesPanel.add(servicePanel)
-            startServicesRemovalButtons.merge(service, removeButton) { o, n -> n.apply { isEnabled = o.isEnabled } }
+            startAccountsPanel.add(accountPanel)
+            startAccountsRemovalButtons.merge(account, removeButton) { o, n -> n.apply { isEnabled = o.isEnabled } }
         }
+        startAccountsPanel.isVisible = accounts.isNotEmpty()
     }
 
-    fun preferences_start_setServiceRemovalLocked(service: Service, locked: Boolean) {
-        startServicesRemovalButtons[service]?.isEnabled = !locked
+    fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) {
+        startAccountsRemovalButtons[account]?.isEnabled = !locked
     }
 
-    fun preferences_authorizeService_setError(error: String?) {
+    fun preferences_configureAccount_resetForm() {
+        configureAccountForm.apply {
+            labelWidget.value = ""
+            serviceWidget.value = Optional.empty()
+        }
+        configureAccountForm.labelWidget.value = ""
+    }
+
+    fun preferences_authorizeAccount_setError(error: String?) {
         val hasError = error != null
-        authorizeServiceErrorTextArea.isVisible = hasError
-        authorizeServiceResponseTextArea.isVisible = hasError
-        authorizeServiceResponseTextArea.text = error ?: ""
+        authorizeAccountErrorTextArea.isVisible = hasError
+        authorizeAccountResponseTextArea.isVisible = hasError
+        authorizeAccountResponseTextArea.text = error ?: ""
     }
 
 
-    private inner class ConfigureServiceForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+    private inner class ConfigureAccountForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
 
         val labelWidget = addWidget(
-            l10n("ui.preferences.services.configure.label"),
-            TextWidget().apply { value = " " /* so that the first resetting of this widget triggers a verification */ },
-            verify = { label -> welcomeCtrl.preferences_verifyLabel(label)?.let { Notice(Severity.ERROR, it) } }
+            l10n("ui.preferences.accounts.configure.label"),
+            TextWidget(),
+            verify = { label ->
+                welcomeCtrl.preferences_configureAccount_verifyLabel(label)?.let { Notice(Severity.ERROR, it) }
+            }
         )
 
-        val providerWidget = addWidget(
-            l10n("ui.preferences.services.configure.provider"),
-            ComboBoxWidget(
-                ServiceProvider::class.java, SERVICE_PROVIDERS, widthSpec = WidthSpec.WIDE,
-                toString = ServiceProvider::label
-            )
+        val serviceWidget = addWidget(
+            l10n("ui.preferences.accounts.configure.service"),
+            OptionalComboBoxWidget(
+                Service::class.java, SERVICES, widthSpec = WidthSpec.WIDE,
+                toString = Service::product
+            ).apply { value = Optional.empty() },
+            verify = { optional ->
+                if (optional.isPresent) null else
+                    Notice(Severity.ERROR, l10n("ui.preferences.accounts.configure.noServiceSelected"))
+            }
         )
 
-        override fun onChange(widget: Widget<*>) {
+        public override fun onChange(widget: Widget<*>) {
             super.onChange(widget)
-            configureServiceAuthorizeButton.isEnabled = isErrorFree
+            val service = serviceWidget.value.getOrNull()
+            val authorizeText = service
+                ?.let { l10n("ui.preferences.accounts.configure.authorize", service.authenticator) }.orEmpty()
+            val authorizeIcon = service?.let {
+                val icon = service.icon
+                object : FlatAbstractIcon(36, 36, null) {
+                    override fun paintIcon(c: Component, g2: Graphics2D) {
+                        g2.color = Color.WHITE
+                        g2.fillRoundRect(0, 0, iconWidth, iconHeight, 4, 4)
+                        icon.paintIcon(c, g2, (iconWidth - icon.iconWidth) / 2, (iconHeight - icon.iconHeight) / 2)
+                    }
+                }
+            }
+            configureAccountAuthorizeButton.apply {
+                isVisible = isErrorFree
+                text = authorizeText
+                icon = authorizeIcon
+            }
         }
 
     }

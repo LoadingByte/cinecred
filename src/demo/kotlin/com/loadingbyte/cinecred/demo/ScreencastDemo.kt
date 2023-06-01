@@ -169,7 +169,7 @@ abstract class ScreencastDemo(
     protected val styPnl get() = projectCtrl.stylingDialog.panel
     protected val vidPnl get() = projectCtrl.videoDialog.panel
     protected val dlvPnl get() = projectCtrl.deliveryDialog.panel
-    protected fun prjImagePnl(pageIdx: Int) = prjPnl.leakedPreviewPanels[pageIdx].leakedImagePanel
+    protected fun prjImagePnl(pageIdx: Int) = prjPnl.leakedImagePanels[pageIdx]
     protected val styTree get() = styPnl.leakedStylingTree
     protected val styGlobForm get() = styPnl.leakedGlobalForm
     protected val styPageForm get() = styPnl.leakedPageStyleForm

@@ -6,18 +6,19 @@ import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toHex24
 import com.loadingbyte.cinecred.drawer.*
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
-import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_16_9
-import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.CUT_SAFE_AREA_4_3
-import com.loadingbyte.cinecred.ui.EditPagePreviewPanel.Companion.UNIFORM_SAFE_AREAS
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.table.AbstractTableModel
@@ -39,15 +40,12 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedSaveStylingButton get() = saveStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedGuidesButton get() = guidesToggleButton
-    @Deprecated("ENCAPSULATION LEAK") val leakedUniformSafeAreasButton get() = uniformSafeAreasToggleButton
-    @Deprecated("ENCAPSULATION LEAK") val leakedCutSafeArea16to9Button get() = cutSafeArea16to9ToggleButton
-    @Deprecated("ENCAPSULATION LEAK") val leakedCutSafeArea4to3Button get() = cutSafeArea4to3ToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingDialogButton get() = stylingDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedVideoDialogButton get() = videoDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
     @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
-    @Deprecated("ENCAPSULATION LEAK") val leakedPreviewPanels get() = previewPanels
+    @Deprecated("ENCAPSULATION LEAK") val leakedImagePanels get() = imagePanels
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
     // =========================================
 
@@ -112,7 +110,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
     }.apply {
         isFocusable = false
-        addChangeListener { previewPanels.forEach { it.zoom = zoom } }
+        addChangeListener { imagePanels.forEach { it.zoom = zoom } }
     }
 
     private val guidesToggleButton = newToolbarToggleButtonWithKeyListener(
@@ -128,27 +126,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 "<font color=\"${HEAD_TAIL_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
                 l10n("ui.edit.guidesTooltip.headTail") + "</html>",
         VK_G, CTRL_DOWN_MASK, isSelected = true
-    ) { isSelected ->
-        previewPanels.forEach { it.setLayerVisible(GUIDES, isSelected) }
+    ) {
+        refreshVisibleLayers()
     }
-    private val uniformSafeAreasToggleButton = newToolbarToggleButtonWithKeyListener(
-        UNIFORM_SAFE_AREAS_ICON, "<html>" + l10n("ui.edit.uniformSafeAreasTooltip").replace("\n", "<br>") + "</html>",
-        VK_M, CTRL_DOWN_MASK, isSelected = false
-    ) { isSelected ->
-        previewPanels.forEach { it.setLayerVisible(UNIFORM_SAFE_AREAS, isSelected) }
-    }
-    private val cutSafeArea16to9ToggleButton = newToolbarToggleButtonWithKeyListener(
-        X_16_TO_9_ICON, l10n("ui.edit.cutSafeAreaTooltip", "16", "9"),
-        VK_9, CTRL_DOWN_MASK, isSelected = false
-    ) { isSelected ->
-        previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_16_9, isSelected) }
-    }
-    private val cutSafeArea4to3ToggleButton = newToolbarToggleButtonWithKeyListener(
-        X_4_TO_3_ICON, l10n("ui.edit.cutSafeAreaTooltip", "4", "3"),
-        VK_3, CTRL_DOWN_MASK, isSelected = false
-    ) { isSelected ->
-        previewPanels.forEach { it.setLayerVisible(CUT_SAFE_AREA_4_3, isSelected) }
-    }
+    private val overlaysButton = newToolbarButton(
+        ADVANCED_ICON, l10n("ui.edit.overlaysTooltip"),
+        VK_O, CTRL_DOWN_MASK
+    )
+    private val overlaysMenu: DropdownPopupMenu = DropdownPopupMenu(overlaysButton)
 
     private val runtimeLabel = JLabel("\u2014").apply {
         putClientProperty(STYLE_CLASS, "monospaced")
@@ -168,7 +153,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
     private val deliveryDialogToggleButton = newToolbarToggleButtonWithKeyListener(
         PROJECT_DIALOG_DELIVERY_ICON, tooltip = l10n("ui.edit.toggleDeliveryDialog"),
-        VK_O, CTRL_DOWN_MASK, isSelected = false
+        VK_Q, CTRL_DOWN_MASK, isSelected = false
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.DELIVERY, selected)
     }
@@ -203,14 +188,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val logTableModel = LogTableModel()
 
-    // Utility to quickly get all PagePreviewPanels from the tabbed pane.
-    private val previewPanels: List<EditPagePreviewPanel>
-        get() = ArrayList<EditPagePreviewPanel>(pageTabs.tabCount).apply {
+    // Utility to quickly get all DeferredImagePanels from the tabbed pane.
+    private val imagePanels: List<DeferredImagePanel>
+        get() = buildList(pageTabs.tabCount) {
             for (tabIdx in 0 until pageTabs.tabCount)
-                add(pageTabs.getComponentAt(tabIdx) as EditPagePreviewPanel)
+                add(pageTabs.getComponentAt(tabIdx) as DeferredImagePanel)
         }
 
-    private var updatedProjectOnce = false
+    private var drawnProject: DrawnProject? = null
 
     private fun newToolbarButtonWithKeyListener(
         icon: Icon,
@@ -245,6 +230,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
 
+        overlaysButton.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e))
+                    SwingUtilities.invokeLater { overlaysMenu.toggle() }
+            }
+        })
+
         val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {
             toolTipText = text
         }
@@ -256,7 +248,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 rel[]rel
                 []0[]0[]0[]rel[shrinkprio 200]
                 0:unrel:[]unrel
-                []rel[]rel[]0[]0[]0[]
+                []rel[]rel[]0[]
                 rel[]rel:unrel:
                 [shrinkprio 300]0:rel:[]
                 rel:unrel:[]rel
@@ -277,9 +269,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
             add(zoomSlider, "width 50!")
             add(guidesToggleButton)
-            add(uniformSafeAreasToggleButton)
-            add(cutSafeArea16to9ToggleButton)
-            add(cutSafeArea4to3ToggleButton)
+            add(overlaysButton)
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(runtimeDescLabel, "wmin 0")
             add(runtimeLabel)
@@ -341,6 +331,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_SUBTRACT, CTRL_DOWN_MASK) { zoomSlider.zoom -= ZOOM_INCREMENT })
         keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
         keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
+        keyListeners.add(KeyListener(VK_O, CTRL_DOWN_MASK) { overlaysMenu.toggle() })
     }
 
     fun onSetDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
@@ -400,15 +391,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         logTableModel.log = log.sortedWith(compareByDescending(ParserMsg::severity).thenBy(ParserMsg::recordNo))
         // If there are errors in the log and updateProject() isn't called, an erroneous project has been opened.
         // In that case, show the big error mark.
-        if (log.any { it.severity == Severity.ERROR } && !updatedProjectOnce)
+        if (log.any { it.severity == Severity.ERROR } && drawnProject == null)
             pagePanelCards.show(pagePanel, "Error")
     }
 
     fun updateProject(drawnProject: DrawnProject) {
-        updatedProjectOnce = true
+        this.drawnProject = drawnProject
         // Update the pages tabs.
         pagePanelCards.show(pagePanel, "Pages")
-        updatePageTabs(drawnProject)
+        refreshPageTabs()
         // Adjust the total runtime label
         val global = drawnProject.project.styling.global
         val runtime = drawnProject.video.numFrames
@@ -418,7 +409,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         runtimeLabel.toolTipText = tooltip
     }
 
-    private fun updatePageTabs(drawnProject: DrawnProject) {
+    private fun refreshPageTabs() {
+        val drawnProject = this.drawnProject ?: return
         // First adjust the number of tabs to the number of pages.
         val numPages = drawnProject.drawnPages.size
         while (pageTabs.tabCount > numPages)
@@ -426,19 +418,72 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         while (pageTabs.tabCount < numPages) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val previewPanel = EditPagePreviewPanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
+            val imagePanel = DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
                 zoom = zoomSlider.zoom
-                setLayerVisible(GUIDES, guidesToggleButton.isSelected)
-                setLayerVisible(UNIFORM_SAFE_AREAS, uniformSafeAreasToggleButton.isSelected)
-                setLayerVisible(CUT_SAFE_AREA_16_9, cutSafeArea16to9ToggleButton.isSelected)
-                setLayerVisible(CUT_SAFE_AREA_4_3, cutSafeArea4to3ToggleButton.isSelected)
+                layers = getVisibleLayers()
                 zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
             }
-            pageTabs.addTab(tabTitle, PAGE_ICON, previewPanel)
+            pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel)
         }
-        // Then fill each tab with its corresponding page.
-        for ((drawnPage, previewPanel) in drawnProject.drawnPages.zip(previewPanels))
-            previewPanel.setContent(drawnProject.project.styling.global, drawnPage)
+        // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
+        for ((drawnPage, imagePanel) in drawnProject.drawnPages.zip(imagePanels)) {
+            val image = drawnPage.defImage.copy()
+            for (overlay in availableOverlays)
+                overlay.draw(drawnProject.project.styling.global.resolution, drawnPage.stageInfo, image)
+            imagePanel.setImageAndGrounding(image, drawnProject.project.styling.global.grounding)
+        }
+    }
+
+    var availableOverlays: List<Overlay> = emptyList()
+        set(overlays) {
+            if (field == overlays)
+                return
+            field = overlays
+            val selectedUUIDs = getSelectedOverlays().mapTo(HashSet(), Overlay::uuid)
+            overlaysMenu.removeAll()
+            for (overlay in overlays) {
+                val menuItem = object : DropdownPopupMenuCheckBoxItem<Overlay>(
+                    overlaysMenu, overlay, overlay.label, overlay.icon, isSelected = overlay.uuid in selectedUUIDs
+                ) {
+                    override fun onToggle() {
+                        refreshVisibleLayers()
+                    }
+                }
+                overlaysMenu.add(menuItem)
+            }
+            overlaysMenu.pack()
+            // Re-draw the overlays onto the page images.
+            refreshPageTabs()
+            // Notify the image panels if previously visible overlays have been removed.
+            refreshVisibleLayers()
+        }
+
+    private fun refreshVisibleLayers() {
+        val visibleLayers = getVisibleLayers()
+        for (imagePanel in imagePanels)
+            imagePanel.layers = visibleLayers
+    }
+
+    private fun getVisibleLayers(): List<DeferredImage.Layer> {
+        val layers = mutableListOf<DeferredImage.Layer>()
+        val nonImageOverlays = mutableListOf<Overlay>()
+        for (overlay in getSelectedOverlays())
+            when (overlay) {
+                is ImageOverlay -> layers += overlay
+                is SafeAreasOverlay, is AspectRatioOverlay, is LinesOverlay -> nonImageOverlays += overlay
+            }
+        layers += DELIVERED_LAYERS
+        layers += GUIDES
+        layers += nonImageOverlays
+        return layers
+    }
+
+    private fun getSelectedOverlays(): List<Overlay> = buildList {
+        for (idx in 0 until overlaysMenu.componentCount) {
+            val menuItem = overlaysMenu.getComponent(idx) as DropdownPopupMenuCheckBoxItem<*>
+            if (menuItem.isSelected)
+                add(menuItem.item as Overlay)
+        }
     }
 
 

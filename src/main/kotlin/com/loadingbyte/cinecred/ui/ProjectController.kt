@@ -119,6 +119,19 @@ class ProjectController(
         process(currentInput.updateAndGet { it.copy(styling = styling) })
     }
 
+    // STEP 4:
+    // Now that the creation of the ProjectController can no longer fail, we can add a listener to the overlays
+    // preference and be sure that it will be removed when the project is closed again.
+
+    private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
+        projectFrame.panel.availableOverlays = (Overlay.BUNDLED + overlays).sorted()
+    }
+
+    init {
+        OVERLAYS_PREFERENCE.addListener(overlaysListener)
+        overlaysListener(OVERLAYS_PREFERENCE.get())
+    }
+
     // END OF INITIALIZATION PROCEDURE
 
     private fun process(input: Input) {
@@ -182,6 +195,8 @@ class ProjectController(
             !deliveryDialog.panel.renderQueuePanel.onTryCloseProject(force)
         )
             return false
+
+        OVERLAYS_PREFERENCE.removeListener(overlaysListener)
 
         onClose()
 

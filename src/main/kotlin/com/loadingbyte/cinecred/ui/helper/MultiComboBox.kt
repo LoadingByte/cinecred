@@ -248,13 +248,11 @@ class MultiComboBox<E : Any>(
         putClientProperty(STYLE, "margin: \$ComboBox.padding")
     }
 
-    private inner class CustomMenuItem(val item: E, isSelected: Boolean, private val isOverflow: Boolean = false) :
-        JCheckBoxMenuItem(toString(item), isSelected), ActionListener {
+    private inner class CustomMenuItem(item: E, isSelected: Boolean, private val isOverflow: Boolean = false) :
+        DropdownPopupMenuCheckBoxItem<E>(popup, item, toString(item), isSelected = isSelected) {
 
         init {
-            putClientProperty("CheckBoxMenuItem.doNotCloseOnMouseClick", true)
             updateStyle()
-            addActionListener(this)
         }
 
         fun updateStyle() {
@@ -269,21 +267,7 @@ class MultiComboBox<E : Any>(
             putClientProperty(STYLE, "margin: \$ComboBox.padding; $overflowStyling")
         }
 
-        override fun actionPerformed(e: ActionEvent) {
-            // If we don't do this, the menu item loses the hover/navigation effect when it's toggled.
-            SwingUtilities.invokeLater { isArmed = true }
-
-            // When the user opens a popup that is so long it overlaps the box button, him releasing the mouse
-            // immediately afterwards actually selects the item he's hovering over if he moved the mouse ever so
-            // slightly. To avoid this undesired behavior, we cancel any item change that comes in too soon after the
-            // popup has been opened.
-            if (System.currentTimeMillis() - popup.lastOpenTime < 300) {
-                removeActionListener(this)
-                isSelected = !isSelected
-                addActionListener(this)
-                return
-            }
-
+        override fun onToggle() {
             if (isOverflow && !isSelected) {
                 popup.remove(this)
                 if (popup.componentCount == getNumFixedMenuItems() + 1 /* +1 is the separator */)

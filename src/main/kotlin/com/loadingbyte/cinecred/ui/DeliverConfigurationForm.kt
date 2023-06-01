@@ -60,14 +60,14 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     private val singleFileWidget = addWidget(
         l10n("ui.deliverConfig.singleFile"),
-        FileWidget(FileType.FILE, widthSpec = WidthSpec.WIDER),
+        FileWidget(FileType.FILE, FileAction.SAVE, widthSpec = WidthSpec.WIDER),
         isVisible = { !formatWidget.value.fileSeq },
         verify = ::verifyFile
     )
 
     private val seqDirWidget = addWidget(
         l10n("ui.deliverConfig.seqDir"),
-        FileWidget(FileType.DIRECTORY, widthSpec = WidthSpec.WIDER),
+        FileWidget(FileType.DIRECTORY, FileAction.SAVE, widthSpec = WidthSpec.WIDER),
         isVisible = { formatWidget.value.fileSeq },
         verify = ::verifyFile
     )

@@ -6,14 +6,17 @@ import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.formdev.flatlaf.ui.FlatRoundBorder
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.SERVICES
 import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.PreferencesCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
+import java.nio.file.Path
 import java.util.*
 import javax.swing.*
 import kotlin.jvm.optionals.getOrNull
@@ -28,12 +31,16 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val startLowerPanel: JPanel
     private val startAccountsPanel: JPanel
     private val startAccountsRemovalButtons = HashMap<Account, JButton>()
+    private val startOverlaysPanel: JPanel
 
     private val configureAccountForm: ConfigureAccountForm
     private val configureAccountAuthorizeButton: JButton
 
     private val authorizeAccountErrorTextArea: JTextArea
     private val authorizeAccountResponseTextArea: JTextArea
+
+    private val configureOverlayForm: ConfigureOverlayForm
+    private val configureOverlayDoneButton: JButton
 
     init {
         startPreferencesForm = PreferencesForm(welcomeCtrl).apply {
@@ -47,15 +54,25 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
         }
 
-        startLowerPanel = JPanel(MigLayout("insets 0, wrap")).apply {
+        val startAddOverlayButton = JButton(l10n("ui.preferences.overlays.add"), ADD_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_start_onClickAddOverlay() }
+        }
+        startOverlaysPanel = JPanel(MigLayout("insets 0, wrap 2, fillx", "[sg, fill][sg, fill]")).apply {
+            background = null
+        }
+
+        startLowerPanel = JPanel(MigLayout("insets 0, wrap, hidemode 3")).apply {
             background = null
             add(JSeparator(), "growx, pushx, gapy unrel unrel")
             add(startAddAccountButton)
             add(startAccountsPanel, "growx, pushx, gaptop rel")
+            add(JSeparator(), "growx, pushx, gapy unrel unrel")
+            add(startAddOverlayButton)
+            add(startOverlaysPanel, "growx, pushx, gaptop rel")
         }
-        val startWidgetsPanel = JPanel(MigLayout("insets 0, wrap, gapy 0")).apply {
+        val startWidgetsPanel = JPanel(MigLayout("insets 0 0 0 10, wrap, gapy 0")).apply {
             background = null
-            add(startPreferencesForm, "growx")
+            add(startPreferencesForm, "growx, pushx")
             add(startLowerPanel, "grow, push")
         }
         val startScrollPane = JScrollPane(startWidgetsPanel).apply {
@@ -65,7 +82,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             verticalScrollBar.unitIncrement = 10
             verticalScrollBar.blockIncrement = 100
         }
-        val startPanel = JPanel(MigLayout("insets 20, wrap")).apply {
+        val startPanel = JPanel(MigLayout("insets 20 20 20 10, wrap")).apply {
             background = null
             add(newLabelTextArea(l10n("ui.preferences.msg")), "hmin pref, growx")
             add(startScrollPane, "grow, push, gaptop para")
@@ -114,9 +131,37 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(authorizeAccountCancelButton, "right")
         }
 
+        configureOverlayForm = ConfigureOverlayForm().apply {
+            background = null
+        }
+        val configureOverlayCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_configureOverlay_onClickCancel() }
+        }
+        configureOverlayDoneButton = JButton(l10n("ok"), CHECK_ICON)
+        configureOverlayDoneButton.addActionListener {
+            welcomeCtrl.preferences_configureOverlay_onClickDone(
+                configureOverlayForm.typeWidget.value,
+                configureOverlayForm.nameWidget.value,
+                configureOverlayForm.aspectRatioHWidget.value,
+                configureOverlayForm.aspectRatioVWidget.value,
+                configureOverlayForm.linesColorWidget.value.run { if (isActive) value else null },
+                configureOverlayForm.linesHWidget.value,
+                configureOverlayForm.linesVWidget.value,
+                configureOverlayForm.imageFileWidget.value
+            )
+        }
+        val configureOverlayPanel = JPanel(MigLayout("insets 20, wrap")).apply {
+            background = null
+            add(newLabelTextArea(l10n("ui.preferences.overlays.configure.prompt")), "growx")
+            add(configureOverlayForm, "grow, push, gaptop para")
+            add(configureOverlayCancelButton, "split 2, right")
+            add(configureOverlayDoneButton)
+        }
+
         add(startPanel, PreferencesCard.START.name)
         add(configureAccountPanel, PreferencesCard.CONFIGURE_ACCOUNT.name)
         add(authorizeAccountPanel, PreferencesCard.AUTHORIZE_ACCOUNT.name)
+        add(configureOverlayPanel, PreferencesCard.CONFIGURE_OVERLAY.name)
     }
 
 
@@ -157,6 +202,28 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         startAccountsRemovalButtons[account]?.isEnabled = !locked
     }
 
+    fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>) {
+        startOverlaysPanel.removeAll()
+        for (overlay in overlays) {
+            val editButton = JButton(EDIT_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickEditOverlay(overlay) }
+            }
+            val removeButton = JButton(TRASH_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickRemoveOverlay(overlay) }
+            }
+            val overlayPanel = JPanel(MigLayout("", "[]push[][]")).apply {
+                border = FlatRoundBorder()
+                add(JLabel(overlay.label, overlay.icon, JLabel.LEADING).apply {
+                    toolTipText = overlay.label
+                }, "wmax 230")
+                add(editButton)
+                add(removeButton)
+            }
+            startOverlaysPanel.add(overlayPanel)
+        }
+        startOverlaysPanel.isVisible = overlays.isNotEmpty()
+    }
+
     fun preferences_configureAccount_resetForm() {
         configureAccountForm.apply {
             labelWidget.value = ""
@@ -170,6 +237,32 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         authorizeAccountErrorTextArea.isVisible = hasError
         authorizeAccountResponseTextArea.isVisible = hasError
         authorizeAccountResponseTextArea.text = error ?: ""
+    }
+
+    fun preferences_configureOverlay_setForm(
+        type: Class<out ConfigurableOverlay>,
+        name: String,
+        aspectRatioH: Double,
+        aspectRatioV: Double,
+        linesColor: Color?,
+        linesH: List<Int>,
+        linesV: List<Int>,
+        imageFile: Path
+    ) {
+        configureOverlayForm.apply {
+            typeWidget.value = type
+            nameWidget.value = name
+            aspectRatioHWidget.value = aspectRatioH
+            aspectRatioVWidget.value = aspectRatioV
+            linesColorWidget.value = Opt(linesColor != null, linesColor ?: OVERLAY_COLOR)
+            linesHWidget.value = linesH
+            linesVWidget.value = linesV
+            imageFileWidget.value = imageFile
+        }
+    }
+
+    fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) {
+        configureOverlayForm.imageFileWidget.fileExtAssortment = fileExtAssortment
     }
 
 
@@ -215,6 +308,78 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 text = authorizeText
                 icon = authorizeIcon
             }
+        }
+
+    }
+
+
+    private inner class ConfigureOverlayForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+
+        val typeWidget = addWidget(
+            l10n("ui.preferences.overlays.configure.type"),
+            ToggleButtonGroupWidget(
+                ConfigurableOverlay.TYPES,
+                toIcon = Overlay::icon,
+                toLabel = ConfigurableOverlay::typeName
+            )
+        )
+
+        val nameWidget = addWidget(
+            l10n("ui.preferences.overlays.configure.name"),
+            TextWidget(),
+            isVisible = { val t = typeWidget.value; t == LinesOverlay::class.java || t == ImageOverlay::class.java },
+            verify = { if (it.isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
+        )
+
+        val aspectRatioHWidget = makeAspectRatioSpinnerWidget()
+        val aspectRatioVWidget = makeAspectRatioSpinnerWidget()
+
+        init {
+            addWidget(
+                l10n("ui.overlays.type.aspectRatio"),
+                UnionWidget(
+                    listOf(aspectRatioHWidget, aspectRatioVWidget),
+                    labels = listOf(null, ":"), gaps = listOf("rel")
+                ),
+                isVisible = { typeWidget.value == AspectRatioOverlay::class.java }
+            )
+        }
+
+        val linesColorWidget = addWidget(
+            l10n("color"),
+            OptWidget(ColorWellWidget(allowAlpha = false)),
+            isVisible = { typeWidget.value == LinesOverlay::class.java }
+        )
+
+        val linesHWidget = addWidget(
+            l10n("ui.preferences.overlays.configure.linesH") + " [px]",
+            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 1, elementsPerRow = 3),
+            isVisible = { typeWidget.value == LinesOverlay::class.java }
+        )
+
+        val linesVWidget = addWidget(
+            l10n("ui.preferences.overlays.configure.linesV") + " [px]",
+            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 1, elementsPerRow = 3),
+            isVisible = { typeWidget.value == LinesOverlay::class.java }
+        )
+
+        val imageFileWidget = addWidget(
+            l10n("ui.overlays.type.image"),
+            FileWidget(FileType.FILE, FileAction.OPEN),
+            isVisible = { typeWidget.value == ImageOverlay::class.java }
+        )
+
+        private fun makeAspectRatioSpinnerWidget() = SpinnerWidget(
+            Double::class.javaObjectType, SpinnerNumberModel(1.0, 1.0, null, 1.0), widthSpec = WidthSpec.LITTLE
+        )
+
+        private fun makeLineSpinnerWidget() = SpinnerWidget(
+            Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 1), widthSpec = WidthSpec.LITTLE
+        )
+
+        override fun onChange(widget: Widget<*>) {
+            super.onChange(widget)
+            configureOverlayDoneButton.isEnabled = isErrorFree
         }
 
     }

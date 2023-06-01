@@ -64,6 +64,8 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
 
     var layers: List<Layer> = listOf()
         set(value) {
+            if (field == value)
+                return
             field = value
             // Rematerialize will call canvas.repaint() once it's done.
             rematerialize(contentChanged = true)

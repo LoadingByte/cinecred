@@ -8,11 +8,8 @@ import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
 import com.loadingbyte.cinecred.common.preserveTransform
 import java.awt.*
-import java.awt.event.ItemEvent
-import java.awt.event.KeyEvent
+import java.awt.event.*
 import java.awt.event.KeyEvent.*
-import java.awt.event.WindowAdapter
-import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
 import java.io.File
@@ -38,6 +35,8 @@ const val PALETTE_BLUE: String = "#3592C4"
 const val PALETTE_GRAY: String = "#AFB1B3"
 val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
 val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
+
+val OVERLAY_COLOR: Color = Color.GRAY
 
 
 /**
@@ -273,6 +272,41 @@ class DropdownPopupMenu(
         )
             toggle()
     }
+
+}
+
+open class DropdownPopupMenuCheckBoxItem<E>(
+    private val popup: DropdownPopupMenu,
+    val item: E,
+    label: String,
+    icon: Icon? = null,
+    isSelected: Boolean = false
+) : JCheckBoxMenuItem(label, icon, isSelected), ActionListener {
+
+    init {
+        putClientProperty("CheckBoxMenuItem.doNotCloseOnMouseClick", true)
+        addActionListener(this)
+    }
+
+    final override fun actionPerformed(e: ActionEvent) {
+        // If we don't do this, the menu item loses the hover/navigation effect when it's toggled.
+        SwingUtilities.invokeLater { isArmed = true }
+
+        // When the user opens a popup that is so long it overlaps the box button, him releasing the mouse
+        // immediately afterward actually selects the item he's hovering over if he moved the mouse ever so
+        // slightly. To avoid this undesired behavior, we cancel any item change that comes in too soon after the
+        // popup has been opened.
+        if (System.currentTimeMillis() - popup.lastOpenTime < 300) {
+            removeActionListener(this)
+            isSelected = !isSelected
+            addActionListener(this)
+            return
+        }
+
+        onToggle()
+    }
+
+    open fun onToggle() {}
 
 }
 

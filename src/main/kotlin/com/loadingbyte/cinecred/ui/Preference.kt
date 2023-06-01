@@ -1,11 +1,12 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Picture
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
-import kotlin.io.path.exists
-import kotlin.io.path.pathString
+import javax.imageio.ImageIO
+import kotlin.io.path.*
 
 
 interface Preference<P : Any> {
@@ -23,6 +24,7 @@ val CHECK_FOR_UPDATES_PREFERENCE: Preference<Boolean> = BooleanPreference("check
 val WELCOME_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("welcomeHintTrackPending", true)
 val PROJECT_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("projectHintTrackPending", true)
 val PROJECT_DIRS_PREFERENCE: Preference<List<Path>> = PathListPreference("projectDirs")
+val OVERLAYS_PREFERENCE: Preference<List<ConfigurableOverlay>> = OverlayListPreference("overlay")
 
 
 private abstract class AbstractPreference<P : Any> : Preference<P> {
@@ -88,6 +90,106 @@ private class LocaleWishPreference(override val key: String) : AbstractPreferenc
             is LocaleWish.Specific -> value.locale.toLanguageTag()
         }
         PreferencesToml.set(key, str)
+    }
+
+}
+
+
+private class OverlayListPreference(override val key: String) : AbstractPreference<List<ConfigurableOverlay>>() {
+
+    override fun doGet() = (PreferencesToml.get(key) as? List<*> ?: emptyList<Any>()).mapNotNull {
+        if (it !is Map<*, *>) return@mapNotNull null
+        val type = it["type"] as? String ?: return@mapNotNull null
+        when (type) {
+            "aspectRatio" -> {
+                val ratio = it["ratio"] as? String ?: return@mapNotNull null
+                val ratioParts = ratio.split(":")
+                if (ratioParts.size != 2) return@mapNotNull null
+                val h = ratioParts[0].toDoubleOrNull() ?: return@mapNotNull null
+                val v = ratioParts[1].toDoubleOrNull() ?: return@mapNotNull null
+                if (!h.isFinite() || h < 1.0 || !v.isFinite() || v < 1.0)
+                    return@mapNotNull null
+                AspectRatioOverlay(UUID.randomUUID(), h, v)
+            }
+            "lines" -> {
+                val name = it["name"] as? String ?: return@mapNotNull null
+                val color = (it["color"] as? String)?.let(::colorFromHex)
+                val hLines = (it["hLines"] as? List<*>)?.filterIsInstance<Int>() ?: emptyList()
+                val vLines = (it["vLines"] as? List<*>)?.filterIsInstance<Int>() ?: emptyList()
+                LinesOverlay(UUID.randomUUID(), name, color, hLines, vLines)
+            }
+            "image" -> {
+                val name = it["name"] as? String ?: return@mapNotNull null
+                val uuid = try {
+                    UUID.fromString(it["image"] as? String ?: return@mapNotNull null)
+                } catch (_: IllegalArgumentException) {
+                    return@mapNotNull null
+                }
+                val file = IMAGE_DIR.resolve("$uuid.png")
+                val image = try {
+                    ImageIO.read(file.toFile())
+                } catch (e: IOException) {
+                    LOGGER.error("Cannot read overlay image file '{}'.", file, e)
+                    return@mapNotNull null
+                }
+                ImageOverlay(uuid, name, Picture.Raster(image))
+            }
+            else -> null
+        }
+    }
+
+    override fun doSet(value: List<ConfigurableOverlay>) {
+        // Delete old overlay image files which are no longer used.
+        try {
+            if (IMAGE_DIR.exists())
+                for (file in IMAGE_DIR.listDirectoryEntries()) {
+                    val fileUUIDStr = file.nameWithoutExtension
+                    if (value.none { overlay -> overlay is ImageOverlay && overlay.uuid.toString() == fileUUIDStr })
+                        file.deleteIfExists()
+                }
+        } catch (e: IOException) {
+            LOGGER.error("Cannot delete old overlay image files.", e)
+        }
+        // Save overlay image files which have not yet been saved.
+        for (overlay in value)
+            if (overlay is ImageOverlay) {
+                val file = IMAGE_DIR.resolve("${overlay.uuid}.png")
+                if (!file.exists())
+                    try {
+                        file.parent.createDirectoriesSafely()
+                        ImageIO.write(overlay.raster.img, "png", file.toFile())
+                    } catch (e: IOException) {
+                        LOGGER.error("Cannot write the overlay image file '{}'.", file, e)
+                    }
+            }
+        // Update the overlay list in preferences.toml.
+        PreferencesToml.set(key, value.map { overlay ->
+            when (overlay) {
+                is AspectRatioOverlay -> mapOf(
+                    "type" to "aspectRatio",
+                    "ratio" to "${overlay.h}:${overlay.v}"
+                )
+                is LinesOverlay -> {
+                    val toml = mutableMapOf<String, Any>(
+                        "type" to "lines",
+                        "name" to overlay.name
+                    )
+                    if (overlay.color != null) toml["color"] = overlay.color.toHex24()
+                    if (overlay.hLines.isNotEmpty()) toml["hLines"] = overlay.hLines
+                    if (overlay.vLines.isNotEmpty()) toml["vLines"] = overlay.vLines
+                    toml
+                }
+                is ImageOverlay -> mapOf(
+                    "type" to "image",
+                    "name" to overlay.name,
+                    "image" to overlay.uuid.toString()
+                )
+            }
+        })
+    }
+
+    companion object {
+        private val IMAGE_DIR = CONFIG_DIR.resolve("overlays")
     }
 
 }

@@ -3,8 +3,11 @@ package com.loadingbyte.cinecred.ui.comms
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.ui.ConfigurableOverlay
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.Preference
+import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
+import java.awt.Color
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
 import java.nio.file.Path
@@ -56,12 +59,27 @@ interface WelcomeCtrlComms {
     fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P)
     fun preferences_start_onClickAddAccount()
     fun preferences_start_onClickRemoveAccount(account: Account)
+    fun preferences_start_onClickAddOverlay()
+    fun preferences_start_onClickEditOverlay(overlay: ConfigurableOverlay)
+    fun preferences_start_onClickRemoveOverlay(overlay: ConfigurableOverlay)
 
     fun preferences_configureAccount_verifyLabel(label: String): String? // Returns an error.
     fun preferences_configureAccount_onClickCancel()
     fun preferences_configureAccount_onClickAuthorize(label: String, service: Service)
 
     fun preferences_authorizeAccount_onClickCancel()
+
+    fun preferences_configureOverlay_onClickCancel()
+    fun preferences_configureOverlay_onClickDone(
+        type: Class<out ConfigurableOverlay>,
+        name: String,
+        aspectRatioH: Double,
+        aspectRatioV: Double,
+        linesColor: Color?,
+        linesH: List<Int>,
+        linesV: List<Int>,
+        imageFile: Path
+    )
 
 }
 
@@ -104,10 +122,24 @@ interface WelcomeViewComms {
     fun preferences_start_setProjectHintTrackPending(pending: Boolean)
     fun preferences_start_setAccounts(accounts: List<Account>)
     fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean)
+    fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>)
 
     fun preferences_configureAccount_resetForm()
 
     fun preferences_authorizeAccount_setError(error: String?)
+
+    fun preferences_configureOverlay_setForm(
+        type: Class<out ConfigurableOverlay>,
+        name: String,
+        aspectRatioH: Double,
+        aspectRatioV: Double,
+        linesColor: Color?,
+        linesH: List<Int>,
+        linesV: List<Int>,
+        imageFile: Path
+    )
+
+    fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?)
 
     fun setChangelog(changelog: String)
     fun setLicenses(licenses: List<License>)
@@ -120,6 +152,7 @@ interface WelcomeViewComms {
     fun showNotEmptyQuestion(projectDir: Path): Boolean
     fun showRestartUILocaleQuestion(newLocale: Locale): Boolean
     fun showCannotRemoveAccountMessage(account: Account, error: String)
+    fun showCannotReadOverlayImageMessage(file: Path, error: String)
 
 }
 
@@ -127,7 +160,7 @@ interface WelcomeViewComms {
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
 enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
-enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT }
+enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT, CONFIGURE_OVERLAY }
 
 
 class License(val name: String, val body: String)

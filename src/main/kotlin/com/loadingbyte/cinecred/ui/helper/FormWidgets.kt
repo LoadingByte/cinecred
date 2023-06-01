@@ -107,9 +107,9 @@ class TextListWidget(
 }
 
 
-class FileExtAssortment(val choices: List<String>, val default: String) {
+class FileExtAssortment(val choices: List<String>, val default: String? = null) {
     init {
-        require(default in choices)
+        require(default == null || default in choices)
     }
 }
 
@@ -122,24 +122,24 @@ abstract class AbstractFilenameWidget<V : Any>(
         tc.addFocusListener(object : FocusAdapter() {
             override fun focusLost(e: FocusEvent) {
                 val ass = fileExtAssortment
-                if (ass != null && ass.choices.none { text.endsWith(".$it", ignoreCase = true) })
+                if (ass?.default != null && ass.choices.none { text.endsWith(".$it", ignoreCase = true) })
                     text += ".${ass.default}"
             }
         })
     }
 
     var fileExtAssortment: FileExtAssortment? = null
-        set(newAssortment) {
-            if (field == newAssortment)
+        set(ass) {
+            if (field == ass)
                 return
             // When the list of admissible file extensions is changed and the field text doesn't end with an
             // admissible file extension anymore, remove the previous file extension (if there was any) and add
             // the default new one.
-            if (newAssortment != null && newAssortment.choices.none { text.endsWith(".$it", ignoreCase = true) }) {
+            if (ass?.default != null && ass.choices.none { text.endsWith(".$it", ignoreCase = true) }) {
                 field?.let { old -> text = text.removeAnySuffix(old.choices.map { ".$it" }, ignoreCase = true) }
-                text += ".${newAssortment.default}"
+                text += ".${ass.default}"
             }
-            field = newAssortment
+            field = ass
         }
 
 }
@@ -157,9 +157,11 @@ class FilenameWidget(
 
 
 enum class FileType { FILE, DIRECTORY }
+enum class FileAction { OPEN, SAVE }
 
 class FileWidget(
     fileType: FileType,
+    fileAction: FileAction,
     widthSpec: WidthSpec? = null
 ) : AbstractFilenameWidget<Path>() {
 
@@ -180,17 +182,28 @@ class FileWidget(
 
             if (ass != null) {
                 fc.isAcceptAllFileFilterUsed = false
-                for (fileExt in ass.choices) {
-                    val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
-                    fc.addChoosableFileFilter(filter)
-                    if (text.endsWith(".$fileExt"))
-                        fc.fileFilter = filter
+                when (fileAction) {
+                    FileAction.OPEN -> {
+                        val desc = ass.choices.joinToString { "*.$it" }
+                        fc.addChoosableFileFilter(FileNameExtensionFilter(desc, *ass.choices.toTypedArray()))
+                    }
+                    FileAction.SAVE ->
+                        for (fileExt in ass.choices) {
+                            val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
+                            fc.addChoosableFileFilter(filter)
+                            if (text.endsWith(".$fileExt"))
+                                fc.fileFilter = filter
+                        }
                 }
             }
 
-            if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            val result = when (fileAction) {
+                FileAction.OPEN -> fc.showOpenDialog(null)
+                FileAction.SAVE -> fc.showSaveDialog(null)
+            }
+            if (result == JFileChooser.APPROVE_OPTION) {
                 var newText = fc.selectedFile.absolutePath
-                if (ass != null) {
+                if (ass != null && fileAction == FileAction.SAVE) {
                     val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
                     newText = newText.removeAnySuffix(ass.choices.map { ".$it" }) + ".$selectedFileExt"
                 }
@@ -1505,6 +1518,10 @@ class SimpleListWidget<E : Any>(
     private val addBtn = JButton(ADD_ICON)
 
     private val panel = object : JPanel(MigLayout("hidemode 3, insets 0")) {
+        init {
+            background = null
+        }
+
         override fun getBaseline(width: Int, height: Int): Int {
             // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component
             // in the first row. We choose the first one which has a valid baseline.

@@ -271,8 +271,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     companion object {
 
         // These common layers are typically used. Additional layers may be defined by users of this class.
-        val FOREGROUND = Layer()
-        val GUIDES = Layer()
+        val FOREGROUND = object : Layer {}
+        val GUIDES = object : Layer {}
 
         val DELIVERED_LAYERS = listOf(FOREGROUND)
 
@@ -308,7 +308,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    class Layer
+    interface Layer
 
 
     sealed interface Coat {

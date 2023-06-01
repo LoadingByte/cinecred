@@ -2,16 +2,22 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.*
+import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
+import java.awt.Color
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.VK_ESCAPE
+import java.awt.image.BufferedImage
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI
@@ -25,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileSystemView
 import kotlin.io.path.*
+import kotlin.math.roundToInt
 
 
 class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
@@ -63,6 +70,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             welcomeView.preferences_start_setAccounts(accounts)
         }
     }
+    private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
+        welcomeView.preferences_start_setOverlays(overlays)
+    }
 
     /*
      * The [commence] method can be called multiple times on the same object. However, some things should only be run
@@ -80,6 +90,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     private var openBrowseSelection: Path? = null
     private var newBrowseSelection: Path? = null
+    private var currentlyEditedOverlay: ConfigurableOverlay? = null
 
     private val createProjectThread = AtomicReference<Thread?>()
     private val addAccountThread = AtomicReference<Thread?>()
@@ -90,15 +101,17 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         check(!::welcomeView.isInitialized)
         this.welcomeView = welcomeView
 
-        // Register the accounts listener.
+        // Register the accounts and overlays listeners.
         addAccountListListener(accountListListener)
+        OVERLAYS_PREFERENCE.addListener(overlaysListener)
 
-        // Retrieve the current preferences and accounts.
+        // Retrieve the current preferences, accounts, and overlays.
         welcomeView.preferences_start_setUILocaleWish(UI_LOCALE_PREFERENCE.get())
         welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
         accountListListener()
+        overlaysListener(OVERLAYS_PREFERENCE.get())
 
         // Remove all memorized directories which are no longer project directories.
         val memProjectDirs = PROJECT_DIRS_PREFERENCE.get().toMutableList()
@@ -114,6 +127,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         val dir = memProjectDirs.firstOrNull()?.parent ?: FileSystemView.getFileSystemView().defaultDirectory.toPath()
         welcomeView.projects_openBrowse_setCurrentDir(dir)
         welcomeView.projects_createBrowse_setCurrentDir(dir)
+
+        // We will later use the Picture mechanism for reading overlay images, so tell the UI which files that accepts.
+        welcomeView.preferences_configureOverlay_setImageFileExtAssortment(FileExtAssortment(Picture.EXTS.sorted()))
 
         welcomeView.setChangelog(CHANGELOG_HTML)
         welcomeView.setLicenses(LICENSES)
@@ -287,6 +303,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.removeListener(welcomeHintTrackPendingListener)
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
         removeAccountListListener(accountListListener)
+        OVERLAYS_PREFERENCE.removeListener(overlaysListener)
 
         createProjectThread.getAndSet(null)?.interrupt()
         addAccountThread.getAndSet(null)?.interrupt()
@@ -454,6 +471,91 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun preferences_authorizeAccount_onClickCancel() {
         addAccountThread.getAndSet(null)?.interrupt()
+        welcomeView.preferences_setCard(PreferencesCard.START)
+    }
+
+    override fun preferences_start_onClickAddOverlay() {
+        welcomeView.preferences_configureOverlay_setForm(
+            name = "",
+            type = AspectRatioOverlay::class.java,
+            aspectRatioH = 1.0,
+            aspectRatioV = 1.0,
+            linesColor = null,
+            linesH = emptyList(),
+            linesV = emptyList(),
+            imageFile = Path("")
+        )
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_OVERLAY)
+    }
+
+    override fun preferences_start_onClickEditOverlay(overlay: ConfigurableOverlay) {
+        currentlyEditedOverlay = overlay
+        welcomeView.preferences_configureOverlay_setForm(
+            type = overlay.javaClass,
+            name = when (overlay) {
+                is AspectRatioOverlay -> ""
+                is LinesOverlay -> overlay.name
+                is ImageOverlay -> overlay.name
+            },
+            aspectRatioH = if (overlay is AspectRatioOverlay) overlay.h else 1.0,
+            aspectRatioV = if (overlay is AspectRatioOverlay) overlay.v else 1.0,
+            linesColor = if (overlay is LinesOverlay) overlay.color else null,
+            linesH = if (overlay is LinesOverlay) overlay.hLines else emptyList(),
+            linesV = if (overlay is LinesOverlay) overlay.vLines else emptyList(),
+            imageFile = Path("")
+        )
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_OVERLAY)
+    }
+
+    override fun preferences_start_onClickRemoveOverlay(overlay: ConfigurableOverlay) {
+        OVERLAYS_PREFERENCE.set(OVERLAYS_PREFERENCE.get().filter { it != overlay })
+    }
+
+    override fun preferences_configureOverlay_onClickCancel() {
+        currentlyEditedOverlay = null
+        welcomeView.preferences_setCard(PreferencesCard.START)
+    }
+
+    override fun preferences_configureOverlay_onClickDone(
+        type: Class<out ConfigurableOverlay>,
+        name: String,
+        aspectRatioH: Double,
+        aspectRatioV: Double,
+        linesColor: Color?,
+        linesH: List<Int>,
+        linesV: List<Int>,
+        imageFile: Path
+    ) {
+        val edited = currentlyEditedOverlay
+        currentlyEditedOverlay = null
+        val uuid = edited?.uuid ?: UUID.randomUUID()
+        val newOverlay = when (type) {
+            AspectRatioOverlay::class.java -> AspectRatioOverlay(uuid, aspectRatioH, aspectRatioV)
+            LinesOverlay::class.java -> LinesOverlay(uuid, name, linesColor, linesH, linesV)
+            ImageOverlay::class.java ->
+                if (edited is ImageOverlay && imageFile == Path(""))
+                    ImageOverlay(uuid, name, edited.raster)
+                else try {
+                    val picture = Picture.read(imageFile)
+                    val defImage = DeferredImage()
+                    defImage.drawPicture(picture, 0.0, 0.0.toY())
+                    val image = BufferedImage(
+                        picture.width.roundToInt(), picture.height.roundToInt(), BufferedImage.TYPE_4BYTE_ABGR
+                    ).withG2 { g2 -> defImage.materialize(g2, DeferredImage.DELIVERED_LAYERS) }
+                    picture.dispose()
+                    ImageOverlay(uuid, name, Picture.Raster(image))
+                } catch (e: Exception) {
+                    welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())
+                    welcomeView.preferences_setCard(PreferencesCard.START)
+                    return
+                }
+            else -> throw IllegalArgumentException()
+        }
+        val newOverlays = OVERLAYS_PREFERENCE.get().toMutableList()
+        edited?.let(newOverlays::remove)
+        newOverlays.add(newOverlay)
+        newOverlays.sort()
+        OVERLAYS_PREFERENCE.set(newOverlays)
         welcomeView.preferences_setCard(PreferencesCard.START)
     }
 

@@ -38,7 +38,7 @@ abstract class ProjectDemo(filename: String, format: Format) : Demo(filename, fo
     protected val projectDir get() = projectCtrl.projectDir
     protected val prjFrame get() = projectCtrl.projectFrame
     protected val prjPanel get() = prjFrame.panel
-    protected fun prjImagePanel(pageIdx: Int) = prjPanel.leakedPreviewPanels[pageIdx].leakedImagePanel
+    protected fun prjImagePanel(pageIdx: Int) = prjPanel.leakedImagePanels[pageIdx]
     protected val styDialog get() = projectCtrl.stylingDialog
     protected val styPanel get() = styDialog.panel
     protected val vidDialog get() = projectCtrl.videoDialog

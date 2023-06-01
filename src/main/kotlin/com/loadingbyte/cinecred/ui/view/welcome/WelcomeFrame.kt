@@ -3,13 +3,16 @@ package com.loadingbyte.cinecred.ui.view.welcome
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.projectio.service.Account
+import com.loadingbyte.cinecred.ui.ConfigurableOverlay
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.*
+import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
 import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
 import com.loadingbyte.cinecred.ui.helper.center
 import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.makeWelcomeHintTrack
 import com.loadingbyte.cinecred.ui.play
+import java.awt.Color
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -120,10 +123,20 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_start_setAccounts(accounts)
     override fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) =
         panel.preferencesPanel.preferences_start_setAccountRemovalLocked(account, locked)
+    override fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>) =
+        panel.preferencesPanel.preferences_start_setOverlays(overlays)
     override fun preferences_configureAccount_resetForm() =
         panel.preferencesPanel.preferences_configureAccount_resetForm()
     override fun preferences_authorizeAccount_setError(error: String?) =
         panel.preferencesPanel.preferences_authorizeAccount_setError(error)
+    override fun preferences_configureOverlay_setForm(
+        type: Class<out ConfigurableOverlay>, name: String, aspectRatioH: Double, aspectRatioV: Double, linesColor: Color?,
+        linesH: List<Int>, linesV: List<Int>, imageFile: Path
+    ) = panel.preferencesPanel.preferences_configureOverlay_setForm(
+        type, name, aspectRatioH, aspectRatioV, linesColor, linesH, linesV, imageFile
+    )
+    override fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) =
+        panel.preferencesPanel.preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment)
     // @formatter:on
 
     override fun setChangelog(changelog: String) = panel.setChangelog(changelog)
@@ -176,6 +189,13 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         JOptionPane.showMessageDialog(
             this, arrayOf(l10n("ui.preferences.accounts.cannotRemove.msg", account.id), error),
             l10n("ui.preferences.accounts.cannotRemove.title"), JOptionPane.ERROR_MESSAGE
+        )
+    }
+
+    override fun showCannotReadOverlayImageMessage(file: Path, error: String) {
+        JOptionPane.showMessageDialog(
+            this, arrayOf(l10n("ui.preferences.overlays.configure.cannotReadImageFile.msg", file), error),
+            l10n("ui.preferences.overlays.configure.cannotReadImageFile.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 

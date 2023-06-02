@@ -24,6 +24,8 @@ Cinecred Changelog
 ### Fixes
 
 - Embedded pictures are now perfectly aligned at pixel boundaries.
+- SVGs without width and height attributes now default to the size of their
+  view box instead of vanishing.
 - Rendering a video with a non-ASCII filename no longer crashes on Windows.
 - Improved stability by letting Cinecred use up to 75% of the installed memory.
 - Most I/O errors are now caught and gracefully handled.

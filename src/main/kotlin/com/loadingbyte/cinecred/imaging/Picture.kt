@@ -10,11 +10,15 @@ import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import mkl.testarea.pdfbox2.extract.BoundingBoxFinder
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory
 import org.apache.batik.anim.dom.SVGOMDocument
-import org.apache.batik.bridge.*
+import org.apache.batik.bridge.BaseScriptingEnvironment
+import org.apache.batik.bridge.BridgeContext
+import org.apache.batik.bridge.GVTBuilder
+import org.apache.batik.bridge.SVGUtilities
 import org.apache.batik.bridge.svg12.SVG12BridgeContext
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.poi.xslf.draw.SVGUserAgent
 import org.slf4j.LoggerFactory
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
@@ -142,9 +146,15 @@ sealed interface Picture {
                 factory.createDocument(svgFile.toUri().toString(), it) as SVGOMDocument
             }
             val docRoot = doc.rootElement
+            // By default, Batik assumes that the viewport has size (1,1). If the SVG doesn't have the width and height
+            // attributes, Batik fits the SVG into the viewport, and as such, the SVG basically vanishes. Of course, the
+            // user can still get the SVG to show by scaling it back up in the program, but we'd like a better default.
+            // So we read the viewBox attribute of the SVG (which must exist when width/height are missing) and set the
+            // viewport size to the viewBox size. Apache POI has already implemented this, so we just steal their class.
+            val userAgent = SVGUserAgent().apply { initViewbox(doc) }
             val ctx = when {
-                doc.isSVG12 -> SVG12BridgeContext(UserAgentAdapter())
-                else -> BridgeContext(UserAgentAdapter())
+                doc.isSVG12 -> SVG12BridgeContext(userAgent)
+                else -> BridgeContext(userAgent)
             }
             ctx.isDynamic = true
 

@@ -39,12 +39,7 @@ val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 
 enum class Severity { INFO, WARN, ERROR }
 
-
-data class Resolution(
-    val widthPx: Int,
-    val heightPx: Int
-)
-
+data class Resolution(val widthPx: Int, val heightPx: Int)
 
 data class FPS(val numerator: Int, val denominator: Int) {
     val frac: Double
@@ -221,7 +216,7 @@ fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBun
 
 fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String {
     val effArgs = if (args.none { it is Float || it is Double }) args else {
-        val fmt = NumberFormat.getCompactNumberInstance()
+        val fmt = NumberFormat.getInstance()
         Array(args.size) { idx ->
             val arg = args[idx]
             if (arg is Float || arg is Double) fmt.format(arg) else arg

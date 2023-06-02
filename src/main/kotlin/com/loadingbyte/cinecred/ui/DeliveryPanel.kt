@@ -47,7 +47,7 @@ class DeliveryPanel(ctrl: ProjectController) : JPanel() {
         } + ")"
 
         layout = MigLayout("insets dialog, wrap", "", "[]20[]20[][]")
-        add(configurationForm, "width (100% - $horInsets)!")
+        add(configurationForm, "wmax (100% - $horInsets), center")
         add(specsAndIssuesPanel, "center")
         add(addButton, "split 2, growx")
         add(processButton, "growx")

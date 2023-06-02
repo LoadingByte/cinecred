@@ -348,7 +348,7 @@ class StyleForm<S : Style>(
     }
 
     private fun l10nKey(name: String) = "ui.styling." +
-            styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercase) +
+            styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercaseChar) +
             ".$name"
 
     fun <T : Style> castToStyle(styleClass: Class<T>): StyleForm<T> {

@@ -62,7 +62,7 @@ fun drawCardStage(
                     compoundImage.drawShape(
                         SPINE_GUIDE_COLOR,
                         Path2D.Double().apply { moveTo(-s, -s); lineTo(s, s); moveTo(-s, s); lineTo(s, -s) },
-                        x = info.x, y = imgY + anchor.yIn(spineHeight), fill = false
+                        x = info.x, y = imgY + anchor.yIn(spineHeight), fill = false, layer = GUIDES
                     )
                 // If this is a hooked spine, draw guides that show the hook's target and line.
                 if (spine.hookTo != null) {

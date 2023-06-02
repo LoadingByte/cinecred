@@ -595,7 +595,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 }
             }
             val appLicenses = rawAppLicenses.map { (lib, clf, text) ->
-                val fancyLib = lib.replace("/", " \u2192 ").replaceFirstChar(Char::uppercase)
+                val fancyLib = lib.replace("/", " \u2192 ").replaceFirstChar(Char::uppercaseChar)
                 val fancyClf = if (rawAppLicenses.count { (o, _, _) -> o == lib } > 1) "  [${clf.lowercase()}]" else ""
                 val fancyText = text.trim('\n')
                 License(fancyLib + fancyClf, fancyText)

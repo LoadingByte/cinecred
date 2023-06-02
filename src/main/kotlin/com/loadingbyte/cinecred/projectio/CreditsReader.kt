@@ -361,11 +361,15 @@ private class CreditsReader(
         }
 
         // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
-        // specified page style for the stage that starts immediately afterwards. Also reset the spine position offset.
+        // specified page style for the stage that starts immediately afterwards. Also reset the spine positioning info.
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
             nextStageStyle = newPageStyle
             nextStageDeclaredRow = row
+            nextSpineHookTo = 0
+            nextSpineHookVAnchor = VAnchor.MIDDLE
+            nextSpineSelfVAnchor = VAnchor.MIDDLE
             nextSpineHOffsetPx = 0.0
+            nextSpineVOffsetPx = 0.0
             isStageConclusionMarked = true
         }
         table.getString(row, "pageRuntime")?.let { str ->

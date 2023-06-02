@@ -177,7 +177,7 @@ private class KProperty1ListStyleSetting<S : Style, SUBJ : Any>(private val kPro
 
 
 private fun Class<*>.getGetter(fieldName: String) =
-    getDeclaredMethod("get" + fieldName.replaceFirstChar(Char::uppercase))
+    getDeclaredMethod("get" + fieldName.replaceFirstChar(Char::uppercaseChar))
 
 
 @Suppress("UNCHECKED_CAST")

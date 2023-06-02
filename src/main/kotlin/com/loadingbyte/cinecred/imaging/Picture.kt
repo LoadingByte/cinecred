@@ -237,7 +237,7 @@ sealed interface Picture {
         private val GS_LOGGER = LoggerFactory.getLogger("Ghostscript")
 
         private fun loadPostScript(psFile: Path): PDF {
-            val gs = GS_EXECUTABLE ?: throw IOException()
+            val gs = GS_EXECUTABLE ?: throw IOException("Ghostscript not found.")
             val tmpFile = createTempFile("cinecred-ps2pdf-", ".pdf")
             try {
                 val cmd = arrayOf(gs.pathString, "-sDEVICE=pdfwrite", "-o", tmpFile.pathString, psFile.pathString)

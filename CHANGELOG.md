@@ -18,6 +18,7 @@ Cinecred Changelog
 - The opacity setting in the color picker now has a slider and supports the
   0-100 range often found in specs.
 - Added the option to specify a layer's offset in polar coordinates.
+- Added support for reading TGA image files.
 - Added a translation to Simplified Chinese.
 
 ### Fixes

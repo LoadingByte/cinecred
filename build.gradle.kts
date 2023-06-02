@@ -74,6 +74,9 @@ dependencies {
     implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.34.1")
     implementation("com.google.apis", "google-api-services-sheets", "v4-rev20230227-2.0.0")
 
+    // Raster Image Reading and Writing
+    implementation("com.twelvemonkeys.imageio", "imageio-tga", "3.9.4")
+
     // SVG Reading and Writing
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
     implementation("org.apache.xmlgraphics", "batik-svggen", batikVersion)

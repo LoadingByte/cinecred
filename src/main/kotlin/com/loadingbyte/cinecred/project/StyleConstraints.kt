@@ -6,8 +6,7 @@ import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
 import com.loadingbyte.cinecred.project.BodyLayout.GRID
-import com.loadingbyte.cinecred.project.GridStructure.FREE
-import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
+import com.loadingbyte.cinecred.project.GridStructure.*
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
@@ -96,15 +95,20 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     ),
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
         if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(FREE, SQUARE_CELLS)
+        else if (style.gridForceColWidthPx.isActive) sortedSetOf(EQUAL_WIDTH_COLS, SQUARE_CELLS)
         else GridStructure.values().toSortedSet()
     },
+    DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchColWidthsAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.bodyLayout == GRID && o.gridMatchColWidths == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchColWidths == ACROSS_BLOCKS
+            }
         }
     ),
+    DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
         if (style.gridStructure == SQUARE_CELLS) sortedSetOf(OFF, ACROSS_BLOCKS)
         else MatchExtent.values().toSortedSet()
@@ -113,12 +117,16 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.bodyLayout == GRID && o.gridMatchRowHeight == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchRowHeight == ACROSS_BLOCKS
+            }
         }
     ),
     MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
     DoubleConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::flowForceCellHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
         if (sty.flowSquareCells) sortedSetOf(OFF, ACROSS_BLOCKS)
         else MatchExtent.values().toSortedSet()
@@ -127,14 +135,18 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.bodyLayout == FLOW && o.flowMatchCellWidth == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.bodyLayout == FLOW && !o.flowForceCellWidthPx.isActive && o.flowMatchCellWidth == ACROSS_BLOCKS
+            }
         }
     ),
     StyleNameConstr(
         ERROR, ContentStyle::flowMatchCellHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.bodyLayout == FLOW && o.flowMatchCellHeight == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.bodyLayout == FLOW && !o.flowForceCellHeightPx.isActive && o.flowMatchCellHeight == ACROSS_BLOCKS
+            }
         }
     ),
     DoubleConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0.0, minInclusive = false),
@@ -143,19 +155,25 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::headForceWidthPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::headMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.headMatchWidth == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.blockOrientation == HORIZONTAL && !o.headForceWidthPx.isActive && o.headMatchWidth == ACROSS_BLOCKS
+            }
         }
     ),
     DoubleConstr(ERROR, ContentStyle::headGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::tailForceWidthPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { _, styling, _ ->
-            styling.contentStyles.filter { o -> o.blockOrientation == HORIZONTAL && o.tailMatchWidth == ACROSS_BLOCKS }
+            styling.contentStyles.filter { o ->
+                o.blockOrientation == HORIZONTAL && !o.tailForceWidthPx.isActive && o.tailMatchWidth == ACROSS_BLOCKS
+            }
         }
     ),
     DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0)

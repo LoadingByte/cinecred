@@ -46,10 +46,12 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
 
 private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = listOf(
     UnitWidgetSpec(
-        ContentStyle::vMarginPx.st(), ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(),
-        ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(),
-        ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
-        ContentStyle::paragraphsLineGapPx.st(), ContentStyle::headGapPx.st(), ContentStyle::tailGapPx.st(),
+        ContentStyle::vMarginPx.st(), ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st(),
+        ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(), ContentStyle::flowForceCellWidthPx.st(),
+        ContentStyle::flowForceCellHeightPx.st(), ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(),
+        ContentStyle::flowHGapPx.st(), ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
+        ContentStyle::paragraphsLineGapPx.st(), ContentStyle::headForceWidthPx.st(), ContentStyle::headGapPx.st(),
+        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailGapPx.st(),
         unit = "px"
     ),
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),

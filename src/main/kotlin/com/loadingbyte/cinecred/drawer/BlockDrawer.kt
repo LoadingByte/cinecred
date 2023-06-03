@@ -54,10 +54,10 @@ private fun drawHorizontalBlocks(
     // user to justify all heads "left" in a meaningful way. For both widths that can be harmonized (i.e., head and tail
     // width), find which styles should harmonize together.
     val matchHeadWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::headMatchWidthAcrossStyles) {
-        blockOrientation == HORIZONTAL && headMatchWidth == ACROSS_BLOCKS
+        blockOrientation == HORIZONTAL && !headForceWidthPx.isActive && headMatchWidth == ACROSS_BLOCKS
     }
     val matchTailWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::tailMatchWidthAcrossStyles) {
-        blockOrientation == HORIZONTAL && tailMatchWidth == ACROSS_BLOCKS
+        blockOrientation == HORIZONTAL && !tailForceWidthPx.isActive && tailMatchWidth == ACROSS_BLOCKS
     }
 
     // Determine the groups of blocks which should share the same head/tail width, and of course also find those widths.
@@ -73,8 +73,8 @@ private fun drawHorizontalBlocks(
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = sharedHeadWidths[block] ?: block.head?.run { formatted(textCtx).width } ?: 0.0
-        val tailWidth = sharedTailWidths[block] ?: block.tail?.run { formatted(textCtx).width } ?: 0.0
+        val headWidth = resolveWidth(textCtx, block, block.style.headForceWidthPx, sharedHeadWidths, block.head)
+        val tailWidth = resolveWidth(textCtx, block, block.style.tailForceWidthPx, sharedTailWidths, block.tail)
 
         val headStartX = 0.0
         val headEndX = headStartX + headWidth
@@ -174,6 +174,22 @@ private inline fun matchWidth(
         group.associateWithTo(groupWidths) { width }
     }
     return groupWidths
+}
+
+
+private fun resolveWidth(
+    textCtx: TextContext,
+    block: Block,
+    force: Opt<Double>,
+    shared: Map<Block, Double>,
+    str: StyledString?
+): Double {
+    if (force.isActive)
+        return force.value
+    shared[block]?.let { return it }
+    if (str != null)
+        return str.formatted(textCtx).width
+    return 0.0
 }
 
 

@@ -14,6 +14,7 @@ Cinecred Changelog
 - Card content can now be freely arranged horizontally and vertically using new
   spine positioning options.
 - Vertical gaps in the credits spreadsheet may now be specified in pixels.
+- Grid cells, flow cells, and heads and tails can now be sized manually.
 - Added more fine-grained controls for vertical head and tail justification.
 - Added a dedicated coloring option for hiding helper layers.
 - The opacity setting in the color picker now has a slider and supports the

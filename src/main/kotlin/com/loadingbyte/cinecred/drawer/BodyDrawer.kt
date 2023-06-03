@@ -70,21 +70,25 @@ private fun drawBodyImagesWithGridBodyLayout(
     // to create neatly aligned tabular layouts that span multiple blocks. For both "extents" that can be harmonized
     // (i.e., col widths and row height), find which styles should harmonize together.
     val matchColWidthsPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchColWidthsAcrossStyles) {
-        bodyLayout == GRID && gridMatchColWidths == ACROSS_BLOCKS
+        bodyLayout == GRID && !gridForceColWidthPx.isActive && gridMatchColWidths == ACROSS_BLOCKS
     }
     val matchRowHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchRowHeightAcrossStyles) {
-        bodyLayout == GRID && gridMatchRowHeight == ACROSS_BLOCKS
+        bodyLayout == GRID && !gridForceRowHeightPx.isActive && gridMatchRowHeight == ACROSS_BLOCKS
     }
 
     // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
-    // also includes ungrouped blocks whose grid structure mandates square cells), and then find those shared widths.
+    // also includes ungrouped blocks whose grid structure mandates square cells, and ungrouped blocks with forced
+    // column width), and then find those shared widths.
     fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
     val sharedColWidthsPerBlock: Map<Block, DoubleArray> = matchExtent(
         blocks, matchColWidthsPartitionIds,
-        matchWithinBlock = { gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS },
+        matchWithinBlock = {
+            gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS || gridForceColWidthPx.isActive
+        },
         sharedBlockExtent = { block ->
+            val force = block.style.gridForceColWidthPx
             val cols = colsPerBlock.getValue(block)
-            DoubleArray(cols.size) { colIdx -> colWidth(cols[colIdx]) }
+            DoubleArray(cols.size) { colIdx -> force.orElse { colWidth(cols[colIdx]) } }
         },
         sharedGroupExtent = { group ->
             // This piece of code takes a group of blocks and produces the list of shared column widths.
@@ -106,8 +110,10 @@ private fun drawBodyImagesWithGridBodyLayout(
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
     val sharedRowHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchRowHeightPartitionIds,
-        matchWithinBlock = { gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS },
-        sharedBlockExtent = { block -> MutableDouble(maxElemHeight(block)) },
+        matchWithinBlock = {
+            gridForceRowHeightPx.isActive || gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS
+        },
+        sharedBlockExtent = { block -> MutableDouble(block.style.gridForceRowHeightPx.orElse { maxElemHeight(block) }) },
         sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
     )
 
@@ -163,7 +169,7 @@ private fun drawBodyImageWithGridBodyLayout(
     val numCols = cols.size
     val numRows = cols.maxOf { col -> col.size }
     val rowHeights = DoubleArray(numRows) { rowIdx ->
-        sharedRowHeight?.value ?: cols.maxOf { col -> col.getOrNull(rowIdx)?.getHeight() ?: 0.0 }
+        sharedRowHeight?.value ?: cols.maxOf { col -> if (rowIdx < col.size) col[rowIdx].getHeight() else 0.0 }
     }
 
     val bodyImage = DeferredImage(height = ((numRows - 1) * style.gridRowGapPx).toElasticY() + rowHeights.sum())
@@ -175,7 +181,7 @@ private fun drawBodyImageWithGridBodyLayout(
     val startColIdx = if (sharedColWidths != null && unocc == RIGHT_RETAIN) numCols - sharedColWidths.size else 0
     val endColIdx = if (sharedColWidths != null && unocc == LEFT_RETAIN) sharedColWidths.size else numCols
     for (colIdx in startColIdx until endColIdx) {
-        // Either get the column's shared width, or compute it now if the block's column widths are now shared.
+        // Either get the column's shared width, or compute it now if the block's column widths are not shared.
         val colWidth = when (sharedColWidths) {
             null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
             else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0]
@@ -282,10 +288,10 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // aligned grid-like yet dynamic layouts that can even span multiple blocks. For both "extents" that can be
     // harmonized (i.e., cell width and height), find which styles should harmonize together.
     val matchCellWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellWidthAcrossStyles) {
-        bodyLayout == FLOW && flowMatchCellWidth == ACROSS_BLOCKS
+        bodyLayout == FLOW && !flowForceCellWidthPx.isActive && flowMatchCellWidth == ACROSS_BLOCKS
     }
     val matchCellHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellHeightAcrossStyles) {
-        bodyLayout == FLOW && flowMatchCellHeight == ACROSS_BLOCKS
+        bodyLayout == FLOW && !flowForceCellHeightPx.isActive && flowMatchCellHeight == ACROSS_BLOCKS
     }
 
     // Determine the blocks which have uniform cell width or height, optionally shared across multiple blocks, and then
@@ -294,14 +300,14 @@ private fun drawBodyImagesWithFlowBodyLayout(
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
     val sharedCellWidthPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchCellWidthPartitionIds,
-        matchWithinBlock = { flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableDouble(maxElemWidth(block)) },
+        matchWithinBlock = { flowForceCellWidthPx.isActive || flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
+        sharedBlockExtent = { block -> MutableDouble(block.style.flowForceCellWidthPx.orElse { maxElemWidth(block) }) },
         sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemWidth)) }
     )
     val sharedCellHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
         blocks, matchCellHeightPartitionIds,
-        matchWithinBlock = { flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableDouble(maxElemHeight(block)) },
+        matchWithinBlock = { flowForceCellHeightPx.isActive || flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
+        sharedBlockExtent = { block -> MutableDouble(block.style.flowForceCellHeightPx.orElse { maxElemHeight(block) }) },
         sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
     )
 
@@ -629,3 +635,6 @@ private fun SingleLineHJustify.toHJustify() = when (this) {
     SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
     SingleLineHJustify.RIGHT -> HJustify.RIGHT
 }
+
+
+private inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()

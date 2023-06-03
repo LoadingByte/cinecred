@@ -447,7 +447,7 @@ private inline fun <E> flowIntoLines(
     if (list.isEmpty())
         return emptyList()
 
-    val queue: Queue<E> = LinkedList(list)
+    val queue: Queue<E> = ArrayDeque(list)
     val lines = ArrayList<MutableList<E>>()
     var x: Double
 

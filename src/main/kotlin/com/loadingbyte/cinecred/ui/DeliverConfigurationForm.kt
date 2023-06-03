@@ -177,10 +177,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val (project, _, _) = drawnProject ?: return false
 
         val format = formatWidget.value
-        val resMult = 2.0.pow(resolutionMultWidget.value)
-        val fpsMult = fpsMultWidget.value
-        val scan = if (format is VideoRenderJob.Format && format.interlacing) scanWidget.value else Scan.PROGRESSIVE
-        val cs = if (format is VideoRenderJob.Format) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
+        val resMult = if (resolutionMultWidget.isEnabled) 2.0.pow(resolutionMultWidget.value) else 1.0
+        val fpsMult = if (fpsMultWidget.isEnabled) fpsMultWidget.value else 1
+        val scan = if (scanWidget.isEnabled) scanWidget.value else Scan.PROGRESSIVE
+        val cs = if (colorSpaceWidget.isEnabled) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
 
         // Determine the scaled specs.
         val resolution = project.styling.global.resolution
@@ -194,7 +194,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             .associateWith { speed -> speed * resMult * fpsMult }
 
         // Display the scaled specs in the specs labels.
-        val decFmt = DecimalFormat("0.###")
+        val decFmt = DecimalFormat("0.##")
         panel.specsLabels[0].text = "$scaledWidth \u00D7 $scaledHeight"
         panel.specsLabels[2].text = when (cs) {
             VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
@@ -271,12 +271,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
-            val transparentGrounding = transparentGroundingWidget.value && format.supportsAlpha
+            val transparentGrounding = transparentGroundingWidget.isEnabled && transparentGroundingWidget.value
             val grounding = if (transparentGrounding) null else project.styling.global.grounding
-            val resolutionScaling = 2.0.pow(resolutionMultWidget.value)
-            val fpsScaling = fpsMultWidget.value
-            val scan = if (format is VideoRenderJob.Format && format.interlacing) scanWidget.value else Scan.PROGRESSIVE
-            val colorSpace = colorSpaceWidget.value
+            val resolutionScaling = if (resolutionMultWidget.isEnabled) 2.0.pow(resolutionMultWidget.value) else 1.0
+            val fpsScaling = if (fpsMultWidget.isEnabled) fpsMultWidget.value else 1
+            val scan = if (scanWidget.isEnabled) scanWidget.value else Scan.PROGRESSIVE
+            val colorSpace = if (colorSpaceWidget.isEnabled) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE

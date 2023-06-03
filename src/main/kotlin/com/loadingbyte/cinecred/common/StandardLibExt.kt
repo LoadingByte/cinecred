@@ -9,10 +9,6 @@ import kotlin.math.max
  */
 
 
-fun String.equalsAny(other: Collection<String>, ignoreCase: Boolean = false) =
-    other.any { equals(it, ignoreCase) }
-
-
 inline fun DoubleArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Double) -> Boolean): Boolean {
     for (idx in startIdx until endIdx)
         if (predicate(this[idx]))

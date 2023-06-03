@@ -2,7 +2,7 @@
 <installer-gui-script minSpecVersion="1">
   <title>Cinecred</title>
   <options customize="never" require-scripts="false" hostArchitectures="@ARCH@"/>
-  <pkg-ref id="Cinecred" version="@VERSION">Cinecred.pkg</pkg-ref>
+  <pkg-ref id="Cinecred" version="@VERSION@">Cinecred.pkg</pkg-ref>
   <choice id="Cinecred" visible="false">
     <pkg-ref id="Cinecred"/>
   </choice>

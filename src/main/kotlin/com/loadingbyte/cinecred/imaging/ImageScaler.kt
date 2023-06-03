@@ -26,6 +26,9 @@ private val cache = Collections.synchronizedMap(WeakHashMap<BufferedImage, Buffe
  *   - Scaling in linear RGB is not always advantageous, as is shown here: https://entropymine.com/imageworsener/gamma/
  */
 fun scaleImageLanczos(inImage: BufferedImage, outW: Int, outH: Int): BufferedImage {
+    if (inImage.width == outW && inImage.height == outH)
+        return inImage
+
     val cachedOutImage = cache[inImage]
     if (cachedOutImage != null && cachedOutImage.width == outW && cachedOutImage.height == outH)
         return cachedOutImage

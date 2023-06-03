@@ -129,7 +129,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.projects_createBrowse_setCurrentDir(dir)
 
         // We will later use the Picture mechanism for reading overlay images, so tell the UI which files that accepts.
-        welcomeView.preferences_configureOverlay_setImageFileExtAssortment(FileExtAssortment(Picture.EXTS.sorted()))
+        welcomeView.preferences_configureOverlay_setImageFileExtAssortment(FileExtAssortment(Picture.EXTS.toList()))
 
         welcomeView.setChangelog(CHANGELOG_HTML)
         welcomeView.setLicenses(LICENSES)

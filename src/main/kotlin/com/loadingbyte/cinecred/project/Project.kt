@@ -327,7 +327,7 @@ sealed interface Spine {
     val blocks: PersistentList<Block>
 
     class Card(
-        val hookTo: Spine.Card?,
+        val hookTo: Card?,
         val hookVAnchor: VAnchor,
         val selfVAnchor: VAnchor,
         val hOffsetPx: Double,

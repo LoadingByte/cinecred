@@ -533,7 +533,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     }
                 is FPSConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, fps ->
-                        if (fps.run { numerator <= 0 || denominator <= 0 || !frac.isFinite() })
+                        if (fps.run { numerator <= 0 || denominator <= 0 })
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.fps"))
                     }
                 is FontNameConstr ->

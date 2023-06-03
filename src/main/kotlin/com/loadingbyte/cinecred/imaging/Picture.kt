@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.imaging
 
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.equalsAny
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
@@ -98,11 +97,12 @@ sealed interface Picture {
         }
 
         private class AugmentedDoc(val doc: PDDocument) {
-            val minBox: Rectangle2D by lazy {
+            val minBox: Rectangle2D by lazy(::computeMinBox)
+            private fun computeMinBox() = synchronized(doc) {
                 // If the document has already been closed, the responsible project has just been closed. In that case,
                 // just return a dummy rectangle here to let the project closing finish regularly.
                 if (doc.document.isClosed)
-                    return@lazy Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
+                    return Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
                 val raw = BoundingBoxFinder(doc.pages[0]).apply { processPage(doc.pages[0]) }.boundingBox
                 // The raw bounding box y coordinate is actually relative to the bottom of the crop box, so we need
                 // to convert it such that it is relative to the top because the rest of our program works like that.
@@ -115,22 +115,22 @@ sealed interface Picture {
 
     companion object {
 
-        private val RASTER_EXTS = ImageIO.getReaderFileSuffixes().asList()
+        private val RASTER_EXTS = ImageIO.getReaderFileSuffixes().asList().toSortedSet(String.CASE_INSENSITIVE_ORDER)
         private const val SVG_EXT = "svg"
         private const val PDF_EXT = "pdf"
-        private val POSTSCRIPT_EXTS = listOf("ai", "eps", "ps")
+        private val POSTSCRIPT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ai", "eps", "ps")
 
-        val EXTS = RASTER_EXTS + SVG_EXT + PDF_EXT + POSTSCRIPT_EXTS
+        val EXTS = (RASTER_EXTS + SVG_EXT + PDF_EXT + POSTSCRIPT_EXTS).toSortedSet(String.CASE_INSENSITIVE_ORDER)
 
         /** @throws Exception */
         fun read(file: Path): Picture {
             val ext = file.extension
             if (file.isRegularFile())
                 when {
-                    ext.equalsAny(RASTER_EXTS, ignoreCase = true) -> return loadRaster(file)
+                    ext in RASTER_EXTS -> return loadRaster(file)
                     ext.equals(SVG_EXT, ignoreCase = true) -> return loadSVG(file)
                     ext.equals(PDF_EXT, ignoreCase = true) -> return loadPDF(file)
-                    ext.equalsAny(POSTSCRIPT_EXTS, ignoreCase = true) -> return loadPostScript(file)
+                    ext in POSTSCRIPT_EXTS -> return loadPostScript(file)
                 }
             throw IllegalArgumentException("Not a picture file: $file")
         }

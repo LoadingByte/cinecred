@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.CLEANER
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.VERSION
@@ -18,14 +19,12 @@ import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.ResourceScope
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
-import org.bytedeco.ffmpeg.avcodec.AVPacket
 import org.bytedeco.ffmpeg.avformat.AVFormatContext
 import org.bytedeco.ffmpeg.avformat.AVIOContext
 import org.bytedeco.ffmpeg.avformat.AVStream
 import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
-import org.bytedeco.ffmpeg.avutil.AVRational
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avformat.*
 import org.bytedeco.ffmpeg.global.avutil.*
@@ -38,8 +37,8 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
 import java.io.Closeable
 import java.lang.invoke.VarHandle
-import java.lang.ref.Cleaner
 import java.nio.file.Path
+import kotlin.io.path.name
 import kotlin.io.path.pathString
 
 
@@ -81,7 +80,7 @@ class MuxerFormat(val name: String, val supportedCodecIds: Set<Int>, val extensi
  * The code inside this class is adapted from here: https://ffmpeg.org/doxygen/trunk/muxing_8c-example.html
  */
 class VideoWriter(
-    fileOrDir: Path,
+    fileOrPattern: Path,
     private val resolution: Resolution,
     /** Note: When `scan` is interlaced, `fps` still refers to the number of full (and not half) frames per second. */
     fps: FPS,
@@ -120,7 +119,7 @@ class VideoWriter(
     init {
         try {
             setup(
-                fileOrDir, fps,
+                fileOrPattern, fps,
                 outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients,
                 codecName, codecProfile, codecOptions, muxerOptions
             )
@@ -135,7 +134,7 @@ class VideoWriter(
     }
 
     private fun setup(
-        fileOrDir: Path,
+        fileOrPattern: Path,
         fps: FPS,
         outPixelFormat: Int,
         outRange: Range,
@@ -154,23 +153,23 @@ class VideoWriter(
         // Build a pipeline that converts BufferedImages into the desired format.
         configurePipeline(outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients)
 
-        // Allocate the output media context.
+        // Allocate the format context.
         val oc = AVFormatContext(null)
         this.oc = oc
         // When we let JavaCPP convert the string to a byte array by directly passing it to the FFmpeg function, it
         // doesn't use the UTF-8 encoding on Windows. However, this encoding seems to be assumed by FFmpeg, so we get
         // crashes when non-ASCII characters are used. Hence, we force UTF-8 encoding here.
-        val encodedFilename = BytePointer(fileOrDir.pathString, Charsets.UTF_8)
+        val encodedFilename = BytePointer(fileOrPattern.pathString, Charsets.UTF_8)
         avformat_alloc_output_context2(oc, null, null, encodedFilename)
             .ffmpegThrowIfErrnum("Could not deduce output muxer from file extension")
         // Will be freed by avformat_free_context().
-        oc.metadata(AVDictionary().also { metaDict ->
+        oc.metadata(AVDictionary(null).also { metaDict ->
             av_dict_set(metaDict, "encoding_tool", "Cinecred $VERSION", 0)
             av_dict_set(metaDict, "company_name", "Cinecred", 0)
             av_dict_set(metaDict, "product_name", "Cinecred $VERSION", 0)
         })
 
-        // Find the encoder.
+        // Find the codec.
         val codec = avcodec_find_encoder_by_name(codecName)
             .ffmpegThrowIfNull("Could not find encoder '$codecName'")
 
@@ -181,28 +180,28 @@ class VideoWriter(
         // Assigning the stream ID dynamically is technically unnecessary because we only have one stream.
         st.id(oc.nb_streams() - 1)
 
-        // Allocate and configure the codec.
+        // Allocate and configure the encoder.
         val enc = avcodec_alloc_context3(codec)
-            .ffmpegThrowIfNull("Could not allocate encoding context")
+            .ffmpegThrowIfNull("Could not allocate encoder")
         this.enc = enc
         configureCodec(fps, outPixelFormat, outRange, outTransferCharacteristic, outYCbCrCoefficients, codecProfile)
 
-        // Now that all the parameters are set, we can open the video codec and allocate the necessary encode buffer.
+        // Now that all the parameters are set, we can open the encoder and allocate the necessary encode buffer.
         withOptionsDict(codecOptions) { codecOptionsDict ->
             avcodec_open2(enc, codec, codecOptionsDict)
                 .ffmpegThrowIfErrnum("Could not open encoder")
         }
 
-        // Copy the stream parameters to the muxer.
+        // Copy the encoder parameters to the stream.
         avcodec_parameters_from_context(st.codecpar(), enc)
-            .ffmpegThrowIfErrnum("Could not copy the stream parameters to the muxer")
+            .ffmpegThrowIfErrnum("Could not copy the encoder parameters to the stream")
 
         withOptionsDict(muxerOptions) { muxerOptionsDict ->
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
                 avio_open2(pb, encodedFilename, AVIO_FLAG_WRITE, null, muxerOptionsDict)
-                    .ffmpegThrowIfErrnum("Could not open output file '$fileOrDir'")
+                    .ffmpegThrowIfErrnum("Could not open output file '${fileOrPattern.name}'")
                 oc.pb(pb)
             }
 
@@ -311,13 +310,12 @@ class VideoWriter(
         // of which frame timestamps are represented. For fixed-fps content,
         // timebase should be 1/framerate and timestamp increments should be
         // identical to 1.
-        val timebase = AVRational().apply { num(fps.denominator); den(fps.numerator) }
-        st.time_base(timebase)
-        enc.time_base(timebase)
+        st.time_base().apply { num(fps.denominator); den(fps.numerator) }
+        enc.time_base().apply { num(fps.denominator); den(fps.numerator) }
 
         // Some muxers, for example MKV, require the framerate to be set directly on the stream.
         // Otherwise, they infer it incorrectly.
-        st.avg_frame_rate(AVRational().apply { num(fps.numerator); den(fps.denominator) })
+        st.avg_frame_rate().apply { num(fps.numerator); den(fps.denominator) }
 
         // Some formats want stream headers to be separate.
         if (oc.oformat().flags() and AVFMT_GLOBALHEADER != 0)
@@ -348,7 +346,7 @@ class VideoWriter(
         val frame = allocFrame(workResolution.widthPx, image.height, pipe!!.outPixelFormat, buf = true)
         pipe!!.process(image, frame)
         val preparedFrame = PreparedFrameImpl(frame)
-        preparedFrameCleaner.register(preparedFrame, FrameCleanerAction(frame))
+        CLEANER.register(preparedFrame, FrameCleanerAction(frame))
         return preparedFrame
     }
 
@@ -440,11 +438,10 @@ class VideoWriter(
         avcodec_send_frame(enc, frame)
             .ffmpegThrowIfErrnum("Error while sending a frame to the encoder")
 
-        var ret = 0
-        while (ret >= 0) {
-            val pkt = AVPacket()
+        while (true) {
+            val pkt = av_packet_alloc()
             try {
-                ret = avcodec_receive_packet(enc, pkt)
+                val ret = avcodec_receive_packet(enc, pkt)
                 if (ret == AVERROR_EAGAIN() || ret == AVERROR_EOF)
                     break
                 ret.ffmpegThrowIfErrnum("Error while receiving an encoded packet from the encoder")
@@ -460,7 +457,7 @@ class VideoWriter(
                 av_packet_rescale_ts(pkt, enc.time_base(), st.time_base())
 
                 // Write the compressed frame to the media file.
-                ret = av_interleaved_write_frame(oc, pkt)
+                av_interleaved_write_frame(oc, pkt)
                     .ffmpegThrowIfErrnum("Error while writing an encoded packet to the stream")
             } finally {
                 av_packet_unref(pkt)
@@ -521,8 +518,6 @@ class VideoWriter(
         // SIMD instructions require the buffers to have certain alignment. The strictest of them all is AVX-512, which
         // requires 512-bit alignment.
         private const val BYTE_ALIGNMENT = 64
-
-        private val preparedFrameCleaner = Cleaner.create()
 
         private inline fun <P : Pointer> P?.letIfNonNull(block: (P) -> Unit) {
             if (this != null && !this.isNull)

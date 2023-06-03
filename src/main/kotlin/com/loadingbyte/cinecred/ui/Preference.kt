@@ -223,6 +223,7 @@ private object PreferencesToml {
         if (!exists()) {
             val legacyRoot = java.util.prefs.Preferences.userRoot()
             if (legacyRoot.nodeExists("com/loadingbyte/cinecred")) {
+                toml[SET_UP_PREFERENCE.key] = true
                 val legacyPrefs = legacyRoot.node("com/loadingbyte/cinecred")
                 legacyPrefs.get("ui_locale", null)
                     ?.let { toml[UI_LOCALE_PREFERENCE.key] = it }

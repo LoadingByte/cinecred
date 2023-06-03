@@ -478,7 +478,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 is SafeAreasOverlay, is AspectRatioOverlay, is LinesOverlay -> nonImageOverlays += overlay
             }
         layers += DELIVERED_LAYERS
-        layers += GUIDES
+        if (guidesToggleButton.isSelected)
+            layers += GUIDES
         layers += nonImageOverlays
         return layers
     }

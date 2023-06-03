@@ -820,10 +820,10 @@ private class CreditsReader(
         val HEAD_KW = Keyword("projectIO.credits.table.head")
         val BODY_KW = Keyword("projectIO.credits.table.body")
         val TAIL_KW = Keyword("projectIO.credits.table.tail")
-        val CROP_KW = Keyword("projectIO.credits.table.crop")
         val BLANK_KW = Keyword("blank")
         val STYLE_KW = Keyword("projectIO.credits.table.style")
         val PIC_KW = Keyword("projectIO.credits.table.pic")
+        val CROP_KW = Keyword("projectIO.credits.table.crop")
 
         val TAG_DELIMITERS = listOf("{{", "}}")
 

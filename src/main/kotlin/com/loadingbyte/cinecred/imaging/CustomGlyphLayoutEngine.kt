@@ -17,7 +17,6 @@ import jdk.incubator.foreign.ResourceScope.newConfinedScope
 import jdk.incubator.foreign.SegmentAllocator.ofScope
 import sun.font.*
 import java.awt.geom.Point2D
-import java.lang.ref.Cleaner
 import java.util.*
 
 
@@ -156,7 +155,6 @@ class CustomGlyphLayoutEngine private constructor(
 
 
         private val hbFaces = WeakHashMap<Font2D, MemoryAddress>()
-        private val hbFaceCleaner = Cleaner.create()
 
         private fun getHBFace(font: Font2D) =
             synchronized(hbFaces) {
@@ -175,7 +173,7 @@ class CustomGlyphLayoutEngine private constructor(
                         }
                     }, faceScope)
                     val face = hb_face_create_for_tables(tableFunc, NULL, destroyFunc(faceScope))
-                    hbFaceCleaner.register(font, FaceCleanerAction(face))
+                    CLEANER.register(font, FaceCleanerAction(face))
                     face
                 }
             }

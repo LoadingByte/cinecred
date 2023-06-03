@@ -63,7 +63,7 @@ dependencies {
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
     implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.20.0")
 
-    // Spreadsheet Reading and Writing
+    // Spreadsheet IO
     implementation("org.apache.poi", "poi", poiVersion)
     implementation("org.apache.poi", "poi-ooxml", poiVersion)
     implementation("com.github.miachm.sods", "SODS", "1.5.4")
@@ -74,20 +74,20 @@ dependencies {
     implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.34.1")
     implementation("com.google.apis", "google-api-services-sheets", "v4-rev20230227-2.0.0")
 
-    // Raster Image Reading and Writing
+    // Raster Image IO
     implementation("com.twelvemonkeys.imageio", "imageio-tga", "3.9.4")
 
-    // SVG Reading and Writing
+    // SVG IO
     implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
     implementation("org.apache.xmlgraphics", "batik-svggen", batikVersion)
     // For pictures embedded in the SVG:
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
-    // PDF Reading and Writing
+    // PDF IO
     implementation("org.apache.pdfbox", "pdfbox", "2.0.28")
     implementation("de.rototor.pdfbox", "graphics2d", "0.42")
 
-    // Video Encoding
+    // Video IO
     implementation("org.bytedeco", "javacpp", javacppVersion)
     implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
     for (platform in Platform.values()) {

@@ -20,6 +20,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.StringWriter
+import java.lang.ref.Cleaner
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
@@ -35,6 +36,7 @@ import kotlin.io.path.writeText
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
+val CLEANER: Cleaner = Cleaner.create()
 
 
 enum class Severity { INFO, WARN, ERROR }

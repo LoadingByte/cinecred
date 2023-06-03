@@ -41,6 +41,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     private val configureOverlayForm: ConfigureOverlayForm
     private val configureOverlayDoneButton: JButton
+    private val configureOverlayApplyButton: JButton
 
     init {
         startPreferencesForm = PreferencesForm(welcomeCtrl).apply {
@@ -137,9 +138,10 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val configureOverlayCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
             addActionListener { welcomeCtrl.preferences_configureOverlay_onClickCancel() }
         }
-        configureOverlayDoneButton = JButton(l10n("ok"), CHECK_ICON)
-        configureOverlayDoneButton.addActionListener {
-            welcomeCtrl.preferences_configureOverlay_onClickDone(
+
+        fun configureOverlayDoneOrApplyCallback(done: Boolean) {
+            welcomeCtrl.preferences_configureOverlay_onClickDoneOrApply(
+                done,
                 configureOverlayForm.typeWidget.value,
                 configureOverlayForm.nameWidget.value,
                 configureOverlayForm.aspectRatioHWidget.value,
@@ -150,12 +152,19 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 configureOverlayForm.imageFileWidget.value
             )
         }
+        configureOverlayDoneButton = JButton(l10n("ok"), CHECK_ICON).apply {
+            addActionListener { configureOverlayDoneOrApplyCallback(true) }
+        }
+        configureOverlayApplyButton = JButton(l10n("apply"), CHECK_ICON).apply {
+            addActionListener { configureOverlayDoneOrApplyCallback(false) }
+        }
         val configureOverlayPanel = JPanel(MigLayout("insets 20, wrap")).apply {
             background = null
             add(newLabelTextArea(l10n("ui.preferences.overlays.configure.prompt")), "growx")
             add(configureOverlayForm, "grow, push, gaptop para")
-            add(configureOverlayCancelButton, "split 2, right")
+            add(configureOverlayCancelButton, "split 3, right")
             add(configureOverlayDoneButton)
+            add(configureOverlayApplyButton)
         }
 
         add(startPanel, PreferencesCard.START.name)
@@ -353,13 +362,15 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         val linesHWidget = addWidget(
             l10n("ui.preferences.overlays.configure.linesH") + " [px]",
-            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 1, elementsPerRow = 3),
+            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 0, elementsPerRow = 2),
+            description = l10n("ui.preferences.overlays.configure.lines.desc"),
             isVisible = { typeWidget.value == LinesOverlay::class.java }
         )
 
         val linesVWidget = addWidget(
             l10n("ui.preferences.overlays.configure.linesV") + " [px]",
-            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 1, elementsPerRow = 3),
+            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 0, elementsPerRow = 2),
+            description = l10n("ui.preferences.overlays.configure.lines.desc"),
             isVisible = { typeWidget.value == LinesOverlay::class.java }
         )
 
@@ -374,7 +385,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         )
 
         private fun makeLineSpinnerWidget() = SpinnerWidget(
-            Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 1), widthSpec = WidthSpec.LITTLE
+            Int::class.javaObjectType, SpinnerNumberModel(0, null, null, 1), widthSpec = WidthSpec.LITTLE
         )
 
         override fun onChange(widget: Widget<*>) {

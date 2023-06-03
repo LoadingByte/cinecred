@@ -114,13 +114,13 @@ fun drawLinesOverlay(
     for (cardInfo in stageInfo)
         if (cardInfo is DrawnStageInfo.Card)
             for (hLine in hLines) {
-                val y = cardInfo.middleY - resolution.heightPx / 2.0 + hLine.toDouble()
+                val y = cardInfo.middleY + hLine.toDouble()
                 image.drawLine(color, 0.0, y, resolution.widthPx.toDouble(), y, layer = layer)
             }
 
     // Draw vertical lines across the whole page.
     for (vLine in vLines) {
-        val x = vLine.toDouble()
+        val x = resolution.widthPx / 2.0 + vLine
         image.drawLine(color, x, 0.0.toY(), x, image.height, layer = layer)
     }
 }

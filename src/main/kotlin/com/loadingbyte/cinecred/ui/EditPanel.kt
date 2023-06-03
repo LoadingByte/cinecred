@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
+import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
@@ -451,6 +452,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 }
                 overlaysMenu.add(menuItem)
             }
+            overlaysMenu.add(JSeparator())
+            overlaysMenu.add(JMenuItem(l10n("ui.edit.overlaysAdd"), ARROW_RIGHT_ICON).apply {
+                addActionListener { ctrl.masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES) }
+            })
             overlaysMenu.pack()
             // Re-draw the overlays onto the page images.
             refreshPageTabs()
@@ -480,8 +485,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun getSelectedOverlays(): List<Overlay> = buildList {
         for (idx in 0 until overlaysMenu.componentCount) {
-            val menuItem = overlaysMenu.getComponent(idx) as DropdownPopupMenuCheckBoxItem<*>
-            if (menuItem.isSelected)
+            val menuItem = overlaysMenu.getComponent(idx)
+            if (menuItem is DropdownPopupMenuCheckBoxItem<*> && menuItem.isSelected)
                 add(menuItem.item as Overlay)
         }
     }

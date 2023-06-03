@@ -1315,6 +1315,8 @@ class OptWidget<E : Any>(
 ) : Form.AbstractWidget<Opt<E>>() {
 
     init {
+        // By default, the checkbox is deselected, so the wrapped widget needs to be disabled.
+        wrapped.isEnabled = false
         // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
         wrapped.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }

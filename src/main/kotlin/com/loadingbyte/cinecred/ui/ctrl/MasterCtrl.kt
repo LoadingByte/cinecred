@@ -35,9 +35,10 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
     override fun onGlobalKeyEvent(event: KeyEvent) =
         welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }
 
-    override fun showWelcomeFrame(openProjectDir: Path?) {
+    override fun showWelcomeFrame(openProjectDir: Path?, tab: WelcomeTab?) {
         if (welcomeCtrl == null)
             welcomeCtrl = uiFactory.welcomeCtrlViewPair(this)
+        tab?.let(welcomeCtrl!!::setTab)
         welcomeCtrl!!.commence(openProjectDir)
     }
 

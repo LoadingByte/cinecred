@@ -516,7 +516,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_setCard(PreferencesCard.START)
     }
 
-    override fun preferences_configureOverlay_onClickDone(
+    override fun preferences_configureOverlay_onClickDoneOrApply(
+        done: Boolean,
         type: Class<out ConfigurableOverlay>,
         name: String,
         aspectRatioH: Double,
@@ -527,7 +528,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         imageFile: Path
     ) {
         val edited = currentlyEditedOverlay
-        currentlyEditedOverlay = null
         val uuid = edited?.uuid ?: UUID.randomUUID()
         val newOverlay = when (type) {
             AspectRatioOverlay::class.java -> AspectRatioOverlay(uuid, aspectRatioH, aspectRatioV)
@@ -551,12 +551,14 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 }
             else -> throw IllegalArgumentException()
         }
+        currentlyEditedOverlay = if (done) null else newOverlay
         val newOverlays = OVERLAYS_PREFERENCE.get().toMutableList()
         edited?.let(newOverlays::remove)
         newOverlays.add(newOverlay)
         newOverlays.sort()
         OVERLAYS_PREFERENCE.set(newOverlays)
-        welcomeView.preferences_setCard(PreferencesCard.START)
+        if (done)
+            welcomeView.preferences_setCard(PreferencesCard.START)
     }
 
 

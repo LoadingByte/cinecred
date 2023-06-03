@@ -70,7 +70,8 @@ interface WelcomeCtrlComms {
     fun preferences_authorizeAccount_onClickCancel()
 
     fun preferences_configureOverlay_onClickCancel()
-    fun preferences_configureOverlay_onClickDone(
+    fun preferences_configureOverlay_onClickDoneOrApply(
+        done: Boolean,
         type: Class<out ConfigurableOverlay>,
         name: String,
         aspectRatioH: Double,

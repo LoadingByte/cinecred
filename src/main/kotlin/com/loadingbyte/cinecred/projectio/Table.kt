@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.toFiniteDouble
 import java.util.*
 
 
@@ -115,22 +114,6 @@ class Table(
         }
         // If the column is present but the cell is empty, or if the column is missing in the table, return null.
         return null
-    }
-
-    fun getFiniteDouble(row: Int, l10nColName: String, nonNeg: Boolean = false, non0: Boolean = false): Double? {
-        val str = getString(row, l10nColName) ?: return null
-        return try {
-            str.toFiniteDouble(nonNeg, non0)
-        } catch (_: NumberFormatException) {
-            val msg = when {
-                nonNeg && non0 -> l10n("projectIO.table.illFormattedDoubleGT0")
-                nonNeg && !non0 -> l10n("projectIO.table.illFormattedDoubleGTE0")
-                !nonNeg && non0 -> l10n("projectIO.table.illFormattedDoubleNEQ0")
-                else -> l10n("projectIO.table.illFormattedDouble")
-            }
-            log(row, l10nColName, WARN, msg)
-            null
-        }
     }
 
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {

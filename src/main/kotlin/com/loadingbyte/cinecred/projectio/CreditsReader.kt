@@ -111,8 +111,8 @@ private class CreditsReader(
     // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
     // (e.g., a block, a spine, and a lateral), the most significant credits element will receive the gap
     // (in our example, that would be the lateral).
-    var explicitVGapInUnits: Double? = null
-    var implicitVGapInUnits: Int = 0
+    var explicitVGapPx: Double? = null
+    var implicitVGapPx: Double = 0.0
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
     // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
@@ -349,15 +349,24 @@ private class CreditsReader(
         // A row without head, body, and tail implicitly means a 1-unit vertical gap after the previous credits element.
         val isHBTFreeRow = table.isEmpty(row, "head") && table.isEmpty(row, "body") && table.isEmpty(row, "tail")
         if (isHBTFreeRow)
-            implicitVGapInUnits += 1
+            implicitVGapPx += styling.global.unitVGapPx
         // The user may explicitly specify the vertical gap size. Per gap, only one specification is permitted.
-        table.getFiniteDouble(row, "vGap", nonNeg = true)?.let {
+        table.getString(row, "vGap")?.let { str ->
             if (!isHBTFreeRow)
                 table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapInContentRow"))
-            if (explicitVGapInUnits == null)
-                explicitVGapInUnits = it
             else
-                table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapInUnits))
+                try {
+                    val vGap = when {
+                        str.endsWith("px") -> str.dropLast(2).trimEnd().toFiniteDouble(nonNeg = true)
+                        else -> str.toFiniteDouble(nonNeg = true) * styling.global.unitVGapPx
+                    }
+                    if (explicitVGapPx == null)
+                        explicitVGapPx = vGap
+                    else
+                        table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapPx))
+                } catch (_: IllegalArgumentException) {
+                    table.log(row, "vGap", WARN, l10n("projectIO.credits.illFormattedVGap", "px"))
+                }
         }
 
         // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
@@ -547,9 +556,9 @@ private class CreditsReader(
                 isLateralConclusionMarked || isStageConclusionMarked
         if (newHead != null || newTail != null || (isConclusionMarked && bodyElem != null)) {
             // Pull the accumulated vertical gap.
-            val vGap = (explicitVGapInUnits ?: implicitVGapInUnits.toDouble()) * styling.global.unitVGapPx
-            explicitVGapInUnits = null
-            implicitVGapInUnits = 0
+            val vGap = explicitVGapPx ?: implicitVGapPx
+            explicitVGapPx = null
+            implicitVGapPx = 0.0
 
             // If the conclusion of the previous spine, lateral, compound, or stage has been marked, also conclude that
             // and give the accumulated virtual gap to the concluded element of the highest order.

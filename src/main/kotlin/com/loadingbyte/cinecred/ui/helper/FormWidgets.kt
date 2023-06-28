@@ -606,11 +606,7 @@ class FPSWidget(
 
         private fun toDisplayString(fps: FPS): String {
             val frac = SUGGESTED_FRAC_FPS.find { it.second == fps }?.first
-            return when {
-                frac != null -> NumberFormat.getNumberInstance().format(frac)
-                fps.denominator == 1 -> fps.numerator.toString()
-                else -> fps.toFraction()
-            }
+            return if (frac != null) NumberFormat.getNumberInstance().format(frac) else fps.toFraction()
         }
 
         private fun fromDisplayString(str: String): FPS {
@@ -620,7 +616,6 @@ class FPSWidget(
             } catch (_: ParseException) {
                 // Try the next parser.
             }
-            str.toIntOrNull()?.let { return FPS(it, 1) }
             return fpsFromFraction(str)
         }
 

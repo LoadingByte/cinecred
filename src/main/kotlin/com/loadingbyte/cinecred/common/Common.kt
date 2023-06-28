@@ -78,12 +78,15 @@ fun resolutionFromTimes(quote: String): Resolution {
     return Resolution(parts[0].toInt(), parts[1].toInt())
 }
 
-fun FPS.toFraction() = "$numerator/$denominator"
+fun FPS.toFraction() = if (denominator == 1) "$numerator" else "$numerator/$denominator"
 
 fun fpsFromFraction(fraction: String): FPS {
     val parts = fraction.split("/")
-    require(parts.size == 2)
-    return FPS(parts[0].toInt(), parts[1].toInt())
+    return when (parts.size) {
+        1 -> FPS(fraction.toInt(), 1)
+        2 -> FPS(parts[0].toInt(), parts[1].toInt())
+        else -> throw IllegalArgumentException()
+    }
 }
 
 

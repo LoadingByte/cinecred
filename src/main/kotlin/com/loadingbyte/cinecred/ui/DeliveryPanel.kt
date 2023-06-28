@@ -30,6 +30,7 @@ class DeliveryPanel(ctrl: ProjectController) : JPanel() {
         }
         specsAndIssuesPanel.add(specsPanel, "center")
 
+        addButton.isEnabled = false
         addButton.addActionListener { configurationForm.addRenderJobToQueue() }
 
         processButton.addItemListener {

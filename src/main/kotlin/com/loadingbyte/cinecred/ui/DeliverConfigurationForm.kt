@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.imaging.VideoWriter.Scan
@@ -11,7 +12,10 @@ import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path
 import java.text.DecimalFormat
 import javax.swing.JOptionPane.*
-import kotlin.io.path.*
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -293,7 +297,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
             // If there is any issue with the output file or folder, inform the user and abort if necessary.
             if (format.fileSeq) {
-                if (fileOrDir.isRegularFile()) {
+                if (fileOrDir.exists() && !fileOrDir.isAccessibleDirectory()) {
                     wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", fileOrDir))
                     return
                 } else if (fileOrDir == ctrl.projectDir) {
@@ -302,7 +306,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))
                         return
-                } else if (fileOrDir.isDirectory() && fileOrDir.useDirectoryEntries { seq -> seq.any() })
+                } else if (fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true))
                     if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", fileOrDir)))
                         return
             } else {

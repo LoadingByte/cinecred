@@ -367,7 +367,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun projects_createBrowse_onClickNext() {
         val projectDir = newBrowseSelection ?: return
         // Ask for confirmation if the selected directory is not empty; maybe the user made a mistake.
-        if (projectDir.exists() && projectDir.useDirectoryEntries { seq -> !seq.all(Path::isHidden) }) {
+        if (projectDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true)) {
             if (!welcomeView.showNotEmptyQuestion(projectDir))
                 return
         }

@@ -28,10 +28,7 @@ import java.text.NumberFormat
 import java.util.*
 import javax.swing.JComponent
 import javax.swing.UIManager
-import kotlin.io.path.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.isDirectory
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -121,6 +118,17 @@ fun File.toPathSafely(): Path? =
     } catch (_: InvalidPathException) {
         null
     }
+
+
+fun Path.isAccessibleDirectory(thatContainsNonHiddenFiles: Boolean = false): Boolean =
+    if (!isDirectory())
+        false
+    else
+        try {
+            useDirectoryEntries { seq -> !thatContainsNonHiddenFiles || !seq.all(Path::isHidden) }
+        } catch (_: IOException) {
+            false
+        }
 
 
 /**

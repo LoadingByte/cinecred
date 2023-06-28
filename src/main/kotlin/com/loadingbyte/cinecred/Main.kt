@@ -33,10 +33,12 @@ import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
+import java.util.Timer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.*
 import java.util.logging.Formatter
 import javax.swing.*
+import kotlin.concurrent.schedule
 import kotlin.io.path.absolute
 
 
@@ -85,6 +87,11 @@ fun main(args: Array<String>) {
     avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
     // Redirect FFmpeg's logging output to slf4j.
     avutil.setLogCallback(FFmpegLogCallback)
+
+    // Regularly suggest to run the GC. Without this, the GC usually only runs when there's memory pressure, but as our
+    // configured maximum heap size is pretty large, there is rarely pressure. Thus, a lot of garbage lingers around on
+    // the heap and fills up the user's precious RAM.
+    Timer("GCCaller", true).schedule(0, 60_000) { System.gc() }
 
     SwingUtilities.invokeLater { mainSwing(args) }
 }

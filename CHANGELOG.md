@@ -30,6 +30,7 @@ Cinecred Changelog
   view box instead of vanishing.
 - Rendering a video with a non-ASCII filename no longer crashes on Windows.
 - Improved stability by letting Cinecred use up to 75% of the installed memory.
+- Unused memory is now released earlier, reducing off-peak memory consumption.
 - Most I/O errors are now caught and gracefully handled.
 - Crash reports now include more context and ask users to state what they did.
 

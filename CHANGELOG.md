@@ -16,6 +16,8 @@ Cinecred Changelog
 - Vertical gaps in the credits spreadsheet may now be specified in pixels.
 - Grid cells, flow cells, and heads and tails can now be sized manually.
 - Added more fine-grained controls for vertical head and tail justification.
+- Added an alternative timecode format for fractional FPS that, in each second,
+  simply enumerates only those frames present in that second.
 - Added a dedicated coloring option for hiding helper layers.
 - The opacity setting in the color picker now has a slider and supports the
   0-100 range often found in specs.

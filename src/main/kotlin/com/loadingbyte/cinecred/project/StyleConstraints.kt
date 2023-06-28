@@ -30,10 +30,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     ResolutionConstr(ERROR, Global::resolution.st()),
     FPSConstr(ERROR, Global::fps.st()),
     DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
-        val formats = TimecodeFormat.values().toSortedSet()
-        if (!global.fps.supportsDropFrameTimecode)
-            formats.remove(TimecodeFormat.SMPTE_DROP_FRAME)
-        formats
+        TreeSet(global.fps.canonicalTimecodeFormats)
     },
     IntConstr(ERROR, Global::runtimeFrames.st(), min = 1),
     ColorConstr(ERROR, Global::grounding.st(), allowAlpha = false),

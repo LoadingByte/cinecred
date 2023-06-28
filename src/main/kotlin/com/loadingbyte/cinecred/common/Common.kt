@@ -43,6 +43,8 @@ data class Resolution(val widthPx: Int, val heightPx: Int)
 data class FPS(val numerator: Int, val denominator: Int) {
     val frac: Double
         get() = numerator.toDouble() / denominator
+    val isFractional: Boolean
+        get() = numerator / denominator * denominator != numerator
 }
 
 
@@ -89,6 +91,11 @@ fun fpsFromFraction(fraction: String): FPS {
 
 /** Implements `ceil(a / b)`, but works only for non-negative numbers! */
 fun ceilDiv(a: Int, b: Int) = (a + (b - 1)) / b
+/** Implements `ceil(a / b)`, but works only for non-negative denominators! */
+fun ceilDiv(a: Long, b: Long) = (a + ((b - 1L) and (a.inv() shr 31))) / b
+
+/** Implements `round(a / b)`, but works only for non-negative numbers! */
+fun roundingDiv(a: Long, b: Long): Long = (a + (b shr 1)) / b
 
 
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =

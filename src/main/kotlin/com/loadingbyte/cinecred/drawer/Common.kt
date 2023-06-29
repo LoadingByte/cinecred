@@ -22,7 +22,7 @@ val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)
 fun DeferredImage.drawString(
     fmtStr: FormattedString,
     x: Double, y: Y,
-    layer: DeferredImage.Layer = DeferredImage.FOREGROUND
+    layer: DeferredImage.Layer = DeferredImage.STATIC
 ) {
     fmtStr.drawTo(this, x, y, layer)
 }

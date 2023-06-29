@@ -7,6 +7,9 @@ Cinecred Changelog
 
 ### Additions
 
+- Videos and image sequences can now be inserted analogously to pictures.
+    - As audio is not supported, an EDL or CSV of the embedded videos can be
+      exported to help in aligning the audio in an external tool.
 - A Google Sheet may now be used as the credits table.
 - New projects may now omit the sample credits or the credits file altogether.
 - Users can now set up custom overlays that show a cropped aspect ratio, custom
@@ -30,7 +33,11 @@ Cinecred Changelog
 - Embedded pictures are now perfectly aligned at pixel boundaries.
 - SVGs without width and height attributes now default to the size of their
   view box instead of vanishing.
+- Exported SVGs now retain the original resolution of embedded pictures.
+- Exported interlaced video with bottom field first display order is now
+  correctly marked as having the top field coded first.
 - Rendering a video with a non-ASCII filename no longer crashes on Windows.
+- The video preview now renders in the background without blocking the UI.
 - Improved stability by letting Cinecred use up to 75% of the installed memory.
 - Unused memory is now released earlier, reducing off-peak memory consumption.
 - Most I/O errors are now caught and gracefully handled.

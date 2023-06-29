@@ -4,8 +4,7 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
-import com.loadingbyte.cinecred.imaging.VideoWriter.Scan
-import com.loadingbyte.cinecred.imaging.isRGBPixelFormat
+import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
@@ -25,8 +24,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
 
     companion object {
-        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + listOf(WholePagePDFRenderJob.FORMAT)
-        private val ALL_FORMATS = (WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL)
+        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + WholePagePDFRenderJob.FORMAT
+        private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL + TapeTimelineRenderJob.Format.ALL
     }
 
     // ========== ENCAPSULATION LEAKS ==========
@@ -43,9 +42,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         ComboBoxWidget(
             RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDER, scrollbar = false,
             toString = { format ->
-                val prefix =
-                    if (format in WHOLE_PAGE_FORMATS) l10n("ui.deliverConfig.wholePageFormat")
-                    else l10n("ui.deliverConfig.videoFormat")
+                val prefix = when (format) {
+                    in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat")
+                    is VideoRenderJob.Format -> l10n("ui.deliverConfig.videoFormat")
+                    is TapeTimelineRenderJob.Format -> l10n("ui.deliverConfig.timelineFormat")
+                    else -> throw IllegalArgumentException()
+                }
                 val suffix = format.notice.let { if (it == null) "" else "  \u2013  $it" }
                 "$prefix  \u2013  ${format.label}$suffix"
             },
@@ -55,6 +57,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     when (index) {
                         0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
                         WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
+                        WHOLE_PAGE_FORMATS.size + VideoRenderJob.Format.ALL.size ->
+                            listOf(l10n("ui.deliverConfig.timelineFormat"))
                         else -> emptyList()
                     }
                 }
@@ -124,7 +128,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             Scan::class.java, Scan.values().asList(), widthSpec = WidthSpec.WIDER,
             toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
         ),
-        isEnabled = { formatWidget.value.let { it is VideoRenderJob.Format && it.interlacing } }
+        isEnabled = {
+            val format = formatWidget.value
+            format is VideoRenderJob.Format && format.interlacing || format is TapeTimelineRenderJob.Format
+        }
     )
 
     private val colorSpaceWidget = addWidget(
@@ -160,8 +167,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         super.onChange(widget)
 
-        // This isEnabled check is separate because the FPS multiplier is part of a UnionWidget.
-        fpsMultWidget.isEnabled = formatWidget.value is VideoRenderJob.Format
+        // These isEnabled checks are separate because the multiplier widgets are part of a UnionWidget.
+        resolutionMultWidget.isEnabled = formatWidget.value !is TapeTimelineRenderJob.Format
+        fpsMultWidget.isEnabled = formatWidget.value !in WHOLE_PAGE_FORMATS
 
         // Update the specs labels and determine whether the specs are valid.
         // Then disable the add button if there are errors in the form or the specs are invalid.
@@ -199,18 +207,20 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         // Display the scaled specs in the specs labels.
         val decFmt = DecimalFormat("0.##")
-        panel.specsLabels[0].text = "$scaledWidth \u00D7 $scaledHeight"
-        panel.specsLabels[2].text = when (cs) {
-            VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
-            VideoRenderJob.ColorSpace.SRGB ->
-                if (format !is VideoRenderJob.Format || isRGBPixelFormat(format.pixelFormat)) "sRGB" else "sYCC"
-        }
-        if (format !is VideoRenderJob.Format) {
-            panel.specsLabels[1].text = "\u2014"
-            panel.specsLabels[3].text = "\u2014"
-        } else {
-            panel.specsLabels[1].text = decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
-            panel.specsLabels[3].text = if (scrollSpeeds.isEmpty()) "\u2014" else {
+        panel.specsLabels[0].text =
+            if (format is TapeTimelineRenderJob.Format) "\u2014" else
+                "$scaledWidth \u00D7 $scaledHeight"
+        panel.specsLabels[1].text =
+            if (format in WHOLE_PAGE_FORMATS) "\u2014" else
+                decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
+        panel.specsLabels[2].text =
+            if (format is TapeTimelineRenderJob.Format) "\u2014" else when (cs) {
+                VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
+                VideoRenderJob.ColorSpace.SRGB ->
+                    if (format !is VideoRenderJob.Format || format.pixelFormat.isRGB) "sRGB" else "sYCC"
+            }
+        panel.specsLabels[3].text =
+            if (format !is VideoRenderJob.Format || scrollSpeeds.isEmpty()) "\u2014" else {
                 val speedsDesc = when (scan) {
                     Scan.PROGRESSIVE -> l10n("ui.delivery.scrollPxPerFrame")
                     else -> l10n("ui.delivery.scrollPxPerFrameAndField")
@@ -226,7 +236,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 }
                 "$speedsDesc   $speedsCont"
             }
-        }
 
         // Clear all previous issues and create new ones if applicable.
         panel.clearIssues()
@@ -246,7 +255,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
         }
         // Check for fractional scroll speeds.
-        if (format is VideoRenderJob.Format) {
+        if (format !in WHOLE_PAGE_FORMATS) {
             if (scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
                 warn(l10n("ui.delivery.issues.fractionalFrameShift"))
             if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
@@ -357,6 +366,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         project, video, transparentGrounding, resolutionScaling, fpsScaling,
                         scan, colorSpace, format, fileOrPattern
                     )
+                }
+                is TapeTimelineRenderJob.Format -> {
+                    renderJob = TapeTimelineRenderJob(project, video, fpsScaling, scan, format, fileOrDir)
+                    destination = fileOrDir.pathString
                 }
                 else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
             }

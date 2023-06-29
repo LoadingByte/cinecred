@@ -1,9 +1,7 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import mkl.testarea.pdfbox2.extract.BoundingBoxFinder
@@ -30,17 +28,22 @@ import javax.imageio.ImageIO
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
 import kotlin.io.path.*
+import kotlin.math.roundToInt
 
 
+/** An abstraction over all the kinds of input images that a [DeferredImage] can work with: Raster, SVG, and PDF. */
 sealed interface Picture {
 
     val width: Double
     val height: Double
-    fun scaled(scaling: Double): Picture
+    fun withWidth(width: Double): Picture
+    fun withHeight(height: Double): Picture
     fun dispose() {}
 
 
-    class Raster(img: BufferedImage, val scaling: Double = 1.0) : Picture {
+    class Raster private constructor(img: BufferedImage, val resolution: Resolution) : Picture {
+
+        constructor(img: BufferedImage) : this(img, Resolution(img.width, img.height))
 
         // Conform non-standard raster images to the 8-bit (A)BGR pixel format and the sRGB color space. This needs to
         // be done at some point because some of our code expects (A)BGR, and we're compositing in sRGB.
@@ -51,42 +54,72 @@ sealed interface Picture {
                 BufferedImage(img.width, img.height, if (img.colorModel.hasAlpha()) TYPE_4BYTE_ABGR else TYPE_3BYTE_BGR)
                     .withG2 { g2 -> g2.drawImage(img, 0, 0, null) }
 
-        override val width get() = scaling * img.width
-        override val height get() = scaling * img.height
+        override val width get() = resolution.widthPx.toDouble()
+        override val height get() = resolution.heightPx.toDouble()
 
-        override fun scaled(scaling: Double) = Raster(img, this.scaling * scaling)
+        fun withWidth(width: Int) = Raster(img, Resolution(width, roundingDiv(img.height * width, img.width)))
+        fun withHeight(height: Int) = Raster(img, Resolution(roundingDiv(img.width * height, img.height), height))
+        override fun withWidth(width: Double) = withWidth(width.roundToInt())
+        override fun withHeight(height: Double) = withHeight(height.roundToInt())
+
+        /** In contrast to the other sizing methods, this one doesn't preserve the aspect ratio. */
+        fun withForcedResolution(resolution: Resolution) = Raster(img, resolution)
 
     }
 
 
-    class SVG(
-        val gvtRoot: GraphicsNode, private val docWidth: Double, private val docHeight: Double,
-        val scaling: Double = 1.0, val isCropped: Boolean = false
+    sealed class Vector(
+        protected val targetDim: Int, protected val targetSize: Double, val isCropped: Boolean
     ) : Picture {
 
-        override val width get() = scaling * (if (isCropped) gvtRoot.bounds.width else docWidth)
-        override val height get() = scaling * (if (isCropped) gvtRoot.bounds.height else docHeight)
+        protected abstract val bw: Double
+        protected abstract val bh: Double
 
-        override fun scaled(scaling: Double) = SVG(gvtRoot, docWidth, docHeight, this.scaling * scaling, isCropped)
-        fun cropped() = SVG(gvtRoot, docWidth, docHeight, scaling, isCropped = true)
+        val scaling: Double get() = if (targetDim == 0) 1.0 else targetSize / if (targetDim == 1) bw else bh
+        override val width get() = scaling * bw
+        override val height get() = scaling * bh
+
+        abstract override fun withWidth(width: Double): Vector
+        abstract override fun withHeight(height: Double): Vector
+        abstract fun cropped(): Vector
+
+    }
+
+
+    class SVG private constructor(
+        val gvtRoot: GraphicsNode, private val docWidth: Double, private val docHeight: Double,
+        targetDim: Int, targetSize: Double, isCropped: Boolean
+    ) : Vector(targetDim, targetSize, isCropped) {
+
+        constructor(gvtRoot: GraphicsNode, docWidth: Double, docHeight: Double) :
+                this(gvtRoot, docWidth, docHeight, 0, 0.0, false)
+
+        override val bw get() = if (isCropped) gvtRoot.bounds.width else docWidth
+        override val bh get() = if (isCropped) gvtRoot.bounds.height else docHeight
+
+        override fun withWidth(width: Double) = SVG(gvtRoot, docWidth, docHeight, 1, width, isCropped)
+        override fun withHeight(height: Double) = SVG(gvtRoot, docWidth, docHeight, 2, height, isCropped)
+        override fun cropped() = SVG(gvtRoot, docWidth, docHeight, targetDim, targetSize, isCropped = true)
 
     }
 
 
     class PDF private constructor(
-        private val aDoc: AugmentedDoc, val scaling: Double, val isCropped: Boolean
-    ) : Picture {
+        private val aDoc: AugmentedDoc,
+        targetDim: Int, targetSize: Double, isCropped: Boolean
+    ) : Vector(targetDim, targetSize, isCropped) {
 
-        constructor(doc: PDDocument) : this(AugmentedDoc(doc), 1.0, false)
+        constructor(doc: PDDocument) : this(AugmentedDoc(doc), 0, 0.0, false)
 
         val doc get() = aDoc.doc
         val minBox get() = aDoc.minBox
 
-        override val width get() = scaling * (if (isCropped) minBox.width else doc.pages[0].cropBox.width.toDouble())
-        override val height get() = scaling * (if (isCropped) minBox.height else doc.pages[0].cropBox.height.toDouble())
+        override val bw get() = if (isCropped) minBox.width else doc.pages[0].cropBox.width.toDouble()
+        override val bh get() = if (isCropped) minBox.height else doc.pages[0].cropBox.height.toDouble()
 
-        override fun scaled(scaling: Double) = PDF(aDoc, this.scaling * scaling, isCropped)
-        fun cropped() = PDF(aDoc, scaling, isCropped = true)
+        override fun withWidth(width: Double) = PDF(aDoc, 1, width, isCropped)
+        override fun withHeight(height: Double) = PDF(aDoc, 2, height, isCropped)
+        override fun cropped() = PDF(aDoc, targetDim, targetSize, isCropped = true)
 
         override fun dispose() {
             // Synchronize the closing operation so that other threads can safely check whether a document is closed

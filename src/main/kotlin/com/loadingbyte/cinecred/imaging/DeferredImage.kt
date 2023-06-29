@@ -4,6 +4,7 @@ import com.formdev.flatlaf.util.Graphics2DProxy
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
+import org.apache.batik.svggen.SVGGraphics2D
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
 import org.apache.fontbox.ttf.TTFParser
@@ -36,12 +37,15 @@ import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.util.Matrix
 import java.awt.*
+import java.awt.RenderingHints.KEY_INTERPOLATION
+import java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
 import java.awt.geom.*
 import java.awt.image.BufferedImage
 import java.awt.image.ConvolveOp
 import java.awt.image.Kernel
 import java.io.DataInputStream
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.*
 
 
@@ -73,47 +77,80 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun drawShape(
-        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
+        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = STATIC
     ) {
         drawShape(Coat.Plain(color), shape, x, y, fill, blurRadius, layer)
     }
 
     fun drawShape(
-        coat: Coat, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = FOREGROUND
+        coat: Coat, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = STATIC
     ) {
         if (!coat.isVisible()) return
         addInstruction(layer, Instruction.DrawShape(x, y, shape, coat, fill, blurRadius))
     }
 
-    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, dash: Boolean = false, layer: Layer = FOREGROUND) {
+    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, dash: Boolean = false, layer: Layer = STATIC) {
         if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, dash))
     }
 
     fun drawRect(
-        color: Color, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = FOREGROUND
+        color: Color, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = STATIC
     ) {
         if (color.alpha == 0) return
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
-    fun drawText(coat: Coat, text: Text, x: Double, yBaseline: Y, layer: Layer = FOREGROUND) {
+    fun drawText(coat: Coat, text: Text, x: Double, yBaseline: Y, layer: Layer = STATIC) {
         if (!coat.isVisible()) return
         addInstruction(layer, Instruction.DrawText(x, yBaseline, text, coat))
     }
 
-    fun drawPicture(pic: Picture, x: Double, y: Y, layer: Layer = FOREGROUND) {
+    fun drawPicture(pic: Picture, x: Double, y: Y, layer: Layer = STATIC) {
         addInstruction(layer, Instruction.DrawPicture(x, y, pic))
     }
 
-    fun materialize(g2: Graphics2D, layers: List<Layer>, culling: Rectangle2D? = null) {
-        materializeDeferredImage(Graphics2DBackend(g2), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
+    fun drawEmbeddedTape(embeddedTape: Tape.Embedded, x: Double, y: Y, layer: Layer = TAPES) {
+        val thumbnail = try {
+            @OptIn(ExperimentalStdlibApi::class)
+            Picture.Raster(embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)!!)
+        } catch (_: Exception) {
+            null
+        }
+        addInstruction(layer, Instruction.DrawEmbeddedTape(x, y, embeddedTape, thumbnail))
     }
 
-    fun materialize(
-        doc: PDDocument, page: PDPage, cs: PDPageContentStream, layers: List<Layer>, culling: Rectangle2D? = null
-    ) {
-        materializeDeferredImage(PDFBackend(doc, page, cs), 0.0, 0.0, 1.0, 1.0, culling, this, layers)
+    /**
+     * Draws the content of this deferred image onto the given [BufferedImage]. Any raster content is aligned with the
+     * buffered image's pixel grid to prevent interpolation and retain as much quality as possible.
+     */
+    fun materialize(bufImage: BufferedImage, layers: List<Layer>, composite: Composite? = null) {
+        bufImage.withG2 { g2 ->
+            g2.setHighQuality()
+            composite?.let(g2::setComposite)
+            val backend = Graphics2DBackend(g2, rasterOutput = true)
+            // If only a portion of the deferred image is materialized, cull the rest to improve performance.
+            // Notice that because the culling rect is aligned with the pixel grid, we correctly include all content
+            // that at least partially lies inside one of the buffered image's pixels.
+            val culling = Rectangle2D.Double(0.0, 0.0, bufImage.width.toDouble(), bufImage.height.toDouble())
+            materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, culling, this, layers)
+        }
+    }
+
+    /** Draws the content of this deferred image onto an SVG via the given [SVGGraphics2D]. */
+    fun materialize(g2: SVGGraphics2D, layers: List<Layer>) {
+        materializeDeferredImage(Graphics2DBackend(g2, rasterOutput = false), 0.0, 0.0, 1.0, 1.0, null, this, layers)
+    }
+
+    /** Draws the content of this deferred onto a PDF page. */
+    fun materialize(doc: PDDocument, page: PDPage, cs: PDPageContentStream, layers: List<Layer>) {
+        materializeDeferredImage(PDFBackend(doc, page, cs), 0.0, 0.0, 1.0, 1.0, null, this, layers)
+    }
+
+    fun collectPlacedTapes(layers: List<Layer>): List<PlacedTape> {
+        val backend = PlacedTapeCollectorBackend()
+        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
+        return backend.collected
     }
 
     private fun materializeDeferredImage(
@@ -121,6 +158,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
         image: DeferredImage, layers: List<Layer>
     ) {
+        if (culling != null && !culling.intersects(
+                x, y, universeScaling * image.width, universeScaling * image.height.resolve(elasticScaling)
+            )
+        ) return
         for (layer in layers)
             for (insn in image.instructions.getOrDefault(layer, emptyList()))
                 materializeInstruction(backend, x, y, universeScaling, elasticScaling, culling, insn)
@@ -157,8 +198,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 universeScaling, culling, insn.text, insn.coat
             )
             is Instruction.DrawPicture -> materializePicture(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling), culling,
-                insn.pic.scaled(universeScaling)
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                universeScaling, culling, insn.pic
+            )
+            is Instruction.DrawEmbeddedTape -> materializeEmbeddedTape(
+                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
+                universeScaling, culling, insn.embeddedTape, insn.thumbnail
             )
         }
     }
@@ -221,7 +266,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             // Cut off the padding that is guaranteed to be empty due to the convolutions' EDGE_ZERO_FILL behavior.
             img = img.getSubimage(halfPad, halfPad, img.width - fullPad, img.height - fullPad)
             // Send the resulting image to the backend.
-            backend.materializePicture(xWhole - halfPad, yWhole - halfPad, Picture.Raster(img))
+            backend.materializePicture(xWhole - halfPad, yWhole - halfPad, 1.0, Picture.Raster(img), draft = false)
         }
     }
 
@@ -259,22 +304,32 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private fun materializePicture(
         backend: MaterializationBackend,
-        x: Double, y: Double, culling: Rectangle2D?,
+        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
         pic: Picture
     ) {
-        if (culling != null && !culling.intersects(x, y, pic.width, pic.height))
+        if (culling != null && !culling.intersects(x, y, pic.width * scaling, pic.height * scaling))
             return
-        backend.materializePicture(x, y, pic)
+        backend.materializePicture(x, y, scaling, pic, draft = false)
+    }
+
+    private fun materializeEmbeddedTape(
+        backend: MaterializationBackend,
+        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
+        embeddedTape: Tape.Embedded, thumbnail: Picture.Raster?
+    ) {
+        val resolution = embeddedTape.resolution
+        if (culling != null && !culling.intersects(x, y, resolution.widthPx * scaling, resolution.heightPx * scaling))
+            return
+        backend.materializeEmbeddedTape(x, y, scaling, embeddedTape, thumbnail)
     }
 
 
     companion object {
 
         // These common layers are typically used. Additional layers may be defined by users of this class.
-        val FOREGROUND = object : Layer {}
+        val STATIC = object : Layer {}
+        val TAPES = object : Layer {}
         val GUIDES = object : Layer {}
-
-        val DELIVERED_LAYERS = listOf(FOREGROUND)
 
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
@@ -358,17 +413,48 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val x: Double, val y: Y, val pic: Picture
         ) : Instruction
 
+        class DrawEmbeddedTape(
+            val x: Double, val y: Y, val embeddedTape: Tape.Embedded, val thumbnail: Picture.Raster?
+        ) : Instruction
+
     }
 
 
     private interface MaterializationBackend {
-        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean)
-        fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat)
-        fun materializePicture(x: Double, y: Double, pic: Picture)
+
+        // The default implementations skip materialization.
+        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {}
+        fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {}
+        fun materializePicture(x: Double, y: Double, scaling: Double, pic: Picture, draft: Boolean) {}
+
+        // The default implementation materializes the tape's thumbnail or a "missing media" placeholder, respectively.
+        fun materializeEmbeddedTape(
+            x: Double,
+            y: Double,
+            scaling: Double,
+            embeddedTape: Tape.Embedded,
+            thumbnail: Picture.Raster?
+        ) {
+            if (thumbnail != null)
+                materializePicture(x, y, scaling, thumbnail.withForcedResolution(embeddedTape.resolution), draft = true)
+            else {
+                val (w, h) = embeddedTape.resolution
+                val rect = Rectangle2D.Double(x, y, w * scaling, h * scaling)
+                val coat = Coat.Gradient(
+                    Tape.MISSING_MEDIA_TOP_COLOR, Tape.MISSING_MEDIA_BOT_COLOR,
+                    Point2D.Double(0.0, rect.minY), Point2D.Double(0.0, rect.maxY)
+                )
+                materializeShape(rect, coat, fill = true, dash = false)
+            }
+        }
+
     }
 
 
-    private class Graphics2DBackend(private val g2: Graphics2D) : MaterializationBackend {
+    private class Graphics2DBackend(
+        private val g2: Graphics2D,
+        private val rasterOutput: Boolean
+    ) : MaterializationBackend {
 
         override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
             g2.paint = coat.toPaint()
@@ -410,30 +496,55 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
         }
 
-        override fun materializePicture(x: Double, y: Double, pic: Picture) {
+        override fun materializePicture(x: Double, y: Double, scaling: Double, pic: Picture, draft: Boolean) {
             when (pic) {
                 is Picture.Raster -> g2.preserveTransform {
-                    g2.translate(x, y)
-                    val trans = g2.transform
-                    val tx = trans.translateX
-                    val ty = trans.translateY
-                    val sx = trans.scaleX
-                    val sy = trans.scaleY
-                    g2.transform = AffineTransform()
+                    // When drawing vector graphics, neither care about aligning with the pixel grid nor creating a
+                    // scaled copy with the target resolution.
+                    if (!rasterOutput) {
+                        g2.translate(x, y)
+                        g2.scale(scaling * pic.width / pic.img.width)
+                        g2.drawImage(pic.img, 0, 0, null)
+                        return@preserveTransform
+                    }
+                    // When drawing to a raster output, align the raster picture with the pixel grid and force the
+                    // picture to have integer size to prevent interpolation.
+                    g2.translate(x.roundToInt(), y.roundToInt())
+                    val w = (pic.width * scaling).roundToInt()
+                    val h = (pic.height * scaling).roundToInt()
                     // Note: Directly drawing with bilinear or bicubic interpolation exhibits poor quality when
                     // downscaling by more than a factor of two, and Image.getScaledInstance() with SCALE_AREA_AVERAGING
                     // is way too slow, so we use swscale with the Lanczos algorithm instead.
-                    // Then draw at integer coordinates so that no further interpolation is done.
-                    val scaledImg = scaleImageLanczos(
-                        pic.img,
-                        (pic.img.width * sx * pic.scaling).roundToInt(),
-                        (pic.img.height * sy * pic.scaling).roundToInt()
-                    )
-                    g2.drawImage(scaledImg, tx.roundToInt(), ty.roundToInt(), null)
+                    // Scaling happens in the sRGB color space, as opposed to the often recommended linear RGB space.
+                    // This has a couple of reasons:
+                    //   - Converting from the sRGB to a linear transfer characteristic is slow.
+                    //   - Scaling in linear RGB is not always advantageous, as is shown here:
+                    //     https://entropymine.com/imageworsener/gamma/
+                    // Nevertheless, if "draft" is true, directly draw using Java2D's interpolation as it's very fast.
+                    if (draft) {
+                        // Set the interpolation mode to nearest neighbor to achieve a "pixelated preview" effect and
+                        // thereby clearly communicate that this picture is drawn in draft mode.
+                        val hint = g2.getRenderingHint(KEY_INTERPOLATION)
+                        g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+                        g2.drawImage(pic.img, 0, 0, w, h, null)
+                        g2.setRenderingHint(KEY_INTERPOLATION, hint)
+                        return@preserveTransform
+                    }
+                    var scaledImg = scaledImgCache[pic.img]
+                    if (scaledImg == null || scaledImg.width != w || scaledImg.height != h) {
+                        scaledImg = Image2ImageConverter(
+                            srcResolution = Resolution(pic.img.width, pic.img.height),
+                            dstResolution = Resolution(w, h),
+                            hasAlpha = pic.img.colorModel.hasAlpha(),
+                            isAlphaPremultiplied = pic.img.isAlphaPremultiplied
+                        ).convert(pic.img)
+                        scaledImgCache[pic.img] = scaledImg
+                    }
+                    g2.drawImage(scaledImg, 0, 0, null)
                 }
                 is Picture.SVG -> g2.preserveTransform {
                     g2.translate(x, y)
-                    g2.scale(pic.scaling)
+                    g2.scale(pic.scaling * scaling)
                     // Batik might not be thread-safe, even though we haven't tested that.
                     synchronized(pic.gvtRoot) {
                         if (pic.isCropped)
@@ -444,9 +555,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
                 // and sometimes even makes it totally unusable.
                 is Picture.PDF -> g2.withNewG2 { g2 ->
+                    val s = pic.scaling * scaling
                     g2.translate(x, y)
                     if (pic.isCropped)
-                        g2.translate(-pic.minBox.x * pic.scaling, -pic.minBox.y * pic.scaling)
+                        g2.translate(-pic.minBox.x * s, -pic.minBox.y * s)
                     // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
                     // box even if g2.background is set to a transparent color. The most thorough fix is
                     // to just block all calls to clearRect().
@@ -463,10 +575,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         // possible because materialization might happen in a background thread), do not render the
                         // PDF to avoid provoking an exception.
                         if (!pic.doc.document.isClosed)
-                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, pic.scaling.toFloat())
+                            PDFRenderer(pic.doc).renderPageToGraphics(0, g2Proxy, s.toFloat())
                     }
                 }
             }
+        }
+
+        companion object {
+            private val scaledImgCache = ConcurrentHashMap<BufferedImage, BufferedImage>()
         }
 
     }
@@ -558,12 +674,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             cs.restoreGraphicsState()
         }
 
-        override fun materializePicture(x: Double, y: Double, pic: Picture) {
+        override fun materializePicture(x: Double, y: Double, scaling: Double, pic: Picture, draft: Boolean) {
             val mat = Matrix().apply { translate(x, csHeight - y - pic.height) }
 
             when (pic) {
                 is Picture.Raster -> {
                     mat.scale(pic.width, pic.height)
+                    mat.scale(scaling)
                     // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
                     // images to produce smaller files.
                     val pdImg = docRes.pdImages.computeIfAbsent(pic) {
@@ -594,8 +711,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 }
                 is Picture.SVG -> {
                     val pdForm = docRes.pdForms.computeIfAbsent(pic) {
-                        val g2 = PdfBoxGraphics2D(doc, pic.width.toFloat(), pic.height.toFloat())
-                        g2.scale(pic.scaling)
+                        val g2 =
+                            PdfBoxGraphics2D(doc, (pic.width * scaling).toFloat(), (pic.height * scaling).toFloat())
+                        g2.scale(pic.scaling * scaling)
                         // Batik might not be thread-safe, even though we haven't tested that.
                         synchronized(pic.gvtRoot) {
                             if (pic.isCropped)
@@ -611,7 +729,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     cs.restoreGraphicsState()
                 }
                 is Picture.PDF -> {
-                    mat.scale(pic.scaling)
+                    mat.scale(pic.scaling * scaling)
                     if (pic.isCropped) {
                         val origHeight = pic.doc.pages[0].cropBox.height
                         mat.translate(-pic.minBox.x, pic.minBox.maxY - origHeight)
@@ -798,6 +916,24 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         private data class ExtGStateKey(private val fill: Boolean, private val alpha: Int)
+
+    }
+
+
+    class PlacedTape(val embeddedTape: Tape.Embedded, val x: Double, val y: Double)
+
+    private class PlacedTapeCollectorBackend : MaterializationBackend {
+
+        val collected = mutableListOf<PlacedTape>()
+
+        override fun materializeEmbeddedTape(
+            x: Double, y: Double, scaling: Double, embeddedTape: Tape.Embedded, thumbnail: Picture.Raster?
+        ) {
+            var res = embeddedTape.resolution
+            res = Resolution((res.widthPx * scaling).roundToInt(), (res.heightPx * scaling).roundToInt())
+            @OptIn(ExperimentalStdlibApi::class)
+            collected.add(PlacedTape(embeddedTape.copy(resolution = res), x, y))
+        }
 
     }
 

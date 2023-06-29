@@ -3,10 +3,9 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.formatTimecode
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.scale
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
+import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.*
@@ -20,6 +19,7 @@ import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.*
 import kotlin.math.*
 
@@ -36,17 +36,14 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private val canvas: JPanel = object : JPanel() {
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            val video = scaledVideo
-            val videoBackend = scaledVideoBackend
-            if (video != null && videoBackend != null) {
-                val (videoWidth, videoHeight) = video.resolution
+            curFrame?.let { frame ->
                 g as Graphics2D
-                g.translate((width - videoWidth / systemScaling) / 2.0, (height - videoHeight / systemScaling) / 2.0)
+                g.translate(
+                    ((width - frame.width / systemScaling) / 2.0).roundToInt(),
+                    ((height - frame.height / systemScaling) / 2.0).roundToInt()
+                )
                 g.scale(1.0 / systemScaling)
-                g.color = grounding
-                g.fillRect(0, 0, videoWidth, videoHeight)
-                g.clipRect(0, 0, videoWidth, videoHeight)
-                videoBackend.materializeFrame(g, frameSlider.value)
+                g.drawImage(frame, 0, 0, null)
             }
         }
     }
@@ -74,8 +71,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         frameSlider.isFocusable = false
         frameSlider.addChangeListener {
             // When the slider is moved, either automatically or by hand, draw the selected frame.
-            // Use paintImmediately() because repaint() might postpone the painting, which we do not want.
-            canvas.paintImmediately(0, 0, canvas.width, canvas.height)
+            materializeAndDrawFrame(frameSlider.value)
             // Also adjust the timecode label.
             adjustTimecodeLabel()
         }
@@ -88,9 +84,9 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     private var drawnProject: DrawnProject? = null
 
     private val makeVideoBackendJobSlot = JobSlot()
-    private var scaledVideo: DeferredVideo? = null
-    private var scaledVideoBackend: DeferredVideo.Graphics2DBackend? = null
-    private var grounding = Color.BLACK
+    private val materializeFrameJobSlot = JobSlot()
+    private val curVideoBackend = AtomicReference<Triple<DeferredVideo.BufferedImageBackend, Resolution, Color>?>()
+    private var curFrame: BufferedImage? = null
     private var systemScaling = 1.0
 
     private var playTimer: Timer? = null
@@ -224,9 +220,10 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
         playRate = 0
         if (drawnProject == null) {
-            scaledVideo = null
-            scaledVideoBackend = null
-            canvas.repaint()
+            makeVideoBackendJobSlot.submit {
+                curVideoBackend.set(null)
+                materializeAndDrawFrame(0)
+            }
             timecodeLabel.text = "\u2014 / \u2014"
         } else {
             restartDrawing()
@@ -258,8 +255,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
         makeVideoBackendJobSlot.submit {
             val scaledVideo = video.copy(resolutionScaling = scaling)
-            val scaledVideoBackend = object : DeferredVideo.Graphics2DBackend(
-                scaledVideo, DELIVERED_LAYERS, draft = true, preloading = true
+            val scaledVideoBackend = object : DeferredVideo.BufferedImageBackend(
+                scaledVideo, listOf(STATIC), listOf(TAPES), draft = true, preloading = true
             ) {
                 override fun createIntermediateImage(width: Int, height: Int) =
                     // If the canvas was disposed in the meantime, create a dummy image to avoid crashing.
@@ -267,13 +264,24 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
                         ?: BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
             }
             // Simulate materializing the currently selected frame in the background thread. As expensive operations
-            // are cached, the subsequent materialization of that frame in the EDT thread will be very fast.
+            // are cached, the subsequent materialization of that frame will be very fast.
             scaledVideoBackend.preloadFrame(currentFrameIdx)
+            curVideoBackend.set(Triple(scaledVideoBackend, scaledVideo.resolution, project.styling.global.grounding))
+            materializeAndDrawFrame(currentFrameIdx)
+        }
+    }
+
+    private fun materializeAndDrawFrame(frameIdx: Int) {
+        materializeFrameJobSlot.submit {
+            val frame = curVideoBackend.get()?.let { (scaledVideoBackend, resolution, grounding) ->
+                canvas.graphicsConfiguration.createCompatibleImage(resolution.widthPx, resolution.heightPx)
+                    ?.withG2 { g2 -> g2.color = grounding; g2.fillRect(0, 0, resolution.widthPx, resolution.heightPx) }
+                    ?.also { scaledVideoBackend.materializeFrame(it, frameIdx) }
+            }
             SwingUtilities.invokeLater {
-                this.scaledVideo = scaledVideo
-                this.scaledVideoBackend = scaledVideoBackend
-                this.grounding = project.styling.global.grounding
-                canvas.repaint()
+                curFrame = frame
+                // Use paintImmediately() because repaint() might postpone the painting, which we do not want.
+                canvas.paintImmediately(0, 0, canvas.width, canvas.height)
             }
         }
     }

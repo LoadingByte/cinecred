@@ -9,6 +9,25 @@ import jdk.incubator.foreign.*;
 import static jdk.incubator.foreign.CLinker.*;
 class constants$0 {
 
+    static final FunctionDescriptor zimg_get_version_info$FUNC = FunctionDescriptor.ofVoid(
+        C_POINTER,
+        C_POINTER,
+        C_POINTER
+    );
+    static final MethodHandle zimg_get_version_info$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_get_version_info",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)V",
+        constants$0.zimg_get_version_info$FUNC, false
+    );
+    static final FunctionDescriptor zimg_get_api_version$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_POINTER
+    );
+    static final MethodHandle zimg_get_api_version$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_get_api_version",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
+        constants$0.zimg_get_api_version$FUNC, false
+    );
     static final FunctionDescriptor zimg_get_last_error$FUNC = FunctionDescriptor.of(C_INT,
         C_POINTER,
         C_LONG_LONG
@@ -18,55 +37,25 @@ class constants$0 {
         "(Ljdk/incubator/foreign/MemoryAddress;J)I",
         constants$0.zimg_get_last_error$FUNC, false
     );
-    static final FunctionDescriptor zimg_filter_graph_free$FUNC = FunctionDescriptor.ofVoid(
-        C_POINTER
+    static final FunctionDescriptor zimg_clear_last_error$FUNC = FunctionDescriptor.ofVoid();
+    static final MethodHandle zimg_clear_last_error$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_clear_last_error",
+        "()V",
+        constants$0.zimg_clear_last_error$FUNC, false
     );
-    static final MethodHandle zimg_filter_graph_free$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_filter_graph_free",
-        "(Ljdk/incubator/foreign/MemoryAddress;)V",
-        constants$0.zimg_filter_graph_free$FUNC, false
-    );
-    static final FunctionDescriptor zimg_filter_graph_get_tmp_size$FUNC = FunctionDescriptor.of(C_INT,
-        C_POINTER,
-        C_POINTER
-    );
-    static final MethodHandle zimg_filter_graph_get_tmp_size$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_filter_graph_get_tmp_size",
-        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
-        constants$0.zimg_filter_graph_get_tmp_size$FUNC, false
-    );
-    static final FunctionDescriptor zimg_filter_graph_process$FUNC = FunctionDescriptor.of(C_INT,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER,
-        C_POINTER
-    );
-    static final MethodHandle zimg_filter_graph_process$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_filter_graph_process",
-        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
-        constants$0.zimg_filter_graph_process$FUNC, false
-    );
-    static final FunctionDescriptor zimg_image_format_default$FUNC = FunctionDescriptor.ofVoid(
-        C_POINTER,
+    static final FunctionDescriptor zimg_select_buffer_mask$FUNC = FunctionDescriptor.of(C_INT,
         C_INT
     );
-    static final MethodHandle zimg_image_format_default$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_image_format_default",
-        "(Ljdk/incubator/foreign/MemoryAddress;I)V",
-        constants$0.zimg_image_format_default$FUNC, false
+    static final MethodHandle zimg_select_buffer_mask$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_select_buffer_mask",
+        "(I)I",
+        constants$0.zimg_select_buffer_mask$FUNC, false
     );
-    static final FunctionDescriptor zimg_graph_builder_params_default$FUNC = FunctionDescriptor.ofVoid(
+    static final FunctionDescriptor zimg_filter_graph_callback$FUNC = FunctionDescriptor.of(C_INT,
         C_POINTER,
+        C_INT,
+        C_INT,
         C_INT
-    );
-    static final MethodHandle zimg_graph_builder_params_default$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_graph_builder_params_default",
-        "(Ljdk/incubator/foreign/MemoryAddress;I)V",
-        constants$0.zimg_graph_builder_params_default$FUNC, false
     );
 }
 

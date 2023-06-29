@@ -2,11 +2,11 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.scale
-import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ComponentAdapter
@@ -15,7 +15,6 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent.*
 import java.awt.geom.AffineTransform
-import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import javax.swing.JScrollBar
@@ -363,21 +362,17 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
                 // Abort if the canvas was disposed in the meantime.
                 val materialized = (canvas.createImage(matWidth, matHeight) ?: return@submit) as BufferedImage
+                // Paint the grounding.
                 materialized.withG2 { g2 ->
-                    g2.setHighQuality()
-                    // Paint the grounding.
                     g2.color = grounding
                     g2.fillRect(0, 0, matWidth, matHeight)
-                    // If only a portion is materialized, scroll the deferred image to that portion.
-                    if (!startY.isNaN())
-                        g2.translate(0.0, physicalImageScaling * -startY)
-                    // If only a portion is materialized, cull the rest to improve performance.
-                    val culling = if (startY.isNaN()) null else Rectangle2D.Double(
-                        0.0, physicalImageScaling * startY, matWidth.toDouble(), matHeight.toDouble()
-                    )
-                    // Paint a scaled version of the deferred image onto the raster image.
-                    image.copy(universeScaling = physicalImageScaling).materialize(g2, layers, culling)
                 }
+                // Paint a scaled version of the deferred image onto the raster image.
+                DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
+                    // If only a portion is materialized, scroll the deferred image to that portion.
+                    val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
+                    drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
+                }.materialize(materialized, layers)
 
                 // If only a portion is materialized, we generate another more low-res image that covers the whole
                 // deferred image. We momentarily paint this placeholder image when the user scrolls out of the
@@ -391,11 +386,11 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     // Abort if the canvas was disposed in the meantime.
                     val img = (canvas.createImage(lowResMatWidth, lowResMatHeight) ?: return@submit) as BufferedImage
                     img.withG2 { g2 ->
-                        g2.setHighQuality()
                         g2.color = grounding
                         g2.fillRect(0, 0, lowResMatWidth, lowResMatHeight)
-                        image.copy(universeScaling = lowResScaling).materialize(g2, layers)
                     }
+                    image.copy(universeScaling = lowResScaling).materialize(img, layers)
+                    img
                 }
 
                 onFinish(materialized, startY, startY + clippedImgHeight, lowResMaterialized)

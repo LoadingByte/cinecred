@@ -7,8 +7,9 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toHex24
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
@@ -477,7 +478,8 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 is ImageOverlay -> layers += overlay
                 is SafeAreasOverlay, is AspectRatioOverlay, is LinesOverlay -> nonImageOverlays += overlay
             }
-        layers += DELIVERED_LAYERS
+        layers += STATIC
+        layers += TAPES
         if (guidesToggleButton.isSelected)
             layers += GUIDES
         layers += nonImageOverlays

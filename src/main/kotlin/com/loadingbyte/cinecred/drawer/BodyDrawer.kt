@@ -597,12 +597,14 @@ private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
     is BodyElement.Nil -> 0.0
     is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
+    is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
 }
 
 private fun BodyElement.getHeight(): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
     is BodyElement.Str -> str.height
     is BodyElement.Pic -> pic.height
+    is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
 }
 
 
@@ -618,6 +620,10 @@ private fun DeferredImage.drawJustifiedBodyElem(
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height.toY()
         ) { objX, objY -> drawPicture(elem.pic, objX, objY) }
+    is BodyElement.Tap ->
+        drawJustified(
+            hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.getWidth(textCtx), elem.getHeight().toY()
+        ) { objX, objY -> drawEmbeddedTape(elem.emb, objX, objY) }
 }
 
 

@@ -2,10 +2,10 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.DELIVERED_LAYERS
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import org.apache.batik.dom.GenericDOMImplementation
 import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
@@ -16,7 +16,6 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import java.awt.Color
 import java.awt.Dimension
-import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.nio.file.Path
 import javax.imageio.IIOImage
@@ -52,23 +51,17 @@ class WholePageSequenceRenderJob(
             val pageHeight = pageDefImage.height.resolve().roundToInt()
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
-            fun renderPageTo(g2: Graphics2D) {
-                if (grounding != null) {
-                    g2.color = grounding
-                    g2.fillRect(0, 0, pageWidth, pageHeight)
-                }
-                pageDefImage.materialize(g2, DELIVERED_LAYERS)
-            }
-
             when (format) {
                 Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
                     val imgType = if (grounding == null) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
                     val pageImage = BufferedImage(pageWidth, pageHeight, imgType)
 
-                    pageImage.withG2 { g2 ->
-                        g2.setHighQuality()
-                        renderPageTo(g2)
-                    }
+                    if (grounding != null)
+                        pageImage.withG2 { g2 ->
+                            g2.color = grounding
+                            g2.fillRect(0, 0, pageWidth, pageHeight)
+                        }
+                    pageDefImage.materialize(pageImage, listOf(STATIC, TAPES))
 
                     // Note: We do not use ImageIO.write() for two reasons:
                     //   - We need to support TIFF compression.
@@ -100,7 +93,11 @@ class WholePageSequenceRenderJob(
 
                     val g2 = SVGGraphics2D(ctx, true)
                     g2.svgCanvasSize = Dimension(pageWidth, pageHeight)
-                    renderPageTo(g2)
+                    if (grounding != null) {
+                        g2.color = grounding
+                        g2.fillRect(0, 0, pageWidth, pageHeight)
+                    }
+                    pageDefImage.materialize(g2, listOf(STATIC, TAPES))
 
                     pageFile.bufferedWriter().use { writer -> g2.stream(writer, true) }
                 }
@@ -164,7 +161,7 @@ class WholePagePDFRenderJob(
                     cs.fill()
                     cs.restoreGraphicsState()
                 }
-                page.materialize(pdfDoc, pdfPage, cs, DELIVERED_LAYERS)
+                page.materialize(pdfDoc, pdfPage, cs, listOf(STATIC, TAPES))
             }
 
             progressCallback(100 * (idx + 1) / pageDefImages.size)

@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Color
 import java.util.*
@@ -366,6 +367,7 @@ sealed interface BodyElement {
     class Nil(val sty: LetterStyle) : BodyElement
     class Str(val str: StyledString) : BodyElement
     class Pic(val pic: Picture) : BodyElement
+    class Tap(val emb: Tape.Embedded) : BodyElement
 }
 
 

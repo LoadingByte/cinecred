@@ -89,13 +89,21 @@ fun fpsFromFraction(fraction: String): FPS {
 }
 
 
-/** Implements `ceil(a / b)`, but works only for non-negative numbers! */
-fun ceilDiv(a: Int, b: Int) = (a + (b - 1)) / b
+/** Implements `floor(a / b)`, but works only for non-negative denominators! */
+fun floorDiv(a: Int, b: Int) = (a - ((b - 1) and (a shr 31))) / b
+
+/** Implements `ceil(a / b)`, but works only for non-negative denominators! */
+fun ceilDiv(a: Int, b: Int) = (a + ((b - 1) and (a.inv() shr 31))) / b
 /** Implements `ceil(a / b)`, but works only for non-negative denominators! */
 fun ceilDiv(a: Long, b: Long) = (a + ((b - 1L) and (a.inv() shr 31))) / b
 
 /** Implements `round(a / b)`, but works only for non-negative numbers! */
+fun roundingDiv(a: Int, b: Int): Int = (a + (b shr 1)) / b
+/** Implements `round(a / b)`, but works only for non-negative numbers! */
 fun roundingDiv(a: Long, b: Long): Long = (a + (b shr 1)) / b
+
+/** Implements `round(a / 2^b)`, but works only for non-negative numbers! */
+fun roundingDivLog2(a: Long, bLog2: Int): Long = (a + ((1L shl bLog2) shr 1)) shr bLog2
 
 
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =

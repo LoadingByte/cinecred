@@ -2,17 +2,20 @@ package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredVideo.Cache.Response
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
+import org.bytedeco.ffmpeg.global.avcodec.*
 import java.awt.AlphaComposite
 import java.awt.Color
+import java.awt.GradientPaint
 import java.awt.Graphics2D
-import java.awt.geom.AffineTransform.getTranslateInstance
-import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
+import java.io.Closeable
 import java.lang.ref.SoftReference
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.sumOf
 import kotlin.concurrent.withLock
+import kotlin.io.path.name
 import kotlin.math.*
 
 
@@ -94,6 +97,9 @@ class DeferredVideo private constructor(
             flows.add(Flow.DefImg(image, mutableListOf(phase)))
     }
 
+    fun collectTapeSpans(layers: List<DeferredImage.Layer>): List<TapeSpan> =
+        TapeTracker<Unit>(this, layers).collectSpans()
+
     private val instructions: List<Instruction> by lazy {
         val list = mutableListOf<Instruction>()
         var firstFrameIdx = 0
@@ -131,25 +137,44 @@ class DeferredVideo private constructor(
 
     companion object {
 
-        private inline fun Graphics2D.blend(alpha: Double, block: () -> Unit) {
-            val blend = alpha != 1.0
-            val prevComposite = composite
-            if (blend) composite = AlphaComposite.SrcOver.derive(alpha.toFloat())
-            block()
-            if (blend) composite = prevComposite
-        }
-
-        private fun Graphics2D.drawDeferredImage(
-            image: DeferredImage, layers: List<DeferredImage.Layer>, shift: Double, height: Int
+        private fun materialize(
+            dst: BufferedImage, src: DeferredImage,
+            layers: List<DeferredImage.Layer>, y: Double, alpha: Double
         ) {
-            translate(0.0, -shift)
-            // If the chunk doesn't contain the whole page, cull the rest to improve performance.
-            val culling = if (height < image.height.resolve()) null else
-                Rectangle2D.Double(0.0, shift, image.width, height.toDouble())
-            // Paint the deferred image onto the raster image.
-            image.materialize(this, layers, culling)
+            val shiftedSrc = if (y == 0.0) src else
+                DeferredImage(dst.width.toDouble(), dst.height.toDouble().toY())
+                    .apply { drawDeferredImage(src, y = y.toY()) }
+            shiftedSrc.materialize(dst, layers, alphaComposite(alpha))
         }
 
+        private fun transfer(
+            dst: BufferedImage, src: BufferedImage,
+            ix: Int = 0, iy: Int = 0, dy: Double = 0.0, res: Resolution? = null, alpha: Double = 1.0,
+            draft: Boolean = false
+        ) {
+            dst.withG2 { g2 ->
+                if (!draft)
+                    g2.setHighQuality()
+                alphaComposite(alpha)?.let(g2::setComposite)
+                if (dy != 0.0)
+                    g2.translate(0.0, dy)
+                if (res == null) {
+                    g2.drawImage(src, ix, iy, null)
+                } else
+                    g2.drawImage(src, ix, iy, res.widthPx, res.heightPx, null)
+            }
+        }
+
+        private fun alphaComposite(alpha: Double) =
+            if (alpha == 1.0) null else AlphaComposite.SrcOver.derive(alpha.toFloat())
+
+    }
+
+
+    interface TapeSpan {
+        val embeddedTape: Tape.Embedded
+        val firstFrameIdx: Int
+        val lastFrameIdx: Int
     }
 
 
@@ -248,21 +273,26 @@ class DeferredVideo private constructor(
     )
 
 
-    abstract class Graphics2DBackend(
+    abstract class BufferedImageBackend(
         private val video: DeferredVideo,
-        private val layers: List<DeferredImage.Layer>,
-        draft: Boolean = false,
+        private val staticLayers: List<DeferredImage.Layer>,
+        tapeLayers: List<DeferredImage.Layer>,
+        private val draft: Boolean = false,
         sequentialAccess: Boolean = false,
         preloading: Boolean = false
     ) {
 
         private val cache = object : Cache<BufferedImage>(video, draft, sequentialAccess, preloading) {
-            override fun createRender(image: DeferredImage, shift: Double, height: Int): BufferedImage =
-                createIntermediateImage(video.width, height).withG2 { g2 ->
-                    g2.setHighQuality()
-                    g2.drawDeferredImage(image, layers, shift, height)
-                }
+            override fun createRender(image: DeferredImage, shift: Double, height: Int): BufferedImage {
+                val render = createIntermediateImage(video.width, height)
+                DeferredImage(render.width.toDouble(), render.height.toDouble().toY())
+                    .apply { drawDeferredImage(image, y = (-shift).toY()) }
+                    .materialize(render, staticLayers)
+                return render
+            }
         }
+
+        private val tapeTracker = TapeTracker<Unit>(video, tapeLayers)
 
         /**
          * This method must be overwritten by users of this class who exactly know onto what kind of [Graphics2D] object
@@ -274,96 +304,168 @@ class DeferredVideo private constructor(
             cache.query(frameIdx)
         }
 
-        fun materializeFrame(g2: Graphics2D, frameIdx: Int) {
-            for (resp in cache.query(frameIdx)) when (resp) {
-                is Response.Image -> @Suppress("NAME_SHADOWING") g2.withNewG2 { g2 ->
-                    g2.setHighQuality()
-                    g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, layers, resp.shift, video.height) }
+        fun materializeFrame(bufImage: BufferedImage, frameIdx: Int) {
+            // Get the static pages from the cache and put them onto the buffered image.
+            for (resp in cache.query(frameIdx))
+                when (resp) {
+                    is Response.Image ->
+                        materialize(bufImage, resp.image, staticLayers, -resp.shift, resp.alpha)
+                    is Response.AlignedRender ->
+                        transfer(bufImage, resp.render, iy = -resp.shift, alpha = resp.alpha, draft = draft)
+                    is Response.UnalignedRender ->
+                        transfer(bufImage, resp.render, dy = -resp.shift, alpha = resp.alpha, draft = draft)
                 }
-                is Response.AlignedRender ->
-                    g2.blend(resp.alpha) { g2.drawImage(resp.render, 0, -resp.shift, null) }
-                is Response.UnalignedRender ->
-                    g2.blend(resp.alpha) { g2.drawImage(resp.render, getTranslateInstance(0.0, -resp.shift), null) }
+
+            // Get the correct preview frame for each visible tape and put them onto the buffered image.
+            for (resp in tapeTracker.query(frameIdx)) {
+                require(draft) { "The BufferedImageBackend can only embed tapes when in draft mode." }
+                val previewFrame = try {
+                    resp.span.embeddedTape.tape.getPreviewFrame(resp.timecode)
+                } catch (_: Exception) {
+                    // In case of errors, draw a missing media placeholder instead.
+                    bufImage.withG2 { g2 ->
+                        val (w, h) = resp.resolution
+                        alphaComposite(resp.alpha)?.let(g2::setComposite)
+                        g2.paint = GradientPaint(
+                            0f, resp.y.toFloat(), Tape.MISSING_MEDIA_TOP_COLOR,
+                            0f, (resp.y + h).toFloat(), Tape.MISSING_MEDIA_BOT_COLOR
+                        )
+                        g2.fillRect(resp.x, resp.y, w, h)
+                    }
+                    continue
+                }
+                if (previewFrame != null)
+                    transfer(
+                        bufImage, previewFrame,
+                        ix = resp.x, iy = resp.y, res = resp.resolution, alpha = resp.alpha, draft = draft
+                    )
             }
         }
 
     }
 
 
-    class VideoWriterBackend(
-        private val videoWriter: VideoWriter,
+    class BitmapBackend(
         video: DeferredVideo,
-        private val layers: List<DeferredImage.Layer>,
+        private val staticLayers: List<DeferredImage.Layer>,
+        tapeLayers: List<DeferredImage.Layer>,
         private val grounding: Color?,
-        sequentialAccess: Boolean = false,
-        preloading: Boolean = false
-    ) {
+        private val spec: Bitmap.Spec
+    ) : Closeable {
 
-        private class Render(val bufImage: BufferedImage, val prepFrame: VideoWriter.PreparedFrame)
+        init {
+            require(video.resolution == spec.resolution)
+            require(spec.content != Bitmap.Content.ONLY_TOP_FIELD && spec.content != Bitmap.Content.ONLY_BOT_FIELD)
+        }
 
-        private val workWidth = VideoWriter.closestWorkResolution(video.width)
-        private val workHeight = VideoWriter.closestWorkResolution(video.height)
+        private val numFrames = video.numFrames
+        private val pixelFormat get() = spec.representation.pixelFormat
+        private val renderSpec = spec.copy(scan = Bitmap.Scan.PROGRESSIVE, content = Bitmap.Content.PROGRESSIVE_FRAME)
 
-        private val cache = object : Cache<Render>(
-            video = if (videoWriter.scan == VideoWriter.Scan.PROGRESSIVE) video else video.copy(fpsScaling = 2),
-            draft = false, sequentialAccess, preloading
-        ) {
-            override fun createRender(image: DeferredImage, shift: Double, height: Int): Render {
-                val h = VideoWriter.closestWorkResolution(height)
-                val transparentBufImage = drawImage(workWidth, h, grounding = null) { g2 ->
-                    g2.drawDeferredImage(image, layers, shift, h)
+        private val workWidth = closestWorkResolution(spec.resolution.widthPx, pixelFormat.hChromaSub)
+        private val workHeight = closestWorkResolution(spec.resolution.heightPx, pixelFormat.vChromaSub)
+        private val workResolution = Resolution(workWidth, workHeight)
+        private val workResolutionSpec = spec.copy(resolution = workResolution)
+        private val workResolutionRenderSpec = renderSpec.copy(resolution = workResolution)
+        private val workResolutionRenderConverter = Image2BitmapConverter(workResolutionRenderSpec)
+
+        private val blankBitmap = Bitmap.allocate(workResolutionRenderSpec).also {
+            workResolutionRenderConverter.convert(drawImage(workWidth, workHeight, grounding) {}, it)
+        }
+
+        private val cache: Cache<Render>
+        private val tapeTracker: TapeTracker<TapeUserData>
+
+        init {
+            val effectiveVideo = if (spec.scan == Bitmap.Scan.PROGRESSIVE) video else video.copy(fpsScaling = 2)
+            cache = object : Cache<Render>(effectiveVideo, draft = false, sequentialAccess = true, preloading = false) {
+                override fun createRender(image: DeferredImage, shift: Double, height: Int): Render {
+                    val h = closestWorkResolution(height, pixelFormat.vChromaSub)
+                    val transparentBufImage = BufferedImage(workWidth, h, BufferedImage.TYPE_4BYTE_ABGR)
+                    materialize(transparentBufImage, image, staticLayers, -shift, 1.0)
+                    val groundedBufImage = if (grounding == null) transparentBufImage else
+                        drawImage(workWidth, h, grounding) { g2 -> g2.drawImage(transparentBufImage, 0, 0, null) }
+                    val groundedBitmap = Bitmap.allocate(renderSpec.copy(resolution = Resolution(workWidth, h)))
+                    (if (h == workHeight) workResolutionRenderConverter else Image2BitmapConverter(groundedBitmap.spec))
+                        .convert(groundedBufImage, groundedBitmap)
+                    return Render(transparentBufImage, groundedBitmap)
                 }
-                val groundedBufImage = if (grounding == null) transparentBufImage else
-                    drawImage(workWidth, h, grounding) { g2 -> g2.drawImage(transparentBufImage, 0, 0, null) }
-                return Render(transparentBufImage, videoWriter.prepareFrame(groundedBufImage))
             }
+            tapeTracker = TapeTracker(effectiveVideo, tapeLayers)
         }
 
-        private val blankPrepFrame = videoWriter.prepareFrame(drawImage(workWidth, workHeight, grounding) {})
+        private var frameIdx = -1
 
-        fun writeFrame(frameIdx: Int) {
-            if (videoWriter.scan == VideoWriter.Scan.PROGRESSIVE)
-                writeFrame(cache.query(frameIdx))
-            else {
-                val tff = videoWriter.scan == VideoWriter.Scan.INTERLACED_TOP_FIELD_FIRST
-                // It is important to query the earlier frame first, because if sequentialAccess is true, the cache is
-                // free to discard it as soon as later frame is queried.
-                val responses1 = cache.query(frameIdx * 2)
-                val responses2 = cache.query(frameIdx * 2 + 1)
-                val (topPrepFrame, topShift) = obtainPrepFrame(if (tff) responses1 else responses2)
-                val (botPrepFrame, botShift) = obtainPrepFrame(if (tff) responses2 else responses1)
-                videoWriter.writeFrame(topPrepFrame, topShift, botPrepFrame, botShift)
+        /** The returned bitmap is permitted to be [Bitmap.close]d. */
+        fun materializeNextFrame(): Bitmap? {
+            if (++frameIdx >= numFrames)
+                return null
+
+            val out: Bitmap
+            val (width, height) = spec.resolution
+            if (spec.scan == Bitmap.Scan.PROGRESSIVE) {
+                val (bitmap, writable, shift) = obtainBitmap(frameIdx)
+                val tapeResponses = tapeTracker.query(frameIdx)
+                out = when {
+                    writable -> bitmap
+                    tapeResponses.isEmpty() -> bitmap.view(0, shift, width, height, 1)
+                    else -> Bitmap.allocate(workResolutionSpec)
+                        .apply { blit(bitmap, 0, shift, workWidth, workHeight, 0, 0, 1) }
+                }
+                for (resp in tapeResponses) {
+                    val userData = takeTapeUserData(resp)
+                    val frame = userData.reader.read(resp.timecode).bitmap
+                    userData.compositor.compose(out, frame, resp.x, resp.y, 1, 0, resp.alpha)
+                    dropTapeUserData(resp, frameIdx)
+                }
+            } else {
+                val fstSrcParity = if (spec.scan == Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST) 0 else 1
+                val sndSrcParity = 1 - fstSrcParity
+                val fstDstParity = if (spec.content == Bitmap.Content.INTERLEAVED_FIELDS) fstSrcParity else sndSrcParity
+                val sndDstParity = 1 - fstDstParity
+                // It is important to query the earlier frame first, because as sequentialAccess is true, the cache is
+                // free to discard it as soon as a later frame is queried.
+                val (fst, fstWritable, fstShift) = obtainBitmap(frameIdx * 2)
+                val (snd, sndWritable, sndShift) = obtainBitmap(frameIdx * 2 + 1)
+                out = Bitmap.allocate(workResolutionSpec)
+                out.blit(fst, 0, fstShift + fstSrcParity, workWidth, workHeight - 1, 0, fstDstParity, 2)
+                out.blit(snd, 0, sndShift + sndSrcParity, workWidth, workHeight - 1, 0, sndDstParity, 2)
+                if (fstWritable) fst.close()
+                if (sndWritable) snd.close()
+                overlayInterlacedTapes(out, frameIdx * 2, fstSrcParity, fstDstParity)
+                overlayInterlacedTapes(out, frameIdx * 2 + 1, sndSrcParity, sndDstParity)
             }
+
+            return if (width == workWidth && height == workHeight) out else
+                out.view(0, 0, width, height, 1).also { out.close() }
         }
 
-        private fun writeFrame(responses: List<Response<Render>>) {
-            val r = responses.singleOrNull()
-            when {
-                responses.isEmpty() -> videoWriter.writeFrame(blankPrepFrame, 0)
-                r is Response.AlignedRender && r.alpha == 1.0 -> videoWriter.writeFrame(r.render.prepFrame, r.shift)
-                else -> videoWriter.writeFrame(drawResponsesImage(responses))
-            }
-        }
+        private data class Obtained(val bitmap: Bitmap, val writable: Boolean, val shift: Int)
 
-        private fun obtainPrepFrame(responses: List<Response<Render>>): Pair<VideoWriter.PreparedFrame, Int> {
+        private fun obtainBitmap(frameIdx: Int): Obtained {
+            val responses = cache.query(frameIdx)
             val r = responses.singleOrNull()
             return when {
-                responses.isEmpty() -> Pair(blankPrepFrame, 0)
-                r is Response.AlignedRender && r.alpha == 1.0 -> Pair(r.render.prepFrame, r.shift)
-                else -> Pair(videoWriter.prepareFrame(drawResponsesImage(responses)), 0)
-            }
-        }
-
-        private fun drawResponsesImage(responses: List<Response<Render>>) =
-            drawImage(workWidth, workHeight, grounding) { g2 ->
-                for (resp in responses) when (resp) {
-                    is Response.Image ->
-                        g2.blend(resp.alpha) { g2.drawDeferredImage(resp.image, layers, resp.shift, workHeight) }
-                    is Response.AlignedRender ->
-                        g2.blend(resp.alpha) { g2.drawImage(resp.render.bufImage, 0, -resp.shift, null) }
-                    is Response.UnalignedRender -> throw IllegalStateException()
+                responses.isEmpty() ->
+                    Obtained(blankBitmap, writable = false, shift = 0)
+                r is Response.AlignedRender && r.alpha == 1.0 ->
+                    Obtained(r.render.bitmap, writable = false, shift = r.shift)
+                else -> {
+                    val bufImage = drawImage(workWidth, workHeight, grounding) {}
+                    for (resp in cache.query(frameIdx))
+                        when (resp) {
+                            is Response.Image ->
+                                materialize(bufImage, resp.image, staticLayers, -resp.shift, resp.alpha)
+                            is Response.AlignedRender ->
+                                transfer(bufImage, resp.render.bufImage, iy = -resp.shift, alpha = resp.alpha)
+                            is Response.UnalignedRender -> throw IllegalStateException()
+                        }
+                    val bitmap = Bitmap.allocate(workResolutionRenderSpec)
+                    workResolutionRenderConverter.convert(bufImage, bitmap)
+                    Obtained(bitmap, writable = true, shift = 0)
                 }
             }
+        }
 
         private inline fun drawImage(
             width: Int, height: Int, grounding: Color?, block: (Graphics2D) -> Unit
@@ -377,6 +479,135 @@ class DeferredVideo private constructor(
                 }
                 block(g2)
             }
+        }
+
+        private fun overlayInterlacedTapes(out: Bitmap, frameIdx: Int, srcParity: Int, dstParity: Int) {
+            for (resp in tapeTracker.query(frameIdx)) {
+                // Find which tape field to overlay onto the currently written output field.
+                val overlayParity = if (resp.y.mod(2) == srcParity) 0 else 1
+                // Find the y coordinate inside the currently written output field where the tape field should begin.
+                val y = if (srcParity == 0) ceilDiv(resp.y, 2) else floorDiv(resp.y, 2)
+
+                val userData = takeTapeUserData(resp)
+                if (userData.reader.spec.scan == Bitmap.Scan.PROGRESSIVE) {
+                    // When the tape is progressive, treat the progressive frames as if they consist of two fields.
+                    val frame = userData.reader.read(resp.timecode).bitmap
+                    userData.compositor.compose(out, frame, resp.x, dstParity + y * 2, 2, overlayParity, resp.alpha)
+                } else {
+                    // When the tape is interlaced, bring overlay fields into action alternatingly.
+                    val fileSeq = resp.span.embeddedTape.tape.fileSeq
+                    val frame = userData.reader.read(resp.timecode).bitmap
+                    if (userData.topField == null) {
+                        // If the tape has just appeared, immediately bring in both fields from the tape's first frame.
+                        userData.topField = frame.topFieldView()
+                        userData.botField = frame.botFieldView()
+                    } else {
+                        // Push the first field of "frame" if "resp.timecode" lies in the first field's time range.
+                        // Otherwise, push the second field of "frame".
+                        val tff = userData.reader.spec.scan == Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                        val timecodeRefersToFirstField =
+                            if (fileSeq) resp.fileSeqFirstField else userData.reader.didReadFirstField()
+                        if (tff == timecodeRefersToFirstField)
+                            userData.topField = frame.topFieldView()
+                        else
+                            userData.botField = frame.botFieldView()
+                    }
+                    // Perform the overlaying.
+                    out.view(0, dstParity, spec.resolution.widthPx, spec.resolution.heightPx - 1, 2).use { field ->
+                        if (overlayParity == 0)
+                            userData.topFieldCompositor.compose(field, userData.topField!!, resp.x, y, 1, 0, resp.alpha)
+                        else
+                            userData.botFieldCompositor.compose(field, userData.botField!!, resp.x, y, 1, 0, resp.alpha)
+                    }
+                }
+                dropTapeUserData(resp, frameIdx)
+            }
+        }
+
+        /**
+         * This function rounds numbers up to the next multiple of chromaSub (which is given in log2).
+         *
+         * When chroma subsampling is enabled, the respective image dimension must have such a multiple size, or
+         * otherwise zimg would throw an error because it can't evenly divide the chroma samples along that dimension.
+         * Hence, while working on the image, its resolution should be a multiple. This function needs to be called on
+         * the original image resolution to obtain one that is accepted by zimg.
+         *
+         * Notice that all of this only affects the working stage. The final encode can exhibit odd resolutions if the
+         * codec permits that.
+         */
+        private fun closestWorkResolution(size: Int, chromaSub: Int): Int {
+            if (chromaSub < 1)
+                return size
+            val n = 1 shl chromaSub
+            return size + n - (size and (n - 1))
+        }
+
+        private fun takeTapeUserData(resp: TapeTracker.Response<TapeUserData>): TapeUserData {
+            resp.userData?.let { return it }
+            return TapeUserData(spec, resp).also { resp.userData = it }
+        }
+
+        private fun dropTapeUserData(resp: TapeTracker.Response<TapeUserData>, frameIdx: Int) {
+            // Close the reader early and dereference the user data if we no longer need it. Notice that in case of
+            // errors, the close() function on this object will be called and will close all remaining readers.
+            if (frameIdx >= /* use >= instead of == just to be sure */ resp.span.lastFrameIdx) {
+                resp.userData?.run { reader.close() }
+                resp.userData = null
+            }
+        }
+
+        override fun close() {
+            for (userData in tapeTracker.collectUserData())
+                userData.reader.close()
+        }
+
+        private class Render(val bufImage: BufferedImage, val bitmap: Bitmap)
+
+        private class TapeUserData(canvasSpec: Bitmap.Spec, resp: TapeTracker.Response<*>) {
+
+            val reader = resp.span.embeddedTape.tape.SequentialReader(resp.timecode /* the span's first timecode */)
+            lateinit var compositor: BitmapCompositor; private set
+            lateinit var topFieldCompositor: BitmapCompositor; private set
+            lateinit var botFieldCompositor: BitmapCompositor; private set
+
+            var topField: Bitmap? = null
+                set(value) {
+                    field?.close()
+                    field = value
+                }
+            var botField: Bitmap? = null
+                set(value) {
+                    field?.close()
+                    field = value
+                }
+
+            init {
+                setupSafely({
+                    val tapeSpec = reader.spec
+                    val tapeIsProgressive = tapeSpec.scan == Bitmap.Scan.PROGRESSIVE
+                    if (canvasSpec.scan == Bitmap.Scan.PROGRESSIVE || tapeIsProgressive) {
+                        // If the tape is interlaced, make it have even height in the final output.
+                        val composedOverlayRes = if (tapeIsProgressive) resp.resolution else
+                            resp.resolution.copy(heightPx = resp.resolution.heightPx / 2 * 2)
+                        compositor = BitmapCompositor(canvasSpec, tapeSpec, composedOverlayRes)
+                    } else {
+                        val tapeFrameRes = tapeSpec.resolution
+                        require(tapeFrameRes.heightPx % 2 == 0) {
+                            "The interlaced tape '${resp.span.embeddedTape.tape.fileOrDir.name}' must have even height."
+                        }
+                        val tapeFieldSpec =
+                            tapeSpec.copy(resolution = tapeFrameRes.copy(heightPx = tapeFrameRes.heightPx / 2))
+                        val composedFieldRes = resp.resolution.copy(heightPx = resp.resolution.heightPx / 2)
+                        topFieldCompositor = BitmapCompositor(
+                            canvasSpec, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_TOP_FIELD), composedFieldRes
+                        )
+                        botFieldCompositor = BitmapCompositor(
+                            canvasSpec, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD), composedFieldRes
+                        )
+                    }
+                }, reader::close)
+            }
+
         }
 
     }
@@ -480,11 +711,9 @@ class DeferredVideo private constructor(
             if (sequentialAccess && first)
                 for (i in chunkIdx - 1 downTo 0) {
                     val chunk = chunks[i]
-                    val ref = chunk.withLock(chunk::microShiftedRenders)
-                    // Stop when we encounter a chunk that was once loaded but has since been freed before.
-                    if (ref != null && ref.refersTo(null))
-                        break
-                    ref?.clear()
+                    chunk.withLock { chunk.microShiftedRenders.also { chunk.microShiftedRenders = null } }
+                    // Stop when we encounter a chunk that was once loaded but has since been explicitly nulled before.
+                        ?: break
                 }
 
             // In preloading mode, queue preloading of the surrounding chunks in a background thread.
@@ -577,6 +806,136 @@ class DeferredVideo private constructor(
             var microShiftedRenders: SoftReference<List<R>>? = null
 
             inline fun <T> withLock(block: () -> T): T = if (lock == null) block() else lock.withLock(block)
+        }
+
+    }
+
+
+    private class TapeTracker<U>(private val video: DeferredVideo, layers: List<DeferredImage.Layer>) {
+
+        private val spans: List<Span<U>> = buildList {
+            for (insn in video.instructions)
+                for (placed in insn.image.collectPlacedTapes(layers)) {
+                    val placedH = placed.embeddedTape.resolution.heightPx
+                    // Notice that we add/subtract an epsilon to avoid inaccuracies when placed.y is a whole number.
+                    val relFirstFrameIdx = findRelFirstFrameIdx(insn.shifts, placed.y - video.height + 0.001)
+                    if (relFirstFrameIdx < 0)
+                        continue
+                    val relLastFrameIdx = findRelLastFrameIdx(insn.shifts, placed.y + placedH - 0.001)
+                    if (relLastFrameIdx < 0)
+                        continue
+                    @OptIn(ExperimentalStdlibApi::class)
+                    val rangeDiff = placed.embeddedTape.range.run { endExclusive - start }
+                    val rangeFrames = when (rangeDiff) {
+                        is Timecode.Frames -> rangeDiff.frames * video.fpsScaling
+                        is Timecode.Clock -> rangeDiff.toFramesCeil(video.fps).frames
+                        else -> throw IllegalStateException("Wrong timecode format: ${rangeDiff.javaClass.simpleName}")
+                    }
+                    val firstFrameIdx =
+                        insn.firstFrameIdx + relFirstFrameIdx + placed.embeddedTape.leftMarginFrames * video.fpsScaling
+                    val lastFrameIdx = min(
+                        insn.firstFrameIdx + relLastFrameIdx - placed.embeddedTape.rightMarginFrames * video.fpsScaling,
+                        firstFrameIdx + rangeFrames - 1
+                    )
+                    if (firstFrameIdx > lastFrameIdx)
+                        continue
+                    add(Span(insn, placed, firstFrameIdx, lastFrameIdx))
+                }
+        }
+
+        private fun findRelFirstFrameIdx(shifts: DoubleArray, appearanceShift: Double): Int {
+            var idx = shifts.binarySearch(appearanceShift)
+            when {
+                // The span doesn't start before the last shift.
+                idx == -shifts.size - 1 -> return -1
+                // -idx-1 marks the first shift larger than appearanceShift, which is where the span starts.
+                idx < 0 -> return -idx - 1
+                // If appearanceShift is found exactly, search for the first shift larger than it.
+                else -> {
+                    do {
+                        idx++
+                        if (idx >= shifts.size)
+                            return -1
+                    } while (shifts[idx] == appearanceShift)
+                    return idx
+                }
+            }
+        }
+
+        private fun findRelLastFrameIdx(shifts: DoubleArray, disappearanceShift: Double): Int {
+            val idx = shifts.binarySearch(disappearanceShift)
+            return when {
+                // The span stops even before the first shift.
+                idx == 0 || idx == -0 - 1 -> -1
+                // The span doesn't stop before the last shift.
+                idx == -shifts.size - 1 -> shifts.lastIndex
+                // -idx-1 respectively idx marks the first shift that no longer shows the span.
+                idx < 0 -> -idx - 2
+                else -> idx - 1
+            }
+        }
+
+        fun query(frameIdx: Int): List<Response<U>> = buildList {
+            for (span in spans)
+                if (frameIdx in span.firstFrameIdx..span.lastFrameIdx) {
+                    val pastFrames = frameIdx - span.firstFrameIdx
+                    val futureFrames = span.lastFrameIdx - frameIdx
+
+                    @OptIn(ExperimentalStdlibApi::class)
+                    val start = span.embeddedTape.range.start
+                    val timecode = start + when {
+                        span.embeddedTape.tape.fileSeq -> Timecode.Frames(pastFrames / video.fpsScaling)
+                        else -> Timecode.Frames(pastFrames).toClock(video.fps)
+                    }
+                    val fileSeqFirstField = span.embeddedTape.tape.fileSeq &&
+                            ((start as Timecode.Frames).frames + pastFrames * 2 / video.fpsScaling) % 2 == 0
+
+                    val relFrameIdx = frameIdx - span.insn.firstFrameIdx
+                    val x = span.placed.x.roundToInt()
+                    val y = (span.placed.y - span.insn.shifts[relFrameIdx]).roundToInt()
+
+                    var alpha = span.insn.alphas[relFrameIdx]
+                    val leftFadeFrames = span.embeddedTape.leftFadeFrames * video.fpsScaling
+                    val rightFadeFrames = span.embeddedTape.rightFadeFrames * video.fpsScaling
+                    if (pastFrames < leftFadeFrames || futureFrames < rightFadeFrames)
+                        alpha *= minOf(
+                            1.0,
+                            (pastFrames + 1) / (leftFadeFrames + 1).toDouble(),
+                            (futureFrames + 1) / (rightFadeFrames + 1).toDouble()
+                        )
+
+                    add(Response(span, timecode, fileSeqFirstField, x, y, span.embeddedTape.resolution, alpha))
+                }
+        }
+
+        fun collectSpans(): List<TapeSpan> = spans
+        fun collectUserData(): List<U> = spans.mapNotNull(Span<U>::userData)
+
+        class Response<U>(
+            private val _span: Span<U>,
+            val timecode: Timecode,
+            /**
+             * For file sequence tapes, [timecode] is a [Timecode.Frames] which refers to a frame, but looses
+             * information on which field inside that frame it refers to. This boolean retrofits that information.
+             */
+            val fileSeqFirstField: Boolean,
+            val x: Int,
+            val y: Int,
+            val resolution: Resolution,
+            val alpha: Double
+        ) {
+            val span: TapeSpan get() = _span
+            var userData: U? by _span::userData
+        }
+
+        private class Span<U>(
+            val insn: Instruction,
+            val placed: DeferredImage.PlacedTape,
+            override val firstFrameIdx: Int,
+            override val lastFrameIdx: Int
+        ) : TapeSpan {
+            var userData: U? = null
+            override val embeddedTape get() = placed.embeddedTape
         }
 
     }

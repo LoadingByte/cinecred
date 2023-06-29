@@ -2,7 +2,9 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import java.awt.Font
+import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
@@ -46,3 +48,13 @@ class PictureLoader(file: Path) {
         if (lazy.isInitialized()) lazy.value?.dispose()
     }
 }
+
+
+/** Doesn't throw, instead returns null. */
+fun tryRecognizeTape(tapeFileOrDir: Path): Tape? =
+    try {
+        Tape.recognize(tapeFileOrDir)
+    } catch (e: IOException) {
+        LOGGER.error("Skipping tape '{}' because it is corrupt or cannot be read.", tapeFileOrDir, e)
+        null
+    }

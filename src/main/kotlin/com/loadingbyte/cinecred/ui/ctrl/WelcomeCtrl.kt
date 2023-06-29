@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.ctrl
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.projectio.*
@@ -537,11 +538,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                     ImageOverlay(uuid, name, edited.raster)
                 else try {
                     val picture = Picture.read(imageFile)
-                    val defImage = DeferredImage()
-                    defImage.drawPicture(picture, 0.0, 0.0.toY())
                     val image = BufferedImage(
                         picture.width.roundToInt(), picture.height.roundToInt(), BufferedImage.TYPE_4BYTE_ABGR
-                    ).withG2 { g2 -> defImage.materialize(g2, DeferredImage.DELIVERED_LAYERS) }
+                    )
+                    DeferredImage(picture.width, picture.height.toY()).apply {
+                        drawPicture(picture, 0.0, 0.0.toY())
+                    }.materialize(image, listOf(STATIC))
                     picture.dispose()
                     ImageOverlay(uuid, name, Picture.Raster(image))
                 } catch (e: Exception) {

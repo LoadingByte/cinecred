@@ -34,6 +34,7 @@ fun extractStyling(global: Global, page: Page): Styling {
                             is BodyElement.Nil -> letterStyles.add(elem.sty)
                             is BodyElement.Str -> elem.str.forEach { (_, style) -> letterStyles.add(style) }
                             is BodyElement.Pic -> {}
+                            is BodyElement.Tap -> {}
                         }
                     block.head?.forEach { (_, style) -> letterStyles.add(style) }
                     block.tail?.forEach { (_, style) -> letterStyles.add(style) }
@@ -109,7 +110,7 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
                 if (file.isRegularFile())
                     tryReadPictureLoader(file)?.let(::add)
         }
-        val (pages, runtimeGroups, _) = readCredits(spreadsheet, styling, pictureLoaders)
+        val (pages, runtimeGroups, _) = readCredits(spreadsheet, styling, pictureLoaders, emptyList())
         for (pl in pictureLoaders)
             pl.dispose()
         Project(styling, BundledFontsStylingContext, pages.toPersistentList(), runtimeGroups.toPersistentList())
@@ -124,7 +125,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle): Pair<Global, Page
     val (pages, _, _) = useResourcePath("/logo.svg") { logoSvg ->
         useResourcePath("/template/cinecred.svg") { cinecredSvg ->
             val pictureLoaders = listOf(tryReadPictureLoader(logoSvg)!!, tryReadPictureLoader(cinecredSvg)!!)
-            readCredits(spreadsheet, styling, pictureLoaders)
+            readCredits(spreadsheet, styling, pictureLoaders, emptyList())
         }
     }
     return Pair(styling.global, pages.single())
@@ -134,6 +135,6 @@ fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> 
     val styling =
         Styling(PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList())
     val spreadsheet = CsvFormat.read(this)
-    val (pages, _, _) = readCredits(spreadsheet, styling, emptyList())
+    val (pages, _, _) = readCredits(spreadsheet, styling, emptyList(), emptyList())
     return Pair(styling.global, pages.single())
 }

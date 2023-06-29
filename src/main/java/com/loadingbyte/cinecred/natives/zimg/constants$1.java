@@ -9,15 +9,65 @@ import jdk.incubator.foreign.*;
 import static jdk.incubator.foreign.CLinker.*;
 class constants$1 {
 
-    static final FunctionDescriptor zimg_filter_graph_build$FUNC = FunctionDescriptor.of(C_POINTER,
+    static final FunctionDescriptor zimg_filter_graph_callback$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_INT,
+        C_INT,
+        C_INT
+    );
+    static final MethodHandle zimg_filter_graph_callback$MH = RuntimeHelper.downcallHandle(
+        "(Ljdk/incubator/foreign/MemoryAddress;III)I",
+        constants$1.zimg_filter_graph_callback$FUNC, false
+    );
+    static final FunctionDescriptor zimg_filter_graph_free$FUNC = FunctionDescriptor.ofVoid(
+        C_POINTER
+    );
+    static final MethodHandle zimg_filter_graph_free$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_filter_graph_free",
+        "(Ljdk/incubator/foreign/MemoryAddress;)V",
+        constants$1.zimg_filter_graph_free$FUNC, false
+    );
+    static final FunctionDescriptor zimg_filter_graph_get_tmp_size$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_POINTER
+    );
+    static final MethodHandle zimg_filter_graph_get_tmp_size$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_filter_graph_get_tmp_size",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
+        constants$1.zimg_filter_graph_get_tmp_size$FUNC, false
+    );
+    static final FunctionDescriptor zimg_filter_graph_get_input_buffering$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_POINTER
+    );
+    static final MethodHandle zimg_filter_graph_get_input_buffering$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_filter_graph_get_input_buffering",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
+        constants$1.zimg_filter_graph_get_input_buffering$FUNC, false
+    );
+    static final FunctionDescriptor zimg_filter_graph_get_output_buffering$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_POINTER
+    );
+    static final MethodHandle zimg_filter_graph_get_output_buffering$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_filter_graph_get_output_buffering",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
+        constants$1.zimg_filter_graph_get_output_buffering$FUNC, false
+    );
+    static final FunctionDescriptor zimg_filter_graph_process$FUNC = FunctionDescriptor.of(C_INT,
+        C_POINTER,
+        C_POINTER,
+        C_POINTER,
+        C_POINTER,
+        C_POINTER,
         C_POINTER,
         C_POINTER,
         C_POINTER
     );
-    static final MethodHandle zimg_filter_graph_build$MH = RuntimeHelper.downcallHandle(
-        zimg_h.LIBRARIES, "zimg_filter_graph_build",
-        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)Ljdk/incubator/foreign/MemoryAddress;",
-        constants$1.zimg_filter_graph_build$FUNC, false
+    static final MethodHandle zimg_filter_graph_process$MH = RuntimeHelper.downcallHandle(
+        zimg_h.LIBRARIES, "zimg_filter_graph_process",
+        "(Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;Ljdk/incubator/foreign/MemoryAddress;)I",
+        constants$1.zimg_filter_graph_process$FUNC, false
     );
 }
 

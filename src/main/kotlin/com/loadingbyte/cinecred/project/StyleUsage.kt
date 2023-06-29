@@ -50,6 +50,7 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
                                 is BodyElement.Nil -> usedStyles.add(bodyElem.sty)
                                 is BodyElement.Str -> for ((_, letSty) in bodyElem.str) usedStyles.add(letSty)
                                 is BodyElement.Pic -> {}
+                                is BodyElement.Tap -> {}
                             }
                     }
         }

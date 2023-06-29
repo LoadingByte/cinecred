@@ -6,9 +6,12 @@ import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.projectio.ProjectIntake.Callbacks
-import com.loadingbyte.cinecred.projectio.service.SERVICE_LINK_EXTS
+import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.DELETE
+import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.MODIFY
 import com.loadingbyte.cinecred.projectio.service.SERVICES
+import com.loadingbyte.cinecred.projectio.service.SERVICE_LINK_EXTS
 import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
 import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.awt.Font
@@ -17,13 +20,16 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.*
 
 
 /**
- * Upon creation of a new instance of this class, the callbacks [Callbacks.pushProjectFonts] and
- * [Callbacks.pushPictureLoaders] are immediately called from the same thread before the constructor returns.
+ * Upon creation of a new instance of this class, the callbacks [Callbacks.pushProjectFonts],
+ * [Callbacks.pushPictureLoaders], and [Callbacks.pushTapes] are immediately called from the same thread before the
+ * constructor returns.
  * In contrast, the callback [Callbacks.pushCreditsSpreadsheet] will be called later from a separate thread.
  *
  * Neither the constructor nor any method in this class throws exceptions. Instead, errors are gracefully handled and,
@@ -36,6 +42,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>)
         fun pushProjectFonts(projectFonts: Collection<Font>)
         fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>)
+        fun pushTapes(tapes: Collection<Tape>)
     }
 
     private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
@@ -45,32 +52,56 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private var currentCreditsFile: Path? = null
     private var linkedCreditsWatcher: ServiceWatcher? = null
 
+    private val auxFileEventBatch = AtomicReference(HashMap<Path, RecursiveFileWatcher.Event>())
+    private val auxFileEventBatchProcessor = AtomicReference<ScheduledFuture<*>?>()
+
     private val projectFonts = HashMap<Path, List<Font>>()
-    private val pictureLoaders = HashMap<Path, PictureLoader>()
+    private val pictureLoaders = PathTreeMap<PictureLoader>()
+    private val tapes = HashMap<Path, Tape>()
+
+    // These are set to true to force calls to the corresponding pushX() method upon initialization.
+    private var projectFontsChanged = true
+    private var pictureLoadersChanged = true
+    private var tapesChanged = true
 
     init {
-        // Load the initially present auxiliary files (project fonts and pictures) in the current thread, which is
+        // Load the initially present auxiliary files (project fonts, pictures, tapes) in the current thread, which is
         // required by the class's contract. After that, all actions will be performed in the executor thread, which is
         // why the class doesn't need locking mechanisms.
-        for (projectFile in projectDir.walkSafely())
-            if (projectFile.isRegularFile())
-                reloadAuxFile(projectFile, push = false)
-        callbacks.pushProjectFonts(projectFonts.values.flatten())
-        callbacks.pushPictureLoaders(pictureLoaders.values)
+        for (projectFileOrDir in projectDir.walkSafely())
+            reloadAuxFileOrDir(projectFileOrDir)
+        pushAuxiliaryFileChanges()
 
         // Load the initially present credits file in the executor thread.
         executor.submit { reloadCreditsFile(Path("")) }
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
-            // Process the change in the executor thread. Also wait a moment so that the file has been fully written.
-            executor.schedule({
-                when {
-                    hasCreditsFilename(file) -> reloadCreditsFile(file)
-                    event == RecursiveFileWatcher.Event.MODIFY -> reloadAuxFile(file, push = true)
-                    event == RecursiveFileWatcher.Event.DELETE -> removeAuxFile(file)
-                }
-            }, 100, TimeUnit.MILLISECONDS)
+            if (hasCreditsFilename(file)) {
+                // Process changes to the credits file in the executor thread.
+                // Also wait a moment so that the file has been fully written.
+                executor.schedule({ reloadCreditsFile(file) }, 100, TimeUnit.MILLISECONDS)
+            } else {
+                // Changes to auxiliary files are batched to reduce the number of pushes when, e.g., a long image
+                // sequence is copied into the project dir.
+                // For this, we first record the event to a map, overriding the previous event for that file if there
+                // was any. We also record events for the changed file's parent dir to account for image sequences.
+                val batch = auxFileEventBatch.get()
+                val parent = file.parent
+                batch[file] = event
+                batch[parent] = if (parent.exists()) MODIFY else DELETE
+                // We then schedule a task that will later apply the batched changes in one go.
+                val newProcessor = executor.schedule({
+                    for ((defFile, defEvent) in auxFileEventBatch.getAndSet(HashMap())) {
+                        removeAuxFileOrDir(defFile)
+                        if (defEvent == MODIFY)
+                            reloadAuxFileOrDir(defFile)
+                    }
+                    pushAuxiliaryFileChanges()
+                }, 500, TimeUnit.MILLISECONDS)
+                // Cancel the previous task if it hasn't started yet
+                auxFileEventBatchProcessor.getAndSet(newProcessor)?.cancel(false)
+            }
         }
     }
 
@@ -79,13 +110,21 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     }
 
     fun close() {
+        // Don't close the intake twice, as the call to executor.submit() would throw an exception.
+        if (executor.isShutdown)
+            return
+
         // Cancel the previous project dir change watching order.
         RecursiveFileWatcher.unwatch(projectDir)
 
         executor.submit {
             // Dispose of all loaded pictures.
-            for (pictureLoader in pictureLoaders.values)
+            for (pictureLoader in pictureLoaders.values())
                 pictureLoader.dispose()
+
+            // Close all recognized tapes.
+            for (tape in tapes.values)
+                tape.close()
 
             // Stop watching for online changes.
             linkedCreditsWatcher?.cancel()
@@ -146,45 +185,78 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         currentCreditsFile = activeFile
     }
 
-    private fun reloadAuxFile(file: Path, push: Boolean) {
+    private fun reloadAuxFileOrDir(fileOrDir: Path) {
         // If the file has been generated by a render job, don't reload the project. Otherwise, generating image
         // sequences would be very expensive because we would constantly reload the project. Note that we do not
         // only consider the current render job, but all render jobs in the render job list. This ensures that even
         // the last file generated by a render job doesn't reload the project even when the render job has already
         // been marked as complete by the time the OS notifies us about the newly generated file.
-        if (RenderQueue.isRenderedFile(file))
+        if (RenderQueue.isRenderedFile(fileOrDir))
             return
 
-        val newFonts = tryReadFonts(file)
+        val newFonts = tryReadFonts(fileOrDir)
         if (newFonts.isNotEmpty()) {
-            projectFonts[file] = newFonts
-            if (push)
-                callbacks.pushProjectFonts(projectFonts.values.flatten())
+            projectFonts[fileOrDir] = newFonts
+            projectFontsChanged = true
             return
         }
 
-        tryReadPictureLoader(file)?.let { pictureLoader ->
-            val prevPictureLoader = pictureLoaders.put(file, pictureLoader)
-            prevPictureLoader?.dispose()
-            if (push)
-                callbacks.pushPictureLoaders(pictureLoaders.values)
+        tryReadPictureLoader(fileOrDir)?.let { pictureLoader ->
+            pictureLoaders.put(fileOrDir, pictureLoader)?.dispose()
+            pictureLoadersChanged = true
+            return
+        }
+
+        tryRecognizeTape(fileOrDir)?.let { tape ->
+            tapes.put(fileOrDir, tape)?.close()
+            tapesChanged = true
+            // If this is an image sequence tape, disable all picture loaders inside the sequence folder.
+            if (tape.fileSeq)
+                pictureLoadersChanged = true
             return
         }
     }
 
-    private fun removeAuxFile(file: Path) {
-        val remFonts = projectFonts.remove(file)
-        if (remFonts != null) {
-            callbacks.pushProjectFonts(projectFonts.values.flatten())
+    private fun removeAuxFileOrDir(fileOrDir: Path) {
+        projectFonts.remove(fileOrDir)?.let {
+            projectFontsChanged = true
             return
         }
 
-        val pictureLoader = pictureLoaders.remove(file)
-        if (pictureLoader != null) {
+        pictureLoaders.removeLeaf(fileOrDir)?.let { pictureLoader ->
             pictureLoader.dispose()
-            callbacks.pushPictureLoaders(pictureLoaders.values)
+            pictureLoadersChanged = true
             return
         }
+
+        tapes.remove(fileOrDir)?.let { tape ->
+            tape.close()
+            tapesChanged = true
+            // If this was an image sequence tape, re-enable all picture loaders inside the sequence folder in case
+            // there are still some left.
+            if (tape.fileSeq)
+                pictureLoadersChanged = true
+            return
+        }
+    }
+
+    private fun pushAuxiliaryFileChanges() {
+        if (projectFontsChanged)
+            callbacks.pushProjectFonts(projectFonts.values.flatten())
+
+        if (pictureLoadersChanged) {
+            // Exclude all pictures that belong to a file sequence tape.
+            val exclude = if (tapes.values.none(Tape::fileSeq)) null else
+                tapes.values.mapNotNullTo(HashSet()) { if (it.fileSeq) it.fileOrDir else null }
+            callbacks.pushPictureLoaders(pictureLoaders.values(exclude = exclude))
+        }
+
+        if (tapesChanged)
+            callbacks.pushTapes(tapes.values)
+
+        projectFontsChanged = false
+        pictureLoadersChanged = false
+        tapesChanged = false
     }
 
 
@@ -241,6 +313,78 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } catch (_: IOException) {
                 false
             }
+
+    }
+
+
+    private class PathTreeMap<V : Any> {
+
+        private val root = Node<V>(Path(""), null)
+
+        operator fun get(path: Path): V? {
+            var node = root
+            for (component in path)
+                node = node.children[component] ?: return null
+            return node.value
+        }
+
+        operator fun set(path: Path, value: V) = put(path, value)
+
+        fun put(path: Path, value: V): V? {
+            var node = root
+            for ((i, component) in path.withIndex())
+                node = node.children.computeIfAbsent(component) {
+                    // We can't use Path.subpath() to compute nodePath as it turns absolute paths into relative ones.
+                    var nodePath = path
+                    repeat(path.nameCount - i - 1) { nodePath = nodePath.parent }
+                    Node(nodePath, null)
+                }
+            return node.value.also { node.value = value }
+        }
+
+        fun removeLeaf(path: Path): V? {
+            var parentNode = root
+            for (component in path.parent)
+                parentNode = parentNode.children[component] ?: return null
+            val filename = path.fileName
+            if (parentNode.children[filename].let { it == null || it.children.isNotEmpty() })
+                return null
+            return parentNode.children.remove(filename)?.value
+        }
+
+        fun removeSubtree(path: Path): V? {
+            var remParent: Node<V>? = null
+            var remComponent: Path? = null
+            var node = root
+            for (component in path) {
+                val child = node.children[component] ?: return null
+                // Make a note to later remove "child" if either (a) "child" is a child of "root" or (b) "node" is more
+                // than just a dummy node on the way to "path". This way, unused dummy nodes are cleaned up.
+                if (remParent == null || node.value != null || node.children.size > 1) {
+                    remParent = node
+                    remComponent = component
+                }
+                node = child
+            }
+            remParent?.run { children.remove(remComponent) }
+            return node.value
+        }
+
+        fun values(exclude: Set<Path>? = null): Collection<V> {
+            val values = mutableListOf<V>()
+            fun recursion(node: Node<V>) {
+                node.value?.let(values::add)
+                for (child in node.children.values)
+                    if (exclude == null || child.path !in exclude)
+                        recursion(child)
+            }
+            recursion(root)
+            return values
+        }
+
+        private class Node<V>(val path: Path, var value: V?) {
+            val children = HashMap<Path, Node<V>>()
+        }
 
     }
 

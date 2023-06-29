@@ -249,36 +249,7 @@ would declare them anyway.
 
 Finally, generate Java bindings using the following command:
 
-    jextract --source -d <OUT_DIR> --target-package com.loadingbyte.cinecred.natives.zimg <ZIMG_DIR>/src/zimg/api/zimg.h \
-        --include-function zimg_filter_graph_build \
-        --include-function zimg_filter_graph_free \
-        --include-function zimg_filter_graph_get_tmp_size \
-        --include-function zimg_filter_graph_process \
-        --include-function zimg_get_last_error \
-        --include-function zimg_graph_builder_params_default \
-        --include-function zimg_image_format_default \
-        --include-macro ZIMG_ALPHA_NONE \
-        --include-macro ZIMG_ALPHA_STRAIGHT \
-        --include-macro ZIMG_API_VERSION \
-        --include-macro ZIMG_BUFFER_MAX \
-        --include-macro ZIMG_CHROMA_LEFT \
-        --include-macro ZIMG_COLOR_RGB \
-        --include-macro ZIMG_COLOR_YUV \
-        --include-macro ZIMG_CPU_AUTO_64B \
-        --include-macro ZIMG_MATRIX_BT470_BG \
-        --include-macro ZIMG_MATRIX_BT709 \
-        --include-macro ZIMG_MATRIX_RGB \
-        --include-macro ZIMG_PIXEL_BYTE \
-        --include-macro ZIMG_PIXEL_WORD \
-        --include-macro ZIMG_PRIMARIES_709 \
-        --include-macro ZIMG_RANGE_FULL \
-        --include-macro ZIMG_RANGE_LIMITED \
-        --include-macro ZIMG_TRANSFER_BT709 \
-        --include-macro ZIMG_TRANSFER_IEC_61966_2_1 \
-        --include-struct zimg_image_buffer \
-        --include-struct zimg_image_buffer_const \
-        --include-struct zimg_graph_builder_params \
-        --include-struct zimg_image_format
+    jextract --source -d <OUT_DIR> --target-package com.loadingbyte.cinecred.natives.zimg <ZIMG_DIR>/src/zimg/api/zimg.h
 
 It is then necessary to replace all occurrences of `C_LONG` with `C_LONG_LONG`,
 as the former is 32-bit even on 64-bit Windows machines, while the original C

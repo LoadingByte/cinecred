@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.drawer.getSystemFont
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
@@ -47,10 +48,11 @@ class ProjectController(
         val ioLog: List<ParserMsg>,
         val stylingCtx: StylingContext?,
         val pictureLoaders: Collection<PictureLoader>?,
+        val tapes: Collection<Tape>?,
         val styling: Styling?
     )
 
-    private val currentInput = AtomicReference(Input(null, emptyList(), null, null, null))
+    private val currentInput = AtomicReference(Input(null, emptyList(), null, null, null, null))
     private val processingJobSlot = JobSlot()
     private var processingLog = emptyList<ParserMsg>()
 
@@ -96,6 +98,10 @@ class ProjectController(
             process(currentInput.updateAndGet { it.copy(pictureLoaders = pictureLoaders) })
         }
 
+        override fun pushTapes(tapes: Collection<Tape>) {
+            process(currentInput.updateAndGet { it.copy(tapes = tapes) })
+        }
+
     })
 
     // STEP 3:
@@ -135,14 +141,16 @@ class ProjectController(
     // END OF INITIALIZATION PROCEDURE
 
     private fun process(input: Input) {
-        val (creditsSpreadsheet, _, stylingCtx, pictureLoaders, styling) = input
+        val (creditsSpreadsheet, _, stylingCtx, pictureLoaders, tapes, styling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
-        if (creditsSpreadsheet == null || stylingCtx == null || pictureLoaders == null || styling == null)
+        if (creditsSpreadsheet == null || stylingCtx == null ||
+            pictureLoaders == null || tapes == null || styling == null
+        )
             return doneProcessing(input, null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
-            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoaders)
+            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoaders, tapes)
 
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.

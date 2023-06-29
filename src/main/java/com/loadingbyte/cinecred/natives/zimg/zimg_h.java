@@ -13,6 +13,87 @@ public class zimg_h  {
     }
 
     static final SymbolLookup LIBRARIES = RuntimeHelper.lookup();    /* package-private */ zimg_h() {}
+    public static int ZIMG_API_VERSION_MAJOR() {
+        return (int)2L;
+    }
+    public static int ZIMG_API_VERSION_MINOR() {
+        return (int)4L;
+    }
+    public static ValueLayout ptrdiff_t = C_LONG_LONG;
+    public static ValueLayout wchar_t = C_INT;
+    public static MethodHandle zimg_get_version_info$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.zimg_get_version_info$MH,"zimg_get_version_info");
+    }
+    public static void zimg_get_version_info ( Addressable major,  Addressable minor,  Addressable micro) {
+        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_get_version_info$MH, "zimg_get_version_info");
+        try {
+            mh$.invokeExact(major.address(), minor.address(), micro.address());
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle zimg_get_api_version$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.zimg_get_api_version$MH,"zimg_get_api_version");
+    }
+    public static int zimg_get_api_version ( Addressable major,  Addressable minor) {
+        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_get_api_version$MH, "zimg_get_api_version");
+        try {
+            return (int)mh$.invokeExact(major.address(), minor.address());
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static int ZIMG_ERROR_UNKNOWN() {
+        return (int)-1L;
+    }
+    public static int ZIMG_ERROR_SUCCESS() {
+        return (int)0L;
+    }
+    public static int ZIMG_ERROR_OUT_OF_MEMORY() {
+        return (int)1L;
+    }
+    public static int ZIMG_ERROR_USER_CALLBACK_FAILED() {
+        return (int)2L;
+    }
+    public static int ZIMG_ERROR_LOGIC() {
+        return (int)1024L;
+    }
+    public static int ZIMG_ERROR_GREYSCALE_SUBSAMPLING() {
+        return (int)1025L;
+    }
+    public static int ZIMG_ERROR_COLOR_FAMILY_MISMATCH() {
+        return (int)1026L;
+    }
+    public static int ZIMG_ERROR_IMAGE_NOT_DIVISIBLE() {
+        return (int)1027L;
+    }
+    public static int ZIMG_ERROR_BIT_DEPTH_OVERFLOW() {
+        return (int)1028L;
+    }
+    public static int ZIMG_ERROR_ILLEGAL_ARGUMENT() {
+        return (int)2048L;
+    }
+    public static int ZIMG_ERROR_ENUM_OUT_OF_RANGE() {
+        return (int)2049L;
+    }
+    public static int ZIMG_ERROR_INVALID_IMAGE_SIZE() {
+        return (int)2050L;
+    }
+    public static int ZIMG_ERROR_UNSUPPORTED_OPERATION() {
+        return (int)3072L;
+    }
+    public static int ZIMG_ERROR_UNSUPPORTED_SUBSAMPLING() {
+        return (int)3073L;
+    }
+    public static int ZIMG_ERROR_NO_COLORSPACE_CONVERSION() {
+        return (int)3074L;
+    }
+    public static int ZIMG_ERROR_NO_FIELD_PARITY_CONVERSION() {
+        return (int)3075L;
+    }
+    public static int ZIMG_ERROR_RESAMPLING_NOT_AVAILABLE() {
+        return (int)3076L;
+    }
     public static MethodHandle zimg_get_last_error$MH() {
         return RuntimeHelper.requireNonNull(constants$0.zimg_get_last_error$MH,"zimg_get_last_error");
     }
@@ -24,8 +105,70 @@ public class zimg_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle zimg_clear_last_error$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.zimg_clear_last_error$MH,"zimg_clear_last_error");
+    }
+    public static void zimg_clear_last_error () {
+        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_clear_last_error$MH, "zimg_clear_last_error");
+        try {
+            mh$.invokeExact();
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static int ZIMG_CPU_NONE() {
+        return (int)0L;
+    }
+    public static int ZIMG_CPU_AUTO() {
+        return (int)1L;
+    }
     public static int ZIMG_CPU_AUTO_64B() {
         return (int)2L;
+    }
+    public static int ZIMG_CPU_X86_MMX() {
+        return (int)1000L;
+    }
+    public static int ZIMG_CPU_X86_SSE() {
+        return (int)1001L;
+    }
+    public static int ZIMG_CPU_X86_SSE2() {
+        return (int)1002L;
+    }
+    public static int ZIMG_CPU_X86_SSE3() {
+        return (int)1003L;
+    }
+    public static int ZIMG_CPU_X86_SSSE3() {
+        return (int)1004L;
+    }
+    public static int ZIMG_CPU_X86_SSE41() {
+        return (int)1005L;
+    }
+    public static int ZIMG_CPU_X86_SSE42() {
+        return (int)1006L;
+    }
+    public static int ZIMG_CPU_X86_AVX() {
+        return (int)1007L;
+    }
+    public static int ZIMG_CPU_X86_F16C() {
+        return (int)1008L;
+    }
+    public static int ZIMG_CPU_X86_AVX2() {
+        return (int)1009L;
+    }
+    public static int ZIMG_CPU_X86_AVX512F() {
+        return (int)1010L;
+    }
+    public static int ZIMG_CPU_X86_AVX512_SKX() {
+        return (int)1011L;
+    }
+    public static int ZIMG_CPU_X86_AVX512_CLX() {
+        return (int)1012L;
+    }
+    public static int ZIMG_CPU_X86_AVX512_PMC() {
+        return (int)1013L;
+    }
+    public static int ZIMG_CPU_X86_AVX512_SNC() {
+        return (int)1014L;
     }
     public static int ZIMG_PIXEL_BYTE() {
         return (int)0L;
@@ -33,11 +176,23 @@ public class zimg_h  {
     public static int ZIMG_PIXEL_WORD() {
         return (int)1L;
     }
+    public static int ZIMG_PIXEL_HALF() {
+        return (int)2L;
+    }
+    public static int ZIMG_PIXEL_FLOAT() {
+        return (int)3L;
+    }
+    public static int ZIMG_RANGE_INTERNAL() {
+        return (int)-1L;
+    }
     public static int ZIMG_RANGE_LIMITED() {
         return (int)0L;
     }
     public static int ZIMG_RANGE_FULL() {
         return (int)1L;
+    }
+    public static int ZIMG_COLOR_GREY() {
+        return (int)0L;
     }
     public static int ZIMG_COLOR_RGB() {
         return (int)1L;
@@ -51,8 +206,41 @@ public class zimg_h  {
     public static int ZIMG_ALPHA_STRAIGHT() {
         return (int)1L;
     }
+    public static int ZIMG_ALPHA_PREMULTIPLIED() {
+        return (int)2L;
+    }
+    public static int ZIMG_FIELD_PROGRESSIVE() {
+        return (int)0L;
+    }
+    public static int ZIMG_FIELD_TOP() {
+        return (int)1L;
+    }
+    public static int ZIMG_FIELD_BOTTOM() {
+        return (int)2L;
+    }
+    public static int ZIMG_CHROMA_INTERNAL() {
+        return (int)-1L;
+    }
     public static int ZIMG_CHROMA_LEFT() {
         return (int)0L;
+    }
+    public static int ZIMG_CHROMA_CENTER() {
+        return (int)1L;
+    }
+    public static int ZIMG_CHROMA_TOP_LEFT() {
+        return (int)2L;
+    }
+    public static int ZIMG_CHROMA_TOP() {
+        return (int)3L;
+    }
+    public static int ZIMG_CHROMA_BOTTOM_LEFT() {
+        return (int)4L;
+    }
+    public static int ZIMG_CHROMA_BOTTOM() {
+        return (int)5L;
+    }
+    public static int ZIMG_MATRIX_INTERNAL() {
+        return (int)-1L;
     }
     public static int ZIMG_MATRIX_RGB() {
         return (int)0L;
@@ -60,20 +248,175 @@ public class zimg_h  {
     public static int ZIMG_MATRIX_BT709() {
         return (int)1L;
     }
+    public static int ZIMG_MATRIX_UNSPECIFIED() {
+        return (int)2L;
+    }
+    public static int ZIMG_MATRIX_FCC() {
+        return (int)4L;
+    }
     public static int ZIMG_MATRIX_BT470_BG() {
         return (int)5L;
+    }
+    public static int ZIMG_MATRIX_ST170_M() {
+        return (int)6L;
+    }
+    public static int ZIMG_MATRIX_ST240_M() {
+        return (int)7L;
+    }
+    public static int ZIMG_MATRIX_YCGCO() {
+        return (int)8L;
+    }
+    public static int ZIMG_MATRIX_BT2020_NCL() {
+        return (int)9L;
+    }
+    public static int ZIMG_MATRIX_BT2020_CL() {
+        return (int)10L;
+    }
+    public static int ZIMG_MATRIX_CHROMATICITY_DERIVED_NCL() {
+        return (int)12L;
+    }
+    public static int ZIMG_MATRIX_CHROMATICITY_DERIVED_CL() {
+        return (int)13L;
+    }
+    public static int ZIMG_MATRIX_ICTCP() {
+        return (int)14L;
+    }
+    public static int ZIMG_TRANSFER_INTERNAL() {
+        return (int)-1L;
     }
     public static int ZIMG_TRANSFER_BT709() {
         return (int)1L;
     }
+    public static int ZIMG_TRANSFER_UNSPECIFIED() {
+        return (int)2L;
+    }
+    public static int ZIMG_TRANSFER_BT470_M() {
+        return (int)4L;
+    }
+    public static int ZIMG_TRANSFER_BT470_BG() {
+        return (int)5L;
+    }
+    public static int ZIMG_TRANSFER_BT601() {
+        return (int)6L;
+    }
+    public static int ZIMG_TRANSFER_ST240_M() {
+        return (int)7L;
+    }
+    public static int ZIMG_TRANSFER_LINEAR() {
+        return (int)8L;
+    }
+    public static int ZIMG_TRANSFER_LOG_100() {
+        return (int)9L;
+    }
+    public static int ZIMG_TRANSFER_LOG_316() {
+        return (int)10L;
+    }
+    public static int ZIMG_TRANSFER_IEC_61966_2_4() {
+        return (int)11L;
+    }
     public static int ZIMG_TRANSFER_IEC_61966_2_1() {
         return (int)13L;
     }
+    public static int ZIMG_TRANSFER_BT2020_10() {
+        return (int)14L;
+    }
+    public static int ZIMG_TRANSFER_BT2020_12() {
+        return (int)15L;
+    }
+    public static int ZIMG_TRANSFER_ST2084() {
+        return (int)16L;
+    }
+    public static int ZIMG_TRANSFER_ARIB_B67() {
+        return (int)18L;
+    }
+    public static int ZIMG_PRIMARIES_INTERNAL() {
+        return (int)-1L;
+    }
+    public static int ZIMG_PRIMARIES_BT709() {
+        return (int)1L;
+    }
+    public static int ZIMG_PRIMARIES_UNSPECIFIED() {
+        return (int)2L;
+    }
+    public static int ZIMG_PRIMARIES_BT470_M() {
+        return (int)4L;
+    }
+    public static int ZIMG_PRIMARIES_BT470_BG() {
+        return (int)5L;
+    }
+    public static int ZIMG_PRIMARIES_ST170_M() {
+        return (int)6L;
+    }
+    public static int ZIMG_PRIMARIES_ST240_M() {
+        return (int)7L;
+    }
+    public static int ZIMG_PRIMARIES_FILM() {
+        return (int)8L;
+    }
+    public static int ZIMG_PRIMARIES_BT2020() {
+        return (int)9L;
+    }
+    public static int ZIMG_PRIMARIES_ST428() {
+        return (int)10L;
+    }
+    public static int ZIMG_PRIMARIES_ST431_2() {
+        return (int)11L;
+    }
+    public static int ZIMG_PRIMARIES_ST432_1() {
+        return (int)12L;
+    }
+    public static int ZIMG_PRIMARIES_EBU3213_E() {
+        return (int)22L;
+    }
+    public static int ZIMG_DITHER_NONE() {
+        return (int)0L;
+    }
+    public static int ZIMG_DITHER_ORDERED() {
+        return (int)1L;
+    }
+    public static int ZIMG_DITHER_RANDOM() {
+        return (int)2L;
+    }
+    public static int ZIMG_DITHER_ERROR_DIFFUSION() {
+        return (int)3L;
+    }
+    public static int ZIMG_RESIZE_POINT() {
+        return (int)0L;
+    }
+    public static int ZIMG_RESIZE_BILINEAR() {
+        return (int)1L;
+    }
+    public static int ZIMG_RESIZE_BICUBIC() {
+        return (int)2L;
+    }
+    public static int ZIMG_RESIZE_SPLINE16() {
+        return (int)3L;
+    }
+    public static int ZIMG_RESIZE_SPLINE36() {
+        return (int)4L;
+    }
+    public static int ZIMG_RESIZE_SPLINE64() {
+        return (int)6L;
+    }
+    public static int ZIMG_RESIZE_LANCZOS() {
+        return (int)5L;
+    }
+    public static MethodHandle zimg_select_buffer_mask$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.zimg_select_buffer_mask$MH,"zimg_select_buffer_mask");
+    }
+    public static int zimg_select_buffer_mask ( int count) {
+        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_select_buffer_mask$MH, "zimg_select_buffer_mask");
+        try {
+            return (int)mh$.invokeExact(count);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MethodHandle zimg_filter_graph_free$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_free$MH,"zimg_filter_graph_free");
+        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_free$MH,"zimg_filter_graph_free");
     }
     public static void zimg_filter_graph_free ( Addressable ptr) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_free$MH, "zimg_filter_graph_free");
+        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_free$MH, "zimg_filter_graph_free");
         try {
             mh$.invokeExact(ptr.address());
         } catch (Throwable ex$) {
@@ -81,10 +424,32 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_filter_graph_get_tmp_size$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_get_tmp_size$MH,"zimg_filter_graph_get_tmp_size");
+        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_tmp_size$MH,"zimg_filter_graph_get_tmp_size");
     }
     public static int zimg_filter_graph_get_tmp_size ( Addressable ptr,  Addressable out) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_get_tmp_size$MH, "zimg_filter_graph_get_tmp_size");
+        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_tmp_size$MH, "zimg_filter_graph_get_tmp_size");
+        try {
+            return (int)mh$.invokeExact(ptr.address(), out.address());
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle zimg_filter_graph_get_input_buffering$MH() {
+        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_input_buffering$MH,"zimg_filter_graph_get_input_buffering");
+    }
+    public static int zimg_filter_graph_get_input_buffering ( Addressable ptr,  Addressable out) {
+        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_input_buffering$MH, "zimg_filter_graph_get_input_buffering");
+        try {
+            return (int)mh$.invokeExact(ptr.address(), out.address());
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle zimg_filter_graph_get_output_buffering$MH() {
+        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_output_buffering$MH,"zimg_filter_graph_get_output_buffering");
+    }
+    public static int zimg_filter_graph_get_output_buffering ( Addressable ptr,  Addressable out) {
+        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_output_buffering$MH, "zimg_filter_graph_get_output_buffering");
         try {
             return (int)mh$.invokeExact(ptr.address(), out.address());
         } catch (Throwable ex$) {
@@ -92,10 +457,10 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_filter_graph_process$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_process$MH,"zimg_filter_graph_process");
+        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_process$MH,"zimg_filter_graph_process");
     }
     public static int zimg_filter_graph_process ( Addressable ptr,  Addressable src,  Addressable dst,  Addressable tmp,  Addressable unpack_cb,  Addressable unpack_user,  Addressable pack_cb,  Addressable pack_user) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_filter_graph_process$MH, "zimg_filter_graph_process");
+        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_process$MH, "zimg_filter_graph_process");
         try {
             return (int)mh$.invokeExact(ptr.address(), src.address(), dst.address(), tmp.address(), unpack_cb.address(), unpack_user.address(), pack_cb.address(), pack_user.address());
         } catch (Throwable ex$) {
@@ -103,10 +468,10 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_image_format_default$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_image_format_default$MH,"zimg_image_format_default");
+        return RuntimeHelper.requireNonNull(constants$2.zimg_image_format_default$MH,"zimg_image_format_default");
     }
     public static void zimg_image_format_default ( Addressable ptr,  int version) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_image_format_default$MH, "zimg_image_format_default");
+        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_image_format_default$MH, "zimg_image_format_default");
         try {
             mh$.invokeExact(ptr.address(), version);
         } catch (Throwable ex$) {
@@ -114,10 +479,10 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_graph_builder_params_default$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_graph_builder_params_default$MH,"zimg_graph_builder_params_default");
+        return RuntimeHelper.requireNonNull(constants$2.zimg_graph_builder_params_default$MH,"zimg_graph_builder_params_default");
     }
     public static void zimg_graph_builder_params_default ( Addressable ptr,  int version) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_graph_builder_params_default$MH, "zimg_graph_builder_params_default");
+        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_graph_builder_params_default$MH, "zimg_graph_builder_params_default");
         try {
             mh$.invokeExact(ptr.address(), version);
         } catch (Throwable ex$) {
@@ -125,21 +490,78 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_filter_graph_build$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_build$MH,"zimg_filter_graph_build");
+        return RuntimeHelper.requireNonNull(constants$2.zimg_filter_graph_build$MH,"zimg_filter_graph_build");
     }
     public static MemoryAddress zimg_filter_graph_build ( Addressable src_format,  Addressable dst_format,  Addressable params) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_build$MH, "zimg_filter_graph_build");
+        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_filter_graph_build$MH, "zimg_filter_graph_build");
         try {
             return (jdk.incubator.foreign.MemoryAddress)mh$.invokeExact(src_format.address(), dst_format.address(), params.address());
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MemoryAddress NULL() {
+        return constants$2.NULL$ADDR;
+    }
     public static int ZIMG_API_VERSION() {
         return (int)516L;
     }
+    public static int ZIMG_MATRIX_709() {
+        return (int)1L;
+    }
+    public static int ZIMG_MATRIX_470BG() {
+        return (int)5L;
+    }
+    public static int ZIMG_MATRIX_170M() {
+        return (int)6L;
+    }
+    public static int ZIMG_MATRIX_240M() {
+        return (int)7L;
+    }
+    public static int ZIMG_MATRIX_2020_NCL() {
+        return (int)9L;
+    }
+    public static int ZIMG_MATRIX_2020_CL() {
+        return (int)10L;
+    }
+    public static int ZIMG_TRANSFER_709() {
+        return (int)1L;
+    }
+    public static int ZIMG_TRANSFER_470_M() {
+        return (int)4L;
+    }
+    public static int ZIMG_TRANSFER_470_BG() {
+        return (int)5L;
+    }
+    public static int ZIMG_TRANSFER_601() {
+        return (int)6L;
+    }
+    public static int ZIMG_TRANSFER_240M() {
+        return (int)7L;
+    }
+    public static int ZIMG_TRANSFER_2020_10() {
+        return (int)14L;
+    }
+    public static int ZIMG_TRANSFER_2020_12() {
+        return (int)15L;
+    }
     public static int ZIMG_PRIMARIES_709() {
         return (int)1L;
+    }
+    public static int ZIMG_PRIMARIES_470_M() {
+        return (int)4L;
+    }
+    public static int ZIMG_PRIMARIES_470_BG() {
+        return (int)5L;
+    }
+    public static int ZIMG_PRIMARIES_170M() {
+        return (int)6L;
+    }
+    public static int ZIMG_PRIMARIES_240M() {
+        return (int)7L;
+    }
+    public static int ZIMG_PRIMARIES_2020() {
+        return (int)9L;
     }
     public static int ZIMG_BUFFER_MAX() {
         return (int)4294967295L;

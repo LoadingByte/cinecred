@@ -209,7 +209,7 @@ class ProjectController(
         onClose()
 
         projectFrame.dispose()
-        for (type in ProjectDialogType.values())
+        for (type in ProjectDialogType.entries)
             getDialog(type).dispose()
 
         projectIntake.close()

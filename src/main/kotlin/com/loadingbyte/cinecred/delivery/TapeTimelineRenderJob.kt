@@ -53,7 +53,6 @@ class TapeTimelineRenderJob(
             val startFrame = startField / extraFPSMul
             val stopFrame = ceilDiv(stopField, extraFPSMul)
             val tapeFPS = tapeSpan.embeddedTape.tape.fps ?: global.fps
-            @OptIn(ExperimentalStdlibApi::class)
             val tapeStartExact = tapeSpan.embeddedTape.range.start
             val tapeStartRounded = when (tapeStartExact) {
                 is Timecode.Frames -> tapeStartExact
@@ -98,7 +97,6 @@ class TapeTimelineRenderJob(
             if (clipLength.frames > 0) {
                 val tapeFPS = tapeSpan.embeddedTape.tape.fps ?: projFPS
                 val tapeDropFrame = projDropFrame && tapeFPS.supportsDropFrameTimecode
-                @OptIn(ExperimentalStdlibApi::class)
                 val tapeStart = tapeSpan.embeddedTape.range.start.toFrames(tapeFPS)
                 val tapeLength = clipLength.toClock(projFPS).toFramesCeil(tapeFPS)
                 // In a well-behaved project, tapeFPS equals projFPS, and only in those cases, we can actually produce

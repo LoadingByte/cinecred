@@ -28,7 +28,7 @@ object GuideContentStyleParagraphsLayoutLineHJustifyDemo : StyleSettingsDemo<Con
     listOf(ContentStyle::paragraphsLineHJustify.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (justify in LineHJustify.values())
+        for (justify in LineHJustify.entries)
             this += blurbCS.copy(name = "Demo", paragraphsLineHJustify = justify)
     }
 

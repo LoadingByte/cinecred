@@ -180,7 +180,7 @@ private fun drawBodyImageWithGridBodyLayout(
     var x = 0.0
     val startColIdx = if (sharedColWidths != null && unocc == RIGHT_RETAIN) numCols - sharedColWidths.size else 0
     val endColIdx = if (sharedColWidths != null && unocc == LEFT_RETAIN) sharedColWidths.size else numCols
-    for (colIdx in startColIdx until endColIdx) {
+    for (colIdx in startColIdx..<endColIdx) {
         // Either get the column's shared width, or compute it now if the block's column widths are not shared.
         val colWidth = when (sharedColWidths) {
             null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
@@ -235,7 +235,7 @@ private fun <E> flowIntoGridCols(
             repeat(numRows) {
                 val remaining = list.size - idx
                 if (!balanced || remaining >= numCols)
-                    for (colIdx in 0 until min(numCols, remaining))
+                    for (colIdx in 0..<min(numCols, remaining))
                         cols[colIdx].add(list[idx++])
                 else {
                     val skipColIdx = if (numCols % 2 == 1 && remaining % 2 == 0) numCols / 2 else -1
@@ -257,7 +257,7 @@ private fun <E> flowIntoGridCols(
             val lRowStop = lRowStart + lRowElems + if (lRowSkip == -1) 0 else 1
             var idx = 0
             List(numCols) { colIdx ->
-                val useLastRow = !balanced || lRowElems == 0 || colIdx in lRowStart until lRowStop && colIdx != lRowSkip
+                val useLastRow = !balanced || lRowElems == 0 || colIdx in lRowStart..<lRowStop && colIdx != lRowSkip
                 val take = numRows - if (useLastRow) 0 else 1
                 val col = list.subList(idx, min(idx + take, list.size))
                 idx += take

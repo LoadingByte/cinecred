@@ -16,7 +16,6 @@ import kotlin.math.min
 
 
 /** An abstraction for a video that can be drawn onto a [DeferredImage] and is later recognized by [DeferredVideo]. */
-@OptIn(ExperimentalStdlibApi::class)
 class Tape private constructor(
     val fileSeq: Boolean,
     val fileOrDir: Path,
@@ -40,7 +39,7 @@ class Tape private constructor(
     private var _fps: FPS? = null
     private var _exceeds8Bit: Boolean = false
     private var _availableRange: OpenEndRange<Timecode>? = if (!fileSeq) null else
-        Timecode.Frames(firstNumber).rangeUntil(Timecode.Frames(lastNumber + 1))
+        Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
 
     /** @throws Exception */
     val resolution: Resolution
@@ -78,7 +77,7 @@ class Tape private constructor(
                         end = (videoReader.read() ?: break).apply { bitmap.close() /* close immediately */ }.timecode
                     val pad = _fps?.let { Timecode.Clock(it.denominator.toLong(), it.numerator.toLong()) }
                         ?: Timecode.Clock(1, 24)
-                    _availableRange = start.rangeUntil(end!! + pad)
+                    _availableRange = start..<(end!! + pad)
                 }
             metadataInitialized = true
         } catch (e: Exception) {
@@ -248,7 +247,7 @@ class Tape private constructor(
                 // Require that the infix part consists only of digits.
                 // Record the number and require that no number occurs more than once.
                 var number = 0
-                for (i in i1 until i2) {
+                for (i in i1..<i2) {
                     val c = name[i]
                     if (c !in '0'..'9')
                         return false
@@ -395,8 +394,8 @@ class Tape private constructor(
             return copy(resolution = Resolution(roundingDiv(base.widthPx * height, base.heightPx), height))
         }
 
-        fun withInPoint(timecode: Timecode): Embedded = copy(range = timecode.rangeUntil(range.endExclusive))
-        fun withOutPoint(timecode: Timecode): Embedded = copy(range = range.start.rangeUntil(timecode))
+        fun withInPoint(timecode: Timecode): Embedded = copy(range = timecode..<range.endExclusive)
+        fun withOutPoint(timecode: Timecode): Embedded = copy(range = range.start..<timecode)
 
     }
 
@@ -490,7 +489,7 @@ class Tape private constructor(
             fun getItemOrSplitSlice(point: Int): SliceResp<I> = lock.withLock {
                 if (closed)
                     return SliceResp(SliceRespStatus.GOT, CompletableFuture.failedFuture(ClosedException()))
-                require(point in start until stop)
+                require(point in start..<stop)
                 val idx = point - start
                 val items = this.items
                 if (items == null)

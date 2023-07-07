@@ -88,7 +88,7 @@ class MultiComboBox<E : Any>(
                 return
             field = toString
             updateSelectionLabel()
-            for (idx in 0 until popup.componentCount) {
+            for (idx in 0..<popup.componentCount) {
                 val menuItem = popup.getComponent(idx)
                 if (menuItem is MultiComboBox<*>.CustomMenuItem)
                     @Suppress("UNCHECKED_CAST")
@@ -125,7 +125,7 @@ class MultiComboBox<E : Any>(
 
     var selectedItems: Set<E>
         get() = buildSet {
-            for (idx in 0 until popup.componentCount) {
+            for (idx in 0..<popup.componentCount) {
                 val menuItem = popup.getComponent(idx)
                 if (menuItem is MultiComboBox<*>.CustomMenuItem && menuItem.isSelected)
                     @Suppress("UNCHECKED_CAST")
@@ -137,7 +137,7 @@ class MultiComboBox<E : Any>(
             // Mark all regular items as selected or deselected. If the combo box is inconsistent, also record all
             // selected items which do not appear in the regular items ("overflow").
             val over = if (inconsistent) HashSet(selectedItems) else null
-            for (idx in 0 until numFixedMenuItems) {
+            for (idx in 0..<numFixedMenuItems) {
                 val menuItem = popup.getComponent(idx)
                 if (menuItem is MultiComboBox<*>.CustomMenuItem)
                     menuItem.isSelected = over?.remove(menuItem.item) ?: (menuItem.item in selectedItems)
@@ -173,7 +173,7 @@ class MultiComboBox<E : Any>(
             }
             overflowSeparator.putClientProperty(STYLE, sepStyle)
 
-            for (idx in getNumFixedMenuItems() + 1 /* skip separator */ until popup.componentCount)
+            for (idx in getNumFixedMenuItems() + 1 /* skip separator */..<popup.componentCount)
                 (popup.getComponent(idx) as MultiComboBox<*>.CustomMenuItem).updateStyle()
         }
 

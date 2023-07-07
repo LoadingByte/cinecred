@@ -264,7 +264,7 @@ sealed interface LocaleWish {
 
     val locale: Locale
 
-    object System : LocaleWish {
+    data object System : LocaleWish {
         override val locale = SYSTEM_LOCALE
     }
 

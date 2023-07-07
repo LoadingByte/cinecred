@@ -80,13 +80,13 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val view = allocateWithoutBuffer(spec.copy(resolution = viewResolution, content = viewContent))
         val thisFrame = frame
         val viewFrame = view.frame
-        for (i in 0 until AV_NUM_DATA_POINTERS) {
+        for (i in 0..<AV_NUM_DATA_POINTERS) {
             val bufRef = av_buffer_ref(thisFrame.buf(i) ?: break)
                 .ffmpegThrowIfNull("Could not create a reference to an existing frame buffer")
             viewFrame.buf(i, bufRef)
         }
         val pixelFormat = spec.representation.pixelFormat
-        for (plane in 0 until 4) {
+        for (plane in 0..<4) {
             val data = thisFrame.data(plane) ?: continue
             val ls = thisFrame.linesize(plane)
             val step = pixelFormat.stepOfPlane(plane)
@@ -132,7 +132,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val srcFrame = src.frame
         val dstFrame = frame
         val pixelFormat = spec.representation.pixelFormat
-        for (plane in 0 until 4) {
+        for (plane in 0..<4) {
             val srcData = srcFrame.data(plane) ?: continue
             val dstData = dstFrame.data(plane)
             val srcLs = srcFrame.linesize(plane)
@@ -191,9 +191,9 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
     inline fun internalConsumeComponentByte(c: PixelFormat.Component, consume: (Long) -> Unit) {
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr = y * ls + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 consume(buf.get(addr).toLong() and mask)
                 addr += step
             }
@@ -203,9 +203,9 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
     inline fun internalConsumeComponentShort(c: PixelFormat.Component, consume: (Long) -> Unit) {
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr = y * ls + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 consume(buf.getShort(addr).toLong() and mask)
                 addr += step
             }
@@ -215,9 +215,9 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
     inline fun internalModifyComponentByte(c: PixelFormat.Component, modify: (Long) -> Long) {
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr = y * ls + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 buf.put(addr, modify(buf.get(addr).toLong() and mask).toByte())
                 addr += step
             }
@@ -227,9 +227,9 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
     inline fun internalModifyComponentShort(c: PixelFormat.Component, modify: (Long) -> Long) {
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr = y * ls + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 buf.putShort(addr, modify(buf.getShort(addr).toLong() and mask).toShort())
                 addr += step
             }
@@ -240,10 +240,10 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls1, buf1) = InternalBitmapIterationKit.create(this, c)
         val (ls2, buf2) = InternalBitmapIterationKit.create(o, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr1 = y * ls1 + offset
             var addr2 = y * ls2 + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 val v1 = buf1.get(addr1).toLong() and mask
                 val v2 = buf2.get(addr2).toLong() and mask
                 buf1.put(addr1, merge(v1, v2).toByte())
@@ -257,10 +257,10 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
         val (ls1, buf1) = InternalBitmapIterationKit.create(this, c)
         val (ls2, buf2) = InternalBitmapIterationKit.create(o, c)
-        for (y in 0 until h) {
+        for (y in 0..<h) {
             var addr1 = y * ls1 + offset
             var addr2 = y * ls2 + offset
-            for (x in 0 until w) {
+            for (x in 0..<w) {
                 val v1 = buf1.getShort(addr1).toLong() and mask
                 val v2 = buf2.getShort(addr2).toLong() and mask
                 buf1.putShort(addr1, merge(v1, v2).toShort())
@@ -383,11 +383,11 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val isAlphaPremultiplied: Boolean
     ) {
         init {
-            require(range in 0 until AVCOL_RANGE_NB && range != AVCOL_RANGE_UNSPECIFIED)
-            require(primaries in 0 until AVCOL_PRI_NB && primaries != AVCOL_PRI_UNSPECIFIED)
-            require(transferCharacteristic in 0 until AVCOL_TRC_NB && transferCharacteristic != AVCOL_TRC_UNSPECIFIED)
-            require(yCbCrCoefficients in 0 until AVCOL_SPC_NB && yCbCrCoefficients != AVCOL_SPC_UNSPECIFIED)
-            require(chromaLocation in 0 until AVCHROMA_LOC_NB)
+            require(range in 0..<AVCOL_RANGE_NB && range != AVCOL_RANGE_UNSPECIFIED)
+            require(primaries in 0..<AVCOL_PRI_NB && primaries != AVCOL_PRI_UNSPECIFIED)
+            require(transferCharacteristic in 0..<AVCOL_TRC_NB && transferCharacteristic != AVCOL_TRC_UNSPECIFIED)
+            require(yCbCrCoefficients in 0..<AVCOL_SPC_NB && yCbCrCoefficients != AVCOL_SPC_UNSPECIFIED)
+            require(chromaLocation in 0..<AVCHROMA_LOC_NB)
             require(pixelFormat.isRGB == (yCbCrCoefficients == AVCOL_SPC_RGB))
             require(pixelFormat.hasChromaSub == (chromaLocation != AVCHROMA_LOC_UNSPECIFIED))
             require(!isAlphaPremultiplied || pixelFormat.hasAlpha)
@@ -421,7 +421,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
             require(f and AV_PIX_FMT_FLAG_HWACCEL.toLong() == 0L) { "Hardware accel pixel formats are not supported." }
 
             val foundPlanes = BooleanArray(4)
-            for (i in 0 until desc.nb_components())
+            for (i in 0..<desc.nb_components())
                 foundPlanes[desc.comp(i).plane()] = true
             val numPlanes = foundPlanes.count { it }
 
@@ -435,7 +435,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
             vChromaSub = desc.log2_chroma_h().toInt()
 
             components = buildList {
-                for (i in 0 until desc.nb_components()) {
+                for (i in 0..<desc.nb_components()) {
                     val c = desc.comp(i)
                     add(Component(c.plane(), c.step(), c.offset(), c.shift(), c.depth()))
                 }

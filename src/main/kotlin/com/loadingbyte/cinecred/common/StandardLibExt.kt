@@ -10,14 +10,14 @@ import kotlin.math.max
 
 
 inline fun DoubleArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Double) -> Boolean): Boolean {
-    for (idx in startIdx until endIdx)
+    for (idx in startIdx..<endIdx)
         if (predicate(this[idx]))
             return true
     return false
 }
 
 inline fun FloatArray.allBetween(startIdx: Int, endIdx: Int, predicate: (Float) -> Boolean): Boolean {
-    for (idx in startIdx until endIdx)
+    for (idx in startIdx..<endIdx)
         if (!predicate(this[idx]))
             return false
     return true
@@ -25,7 +25,7 @@ inline fun FloatArray.allBetween(startIdx: Int, endIdx: Int, predicate: (Float) 
 
 
 fun BooleanArray.indexOfAfter(elem: Boolean, startIdx: Int): Int {
-    for (idx in startIdx until size) {
+    for (idx in startIdx..<size) {
         if (this[idx] == elem) {
             return idx
         }
@@ -36,7 +36,7 @@ fun BooleanArray.indexOfAfter(elem: Boolean, startIdx: Int): Int {
 
 fun DoubleArray.maxBetween(startIdx: Int, endIdx: Int): Double {
     var max = this[startIdx]
-    for (idx in startIdx + 1 until endIdx)
+    for (idx in startIdx + 1..<endIdx)
         max = max(max, this[idx])
     return max
 }
@@ -56,7 +56,7 @@ inline fun <E> Iterable<E>.sumOf(selector: (E) -> Double): Double {
 
 fun IntArray.sumBetween(startIdx: Int, endIdx: Int): Int {
     var sum = 0
-    for (idx in startIdx until endIdx)
+    for (idx in startIdx..<endIdx)
         sum += this[idx]
     return sum
 }

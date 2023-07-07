@@ -14,8 +14,8 @@ fun quantizeColors(images: List<BufferedImage>): List<BufferedImage> {
     for (image in images) {
         val w = image.width
         val h = image.height
-        for (y in 0 until h)
-            for (x in 0 until w) {
+        for (y in 0..<h)
+            for (x in 0..<w) {
                 val rgb = image.getRGB(x, y) and 0xffffff
                 val r = rgb shr 16
                 val g = (rgb shr 8) and 0xff
@@ -32,7 +32,7 @@ fun quantizeColors(images: List<BufferedImage>): List<BufferedImage> {
     // Iteratively do the following:
     // Identify the bucket with the highest variance in one of its three color channels. Split the bucket along that
     // channel, with each sub-bucket containing roughly half of the colors of the original bucket.
-    for (itr in 0 until 255) {
+    for (itr in 0..<255) {
         if (buckets.peek().colors.size == 1)
             break
         val bucket = buckets.poll()
@@ -54,7 +54,7 @@ fun quantizeColors(images: List<BufferedImage>): List<BufferedImage> {
     val rgb2palette = HashMap<Int, Byte>()
     val paletteChannels = Array(3) { ByteArray(buckets.size) }
     for ((buckIdx, bucket) in buckets.withIndex()) {
-        for (c in 0 until 3)
+        for (c in 0..<3)
             paletteChannels[c][buckIdx] = bucket.channelMeans[c].toByte()
         for (color in bucket.colors)
             rgb2palette[(color.channels[0] shl 16) or (color.channels[1] shl 8) or color.channels[2]] = buckIdx.toByte()
@@ -66,8 +66,8 @@ fun quantizeColors(images: List<BufferedImage>): List<BufferedImage> {
         val h = image.height
         val arr = ByteArray(w * h)
         var i = 0
-        for (y in 0 until h)
-            for (x in 0 until w)
+        for (y in 0..<h)
+            for (x in 0..<w)
                 arr[i++] = rgb2palette.getValue(image.getRGB(x, y) and 0xffffff)
         val raster = Raster.createInterleavedRaster(DataBufferByte(arr, arr.size), w, h, w, 1, intArrayOf(0), null)
         BufferedImage(cm, raster, false, null)
@@ -89,7 +89,7 @@ private class Bucket(val colors: MutableList<MultiColor>) {
         val meanSums = LongArray(3)
         for (color in colors) {
             count += color.multiplicity
-            for (c in 0 until 3)
+            for (c in 0..<3)
                 meanSums[c] += color.multiplicity * color.channels[c].toLong()
         }
         this.count = count
@@ -97,7 +97,7 @@ private class Bucket(val colors: MutableList<MultiColor>) {
         channelMeans = IntArray(3) { c -> (meanSums[c] / count).toInt() }
         val varianceSums = LongArray(3)
         for (color in colors)
-            for (c in 0 until 3)
+            for (c in 0..<3)
                 varianceSums[c] += color.multiplicity * sq(color.channels[c] - channelMeans[c]).toLong()
         channelVars = DoubleArray(3) { c -> varianceSums[c] / count.toDouble() }
     }

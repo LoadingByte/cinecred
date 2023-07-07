@@ -74,7 +74,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT,
                     TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
                 )
-                else -> SpineAttachment.values().toSortedSet()
+                else -> SpineAttachment.entries.toSortedSet()
             }
         }
     },
@@ -93,7 +93,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
         if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(FREE, SQUARE_CELLS)
         else if (style.gridForceColWidthPx.isActive) sortedSetOf(EQUAL_WIDTH_COLS, SQUARE_CELLS)
-        else GridStructure.values().toSortedSet()
+        else GridStructure.entries.toSortedSet()
     },
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
     StyleNameConstr(
@@ -108,7 +108,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
         if (style.gridStructure == SQUARE_CELLS) sortedSetOf(OFF, ACROSS_BLOCKS)
-        else MatchExtent.values().toSortedSet()
+        else MatchExtent.entries.toSortedSet()
     },
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
@@ -126,7 +126,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::flowForceCellHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
         if (sty.flowSquareCells) sortedSetOf(OFF, ACROSS_BLOCKS)
-        else MatchExtent.values().toSortedSet()
+        else MatchExtent.entries.toSortedSet()
     },
     StyleNameConstr(
         ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
@@ -252,7 +252,7 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
     DynChoiceConstr(WARN, Layer::anchor.st()) { _, _, style ->
-        if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) LayerAnchor.values().toSortedSet()
+        if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) LayerAnchor.entries.toSortedSet()
         else sortedSetOf(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
     },
     SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, _, style, _, sibling, siblingOrdinal ->

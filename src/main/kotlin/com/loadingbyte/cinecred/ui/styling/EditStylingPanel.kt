@@ -315,7 +315,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val severityPerStyle = IdentityHashMap<Style, Severity>()
         for (violation in constraintViolations)
             severityPerStyle[violation.rootStyle] =
-                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.values()[0]))
+                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.entries[0]))
 
         stylingTree.adjustAppearance(getExtraIcons = { style ->
             val severity = severityPerStyle[style]
@@ -361,7 +361,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             var rowComps = mutableListOf<Component>()
             var rowWidth = 0
             var rowHeight = 0
-            for (idx in 0 until parent.componentCount) {
+            for (idx in 0..<parent.componentCount) {
                 val comp = parent.getComponent(idx)
                 val pref = comp.preferredSize
                 if (rowWidth == 0 || rowWidth + gap + pref.width <= parent.width) {

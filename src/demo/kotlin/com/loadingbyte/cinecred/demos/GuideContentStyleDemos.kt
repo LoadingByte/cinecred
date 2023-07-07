@@ -60,7 +60,7 @@ object GuideContentStyleSpineAttachmentDemo : StyleSettingsDemo<ContentStyle>(
 ) {
     override fun styles() = buildList<ContentStyle> {
         val baseStyle = headBoyTailCS.copy(name = "Demo", headGapPx = 24.0, tailGapPx = 24.0)
-        for (att in SpineAttachment.values())
+        for (att in SpineAttachment.entries)
             this += baseStyle.copy(spineAttachment = att)
     }
 

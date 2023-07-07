@@ -130,14 +130,14 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
        *************************** */
 
     fun getTab() =
-        WelcomeTab.values()[tabPane.selectedIndex]
+        WelcomeTab.entries[tabPane.selectedIndex]
 
     fun setTab(tab: WelcomeTab) {
         tabPane.selectedIndex = tab.ordinal
     }
 
     fun setTabsLocked(locked: Boolean) {
-        for (index in 0 until tabPane.tabCount)
+        for (index in 0..<tabPane.tabCount)
             if (!locked || index != tabPane.selectedIndex)
                 tabPane.setEnabledAt(index, !locked)
     }

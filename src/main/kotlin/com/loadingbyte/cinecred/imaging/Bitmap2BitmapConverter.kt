@@ -79,7 +79,7 @@ class Bitmap2BitmapConverter(
             processors += SwsProcessor(zimgDstSpec, effDstSpec)
 
         // Allocate reusable intermediate bitmaps which connect the processors with each other.
-        for (i in 0 until processors.size - 1) {
+        for (i in 0..<processors.size - 1) {
             // Ensure that the dst spec of a processor is equal to the src spec of the following processor.
             require(processors[i].dstSpec == processors[i + 1].srcSpec)
             intermediates += Bitmap.allocate(processors[i].dstSpec)
@@ -390,7 +390,7 @@ class Bitmap2BitmapConverter(
             dstBuf = zimg_image_buffer.allocate(scope)
             zimg_image_buffer_const.`version$set`(srcBuf, ZIMG_API_VERSION())
             zimg_image_buffer.`version$set`(dstBuf, ZIMG_API_VERSION())
-            for (plane in 0L until 4L) {
+            for (plane in 0L..<4L) {
                 ZIMG_BUF_CONST_MASK.set(srcBuf, plane, ZIMG_BUFFER_MAX())
                 ZIMG_BUF_MASK.set(dstBuf, plane, ZIMG_BUFFER_MAX())
             }

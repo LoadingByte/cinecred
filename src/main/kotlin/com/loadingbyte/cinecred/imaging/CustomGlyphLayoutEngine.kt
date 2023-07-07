@@ -98,7 +98,7 @@ class CustomGlyphLayoutEngine private constructor(
             // Transfer the shaping result into those arrays.
             var x = startPt.x + config.bearingLeftPx
             var y = startPt.y
-            for (getIdx in 0L until glyphCount.toLong()) {
+            for (getIdx in 0L..<glyphCount.toLong()) {
                 val setIdx = gvData._count++
                 glyphs[setIdx] = hb_glyph_info_t.`codepoint$get`(glyphInfo, getIdx) or gmask
                 indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start

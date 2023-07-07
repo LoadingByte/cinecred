@@ -61,7 +61,7 @@ fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
 
     // These numbers are the name IDs associated with all the fields of "FontStrings" in the same order.
     val nameMaps = shortArrayOf(1, 2, 4, 16, 17, 19).associateWithTo(LinkedHashMap()) { HashMap<Locale, String>() }
-    for (idx in 0 until nameCount) {
+    for (idx in 0..<nameCount) {
         val recordOffset = 6 + idx * 12
         val platformId = nameTable.getShort(recordOffset)
         if (platformId != WIN_PLATFORM && platformId != MAC_PLATFORM)
@@ -95,7 +95,7 @@ private const val MAC_ROMAN_ENCODING = TrueTypeFont.MACROMAN_SPECIFIC_ID.toShort
 private const val MAC_ENGLISH_LANG = TrueTypeFont.MACROMAN_ENGLISH_LANG.toShort()
 
 private val LCID_TO_LOCALE: Map<Short, Locale> = HashMap<Short, Locale>().apply {
-    for (id in LocaleID.values())
+    for (id in LocaleID.entries)
         put(id.lcid.toShort(), Locale.forLanguageTag(id.languageTag))
 }
 
@@ -164,7 +164,7 @@ private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {
     if (table != null && table.capacity() >= 8) {
         val featListOffset = table.getShort(6).toUShort().toInt()
         val featCount = table.getShort(featListOffset).toUShort().toInt()
-        for (idx in 0 until featCount) {
+        for (idx in 0..<featCount) {
             val c = table.getInt(featListOffset + 2 + idx * 6)
             out.add(String(intArrayOf(c ushr 24, (c ushr 16) and 0xFF, (c ushr 8) and 0xFF, c and 0xFF), 0, 4))
         }
@@ -235,7 +235,7 @@ fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: Floa
 
         val glyph = glyphs[idx]
         val glyphBytes = ByteArray(bytesPerGlyph)
-        for (b in 0 until bytesPerGlyph)
+        for (b in 0..<bytesPerGlyph)
             glyphBytes[b] = (glyph shr (8 * (bytesPerGlyph - 1 - b))).toByte()
         COSWriter.writeString(glyphBytes, os)
     }

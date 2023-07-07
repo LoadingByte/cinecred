@@ -226,7 +226,7 @@ class StyleForm<S : Style>(
                     // See makeListWidget() for a comment on why we need an inconsistent widget for sibling ordinals.
                     InconsistentComboBoxWidget(Int::class.javaObjectType, items = emptyList(), widthSpec = widthSpec)
                 } else if (timecodeWidgetSpec != null)
-                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.values()[0], widthSpec)
+                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.entries[0], widthSpec)
                 else
                     SpinnerWidget(Int::class.javaObjectType, model, widthSpec = widthSpec)
             }

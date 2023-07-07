@@ -140,7 +140,7 @@ class BitmapCompositor(
         if (x == 0 && y == 0 && w == stride && h * stride == array.size && yStep == 1)
             return array
         val view = LongArray(w * h)
-        for (i in 0 until ceilDiv(h, yStep))
+        for (i in 0..<ceilDiv(h, yStep))
             System.arraycopy(array, (y + i * yStep) * stride + x, view, i * w, w)
         return view
     }

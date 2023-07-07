@@ -303,7 +303,7 @@ private class CreditsReader(
        ************************************ */
 
     fun read(): Pair<List<Page>, List<RuntimeGroup>> {
-        for (row in 0 until table.numRows) {
+        for (row in 0..<table.numRows) {
             this.row = row
             readRow()
         }
@@ -787,7 +787,6 @@ private class CreditsReader(
                             } catch (_: IllegalArgumentException) {
                                 // rFrames just stays the same as lFrames.
                             }
-                        @OptIn(ExperimentalStdlibApi::class)
                         embTape = when {
                             isMargin -> embTape.copy(leftMarginFrames = lFrames, rightMarginFrames = rFrames)
                             else -> embTape.copy(leftFadeFrames = lFrames, rightFadeFrames = rFrames)
@@ -840,7 +839,7 @@ private class CreditsReader(
 
         fun permittedTcSamples() = permittedTcFmts.joinToString { formatTimecode(fps ?: FPS(30000, 1001), it, 7127) }
 
-        for (tcFmt in TimecodeFormat.values()) {
+        for (tcFmt in TimecodeFormat.entries) {
             val tc = try {
                 parseTimecode(tcFmt, str ?: continue)
             } catch (_: IllegalArgumentException) {

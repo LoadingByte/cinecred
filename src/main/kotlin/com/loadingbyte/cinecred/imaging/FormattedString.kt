@@ -173,7 +173,7 @@ class FormattedString private constructor(
     ) {
         var stretchValue: T? = null
         var stretchStartIdx = 0
-        for (idx in 0 until numItems) {
+        for (idx in 0..<numItems) {
             val value = getItem(idx)
             if (stretchValue != null && stretchValue != value)
                 action(stretchValue, stretchStartIdx, idx)
@@ -303,7 +303,7 @@ class FormattedString private constructor(
                 // editing programs.
                 val mergedShape = if (forms.size == 1) forms[0].awtShape else {
                     val path = Path2D.Double(forms[0].awtShape)
-                    for (i in 1 until forms.size)
+                    for (i in 1..<forms.size)
                         path.append(forms[i].awtShape, false)
                     path
                 }
@@ -487,7 +487,7 @@ class FormattedString private constructor(
                     if (gss.isEmpty())
                         return Path2D.Float()
                     val awtShape = Path2D.Float(gss[0].baseXOutline, transform)
-                    for (i in 1 until gss.size)
+                    for (i in 1..<gss.size)
                         awtShape.append(gss[i].baseXOutline.getPathIterator(transform), false)
                     return awtShape
                 }
@@ -535,7 +535,7 @@ class FormattedString private constructor(
             transform.transform(points, 0, points, 0, 4)
             var yMax = Double.NEGATIVE_INFINITY
             var yMin = Double.POSITIVE_INFINITY
-            for (i in 0 until 4) {
+            for (i in 0..<4) {
                 val y = points[i * 2]
                 yMax = max(yMax, y)
                 yMin = min(yMin, y)
@@ -752,7 +752,7 @@ class FormattedString private constructor(
                 // Upper-bound the number of repetitions to avoid:
                 //   - Accidental infinite looping.
                 //   - Too large fonts, as they cause the Java font rendering engine to destroy its own fonts.
-                for (i in 0 until 10) {
+                for (i in 0..<10) {
                     val height = awtFont.deriveFont(size * 2f).lineMetrics.height
                     if (height >= targetHeightPx)
                         break
@@ -767,7 +767,7 @@ class FormattedString private constructor(
                 var intervalLength = (maxSize - minSize) / 2f
                 size = minSize + intervalLength
                 // Upper-bound the number of repetitions to avoid accidental infinite looping.
-                for (i in 0 until 20) {
+                for (i in 0..<20) {
                     intervalLength /= 2f
                     val height = awtFont.deriveFont(size).lineMetrics.height
                     when {
@@ -917,7 +917,7 @@ class FormattedString private constructor(
         inline fun forEachRun(
             action: (attr: Attribute, runStartCharIdx: Int, runEndCharIdx: Int) -> Unit
         ) {
-            for (runIdx in runLimStart until runLimEnd) {
+            for (runIdx in runLimStart..<runLimEnd) {
                 val runStartCharIdx = if (runIdx == 0) 0 else (runEnds[runIdx - 1] - charLimStart).coerceAtLeast(0)
                 val runEndCharIdx = (runEnds[runIdx] - charLimStart).coerceAtMost(charLimLen)
                 action(runAttrs[runIdx]!!, runStartCharIdx, runEndCharIdx)

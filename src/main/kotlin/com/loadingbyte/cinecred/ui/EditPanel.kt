@@ -193,7 +193,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     // Utility to quickly get all DeferredImagePanels from the tabbed pane.
     private val imagePanels: List<DeferredImagePanel>
         get() = buildList(pageTabs.tabCount) {
-            for (tabIdx in 0 until pageTabs.tabCount)
+            for (tabIdx in 0..<pageTabs.tabCount)
                 add(pageTabs.getComponentAt(tabIdx) as DeferredImagePanel)
         }
 
@@ -484,7 +484,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun getSelectedOverlays(): List<Overlay> = buildList {
-        for (idx in 0 until overlaysMenu.componentCount) {
+        for (idx in 0..<overlaysMenu.componentCount) {
             val menuItem = overlaysMenu.getComponent(idx)
             if (menuItem is DropdownPopupMenuCheckBoxItem<*> && menuItem.isSelected)
                 add(menuItem.item as Overlay)

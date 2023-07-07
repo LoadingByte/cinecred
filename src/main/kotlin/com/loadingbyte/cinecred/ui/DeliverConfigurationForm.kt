@@ -125,7 +125,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private val scanWidget = addWidget(
         l10n("ui.deliverConfig.scan"),
         ComboBoxWidget(
-            Scan::class.java, Scan.values().asList(), widthSpec = WidthSpec.WIDER,
+            Scan::class.java, Scan.entries, widthSpec = WidthSpec.WIDER,
             toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
         ),
         isEnabled = {
@@ -137,7 +137,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private val colorSpaceWidget = addWidget(
         l10n("ui.deliverConfig.colorSpace"),
         ComboBoxWidget(
-            VideoRenderJob.ColorSpace::class.java, VideoRenderJob.ColorSpace.values().asList(),
+            VideoRenderJob.ColorSpace::class.java, VideoRenderJob.ColorSpace.entries,
             widthSpec = WidthSpec.WIDER,
             toString = { cs ->
                 when (cs) {

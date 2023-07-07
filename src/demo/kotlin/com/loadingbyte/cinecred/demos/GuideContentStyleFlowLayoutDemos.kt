@@ -34,7 +34,7 @@ object GuideContentStyleFlowLayoutDirectionDemo : StyleSettingsDemo<ContentStyle
     listOf(ContentStyle::flowDirection.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (direction in FlowDirection.values())
+        for (direction in FlowDirection.entries)
             this += bulletsCS.copy(name = "Demo", flowDirection = direction)
     }
 
@@ -53,7 +53,7 @@ object GuideContentStyleFlowLayoutJustifyLinesDemo : StyleSettingsDemo<ContentSt
     listOf(ContentStyle::flowLineHJustify.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (justify in LineHJustify.values())
+        for (justify in LineHJustify.entries)
             this += bulletsCS.copy(name = "Demo", flowLineHJustify = justify)
     }
 

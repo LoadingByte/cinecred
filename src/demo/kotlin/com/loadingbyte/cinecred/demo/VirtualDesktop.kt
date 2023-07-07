@@ -355,7 +355,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
 
     private fun deepestCompWithTransferHandler(parent: Component, x: Int, y: Int): JComponent? {
         if (parent is Container)
-            for (idx in 0 until parent.componentCount) {
+            for (idx in 0..<parent.componentCount) {
                 val child = parent.getComponent(idx)
                 if (child != null && child.isVisible && child.contains(x - child.x, y - child.y))
                     deepestCompWithTransferHandler(child, x - child.x, y - child.y)?.let { return it }
@@ -403,7 +403,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
         val menu = MenuSelectionManager.defaultManager().selectedPath.single() as JPopupMenu
         val list = (menu.getComponent(0) as JScrollPane).viewport.view as JList<*>
         val listDesktopPos = desktopPosOf(list, center = false)
-        val i = if (idx >= 0) idx else (0 until list.model.size).first { list.model.getElementAt(it) == elem }
+        val i = if (idx >= 0) idx else (0..<list.model.size).first { list.model.getElementAt(it) == elem }
         val cellBounds = list.getCellBounds(i, i)
         return Point(
             listDesktopPos.x + cellBounds.x + if (center) cellBounds.width / 2 else 0,
@@ -430,7 +430,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
      */
     fun desktopPosOfTreeItem(tree: JTree, label: String, center: Boolean = true): Point {
         val treeDesktopPos = desktopPosOf(tree, center = false)
-        for (rowIdx in 0 until tree.rowCount) {
+        for (rowIdx in 0..<tree.rowCount) {
             val path = tree.getPathForRow(rowIdx)
             if (path.lastPathComponent.toString() == label) {
                 val pathBounds = tree.getPathBounds(path)!!
@@ -614,12 +614,12 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
         // Paint cell separators
         g2.clip(area)
         g2.color = Color.GRAY.brighter()
-        for (rowIdx in 1 until matrix.size) {
+        for (rowIdx in 1..<matrix.size) {
             val y = cellY(rowIdx) - SEP_THICKNESS
             if (y > area.y + area.height) break
             g2.fillRect(area.x, y, area.width, SEP_THICKNESS)
         }
-        for (colIdx in 1 until colWidths.size) {
+        for (colIdx in 1..<colWidths.size) {
             val x = cellX(colIdx) - SEP_THICKNESS
             if (x > area.x + area.width) break
             g2.fillRect(x, area.y, SEP_THICKNESS, area.height)

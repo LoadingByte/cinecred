@@ -835,7 +835,7 @@ class ToggleButtonGroupWidget<V : Any>(
                 // not support outlines.
                 val outline = getClientProperty(OUTLINE)
                 if (outline != null)
-                    for (idx in 0 until componentCount) {
+                    for (idx in 0..<componentCount) {
                         val btn = getComponent(idx) as JToggleButton
                         if (btn.isSelected) {
                             val focused = FlatUIUtils.isPermanentFocusOwner(btn)
@@ -896,7 +896,7 @@ class ToggleButtonGroupWidget<V : Any>(
         override fun preferredLayoutSize(parent: Container): Dimension {
             var width = 0
             var height = 0
-            for (idx in 0 until parent.componentCount) {
+            for (idx in 0..<parent.componentCount) {
                 val pref = parent.getComponent(idx).preferredSize
                 width += pref.width
                 height = max(height, pref.height)
@@ -908,7 +908,7 @@ class ToggleButtonGroupWidget<V : Any>(
         override fun layoutContainer(parent: Container) {
             val insets = parent.insets
             var x = insets.left
-            for (idx in 0 until parent.componentCount) {
+            for (idx in 0..<parent.componentCount) {
                 val comp = parent.getComponent(idx)
                 val pref = comp.preferredSize
                 comp.setBounds(x, insets.top, pref.width, max(pref.height, STD_HEIGHT - insets.top - insets.bottom))
@@ -983,8 +983,8 @@ class ColorWellWidget(
 
     private fun Graphics.drawCheckerboard(width: Int, height: Int, n: Int) {
         val checkerSize = ceilDiv(height, n)
-        for (x in 0 until width / checkerSize)
-            for (y in 0 until n) {
+        for (x in 0..<width / checkerSize)
+            for (y in 0..<n) {
                 color = if ((x + y) % 2 == 0) Color.WHITE else Color.LIGHT_GRAY
                 fillRect(x * checkerSize, y * checkerSize, checkerSize, checkerSize)
             }
@@ -1402,7 +1402,7 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
         // This reorder mapping shifts list elements to the right to make room for the added one.
         val mapping = IntArray(elementCount + 1) { it }
         mapping[elementCount /* exceeds current list size, hence filled with fillElement */] = idx
-        for (i in idx until elementCount)
+        for (i in idx..<elementCount)
             mapping[i] = i + 1
         // The new widget should start out with the requested value.
         val fillElement = when {
@@ -1418,11 +1418,11 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
     }
 
     protected fun userDel(idx: Int) {
-        require(idx in 0 until elementCount)
+        require(idx in 0..<elementCount)
         // This reorder mapping shifts list elements to the left to overwrite the removed one.
         val mapping = IntArray(elementCount) { it }
         mapping[idx] = -1
-        for (i in idx + 1 until elementCount)
+        for (i in idx + 1..<elementCount)
             mapping[i] = i - 1
         withoutChangeListeners { reorder(mapping) }
         elementCount--
@@ -1435,8 +1435,8 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
      * and then reinserts the removed element at toIdx.
      */
     protected fun userMov(fromIdx: Int, toIdx: Int) {
-        require(fromIdx in 0 until elementCount)
-        require(toIdx in 0 until elementCount)
+        require(fromIdx in 0..<elementCount)
+        require(toIdx in 0..<elementCount)
         if (fromIdx == toIdx)
             return
         // This reorder mapping applies the rotation described in the function comment.
@@ -1446,7 +1446,7 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
             for (i in fromIdx + 1..toIdx)
                 mapping[i] = i - 1
         else
-            for (i in toIdx until fromIdx)
+            for (i in toIdx..<fromIdx)
                 mapping[i] = i + 1
         withoutChangeListeners { reorder(mapping) }
         notifyChangeListeners()
@@ -1491,13 +1491,13 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
             super.setSeverity(-1, severity)
             for (widget in partWidgets)
                 widget.setSeverity(-1, severity)
-        } else if (index in 0 until elementCount)
+        } else if (index in 0..<elementCount)
             partWidgets[index].setSeverity(-1, severity)
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
-        for (idx in 0 until elementCount)
+        for (idx in 0..<elementCount)
             partWidgets[idx].applyConfigurator(configurator)
     }
 
@@ -1522,7 +1522,7 @@ class SimpleListWidget<E : Any>(
         override fun getBaseline(width: Int, height: Int): Int {
             // Since the vertical insets of this panel are 0, we can directly forward the baseline query to a component
             // in the first row. We choose the first one which has a valid baseline.
-            for (idx in 0 until elementsPerRow.coerceAtMost(elementCount))
+            for (idx in 0..<elementsPerRow.coerceAtMost(elementCount))
                 for (comp in elementWidgets[idx].components) {
                     // If the component layout hasn't been done yet, approximate the component's height using its
                     // preferred height (bounded by STD_HEIGHT from below). This alleviates "jumping" when adding

@@ -68,7 +68,7 @@ object HomeScreenshotStylingDemo : ProjectDemo("$DIR/screenshot-styling", Format
 
     private fun selectLastRowWithLabel(tree: JTree, label: String) {
         edt {
-            val rowIdx = (0 until tree.rowCount).last { tree.getPathForRow(it).lastPathComponent.toString() == label }
+            val rowIdx = (0..<tree.rowCount).last { tree.getPathForRow(it).lastPathComponent.toString() == label }
             tree.selectionRows = intArrayOf(rowIdx)
         }
     }

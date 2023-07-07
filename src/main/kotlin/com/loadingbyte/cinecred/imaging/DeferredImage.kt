@@ -112,7 +112,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     fun drawEmbeddedTape(embeddedTape: Tape.Embedded, x: Double, y: Y, layer: Layer = TAPES) {
         val thumbnail = try {
-            @OptIn(ExperimentalStdlibApi::class)
             Picture.Raster(embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)!!)
         } catch (_: Exception) {
             null
@@ -931,7 +930,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) {
             var res = embeddedTape.resolution
             res = Resolution((res.widthPx * scaling).roundToInt(), (res.heightPx * scaling).roundToInt())
-            @OptIn(ExperimentalStdlibApi::class)
             collected.add(PlacedTape(embeddedTape.copy(resolution = res), x, y))
         }
 

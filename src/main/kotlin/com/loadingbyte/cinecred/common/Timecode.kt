@@ -40,7 +40,7 @@ fun parseTimecode(format: TimecodeFormat, str: String): Timecode = when (format)
 
 val FPS.canonicalTimecodeFormats: List<TimecodeFormat>
     get() = when {
-        supportsDropFrameTimecode -> TimecodeFormat.values().asList()
+        supportsDropFrameTimecode -> TimecodeFormat.entries
         isFractional -> listOf(TimecodeFormat.EXACT_FRAMES_IN_SECOND, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
         else -> listOf(TimecodeFormat.SMPTE_NON_DROP_FRAME, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
     }
@@ -265,9 +265,9 @@ sealed interface Timecode : Comparable<Timecode> {
             val s = match.groupValues[3].toLong()
             val millis = match.groupValues[4].toLong()
             require(h >= 0L)
-            require(m in 0L until 60L)
-            require(s in 0L until 60L)
-            require(millis in 0L until 1000L)
+            require(m in 0L..<60L)
+            require(s in 0L..<60L)
+            require(millis in 0L..<1000L)
             return Clock(millis + 1000L * (s + 60L * (m + 60L * h)), 1000L)
         }
 
@@ -287,8 +287,8 @@ sealed interface Timecode : Comparable<Timecode> {
             val s = match.groupValues[3].toInt()
             val f = match.groupValues[4].toInt()
             require(h >= 0)
-            require(m in 0 until 60)
-            require(s in 0 until 60)
+            require(m in 0..<60)
+            require(s in 0..<60)
             require(f >= 0)
             return new(s + 60 * (m + 60 * h), f)
         }

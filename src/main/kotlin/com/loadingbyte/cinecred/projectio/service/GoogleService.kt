@@ -296,7 +296,7 @@ object GoogleService : Service {
             val sheets = sheets(false) ?: throw IOException("Account is missing credentials.")
             // Construct the request object.
             val rowData = mutableListOf<RowData>()
-            for (row in 0 until max(200, spreadsheet.numRecords)) {
+            for (row in 0..<max(200, spreadsheet.numRecords)) {
                 val record = if (row < spreadsheet.numRecords) spreadsheet[row] else null
                 var cellFormat: CellFormat? = null
                 look.rowLooks[record?.recordNo]?.let { rowLook ->
@@ -310,7 +310,7 @@ object GoogleService : Service {
                         .setBorders(if (rowLook.borderBottom) Borders().setBottom(Border().setStyle("SOLID")) else null)
                 }
                 val cellData = mutableListOf<CellData>()
-                for (col in 0 until spreadsheet.numColumns)
+                for (col in 0..<spreadsheet.numColumns)
                     cellData += CellData()
                         .setUserEnteredFormat(cellFormat)
                         .setUserEnteredValue(record?.let { ExtendedValue().setStringValue(it.cells[col]) })

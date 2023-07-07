@@ -218,7 +218,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         }
 
     private fun nextAlphaRange() {
-        alphaRange = AlphaRange.values().let { it[(alphaRange.ordinal + 1) % it.size] }
+        alphaRange = AlphaRange.entries.let { it[(alphaRange.ordinal + 1) % it.size] }
     }
 
     private var disableOnChange = false
@@ -267,7 +267,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
 
         override fun renderImage(w: Int, h: Int, out: IntArray) {
             var i = 0
-            for (y in 0 until h) {
+            for (y in 0..<h) {
                 val hue = y / (h - 1).toFloat()
                 out.fill(Color.HSBtoRGB(hue, 1f, 1f), i, i + w)
                 i += w
@@ -288,9 +288,9 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         override fun renderImage(w: Int, h: Int, out: IntArray) {
             val hue = hue.toFloat()
             var i = 0
-            for (y in 0 until h) {
+            for (y in 0..<h) {
                 val bri = 1f - y / (h - 1).toFloat()
-                for (x in 0 until w) {
+                for (x in 0..<w) {
                     val sat = x / (w - 1).toFloat()
                     out[i++] = Color.HSBtoRGB(hue, sat, bri)
                 }

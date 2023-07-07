@@ -408,7 +408,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val creditsLocationWidget = addWidget(
             l10n("ui.projects.create.creditsLocation"),
             ToggleButtonGroupWidget(
-                CreditsLocation.values().asList(),
+                CreditsLocation.entries,
                 toLabel = { l10n("ui.projects.create.creditsLocation.${it.name.lowercase()}") }
             )
         )

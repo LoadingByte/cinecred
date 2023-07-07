@@ -265,7 +265,7 @@ private fun legacy131FindSize(awtFont: Font, extraLeadingEm: Double, targetHeigh
     // Upper-bound the number of repetitions to avoid:
     //   - Accidental infinite looping.
     //   - Too large fonts, as they cause the Java font rendering engine to destroy its own fonts.
-    for (i in 0 until 10) {
+    for (i in 0..<10) {
         val height = awtFont.deriveFont(size * 2f).lineMetrics.height + extraLeadingEm * (size * 2f)
         if (height >= targetHeightPx)
             break
@@ -280,7 +280,7 @@ private fun legacy131FindSize(awtFont: Font, extraLeadingEm: Double, targetHeigh
     var intervalLength = (maxSize - minSize) / 2f
     size = minSize + intervalLength
     // Upper-bound the number of repetitions to avoid accidental infinite looping.
-    for (i in 0 until 20) {
+    for (i in 0..<20) {
         intervalLength /= 2f
         val height = awtFont.deriveFont(size).lineMetrics.height + extraLeadingEm * size
         when {

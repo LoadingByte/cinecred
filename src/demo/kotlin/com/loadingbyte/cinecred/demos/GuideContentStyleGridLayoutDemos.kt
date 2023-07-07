@@ -34,7 +34,7 @@ object GuideContentStyleGridLayoutFillingOrderDemo : StyleSettingsDemo<ContentSt
     listOf(ContentStyle::gridFillingOrder.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (order in GridFillingOrder.values())
+        for (order in GridFillingOrder.entries)
             this += tabularCS.copy(name = "Demo", gridFillingOrder = order, gridFillingBalanced = false)
     }
 
@@ -69,7 +69,7 @@ object GuideContentStyleGridLayoutStructureDemo : StyleSettingsDemo<ContentStyle
     listOf(ContentStyle::gridStructure.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (structure in GridStructure.values())
+        for (structure in GridStructure.entries)
             this += tabularCS.copy(name = "Demo", gridStructure = structure)
     }
 
@@ -189,7 +189,7 @@ object GuideContentStyleGridLayoutCellVJustifyDemo : StyleSettingsDemo<ContentSt
     listOf(ContentStyle::gridCellVJustify.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (vJustify in VJustify.values())
+        for (vJustify in VJustify.entries)
             this += tabularCS.copy(name = "Demo", gridCellVJustify = vJustify, gridRowGapPx = 32.0)
     }
 

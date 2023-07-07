@@ -126,7 +126,7 @@ class DeferredVideo private constructor(
         val insnAlphas = DoubleArray(insnNumFrames)
         var i = 0
         for ((phaseIdx, phase) in phases.withIndex())
-            for (frameIdx in 0 until numFramesPerPhase[phaseIdx]) {
+            for (frameIdx in 0..<numFramesPerPhase[phaseIdx]) {
                 insnShifts[i] = phase.shift(fpsScaling, frameIdx) * resolutionScaling
                 insnAlphas[i] = phase.alpha(fpsScaling, frameIdx)
                 i++
@@ -824,9 +824,7 @@ class DeferredVideo private constructor(
                     val relLastFrameIdx = findRelLastFrameIdx(insn.shifts, placed.y + placedH - 0.001)
                     if (relLastFrameIdx < 0)
                         continue
-                    @OptIn(ExperimentalStdlibApi::class)
-                    val rangeDiff = placed.embeddedTape.range.run { endExclusive - start }
-                    val rangeFrames = when (rangeDiff) {
+                    val rangeFrames = when (val rangeDiff = placed.embeddedTape.range.run { endExclusive - start }) {
                         is Timecode.Frames -> rangeDiff.frames * video.fpsScaling
                         is Timecode.Clock -> rangeDiff.toFramesCeil(video.fps).frames
                         else -> throw IllegalStateException("Wrong timecode format: ${rangeDiff.javaClass.simpleName}")
@@ -881,7 +879,6 @@ class DeferredVideo private constructor(
                     val pastFrames = frameIdx - span.firstFrameIdx
                     val futureFrames = span.lastFrameIdx - frameIdx
 
-                    @OptIn(ExperimentalStdlibApi::class)
                     val start = span.embeddedTape.range.start
                     val timecode = start + when {
                         span.embeddedTape.tape.fileSeq -> Timecode.Frames(pastFrames / video.fpsScaling)

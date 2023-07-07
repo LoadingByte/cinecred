@@ -48,7 +48,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         SwingUtilities.invokeLater {
             if (welcomeView.showRestartUILocaleQuestion(newLocale = wish.locale)) {
                 masterCtrl.tryCloseProjectsAndDisposeAllFrames()
-                masterCtrl.showWelcomeFrame()
+                masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES)
             }
         }
     }
@@ -251,7 +251,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             // that the new window will take over at this exact point.
             if (initConfigChangedUILocaleWish) {
                 masterCtrl.tryCloseProjectsAndDisposeAllFrames()
-                masterCtrl.showWelcomeFrame(openProjectDir)
+                masterCtrl.showWelcomeFrame(openProjectDir, tab = WelcomeTab.PREFERENCES)
                 return
             }
             // If the user dragged a folder onto the program, try opening that. If opening closed the window, stop here.

@@ -327,12 +327,13 @@ val StripePreset.icon
     }
 
 
+private val LAYER_COLORING_OFF_ICON = SVGIcon.load("/icons/layerColoring/off.svg")
 private val LAYER_COLORING_PLAIN_ICON = SVGIcon.load("/icons/layerColoring/plain.svg")
 private val LAYER_COLORING_GRADIENT_ICON = SVGIcon.load("/icons/layerColoring/gradient.svg")
 
 val LayerColoring.icon
     get() = when (this) {
-        LayerColoring.OFF -> CROSS_ICON
+        LayerColoring.OFF -> LAYER_COLORING_OFF_ICON
         LayerColoring.PLAIN -> LAYER_COLORING_PLAIN_ICON
         LayerColoring.GRADIENT -> LAYER_COLORING_GRADIENT_ICON
     }

@@ -428,11 +428,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel)
         }
         // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
+        // Also make the currently selected layers and overlays visible.
+        val layers = getVisibleLayers()
         for ((drawnPage, imagePanel) in drawnProject.drawnPages.zip(imagePanels)) {
             val image = drawnPage.defImage.copy()
             for (overlay in availableOverlays)
                 overlay.draw(drawnProject.project.styling.global.resolution, drawnPage.stageInfo, image)
-            imagePanel.setImageAndGrounding(image, drawnProject.project.styling.global.grounding)
+            imagePanel.setImageAndGroundingAndLayers(image, drawnProject.project.styling.global.grounding, layers)
         }
     }
 
@@ -460,8 +462,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             overlaysMenu.pack()
             // Re-draw the overlays onto the page images.
             refreshPageTabs()
-            // Notify the image panels if previously visible overlays have been removed.
-            refreshVisibleLayers()
         }
 
     private fun refreshVisibleLayers() {

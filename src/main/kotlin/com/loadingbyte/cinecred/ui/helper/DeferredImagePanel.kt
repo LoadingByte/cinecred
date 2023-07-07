@@ -42,33 +42,32 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     var image: DeferredImage?
         get() = _image
         set(image) {
-            setImageAndGrounding(image, grounding)
+            setImageAndGroundingAndLayers(image, grounding, layers)
         }
 
     var grounding: Color
         get() = _grounding
         set(grounding) {
-            setImageAndGrounding(image, grounding)
+            setImageAndGroundingAndLayers(image, grounding, layers)
         }
 
-    fun setImageAndGrounding(image: DeferredImage?, grounding: Color) {
+    var layers: List<Layer>
+        get() = _layers
+        set(layers) {
+            setImageAndGroundingAndLayers(image, grounding, layers)
+        }
+
+    fun setImageAndGroundingAndLayers(image: DeferredImage?, grounding: Color, layers: List<Layer>) {
         val imageChanged = image !== _image
+        if (!imageChanged && _grounding == grounding && _layers == layers) return
         if (imageChanged) require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
         _image = image
         _grounding = grounding
+        _layers = layers
         if (imageChanged) coerceViewportAndCalibrateScrollbars()
         // Rematerialize will call canvas.repaint() once it's done.
         rematerialize(contentChanged = true)
     }
-
-    var layers: List<Layer> = listOf()
-        set(value) {
-            if (field == value)
-                return
-            field = value
-            // Rematerialize will call canvas.repaint() once it's done.
-            rematerialize(contentChanged = true)
-        }
 
     /**
      * Zoom = 1 means: Show the whole width of the image.
@@ -92,6 +91,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
 
     private var _image: DeferredImage? = null
     private var _grounding: Color = Color.BLACK
+    private var _layers: List<Layer> = emptyList()
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that

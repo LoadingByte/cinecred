@@ -219,9 +219,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 val root = Json.parse(StringReader(resp.body())) as Map<String, List<Map<String, String>>>
                 val version = root
                     .getValue("components")
-                    .firstOrNull { it["qualifier"].equals("Release", ignoreCase = true) }
-                    ?.getValue("version")
-                latestStableVersion.set(version)
+                    .first { it["qualifier"].equals("Release", ignoreCase = true) }
+                    .getValue("version")
+                latestStableVersion.compareAndSet(null, version)
                 SwingUtilities.invokeLater(::afterFetch)
             }
         }

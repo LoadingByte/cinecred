@@ -231,8 +231,8 @@ class StyleForm<S : Style>(
                     SpinnerWidget(Int::class.javaObjectType, model, widthSpec = widthSpec)
             }
             Double::class.javaPrimitiveType, Double::class.javaObjectType -> {
-                val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.01) }
-                val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.01) }
+                val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.0001) }
+                val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.0001) }
                 val step = numberWidgetSpec?.step ?: 1.0
                 val model = SpinnerNumberModel(min ?: max ?: 0.0, min, max, step)
                 if (multiplierWidgetSpec != null)

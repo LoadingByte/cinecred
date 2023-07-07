@@ -34,6 +34,7 @@ Cinecred Changelog
 - SVGs without width and height attributes now default to the size of their
   view box instead of vanishing.
 - Exported SVGs now retain the original resolution of embedded pictures.
+- Exported image sequences now use full range, as is expected by most software.
 - Exported interlaced video with bottom field first display order is now
   correctly marked as having the top field coded first.
 - Rendering a video with a non-ASCII filename no longer crashes on Windows.

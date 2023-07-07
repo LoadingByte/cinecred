@@ -142,9 +142,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             toString = { cs ->
                 when (cs) {
                     VideoRenderJob.ColorSpace.REC_709 ->
-                        "Rec. 709  \u2013  BT.709 Gamut, BT.709 Gamma, Limited Range, BT.709 YCbCr Coefficients"
+                        "Rec. 709  \u2013  BT.709 Gamut, BT.709 Gamma, Limited YCbCr Range, BT.709 YCbCr Coefficients"
                     VideoRenderJob.ColorSpace.SRGB ->
-                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full Range, BT.601 YCbCr Coefficients"
+                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full YCbCr Range, BT.601 YCbCr Coefficients"
                 }
             }
         ).apply { value = VideoRenderJob.ColorSpace.REC_709 },

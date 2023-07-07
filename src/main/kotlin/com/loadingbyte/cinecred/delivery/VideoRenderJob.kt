@@ -56,7 +56,8 @@ class VideoRenderJob(
             scaledVideo.resolution,
             Bitmap.Representation(
                 pixelFormat,
-                colorSpace.range,
+                // RGB image sequences are always in full range.
+                if (pixelFormat.isRGB) AVCOL_RANGE_JPEG else colorSpace.range,
                 colorSpace.primaries,
                 colorSpace.transferCharacteristic,
                 if (pixelFormat.isRGB) AVCOL_SPC_RGB else colorSpace.yCbCrCoefficients,

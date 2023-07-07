@@ -472,17 +472,14 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun getVisibleLayers(): List<DeferredImage.Layer> {
         val layers = mutableListOf<DeferredImage.Layer>()
-        val nonImageOverlays = mutableListOf<Overlay>()
+        val overlays = mutableListOf<DeferredImage.Layer>()
         for (overlay in getSelectedOverlays())
-            when (overlay) {
-                is ImageOverlay -> layers += overlay
-                is SafeAreasOverlay, is AspectRatioOverlay, is LinesOverlay -> nonImageOverlays += overlay
-            }
+            (if (overlay is ImageOverlay && overlay.underlay) layers else overlays) += overlay
         layers += STATIC
         layers += TAPES
         if (guidesToggleButton.isSelected)
             layers += GUIDES
-        layers += nonImageOverlays
+        layers += overlays
         return layers
     }
 

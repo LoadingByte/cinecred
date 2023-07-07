@@ -149,7 +149,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 configureOverlayForm.linesColorWidget.value.run { if (isActive) value else null },
                 configureOverlayForm.linesHWidget.value,
                 configureOverlayForm.linesVWidget.value,
-                configureOverlayForm.imageFileWidget.value
+                configureOverlayForm.imageFileWidget.value,
+                configureOverlayForm.imageUnderlayWidget.value
             )
         }
         configureOverlayDoneButton = JButton(l10n("ok"), CHECK_ICON).apply {
@@ -256,7 +257,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         linesColor: Color?,
         linesH: List<Int>,
         linesV: List<Int>,
-        imageFile: Path
+        imageFile: Path,
+        imageUnderlay: Boolean
     ) {
         configureOverlayForm.apply {
             typeWidget.value = type
@@ -267,6 +269,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             linesHWidget.value = linesH
             linesVWidget.value = linesV
             imageFileWidget.value = imageFile
+            imageUnderlayWidget.value = imageUnderlay
         }
     }
 
@@ -377,6 +380,20 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val imageFileWidget = addWidget(
             l10n("ui.overlays.type.image"),
             FileWidget(FileType.FILE, FileAction.OPEN),
+            isVisible = { typeWidget.value == ImageOverlay::class.java }
+        )
+
+        val imageUnderlayWidget = addWidget(
+            l10n("ui.preferences.overlays.configure.imageLayer"),
+            ToggleButtonGroupWidget(
+                listOf(true, false),
+                toLabel = {
+                    when (it) {
+                        true -> l10n("ui.preferences.overlays.configure.imageLayer.under")
+                        false -> l10n("ui.preferences.overlays.configure.imageLayer.over")
+                    }
+                }
+            ),
             isVisible = { typeWidget.value == ImageOverlay::class.java }
         )
 

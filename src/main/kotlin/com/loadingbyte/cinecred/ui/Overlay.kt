@@ -153,7 +153,8 @@ class LinesOverlay(
 class ImageOverlay(
     override val uuid: UUID,
     val name: String,
-    val raster: Picture.Raster
+    val raster: Picture.Raster,
+    val underlay: Boolean
 ) : ConfigurableOverlay {
 
     override val label get() = name

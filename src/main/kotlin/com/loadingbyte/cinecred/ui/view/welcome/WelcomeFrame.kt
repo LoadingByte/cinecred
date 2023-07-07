@@ -131,9 +131,9 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_authorizeAccount_setError(error)
     override fun preferences_configureOverlay_setForm(
         type: Class<out ConfigurableOverlay>, name: String, aspectRatioH: Double, aspectRatioV: Double, linesColor: Color?,
-        linesH: List<Int>, linesV: List<Int>, imageFile: Path
+        linesH: List<Int>, linesV: List<Int>, imageFile: Path, imageUnderlay: Boolean
     ) = panel.preferencesPanel.preferences_configureOverlay_setForm(
-        type, name, aspectRatioH, aspectRatioV, linesColor, linesH, linesV, imageFile
+        type, name, aspectRatioH, aspectRatioV, linesColor, linesH, linesV, imageFile, imageUnderlay
     )
     override fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) =
         panel.preferencesPanel.preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment)

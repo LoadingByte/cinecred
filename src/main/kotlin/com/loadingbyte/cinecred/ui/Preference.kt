@@ -120,6 +120,7 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
             }
             "image" -> {
                 val name = it["name"] as? String ?: return@mapNotNull null
+                val underlay = it["lay"] == "under"
                 val uuid = try {
                     UUID.fromString(it["image"] as? String ?: return@mapNotNull null)
                 } catch (_: IllegalArgumentException) {
@@ -132,7 +133,7 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                     LOGGER.error("Cannot read overlay image file '{}'.", file, e)
                     return@mapNotNull null
                 }
-                ImageOverlay(uuid, name, Picture.Raster(image))
+                ImageOverlay(uuid, name, Picture.Raster(image), underlay)
             }
             else -> null
         }
@@ -182,6 +183,7 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                 is ImageOverlay -> mapOf(
                     "type" to "image",
                     "name" to overlay.name,
+                    "lay" to if (overlay.underlay) "under" else "over",
                     "image" to overlay.uuid.toString()
                 )
             }

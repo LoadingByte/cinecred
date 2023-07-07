@@ -484,7 +484,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             linesColor = null,
             linesH = emptyList(),
             linesV = emptyList(),
-            imageFile = Path("")
+            imageFile = Path(""),
+            imageUnderlay = false
         )
         welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_OVERLAY)
     }
@@ -503,7 +504,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             linesColor = if (overlay is LinesOverlay) overlay.color else null,
             linesH = if (overlay is LinesOverlay) overlay.hLines else emptyList(),
             linesV = if (overlay is LinesOverlay) overlay.vLines else emptyList(),
-            imageFile = Path("")
+            imageFile = Path(""),
+            imageUnderlay = if (overlay is ImageOverlay) overlay.underlay else false
         )
         welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_OVERLAY)
     }
@@ -526,7 +528,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         linesColor: Color?,
         linesH: List<Int>,
         linesV: List<Int>,
-        imageFile: Path
+        imageFile: Path,
+        imageUnderlay: Boolean
     ) {
         val edited = currentlyEditedOverlay
         val uuid = edited?.uuid ?: UUID.randomUUID()
@@ -535,7 +538,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             LinesOverlay::class.java -> LinesOverlay(uuid, name, linesColor, linesH, linesV)
             ImageOverlay::class.java ->
                 if (edited is ImageOverlay && imageFile == Path(""))
-                    ImageOverlay(uuid, name, edited.raster)
+                    ImageOverlay(uuid, name, edited.raster, imageUnderlay)
                 else try {
                     val picture = Picture.read(imageFile)
                     val image = BufferedImage(
@@ -545,7 +548,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         drawPicture(picture, 0.0, 0.0.toY())
                     }.materialize(image, listOf(STATIC))
                     picture.dispose()
-                    ImageOverlay(uuid, name, Picture.Raster(image))
+                    ImageOverlay(uuid, name, Picture.Raster(image), imageUnderlay)
                 } catch (e: Exception) {
                     welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())
                     welcomeView.preferences_setCard(PreferencesCard.START)

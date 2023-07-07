@@ -79,7 +79,8 @@ interface WelcomeCtrlComms {
         linesColor: Color?,
         linesH: List<Int>,
         linesV: List<Int>,
-        imageFile: Path
+        imageFile: Path,
+        imageUnderlay: Boolean
     )
 
 }
@@ -137,7 +138,8 @@ interface WelcomeViewComms {
         linesColor: Color?,
         linesH: List<Int>,
         linesV: List<Int>,
-        imageFile: Path
+        imageFile: Path,
+        imageUnderlay: Boolean
     )
 
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?)

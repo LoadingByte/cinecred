@@ -19,7 +19,6 @@ import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
-import java.util.concurrent.atomic.AtomicReference
 import javax.swing.*
 import kotlin.math.*
 
@@ -85,7 +84,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val makeVideoBackendJobSlot = JobSlot()
     private val materializeFrameJobSlot = JobSlot()
-    private val curVideoBackend = AtomicReference<Triple<DeferredVideo.BufferedImageBackend, Resolution, Color>?>()
+    @Volatile
+    private var curVideoBackend: Triple<DeferredVideo.BufferedImageBackend, Resolution, Color>? = null
     private var curFrame: BufferedImage? = null
     private var systemScaling = 1.0
 
@@ -221,7 +221,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         playRate = 0
         if (drawnProject == null) {
             makeVideoBackendJobSlot.submit {
-                curVideoBackend.set(null)
+                curVideoBackend = null
                 materializeAndDrawFrame(0)
             }
             timecodeLabel.text = "\u2014 / \u2014"
@@ -266,14 +266,14 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
             // Simulate materializing the currently selected frame in the background thread. As expensive operations
             // are cached, the subsequent materialization of that frame will be very fast.
             scaledVideoBackend.preloadFrame(currentFrameIdx)
-            curVideoBackend.set(Triple(scaledVideoBackend, scaledVideo.resolution, project.styling.global.grounding))
+            curVideoBackend = Triple(scaledVideoBackend, scaledVideo.resolution, project.styling.global.grounding)
             materializeAndDrawFrame(currentFrameIdx)
         }
     }
 
     private fun materializeAndDrawFrame(frameIdx: Int) {
         materializeFrameJobSlot.submit {
-            val frame = curVideoBackend.get()?.let { (scaledVideoBackend, resolution, grounding) ->
+            val frame = curVideoBackend?.let { (scaledVideoBackend, resolution, grounding) ->
                 canvas.graphicsConfiguration.createCompatibleImage(resolution.widthPx, resolution.heightPx)
                     ?.withG2 { g2 -> g2.color = grounding; g2.fillRect(0, 0, resolution.widthPx, resolution.heightPx) }
                     ?.also { scaledVideoBackend.materializeFrame(it, frameIdx) }

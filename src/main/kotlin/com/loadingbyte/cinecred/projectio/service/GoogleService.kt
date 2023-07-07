@@ -132,7 +132,7 @@ object GoogleService : Service {
                     dirtyWatchers.add(watchersForPolling.take())
                 watchersForPolling.drainTo(dirtyWatchers)
                 // Get rid of cancelled watchers.
-                dirtyWatchers.removeIf { watcher -> watcher.callbacks.get() == null }
+                dirtyWatchers.removeIf { watcher -> watcher.callbacks == null }
                 if (dirtyWatchers.isEmpty())
                     continue
                 // Try polling the dirty watchers.
@@ -144,7 +144,7 @@ object GoogleService : Service {
                     // All the watchers that are still dirty haven't been fully polled before the outage happened.
                     // Notify them about the outage and try again in a bit, after having backed off exponentially.
                     for (watcher in dirtyWatchers)
-                        watcher.callbacks.get()?.problem(ServiceWatcher.Problem.DOWN)
+                        watcher.callbacks?.problem(ServiceWatcher.Problem.DOWN)
                     sleep = (sleep * 2).coerceIn(minSleep, maxSleep)
                 }
                 Thread.sleep(sleep * 1000L)
@@ -191,7 +191,7 @@ object GoogleService : Service {
                 // If no account has access, let the watcher know it's inaccessible. Also remove it from the dirty list
                 // so that it is only polled again when the user explicitly requests that.
                 if (response == null) {
-                    watcher.callbacks.get()?.problem(ServiceWatcher.Problem.INACCESSIBLE)
+                    watcher.callbacks?.problem(ServiceWatcher.Problem.INACCESSIBLE)
                     dirtyWatchers.remove(watcher)
                 }
             } else {
@@ -211,7 +211,7 @@ object GoogleService : Service {
             // from the dirty list, so that it is no longer polled until that is explicitly requested again.
             if (response != null) {
                 val spreadsheet = Spreadsheet(response.getValues().map { row -> row.map(Any::toString) })
-                watcher.callbacks.get()?.content(spreadsheet)
+                watcher.callbacks?.content(spreadsheet)
                 dirtyWatchers.remove(watcher)
             }
         }
@@ -227,7 +227,8 @@ object GoogleService : Service {
         callbacks: ServiceWatcher.Callbacks
     ) : ServiceWatcher {
 
-        val callbacks = AtomicReference<ServiceWatcher.Callbacks?>(callbacks)
+        @Volatile
+        var callbacks: ServiceWatcher.Callbacks? = callbacks
         var currentAccount: GoogleAccount? = null
 
         override fun poll() {
@@ -235,7 +236,7 @@ object GoogleService : Service {
         }
 
         override fun cancel() {
-            callbacks.set(null)
+            callbacks = null
         }
 
     }

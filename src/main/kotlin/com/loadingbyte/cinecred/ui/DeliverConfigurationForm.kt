@@ -203,7 +203,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
-            .associateWith { speed -> speed * resMult * fpsMult }
+            .associateWith { speed -> speed * resMult / fpsMult }
 
         // Display the scaled specs in the specs labels.
         val decFmt = DecimalFormat("0.##")

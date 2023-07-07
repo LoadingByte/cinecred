@@ -50,6 +50,8 @@ Cinecred Changelog
   and all error messages are collected in the log table.
 - Instead of hanging, a waiting screen is now displayed during project creation.
 - The movable dividers are no longer sometimes strangely positioned.
+- In the delivery dialog, the scroll speed indicator now correctly decreases
+  instead of increases when activating the frame rate multiplier.
 
 ### Compatibility Notes
 

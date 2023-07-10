@@ -96,6 +96,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         else GridStructure.entries.toSortedSet()
     },
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchColWidthsAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
@@ -105,7 +106,6 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
-    DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
         if (style.gridStructure == SQUARE_CELLS) sortedSetOf(OFF, ACROSS_BLOCKS)
         else MatchExtent.entries.toSortedSet()

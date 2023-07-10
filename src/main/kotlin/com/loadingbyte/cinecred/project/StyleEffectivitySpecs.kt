@@ -50,16 +50,16 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(), ContentStyle::gridStructure.st(),
         ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridMatchColWidths.st(),
-        ContentStyle::gridMatchColWidthsAcrossStyles.st(), ContentStyle::gridMatchColUnderoccupancy.st(),
         ContentStyle::gridForceRowHeightPx.st(), ContentStyle::gridMatchRowHeight.st(),
+        ContentStyle::gridMatchColWidthsAcrossStyles.st(), ContentStyle::gridMatchColUnderoccupancy.st(),
         ContentStyle::gridMatchRowHeightAcrossStyles.st(), ContentStyle::gridCellHJustifyPerCol.st(),
         ContentStyle::gridCellVJustify.st(), ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(),
         isTotallyIneffective = { _, _, style -> style.bodyLayout != GRID }
     ),
     StyleEffectivitySpec(
         ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowSquareCells.st(),
-        ContentStyle::flowForceCellWidthPx.st(), ContentStyle::flowMatchCellWidth.st(),
-        ContentStyle::flowMatchCellWidthAcrossStyles.st(), ContentStyle::flowForceCellHeightPx.st(),
+        ContentStyle::flowForceCellWidthPx.st(), ContentStyle::flowForceCellHeightPx.st(),
+        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
         ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
         ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(), ContentStyle::flowLineWidthPx.st(),
         ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),

@@ -420,7 +420,7 @@ private class CreditsReader(
                         if (parts.size > 1) {
                             val i = parts[1].toInt()
                             if (i in 1..u)
-                                nextSpineHookTo = i - 1
+                                nextSpineHookTo = u - i
                             else
                                 table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, u))
                         }

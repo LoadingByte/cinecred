@@ -43,6 +43,7 @@ Cinecred Changelog
 - Unused memory is now released earlier, reducing off-peak memory consumption.
 - Most I/O errors are now caught and gracefully handled.
 - Crash reports now include more context and ask users to state what they did.
+- Installation of the RPM package no longer fails due to a /usr/bin conflict.
 
 ### UI Fixes
 

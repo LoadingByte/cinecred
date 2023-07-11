@@ -21,4 +21,7 @@ AutoReqProv: no
 cp -r %{_sourcedir}/* %{buildroot}/
 
 %files
-/
+/opt/cinecred/
+# This symlink is listed separately to avoid a /usr/bin conflict error.
+/usr/bin/cinecred
+/usr/share/

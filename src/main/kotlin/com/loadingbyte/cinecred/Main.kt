@@ -98,6 +98,12 @@ fun main(args: Array<String>) {
 
 
 private fun mainSwing(args: Array<String>) {
+    // On Linux, the WM_CLASS property is set to the main class name by default. This leads to the main class name being
+    // displayed as the application name on, e.g., the Gnome Desktop. We fix this by setting WM_CLASS to the app name.
+    // Notice that we could also set it to "cinecred" (in lower case) as Gnome would then find the matching
+    // cinecred.desktop file and extract the app name from there, but directly setting the app name seems more portable.
+    trySetAWTAppClassNameLinux("Cinecred")
+
     // Tooltips should not disappear on their own after some time.
     // To achieve this, we set the dismiss delay to one hour.
     ToolTipManager.sharedInstance().dismissDelay = 60 * 60 * 1000

@@ -255,6 +255,13 @@ fun setWindowCanFullScreenMacOS(window: Window, canFullScreen: Boolean) {
         .invoke(null, window, canFullScreen)
 }
 
+fun trySetAWTAppClassNameLinux(awtAppClassName: String) {
+    // Resort to regular reflection because this method isn't performance-critical and only available on X11.
+    val tkCls = Toolkit.getDefaultToolkit().javaClass
+    if (tkCls.name == "sun.awt.X11.XToolkit")
+        tkCls.getDeclaredField("awtAppClassName").apply { isAccessible = true }.set(null, awtAppClassName)
+}
+
 
 private val TextLine = Class.forName("java.awt.font.TextLine")
 private val ExtendedTextSourceLabel = Class.forName("sun.font.ExtendedTextSourceLabel")

@@ -53,6 +53,7 @@ Cinecred Changelog
 - The movable dividers are no longer sometimes strangely positioned.
 - In the delivery dialog, the scroll speed indicator now correctly decreases
   instead of increases when activating the frame rate multiplier.
+- On Gnome, the application name is no longer some cryptic text.
 
 ### Compatibility Notes
 

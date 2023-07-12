@@ -95,15 +95,14 @@ class TapeTimelineRenderJob(
             val clipStart = Timecode.Frames(startFrame)
             val clipLength = Timecode.Frames(stopFrame - startFrame)
             if (clipLength.frames > 0) {
-                val tapeFPS = tapeSpan.embeddedTape.tape.fps ?: projFPS
-                val tapeDropFrame = projDropFrame && tapeFPS.supportsDropFrameTimecode
-                val tapeStart = tapeSpan.embeddedTape.range.start.toFrames(tapeFPS)
-                val tapeLength = clipLength.toClock(projFPS).toFramesCeil(tapeFPS)
-                // In a well-behaved project, tapeFPS equals projFPS, and only in those cases, we can actually produce
-                // and in-spec EDL. Otherwise, all bets are off, so we'll just insert a timecode specific to tapeFPS,
-                // and see what the importing software makes of it.
-                val srcIn = tapeStart.toSMPTE(tapeFPS, tapeDropFrame)
-                val srcOut = (tapeStart + tapeLength).toSMPTE(tapeFPS, tapeDropFrame)
+                val tapeStart = tapeSpan.embeddedTape.range.start
+                val tapeLength = if (tapeStart is Timecode.Frames) clipLength else clipLength.toClock(projFPS)
+                // In a well-behaved project, the tape FPS equals the project FPS, and only in those cases, we can
+                // actually produce and in-spec EDL. Otherwise, importing software usually assumes that the frame
+                // counter is just "rescaled" from the tape FPS to the project FPS (e.g., when rescaling from tape FPS
+                // of 50 to project FPS of 25, the timecode 00:01:23:40 becomes 00:01:23:20). So we do this as well.
+                val srcIn = tapeStart.toSMPTE(projFPS, projDropFrame)
+                val srcOut = (tapeStart + tapeLength).toSMPTE(projFPS, projDropFrame)
                 val recIn = clipStart.toSMPTE(projFPS, projDropFrame)
                 val recOut = (clipStart + clipLength).toSMPTE(projFPS, projDropFrame)
                 edl.crlf()

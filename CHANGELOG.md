@@ -10,12 +10,14 @@ Cinecred Changelog
 - Videos and image sequences can now be inserted analogously to pictures.
     - As audio is not supported, an EDL or CSV of the embedded videos can be
       exported to help in aligning the audio in an external tool.
+- Greatly extended spine positioning:
+    - Card spines can now be freely positioned horizontally and vertically.
+    - A generalization of Parallel called Hook allows to arrange spines in
+      relation to each other.
 - A Google Sheet may now be used as the credits table.
 - New projects may now omit the sample credits or the credits file altogether.
 - Users can now set up custom overlays that show a cropped aspect ratio, custom
   horizontal or vertical lines, or a custom image.
-- Card content can now be freely arranged horizontally and vertically using new
-  spine positioning options.
 - Vertical gaps in the credits spreadsheet may now be specified in pixels.
 - Grid cells, flow cells, and heads and tails can now be sized manually.
 - Added more fine-grained controls for vertical head and tail justification.

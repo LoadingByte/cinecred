@@ -36,16 +36,9 @@ fun drawPages(project: Project): List<DrawnPage> {
     val blocks = buildList {
         for (page in pages)
             for (stage in page.stages)
-                when (stage) {
-                    is Stage.Card ->
-                        for (compound in stage.compounds)
-                            for (spine in compound.spines)
-                                addAll(spine.blocks)
-                    is Stage.Scroll ->
-                        for (lateral in stage.laterals)
-                            for (spine in lateral.spines)
-                                addAll(spine.blocks)
-                }
+                for (compound in stage.compounds)
+                    for (spine in compound.spines)
+                        addAll(spine.blocks)
     }
     val drawnBodies = drawBodies(project.styling.contentStyles, project.styling.letterStyles, textCtx, blocks)
     val drawnBlocks = drawBlocks(project.styling.contentStyles, textCtx, drawnBodies, blocks)
@@ -56,10 +49,7 @@ fun drawPages(project: Project): List<DrawnPage> {
         for ((stageIdx, stage) in page.stages.withIndex()) {
             val prevStage = page.stages.getOrNull(stageIdx - 1)
             val nextStage = page.stages.getOrNull(stageIdx + 1)
-            drawnStages[stage] = when (stage) {
-                is Stage.Card -> drawCardStage(global.resolution, drawnBlocks, stage)
-                is Stage.Scroll -> drawScrollStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
-            }
+            drawnStages[stage] = drawStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
         }
 
     val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }

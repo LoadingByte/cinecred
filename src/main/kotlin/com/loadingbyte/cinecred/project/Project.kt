@@ -289,59 +289,42 @@ class Page(
 )
 
 
-sealed interface Stage {
-
-    val style: PageStyle
+class Stage(
+    val style: PageStyle,
+    val compounds: PersistentList<Compound>,
     val vGapAfterPx: Double
+)
+
+
+sealed interface Compound {
+
+    val hOffsetPx: Double
+    val spines: PersistentList<Spine>
 
     class Card(
-        override val style: PageStyle,
-        val compounds: PersistentList<Compound>,
-        override val vGapAfterPx: Double
-    ) : Stage
+        val vAnchor: VAnchor,
+        override val hOffsetPx: Double,
+        val vOffsetPx: Double,
+        override val spines: PersistentList<Spine>
+    ) : Compound
 
     class Scroll(
-        override val style: PageStyle,
-        val laterals: PersistentList<Lateral>,
-        override val vGapAfterPx: Double
-    ) : Stage
+        override val hOffsetPx: Double,
+        override val spines: PersistentList<Spine>,
+        val vGapAfterPx: Double
+    ) : Compound
 
 }
 
 
-class Compound(
-    val vAnchor: VAnchor,
+class Spine(
+    val hookTo: Spine?,
+    val hookVAnchor: VAnchor,
+    val selfVAnchor: VAnchor,
     val hOffsetPx: Double,
     val vOffsetPx: Double,
-    val spines: PersistentList<Spine.Card>
-)
-
-
-class Lateral(
-    val spines: PersistentList<Spine.Scroll>,
-    val vGapAfterPx: Double
-)
-
-
-sealed interface Spine {
-
     val blocks: PersistentList<Block>
-
-    class Card(
-        val hookTo: Card?,
-        val hookVAnchor: VAnchor,
-        val selfVAnchor: VAnchor,
-        val hOffsetPx: Double,
-        val vOffsetPx: Double,
-        override val blocks: PersistentList<Block>
-    ) : Spine
-
-    class Scroll(
-        val hOffsetPx: Double,
-        override val blocks: PersistentList<Block>
-    ) : Spine
-
-}
+)
 
 
 enum class VAnchor { TOP, MIDDLE, BOTTOM }

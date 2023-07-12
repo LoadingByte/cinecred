@@ -14,72 +14,111 @@ import java.awt.geom.Path2D
 
 class DrawnStage(val defImage: DeferredImage, val middleYInImage: Y? /* for cards only */)
 private class DrawnSpine(val defImage: DeferredImage, val spineXInImage: Double)
-private class CardSpineInfo(val drawnSpine: DrawnSpine, val x: Double, val y: Y) {
+private class SpineInfo(val drawnSpine: DrawnSpine, val x: Double, val y: Y) {
     val drawVAnchors = HashSet<VAnchor>()
 }
 
 
-fun drawCardStage(
+fun drawStage(
     resolution: Resolution,
     drawnBlocks: Map<Block, DrawnBlock>,
-    stage: Stage.Card
+    stage: Stage,
+    prevStage: Stage?,
+    nextStage: Stage?
 ): DrawnStage {
-    val w = resolution.widthPx.toDouble()
-    val s = resolution.widthPx / 200.0
-
-    val compoundImages = LinkedHashMap<Compound, DeferredImage>()  // retains insertion order
-    for (compound in stage.compounds) {
-        val compoundX = w / 2.0 + compound.hOffsetPx
-
-        val spineInfo = LinkedHashMap<Spine.Card, CardSpineInfo>()  // retains insertion order
-        for (spine in compound.spines) {
-            val drawnSpine = drawSpine(drawnBlocks, spine)
-            val x: Double
-            val y: Y
-            if (spine.hookTo == null) {
-                x = compoundX
-                y = 0.0.toY()
-            } else {
-                val hookToInfo = spineInfo.getValue(spine.hookTo)
-                x = hookToInfo.x + spine.hOffsetPx
-                y = hookToInfo.y + spine.hookVAnchor.yIn(hookToInfo.drawnSpine.defImage.height) +
-                        spine.vOffsetPx - spine.selfVAnchor.yIn(drawnSpine.defImage.height)
-                hookToInfo.drawVAnchors.add(spine.hookVAnchor)
-            }
-            spineInfo[spine] = CardSpineInfo(drawnSpine, x, y)
-        }
-
-        val compoundImage = DeferredImage(width = w)
-        drawWithNegativeYs(
-            compoundImage, spineInfo.entries,
-            y = { (_, info) -> info.y },
-            h = { (_, info) -> info.drawnSpine.defImage.height },
-            draw = { (spine, info), imgY ->
-                compoundImage.drawDeferredImage(info.drawnSpine.defImage, info.x - info.drawnSpine.spineXInImage, imgY)
-                // Draw guides that shows where hooks towards other spines are starting out.
-                val spineHeight = info.drawnSpine.defImage.height
-                for (anchor in info.drawVAnchors)
-                    compoundImage.drawShape(
-                        SPINE_GUIDE_COLOR,
-                        Path2D.Double().apply { moveTo(-s, -s); lineTo(s, s); moveTo(-s, s); lineTo(s, -s) },
-                        x = info.x, y = imgY + anchor.yIn(spineHeight), fill = false, layer = GUIDES
-                    )
-                // If this is a hooked spine, draw guides that show the hook's target and line.
-                if (spine.hookTo != null) {
-                    val startY = imgY + spine.selfVAnchor.yIn(spineHeight)
-                    for (r in doubleArrayOf(0.5 * s, s))
-                        compoundImage.drawShape(
-                            SPINE_GUIDE_COLOR, Ellipse2D.Double(-r, -r, 2.0 * r, 2.0 * r),
-                            x = info.x, y = startY, fill = false, layer = GUIDES
-                        )
-                    compoundImage.drawLine(
-                        SPINE_GUIDE_COLOR, info.x, startY, info.x - spine.hOffsetPx, startY - spine.vOffsetPx,
-                        dash = true, layer = GUIDES
-                    )
-                }
-            }
+    val stageImage = DeferredImage(width = resolution.widthPx.toDouble())
+    if (stage.style.behavior == CARD) {
+        val compoundImages = LinkedHashMap<Compound, DeferredImage>()  // retains insertion order
+        stage.compounds.associateWithTo(compoundImages) { compound -> drawCompound(resolution, drawnBlocks, compound) }
+        val middleYInStageImage = drawWithNegativeYs(
+            stageImage, compoundImages.entries,
+            y = { (compound, compoundImage) ->
+                (compound as Compound.Card).vOffsetPx.toY() - compound.vAnchor.yIn(compoundImage.height)
+            },
+            h = { (_, compoundImage) -> compoundImage.height },
+            draw = { (_, compoundImage), imgY -> stageImage.drawDeferredImage(compoundImage, 0.0, imgY) }
         )
+        return DrawnStage(stageImage, middleYInStageImage)
+    } else {
+        // If this stage is a scroll stage that is preceded by a card stage, add the vertical gap behind the card stage
+        // to the front of this stage because card stage images are not allowed to have extremal vertical gaps baked
+        // into them.
+        var y = (if (prevStage != null && prevStage.style.behavior == CARD) prevStage.vGapAfterPx else 0.0).toElasticY()
+        for ((compoundIdx, compound) in stage.compounds.withIndex()) {
+            val compoundImage = drawCompound(resolution, drawnBlocks, compound)
+            stageImage.drawDeferredImage(compoundImage, 0.0, y)
+            y += compoundImage.height
+            if (compoundIdx != stage.compounds.lastIndex)
+                y += (compound as Compound.Scroll).vGapAfterPx
+        }
+        // If this stage is a scroll stage and not the last stage on the page, add the gap behind it to its image.
+        if (nextStage != null) y += stage.vGapAfterPx.toElasticY()
+        // Set the stage image's height.
+        stageImage.height = y
+        return DrawnStage(stageImage, null)
+    }
+}
 
+
+private fun drawCompound(
+    resolution: Resolution,
+    drawnBlocks: Map<Block, DrawnBlock>,
+    compound: Compound
+): DeferredImage {
+    val w = resolution.widthPx.toDouble()
+    val s = w / 200.0
+    val compoundX = w / 2.0 + compound.hOffsetPx
+
+    val spineInfo = LinkedHashMap<Spine, SpineInfo>()  // retains insertion order
+    for (spine in compound.spines) {
+        val drawnSpine = drawSpine(drawnBlocks, spine)
+        val x: Double
+        val y: Y
+        if (spine.hookTo == null) {
+            x = compoundX
+            y = 0.0.toY()
+        } else {
+            val hookToInfo = spineInfo.getValue(spine.hookTo)
+            x = hookToInfo.x + spine.hOffsetPx
+            y = hookToInfo.y + spine.hookVAnchor.yIn(hookToInfo.drawnSpine.defImage.height) +
+                    spine.vOffsetPx - spine.selfVAnchor.yIn(drawnSpine.defImage.height)
+            hookToInfo.drawVAnchors.add(spine.hookVAnchor)
+        }
+        spineInfo[spine] = SpineInfo(drawnSpine, x, y)
+    }
+
+    val compoundImage = DeferredImage(width = w)
+    drawWithNegativeYs(
+        compoundImage, spineInfo.entries,
+        y = { (_, info) -> info.y },
+        h = { (_, info) -> info.drawnSpine.defImage.height },
+        draw = { (spine, info), imgY ->
+            compoundImage.drawDeferredImage(info.drawnSpine.defImage, info.x - info.drawnSpine.spineXInImage, imgY)
+            // Draw guides that shows where hooks towards other spines are starting out.
+            val spineHeight = info.drawnSpine.defImage.height
+            for (anchor in info.drawVAnchors)
+                compoundImage.drawShape(
+                    SPINE_GUIDE_COLOR,
+                    Path2D.Double().apply { moveTo(-s, -s); lineTo(s, s); moveTo(-s, s); lineTo(s, -s) },
+                    x = info.x, y = imgY + anchor.yIn(spineHeight), fill = false, layer = GUIDES
+                )
+            // If this is a hooked spine, draw guides that show the hook's target and line.
+            if (spine.hookTo != null) {
+                val startY = imgY + spine.selfVAnchor.yIn(spineHeight)
+                for (r in doubleArrayOf(0.5 * s, s))
+                    compoundImage.drawShape(
+                        SPINE_GUIDE_COLOR, Ellipse2D.Double(-r, -r, 2.0 * r, 2.0 * r),
+                        x = info.x, y = startY, fill = false, layer = GUIDES
+                    )
+                compoundImage.drawLine(
+                    SPINE_GUIDE_COLOR, info.x, startY, info.x - spine.hOffsetPx, startY - spine.vOffsetPx,
+                    dash = true, layer = GUIDES
+                )
+            }
+        }
+    )
+
+    if (compound is Compound.Card) {
         // Draw a guide that shows where the entire compound is anchored.
         val diamond = when (compound.vAnchor) {
             VAnchor.TOP ->
@@ -93,20 +132,11 @@ fun drawCardStage(
             SPINE_GUIDE_COLOR, diamond, compoundX, compound.vAnchor.yIn(compoundImage.height + 0.4 * s) - 0.2 * s,
             fill = true, layer = GUIDES
         )
-
-        compoundImages[compound] = compoundImage
     }
 
-    val stageImage = DeferredImage(width = w)
-    val middleYInStageImage = drawWithNegativeYs(
-        stageImage, compoundImages.entries,
-        y = { (compound, compoundImage) -> compound.vOffsetPx.toY() - compound.vAnchor.yIn(compoundImage.height) },
-        h = { (_, compoundImage) -> compoundImage.height },
-        draw = { (_, compoundImage), imgY -> stageImage.drawDeferredImage(compoundImage, 0.0, imgY) }
-    )
-
-    return DrawnStage(stageImage, middleYInStageImage)
+    return compoundImage
 }
+
 
 private fun VAnchor.yIn(h: Y) = when (this) {
     VAnchor.TOP -> 0.0.toY()
@@ -126,41 +156,6 @@ private inline fun <T> drawWithNegativeYs(
         image.height = image.height.max(imgY + h(elem))
     }
     return originY
-}
-
-
-fun drawScrollStage(
-    resolution: Resolution,
-    drawnBlocks: Map<Block, DrawnBlock>,
-    stage: Stage.Scroll,
-    prevStage: Stage?,
-    nextStage: Stage?
-): DrawnStage {
-    // If this stage is a scroll stage is preceded by a card stage, add the vertical gap behind the card stage to the
-    // front of this stage because card stage images are not allowed to have extremal vertical gaps baked into them.
-    val topPad = if (prevStage != null && prevStage.style.behavior == CARD) prevStage.vGapAfterPx.toElasticY() else null
-    // If this stage is a scroll stage and not the last stage on the page, add the gap behind it to its image.
-    val botPad = if (nextStage != null) stage.vGapAfterPx.toElasticY() else null
-
-    val lateralsImage = DeferredImage(width = resolution.widthPx.toDouble())
-    var y = topPad ?: 0.0.toY()
-    for ((lateralIdx, lateral) in stage.laterals.withIndex()) {
-        var maxHeight = 0.0.toY()
-        for (spine in lateral.spines) {
-            val drawnSpine = drawSpine(drawnBlocks, spine)
-            val x = resolution.widthPx / 2.0 + spine.hOffsetPx - drawnSpine.spineXInImage
-            lateralsImage.drawDeferredImage(drawnSpine.defImage, x, y)
-            maxHeight = maxHeight.max(drawnSpine.defImage.height)
-        }
-        y += maxHeight
-        if (lateralIdx != stage.laterals.lastIndex)
-            y += lateral.vGapAfterPx.toElasticY()
-    }
-    if (botPad != null)
-        y += botPad
-    lateralsImage.height = y
-
-    return DrawnStage(lateralsImage, null)
 }
 
 

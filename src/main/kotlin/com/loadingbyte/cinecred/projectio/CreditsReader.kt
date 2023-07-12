@@ -98,26 +98,24 @@ private class CreditsReader(
     // These variables keep track of the vertical gap that should be inserted AFTER the next CONCLUDED credits element.
     // If the gap is not specified explicitly in the vGap table column, it will be implicitly inferred from the number
     // of rows without head, body, and tail. If multiple credits elements will be concluded at the same time
-    // (e.g., a block, a spine, and a lateral), the most significant credits element will receive the gap
-    // (in our example, that would be the lateral).
+    // (e.g., a block, a spine, and a compound), the most significant credits element will receive the gap
+    // (in our example, that would be the compound).
     var explicitVGapPx: Double? = null
     var implicitVGapPx: Double = 0.0
 
     // This variable is set to true when the current block should be concluded as soon as a row with some non-empty
     // body cell arrives. It is used in cases where the previous block is known to be complete (e.g., because the
     // content style changed or there was an empty row), but it cannot be concluded yet because it is unknown whether
-    // only the block or the block and more higher-order elements like a lateral will be concluded at the same time.
-    // In the latter case, the vertical gap accumulator would be given to the lateral and not the block. So we have
+    // only the block or the block and more higher-order elements like a compound will be concluded at the same time.
+    // In the latter case, the vertical gap accumulator would be given to the compound and not the block. So we have
     // to wait and see.
     var isBlockConclusionMarked = false
     // These variables work similar to the one above, but not only cause the conclusion of the current block, but also
-    // the current spine, lateral, compound, or stage. They are used when a new spine, lateral, compound, or stage is
-    // started, but it does not have its first block defined yet, leaving room for additional vertical gaps in the
-    // meantime, which should of course still count to the vGapAfter of the just concluded spine, lateral, compound,
-    // or stage.
+    // the current spine, compound, or stage. They are used when a new spine, compound, or stage is started, but it does
+    // not have its first block defined yet, leaving room for additional vertical gaps in the meantime, which should of
+    // course still count to the vGapAfter of the just concluded spine, compound, or stage.
     var isSpineConclusionMarked = false
     var isCompoundConclusionMarked = false
-    var isLateralConclusionMarked = false
     var isStageConclusionMarked = false
 
     // Final result
@@ -131,7 +129,6 @@ private class CreditsReader(
     // Current stage
     var stageStyle: PageStyle? = null
     val stageCompounds = mutableListOf<Compound>()
-    val stageLaterals = mutableListOf<Lateral>()
     var stageRuntimeFrames: Int? = null
     var stageRuntimeGroupName: String? = null
 
@@ -139,10 +136,7 @@ private class CreditsReader(
     var compoundVAnchor = VAnchor.MIDDLE
     var compoundHOffsetPx = 0.0
     var compoundVOffsetPx = 0.0
-    val compoundSpines = mutableListOf<Spine.Card>()
-
-    // Current lateral
-    val lateralSpines = mutableListOf<Spine.Scroll>()
+    val compoundSpines = mutableListOf<Spine>()
 
     // Current spine
     var spineHookTo = 0
@@ -173,7 +167,7 @@ private class CreditsReader(
         // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
         // when they don't sit next to another scroll stage and when they are not alone on a page.
         // We remove the empty scroll stages that don't make sense.
-        fun isEmptyScroll(stage: Stage) = stage is Stage.Scroll && stage.laterals.isEmpty()
+        fun isEmptyScroll(stage: Stage) = stage.style.behavior == PageBehavior.SCROLL && stage.compounds.isEmpty()
         if (pageStages.isNotEmpty() && !(pageStages.size == 1 && isEmptyScroll(pageStages[0]))) {
             var idx = 0
             while (idx < pageStages.size) {
@@ -194,10 +188,7 @@ private class CreditsReader(
     fun concludeStage(vGapAfter: Double) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageStyle?.behavior == PageBehavior.SCROLL || stageCompounds.isNotEmpty()) {
-            val stage = when (stageStyle!!.behavior) {
-                PageBehavior.CARD -> Stage.Card(stageStyle!!, stageCompounds.toPersistentList(), vGapAfter)
-                PageBehavior.SCROLL -> Stage.Scroll(stageStyle!!, stageLaterals.toPersistentList(), vGapAfter)
-            }
+            val stage = Stage(stageStyle!!, stageCompounds.toPersistentList(), vGapAfter)
             pageStages.add(stage)
             // Remember where the stage has started.
             stageDeclaredRows[stage] = stageDeclaredRow
@@ -218,20 +209,22 @@ private class CreditsReader(
         stageRuntimeGroupName = nextStageRuntimeGroupName
         stageDeclaredRow = nextStageDeclaredRow
         stageCompounds.clear()
-        stageLaterals.clear()
         nextStageStyle = null
         nextStageRuntimeFrames = null
         nextStageRuntimeGroupName = null
         isStageConclusionMarked = false
     }
 
-    fun concludeCompound() {
-        if (compoundSpines.isNotEmpty()) {
-            val compound = Compound(
-                compoundVAnchor, compoundHOffsetPx, compoundVOffsetPx, compoundSpines.toPersistentList()
-            )
-            stageCompounds.add(compound)
-        }
+    fun concludeCompound(vGapAfter: Double) {
+        if (compoundSpines.isNotEmpty())
+            stageCompounds += when (stageStyle!!.behavior) {
+                PageBehavior.CARD -> Compound.Card(
+                    compoundVAnchor, compoundHOffsetPx, compoundVOffsetPx, compoundSpines.toPersistentList()
+                )
+                PageBehavior.SCROLL -> Compound.Scroll(
+                    compoundHOffsetPx, compoundSpines.toPersistentList(), vGapAfter
+                )
+            }
         compoundVAnchor = nextCompoundVAnchor
         compoundHOffsetPx = nextCompoundHOffsetPx
         compoundVOffsetPx = nextCompoundVOffsetPx
@@ -242,24 +235,12 @@ private class CreditsReader(
         isCompoundConclusionMarked = false
     }
 
-    fun concludeLateral(vGapAfter: Double) {
-        if (lateralSpines.isNotEmpty())
-            stageLaterals.add(Lateral(lateralSpines.toPersistentList(), vGapAfter))
-        lateralSpines.clear()
-        isLateralConclusionMarked = false
-    }
-
     fun concludeSpine() {
         if (spineBlocks.isNotEmpty())
-            when (stageStyle!!.behavior) {
-                PageBehavior.CARD -> compoundSpines.add(
-                    Spine.Card(
-                        compoundSpines.getOrNull(spineHookTo), spineHookVAnchor, spineSelfVAnchor,
-                        spineHOffsetPx, spineVOffsetPx, spineBlocks.toPersistentList()
-                    )
-                )
-                PageBehavior.SCROLL -> lateralSpines.add(Spine.Scroll(spineHOffsetPx, spineBlocks.toPersistentList()))
-            }
+            compoundSpines += Spine(
+                compoundSpines.getOrNull(spineHookTo), spineHookVAnchor, spineSelfVAnchor,
+                spineHOffsetPx, spineVOffsetPx, spineBlocks.toPersistentList()
+            )
         spineHookTo = nextSpineHookTo
         spineHookVAnchor = nextSpineHookVAnchor
         spineSelfVAnchor = nextSpineSelfVAnchor
@@ -275,13 +256,12 @@ private class CreditsReader(
     }
 
     fun concludeBlock(vGapAfter: Double) {
-        if (blockBody.isNotEmpty()) {
-            val block = Block(
+        if (blockBody.isNotEmpty())
+            spineBlocks += Block(
                 blockStyle!!, blockHead, blockBody.toPersistentList(), blockTail, vGapAfter,
                 blockMatchHeadPartitionId, blockMatchBodyPartitionId, blockMatchTailPartitionId
             )
-            spineBlocks.add(block)
-        } else {
+        else {
             if (blockHead != null)
                 table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHead", blockHead))
             if (blockTail != null)
@@ -311,11 +291,7 @@ private class CreditsReader(
         // Conclude all open credits elements that haven't been concluded yet.
         concludeBlock(0.0)
         concludeSpine()
-        when (stageStyle?.behavior) {
-            PageBehavior.CARD -> concludeCompound()
-            PageBehavior.SCROLL -> concludeLateral(0.0)
-            null -> {}
-        }
+        concludeCompound(0.0)
         concludeStage(0.0)
         concludePage()
 
@@ -402,103 +378,109 @@ private class CreditsReader(
         }
 
         // If the spine pos cell is non-empty, conclude the previous spine (if there was any) and start a new one.
-        // Also conclude the previous compound (on cards) or lateral (in scrolls) if applicable.
+        // Also conclude the previous compound if applicable.
         table.getString(row, "spinePos")?.let { str ->
             val parts = str.split(' ')
+            val hookKw = parts[0] in HOOK_KW
+
             val nss = nextStageStyle
-            if (nss == null && stageStyle?.behavior == PageBehavior.CARD || nss?.behavior == PageBehavior.CARD) {
-                var hook = false
-                var warn = false
-                val u = compoundSpines.size + 1
-                try {
-                    hook = parts[0] in HOOK_KW
-                    if (hook) {
+            val onCard = nss == null && stageStyle?.behavior == PageBehavior.CARD || nss?.behavior == PageBehavior.CARD
+            val u = compoundSpines.size + 1
+
+            var hook = false
+            var warn = false
+            try {
+                if (hookKw) {
+                    if (isStageConclusionMarked) {
+                        table.log(row, "spinePos", WARN, l10n("projectIO.credits.hookAtNewPage", parts[0]))
+                        return@let
+                    }
+                    hook = true
+                    if (parts.size > 1) {
+                        val i = parts[1].toInt()
+                        if (i in 1..u)
+                            nextSpineHookTo = u - i
+                        else
+                            table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, u))
+                    }
+                    if (parts.size > 2) {
+                        val anchors = parts[2].split('-')
+                        when (anchors[0]) {
+                            in TOP_KW -> nextSpineHookVAnchor = VAnchor.TOP
+                            in MIDDLE_KW -> nextSpineHookVAnchor = VAnchor.MIDDLE
+                            in BOTTOM_KW -> nextSpineHookVAnchor = VAnchor.BOTTOM
+                            else -> warn = true
+                        }
+                        if (anchors.size > 1)
+                            when (anchors[1]) {
+                                in TOP_KW -> nextSpineSelfVAnchor = VAnchor.TOP
+                                in MIDDLE_KW -> nextSpineSelfVAnchor = VAnchor.MIDDLE
+                                in BOTTOM_KW -> nextSpineSelfVAnchor = VAnchor.BOTTOM
+                                else -> warn = true
+                            }
+                        if (anchors.size != 2)
+                            warn = true
+                    }
+                    if (parts.size > 3)
+                        nextSpineHOffsetPx = parts[3].toFiniteDouble()
+                    if (parts.size > 4)
+                        nextSpineVOffsetPx = parts[4].toFiniteDouble()
+                    if (parts.size !in 3..5)
+                        warn = true
+                } else {
+                    val hOffsetPx = parts[0].toFiniteDouble()
+                    if (parts.size > 1 && parts[1] in PARALLEL_KW) {
                         if (isStageConclusionMarked) {
-                            table.log(row, "spinePos", WARN, l10n("projectIO.credits.hookAtNewPage", parts[0]))
+                            table.log(row, "spinePos", WARN, l10n("projectIO.credits.hookAtNewPage", parts[1]))
                             return@let
                         }
-                        if (parts.size > 1) {
-                            val i = parts[1].toInt()
-                            if (i in 1..u)
-                                nextSpineHookTo = u - i
-                            else
-                                table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, u))
-                        }
-                        if (parts.size > 2) {
-                            val anchors = parts[2].split('-')
-                            when (anchors[0]) {
-                                in TOP_KW -> nextSpineHookVAnchor = VAnchor.TOP
-                                in MIDDLE_KW -> nextSpineHookVAnchor = VAnchor.MIDDLE
-                                in BOTTOM_KW -> nextSpineHookVAnchor = VAnchor.BOTTOM
-                                else -> warn = true
-                            }
-                            if (anchors.size > 1)
-                                when (anchors[1]) {
-                                    in TOP_KW -> nextSpineSelfVAnchor = VAnchor.TOP
-                                    in MIDDLE_KW -> nextSpineSelfVAnchor = VAnchor.MIDDLE
-                                    in BOTTOM_KW -> nextSpineSelfVAnchor = VAnchor.BOTTOM
-                                    else -> warn = true
-                                }
-                            if (anchors.size != 2)
-                                warn = true
-                        }
-                        if (parts.size > 3)
-                            nextSpineHOffsetPx = parts[3].toFiniteDouble()
-                        if (parts.size > 4)
-                            nextSpineVOffsetPx = parts[4].toFiniteDouble()
-                        if (parts.size !in 3..5)
+                        hook = true
+                        nextSpineHookTo = 0
+                        nextSpineHookVAnchor = VAnchor.TOP
+                        nextSpineSelfVAnchor = VAnchor.TOP
+                        nextSpineHOffsetPx = hOffsetPx - compoundHOffsetPx
+                        nextSpineVOffsetPx = 0.0
+                        if (parts.size > 2)
                             warn = true
                     } else {
-                        nextCompoundHOffsetPx = parts[0].toFiniteDouble()
-                        if (parts.size > 1)
-                            nextCompoundVOffsetPx = parts[1].toFiniteDouble()
-                        if (parts.size > 2)
-                            when (parts[2]) {
-                                in BELOW_KW -> nextCompoundVAnchor = VAnchor.TOP
-                                in ABOVE_KW -> nextCompoundVAnchor = VAnchor.BOTTOM
-                                else -> warn = true
-                            }
-                        if (parts.size > 3)
-                            warn = true
+                        nextCompoundHOffsetPx = hOffsetPx
+                        if (onCard) {
+                            if (parts.size > 1)
+                                nextCompoundVOffsetPx = parts[1].toFiniteDouble()
+                            if (parts.size > 2)
+                                when (parts[2]) {
+                                    in BELOW_KW -> nextCompoundVAnchor = VAnchor.TOP
+                                    in ABOVE_KW -> nextCompoundVAnchor = VAnchor.BOTTOM
+                                    else -> warn = true
+                                }
+                            if (parts.size > 3)
+                                warn = true
+                        } else
+                            if (parts.size > 1)
+                                warn = true
                     }
-                } catch (_: IllegalArgumentException) {
-                    warn = true
                 }
-                if (warn) {
-                    val msg = when {
-                        hook -> l10n(
-                            "projectIO.credits.illFormattedSpinePosCardHook", parts[0], u,
-                            l10n(TOP_KW.key), l10n(MIDDLE_KW.key), l10n(BOTTOM_KW.key)
-                        )
-                        else -> l10n(
-                            "projectIO.credits.illFormattedSpinePosCard",
-                            l10n(BELOW_KW.key), l10n(ABOVE_KW.key), l10n(HOOK_KW.key)
-                        )
-                    }
-                    table.log(row, "spinePos", WARN, msg)
-                }
-                if (hook) isSpineConclusionMarked = true else isCompoundConclusionMarked = true
-            } else {
-                var parallel = false
-                try {
-                    nextSpineHOffsetPx = parts[0].toFiniteDouble()
-                    if (parts.size > 1)
-                        if (parts[1] in PARALLEL_KW)
-                            if (isStageConclusionMarked) {
-                                table.log(row, "spinePos", WARN, l10n("projectIO.credits.parallelAtNewPage", parts[1]))
-                                return@let
-                            } else
-                                parallel = true
-                        else
-                            throw IllegalArgumentException()
-                    if (parts.size > 2)
-                        throw IllegalArgumentException()
-                } catch (_: IllegalArgumentException) {
-                    val msg = l10n("projectIO.credits.illFormattedSpinePosScroll", l10n(PARALLEL_KW.key))
-                    table.log(row, "spinePos", WARN, msg)
-                }
-                if (parallel) isSpineConclusionMarked = true else isLateralConclusionMarked = true
+            } catch (_: IllegalArgumentException) {
+                warn = true
             }
+            if (warn) {
+                val msg = when {
+                    hookKw -> l10n(
+                        "projectIO.credits.illFormattedSpinePosHook", parts[0], u,
+                        l10n(TOP_KW.key), l10n(MIDDLE_KW.key), l10n(BOTTOM_KW.key)
+                    )
+                    onCard -> l10n(
+                        "projectIO.credits.illFormattedSpinePosCard",
+                        l10n(BELOW_KW.key), l10n(ABOVE_KW.key), l10n(PARALLEL_KW.key), l10n(HOOK_KW.key)
+                    )
+                    else -> l10n(
+                        "projectIO.credits.illFormattedSpinePosScroll",
+                        l10n(PARALLEL_KW.key), l10n(HOOK_KW.key)
+                    )
+                }
+                table.log(row, "spinePos", WARN, msg)
+            }
+            if (hook) isSpineConclusionMarked = true else isCompoundConclusionMarked = true
         }
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
@@ -542,29 +524,19 @@ private class CreditsReader(
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
         val isConclusionMarked = isBlockConclusionMarked || isSpineConclusionMarked || isCompoundConclusionMarked ||
-                isLateralConclusionMarked || isStageConclusionMarked
+                isStageConclusionMarked
         if (newHead != null || newTail != null || (isConclusionMarked && bodyElem != null)) {
             // Pull the accumulated vertical gap.
             val vGap = explicitVGapPx ?: implicitVGapPx
             explicitVGapPx = null
             implicitVGapPx = 0.0
 
-            // If the conclusion of the previous spine, lateral, compound, or stage has been marked, also conclude that
+            // If the conclusion of the previous spine, compound, or stage has been marked, also conclude that
             // and give the accumulated virtual gap to the concluded element of the highest order.
             if (isStageConclusionMarked) {
                 concludeBlock(0.0)
                 concludeSpine()
-                when (stageStyle?.behavior) {
-                    PageBehavior.CARD -> concludeCompound()
-                    PageBehavior.SCROLL -> concludeLateral(0.0)
-                    // If we're here, stageStyle is null, so this is the initial dummy conclusion and the spine lists
-                    // are empty. To ensure both the compound and lateral config is transferred from "next" to
-                    // "current", conclude both.
-                    null -> {
-                        concludeCompound()
-                        concludeLateral(0.0)
-                    }
-                }
+                concludeCompound(0.0)
                 concludeStage(vGap)
                 // If we are not melting the previous stage with the future one, also conclude the current page.
                 val prevStageStyle = pageStages.lastOrNull()?.style
@@ -576,11 +548,7 @@ private class CreditsReader(
             } else if (isCompoundConclusionMarked) {
                 concludeBlock(0.0)
                 concludeSpine()
-                concludeCompound()
-            } else if (isLateralConclusionMarked) {
-                concludeBlock(0.0)
-                concludeSpine()
-                concludeLateral(vGap)
+                concludeCompound(vGap)
             } else if (isSpineConclusionMarked) {
                 concludeBlock(0.0)
                 concludeSpine()

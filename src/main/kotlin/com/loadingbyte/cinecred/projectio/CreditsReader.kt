@@ -727,16 +727,17 @@ private class CreditsReader(
             var pic = pic0
             while (hints.hasNext()) {
                 val hint = hints.next()
-                try {
+                pic = try {
                     when {
                         // Crop the picture.
                         hint in CROP_KW -> when (pic) {
-                            is Picture.SVG -> pic = pic.cropped()
-                            is Picture.PDF -> pic = pic.cropped()
+                            is Picture.SVG -> pic.cropped()
+                            is Picture.PDF -> pic.cropped()
                             // Raster images cannot be cropped.
                             is Picture.Raster -> {
                                 val msg = l10n("projectIO.credits.pictureRasterCrop", l10n(CROP_KW.key))
                                 table.log(row, l10nColName, WARN, msg)
+                                continue
                             }
                         }
                         // Apply scaling hints.

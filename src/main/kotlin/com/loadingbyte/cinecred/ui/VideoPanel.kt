@@ -164,7 +164,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         add(pauseButton)
         add(playButton)
         // If we use % or growx instead of "sp", the slider becomes laggy due to the quickly changing timecode label.
-        add(frameSlider, "width 100sp")
+        // If we only write 100sp, the slider stops to grow at some point on 4K displays and larger.
+        add(frameSlider, "width 800sp")
         add(timecodeLabel)
 
         addComponentListener(object : ComponentAdapter() {

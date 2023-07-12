@@ -54,6 +54,7 @@ Cinecred Changelog
 - In the delivery dialog, the scroll speed indicator now correctly decreases
   instead of increases when activating the frame rate multiplier.
 - Prompts now always appear on the monitor where they contextually belong to.
+- The video controls and crash window are now correctly sized on 4K monitors.
 - On Gnome, the application name is no longer some cryptic text.
 
 ### Compatibility Notes

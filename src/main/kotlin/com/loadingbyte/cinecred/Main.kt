@@ -7,6 +7,7 @@ import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatSystemProperties
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
+import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
@@ -234,15 +235,19 @@ ${ManagementFactory.getRuntimeMXBean().inputArguments.joinToString("\n")}
 
     private fun sendReport(header: String) {
         val win = FocusManager.getCurrentKeyboardFocusManager().activeWindow
+        val s = UIScale.getSystemScaleFactor(
+            win?.graphicsConfiguration
+                ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+        )
 
         val log = JULBuilderHandler.log.toString()
         val logComp = JTextArea("$header$log").apply {
             isEditable = false
             putClientProperty(STYLE_CLASS, "monospaced")
         }
-        val msgComp = JPanel(MigLayout("insets 0, wrap", "[::50sp]", "[][]unrel[][]")).apply {
+        val msgComp = JPanel(MigLayout("insets 0, wrap", "[::${50.0 * s}sp]", "[][]unrel[][]")).apply {
             add(JLabel(l10n("ui.crash.msg.error")))
-            add(JScrollPane(logComp), "hmax 40sp")
+            add(JScrollPane(logComp), "hmax ${40.0 * s}sp")
             add(JLabel(l10n("ui.crash.msg.exit")))
             add(JLabel(l10n("ui.crash.msg.report")))
         }

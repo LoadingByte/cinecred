@@ -197,9 +197,10 @@ class FileWidget(
                 }
             }
 
+            val win = SwingUtilities.getWindowAncestor(browse)
             val result = when (fileAction) {
-                FileAction.OPEN -> fc.showOpenDialog(null)
-                FileAction.SAVE -> fc.showSaveDialog(null)
+                FileAction.OPEN -> fc.showOpenDialog(win)
+                FileAction.SAVE -> fc.showSaveDialog(win)
             }
             if (result == JFileChooser.APPROVE_OPTION) {
                 var newText = fc.selectedFile.absolutePath

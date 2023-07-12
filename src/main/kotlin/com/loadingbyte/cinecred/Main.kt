@@ -25,10 +25,7 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
-import java.awt.Desktop
-import java.awt.Font
-import java.awt.KeyboardFocusManager
-import java.awt.RenderingHints
+import java.awt.*
 import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
@@ -236,6 +233,8 @@ ${ManagementFactory.getRuntimeMXBean().inputArguments.joinToString("\n")}
     }
 
     private fun sendReport(header: String) {
+        val win = FocusManager.getCurrentKeyboardFocusManager().activeWindow
+
         val log = JULBuilderHandler.log.toString()
         val logComp = JTextArea("$header$log").apply {
             isEditable = false
@@ -248,8 +247,9 @@ ${ManagementFactory.getRuntimeMXBean().inputArguments.joinToString("\n")}
             add(JLabel(l10n("ui.crash.msg.report")))
         }
         val send = JOptionPane.showConfirmDialog(
-            null, msgComp, l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
+            win, msgComp, l10n("ui.crash.title"), JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE
         ) == JOptionPane.YES_OPTION
+
         if (send) {
             val address = encodeMailURIComponent("crashes@cinecred.com")
             val subject = encodeMailURIComponent("Cinecred Crash Report")

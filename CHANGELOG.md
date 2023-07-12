@@ -53,6 +53,7 @@ Cinecred Changelog
 - The movable dividers are no longer sometimes strangely positioned.
 - In the delivery dialog, the scroll speed indicator now correctly decreases
   instead of increases when activating the frame rate multiplier.
+- Prompts now always appear on the monitor where they contextually belong to.
 - On Gnome, the application name is no longer some cryptic text.
 
 ### Compatibility Notes

@@ -25,6 +25,7 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import javax.imageio.ImageIO
+import javax.swing.FocusManager
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
 import kotlin.io.path.*
@@ -259,7 +260,8 @@ sealed interface Picture {
                     tryBrowse(e.url.toURI())
             }
             JOptionPane.showMessageDialog(
-                null, ep, l10n("imaging.ghostscriptMissing.title"), JOptionPane.WARNING_MESSAGE
+                FocusManager.getCurrentKeyboardFocusManager().activeWindow,
+                ep, l10n("imaging.ghostscriptMissing.title"), JOptionPane.WARNING_MESSAGE
             )
             null
         }

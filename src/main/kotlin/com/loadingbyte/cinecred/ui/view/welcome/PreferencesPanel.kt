@@ -407,7 +407,9 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         override fun onChange(widget: Widget<*>) {
             super.onChange(widget)
-            configureOverlayDoneButton.isEnabled = isErrorFree
+            val fine = isErrorFree
+            configureOverlayDoneButton.isEnabled = fine
+            configureOverlayApplyButton.isEnabled = fine
         }
 
     }

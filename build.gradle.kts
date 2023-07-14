@@ -149,6 +149,11 @@ val drawSplash by tasks.registering(DrawSplash::class) {
     outputFile.set(layout.buildDirectory.file("generated/splash/splash.png"))
 }
 
+val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
+    configuration.set(configurations.runtimeClasspath)
+    outputDir.set(layout.buildDirectory.dir("generated/licenses"))
+}
+
 tasks.processResources {
     from(writeVersionFile)
     from(drawSplash)
@@ -165,6 +170,10 @@ tasks.processResources {
             eachFile { path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}" }
             includeEmptyDirs = false
         }
+    into("licenses/libraries") {
+        from(collectPOMLicenses)
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }
 
 

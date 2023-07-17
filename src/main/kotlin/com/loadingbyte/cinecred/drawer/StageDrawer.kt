@@ -8,7 +8,6 @@ import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
-import java.awt.geom.Ellipse2D
 import java.awt.geom.Path2D
 
 
@@ -94,7 +93,7 @@ private fun drawCompound(
         h = { (_, info) -> info.drawnSpine.defImage.height },
         draw = { (spine, info), imgY ->
             compoundImage.drawDeferredImage(info.drawnSpine.defImage, info.x - info.drawnSpine.spineXInImage, imgY)
-            // Draw guides that shows where hooks towards other spines are starting out.
+            // Draw guides that shows where hooks from other spines are coming in.
             val spineHeight = info.drawnSpine.defImage.height
             for (anchor in info.drawVAnchors)
                 compoundImage.drawShape(
@@ -102,14 +101,9 @@ private fun drawCompound(
                     Path2D.Double().apply { moveTo(-s, -s); lineTo(s, s); moveTo(-s, s); lineTo(s, -s) },
                     x = info.x, y = imgY + anchor.yIn(spineHeight), fill = false, layer = GUIDES
                 )
-            // If this is a hooked spine, draw guides that show the hook's target and line.
+            // If this is a hooked spine, draw guides that show the hook line.
             if (spine.hookTo != null) {
                 val startY = imgY + spine.selfVAnchor.yIn(spineHeight)
-                for (r in doubleArrayOf(0.5 * s, s))
-                    compoundImage.drawShape(
-                        SPINE_GUIDE_COLOR, Ellipse2D.Double(-r, -r, 2.0 * r, 2.0 * r),
-                        x = info.x, y = startY, fill = false, layer = GUIDES
-                    )
                 compoundImage.drawLine(
                     SPINE_GUIDE_COLOR, info.x, startY, info.x - spine.hOffsetPx, startY - spine.vOffsetPx,
                     dash = true, layer = GUIDES

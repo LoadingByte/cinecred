@@ -34,14 +34,6 @@ fun BooleanArray.indexOfAfter(elem: Boolean, startIdx: Int): Int {
 }
 
 
-fun DoubleArray.maxBetween(startIdx: Int, endIdx: Int): Double {
-    var max = this[startIdx]
-    for (idx in startIdx + 1..<endIdx)
-        max = max(max, this[idx])
-    return max
-}
-
-
 inline fun <E> Collection<E>.maxOfOr(default: Double, selector: (E) -> Double): Double =
     if (isEmpty()) default else maxOf(selector)
 

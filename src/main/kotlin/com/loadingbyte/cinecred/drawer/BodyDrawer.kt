@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.ceilDiv
+import com.loadingbyte.cinecred.common.maxOfOr
+import com.loadingbyte.cinecred.common.sumOf
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.Y
@@ -80,7 +82,7 @@ private fun drawBodyImagesWithGridBodyLayout(
     // also includes ungrouped blocks whose grid structure mandates square cells, and ungrouped blocks with forced
     // column width), and then find those shared widths.
     fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
-    val sharedColWidthsPerBlock: Map<Block, DoubleArray> = matchExtent(
+    val sharedColWidthsPerBlock: Map<Block, Array<Extent>> = matchExtent(
         blocks, matchColWidthsPartitionIds,
         matchWithinBlock = {
             gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS || gridForceColWidthPx.isActive
@@ -88,18 +90,20 @@ private fun drawBodyImagesWithGridBodyLayout(
         sharedBlockExtent = { block ->
             val force = block.style.gridForceColWidthPx
             val cols = colsPerBlock.getValue(block)
-            DoubleArray(cols.size) { colIdx -> force.orElse { colWidth(cols[colIdx]) } }
+            Array(cols.size) { colIdx -> Extent(force.orElse { colWidth(cols[colIdx]) }) }
         },
         sharedGroupExtent = { group ->
             // This piece of code takes a group of blocks and produces the list of shared column widths.
-            val colWidths = DoubleArray(group.maxOf { block -> colsPerBlock.getValue(block).size })
+            val colWidths = Array(group.maxOf { block -> colsPerBlock.getValue(block).size }) { Extent(0.0) }
             for (block in group) {
                 val cols = colsPerBlock.getValue(block)
                 // If the blocks in the group have differing amounts of columns, the user can decide whether he'd like
                 // to match each block with the leftmost or rightmost shared columns.
                 val offset = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - cols.size else 0
-                for ((colIdx, col) in cols.withIndex())
-                    colWidths[offset + colIdx] = max(colWidths[offset + colIdx], colWidth(col))
+                for ((colIdx, col) in cols.withIndex()) {
+                    val extent = colWidths[offset + colIdx]
+                    extent.value = max(extent.value, colWidth(col))
+                }
             }
             colWidths
         }
@@ -108,13 +112,13 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Determine the blocks which have uniform row height, optionally shared across multiple blocks, and then find
     // those shared heights.
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-    val sharedRowHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
+    val sharedRowHeightPerBlock: Map<Block, Extent> = matchExtent(
         blocks, matchRowHeightPartitionIds,
         matchWithinBlock = {
             gridForceRowHeightPx.isActive || gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS
         },
-        sharedBlockExtent = { block -> MutableDouble(block.style.gridForceRowHeightPx.orElse { maxElemHeight(block) }) },
-        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
+        sharedBlockExtent = { block -> Extent((block.style.gridForceRowHeightPx.orElse { maxElemHeight(block) })) },
+        sharedGroupExtent = { group -> Extent(group.maxOf(::maxElemHeight)) }
     )
 
     // Harmonize the column widths of blocks configured as "equal width cols"
@@ -133,17 +137,13 @@ private fun drawBodyImagesWithGridBodyLayout(
             val startIdx = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - numCols else 0
             val endIdx = startIdx + numCols
             if (block.style.gridStructure == EQUAL_WIDTH_COLS) {
-                if (colWidths.anyBetween(startIdx + 1, endIdx) { it != colWidths[startIdx] }) {
-                    val max = colWidths.maxBetween(startIdx, endIdx)
-                    colWidths.fill(max, startIdx, endIdx)
-                }
+                val startColWidth = colWidths[startIdx]
+                for (idx in startIdx + 1..<endIdx)
+                    startColWidth.link(colWidths[idx])
             } else if (block.style.gridStructure == SQUARE_CELLS) {
                 val rowHeight = sharedRowHeightPerBlock.getValue(block)
-                if (colWidths.anyBetween(startIdx, endIdx) { it != rowHeight.value }) {
-                    val max = max(colWidths.maxBetween(startIdx, endIdx), rowHeight.value)
-                    colWidths.fill(max, startIdx, endIdx)
-                    rowHeight.value = max
-                }
+                for (idx in startIdx..<endIdx)
+                    rowHeight.link(colWidths[idx])
             }
         }
 
@@ -160,8 +160,8 @@ private fun drawBodyImageWithGridBodyLayout(
     textCtx: TextContext,
     block: Block,
     cols: List<List<BodyElement>>,
-    sharedColWidths: DoubleArray?,
-    sharedRowHeight: MutableDouble?
+    sharedColWidths: Array<Extent>?,
+    sharedRowHeight: Extent?
 ): DrawnBody {
     val style = block.style
     val unocc = style.gridMatchColUnderoccupancy
@@ -184,7 +184,7 @@ private fun drawBodyImageWithGridBodyLayout(
         // Either get the column's shared width, or compute it now if the block's column widths are not shared.
         val colWidth = when (sharedColWidths) {
             null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
-            else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0]
+            else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0].value
         }
         // Draw each row cell in the column.
         var y = 0.0.toY()
@@ -298,30 +298,23 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // find those shared widths or heights.
     fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
     fun maxElemHeight(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getHeight() }
-    val sharedCellWidthPerBlock: Map<Block, MutableDouble> = matchExtent(
+    val sharedCellWidthPerBlock: Map<Block, Extent> = matchExtent(
         blocks, matchCellWidthPartitionIds,
         matchWithinBlock = { flowForceCellWidthPx.isActive || flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableDouble(block.style.flowForceCellWidthPx.orElse { maxElemWidth(block) }) },
-        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemWidth)) }
+        sharedBlockExtent = { block -> Extent(block.style.flowForceCellWidthPx.orElse { maxElemWidth(block) }) },
+        sharedGroupExtent = { group -> Extent(group.maxOf(::maxElemWidth)) }
     )
-    val sharedCellHeightPerBlock: Map<Block, MutableDouble> = matchExtent(
+    val sharedCellHeightPerBlock: Map<Block, Extent> = matchExtent(
         blocks, matchCellHeightPartitionIds,
         matchWithinBlock = { flowForceCellHeightPx.isActive || flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
-        sharedBlockExtent = { block -> MutableDouble(block.style.flowForceCellHeightPx.orElse { maxElemHeight(block) }) },
-        sharedGroupExtent = { group -> MutableDouble(group.maxOf(::maxElemHeight)) }
+        sharedBlockExtent = { block -> Extent(block.style.flowForceCellHeightPx.orElse { maxElemHeight(block) }) },
+        sharedGroupExtent = { group -> Extent(group.maxOf(::maxElemHeight)) }
     )
 
     // Harmonize the cell width and height of square cells.
     for (block in blocks)
-        if (block.style.flowSquareCells) {
-            val cellWidth = sharedCellWidthPerBlock.getValue(block)
-            val cellHeight = sharedCellHeightPerBlock.getValue(block)
-            if (cellWidth.value != cellHeight.value) {
-                val max = max(cellWidth.value, cellHeight.value)
-                cellWidth.value = max
-                cellHeight.value = max
-            }
-        }
+        if (block.style.flowSquareCells)
+            sharedCellWidthPerBlock.getValue(block).link(sharedCellHeightPerBlock.getValue(block))
 
     // Draw a deferred image for the body of each block.
     blocks.associateWithTo(out) { block ->
@@ -336,8 +329,8 @@ private fun drawBodyImageWithFlowBodyLayout(
     letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     block: Block,
-    sharedCellWidth: MutableDouble?,
-    sharedCellHeight: MutableDouble?
+    sharedCellWidth: Extent?,
+    sharedCellHeight: Extent?
 ): DrawnBody {
     val style = block.style
     val horGap = style.flowHGapPx
@@ -562,7 +555,59 @@ private fun drawBodyImageWithParagraphsBodyLayout(
 }
 
 
-private class MutableDouble(var value: Double)
+private class Extent(value: Double) {
+
+    private var group = Group(value)
+
+    var value: Double
+        get() = group.value
+        set(value) {
+            group.value = value
+        }
+
+    /** The [value] of both extents will initially be the max across them, and it will remain the same in the future. */
+    fun link(other: Extent) {
+        val group1 = this.group
+        val group2 = other.group
+        if (group1 === group2)
+            return
+        val max = max(value, other.value)
+        val group1Extents = group1.extents
+        val group2Extents = group2.extents
+        if (group1Extents == null)
+            if (group2Extents == null) {
+                other.group = group1
+                group1.value = max
+                group1.extents = ArrayList<Extent>().apply { add(this@Extent); add(other) }
+            } else {
+                this.group = group2
+                group2.value = max
+                group2Extents.add(this)
+            }
+        else
+            if (group2Extents == null) {
+                other.group = group1
+                group1.value = max
+                group1Extents.add(other)
+            } else if (group1Extents.size >= group2Extents.size) {
+                for (extent in group2Extents)
+                    extent.group = group1
+                group1.value = max
+                group1Extents.addAll(group2Extents)
+            } else {
+                for (extent in group1Extents)
+                    extent.group = group2
+                group2.value = max
+                group2Extents.addAll(group1Extents)
+            }
+    }
+
+    private class Group(var value: Double) {
+        var extents: MutableList<Extent>? = null
+    }
+
+}
+
 
 private inline fun <T> matchExtent(
     blocks: List<Block>,

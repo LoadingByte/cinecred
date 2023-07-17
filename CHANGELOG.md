@@ -32,6 +32,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Squaring cells no longer fails when matching the width/height across blocks.
 - Embedded pictures are now perfectly aligned at pixel boundaries.
 - SVGs without width and height attributes now default to the size of their
   view box instead of vanishing.

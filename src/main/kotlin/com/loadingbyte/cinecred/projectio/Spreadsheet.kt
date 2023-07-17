@@ -115,6 +115,12 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
         val xlsx = fileExt == "xlsx"
         val workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(xlsx)
         val sheet = workbook.createSheet(name)
+
+        // Make all columns use the raw text data format.
+        val defaultStyle = createCellStyle(workbook)
+        for (col in 0..<spreadsheet.numColumns)
+            sheet.setDefaultColumnStyle(col, defaultStyle)
+
         val rowStyles = createDeduplicatedRowStyles(workbook, look.rowLooks)
 
         for (record in spreadsheet) {
@@ -126,11 +132,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
                 if (cellValue.isEmpty())
                     continue
                 val cell = row.createCell(colIdx)
-                try {
-                    cell.setCellValue(cellValue.toDouble())
-                } catch (_: NumberFormatException) {
-                    cell.setCellValue(cellValue)
-                }
+                cell.setCellValue(cellValue)
                 rowStyle?.let(cell::setCellStyle)
             }
 
@@ -170,7 +172,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
                 }
             }
             val style = stylesByKey.computeIfAbsent(styleKey) {
-                workbook.createCellStyle().apply {
+                createCellStyle(workbook).apply {
                     setFont(font)
                     if (styleKey.wrap)
                         wrapText = true
@@ -185,6 +187,11 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
 
         return stylesByRowIdx
     }
+
+    private fun createCellStyle(workbook: org.apache.poi.ss.usermodel.Workbook) =
+        workbook.createCellStyle().apply {
+            dataFormat = org.apache.poi.ss.usermodel.BuiltinFormats.getBuiltinFormat("@").toShort()
+        }
 
 }
 
@@ -210,12 +217,17 @@ object OdsFormat : SpreadsheetFormat {
         val numCols = spreadsheet.numColumns
 
         val sheet = com.github.miachm.sods.Sheet(name, numRows, numCols)
-        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].preprocess() } }
+        val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].ifEmpty { null } } }
         sheet.dataRange.values = cellMatrix
+
+        // Make all columns use the raw text data format.
+        val defaultStyle = createStyle()
+        for (col in 0 until spreadsheet.numColumns)
+            sheet.setDefaultColumnCellStyle(col, defaultStyle)
 
         for (record in spreadsheet) {
             val row = record.recordNo
-            val style = com.github.miachm.sods.Style()
+            val style = createStyle()
             look.rowLooks[row]?.let { rowLook ->
                 if (rowLook.fontSize != -1)
                     style.fontSize = rowLook.fontSize
@@ -240,12 +252,8 @@ object OdsFormat : SpreadsheetFormat {
         workbook.save(file.toFile())
     }
 
-    private fun String.preprocess(): Any? =
-        if (isEmpty()) null else try {
-            toDouble()
-        } catch (_: NumberFormatException) {
-            this
-        }
+    private fun createStyle() =
+        com.github.miachm.sods.Style().apply { dataStyle = "@" }
 
 }
 

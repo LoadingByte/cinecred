@@ -32,6 +32,8 @@ Cinecred Changelog
 
 ### Fixes
 
+- The template spreadsheet now uses text cells instead of data-dependent cells,
+  which prevents the spreadsheet editor from trying to interpret the data.
 - Squaring cells no longer fails when matching the width/height across blocks.
 - Embedded pictures are now perfectly aligned at pixel boundaries.
 - SVGs without width and height attributes now default to the size of their

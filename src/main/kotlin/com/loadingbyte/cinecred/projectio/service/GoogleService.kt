@@ -298,13 +298,14 @@ object GoogleService : Service {
             val rowData = mutableListOf<RowData>()
             for (row in 0..<max(200, spreadsheet.numRecords)) {
                 val record = if (row < spreadsheet.numRecords) spreadsheet[row] else null
-                var cellFormat: CellFormat? = null
+                val cellFormat = CellFormat()
+                    .setNumberFormat(NumberFormat().setType("TEXT"))
                 look.rowLooks[record?.recordNo]?.let { rowLook ->
                     val textFormat = TextFormat()
                         .setFontSize(if (rowLook.fontSize == -1) null else rowLook.fontSize)
                         .setBold(rowLook.bold)
                         .setItalic(rowLook.italic)
-                    cellFormat = CellFormat()
+                    cellFormat
                         .setTextFormat(textFormat)
                         .setWrapStrategy(if (rowLook.wrap) "WRAP" else null)
                         .setBorders(if (rowLook.borderBottom) Borders().setBottom(Border().setStyle("SOLID")) else null)

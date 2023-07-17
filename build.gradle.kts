@@ -66,7 +66,7 @@ dependencies {
     // Spreadsheet IO
     implementation("org.apache.poi", "poi", poiVersion)
     implementation("org.apache.poi", "poi-ooxml", poiVersion)
-    implementation("com.github.miachm.sods", "SODS", "1.5.4")
+    implementation("com.github.miachm.sods", "SODS", "1.6.1")
     implementation("org.apache.commons", "commons-csv", "1.10.0")
 
     // Spreadsheet Services

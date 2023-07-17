@@ -157,10 +157,16 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
         image: DeferredImage, layers: List<Layer>
     ) {
-        if (culling != null && !culling.intersects(
-                x, y, universeScaling * image.width, universeScaling * image.height.resolve(elasticScaling)
-            )
-        ) return
+        if (culling != null) {
+            // We want seemingly degenerate images (which can occur when a width or height is forced down to 0)
+            // to be drawn as well, but Rectangle2D.intersects() would kick them out, so we implement our own logic.
+            val w = universeScaling * image.width
+            val h = universeScaling * image.height.resolve(elasticScaling)
+            val cx = culling.x
+            val cy = culling.y
+            if (x + w < cx || y + h < cy || x > cx + culling.width || y > cy + culling.height)
+                return
+        }
         for (layer in layers)
             for (insn in image.instructions.getOrDefault(layer, emptyList()))
                 materializeInstruction(backend, x, y, universeScaling, elasticScaling, culling, insn)

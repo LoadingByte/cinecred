@@ -13,21 +13,21 @@ import java.awt.Color
 import java.util.*
 
 
-private const val DIR = "guide/global-styling"
+private const val DIR = "guide/project-settings"
 
-val GUIDE_GLOBAL_STYLING_DEMOS
+val GUIDE_PROJECT_SETTINGS_DEMOS
     get() = listOf(
-        GuideGlobalStylingResolutionAndFrameRateDemo,
-        GuideGlobalStylingTimecodeFormatDemo,
-        GuideGlobalStylingRuntimeFineAdjustmentDemo,
-        GuideGlobalStylingGroundingDemo,
-        GuideGlobalStylingUnitVGapDemo,
-        GuideGlobalStylingLocaleDemo,
-        GuideGlobalStylingUppercaseExceptionsDemo
+        GuideProjectSettingsResolutionAndFrameRateDemo,
+        GuideProjectSettingsTimecodeFormatDemo,
+        GuideProjectSettingsRuntimeFineAdjustmentDemo,
+        GuideProjectSettingsGroundingDemo,
+        GuideProjectSettingsUnitVGapDemo,
+        GuideProjectSettingsLocaleDemo,
+        GuideProjectSettingsUppercaseExceptionsDemo
     )
 
 
-object GuideGlobalStylingResolutionAndFrameRateDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsResolutionAndFrameRateDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/resolution-and-frame-rate", Format.STEP_GIF,
     listOf(Global::resolution.st(), Global::fps.st())
 ) {
@@ -39,19 +39,20 @@ object GuideGlobalStylingResolutionAndFrameRateDemo : StyleSettingsDemo<Global>(
 }
 
 
-object GuideGlobalStylingTimecodeFormatDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsTimecodeFormatDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/timecode-format", Format.SLOW_STEP_GIF,
     listOf(Global::fps.st(), Global::timecodeFormat.st(), Global::runtimeFrames.st())
 ) {
     override fun styles() = buildList<Global> {
-        this += PRESET_GLOBAL.copy(fps = FPS(30, 1), runtimeFrames = Opt(false, 1284))
+        this += PRESET_GLOBAL.copy(fps = FPS(30, 1), runtimeFrames = Opt(false, 3284))
         this += last().copy(timecodeFormat = TimecodeFormat.FRAMES)
         this += last().copy(fps = FPS(30000, 1001), timecodeFormat = TimecodeFormat.SMPTE_DROP_FRAME)
+        this += last().copy(timecodeFormat = TimecodeFormat.EXACT_FRAMES_IN_SECOND)
     }
 }
 
 
-object GuideGlobalStylingRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/runtime-fine-adjustment", Format.STEP_GIF,
     listOf(Global::runtimeFrames.st()), pageScaling = 0.45, pageHeight = 400
 ) {
@@ -64,7 +65,7 @@ object GuideGlobalStylingRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>(
 }
 
 
-object GuideGlobalStylingGroundingDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsGroundingDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/grounding", Format.STEP_GIF,
     listOf(Global::grounding.st()), pageScaling = 0.45, pageHeight = 115
 ) {
@@ -77,7 +78,7 @@ object GuideGlobalStylingGroundingDemo : StyleSettingsDemo<Global>(
 }
 
 
-object GuideGlobalStylingUnitVGapDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsUnitVGapDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/unit-vgap", Format.STEP_GIF,
     listOf(Global::unitVGapPx.st()), pageGuides = true
 ) {
@@ -91,7 +92,7 @@ object GuideGlobalStylingUnitVGapDemo : StyleSettingsDemo<Global>(
 }
 
 
-object GuideGlobalStylingLocaleDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsLocaleDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/locale", Format.STEP_GIF,
     listOf(Global::locale.st())
 ) {
@@ -104,7 +105,7 @@ object GuideGlobalStylingLocaleDemo : StyleSettingsDemo<Global>(
 }
 
 
-object GuideGlobalStylingUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
+object GuideProjectSettingsUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
     Global::class.java, "$DIR/uppercase-exceptions", Format.SLOW_STEP_GIF,
     listOf(Global::uppercaseExceptions.st())
 ) {
@@ -129,6 +130,7 @@ private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, u
         val styledString = persistentListOf(BodyElement.Str(listOf(Pair(text, letterStyle))))
         Block(PRESET_CONTENT_STYLE, null, styledString, null, vGap * global.unitVGapPx, Any(), Any(), Any())
     }.toPersistentList()
-    val lateral = Lateral(persistentListOf(Spine.Scroll(0.0, blocks)), 0.0)
-    return Page(persistentListOf(Stage.Scroll(PRESET_PAGE_STYLE, persistentListOf(lateral), 0.0)))
+    val spine = Spine(null, VAnchor.TOP, VAnchor.TOP, 0.0, 0.0, blocks)
+    val compound = Compound.Scroll(0.0, persistentListOf(spine), 0.0)
+    return Page(persistentListOf(Stage(PRESET_PAGE_STYLE, persistentListOf(compound), 0.0)))
 }

@@ -3,10 +3,7 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.delivery.RenderFormat
-import com.loadingbyte.cinecred.delivery.RenderJob
-import com.loadingbyte.cinecred.delivery.VideoRenderJob
-import com.loadingbyte.cinecred.delivery.WholePagePDFRenderJob
+import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Opt
@@ -15,6 +12,7 @@ import com.loadingbyte.cinecred.ui.ProjectDialogType
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
 import javax.swing.JTree
+import kotlin.io.path.Path
 import kotlin.io.path.readLines
 import kotlin.io.path.writeLines
 
@@ -95,7 +93,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     override fun generate() {
         edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
         sleep(500)
-        reposition(dlvDialog, 820, 555)
+        reposition(dlvDialog, 820, 615)
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
@@ -114,6 +112,8 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         edt { dlvFormatCB.apply { isPopupVisible = true } }
         sleep(500)
         write(printWithPopups(dlvPanel), "-formats")
+
+        RenderQueue.cancelAllJobs()
     }
 
     private fun addDummyRenderJob(format: RenderFormat) {
@@ -124,7 +124,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     }
 
     private class DummyRenderJob : RenderJob {
-        override val prefix get() = throw UnsupportedOperationException()
+        override val prefix get() = Path("")
         override fun render(progressCallback: (Int) -> Unit) = throw UnsupportedOperationException()
     }
 }

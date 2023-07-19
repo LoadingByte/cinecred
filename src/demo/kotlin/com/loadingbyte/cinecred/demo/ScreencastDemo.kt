@@ -158,6 +158,7 @@ abstract class ScreencastDemo(
     protected lateinit var welcomeWin: BackedVirtualWindow; private set
     protected val welcomeFrame get() = (masterCtrl!!.leakedWelcomeCtrl as WelcomeCtrl).leakedWelcomeView as WelcomeFrame
     protected val projectsPanel get() = welcomeFrame.panel.projectsPanel
+    protected val prefsPanel get() = welcomeFrame.panel.preferencesPanel
 
     protected lateinit var projectCtrl: ProjectController; private set
     protected lateinit var prjWin: BackedVirtualWindow; private set
@@ -187,8 +188,6 @@ abstract class ScreencastDemo(
     protected val styLetrFormScrollBar get() = (styLetrForm.parent.parent as JScrollPane).verticalScrollBar
     protected val styIncFontHeight
         get() = styLetrForm.getWidgetFor(LetterStyle::heightPx.st()).components[0].getComponent(0)!!
-    protected val styFeat
-        get() = styLetrForm.getWidgetFor(LetterStyle::features.st()).components[1].getComponent(1) as JComboBox<*>
     protected val styLayrList
         get() = styLetrForm.getWidgetFor(LetterStyle::layers.st()).components[0] as JPanel
 
@@ -198,8 +197,6 @@ abstract class ScreencastDemo(
     protected fun styLayrNameField(i: Int) = styLayrPnl(i).getComponent(2) as JTextField
     protected fun styLayrAdvancedBtn(i: Int) = styLayrPnl(i).getComponent(3) as JToggleButton
     protected fun styLayrDelBtn(i: Int) = styLayrPnl(i).getComponent(4) as JButton
-
-    protected fun styIncClearing() = styLayrForm(0).getWidgetFor(Layer::clearingRfh.st()).components[1].getComponent(0)
 
     protected val dlvFormats get() = dlvPnl.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
     protected val dlvTransparent

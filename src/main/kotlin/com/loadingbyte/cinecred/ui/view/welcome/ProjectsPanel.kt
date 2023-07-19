@@ -37,7 +37,10 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedStartCreateButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgScaleWidget get() = createConfigureForm.scaleWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgLocWidget get() = createConfigureForm.creditsLocationWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget get() = createConfigureForm.creditsFormatWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgAccWidget get() = createConfigureForm.creditsAccountWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgDoneButton get() = createConfigureDoneButton
     // =========================================
 

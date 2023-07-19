@@ -21,6 +21,7 @@ val GUIDE_CONTENT_STYLE_DEMOS
         GuideContentStyleBodyLayoutDemo,
         GuideContentStyleHasHeadDemo,
         GuideContentStyleHeadLetterStyleDemo,
+        GuideContentStyleHeadForceWidthDemo,
         GuideContentStyleHeadMatchWidthDemo,
         GuideContentStyleHeadHJustifyDemo,
         GuideContentStyleHeadVJustifyDemo,
@@ -153,6 +154,23 @@ object GuideContentStyleHeadLetterStyleDemo : StyleSettingsDemo<ContentStyle>(
     override fun credits(style: ContentStyle) = """
 @Head,@Body,@Content Style
 1st Assistant Camera,Paul Puller,Demo
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleHeadForceWidthDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-force-width", Format.STEP_GIF,
+    listOf(ContentStyle::headForceWidthPx.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += gutterCS.copy(name = "Demo", headHJustify = HJustify.LEFT)
+        this += last().copy(headForceWidthPx = Opt(true, 150.0))
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+1st AC,Paul Puller,Demo
+2nd AC,Charly Clapper,
         """.parseCreditsCS(style)
 }
 

@@ -24,6 +24,18 @@ import kotlin.jvm.optionals.getOrNull
 
 class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartAddAccountButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedStartAddOverlayButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountLabelWidget get() = configureAccountForm.labelWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountServiceWidget get() = configureAccountForm.serviceWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountAuthButton get() = configureAccountAuthorizeButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayTypeWidget get() = configureOverlayForm.typeWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayNameWidget get() = configureOverlayForm.nameWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayLinesHWidget get() = configureOverlayForm.linesHWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayDoneButton get() = configureOverlayDoneButton
+    // =========================================
+
     val startPreferencesForm: PreferencesForm
 
     private val cards = CardLayout().also { layout = it }
@@ -172,6 +184,11 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         add(configureAccountPanel, PreferencesCard.CONFIGURE_ACCOUNT.name)
         add(authorizeAccountPanel, PreferencesCard.AUTHORIZE_ACCOUNT.name)
         add(configureOverlayPanel, PreferencesCard.CONFIGURE_OVERLAY.name)
+
+        @Suppress("DEPRECATION")
+        leakedStartAddAccountButton = startAddAccountButton
+        @Suppress("DEPRECATION")
+        leakedStartAddOverlayButton = startAddOverlayButton
     }
 
 

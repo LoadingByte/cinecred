@@ -248,6 +248,12 @@ abstract class VirtualWindow {
         pos.y + if (center) TITLE_BAR_HEIGHT / 2 else 0
     )
 
+    /** Obtains virtual desktop coordinates for the close button in the title bar. */
+    fun desktopPosOfCloseButton(center: Boolean = true) = Point(
+        pos.x + size.width - BORDER - (TITLE_BAR_HEIGHT + if (center) 0 else CANCEL_ICON.iconWidth) / 2,
+        pos.y + if (center) TITLE_BAR_HEIGHT / 2 else 0
+    )
+
 }
 
 
@@ -400,8 +406,11 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
      * assuming that it stems from some component inside this window.
      */
     fun desktopPosOfDropdownItem(elem: Any? = null, idx: Int = -1, center: Boolean = true): Point {
-        val menu = MenuSelectionManager.defaultManager().selectedPath.single() as JPopupMenu
-        val list = (menu.getComponent(0) as JScrollPane).viewport.view as JList<*>
+        val menu = MenuSelectionManager.defaultManager().selectedPath.first() as JPopupMenu
+        val scrollPane = menu.getComponent(0)
+        if (scrollPane !is JScrollPane)
+            return desktopPosOf(menu.getComponent(idx), center)
+        val list = scrollPane.viewport.view as JList<*>
         val listDesktopPos = desktopPosOf(list, center = false)
         val i = if (idx >= 0) idx else (0..<list.model.size).first { list.model.getElementAt(it) == elem }
         val cellBounds = list.getCellBounds(i, i)

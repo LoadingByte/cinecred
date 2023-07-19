@@ -1,10 +1,12 @@
 package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.common.requireIsInstance
-import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.usableBounds
 import com.loadingbyte.cinecred.ui.styling.StyleForm
@@ -151,9 +153,9 @@ abstract class StyleSettingsDemo<S : Style>(
         val pageBounds = pageDefImgsAndGroundings.fold(Dimension()) { d, (defImg, _) ->
             Dimension(max(d.width, defImg.width.roundToInt()), max(d.height, defImg.height.resolve().roundToInt()))
         }
-        val pageLayers = DeferredImage.DELIVERED_LAYERS.toMutableList()
+        val pageLayers = mutableListOf(STATIC, TAPES)
         if (pageGuides)
-            pageLayers.add(DeferredImage.GUIDES)
+            pageLayers.add(GUIDES)
 
         for ((imgIdx, settImg) in settImgs.withIndex()) {
             val suffix = suffixes.getOrElse(imgIdx) { "" }
@@ -176,15 +178,16 @@ abstract class StyleSettingsDemo<S : Style>(
                 buildImage(imgW, imgH, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
                     g2.color = grounding
                     g2.fillRect(0, 0, imgW, imgH)
-                    g2.withNewG2 { g22 ->
-                        g22.setHighQuality()
-                        g22.translate((imgW - pageBounds.width) / 2.0, (settH + pageExtend).toDouble())
-                        pageDefImg.materialize(g22, pageLayers)
-                    }
                     g2.color = settBgColor
                     g2.fillRect(0, 0, imgW, settH)
                     g2.clipRect(settX, 0, imgW, settH)
                     g2.drawImage(settImg, settX, settExtendY, null)
+                }.also { img ->
+                    DeferredImage(imgW.toDouble(), (imgH - settH).toDouble().toY()).apply {
+                        val x = (imgW - pageBounds.width) / 2.0
+                        val y = (settH + pageExtend).toDouble().toY()
+                        drawDeferredImage(pageDefImg, x, y)
+                    }.materialize(img, pageLayers)
                 }
             }
             write(img, suffix)

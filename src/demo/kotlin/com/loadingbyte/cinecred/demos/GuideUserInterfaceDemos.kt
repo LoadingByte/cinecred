@@ -3,19 +3,25 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.delivery.VideoRenderJob
 import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
-import com.loadingbyte.cinecred.imaging.VideoWriter
+import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.st
+import com.loadingbyte.cinecred.ui.LocaleWish
+import com.loadingbyte.cinecred.ui.OVERLAYS_PREFERENCE
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
 import java.awt.Point
 import java.lang.Thread.sleep
 import javax.swing.JScrollPane
+import javax.swing.JSpinner
+import javax.swing.JSpinner.NumberEditor
+import javax.swing.JTextField
 
 
 private const val DIR = "guide/user-interface"
@@ -25,7 +31,8 @@ val GUIDE_USER_INTERFACE_DEMOS
         GuideUserInterfaceToggleDialogsDemo,
         GuideUserInterfacePagesDemo,
         GuideUserInterfaceLayoutGuidesDemo,
-        GuideUserInterfaceSafeAreasDemo,
+        GuideUserInterfaceOverlaysStandardDemo,
+        GuideUserInterfaceOverlaysCustomDemo,
         GuideUserInterfaceEditDemo,
         GuideUserInterfaceResetDemo,
         GuideUserInterfaceSnapSpreadsheetEditorDemo,
@@ -98,20 +105,99 @@ object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides",
 }
 
 
-object GuideUserInterfaceSafeAreasDemo : ScreencastDemo("$DIR/safe-areas", Format.VIDEO_GIF, 600, 450) {
+object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 600, 450) {
     override fun generate() {
+        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
+        OVERLAYS_PREFERENCE.set(emptyList())
+        try {
+            generate2()
+        } finally {
+            OVERLAYS_PREFERENCE.set(backedUpOverlays)
+        }
+    }
+
+    private fun generate2() {
+        addProjectWindows(fullscreenPrjWin = true)
+        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
+        OVERLAYS_PREFERENCE.set(emptyList())
+
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
+        sc.click()
+        sleep(500)
+        for (idx in 0..3) {
+            sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = idx))
+            sleep(500)
+            sc.click(0)
+            sleep(1000)
+            sc.hold(2 * hold)
+            sc.click(0)
+            sleep(1000)
+            sc.hold(hold)
+        }
+
+        OVERLAYS_PREFERENCE.set(backedUpOverlays)
+    }
+}
+
+
+object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-custom", Format.VIDEO_GIF, 900, 600) {
+    override fun generate() {
+        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
+        OVERLAYS_PREFERENCE.set(emptyList())
+        try {
+            generate2()
+        } finally {
+            OVERLAYS_PREFERENCE.set(backedUpOverlays)
+        }
+    }
+
+    private fun generate2() {
         addProjectWindows(fullscreenPrjWin = true)
 
-        dt.mouseTo(prjWin.desktopPosOf(prjPnl.leakedCutSafeArea4to3Button), jump = true)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedUniformSafeAreasButton))
-        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
         sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedCutSafeArea16to9Button))
-        sc.click(2 * hold)
+        sleep(500)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 5))
+        sleep(1000)
+        sc.click(0)
+        sleep(1000)
+
+        addWelcomeWindow()
+        welcomeWin.size = Dimension(750, 500)
+        dt.center(welcomeWin)
+        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
+        welcomeFrame.preferences_start_setCheckForUpdates(true)
+        welcomeFrame.preferences_start_setAccounts(emptyList())
+
+        sc.hold(2 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddOverlayButton), 2 * hold)
+        sc.click(4 * hold)
+        for (idx in 2 downTo 1) {
+            sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayTypeWidget.components[0].getComponent(idx)))
+            sc.click(4 * hold)
+        }
+        val name = "Demo"
+        sc.type(welcomeWin, prefsPanel.leakedCfgOverlayNameWidget.components[0] as JTextField, name)
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayLinesHWidget.components[0]))
         sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedCutSafeArea4to3Button))
-        sc.click(2 * hold)
+        val linesHSpinner = prefsPanel.leakedCfgOverlayLinesHWidget.components[1].getComponent(1) as JSpinner
+        sc.type(welcomeWin, (linesHSpinner.editor as NumberEditor).textField, "200")
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayDoneButton))
+        sc.click(0)
+        welcomeFrame.preferences_start_setAccounts(emptyList())
+        sc.hold(2 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOfCloseButton())
+
+        removeWelcomeWindow()
+
+        sc.hold(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
         sc.click()
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 4))
+        sleep(500)
+        sc.click(0)
+        sleep(500)
+        sc.hold(4 * hold)
     }
 }
 
@@ -142,6 +228,10 @@ object GuideUserInterfaceEditDemo : ScreencastDemo(
         sc.mouseTo(styWin.desktopPosOf(prjPnl.leakedRedoStylingButton))
         sc.click()
         sc.mouseTo(styWin.desktopPosOf(prjPnl.leakedSaveStylingButton))
+        sc.click(4 * hold)
+        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedAddContentStyleButton))
+        sc.click(4 * hold)
+        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedRemoveStyleButton))
         sc.click(4 * hold)
     }
 }
@@ -180,7 +270,7 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
         val creditsFile = projectDir.resolve("Credits.csv")
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
             size = Dimension(600, 350)
-            colWidths = intArrayOf(100, 100, 50, 100, 100, 50, 50, 50, 50, 50)
+            colWidths = intArrayOf(100, 100, 50, 100, 100, 50, 50, 50, 50)
         }
         dt.add(spreadsheetEditorWin)
         dt.center(spreadsheetEditorWin)
@@ -214,15 +304,15 @@ object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview",
 }
 
 
-object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.VIDEO_GIF, 800, 635) {
+object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.VIDEO_GIF, 800, 695) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 510))
+        addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 570))
 
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedDeliveryDialogButton))
-        sc.click(8 * hold)
+        sc.click(12 * hold)
         sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
-        sc.click(4 * hold)
+        sc.click(8 * hold)
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoRenderJob.Format.ALL.first { it.label == "ProRes 4444" }))
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOf(dlvTransparent))
@@ -233,10 +323,12 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOf(dlvScan))
         sc.click(2 * hold)
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoWriter.Scan.INTERLACED_TOP_FIELD_FIRST))
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST))
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOf(dlvPnl.addButton))
         sc.click(8 * hold)
+
+        RenderQueue.cancelAllJobs()
     }
 }
 

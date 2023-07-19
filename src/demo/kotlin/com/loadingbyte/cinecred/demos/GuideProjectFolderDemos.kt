@@ -2,14 +2,22 @@ package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.projectio.CsvFormat
+import com.loadingbyte.cinecred.projectio.Spreadsheet
+import com.loadingbyte.cinecred.projectio.SpreadsheetLook
+import com.loadingbyte.cinecred.projectio.service.Account
+import com.loadingbyte.cinecred.projectio.service.GoogleService
+import com.loadingbyte.cinecred.ui.LocaleWish
+import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import java.lang.Thread.sleep
+import javax.swing.JTextField
 
 
 private const val DIR = "guide/project-folder"
 
 val GUIDE_PROJECT_FOLDER_DEMOS
     get() = listOf(
-        GuideProjectFolderCreateProjectDemo
+        GuideProjectFolderCreateProjectDemo,
+        GuideProjectFolderAddOnlineAccountDemo
     )
 
 
@@ -22,16 +30,56 @@ object GuideProjectFolderCreateProjectDemo : ScreencastDemo("$DIR/create-project
         dt.mouseDownAndDragFolder(projectDir)
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedStartPanel))
         dt.mouseUp()
-        sc.hold(4 * hold)
+        sc.hold(8 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgScaleWidget.components[0].getComponent(1)))
+        sc.click(2 * hold)
+        projectsPanel.projects_createConfigure_setAccounts(listOf(DummyAccount))
+        sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgLocWidget.components[0].getComponent(1)))
+        sc.click(2 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgAccWidget.components[0]))
+        sc.click(4 * hold)
+        sc.click()
+        sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgLocWidget.components[0].getComponent(0)))
+        sc.click(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgFormatWidget.components[0]))
         sc.click()
         sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(CsvFormat))
         sc.click()
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgDoneButton))
         dt.mouseDown()
-        sc.hold()
+        sc.hold(2 * hold)
         dt.mouseUp()
 
         sleep(1000)
+    }
+
+    private object DummyAccount : Account {
+        override val id get() = "John Doe"
+        override val service get() = GoogleService
+        override fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook) =
+            throw UnsupportedOperationException()
+    }
+}
+
+
+object GuideProjectFolderAddOnlineAccountDemo : ScreencastDemo("$DIR/add-online-account", Format.VIDEO_GIF, 700, 500) {
+    @Suppress("DEPRECATION")
+    override fun generate() {
+        addWelcomeWindow(fullscreen = true)
+        welcomeFrame.setTab(WelcomeTab.PREFERENCES)
+        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
+        welcomeFrame.preferences_start_setCheckForUpdates(true)
+        welcomeFrame.preferences_start_setAccounts(emptyList())
+        welcomeFrame.preferences_start_setOverlays(emptyList())
+
+        sc.hold(2 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddAccountButton))
+        sc.click()
+        sc.type(welcomeWin, prefsPanel.leakedCfgAccountLabelWidget.components[0] as JTextField, "John Doe")
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgAccountServiceWidget.components[0]))
+        sc.click()
+        sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(idx = 0))
+        sc.click()
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgAccountAuthButton), 4 * hold)
     }
 }

@@ -1,8 +1,11 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.setHighQuality
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
+import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
@@ -18,6 +21,7 @@ abstract class PageDemo(
     filename: String,
     format: Format,
     private val pageWidth: Int = 700,
+    private val pageHeight: Int = 0,
     private val pageExtend: Int = 20,
     private val pageGuides: Boolean = false
 ) : Demo(filename, format) {
@@ -46,22 +50,22 @@ abstract class PageDemo(
         val pageBounds = pageDefImgsAndGroundings.fold(Dimension()) { d, (defImg, _) ->
             Dimension(max(d.width, defImg.width.roundToInt()), max(d.height, defImg.height.resolve().roundToInt()))
         }
-        val pageLayers = DeferredImage.DELIVERED_LAYERS.toMutableList()
+        val pageLayers = mutableListOf(STATIC, TAPES)
         if (pageGuides)
-            pageLayers.add(DeferredImage.GUIDES)
+            pageLayers.add(GUIDES)
 
         for ((imgIdx, pageDefImgsAndGrounding) in pageDefImgsAndGroundings.withIndex()) {
             val suffix = suffixes.getOrElse(imgIdx) { "" }
             val (pageDefImg, grounding) = pageDefImgsAndGrounding
-            val imgW = if (pageWidth != 0) pageWidth else pageBounds.width
-            val imgH = 2 * pageExtend + pageBounds.height
+            val imgW = if (pageWidth > 0) pageWidth else pageBounds.width
+            val imgH = 2 * pageExtend + if (pageHeight > 0) pageHeight else pageBounds.height
             val img = buildImage(imgW, imgH, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
-                g2.setHighQuality()
                 g2.color = grounding
                 g2.fillRect(0, 0, imgW, imgH)
-                g2.translate((imgW - pageBounds.width) / 2.0, pageExtend.toDouble())
-                pageDefImg.materialize(g2, pageLayers)
             }
+            DeferredImage(imgW.toDouble(), imgH.toDouble().toY()).apply {
+                drawDeferredImage(pageDefImg, (imgW - pageBounds.width) / 2.0, ((imgH - pageBounds.height) / 2.0).toY())
+            }.materialize(img, pageLayers)
             write(img, suffix)
         }
     }

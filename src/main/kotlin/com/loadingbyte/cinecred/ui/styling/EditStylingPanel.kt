@@ -20,6 +20,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
+    @Deprecated("ENCAPSULATION LEAK") val leakedAddContentStyleButton: JButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedRemoveStyleButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingTree get() = stylingTree
     @Deprecated("ENCAPSULATION LEAK") val leakedGlobalForm get() = globalForm
     @Deprecated("ENCAPSULATION LEAK") val leakedPageStyleForm get() = pageStyleForm
@@ -161,6 +163,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         @Suppress("DEPRECATION")
         leakedSplitPane = splitPane
+        @Suppress("DEPRECATION")
+        leakedAddContentStyleButton = addContentStyleButton
+        @Suppress("DEPRECATION")
+        leakedRemoveStyleButton = removeStyleButton
     }
 
     private fun newToolbarButtonWithKeyListener(

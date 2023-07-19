@@ -16,6 +16,7 @@ val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
         GuideContentStyleGridLayoutFillingOrderDemo,
         GuideContentStyleGridLayoutFillingBalancedDemo,
         GuideContentStyleGridLayoutStructureDemo,
+        GuideContentStyleGridLayoutForceColWidthAndRowHeightDemo,
         GuideContentStyleGridLayoutMatchColWidthsDemo,
         GuideContentStyleGridLayoutMatchRowHeightDemo,
         GuideContentStyleGridLayoutCellHJustifyPerColDemo,
@@ -71,6 +72,28 @@ object GuideContentStyleGridLayoutStructureDemo : StyleSettingsDemo<ContentStyle
     override fun styles() = buildList<ContentStyle> {
         for (structure in GridStructure.entries)
             this += tabularCS.copy(name = "Demo", gridStructure = structure)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Body,@Content Style
+Ada,Demo
+Ben,
+Chantal,
+Dan,
+Eva,
+Florian
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleGridLayoutForceColWidthAndRowHeightDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/force-col-width-and-row-height", Format.STEP_GIF,
+    listOf(ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += tabularCS.copy(name = "Demo")
+        this += last().copy(gridForceColWidthPx = Opt(true, 150.0))
+        this += last().copy(gridForceRowHeightPx = Opt(true, 70.0))
     }
 
     override fun credits(style: ContentStyle) = """

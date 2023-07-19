@@ -155,4 +155,16 @@ object RenderQueue {
         }
     }
 
+    fun cancelAllJobs() {
+        pollJobLock.withLock {
+            for (queue in queuedJobs.values) {
+                for (subJob in queue)
+                    subJob.finishCallback(null)
+                queue.clear()
+            }
+            if (runningJob != null)
+                thread.interrupt()
+        }
+    }
+
 }

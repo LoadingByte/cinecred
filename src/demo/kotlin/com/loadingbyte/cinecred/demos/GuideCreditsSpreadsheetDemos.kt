@@ -1,8 +1,13 @@
 package com.loadingbyte.cinecred.demos
 
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.demo.PageDemo
+import com.loadingbyte.cinecred.demo.TimelineDemo
+import com.loadingbyte.cinecred.demo.VideoDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
+import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PRESET_CONTENT_STYLE
+import kotlinx.collections.immutable.persistentListOf
 
 
 private const val DIR = "guide/credits-spreadsheet"
@@ -13,9 +18,19 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
         GuideCreditsSpreadsheetStyleTagDemo,
         GuideCreditsSpreadsheetPicTagDemo,
         GuideCreditsSpreadsheetPicCropDemo,
+        GuideCreditsSpreadsheetVideoTagMovingDemo,
+        GuideCreditsSpreadsheetVideoTagDemo,
+        GuideCreditsSpreadsheetVideoBehaviorStandardDemo,
+        GuideCreditsSpreadsheetVideoBehaviorMarginDemo,
+        GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo,
+        GuideCreditsSpreadsheetVideoBehaviorFadeDemo,
+        GuideCreditsSpreadsheetVideoTrimDemo,
         GuideCreditsSpreadsheetVGapDemo,
         GuideCreditsSpreadsheetContentStylesDemo,
-        GuideCreditsSpreadsheetSpinePositionDemo,
+        GuideCreditsSpreadsheetSpinePositionScrollDemo,
+        GuideCreditsSpreadsheetSpinePositionCardDemo,
+        GuideCreditsSpreadsheetSpinePositionParallelDemo,
+        GuideCreditsSpreadsheetSpinePositionHookDemo,
         GuideCreditsSpreadsheetBreakMatchDemo
     )
 
@@ -70,6 +85,85 @@ object GuideCreditsSpreadsheetPicCropDemo : PageDemo("$DIR/pic-crop", Format.STE
 }
 
 
+object GuideCreditsSpreadsheetVideoTagMovingDemo : VideoDemo("$DIR/video-tag-moving", Format.VIDEO_GIF) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x}}
+        """.parseCreditsCS(resolution = Resolution(700, 350))
+}
+
+
+object GuideCreditsSpreadsheetVideoTagDemo : PageDemo("$DIR/video-tag", Format.PNG, pageGuides = true) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = listOf(
+        """
+@Body
+{{Video rainbow 200x}}
+        """.parseCreditsCS()
+    )
+}
+
+
+object GuideCreditsSpreadsheetVideoBehaviorStandardDemo : TimelineDemo(
+    "$DIR/video-behavior-standard", Format.VIDEO_GIF
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x}}
+        """.parseCreditsCS(resolution = Resolution(700, 400))
+}
+
+
+object GuideCreditsSpreadsheetVideoBehaviorMarginDemo : TimelineDemo(
+    "$DIR/video-behavior-margin", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x Margin 00:00:02:00}}
+        """.parseCreditsCS(resolution = Resolution(700, 400))
+}
+
+
+object GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo : TimelineDemo(
+    "$DIR/video-behavior-two-margins", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 0
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x Margin 00:00:02:00 00:00:00:00}}
+        """.parseCreditsCS(resolution = Resolution(700, 400))
+}
+
+
+object GuideCreditsSpreadsheetVideoBehaviorFadeDemo : TimelineDemo(
+    "$DIR/video-behavior-fade", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48, leftFade = 24, rightFade = 24
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x Margin 00:00:02:00 Fade 00:00:01:00}}
+        """.parseCreditsCS(resolution = Resolution(700, 400))
+}
+
+
+object GuideCreditsSpreadsheetVideoTrimDemo : VideoDemo("$DIR/video-trim", Format.VIDEO_GIF) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x In 90 Out 165}}
+        """.parseCreditsCS(resolution = Resolution(700, 350))
+}
+
+
 object GuideCreditsSpreadsheetVGapDemo : PageDemo("$DIR/vgap", Format.PNG, pageGuides = true) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(
@@ -97,7 +191,45 @@ object GuideCreditsSpreadsheetContentStylesDemo : PageDemo("$DIR/content-styles"
 }
 
 
-object GuideCreditsSpreadsheetSpinePositionDemo : PageDemo("$DIR/spine-position", Format.PNG, pageGuides = true) {
+object GuideCreditsSpreadsheetSpinePositionScrollDemo : PageDemo(
+    "$DIR/spine-position-scroll", Format.PNG, pageGuides = true
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = listOf(
+        """
+@Body,@Content Style,@Spine Position
+I’m a lefty!,Demo,-150
+Me too!,,
+,,
+I’m a righty!,,150
+,,
+I’m dead center!,,0
+        """.parseCreditsCS(demoCS)
+    )
+}
+
+
+object GuideCreditsSpreadsheetSpinePositionCardDemo : PageDemo(
+    "$DIR/spine-position-card", Format.PNG, pageHeight = 240, pageGuides = true
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = listOf(
+        """
+@Body,@Content Style,@Spine Position,@Page Style
+I’m a lefty!,Demo,-150,Card
+,,,
+I’m a top-righty!,,150 -50,
+,,,
+I’m below y’all!,,0 50 Below,
+Me too!,,,
+        """.parseCreditsCS(demoCS)
+    )
+}
+
+
+object GuideCreditsSpreadsheetSpinePositionParallelDemo : PageDemo(
+    "$DIR/spine-position-parallel", Format.PNG, pageGuides = true
+) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(
         """
@@ -106,9 +238,28 @@ I’m a lefty!,Demo,-150
 Me too!,,
 ,,
 I’m a righty!,,150 Parallel
-,,
-I’m dead center!,,0
         """.parseCreditsCS(demoCS)
+    )
+}
+
+
+object GuideCreditsSpreadsheetSpinePositionHookDemo : PageDemo(
+    "$DIR/spine-position-hook", Format.PNG, pageHeight = 310, pageGuides = true
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = listOf(
+        """
+@Body,@Content Style,@Spine Position,@Page Style
+I’m the root!,Demo,-50,Card
+"Hi,",,,
+me too!,,,
+,,,
+I’m right beneath!,,Hook 1 Bottom-Top,
+,,,
+I’m a bit offset!,,Hook 2 Middle-Top 250,
+,,,
+I’m with my friend!,,Hook 1 Bottom-Top 0 200,
+        """.parseCreditsCS(demoCS.copy(gridCellHJustifyPerCol = persistentListOf(HJustify.LEFT)))
     )
 }
 

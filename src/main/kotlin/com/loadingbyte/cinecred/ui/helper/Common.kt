@@ -33,8 +33,10 @@ const val PALETTE_RED: String = "#C75450"
 const val PALETTE_GREEN: String = "#499C54"
 const val PALETTE_BLUE: String = "#3592C4"
 const val PALETTE_GRAY: String = "#AFB1B3"
-val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
+val PALETTE_RED_COLOR: Color = colorFromHex(PALETTE_RED)
+val PALETTE_GREEN_COLOR: Color = colorFromHex(PALETTE_GREEN)
 val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
+val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
 
 val OVERLAY_COLOR: Color = Color.GRAY
 

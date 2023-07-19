@@ -1,15 +1,16 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
-import com.loadingbyte.cinecred.common.createDirectoriesSafely
-import com.loadingbyte.cinecred.common.useResourcePath
-import com.loadingbyte.cinecred.common.walkSafely
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.getBundledFont
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
+import java.awt.Color
+import java.awt.image.BufferedImage
 import java.nio.file.Path
+import javax.imageio.ImageIO
 import kotlin.io.path.Path
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.readLines
@@ -22,11 +23,8 @@ fun extractStyling(global: Global, page: Page): Styling {
     val letterStyles = HashSet<LetterStyle>()
     for (stage in page.stages) {
         pageStyles.add(stage.style)
-        for (spines in when (stage) {
-            is Stage.Card -> stage.compounds.asSequence().map(Compound::spines)
-            is Stage.Scroll -> stage.laterals.asSequence().map(Lateral::spines)
-        })
-            for (spine in spines)
+        for (compound in stage.compounds)
+            for (spine in compound.spines)
                 for (block in spine.blocks) {
                     contentStyles.add(block.style)
                     for (elem in block.body)
@@ -117,17 +115,31 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     }
 
 
-fun String.parseCreditsCS(vararg contentStyles: ContentStyle): Pair<Global, Page> {
+private val LOGO_PIC by lazy { useResourcePath("/logo.svg") { tryReadPictureLoader(it)!!.apply { picture } } }
+private val C_PIC by lazy { useResourcePath("/template/cinecred.svg") { tryReadPictureLoader(it)!!.apply { picture } } }
+
+private val RAINBOW_TAPE: Tape by lazy {
+    val tmpDir = Path(System.getProperty("java.io.tmpdir")).resolve("cinecred-rainbow")
+    tmpDir.toFile().apply { deleteRecursively(); deleteOnExit() }
+    val tapeDir = tmpDir.resolve("rainbow").also(Path::createDirectoriesSafely).apply { toFile().deleteOnExit() }
+    val img = BufferedImage(16, 9, BufferedImage.TYPE_3BYTE_BGR)
+    for (hue in 0..255)
+        ImageIO.write(img.withG2 { g2 ->
+            g2.color = Color(Color.HSBtoRGB(hue / 255f, 1f, 1f))
+            g2.fillRect(0, 0, 16, 9)
+        }, "png", tapeDir.resolve("rainbow.$hue.png").toFile().apply { deleteOnExit() })
+    Tape.recognize(tapeDir)!!
+}
+
+fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolution? = null): Pair<Global, Page> {
     var styling = TEMPLATE_PROJECT.styling
+    if (resolution != null)
+        styling = styling.copy(global = styling.global.copy(resolution = resolution))
     styling = styling.copy(contentStyles = styling.contentStyles.toPersistentList().addAll(contentStyles.asList()))
 
     val spreadsheet = CsvFormat.read(this)
-    val (pages, _, _) = useResourcePath("/logo.svg") { logoSvg ->
-        useResourcePath("/template/cinecred.svg") { cinecredSvg ->
-            val pictureLoaders = listOf(tryReadPictureLoader(logoSvg)!!, tryReadPictureLoader(cinecredSvg)!!)
-            readCredits(spreadsheet, styling, pictureLoaders, emptyList())
-        }
-    }
+    val tapes = if ("{{Video rainbow" in this) listOf(RAINBOW_TAPE) else emptyList()
+    val (pages, _, _) = readCredits(spreadsheet, styling, listOf(LOGO_PIC, C_PIC), tapes)
     return Pair(styling.global, pages.single())
 }
 

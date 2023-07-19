@@ -16,6 +16,7 @@ val GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS
         GuideContentStyleFlowLayoutDirectionDemo,
         GuideContentStyleFlowLayoutJustifyLinesDemo,
         GuideContentStyleFlowLayoutSquareCellsDemo,
+        GuideContentStyleFlowLayoutForceCellWidthAndHeightDemo,
         GuideContentStyleFlowLayoutMatchCellWidthAndHeightDemo,
         GuideContentStyleFlowLayoutCellHJustifyAndVJustifyDemo,
         GuideContentStyleFlowLayoutLineWidthDemo,
@@ -68,6 +69,27 @@ object GuideContentStyleFlowLayoutSquareCellsDemo : StyleSettingsDemo<ContentSty
     override fun styles() = buildList<ContentStyle> {
         this += bulletsCS.copy(name = "Demo")
         this += last().copy(flowSquareCells = true)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Body,@Content Style
+Ada,Demo
+Ben,
+Claire,
+Dan,
+Eva,
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleFlowLayoutForceCellWidthAndHeightDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/force-cell-width-and-height", Format.STEP_GIF,
+    listOf(ContentStyle::flowForceCellWidthPx.st(), ContentStyle::flowForceCellHeightPx.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += bulletsCS.copy(name = "Demo")
+        this += last().copy(flowForceCellWidthPx = Opt(true, 150.0))
+        this += last().copy(flowForceCellHeightPx = Opt(true, 70.0))
     }
 
     override fun credits(style: ContentStyle) = """

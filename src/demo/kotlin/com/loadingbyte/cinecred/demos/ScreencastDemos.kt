@@ -118,7 +118,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         val creditsFile = projectDir.resolve("Credits.csv")
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
             size = Dimension(800, 500)
-            colWidths = intArrayOf(160, 160, 50, 110, 110, 80, 80, 80, 80, 110)
+            colWidths = intArrayOf(160, 160, 50, 110, 110, 80, 80, 80, 110)
         }
         dt.add(spreadsheetEditorWin)
         dt.center(spreadsheetEditorWin)
@@ -221,6 +221,11 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.styling.styles")
         sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.PageBehavior.SCROLL")))
         sc.click()
+        sc.caption("screencast.caption.styling.addRemove")
+        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedAddContentStyleButton))
+        sc.click(4 * hold)
+        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedRemoveStyleButton))
+        sc.click(2 * hold)
         sc.caption("screencast.caption.styling.page")
         sc.mouseTo(styWin.desktopPosOfSetting(styPageForm, PageStyle::scrollMeltWithNext.st()))
         sc.caption("screencast.caption.styling.melt")
@@ -270,9 +275,9 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.type(styWin, styFlowSep, "\u2022")
 
         sc.caption("screencast.caption.blurb.open")
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedPageTabs).apply { y += 380 })
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedPageTabs).apply { y += 300 })
         dt.mouseDown()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedPageTabs).apply { y -= 380 })
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedPageTabs).apply { y -= 300 })
         dt.mouseUp()
         sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.contentStyleBlurb")))
         sc.click()

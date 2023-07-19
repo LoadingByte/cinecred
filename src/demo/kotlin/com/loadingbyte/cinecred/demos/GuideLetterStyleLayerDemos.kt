@@ -115,8 +115,14 @@ object GuideLetterStyleLayerColoringDemo : StyleSettingsDemo<Layer>(
         Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st()
     )
 ) {
+    // The existence of this layer prevents warning that the demo layer is off but not used.
+    private val dummyLayer = PRESET_LAYER.copy(
+        coloring = LayerColoring.OFF, shape = LayerShape.CLONE, cloneLayers = persistentListOf(1)
+    )
+
     override fun styles() = buildList<Layer> {
-        this += PRESET_LAYER.copy(shape = LayerShape.TEXT)
+        this += PRESET_LAYER.copy(coloring = LayerColoring.OFF, shape = LayerShape.TEXT)
+        this += last().copy(coloring = LayerColoring.PLAIN)
         this += last().copy(color1 = Color(220, 195, 130))
         this += last().copy(coloring = LayerColoring.GRADIENT, color2 = Color(80, 45, 13))
         this += last().copy(gradientAngleDeg = 90.0)
@@ -127,7 +133,7 @@ object GuideLetterStyleLayerColoringDemo : StyleSettingsDemo<Layer>(
         this += last().copy(gradientShiftRfh = 1.5)
     }
 
-    override fun credits(style: Layer) = buildCredits(style)
+    override fun credits(style: Layer) = buildCredits(style, dummyLayer)
 }
 
 
@@ -280,14 +286,20 @@ object GuideLetterStyleLayerContourDemo : StyleSettingsDemo<Layer>(
 object GuideLetterStyleLayerTransformDemo : StyleSettingsDemo<Layer>(
     Layer::class.java, "$DIR/transform", Format.STEP_GIF,
     listOf(
-        Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::hScaling.st(), Layer::vScaling.st(),
-        Layer::hShearing.st(), Layer::vShearing.st()
+        Layer::offsetCoordinateSystem.st(),
+        Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
+        Layer::hScaling.st(), Layer::vScaling.st(), Layer::hShearing.st(), Layer::vShearing.st()
     ), pageExtend = 40, pageGuides = true
 ) {
     override fun styles() = buildList<Layer> {
         this += PRESET_LAYER.copy(shape = LayerShape.TEXT)
         this += last().copy(hOffsetRfh = 32.0 / 32.0)
         this += last().copy(vOffsetRfh = -8.0 / 32.0)
+        this += last().copy(
+            offsetCoordinateSystem = CoordinateSystem.POLAR,
+            offsetAngleDeg = 14.0,
+            offsetDistanceRfh = 1.03
+        )
         this += last().copy(hScaling = 1.125)
         this += last().copy(vScaling = 0.75)
         this += last().copy(hShearing = -0.3)

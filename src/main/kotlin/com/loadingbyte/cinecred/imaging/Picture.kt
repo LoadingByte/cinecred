@@ -278,8 +278,8 @@ sealed interface Picture {
                 val cmd = arrayOf(gs.pathString, "-sDEVICE=pdfwrite", "-o", tmpFile.pathString, psFile.pathString)
                 val process = Runtime.getRuntime().exec(cmd)
                 GS_STREAM_GOBBLER_EXECUTOR.submit {
-                    process.inputStream.bufferedReader().lines().forEach { GS_LOGGER.info(it) }
-                    process.errorStream.bufferedReader().lines().forEach { GS_LOGGER.error(it) }
+                    process.inputReader().lines().forEach { GS_LOGGER.info(it) }
+                    process.errorReader().lines().forEach { GS_LOGGER.error(it) }
                 }
                 val exitCode = process.waitFor()
                 if (exitCode != 0)

@@ -15,7 +15,7 @@ class DeliveryPanel(ctrl: ProjectController) : JPanel() {
     val configurationForm = DeliverConfigurationForm(ctrl)
     val renderQueuePanel = DeliverRenderQueuePanel(ctrl)
 
-    val specsLabels = List(4) { JLabel() }
+    val specsLabels = List(4) { JLabel("\u2014") }
     private val specsAndIssuesPanel = JPanel(MigLayout("insets 0, wrap"))
     val addButton = JButton(l10n("ui.delivery.addToRenderQueue"), ADD_ICON)
     val processButton = JToggleButton(l10n("ui.delivery.processRenderQueue"), PLAY_ICON)

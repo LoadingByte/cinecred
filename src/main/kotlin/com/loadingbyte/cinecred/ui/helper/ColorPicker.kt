@@ -231,7 +231,11 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
         }
     }
 
-    var swatchColors: List<Color> by swatches::colors
+    var swatchColors: List<Color>
+        get() = swatches.colors
+        set(swatchColors) {
+            swatches.colors = swatchColors
+        }
 
     var value: Color
         get() = Color(red, grn, blu, if (allowAlpha) alpha else 255)

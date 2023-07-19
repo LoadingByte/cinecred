@@ -6,7 +6,8 @@ import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
 import com.loadingbyte.cinecred.project.BodyLayout.GRID
-import com.loadingbyte.cinecred.project.GridStructure.*
+import com.loadingbyte.cinecred.project.GridStructure.FREE
+import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
@@ -91,9 +92,12 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         choices = { _, styling, _ -> styling.letterStyles }
     ),
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
-        if (style.gridCellHJustifyPerCol.size < 2) sortedSetOf(FREE, SQUARE_CELLS)
-        else if (style.gridForceColWidthPx.isActive) sortedSetOf(EQUAL_WIDTH_COLS, SQUARE_CELLS)
-        else GridStructure.entries.toSortedSet()
+        val forceColWidth = style.gridForceColWidthPx.isActive
+        when {
+            forceColWidth && style.gridForceRowHeightPx.isActive -> sortedSetOf(FREE)
+            forceColWidth || style.gridCellHJustifyPerCol.size < 2 -> sortedSetOf(FREE, SQUARE_CELLS)
+            else -> GridStructure.entries.toSortedSet()
+        }
     },
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),

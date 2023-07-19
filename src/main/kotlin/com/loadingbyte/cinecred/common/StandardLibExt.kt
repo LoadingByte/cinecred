@@ -1,7 +1,5 @@
 package com.loadingbyte.cinecred.common
 
-import kotlin.math.max
-
 
 /*
  * This file contains very slight variations of Kotlin standard library functions. As a rule of thumb, if a function

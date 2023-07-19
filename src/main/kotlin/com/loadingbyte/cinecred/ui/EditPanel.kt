@@ -247,7 +247,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         val topPanelCols = """
                 []push
                 []
-                rel[]rel
+                0:rel[]0:rel
                 []0[]0[]0[]rel[shrinkprio 200]
                 0:unrel:[]unrel
                 []rel[]rel[]0[]

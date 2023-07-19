@@ -688,4 +688,4 @@ private fun SingleLineHJustify.toHJustify() = when (this) {
 }
 
 
-private inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()
+private inline fun Opt<Double>.orElse(block: () -> Double) = if (isActive) value else block()

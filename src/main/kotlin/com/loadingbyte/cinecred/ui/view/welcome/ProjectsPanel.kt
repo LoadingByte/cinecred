@@ -37,7 +37,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedStartCreateButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
-    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget: ComboBoxWidget<SpreadsheetFormat>
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget get() = createConfigureForm.creditsFormatWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgDoneButton get() = createConfigureDoneButton
     // =========================================
 
@@ -219,8 +219,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         leakedStartOpenButton = startOpenButton
         @Suppress("DEPRECATION")
         leakedStartDropLabel = startDropLabel
-        @Suppress("DEPRECATION")
-        leakedCreCfgFormatWidget = createConfigureForm.creditsFormatWidget
     }
 
     private fun makeOpenButton(text: String, icon: Icon) = JButton(text, icon).apply {

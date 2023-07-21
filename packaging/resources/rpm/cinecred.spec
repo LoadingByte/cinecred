@@ -1,7 +1,7 @@
 Name: cinecred
 Version: @VERSION@
 Release: 1
-License: GPLv3
+License: GPLv3+
 Group: Applications/Multimedia
 Summary: @DESCRIPTION@
 URL: @URL@

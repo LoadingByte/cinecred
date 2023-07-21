@@ -9,6 +9,10 @@ Cinecred Changelog
 
 - ProRes rendering no longer fails when the grounding is made transparent.
 
+### UI Fixes
+
+- ProRes profiles lower than 4444 now have the transparency option grayed out.
+
 
 1.5.0
 -----

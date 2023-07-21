@@ -144,7 +144,7 @@ class VideoRenderJob(
                 defaultFileExt = "mov",
                 // prores_aw is faster, but only prores_ks supports 4444 alpha content that is universally compatible.
                 codecName = "prores_aw",
-                alphaCodecName = "prores_ks",
+                alphaCodecName = if (alphaPixelFormat == null) null else "prores_ks",
                 codecProfile = profile,
                 pixelFormat = Bitmap.PixelFormat.of(pixelFormat),
                 alphaPixelFormat = alphaPixelFormat?.let(Bitmap.PixelFormat::of),

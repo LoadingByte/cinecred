@@ -242,6 +242,7 @@ private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strin
 
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
 
+private val DOUBLE_BRACE_REGEX = Regex("(?<!\\{)\\{\\{|}}(?!})")
 fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String {
     val effArgs = if (args.none { it is Float || it is Double }) args else {
         val fmt = NumberFormat.getInstance()
@@ -250,7 +251,10 @@ fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): 
             if (arg is Float || arg is Double) fmt.format(arg) else arg
         }
     }
-    return MessageFormat.format(l10n(key, locale), *effArgs)
+    var str = l10n(key, locale)
+    if ("{{" in str || "}}" in str)
+        str = str.replace(DOUBLE_BRACE_REGEX, "'$0'")
+    return MessageFormat.format(str, *effArgs)
 }
 
 fun comprehensivelyApplyLocale(locale: Locale) {

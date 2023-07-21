@@ -247,10 +247,11 @@ sealed interface Picture {
                 LOGGER.warn("Encountered unexpected exception while looking for the Ghostscript executable.", e)
             }
 
-            val linkWin = "https://ghostscript.com/releases/gsdnld.html"
+            val linkWin = " href=\"https://ghostscript.com/releases/gsdnld.html\""
+            val linkMac = " href=\"https://pages.uoregon.edu/koch/\""
             val osSpecific = when {
                 SystemInfo.isWindows -> l10n("imaging.ghostscriptMissing.msg.windows", linkWin)
-                SystemInfo.isMacOS -> l10n("imaging.ghostscriptMissing.msg.macos", "https://pages.uoregon.edu/koch/")
+                SystemInfo.isMacOS -> l10n("imaging.ghostscriptMissing.msg.macos", linkMac)
                 else -> l10n("imaging.ghostscriptMissing.msg.linux")
             }
             val msg = "<html>" + l10n("imaging.ghostscriptMissing.msg", osSpecific).replace("\n", "<br>") + "</html>"

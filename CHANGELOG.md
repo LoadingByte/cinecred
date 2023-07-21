@@ -5,6 +5,10 @@ Cinecred Changelog
 1.5.1-SNAPSHOT
 --------------
 
+### Fixes
+
+- ProRes rendering no longer fails when the grounding is made transparent.
+
 
 1.5.0
 -----

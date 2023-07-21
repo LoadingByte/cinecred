@@ -47,7 +47,7 @@ class VideoRenderJob(
 
         // If we're embedding tapes whose bit depth exceeds 8, automatically increase the render's bit depth to ensure
         // that no information is lost.
-        val deeperPixelFormat = if (transparentGrounding) format.deeperAlphaPixelFormat!! else format.deeperPixelFormat
+        val deeperPixelFormat = if (transparentGrounding) format.deeperAlphaPixelFormat else format.deeperPixelFormat
         val pixelFormat = if (deeperPixelFormat != null &&
             video.collectTapeSpans(listOf(TAPES)).any { it.embeddedTape.tape.exceeds8Bit }
         ) deeperPixelFormat else if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat

@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
     <UI>
-      <Dialog Id="ShortcutDlg" Width="370" Height="270" Title="!(loc.ShortcutDlg_Title)">
+      <Dialog Id="ShortcutDlg" Width="370" Height="270" Title="!(loc.WelcomeDlg_Title)">
         <!-- Standard dialog elements -->
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.ShortcutDlgTitle)"/>
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.ShortcutDlgDescription)"/>

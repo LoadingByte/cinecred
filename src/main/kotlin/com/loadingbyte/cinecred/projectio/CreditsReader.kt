@@ -958,7 +958,10 @@ private class CreditsReader(
 
 
     class Keyword(val key: String) {
-        private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { l10n(key, it) }
+        private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { l ->
+            l10n(key, l).also { kw -> require(' ' !in kw) { "Keyword '$kw' from $key @ $l contains whitespace" } }
+        }
+
         operator fun contains(str: String) = str in kwSet
     }
 

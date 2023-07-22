@@ -52,9 +52,6 @@ fun drawPages(project: Project): List<DrawnPage> {
             drawnStages[stage] = drawStage(global.resolution, drawnBlocks, stage, prevStage, nextStage)
         }
 
-    val pageTopStages = pages.mapTo(HashSet()) { page -> page.stages.first() }
-    val pageBotStages = pages.mapTo(HashSet()) { page -> page.stages.last() }
-
     // If requested, adjust some vertical gaps to best match a specified runtime.
     if (runtimeGroups.isNotEmpty() || global.runtimeFrames.isActive) {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
@@ -62,17 +59,14 @@ fun drawPages(project: Project): List<DrawnPage> {
         for (page in pages)
             prelimStageLayouts.putAll(layoutStages(global.resolution, drawnStages, page).second)
         // Use that information to scale the vertical gaps.
-        drawnStages = matchRuntime(
-            pages, drawnStages, prelimStageLayouts, pageTopStages, pageBotStages,
-            global.runtimeFrames, runtimeGroups
-        )
+        drawnStages = matchRuntime(pages, drawnStages, prelimStageLayouts, global.runtimeFrames, runtimeGroups)
     }
 
     // Finally, do the real layout pass with potentially changed stage images and combine the stage images
     // to page images.
     return pages.map { page ->
         val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, drawnStages, page)
-        val pageImage = drawPage(global, drawnStages, stageLayouts, pageTopStages, pageBotStages, page, pageImageHeight)
+        val pageImage = drawPage(global, drawnStages, stageLayouts, page, pageImageHeight)
         DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
 }
@@ -198,8 +192,6 @@ private fun matchRuntime(
     pages: List<Page>,
     drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
-    pageTopStages: Set<Stage>,
-    pageBotStages: Set<Stage>,
     globalDesiredFrames: Opt<Int>,
     runtimeGroups: List<RuntimeGroup>
 ): MutableMap<Stage, DrawnStage> {
@@ -215,7 +207,7 @@ private fun matchRuntime(
                 if (nextStage != null) nextStages[scroll] = nextStage
             }
 
-    // This function removes the card stages from a runtime group and subtract their fixed show/hide runtime from the
+    // This function removes the card stages from a runtime group and subtracts their fixed runtime from the
     // runtime group's desired runtime. The function then sorts the group into one of two sets: those whose runtime will
     // shrink, and those whose runtime will expand. This is required to fulfill a later assumption. Groups whose runtime
     // is already attained are discarded.
@@ -226,7 +218,7 @@ private fun matchRuntime(
         var desiredScrollFrames = frames
         for (stage in stages)
             when (stage.style.behavior) {
-                CARD -> desiredScrollFrames -= getCardFrames(pageTopStages, pageBotStages, stage)
+                CARD -> desiredScrollFrames -= stage.cardRuntimeFrames
                 SCROLL -> scrolls.add(stage)
             }
         if (scrolls.isEmpty())
@@ -256,7 +248,7 @@ private fun matchRuntime(
         // desired global runtime to obtain the desired runtime of the new group.
         globalGroupFrames = globalDesiredFrames.value -
                 runtimeGroups.sumOf(RuntimeGroup::runtimeFrames) -
-                pages.dropLast(1).sumOf { it.stages.last().style.afterwardSlugFrames }
+                pages.subList(0, pages.size - 1).sumOf(Page::gapAfterFrames)
         globalGroup = addGroup(remStages, globalGroupFrames)
     }
 
@@ -467,8 +459,6 @@ private fun drawPage(
     global: Global,
     drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
-    pageTopStages: Set<Stage>,
-    pageBotStages: Set<Stage>,
     page: Page,
     pageImageHeight: Y
 ): DeferredImage {
@@ -508,7 +498,7 @@ private fun drawPage(
                 pageImage.drawMeltedCardArrowGuide(resolution, cardTopY)
             if (stageIdx != page.stages.lastIndex)
                 pageImage.drawMeltedCardArrowGuide(resolution, cardBotY)
-            drawFrames(getCardFrames(pageTopStages, pageBotStages, stage), y = cardTopY + framesMargin)
+            drawFrames(stage.cardRuntimeFrames, y = cardTopY + framesMargin)
         } else if (stageLayout.info is DrawnStageInfo.Scroll) {
             val y = when (val prevStageInfo = page.stages.getOrNull(stageIdx - 1)?.let(stageLayouts::getValue)?.info) {
                 is DrawnStageInfo.Card -> prevStageInfo.middleY + resolution.heightPx / 2.0 + framesMargin
@@ -534,21 +524,6 @@ private fun DeferredImage.drawMeltedCardArrowGuide(resolution: Resolution, y: Y)
         closePath()
     }
     drawShape(STAGE_GUIDE_COLOR, triangle, resolution.widthPx / 2.0, y, fill = true, layer = GUIDES)
-}
-
-
-private fun getCardFrames(
-    pageTopStages: Set<Stage>,
-    pageBotStages: Set<Stage>,
-    stage: Stage
-): Int {
-    val style = stage.style
-    var frames = style.cardDurationFrames
-    if (stage in pageTopStages)
-        frames += style.cardFadeInFrames
-    if (stage in pageBotStages)
-        frames += style.cardFadeOutFrames
-    return frames
 }
 
 

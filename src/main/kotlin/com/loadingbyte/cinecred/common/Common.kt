@@ -36,7 +36,7 @@ val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 val CLEANER: Cleaner = Cleaner.create()
 
 
-enum class Severity { INFO, WARN, ERROR }
+enum class Severity { INFO, WARN, MIGRATE, ERROR }
 
 data class Resolution(val widthPx: Int, val heightPx: Int)
 

@@ -63,16 +63,19 @@ class DeferredVideo private constructor(
 
     /** Note that [numFrames] can be negative. */
     fun playBlank(numFrames: Int) {
+        if (numFrames == 0) return
         flows.add(Flow.Blank(numFrames))
         this.numFrames = -1
     }
 
     fun playStatic(image: DeferredImage, numFrames: Int, shift: Double, alpha: Double) {
+        if (numFrames <= 0) return
         playPhase(image, Phase.Static(numFrames, shift, alpha))
         this.numFrames = -1
     }
 
     fun playFade(image: DeferredImage, numFrames: Int, shift: Double, startAlpha: Double, stopAlpha: Double) {
+        if (numFrames <= 0) return
         playPhase(image, Phase.Fade(numFrames, shift, startAlpha, stopAlpha))
         this.numFrames = -1
     }
@@ -81,6 +84,7 @@ class DeferredVideo private constructor(
         image: DeferredImage, numFrames: Int, speed: Double, startShift: Double, stopShift: Double,
         initialAdvance: Double, alpha: Double
     ) {
+        if (numFrames <= 0) return
         val newSection = Phase.Scroll.Section(numFrames, speed, startShift, stopShift, initialAdvance)
         val curFlow = flows.lastOrNull() as? Flow.DefImg
         if (image == curFlow?.image)

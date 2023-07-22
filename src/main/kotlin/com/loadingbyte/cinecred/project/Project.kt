@@ -84,12 +84,16 @@ data class Global(
 
 data class PageStyle(
     override val name: String,
+    /** Only retained for backwards compatibility. */
     val afterwardSlugFrames: Int,
     val behavior: PageBehavior,
+    /** Only retained for backwards compatibility. */
     val cardDurationFrames: Int,
     val cardFadeInFrames: Int,
     val cardFadeOutFrames: Int,
+    /** Only retained for backwards compatibility. */
     val scrollMeltWithPrev: Boolean,
+    /** Only retained for backwards compatibility. */
     val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Double
 ) : ListedStyle
@@ -285,12 +289,14 @@ data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 
 class Page(
-    val stages: PersistentList<Stage>
+    val stages: PersistentList<Stage>,
+    val gapAfterFrames: Int
 )
 
 
 class Stage(
     val style: PageStyle,
+    val cardRuntimeFrames: Int,
     val compounds: PersistentList<Compound>,
     val vGapAfterPx: Double
 )

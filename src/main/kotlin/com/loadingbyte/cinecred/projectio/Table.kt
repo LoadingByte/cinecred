@@ -1,10 +1,11 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.project.Style
+import com.loadingbyte.cinecred.project.StyleSetting
 import java.util.*
 
 
@@ -13,13 +14,20 @@ data class ParserMsg(
     val colHeader: String?,
     val cellValue: String?,
     val severity: Severity,
-    val msg: String
+    val msg: String,
+    val migrationDataSource: MigrationDataSource<*>? = null
+)
+
+
+data class MigrationDataSource<S : Style>(
+    val style: S,
+    val setting: StyleSetting<S, *>
 )
 
 
 class Table(
     spreadsheet: Spreadsheet,
-    l10nPrefix: String,
+    private val l10nPrefix: String,
     l10nColNames: List<String>,
     legacyColNames: Map<String, List<String>>
 ) {
@@ -75,14 +83,13 @@ class Table(
                     val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
                     if (col != -1) {
                         colMap[l10nColName] = col
-                        val msg = l10n("projectIO.table.legacyColumnName", colName)
-                        log.add(ParserMsg(headerRecordNo, legacyColName, null, WARN, msg))
+                        val msg = l10n("projectIO.table.migration.renameColumn", colName)
+                        log.add(ParserMsg(headerRecordNo, legacyColName, null, MIGRATE, msg))
                         continue@outer
                     }
                 }
                 // The column is missing. Emit a warning.
-                val msg = l10n("projectIO.table.missingExpectedColumn")
-                log.add(ParserMsg(headerRecordNo, colName, null, WARN, msg))
+                log.add(ParserMsg(headerRecordNo, colName, null, MIGRATE, l10n("projectIO.table.migration.addColumn")))
             }
 
             // 2. Emit a warning for each unexpected column name.
@@ -92,9 +99,14 @@ class Table(
         }
     }
 
-    fun log(row: Int?, l10nColName: String?, severity: Severity, msg: String) {
+    fun log(row: Int?, l10nColName: String?, severity: Severity, msg: String, mds: MigrationDataSource<*>? = null) {
+        val colName = l10nColName?.let { getColHeader(it) ?: ("@" + l10n(l10nPrefix + l10nColName)) }
         val cellValue = if (row != null && l10nColName != null) getString(row, l10nColName) else null
-        log.add(ParserMsg(row?.let(::getRecordNo), l10nColName?.let(::getColHeader), cellValue, severity, msg))
+        log.add(ParserMsg(row?.let(::getRecordNo), colName, cellValue, severity, msg, mds))
+    }
+
+    fun logMigrationPut(row: Int?, l10nColName: String?, value: String, migrationDataSource: MigrationDataSource<*>) {
+        log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", value), migrationDataSource)
     }
 
     private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo

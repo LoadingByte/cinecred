@@ -118,7 +118,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         val creditsFile = projectDir.resolve("Credits.csv")
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
             size = Dimension(800, 500)
-            colWidths = intArrayOf(160, 160, 50, 110, 110, 80, 80, 80, 110)
+            colWidths = intArrayOf(160, 160, 50, 80, 110, 50, 80, 80, 80, 80)
         }
         dt.add(spreadsheetEditorWin)
         dt.center(spreadsheetEditorWin)

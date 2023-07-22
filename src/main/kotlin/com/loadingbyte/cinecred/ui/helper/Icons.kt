@@ -121,6 +121,7 @@ val Severity.icon
     get() = when (this) {
         Severity.INFO -> INFO_ICON
         Severity.WARN -> WARN_ICON
+        Severity.MIGRATE -> UPDATE_ICON
         Severity.ERROR -> ERROR_ICON
     }
 

@@ -5,6 +5,20 @@ Cinecred Changelog
 1.6.0-SNAPSHOT
 --------------
 
+### Additions
+
+- The runtime of cards is now set via the spreadsheet's page runtime column.
+- The temporal gap between pages and whether to melt pages together is now
+  controlled via a new page gap column in the spreadsheet.
+
+### Compatibility Notes
+
+- Cards can no longer be members of runtime groups.
+- The page slug, card duration, and page melting settings have been removed from
+  page styles, but this information is still retained so that the credits are
+  rendered exactly as in the previous version; warning messages tell the user
+  what to type into which cells in the spreadsheet to complete the migration.
+
 
 1.5.1
 -----

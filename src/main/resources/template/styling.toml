@@ -10,7 +10,6 @@ behavior = "CARD"
 [[pageStyle]]
 name = "{project.PageBehavior.SCROLL}"
 behavior = "SCROLL"
-scrollMeltWithNext = true
 scrollPxPerFrame = <3>
 
 [[contentStyle]]

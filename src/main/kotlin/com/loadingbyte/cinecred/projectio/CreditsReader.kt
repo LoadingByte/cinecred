@@ -13,6 +13,7 @@ import kotlinx.collections.immutable.toPersistentList
 import java.text.DecimalFormat
 import java.util.*
 import kotlin.io.path.name
+import kotlin.math.abs
 
 
 fun readCredits(
@@ -24,7 +25,8 @@ fun readCredits(
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
-            "head", "body", "tail", "vGap", "contentStyle", "breakMatch", "spinePos", "pageStyle", "pageRuntime"
+            "head", "body", "tail", "vGap", "contentStyle", "breakMatch", "spinePos",
+            "pageStyle", "pageRuntime", "pageGap"
         ), legacyColNames = mapOf(
             // 1.2.0 -> 1.3.0: The vertical gap is no longer abbreviated.
             "vGap" to listOf("Vert. Gap", "Senkr. Lücke"),
@@ -125,12 +127,14 @@ private class CreditsReader(
 
     // Current page
     val pageStages = mutableListOf<Stage>()
+    var pageGapAfterFrames: Int? = null
 
     // Current stage
     var stageStyle: PageStyle? = null
     val stageCompounds = mutableListOf<Compound>()
     var stageRuntimeFrames: Int? = null
     var stageRuntimeGroupName: String? = null
+    var stageMeltWithNext = false
 
     // Current compound
     var compoundVAnchor = VAnchor.MIDDLE
@@ -158,7 +162,8 @@ private class CreditsReader(
     // Keep track where each stage has been declared, for use in an error message.
     var nextStageDeclaredRow = 0
     var stageDeclaredRow = 0
-    val stageDeclaredRows = mutableMapOf<Stage, Int>()
+    // Keep track where the melting of stages has been declared, for use in an error message.
+    var stageMeltDeclaredRow = 0
     // Keep track where the current head and tail have been declared. This is used by an error message.
     var blockHeadDeclaredRow = 0
     var blockTailDeclaredRow = 0
@@ -179,30 +184,69 @@ private class CreditsReader(
                 else
                     pageStages.removeAt(idx)
             }
-            val page = Page(pageStages.toPersistentList())
+            val gapAfterFrames = pageGapAfterFrames ?: if (stageStyle == null) 0 else {
+                val style = pageStages.last().style
+                val styleSlug = style.afterwardSlugFrames
+                if (styleSlug == PRESET_PAGE_STYLE.afterwardSlugFrames) 0 else {
+                    val g = styling.global
+                    val tc = (if (styleSlug < 0) "-" else "") + formatTimecode(g.fps, g.timecodeFormat, abs(styleSlug))
+                    val mds = MigrationDataSource(style, PageStyle::afterwardSlugFrames.st())
+                    table.logMigrationPut(row - 1, "pageGap", tc, mds)
+                    styleSlug
+                }
+            }
+            val page = Page(pageStages.toPersistentList(), gapAfterFrames)
             pages.add(page)
         }
         pageStages.clear()
+        pageGapAfterFrames = null
     }
 
-    fun concludeStage(vGapAfter: Double) {
+    fun concludeStage(vGapAfter: Double, isLastOnPage: Boolean) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageStyle?.behavior == PageBehavior.SCROLL || stageCompounds.isNotEmpty()) {
-            val stage = Stage(stageStyle!!, stageCompounds.toPersistentList(), vGapAfter)
-            pageStages.add(stage)
-            // Remember where the stage has started.
-            stageDeclaredRows[stage] = stageDeclaredRow
-
-            // If directed, add the new stage to a runtime group.
-            val stageRtFrames = stageRuntimeFrames
-            val stageRtGroupName = stageRuntimeGroupName
-            if (stageRtGroupName != null && stageRtGroupName in namedRuntimeGroups) {
-                val oldGroup = namedRuntimeGroups.getValue(stageRtGroupName)
-                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames)
-            } else if (stageRtGroupName != null && stageRtFrames != null)
-                namedRuntimeGroups[stageRtGroupName] = RuntimeGroup(persistentListOf(stage), stageRtFrames)
-            else if (stageRtFrames != null)
-                unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), stageRtFrames))
+            val stageStyle = this.stageStyle!!
+            when (stageStyle.behavior) {
+                PageBehavior.CARD -> {
+                    val cardRuntimeFrames = stageRuntimeFrames ?: when {
+                        stageStyle.cardDurationFrames == PRESET_PAGE_STYLE.cardDurationFrames -> {
+                            if (table.isEmpty(stageDeclaredRow, "pageRuntime")) {
+                                val m = l10n("projectIO.credits.cardNeedsRuntime", timecodeFormatLabel, sampleTimecode)
+                                table.log(stageDeclaredRow, "pageRuntime", WARN, m)
+                            }
+                            96
+                        }
+                        else -> {
+                            val f = stageStyle.cardDurationFrames +
+                                    (if (pageStages.isEmpty()) stageStyle.cardFadeInFrames else 0) +
+                                    (if (isLastOnPage) stageStyle.cardFadeOutFrames else 0)
+                            val g = styling.global
+                            val tc = formatTimecode(g.fps, g.timecodeFormat, f)
+                            val mds = MigrationDataSource(stageStyle, PageStyle::cardDurationFrames.st())
+                            table.logMigrationPut(stageDeclaredRow, "pageRuntime", tc, mds)
+                            f
+                        }
+                    }
+                    pageStages += Stage(stageStyle, cardRuntimeFrames, stageCompounds.toPersistentList(), vGapAfter)
+                }
+                PageBehavior.SCROLL -> {
+                    val stage = Stage(stageStyle, 0, stageCompounds.toPersistentList(), vGapAfter)
+                    pageStages += stage
+                    // If directed, add the new stage to a runtime group.
+                    val groupName = stageRuntimeGroupName
+                    if (groupName != null && groupName in namedRuntimeGroups) {
+                        val oldGroup = namedRuntimeGroups.getValue(groupName)
+                        namedRuntimeGroups[groupName] = RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames)
+                    } else {
+                        val groupFrames = stageRuntimeFrames
+                        if (groupFrames != null)
+                            if (groupName != null)
+                                namedRuntimeGroups[groupName] = RuntimeGroup(persistentListOf(stage), groupFrames)
+                            else
+                                unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), groupFrames))
+                    }
+                }
+            }
         }
         stageStyle = nextStageStyle
         stageRuntimeFrames = nextStageRuntimeFrames
@@ -292,20 +336,15 @@ private class CreditsReader(
         concludeBlock(0.0)
         concludeSpine()
         concludeCompound(0.0)
-        concludeStage(0.0)
+        concludeStage(0.0, isLastOnPage = true)
         concludePage()
 
         // If there is not a single page, that's an error.
         if (pages.isEmpty())
             table.log(null, null, ERROR, l10n("projectIO.credits.noPages"))
 
-        // Collect the runtime groups. Warn about those which only contain card stages.
+        // Collect the runtime groups.
         val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
-        for (runtimeGroup in runtimeGroups)
-            if (runtimeGroup.stages.all { stage -> stage.style.behavior == PageBehavior.CARD }) {
-                val declaredRow = stageDeclaredRows.getValue(runtimeGroup.stages.first())
-                table.log(declaredRow, "pageRuntime", WARN, l10n("projectIO.credits.pureCardRuntimeGroup"))
-            }
 
         return Pair(pages, runtimeGroups)
     }
@@ -346,11 +385,13 @@ private class CreditsReader(
             nextSpineVOffsetPx = 0.0
             isStageConclusionMarked = true
         }
+
         table.getString(row, "pageRuntime")?.let { str ->
-            if (table.isEmpty(row, "pageStyle"))
+            var runtimeGroupName: String? = null
+            if (nextStageDeclaredRow != row)
                 table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.pageRuntimeInIntermediateRow"))
             else if (str in namedRuntimeGroups || str == stageRuntimeGroupName)
-                nextStageRuntimeGroupName = str
+                runtimeGroupName = str
             else {
                 val fps = styling.global.fps
                 val timecodeFormat = styling.global.timecodeFormat
@@ -358,23 +399,49 @@ private class CreditsReader(
                     if (' ' in str) {
                         val parts = str.split(' ')
                         val timecode = parts.last()
-                        val runtimeGroupName = parts.subList(0, parts.size - 1).joinToString(" ")
+                        runtimeGroupName = parts.subList(0, parts.size - 1).joinToString(" ")
                         if (runtimeGroupName in namedRuntimeGroups || runtimeGroupName == stageRuntimeGroupName) {
-                            nextStageRuntimeGroupName = runtimeGroupName
                             val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
                             table.log(row, "pageRuntime", WARN, msg)
-                        } else {
+                        } else
                             nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
-                            nextStageRuntimeGroupName = runtimeGroupName
-                        }
                     } else
                         nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
                 } catch (_: IllegalArgumentException) {
-                    val f = styling.global.timecodeFormat.label
-                    val sampleTc = formatTimecode(fps, timecodeFormat, 7127)
-                    table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.illFormattedPageRuntime", f, sampleTc))
+                    val msg = l10n("projectIO.credits.illFormattedPageRuntime", timecodeFormatLabel, sampleTimecode)
+                    table.log(row, "pageRuntime", WARN, msg)
                 }
             }
+            if (runtimeGroupName != null)
+                if (nextStageStyle!!.behavior == PageBehavior.CARD)
+                    table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.cardInRuntimeGroup"))
+                else
+                    nextStageRuntimeGroupName = runtimeGroupName
+        }
+
+        table.getString(row, "pageGap")?.let { str ->
+            if (!table.isEmpty(row, "pageStyle"))
+                table.log(row, "pageGap", WARN, l10n("projectIO.credits.pageGapInNewPageRow"))
+            else if (pageGapAfterFrames != null || stageMeltWithNext)
+                table.log(row, "pageGap", WARN, l10n("projectIO.credits.pageGapAlreadySet"))
+            else if (str in MELT_KW) {
+                stageMeltWithNext = true
+                stageMeltDeclaredRow = row
+            } else
+                try {
+                    val fps = styling.global.fps
+                    val timecodeFormat = styling.global.timecodeFormat
+                    val c0 = str[0]
+                    val tcStr = if (c0 == '+' || c0 == '-' || c0 == '\u2212') str.substring(1) else str
+                    val n = parseTimecode(fps, timecodeFormat, tcStr)
+                    pageGapAfterFrames = if (c0 == '-' || c0 == '\u2212') -n else n
+                } catch (_: IllegalArgumentException) {
+                    val msg = l10n(
+                        "projectIO.credits.illFormattedPageGap",
+                        timecodeFormatLabel, sampleTimecode, "-$sampleTimecode", l10n(MELT_KW.key)
+                    )
+                    table.log(row, "pageGap", WARN, msg)
+                }
         }
 
         // If the spine pos cell is non-empty, conclude the previous spine (if there was any) and start a new one.
@@ -537,13 +604,32 @@ private class CreditsReader(
                 concludeBlock(0.0)
                 concludeSpine()
                 concludeCompound(0.0)
-                concludeStage(vGap)
-                // If we are not melting the previous stage with the future one, also conclude the current page.
-                val prevStageStyle = pageStages.lastOrNull()?.style
-                val currStageStyle = stageStyle!!
-                if (!(prevStageStyle?.behavior == PageBehavior.SCROLL && prevStageStyle.scrollMeltWithNext) &&
-                    !(currStageStyle.behavior == PageBehavior.SCROLL && currStageStyle.scrollMeltWithPrev)
-                )
+                // Determine whether the stage that we'll conclude in a moment is the last one on its page.
+                val currStyle = stageStyle
+                val nextStyle = nextStageStyle!!
+                val isLastOnPage = when {
+                    stageMeltWithNext ->
+                        if (currStyle?.behavior == PageBehavior.CARD && nextStyle.behavior == PageBehavior.CARD) {
+                            table.log(stageMeltDeclaredRow, "pageGap", WARN, l10n("projectIO.credits.cannotMeltCards"))
+                            true
+                        } else false
+                    // If no page gap has been declared and the two adjacent page styles still have the legacy melting
+                    // flag set, we also want to melt the stages.
+                    pageGapAfterFrames == null -> {
+                        val c = currStyle?.behavior == PageBehavior.SCROLL && currStyle.scrollMeltWithNext
+                        val n = nextStyle.behavior == PageBehavior.SCROLL && nextStyle.scrollMeltWithPrev
+                        if (c || n) {
+                            val msd = if (c) MigrationDataSource(currStyle!!, PageStyle::scrollMeltWithNext.st())
+                            else MigrationDataSource(nextStyle, PageStyle::scrollMeltWithPrev.st())
+                            table.logMigrationPut(row - 1, "pageGap", l10n(MELT_KW.key), msd)
+                            false
+                        } else true
+                    }
+                    else -> true
+                }
+                stageMeltWithNext = false
+                concludeStage(vGap, isLastOnPage)
+                if (isLastOnPage)
                     concludePage()
             } else if (isCompoundConclusionMarked) {
                 concludeBlock(0.0)
@@ -866,9 +952,13 @@ private class CreditsReader(
        ********** MISCELLANEOUS **********
        *********************************** */
 
+    private val timecodeFormatLabel get() = styling.global.timecodeFormat.label
+    private val sampleTimecode get() = formatTimecode(styling.global.fps, styling.global.timecodeFormat, 7127)
+
 
     companion object {
 
+        val MELT_KW = Keyword("projectIO.credits.table.melt")
         val BELOW_KW = Keyword("projectIO.credits.table.below")
         val ABOVE_KW = Keyword("projectIO.credits.table.above")
         val HOOK_KW = Keyword("projectIO.credits.table.hook")

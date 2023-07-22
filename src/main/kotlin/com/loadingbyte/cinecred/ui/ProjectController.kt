@@ -163,6 +163,12 @@ class ProjectController(
             if (log.any { it.severity == ERROR })
                 return@submit doneProcessing(input, log, null)
 
+            // If some page styles contains legacy settings which have not been used to produce a migration message,
+            // clear them and put the cleared styling into the history in place of the legacy styling.
+            clearLegacyPageStyleSettings(styling, log)?.let {
+                SwingUtilities.invokeLater { stylingHistory.replaceInHistory(styling, it) }
+            }
+
             val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
             val drawnPages = drawPages(project)
 
@@ -176,6 +182,31 @@ class ProjectController(
             val drawnProject = DrawnProject(project, drawnPages.toPersistentList(), video)
             doneProcessing(input, log, drawnProject)
         }
+    }
+
+    private fun clearLegacyPageStyleSettings(styling: Styling, log: List<ParserMsg>): Styling? {
+        fun <SUBJ : Any> clearSetting(style: PageStyle, setting: DirectStyleSetting<PageStyle, SUBJ>): PageStyle =
+            style.copy(setting.notarize(setting.get(PRESET_PAGE_STYLE)))
+
+        val legacySettings = arrayOf(
+            PageStyle::afterwardSlugFrames.st(), PageStyle::cardDurationFrames.st(),
+            PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st()
+        )
+        val usedLegacySettings = log.mapNotNullTo(HashSet(), ParserMsg::migrationDataSource)
+
+        var clearedStyles: MutableList<PageStyle>? = null
+        for ((idx, style) in styling.pageStyles.withIndex()) {
+            var clearedStyle = style
+            for (st in legacySettings)
+                if (st.get(style) != st.get(PRESET_PAGE_STYLE) && MigrationDataSource(style, st) !in usedLegacySettings)
+                    clearedStyle = clearSetting(clearedStyle, st)
+            if (clearedStyle !== style) {
+                if (clearedStyles == null)
+                    clearedStyles = styling.pageStyles.toMutableList()
+                clearedStyles[idx] = clearedStyle
+            }
+        }
+        return clearedStyles?.let { styling.copy(pageStyles = it.toPersistentList()) }
     }
 
     private fun doneProcessing(input: Input, processingLog: List<ParserMsg>?, drawnProject: DrawnProject?) {
@@ -275,7 +306,8 @@ class ProjectController(
             stylingDialog.panel.setStyling(saved)
         }
 
-        fun editedAndRedraw(new: Styling, editedId: Any?) {
+        /** Returns false when the new styling is semantically equal to the current one. */
+        fun editedAndRedraw(new: Styling, editedId: Any?): Boolean {
             if (!semanticallyEqual(new, current)) {
                 // If the user edits the styling after having undoed some steps, those steps are now dropped.
                 while (history.lastIndex != currentIdx)
@@ -305,24 +337,29 @@ class ProjectController(
                     history.add(new)
                     currentIdx++
                 }
-                onStylingChange()
-            }
+                process(currentInput.updateAndGet { it.copy(styling = new) })
+                updateHistoryIndicators()
+                return true
+            } else
+                return false
         }
 
         fun undoAndRedraw() {
             if (currentIdx != 0) {
                 currentIdx--
                 lastEditedId = null
-                onStylingChange()
+                process(currentInput.updateAndGet { it.copy(styling = current) })
+                updateHistoryIndicators()
                 stylingDialog.panel.setStyling(current)
             }
         }
 
         fun redoAndRedraw() {
-            if (currentIdx != history.lastIndex) {
+            if (currentIdx != history.lastIndex) {/* this method is about replacing a specific object */
                 currentIdx++
                 lastEditedId = null
-                onStylingChange()
+                process(currentInput.updateAndGet { it.copy(styling = current) })
+                updateHistoryIndicators()
                 stylingDialog.panel.setStyling(current)
             }
         }
@@ -332,9 +369,21 @@ class ProjectController(
         }
 
         fun loadAndRedraw(new: Styling) {
-            if (!semanticallyEqual(new, current)) {
-                editedAndRedraw(new, null)
+            if (editedAndRedraw(new, null))
                 stylingDialog.panel.setStyling(new)
+        }
+
+        /** Replaces the exact object that is [old] with [new], and also refreshes the UI if necessary. */
+        fun replaceInHistory(old: Styling, new: Styling) {
+            // Look from the back of the history because that's where we're likely replacing things.
+            val idx = history.indexOfLast { it === old /* === because we replace a specific object */ }
+            if (idx != -1) {
+                history[idx] = new
+                if (idx == currentIdx) {
+                    currentInput.updateAndGet { it.copy(styling = new) }
+                    updateHistoryIndicators()
+                    stylingDialog.panel.setStyling(new)
+                }
             }
         }
 
@@ -352,13 +401,12 @@ class ProjectController(
             projectFrame.panel.onStylingSave()
         }
 
-        private fun onStylingChange() {
+        private fun updateHistoryIndicators() {
             projectFrame.panel.onStylingChange(
                 isUnsaved = !semanticallyEqual(current, saved),
                 isUndoable = currentIdx != 0,
                 isRedoable = currentIdx != history.lastIndex
             )
-            process(currentInput.updateAndGet { it.copy(styling = current) })
         }
 
         private fun semanticallyEqual(a: Styling, b: Styling) =

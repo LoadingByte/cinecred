@@ -72,10 +72,10 @@ private fun tryCopyCreditsTemplate(
     val spreadsheet = CsvFormat.read(csv.joinToString("\n")).map { fillIn(it, template) }
     val look = SpreadsheetLook(
         rowLooks = mapOf(
-            0 to SpreadsheetLook.RowLook(height = 120, fontSize = 8, italic = true, wrap = true),
+            0 to SpreadsheetLook.RowLook(height = 130, fontSize = 8, italic = true, wrap = true),
             1 to SpreadsheetLook.RowLook(bold = true, borderBottom = true)
         ),
-        colWidths = listOf(48, 48, 32, 16, 32, 16, 48, 32, 32)
+        colWidths = listOf(45, 45, 15, 15, 25, 15, 40, 20, 25, 25)
     )
     when {
         creditsFormat != null -> {

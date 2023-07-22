@@ -31,6 +31,24 @@ private val GLOBAL_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Global>> = empty
 
 
 private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> = listOf(
+    // The next four specs are for phasing out the deprecated page style settings.
+    StyleEffectivitySpec(
+        PageStyle::afterwardSlugFrames.st(),
+        isTotallyIneffective = { _, _, style -> style.afterwardSlugFrames == PRESET_PAGE_STYLE.afterwardSlugFrames }
+    ),
+    StyleEffectivitySpec(
+        PageStyle::cardDurationFrames.st(),
+        isTotallyIneffective = { _, _, style -> style.cardDurationFrames == PRESET_PAGE_STYLE.cardDurationFrames }
+    ),
+    StyleEffectivitySpec(
+        PageStyle::scrollMeltWithPrev.st(),
+        isTotallyIneffective = { _, _, style -> !style.scrollMeltWithPrev }
+    ),
+    StyleEffectivitySpec(
+        PageStyle::scrollMeltWithNext.st(),
+        isTotallyIneffective = { _, _, style -> !style.scrollMeltWithNext }
+    ),
+    // From here on, the regular specs start.
     StyleEffectivitySpec(
         PageStyle::cardDurationFrames.st(), PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
         isTotallyIneffective = { _, _, style -> style.behavior != CARD }

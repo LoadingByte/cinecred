@@ -16,11 +16,28 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
             when (val stageInfo = drawnPage.stageInfo[stageIdx]) {
                 is DrawnStageInfo.Card -> {
                     val shift = stageInfo.middleY.resolve() - video.resolution.heightPx / 2.0
-                    if (stageIdx == 0)
-                        video.playFade(drawnPage.defImage, stage.style.cardFadeInFrames, shift, 0.0, 1.0)
-                    video.playStatic(drawnPage.defImage, stage.style.cardDurationFrames, shift, 1.0)
+                    val firstStage = stageIdx == 0
+                    val lastStage = stageIdx == page.stages.lastIndex
+                    var opaqueFrames = stage.cardRuntimeFrames
+                    var fadeInFrames = stage.style.cardFadeInFrames
+                    var fadeOutFrames = stage.style.cardFadeOutFrames
+                    if (firstStage) opaqueFrames -= fadeInFrames
+                    if (lastStage) opaqueFrames -= fadeOutFrames
+                    if (opaqueFrames < 0) when {
+                        firstStage && lastStage -> {
+                            val sub = -opaqueFrames
+                            val half = sub / 2
+                            fadeInFrames -= half
+                            fadeOutFrames -= sub - half
+                        }
+                        firstStage -> fadeInFrames += opaqueFrames
+                        lastStage -> fadeOutFrames += opaqueFrames
+                    }
+                    if (firstStage)
+                        video.playFade(drawnPage.defImage, fadeInFrames, shift, 0.0, 1.0)
+                    video.playStatic(drawnPage.defImage, opaqueFrames, shift, 1.0)
                     if (stageIdx == page.stages.lastIndex)
-                        video.playFade(drawnPage.defImage, stage.style.cardFadeOutFrames, shift, 1.0, 0.0)
+                        video.playFade(drawnPage.defImage, fadeOutFrames, shift, 1.0, 0.0)
                 }
                 is DrawnStageInfo.Scroll ->
                     video.playScroll(
@@ -31,7 +48,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                     )
             }
         if (pageIdx != project.pages.lastIndex)
-            video.playBlank(page.stages.last().style.afterwardSlugFrames)
+            video.playBlank(page.gapAfterFrames)
     }
 
     return video

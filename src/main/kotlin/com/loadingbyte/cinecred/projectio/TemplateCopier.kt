@@ -62,9 +62,6 @@ private fun tryCopyCreditsTemplate(
     creditsAccount: Account?,
     creditsFilename: String?
 ) {
-    if (ProjectIntake.locateCreditsFile(destDir).first != null)
-        return
-
     var csv = useResourceStream("/template/credits.csv") { it.bufferedReader().readLines() }
     // If desired, cut off the sample credits and only keep the table header.
     if (!template.sample)
@@ -79,17 +76,23 @@ private fun tryCopyCreditsTemplate(
     )
     when {
         creditsFormat != null -> {
+            val destFile = destDir.resolve("Credits.${creditsFormat.fileExt}")
+            if (!destFile.notExists())
+                return
             destDir.createDirectoriesSafely()
-            creditsFormat.write(destDir.resolve("Credits.${creditsFormat.fileExt}"), spreadsheet, "Credits", look)
+            creditsFormat.write(destFile, spreadsheet, "Credits", look)
         }
         creditsAccount != null && creditsFilename != null -> {
+            val destFile = destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT")
+            if (!destFile.notExists())
+                return
             val link = creditsAccount.upload(creditsFilename, "Credits", spreadsheet, look)
             // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
             // actually not interrupted. So instead, we detect interruption here and stop project initialization.
             if (Thread.interrupted())
                 throw InterruptedException()
             destDir.createDirectoriesSafely()
-            writeServiceLink(destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT"), link)
+            writeServiceLink(destFile, link)
         }
         else -> throw IllegalArgumentException()
     }

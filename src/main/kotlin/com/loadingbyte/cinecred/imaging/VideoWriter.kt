@@ -63,8 +63,7 @@ class VideoWriter(
         // Allocate the format context.
         val oc = AVFormatContext(null)
         this.oc = oc
-        val encodedFilename = ffmpegUTF8(fileOrPattern.pathString)
-        avformat_alloc_output_context2(oc, null, null, encodedFilename)
+        avformat_alloc_output_context2(oc, null, null, fileOrPattern.pathString)
             .ffmpegThrowIfErrnum("Could not deduce output muxer from file extension")
         // Will be freed by avformat_free_context().
         oc.metadata(AVDictionary(null).also { metaDict ->
@@ -104,7 +103,7 @@ class VideoWriter(
             // Open the output file, if needed.
             if (oc.oformat().flags() and AVFMT_NOFILE == 0) {
                 val pb = AVIOContext(null)
-                avio_open2(pb, encodedFilename, AVIO_FLAG_WRITE, null, muxerOptionsDict)
+                avio_open2(pb, fileOrPattern.pathString, AVIO_FLAG_WRITE, null, muxerOptionsDict)
                     .ffmpegThrowIfErrnum("Could not open output file '${fileOrPattern.name}'")
                 oc.pb(pb)
             }

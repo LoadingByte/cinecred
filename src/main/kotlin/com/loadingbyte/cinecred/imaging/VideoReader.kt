@@ -76,7 +76,7 @@ class VideoReader(
         val ic = AVFormatContext(null)
         this.ic = ic
         withOptionsDict(formatOptions) { formatOptionsDict ->
-            avformat_open_input(ic, ffmpegUTF8(fileOrPattern.pathString), null, formatOptionsDict)
+            avformat_open_input(ic, fileOrPattern.pathString, null, formatOptionsDict)
                 .ffmpegThrowIfErrnum("Could not open input file '$filename'")
         }
 

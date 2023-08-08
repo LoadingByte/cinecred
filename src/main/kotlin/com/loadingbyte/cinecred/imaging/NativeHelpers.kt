@@ -47,15 +47,6 @@ inline fun withOptionsDict(options: Map<String, String>, block: (AVDictionary) -
 }
 
 
-/**
- * When we let JavaCPP convert a string to a byte array by directly passing it to an FFmpeg function, it doesn't use
- * UTF-8 encoding on Windows. However, this encoding seems to be assumed by FFmpeg, so we get crashes when non-ASCII
- * characters are used. Hence, we force UTF-8 encoding here.
- */
-fun ffmpegUTF8(string: String): BytePointer =
-    BytePointer(string, Charsets.UTF_8)
-
-
 inline fun setupSafely(setup: () -> Unit, release: () -> Unit) {
     try {
         setup()

@@ -27,7 +27,6 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import java.awt.*
-import java.lang.management.ManagementFactory
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
@@ -225,9 +224,6 @@ OS: ${System.getProperty("os.name")} ${System.getProperty("os.arch")} ${System.g
 Memory: Used ${(totalMem - freeMem) / mb} MB, Reserved ${totalMem / mb} MB, Max ${maxMem / mb} MB
 Cores: ${rt.availableProcessors()}
 Locale: ${Locale.getDefault().toLanguageTag()}
-
----- JVM ARGS ----
-${ManagementFactory.getRuntimeMXBean().inputArguments.joinToString("\n")}
 
 ---- LOG ----
 """

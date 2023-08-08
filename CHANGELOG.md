@@ -14,6 +14,7 @@ Cinecred Changelog
 
 - Contacting Google servers no longer fails with an SSL error.
 - ProRes rendering no longer fails when the grounding is made transparent.
+- The crash report window now actually opens when an unexpected error occurs.
 
 ### UI Fixes
 

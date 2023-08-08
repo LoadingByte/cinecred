@@ -5,6 +5,11 @@ Cinecred Changelog
 1.5.1-SNAPSHOT
 --------------
 
+### Additions
+
+- Added a translation to Czech.
+- Added a translation to French.
+
 ### Fixes
 
 - Contacting Google servers no longer fails with an SSL error.

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="fr-FR" Codepage="1252">
+  <String Id="LanguageCode">1036</String>
+  <String Id="ShortcutDlgTitle">{\WixUI_Font_Title}Raccourcis</String>
+  <String Id="ShortcutDlgDescription">Sélectionnez les raccourcis à créer.</String>
+  <String Id="ShortcutDlgDesktop">Créer un raccourci sur le bureau</String>
+  <String Id="ShortcutDlgStartMenu">Créer un raccourci dans le menu Démarrer</String>
+</WixLocalization>

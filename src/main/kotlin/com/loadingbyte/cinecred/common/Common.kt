@@ -223,7 +223,13 @@ val CONFIG_DIR: Path = when {
 }
 
 
-val TRANSLATED_LOCALES: List<Locale> = listOf(Locale.ENGLISH, Locale.GERMAN, Locale.SIMPLIFIED_CHINESE)
+val TRANSLATED_LOCALES: List<Locale> = listOf(
+    Locale("en"),
+    Locale("cs"),
+    Locale("de"),
+    Locale("fr"),
+    Locale("zh", "CN")
+)
 val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
 /**

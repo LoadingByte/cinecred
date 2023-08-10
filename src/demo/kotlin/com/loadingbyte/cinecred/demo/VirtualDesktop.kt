@@ -602,7 +602,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
 
     override val title = "${file.name} \u2013 " + l10nDemo("screencast.spreadsheetEditor.title")
 
-    val matrix = CsvFormat.read(file).first.drop(skipRows).map { it.cells.toMutableList() }
+    val matrix = CsvFormat.read(file).first.single().drop(skipRows).map { it.cells.toMutableList() }
     var colWidths = intArrayOf()
 
     private var selectedCell: Point? = null
@@ -680,7 +680,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
     )
 
     fun save() {
-        CsvFormat.write(file, Spreadsheet(matrix), "", SpreadsheetLook(emptyMap(), emptyList()))
+        CsvFormat.write(file, Spreadsheet("", matrix), SpreadsheetLook(emptyMap(), emptyList()))
     }
 
     private fun cellX(colIdx: Int) = INSET_L + colIdx * SEP_THICKNESS + colWidths.sumBetween(0, colIdx)

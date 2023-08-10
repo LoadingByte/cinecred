@@ -66,7 +66,8 @@ private fun tryCopyCreditsTemplate(
     // If desired, cut off the sample credits and only keep the table header.
     if (!template.sample)
         csv = csv.subList(0, 2)
-    val spreadsheet = CsvFormat.read(csv.joinToString("\n")).map { fillIn(it, template) }
+    val spreadsheetName = l10n("project.template.spreadsheetName")
+    val spreadsheet = CsvFormat.read(spreadsheetName, csv.joinToString("\n")).map { fillIn(it, template) }
     val look = SpreadsheetLook(
         rowLooks = mapOf(
             0 to SpreadsheetLook.RowLook(height = 130, fontSize = 8, italic = true, wrap = true),
@@ -80,13 +81,13 @@ private fun tryCopyCreditsTemplate(
             if (!destFile.notExists())
                 return
             destDir.createDirectoriesSafely()
-            creditsFormat.write(destFile, spreadsheet, "Credits", look)
+            creditsFormat.write(destFile, spreadsheet, look)
         }
         creditsAccount != null && creditsFilename != null -> {
             val destFile = destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT")
             if (!destFile.notExists())
                 return
-            val link = creditsAccount.upload(creditsFilename, "Credits", spreadsheet, look)
+            val link = creditsAccount.upload(creditsFilename, spreadsheet, look)
             // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
             // actually not interrupted. So instead, we detect interruption here and stop project initialization.
             if (Thread.interrupted())

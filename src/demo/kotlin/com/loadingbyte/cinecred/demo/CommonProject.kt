@@ -64,7 +64,7 @@ object BundledFontsStylingContext : StylingContext {
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
         tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
-        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first
+        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first.single()
     }
 }
 
@@ -78,7 +78,7 @@ val TEMPLATE_SCROLL_PAGE_FROM_DOP: Page by lazy {
         lines[headerLineNo + 1] = ",,,,Gutter,,,Scroll,\n"
         (dopLineNo - 1 downTo headerLineNo + 2).forEach(lines::removeAt)
         creditsFile.writeLines(lines)
-    }.pages.single()
+    }.credits.single().pages.single()
 }
 
 val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
@@ -93,7 +93,7 @@ val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
         (lawyerLineNo - 2 downTo gafferLineNo + 3).forEach(lines::removeAt)
         (gafferLineNo - 1 downTo headerLineNo + 2).forEach(lines::removeAt)
         creditsFile.writeLines(lines)
-    }.pages.single()
+    }.credits.single().pages.single()
 }
 
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
@@ -101,17 +101,17 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
-        val spreadsheet = CsvFormat.read(creditsFile).first
+        val spreadsheet = CsvFormat.read(creditsFile).first.single()
         val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), BundledFontsStylingContext)
         val pictureLoaders = buildList {
             for (file in projectDir.walkSafely())
                 if (file.isRegularFile())
                     tryReadPictureLoader(file)?.let(::add)
         }
-        val (pages, runtimeGroups, _) = readCredits(spreadsheet, styling, pictureLoaders, emptyList())
+        val credits = readCredits(spreadsheet, styling, pictureLoaders, emptyList()).first
         for (pl in pictureLoaders)
             pl.dispose()
-        Project(styling, BundledFontsStylingContext, pages.toPersistentList(), runtimeGroups.toPersistentList())
+        Project(styling, BundledFontsStylingContext, persistentListOf(credits))
     }
 
 
@@ -137,16 +137,16 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
         styling = styling.copy(global = styling.global.copy(resolution = resolution))
     styling = styling.copy(contentStyles = styling.contentStyles.toPersistentList().addAll(contentStyles.asList()))
 
-    val spreadsheet = CsvFormat.read(this)
+    val spreadsheet = CsvFormat.read("", this)
     val tapes = if ("{{Video rainbow" in this) listOf(RAINBOW_TAPE) else emptyList()
-    val (pages, _, _) = readCredits(spreadsheet, styling, listOf(LOGO_PIC, C_PIC), tapes)
+    val pages = readCredits(spreadsheet, styling, listOf(LOGO_PIC, C_PIC), tapes).first.pages
     return Pair(styling.global, pages.single())
 }
 
 fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> {
     val styling =
         Styling(PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList())
-    val spreadsheet = CsvFormat.read(this)
-    val (pages, _, _) = readCredits(spreadsheet, styling, emptyList(), emptyList())
+    val spreadsheet = CsvFormat.read("", this)
+    val pages = readCredits(spreadsheet, styling, emptyList(), emptyList()).first.pages
     return Pair(styling.global, pages.single())
 }

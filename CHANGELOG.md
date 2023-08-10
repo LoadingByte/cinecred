@@ -7,6 +7,8 @@ Cinecred Changelog
 
 ### Additions
 
+- The credits spreadsheet file may now have multiple sheets, each of which is
+  treated as an isolated credits sequence.
 - The runtime of cards is now set via the spreadsheet's page runtime column.
 - The temporal gap between pages and whether to melt pages together is now
   controlled via a new page gap column in the spreadsheet.

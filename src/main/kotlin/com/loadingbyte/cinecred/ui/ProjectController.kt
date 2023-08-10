@@ -44,7 +44,7 @@ class ProjectController(
     val stylingHistory: StylingHistory
 
     private data class Input(
-        val creditsSpreadsheet: Spreadsheet?,
+        val creditsSpreadsheets: List<Spreadsheet>,
         val ioLog: List<ParserMsg>,
         val stylingCtx: StylingContext?,
         val pictureLoaders: Collection<PictureLoader>?,
@@ -52,7 +52,7 @@ class ProjectController(
         val styling: Styling?
     )
 
-    private val currentInput = AtomicReference(Input(null, emptyList(), null, null, null, null))
+    private val currentInput = AtomicReference(Input(emptyList(), emptyList(), null, null, null, null))
     private val processingJobSlot = JobSlot()
     private var processingLog = emptyList<ParserMsg>()
 
@@ -83,8 +83,8 @@ class ProjectController(
             SwingUtilities.invokeLater { projectFrame.panel.updateCreditsPolling(possible) }
         }
 
-        override fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>) {
-            process(currentInput.updateAndGet { it.copy(creditsSpreadsheet = creditsSpreadsheet, ioLog = log) })
+        override fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, log: List<ParserMsg>) {
+            process(currentInput.updateAndGet { it.copy(creditsSpreadsheets = creditsSpreadsheets, ioLog = log) })
         }
 
         override fun pushProjectFonts(projectFonts: Collection<Font>) {
@@ -105,8 +105,8 @@ class ProjectController(
     })
 
     // STEP 3:
-    // Load the initial state of the styling from disk. Then render the credits if the credits spreadsheet has already
-    // arrived; otherwise, its arrival later on will trigger the render.
+    // Load the initial state of the styling from disk. Then render the credits if the credits spreadsheet file has
+    // already arrived; otherwise, its arrival later on will trigger the render.
 
     private val stylingFile = projectDir.resolve(STYLING_FILE_NAME)
 
@@ -141,27 +141,32 @@ class ProjectController(
     // END OF INITIALIZATION PROCEDURE
 
     private fun process(input: Input) {
-        val (creditsSpreadsheet, _, stylingCtx, pictureLoaders, tapes, styling) = input
+        val (creditsSpreadsheets, _, stylingCtx, pictureLoaders, tapes, styling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
-        if (creditsSpreadsheet == null || stylingCtx == null ||
+        if (creditsSpreadsheets.isEmpty() || stylingCtx == null ||
             pictureLoaders == null || tapes == null || styling == null
         )
             return doneProcessing(input, null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
-            val (pages, runtimeGroups, log) = readCredits(creditsSpreadsheet, styling, pictureLoaders, tapes)
+            // Parse each credits spreadsheet.
+            val credits = mutableListOf<Credits>()  // retains insertion order
+            val log = mutableListOf<ParserMsg>()
+            for (spreadsheet in creditsSpreadsheets) {
+                val (curCredits, curLog) = readCredits(spreadsheet, styling, pictureLoaders, tapes)
+                credits += curCredits
+                log += curLog
+            }
+
+            val project = Project(styling, stylingCtx, credits.toPersistentList())
 
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR }) {
-                val error = ParserMsg(null, null, null, ERROR, l10n("ui.edit.stylingError"))
+                val error = ParserMsg(null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
                 return@submit doneProcessing(input, log + error, null)
             }
-
-            // If the credits spreadsheet could not be read and parsed, abort and notify the UI about the error.
-            if (log.any { it.severity == ERROR })
-                return@submit doneProcessing(input, log, null)
 
             // If some page styles contains legacy settings which have not been used to produce a migration message,
             // clear them and put the cleared styling into the history in place of the legacy styling.
@@ -169,17 +174,22 @@ class ProjectController(
                 SwingUtilities.invokeLater { stylingHistory.replaceInHistory(styling, it) }
             }
 
-            val project = Project(styling, stylingCtx, pages.toPersistentList(), runtimeGroups.toPersistentList())
-            val drawnPages = drawPages(project)
+            // Draw pages and video for each credits spreadsheet.
+            val drawnCredits = credits.map { curCredits ->
+                val drawnPages = drawPages(project, curCredits)
 
-            // Limit each page's height to prevent the program from crashing due to misconfiguration.
-            if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 }) {
-                val error = ParserMsg(null, null, null, ERROR, l10n("ui.edit.excessivePageSizeError"))
-                return@submit doneProcessing(input, log + error, null)
+                // Limit each page's height to prevent the program from crashing due to misconfiguration.
+                if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 }) {
+                    val sName = curCredits.spreadsheetName
+                    val error = ParserMsg(sName, null, null, null, ERROR, l10n("ui.edit.excessivePageSizeError"))
+                    return@submit doneProcessing(input, log + error, null)
+                }
+
+                val video = drawVideo(project, drawnPages)
+                DrawnCredits(curCredits, drawnPages.toPersistentList(), video)
             }
 
-            val video = drawVideo(project, drawnPages)
-            val drawnProject = DrawnProject(project, drawnPages.toPersistentList(), video)
+            val drawnProject = DrawnProject(project, drawnCredits.toPersistentList())
             doneProcessing(input, log, drawnProject)
         }
     }
@@ -211,19 +221,20 @@ class ProjectController(
 
     private fun doneProcessing(input: Input, processingLog: List<ParserMsg>?, drawnProject: DrawnProject?) {
         SwingUtilities.invokeLater {
+            val logCmp = compareByDescending(ParserMsg::severity)
+                .thenComparingInt { msg -> input.creditsSpreadsheets.indexOfFirst { it.name == msg.spreadsheetName } }
+                .thenBy(ParserMsg::spreadsheetName)
+                .thenBy(ParserMsg::recordNo)
             if (processingLog == null)
-                projectFrame.panel.updateLog(input.ioLog + this.processingLog)
+                projectFrame.panel.updateLog((input.ioLog + this.processingLog).sortedWith(logCmp))
             else {
                 this.processingLog = processingLog
-                projectFrame.panel.updateLog(input.ioLog + processingLog)
+                projectFrame.panel.updateLog((input.ioLog + processingLog).sortedWith(logCmp))
                 if (drawnProject != null) {
                     projectFrame.panel.updateProject(drawnProject)
                     stylingDialog.panel.updateProject(drawnProject)
-                    // If the video has no frames at all, tell the video and delivery dialogs that no drawn project
-                    // exists to avoid them having to handle this special case.
-                    val safeDrawnProject = if (drawnProject.video.numFrames != 0) drawnProject else null
-                    videoDialog.panel.updateProject(safeDrawnProject)
-                    deliveryDialog.panel.configurationForm.updateProject(safeDrawnProject)
+                    videoDialog.panel.updateProject(drawnProject)
+                    deliveryDialog.panel.configurationForm.updateProject(drawnProject)
                 }
             }
         }

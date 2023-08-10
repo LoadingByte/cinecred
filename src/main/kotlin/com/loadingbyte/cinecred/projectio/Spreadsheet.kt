@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.github.miachm.sods.Borders
 import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
 import org.apache.commons.csv.CSVFormat
 import org.apache.poi.ss.usermodel.BorderStyle
@@ -12,11 +11,12 @@ import org.apache.poi.ss.usermodel.IndexedColors
 import java.io.IOException
 import java.io.StringReader
 import java.nio.file.Path
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 
 
-class Spreadsheet(matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
+class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
 
     private val records: List<Record> = matrix.mapIndexed(::Record)
 
@@ -26,7 +26,7 @@ class Spreadsheet(matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
     operator fun get(recordNo: Int): Record = records[recordNo]
     operator fun get(recordNo: Int, columnNo: Int): String = records[recordNo].cells[columnNo]
 
-    fun map(transform: (String) -> String): Spreadsheet = Spreadsheet(records.map { it.cells.map(transform) })
+    fun map(transform: (String) -> String): Spreadsheet = Spreadsheet(name, records.map { it.cells.map(transform) })
 
     override fun iterator(): Iterator<Record> = records.iterator()
 
@@ -47,10 +47,10 @@ interface SpreadsheetFormat {
     val label: String
 
     /** @throws Exception */
-    fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>>
+    fun read(file: Path): Pair<List<Spreadsheet>, List<ParserMsg>>
 
     /** @throws IOException */
-    fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook)
+    fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook)
 
 }
 
@@ -86,8 +86,8 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
         file,
         open = { org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile(), null, true) },
         getNumSheets = { workbook -> workbook.numberOfSheets },
-        read = { workbook ->
-            val sheet = workbook.getSheetAt(0)
+        read = { workbook, sheetIdx ->
+            val sheet = workbook.getSheetAt(sheetIdx)
             val numRows = sheet.lastRowNum + 1
             val numCols = sheet.maxOf { row -> row.lastCellNum } + 1
 
@@ -106,15 +106,15 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
                         CellType.FORMULA, CellType._NONE -> throw IllegalStateException()
                     }
                 }
-            Spreadsheet(matrix)
+            Spreadsheet(sheet.sheetName, matrix)
         },
         close = { workbook -> workbook.close() }
     )
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
         val xlsx = fileExt == "xlsx"
         val workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(xlsx)
-        val sheet = workbook.createSheet(name)
+        val sheet = workbook.createSheet(spreadsheet.name)
 
         // Make all columns use the raw text data format.
         val defaultStyle = createCellStyle(workbook)
@@ -205,18 +205,19 @@ object OdsFormat : SpreadsheetFormat {
         file,
         open = { com.github.miachm.sods.SpreadSheet(file.toFile()) },
         getNumSheets = { workbook -> workbook.numSheets },
-        read = { workbook ->
-            val sheet = workbook.getSheet(0)
-            Spreadsheet(sheet.dataRange.values.map { cells -> cells.map { it?.toString() ?: "" } })
+        read = { workbook, sheetIdx ->
+            val sheet = workbook.getSheet(sheetIdx)
+            val matrix = sheet.dataRange.values.map { cells -> cells.map { it?.toString() ?: "" } }
+            Spreadsheet(sheet.name, matrix)
         },
         close = { }
     )
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
         val numRows = spreadsheet.numRecords
         val numCols = spreadsheet.numColumns
 
-        val sheet = com.github.miachm.sods.Sheet(name, numRows, numCols)
+        val sheet = com.github.miachm.sods.Sheet(spreadsheet.name, numRows, numCols)
         val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].ifEmpty { null } } }
         sheet.dataRange.values = cellMatrix
 
@@ -263,22 +264,25 @@ object CsvFormat : SpreadsheetFormat {
     override val fileExt get() = "csv"
     override val label get() = l10n("projectIO.spreadsheet.csv")
 
-    override fun read(file: Path): Pair<Spreadsheet, List<ParserMsg>> {
-        return Pair(read(file.readText()), emptyList())
+    override fun read(file: Path): Pair<List<Spreadsheet>, List<ParserMsg>> {
+        return Pair(listOf(read(file.nameWithoutExtension, file.readText())), emptyList())
     }
 
-    fun read(text: String): Spreadsheet {
+    fun read(name: String, text: String): Spreadsheet {
         // Trim the character which results from the byte order mark (BOM) added by Excel.
         val trimmed = text.trimStart(0xFEFF.toChar())
 
         // Parse the CSV file into a list of CSV records.
         val csvRecords = CSVFormat.DEFAULT.parse(StringReader(trimmed)).records
 
-        // Convert the CSV records to a string matrix and then create a spreadsheet.
-        return Spreadsheet(csvRecords.map { rec -> ArrayList<String>(rec.size()).apply { addAll(rec) } })
+        // Convert the CSV records to a string matrix.
+        val matrix = csvRecords.map { rec -> ArrayList<String>(rec.size()).apply { addAll(rec) } }
+
+        // Create a spreadsheet.
+        return Spreadsheet(name, matrix)
     }
 
-    override fun write(file: Path, spreadsheet: Spreadsheet, name: String, look: SpreadsheetLook) {
+    override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
         CSVFormat.DEFAULT.print(file, Charsets.UTF_8).use { printer ->
             for (record in spreadsheet)
                 printer.printRecord(record.cells.map { it.ifEmpty { null } })
@@ -293,9 +297,9 @@ private inline fun <W> readOfficeDocument(
     file: Path,
     open: () -> W,
     getNumSheets: (W) -> Int,
-    read: (W) -> Spreadsheet,
+    read: (W, Int) -> Spreadsheet,
     close: (W) -> Unit
-): Pair<Spreadsheet, List<ParserMsg>> {
+): Pair<List<Spreadsheet>, List<ParserMsg>> {
     val log = mutableListOf<ParserMsg>()
 
     val workbook = open()
@@ -303,11 +307,9 @@ private inline fun <W> readOfficeDocument(
         val numSheets = getNumSheets(workbook)
 
         if (numSheets == 0)
-            log.add(ParserMsg(null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
-        else if (numSheets > 1)
-            log.add(ParserMsg(null, null, null, WARN, l10n("projectIO.spreadsheet.multipleSheets", file)))
+            log.add(ParserMsg(null, null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
 
-        return Pair(if (numSheets == 0) Spreadsheet(emptyList()) else read(workbook), log)
+        return Pair(if (numSheets == 0) emptyList() else List(numSheets) { read(workbook, it) }, log)
     } finally {
         close(workbook)
     }

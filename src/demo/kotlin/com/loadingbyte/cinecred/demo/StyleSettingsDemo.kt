@@ -137,8 +137,9 @@ abstract class StyleSettingsDemo<S : Style>(
 
         if (credits != null) {
             val (_, page) = credits
-            val project = Project(curStyling, BundledFontsStylingContext, persListOf(page), persListOf())
-            val pageDefImage = drawPages(project).single().defImage.copy(universeScaling = pageScaling)
+            val creditsObj = Credits("", persListOf(page), persListOf())
+            val project = Project(curStyling, BundledFontsStylingContext, persListOf(creditsObj))
+            val pageDefImage = drawPages(project, creditsObj).single().defImage.copy(universeScaling = pageScaling)
             pageDefImgsAndGroundings.add(Pair(pageDefImage, curStyling.global.grounding))
         }
     }

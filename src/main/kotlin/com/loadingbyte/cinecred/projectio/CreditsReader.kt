@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.projectio
 import com.google.common.collect.Iterators
 import com.google.common.collect.PeekingIterator
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
@@ -21,7 +20,7 @@ fun readCredits(
     styling: Styling,
     pictureLoaders: Collection<PictureLoader>,
     tapes: Collection<Tape>
-): Triple<List<Page>, List<RuntimeGroup>, List<ParserMsg>> {
+): Pair<Credits, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
@@ -38,8 +37,8 @@ fun readCredits(
     )
 
     // Read the table.
-    val (pages, runtimeGroups) = CreditsReader(table, styling, pictureLoaders, tapes).read()
-    return Triple(pages, runtimeGroups, table.log)
+    val credits = CreditsReader(table, styling, pictureLoaders, tapes).read()
+    return Pair(credits, table.log)
 }
 
 
@@ -326,7 +325,7 @@ private class CreditsReader(
        ********** ACTUAL PARSING **********
        ************************************ */
 
-    fun read(): Pair<List<Page>, List<RuntimeGroup>> {
+    fun read(): Credits {
         for (row in 0..<table.numRows) {
             this.row = row
             readRow()
@@ -341,12 +340,12 @@ private class CreditsReader(
 
         // If there is not a single page, that's an error.
         if (pages.isEmpty())
-            table.log(null, null, ERROR, l10n("projectIO.credits.noPages"))
+            table.log(null, null, WARN, l10n("projectIO.credits.noPages"))
 
         // Collect the runtime groups.
         val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
 
-        return Pair(pages, runtimeGroups)
+        return Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())
     }
 
     fun readRow() {

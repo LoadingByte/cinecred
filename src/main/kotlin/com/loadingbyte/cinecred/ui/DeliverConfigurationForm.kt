@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
+import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
@@ -15,6 +16,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
 import kotlin.io.path.pathString
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -36,6 +38,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     // =========================================
 
     private var drawnProject: DrawnProject? = null
+
+    private val spreadsheetNameWidget = addWidget(
+        l10n("ui.deliverConfig.spreadsheet"),
+        OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.WIDER)
+    )
 
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
@@ -152,15 +159,21 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     )
 
     init {
-        // Set the directory-related fields to the project dir.
-        val outputLoc = ctrl.projectDir.toAbsolutePath().parent.resolve("${ctrl.projectDir.fileName} Render")
-        singleFileWidget.value = outputLoc
-        seqDirWidget.value = outputLoc
-        // This ensures that file extensions are sensible.
-        onFormatChange()
+        // Get the form into a reasonable state even before the drawn project arrives.
+        onChange(spreadsheetNameWidget)
     }
 
     override fun onChange(widget: Widget<*>) {
+        // If another spreadsheet name is selected, set the output location fields to a reasonable default.
+        if (widget == spreadsheetNameWidget) {
+            val dir = ctrl.projectDir.toAbsolutePath().parent
+            val filename = "${ctrl.projectDir.fileName} ${spreadsheetNameWidget.value.getOrNull() ?: ""} Render"
+            singleFileWidget.value = (singleFileWidget.value.parent ?: dir).resolve(filename)
+            seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve(filename)
+            // This ensures that file extensions are sensible.
+            onFormatChange()
+        }
+
         // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
         if (widget == formatWidget)
             onFormatChange()
@@ -186,7 +199,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     }
 
     private fun updateAndVerifySpecs(panel: DeliveryPanel): Boolean {
-        val (project, _, _) = drawnProject ?: return false
+        val project = (drawnProject ?: return false).project
+        val credits = (selectedDrawnCredits ?: return false).credits
 
         val format = formatWidget.value
         val resMult = if (resolutionMultWidget.isEnabled) 2.0.pow(resolutionMultWidget.value) else 1.0
@@ -199,7 +213,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val scaledWidth = (resMult * resolution.widthPx).roundToInt()
         val scaledHeight = (resMult * resolution.heightPx).roundToInt()
         val scaledFPS = project.styling.global.fps.frac * fpsMult
-        val scrollSpeeds = project.pages.asSequence()
+        val scrollSpeeds = credits.pages.asSequence()
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
@@ -274,13 +288,16 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     fun addRenderJobToQueue() {
         val drawnProject = this.drawnProject
-        if (drawnProject == null)
+        val drawnCredits = selectedDrawnCredits
+        if (drawnProject == null || drawnCredits == null)
             showMessageDialog(
                 ctrl.deliveryDialog, l10n("ui.deliverConfig.noPages.msg"),
                 l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
-            val (project, drawnPages, video) = drawnProject
+            val project = drawnProject.project
+            val drawnPages = drawnCredits.drawnPages
+            val video = drawnCredits.video
 
             val format = formatWidget.value
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
@@ -378,8 +395,17 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         }
     }
 
-    fun updateProject(drawnProject: DrawnProject?) {
+    private val selectedDrawnCredits: DrawnCredits?
+        get() = spreadsheetNameWidget.value.getOrNull()?.let { selName ->
+            drawnProject?.drawnCredits?.find { it.credits.spreadsheetName == selName }
+        }
+
+    fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
+
+        // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
+        spreadsheetNameWidget.items =
+            drawnProject.drawnCredits.filter { it.video.numFrames > 0 }.map { it.credits.spreadsheetName }
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
         onChange(resolutionMultWidget)

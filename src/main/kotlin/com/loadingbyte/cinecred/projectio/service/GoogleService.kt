@@ -168,7 +168,7 @@ object GoogleService : Service {
 
         // Try to get the cells of each watched file.
         for (watcher in dirtyWatchers) {
-            var response: ValueRange? = null
+            var response: com.google.api.services.sheets.v4.model.Spreadsheet? = null
 
             // If an account has been removed, make sure to remove it from the watcher's currentAccount field as well.
             if (watcher.currentAccount !in accounts)
@@ -210,16 +210,20 @@ object GoogleService : Service {
             // If we successfully retrieved the cells for a watcher, push them to the callback and remove the watcher
             // from the dirty list, so that it is no longer polled until that is explicitly requested again.
             if (response != null) {
-                val spreadsheet = Spreadsheet(response.getValues().map { row -> row.map(Any::toString) })
-                watcher.callbacks?.content(spreadsheet)
+                val spreadsheets = (response.sheets ?: emptyList()).map { sheet ->
+                    val matrix = (sheet.data?.firstOrNull()?.rowData ?: emptyList()).map { row ->
+                        (row.getValues() ?: emptyList()).map { cell -> cell.formattedValue ?: "" }
+                    }
+                    Spreadsheet(sheet.properties.title, matrix)
+                }
+                watcher.callbacks?.content(spreadsheets)
                 dirtyWatchers.remove(watcher)
             }
         }
     }
 
     private fun makeReadRequest(sheets: Sheets, fileId: String) =
-        // Trailing rows and columns are clipped, so we can just request a very large range.
-        sheets.spreadsheets().values().get(fileId, "A1:Z10000")
+        sheets.spreadsheets().get(fileId).setFields("sheets(properties.title,data.rowData.values.formattedValue)")
 
 
     private class GoogleWatcher(
@@ -291,7 +295,7 @@ object GoogleService : Service {
             return sheets
         }
 
-        override fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
+        override fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
             // Get the sheets object.
             val sheets = sheets(false) ?: throw IOException("Account is missing credentials.")
             // Construct the request object.
@@ -333,7 +337,7 @@ object GoogleService : Service {
                 .setRowCount(rowData.size)
                 .setColumnCount(spreadsheet.numColumns)
             val sheet = Sheet()
-                .setProperties(SheetProperties().setTitle(sheetName).setGridProperties(gridProps))
+                .setProperties(SheetProperties().setTitle(spreadsheet.name).setGridProperties(gridProps))
                 .setData(listOf(gridData))
             val sSheet = Spreadsheet()
                 .setProperties(SpreadsheetProperties().setTitle(filename))

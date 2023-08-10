@@ -26,7 +26,7 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
             processStyle(style)
 
     // Add the page, content, and letter styles referenced from the read pages.
-    for (page in project.pages)
+    for (page in project.credits.asSequence().flatMap(Credits::pages))
         for (stage in page.stages) {
             // Add the stage's page style.
             usedStyles.add(stage.style)

@@ -314,7 +314,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             val usedStyles = findUsedStyles(drawnProject.project)
             stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
         }
-        mostRecentRuntime = drawnProject.video.numFrames
+        drawnProject.drawnCredits.firstOrNull()?.let { mostRecentRuntime = it.video.numFrames }
     }
 
     private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {

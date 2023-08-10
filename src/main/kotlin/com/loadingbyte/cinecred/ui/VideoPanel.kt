@@ -16,6 +16,7 @@ import java.awt.Graphics2D
 import java.awt.Transparency
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
@@ -59,6 +60,16 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         VK_F11, 0
     ) { isSelected ->
         graphicsConfiguration.device.fullScreenWindow = if (isSelected) ctrl.videoDialog else null
+    }
+
+    private val spreadsheetNameComboBox = JComboBox<String>().also { cb ->
+        cb.isFocusable = false
+        cb.addItemListener { e ->
+            if (e.stateChange == ItemEvent.SELECTED) {
+                restartDrawing()
+                adjustTimecodeLabel()
+            }
+        }
     }
 
     private val rewindButton: JToggleButton
@@ -152,7 +163,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
         layout = MigLayout(
             "insets 0",
-            "[]8[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]rel[]2[]2[][][]14[]",
+            "[]8[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]rel[]2[]2[][][]14[]",
             "[]0[]8[]8"
         )
         add(canvas, "span, grow, push")
@@ -160,6 +171,7 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         add(actualSizeButton, "newline, skip 1")
         fullScreenButton?.let(::add)
         add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
+        add(spreadsheetNameComboBox)
         add(rewindButton)
         add(pauseButton)
         add(playButton)
@@ -216,11 +228,19 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         playRate = 0
     }
 
-    fun updateProject(drawnProject: DrawnProject?) {
+    fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
 
+        // Populate the credits spreadsheet name combo box.
+        // Just to be sure, filter out spreadsheets which have 0 runtime.
+        val avail = drawnProject.drawnCredits.filter { it.video.numFrames > 0 }.map { it.credits.spreadsheetName }
+        val model = DefaultComboBoxModel(avail.toTypedArray())
+        if (spreadsheetNameComboBox.selectedItem in avail)
+            model.selectedItem = spreadsheetNameComboBox.selectedItem
+        spreadsheetNameComboBox.model = model
+
         playRate = 0
-        if (drawnProject == null) {
+        if (avail.isEmpty()) {
             makeVideoBackendJobSlot.submit {
                 curVideoBackend = null
                 materializeAndDrawFrame(0)
@@ -233,7 +253,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun restartDrawing() {
-        val (project, _, video) = drawnProject ?: return
+        val project = (drawnProject ?: return).project
+        val video = selectedVideo ?: return
 
         // Abort if the canvas has never been shown on the screen yet, which would have it in a pre-initialized state
         // that this method can't cope with. As soon as it is shown for the first time, the resize listener will be
@@ -288,12 +309,18 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun adjustTimecodeLabel() {
-        val (project, _, video) = drawnProject ?: return
+        val project = (drawnProject ?: return).project
+        val video = selectedVideo ?: return
         val fps = project.styling.global.fps
         val timecodeFormat = project.styling.global.timecodeFormat
         val curTc = formatTimecode(fps, timecodeFormat, frameSlider.value)
         val runtimeTc = formatTimecode(fps, timecodeFormat, video.numFrames)
         timecodeLabel.text = "$curTc / $runtimeTc"
     }
+
+    private val selectedVideo: DeferredVideo?
+        get() = spreadsheetNameComboBox.selectedItem?.let { selName ->
+            drawnProject?.drawnCredits?.find { it.credits.spreadsheetName == selName }?.video
+        }
 
 }

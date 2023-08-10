@@ -30,7 +30,7 @@ import kotlin.io.path.*
  * Upon creation of a new instance of this class, the callbacks [Callbacks.pushProjectFonts],
  * [Callbacks.pushPictureLoaders], and [Callbacks.pushTapes] are immediately called from the same thread before the
  * constructor returns.
- * In contrast, the callback [Callbacks.pushCreditsSpreadsheet] will be called later from a separate thread.
+ * In contrast, the callback [Callbacks.pushCreditsSpreadsheets] will be called later from a separate thread.
  *
  * Neither the constructor nor any method in this class throws exceptions. Instead, errors are gracefully handled and,
  * if reasonable, the user is notified via the log.
@@ -39,7 +39,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     interface Callbacks {
         fun creditsPolling(possible: Boolean)
-        fun pushCreditsSpreadsheet(creditsSpreadsheet: Spreadsheet?, log: List<ParserMsg>)
+        fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, log: List<ParserMsg>)
         fun pushProjectFonts(projectFonts: Collection<Font>)
         fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>)
         fun pushTapes(tapes: Collection<Tape>)
@@ -149,11 +149,12 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     val service = SERVICES.find { it.canWatch(link) }
                     if (service == null) {
                         val msg = l10n("projectIO.credits.unsupportedServiceLink", link)
-                        callbacks.pushCreditsSpreadsheet(null, locatingLog + ParserMsg(null, null, null, ERROR, msg))
+                        val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
+                        callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msgObj)
                     } else {
                         linkedCreditsWatcher = service.watch(link, object : ServiceWatcher.Callbacks {
-                            override fun content(spreadsheet: Spreadsheet) {
-                                callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog)
+                            override fun content(spreadsheets: List<Spreadsheet>) {
+                                callbacks.pushCreditsSpreadsheets(spreadsheets, locatingLog)
                             }
 
                             override fun problem(problem: ServiceWatcher.Problem) {
@@ -161,16 +162,16 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                                     ServiceWatcher.Problem.INACCESSIBLE -> "projectIO.credits.noAccountGrantsAccess"
                                     ServiceWatcher.Problem.DOWN -> "projectIO.credits.serviceUnresponsive"
                                 }
-                                val msg = ParserMsg(null, null, null, ERROR, l10n(key))
-                                callbacks.pushCreditsSpreadsheet(null, locatingLog + msg)
+                                val msg = ParserMsg(null, null, null, null, ERROR, l10n(key))
+                                callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msg)
                             }
                         })
                         callbacks.creditsPolling(true)
                     }
                 } else {
                     val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-                    val (spreadsheet, loadingLog) = fmt.read(activeFile)
-                    callbacks.pushCreditsSpreadsheet(spreadsheet, locatingLog + loadingLog)
+                    val (spreadsheets, loadingLog) = fmt.read(activeFile)
+                    callbacks.pushCreditsSpreadsheets(spreadsheets, locatingLog + loadingLog)
                 }
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
@@ -178,10 +179,11 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 // the file watcher should quickly trigger a call to this method again. Still, we add a push an
                 // error message in case something else goes wrong too.
                 val msg = l10n("projectIO.credits.cannotReadCreditsFile", activeFile.fileName, e.toString())
-                callbacks.pushCreditsSpreadsheet(null, locatingLog + ParserMsg(null, null, null, ERROR, msg))
+                val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
+                callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msgObj)
             }
         } else
-            callbacks.pushCreditsSpreadsheet(null, locatingLog)
+            callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog)
         currentCreditsFile = activeFile
     }
 
@@ -273,12 +275,12 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             val candidates = getCreditsFileCandidates(projectDir)
             if (candidates.isEmpty()) {
                 val msg = l10n("projectIO.credits.noCreditsFile", availExtsStr())
-                log.add(ParserMsg(null, null, null, ERROR, msg))
+                log.add(ParserMsg(null, null, null, null, ERROR, msg))
             } else {
                 creditsFile = candidates.first()
                 if (candidates.size > 1) {
                     val msg = l10n("projectIO.credits.multipleCreditsFiles", availExtsStr(), creditsFile.fileName)
-                    log.add(ParserMsg(null, null, null, WARN, msg))
+                    log.add(ParserMsg(null, null, null, null, WARN, msg))
                 }
             }
 

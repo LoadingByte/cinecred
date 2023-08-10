@@ -14,8 +14,7 @@ import java.util.*
 class Project(
     val styling: Styling,
     val stylingCtx: StylingContext,
-    val pages: PersistentList<Page>,
-    val runtimeGroups: PersistentList<RuntimeGroup>
+    val credits: PersistentList<Credits>
 )
 
 
@@ -286,6 +285,13 @@ data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
 // The following classes are deliberately not data classes to improve the speed of equality and hash code operations,
 // which is important as the classes are often used as map keys.
+
+
+class Credits(
+    val spreadsheetName: String,
+    val pages: PersistentList<Page>,
+    val runtimeGroups: PersistentList<RuntimeGroup>
+)
 
 
 class Page(

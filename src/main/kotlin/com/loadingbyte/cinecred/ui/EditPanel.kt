@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
+import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
@@ -47,7 +48,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedVideoDialogButton get() = videoDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
-    @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = pageTabs
+    @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = creditsTabs.getComponentAt(0) as JTabbedPane
     @Deprecated("ENCAPSULATION LEAK") val leakedImagePanels get() = imagePanels
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
     // =========================================
@@ -174,28 +175,28 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.masterCtrl.showWelcomeFrame()
     }
 
-    private val pageTabs = JTabbedPane().apply {
-        isFocusable = false
-        tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
-        putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
-        putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
-        putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
+    private val creditsTabs = newPreviewTabbedPane().apply {
+        addChangeListener { displayRuntimeOfSelectedCredits() }
     }
-    private val pagePanelCards = CardLayout()
-    private val pagePanel = JPanel(pagePanelCards).apply {
+
+    private val previewPanelCards = CardLayout()
+    private val previewPanel = JPanel(previewPanelCards).apply {
         val loadingLabel = JLabel(l10n("ui.edit.loading")).apply { putClientProperty(STYLE, "font: bold \$h0.font") }
         add(JPanel(MigLayout()).apply { add(loadingLabel, "push, center") }, "Loading")
         add(JPanel(MigLayout()).apply { add(JLabel(ERROR_ICON.getScaledIcon(4.0)), "push, center") }, "Error")
-        add(pageTabs, "Pages")
+        add(creditsTabs, "Preview")
     }
 
     private val logTableModel = LogTableModel()
 
-    // Utility to quickly get all DeferredImagePanels from the tabbed pane.
+    // Utility to quickly get all DeferredImagePanels of all credits spreadsheets.
     private val imagePanels: List<DeferredImagePanel>
-        get() = buildList(pageTabs.tabCount) {
-            for (tabIdx in 0..<pageTabs.tabCount)
-                add(pageTabs.getComponentAt(tabIdx) as DeferredImagePanel)
+        get() = buildList(256) {
+            for (creditsIdx in 0..<creditsTabs.tabCount) {
+                val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
+                for (pageIdx in 0..<pageTabs.tabCount)
+                    add(pageTabs.getComponentAt(pageIdx) as DeferredImagePanel)
+            }
         }
 
     private var drawnProject: DrawnProject? = null
@@ -222,6 +223,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         val btn = newToolbarToggleButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, isSelected, listener)
         keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers) { btn.isSelected = !btn.isSelected })
         return btn
+    }
+
+    private fun newPreviewTabbedPane() = JTabbedPane().apply {
+        isFocusable = false
+        tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
+        putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
+        putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
     }
 
     init {
@@ -284,7 +292,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(JSeparator(JSeparator.VERTICAL), "growy")
             add(homeButton)
             add(JSeparator(), "newline, span, growx")
-            add(pagePanel, "newline, span, grow, push")
+            add(previewPanel, "newline, span, grow, push")
         }
 
         val logTable = JTable(logTableModel).apply {
@@ -293,20 +301,21 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
             tableHeader.reorderingAllowed = false
-            // Lock the widths of the first two columns (severity and record number), initialize the widths of
-            // the col and cell columns with a small minimum width, and initially distribute all remaining width
+            // Lock the widths of the severity and row columns, initialize the widths of the spreadsheet name,
+            // column name, and cell columns with a small minimum width, and initially distribute all remaining width
             // to the message column.
             columnModel.getColumn(0).apply { minWidth = 24; maxWidth = 24 }
-            columnModel.getColumn(1).apply { minWidth = 48; maxWidth = 48 }
-            columnModel.getColumn(2).apply { minWidth = 96; width = 96 }
+            columnModel.getColumn(1).apply { minWidth = 64; width = 64 }
+            columnModel.getColumn(2).apply { minWidth = 48; maxWidth = 48 }
             columnModel.getColumn(3).apply { minWidth = 96; width = 96 }
-            tableHeader.resizingColumn = columnModel.getColumn(4)
-            // Center the record number, column name, and cell value columns.
-            for (colIdx in 1..3)
+            columnModel.getColumn(4).apply { minWidth = 96; width = 96 }
+            tableHeader.resizingColumn = columnModel.getColumn(5)
+            // Center the spreadsheet name, record number, column name, and cell value columns.
+            for (colIdx in 1..4)
                 columnModel.getColumn(colIdx).cellRenderer =
                     DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping and HTML display in the message column.
-            columnModel.getColumn(4).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
+            columnModel.getColumn(5).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
         }
         val logTablePanel = JPanel(MigLayout()).apply {
             add(JScrollPane(logTable), "grow, push")
@@ -391,31 +400,53 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateLog(log: List<ParserMsg>) {
         // Put the new parser log messages into the log table.
-        logTableModel.log = log.sortedWith(compareByDescending(ParserMsg::severity).thenBy(ParserMsg::recordNo))
+        logTableModel.log = log
         // If there are errors in the log and updateProject() isn't called, an erroneous project has been opened.
         // In that case, show the big error mark.
         if (log.any { it.severity == Severity.ERROR } && drawnProject == null)
-            pagePanelCards.show(pagePanel, "Error")
+            previewPanelCards.show(previewPanel, "Error")
     }
 
     fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
         // Update the pages tabs.
-        pagePanelCards.show(pagePanel, "Pages")
-        refreshPageTabs()
-        // Adjust the total runtime label
+        previewPanelCards.show(previewPanel, "Preview")
+        refreshCreditsTabs()
+        // Adjust the total runtime label.
+        displayRuntimeOfSelectedCredits()
+    }
+
+    private fun displayRuntimeOfSelectedCredits() {
+        val drawnProject = this.drawnProject ?: return
+        val drawnCredits = drawnProject.drawnCredits.getOrNull(creditsTabs.selectedIndex) ?: return
         val global = drawnProject.project.styling.global
-        val runtime = drawnProject.video.numFrames
+        val runtime = drawnCredits.video.numFrames
         val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
         val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
         runtimeLabel.text = tc
         runtimeLabel.toolTipText = tooltip
     }
 
-    private fun refreshPageTabs() {
+    private fun refreshCreditsTabs() {
         val drawnProject = this.drawnProject ?: return
+        // First adjust the number of tabs to the number of credits spreadsheets.
+        val numCredits = drawnProject.drawnCredits.size
+        while (creditsTabs.tabCount > numCredits)
+            creditsTabs.removeTabAt(creditsTabs.tabCount - 1)
+        while (creditsTabs.tabCount < numCredits) {
+            val pageTabs = newPreviewTabbedPane().apply { putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false) }
+            creditsTabs.addTab("", TABLE_ICON, pageTabs)
+        }
+        // Then fill each tab with its corresponding credits.
+        for ((idx, drawnCredits) in drawnProject.drawnCredits.withIndex()) {
+            creditsTabs.setTitleAt(idx, drawnCredits.credits.spreadsheetName)
+            refreshPageTabs(creditsTabs.getComponentAt(idx) as JTabbedPane, drawnProject, drawnCredits)
+        }
+    }
+
+    private fun refreshPageTabs(pageTabs: JTabbedPane, drawnProject: DrawnProject, drawnCredits: DrawnCredits) {
         // First adjust the number of tabs to the number of pages.
-        val numPages = drawnProject.drawnPages.size
+        val numPages = drawnCredits.drawnPages.size
         while (pageTabs.tabCount > numPages)
             pageTabs.removeTabAt(pageTabs.tabCount - 1)
         while (pageTabs.tabCount < numPages) {
@@ -431,10 +462,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
         // Also make the currently selected layers and overlays visible.
         val layers = getVisibleLayers()
-        for ((drawnPage, imagePanel) in drawnProject.drawnPages.zip(imagePanels)) {
+        for ((idx, drawnPage) in drawnCredits.drawnPages.withIndex()) {
             val image = drawnPage.defImage.copy()
             for (overlay in availableOverlays)
                 overlay.draw(drawnProject.project.styling.global.resolution, drawnPage.stageInfo, image)
+            val imagePanel = pageTabs.getComponentAt(idx) as DeferredImagePanel
             imagePanel.setImageAndGroundingAndLayers(image, drawnProject.project.styling.global.grounding, layers)
         }
     }
@@ -462,7 +494,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             })
             overlaysMenu.pack()
             // Re-draw the overlays onto the page images.
-            refreshPageTabs()
+            refreshCreditsTabs()
         }
 
     private fun refreshVisibleLayers() {
@@ -508,14 +540,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
 
         override fun getRowCount() = log.size
-        override fun getColumnCount() = 5
+        override fun getColumnCount() = 6
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
             0 -> ""
-            1 -> l10n("ui.edit.record")
-            2 -> l10n("ui.edit.column")
-            3 -> l10n("ui.edit.value")
-            4 -> l10n("ui.edit.message")
+            1 -> l10n("ui.edit.sheet")
+            2 -> l10n("ui.edit.record")
+            3 -> l10n("ui.edit.column")
+            4 -> l10n("ui.edit.value")
+            5 -> l10n("ui.edit.message")
             else -> throw IllegalArgumentException()
         }
 
@@ -524,10 +557,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> log[rowIdx].severity.icon
-            1 -> log[rowIdx].recordNo?.plus(1) ?: ""
-            2 -> log[rowIdx].colHeader ?: ""
-            3 -> log[rowIdx].cellValue ?: ""
-            4 -> log[rowIdx].msg
+            1 -> log[rowIdx].spreadsheetName ?: ""
+            2 -> log[rowIdx].recordNo?.plus(1) ?: ""
+            3 -> log[rowIdx].colHeader ?: ""
+            4 -> log[rowIdx].cellValue ?: ""
+            5 -> log[rowIdx].msg
             else -> throw IllegalArgumentException()
         }
 

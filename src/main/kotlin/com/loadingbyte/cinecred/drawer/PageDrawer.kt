@@ -23,11 +23,13 @@ import kotlin.math.floor
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
 
 
-fun drawPages(project: Project): List<DrawnPage> {
+fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
     val styling = project.styling
     val global = styling.global
-    val pages = project.pages
-    val runtimeGroups = project.runtimeGroups
+
+    require(credits in project.credits)
+    val pages = credits.pages
+    val runtimeGroups = credits.runtimeGroups
 
     val textCtx = makeTextCtx(styling, project.stylingCtx)
 
@@ -67,7 +69,7 @@ fun drawPages(project: Project): List<DrawnPage> {
     return pages.map { page ->
         val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, drawnStages, page)
         val pageImage = drawPage(global, drawnStages, stageLayouts, page, pageImageHeight)
-        DrawnPage(pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
+        DrawnPage(page, pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
 }
 

@@ -10,8 +10,8 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
     val video = DeferredVideo(project.styling.global.resolution, project.styling.global.fps)
 
     // Write frames for each page as has been configured.
-    for ((pageIdx, page) in project.pages.withIndex()) {
-        val drawnPage = drawnPages[pageIdx]
+    for ((pageIdx, drawnPage) in drawnPages.withIndex()) {
+        val page = drawnPage.page
         for ((stageIdx, stage) in page.stages.withIndex())
             when (val stageInfo = drawnPage.stageInfo[stageIdx]) {
                 is DrawnStageInfo.Card -> {
@@ -47,7 +47,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                         stageInfo.initialAdvance, alpha = 1.0
                     )
             }
-        if (pageIdx != project.pages.lastIndex)
+        if (pageIdx != drawnPages.lastIndex)
             video.playBlank(page.gapAfterFrames)
     }
 

@@ -6,10 +6,9 @@ import com.loadingbyte.cinecred.imaging.Y
 import kotlinx.collections.immutable.PersistentList
 
 
-data class DrawnProject(val project: Project, val drawnPages: PersistentList<DrawnPage>, val video: DeferredVideo)
-
-
-class DrawnPage(val defImage: DeferredImage, val stageInfo: PersistentList<DrawnStageInfo>)
+class DrawnProject(val project: Project, val drawnCredits: PersistentList<DrawnCredits>)
+class DrawnCredits(val credits: Credits, val drawnPages: PersistentList<DrawnPage>, val video: DeferredVideo)
+class DrawnPage(val page: Page, val defImage: DeferredImage, val stageInfo: PersistentList<DrawnStageInfo>)
 
 
 sealed interface DrawnStageInfo {

@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
+import com.loadingbyte.cinecred.project.Credits
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
@@ -23,8 +24,9 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
         // Capture the video.
         val (global, page) = credits()
         val styling = extractStyling(global, page)
-        val project = Project(styling, BundledFontsStylingContext, persistentListOf(page), persistentListOf())
-        val video = drawVideo(project, drawPages(project))
+        val credits = Credits("", persistentListOf(page), persistentListOf())
+        val project = Project(styling, BundledFontsStylingContext, persistentListOf(credits))
+        val video = drawVideo(project, drawPages(project, credits))
 
         // Write out the video.
         val backend = object : DeferredVideo.BufferedImageBackend(video, listOf(STATIC), listOf(TAPES), draft = true) {

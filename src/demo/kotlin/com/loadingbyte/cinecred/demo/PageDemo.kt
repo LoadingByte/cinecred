@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
+import com.loadingbyte.cinecred.project.Credits
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
@@ -41,8 +42,9 @@ abstract class PageDemo(
 
     private fun capture(global: Global, page: Page) {
         val styling = extractStyling(global, page)
-        val project = Project(styling, BundledFontsStylingContext, persistentListOf(page), persistentListOf())
-        val pageDefImage = drawPages(project).single().defImage
+        val credits = Credits("", persistentListOf(page), persistentListOf())
+        val project = Project(styling, BundledFontsStylingContext, persistentListOf(credits))
+        val pageDefImage = drawPages(project, credits).single().defImage
         pageDefImgsAndGroundings.add(Pair(pageDefImage, styling.global.grounding))
     }
 

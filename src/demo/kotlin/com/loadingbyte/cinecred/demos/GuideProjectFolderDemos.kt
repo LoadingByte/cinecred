@@ -56,7 +56,7 @@ object GuideProjectFolderCreateProjectDemo : ScreencastDemo("$DIR/create-project
     private object DummyAccount : Account {
         override val id get() = "John Doe"
         override val service get() = GoogleService
-        override fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook) =
+        override fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook) =
             throw UnsupportedOperationException()
     }
 }

@@ -63,7 +63,7 @@ interface Account {
      * @throws DownException
      * @throws IOException
      */
-    fun upload(filename: String, sheetName: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
+    fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
 
 }
 
@@ -76,7 +76,7 @@ interface ServiceWatcher {
     fun cancel()
 
     interface Callbacks {
-        fun content(spreadsheet: Spreadsheet)
+        fun content(spreadsheets: List<Spreadsheet>)
         fun problem(problem: Problem)
     }
 

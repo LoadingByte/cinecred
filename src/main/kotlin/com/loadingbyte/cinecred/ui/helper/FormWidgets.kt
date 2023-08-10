@@ -994,9 +994,7 @@ class ColorWellWidget(
 }
 
 
-class ResolutionWidget(
-    defaultCustom: Resolution
-) : Form.AbstractWidget<Resolution>() {
+class ResolutionWidget : Form.AbstractWidget<Resolution>() {
 
     private sealed interface Preset {
         class Choice(val label: String, val resolution: Resolution) : Preset
@@ -1023,14 +1021,17 @@ class ResolutionWidget(
                 is Preset.Custom -> l10n("custom")
             }
         }
-    )
+    ).apply { value = CHOICE_PRESETS[1] /* start out with Full HD */ }
 
-    private val widthWidget = makeDimensionSpinner(defaultCustom.widthPx)
-    private val heightWidget = makeDimensionSpinner(defaultCustom.heightPx)
+    private val widthWidget = makeDimensionSpinner()
+    private val heightWidget = makeDimensionSpinner()
     private val timesLabel = JLabel("\u00D7")
 
-    private fun makeDimensionSpinner(value: Int) =
-        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(value, 1, null, 10), "#", WidthSpec.LITTLE)
+    private var initializedCustom = false
+    private var prevPreset: Preset = presetWidget.value
+
+    private fun makeDimensionSpinner() =
+        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 10), "#", WidthSpec.LITTLE)
 
     init {
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
@@ -1040,6 +1041,17 @@ class ResolutionWidget(
             widthWidget.isVisible = isCustom
             heightWidget.isVisible = isCustom
             timesLabel.isVisible = isCustom
+            // When the custom option is selected for the first time, initialize it with the previously selected preset.
+            if (!initializedCustom)
+                if (isCustom) {
+                    initializedCustom = true
+                    val initRes = (prevPreset as Preset.Choice).resolution
+                    withoutChangeListeners {
+                        widthWidget.value = initRes.widthPx
+                        heightWidget.value = initRes.heightPx
+                    }
+                } else
+                    prevPreset = presetWidget.value
             notifyChangeListenersAboutOtherWidgetChange(widget)
         }
         widthWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)

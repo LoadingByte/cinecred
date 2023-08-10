@@ -13,6 +13,10 @@ Cinecred Changelog
 - The temporal gap between pages and whether to melt pages together is now
   controlled via a new page gap column in the spreadsheet.
 
+### UI Fixes
+
+- The custom resolution chooser now defaults to the last selected resolution.
+
 ### Compatibility Notes
 
 - Cards can no longer be members of runtime groups.

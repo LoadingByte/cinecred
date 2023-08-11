@@ -315,15 +315,19 @@ class Screencast(
 
     fun caption(l10nKey: String, holdAction: (() -> Unit)? = null) {
         val text = l10nDemo(l10nKey)
-        caption.clear()
         val attrs = mapOf(
             TextAttribute.FONT to CAPTION_FONT,
             TextAttribute.KERNING to TextAttribute.KERNING_ON,
             TextAttribute.LIGATURES to TextAttribute.LIGATURES_ON
         )
-        val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, REF_FRC)
-        while (lbm.position != text.length)
-            caption.add(lbm.nextLayout(width / 2f))
+        for (ratio in floatArrayOf(0.5f, 0.6f, 0.7f, 0.8f)) {
+            caption.clear()
+            val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, REF_FRC)
+            while (lbm.position != text.length)
+                caption.add(lbm.nextLayout(width * ratio))
+            if (caption.size <= 2)
+                break
+        }
         check(caption.size <= 2) { "Caption '$l10nKey' has ${caption.size} lines (only 2 are allowed)." }
         hold(1000 + 35 * text.length, holdAction)
         caption.clear()

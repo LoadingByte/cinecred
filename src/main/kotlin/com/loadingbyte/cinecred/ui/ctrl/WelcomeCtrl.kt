@@ -379,7 +379,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun projects_createConfigure_onClickDone(
         locale: Locale,
-        scale: Int,
+        resolution: Resolution,
+        fps: FPS,
+        timecodeFormat: TimecodeFormat,
         sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,
@@ -387,7 +389,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         creditsFilename: String
     ) {
         val projectDir = newBrowseSelection ?: return
-        val template = Template(locale, scale, sample = if (creditsLocation == CreditsLocation.SKIP) false else sample)
+        val effSample = if (creditsLocation == CreditsLocation.SKIP) false else sample
+        val template = Template(locale, resolution, fps, timecodeFormat, effSample)
         welcomeView.projects_createWait_setError(null)
         welcomeView.projects_setCard(ProjectsCard.CREATE_WAIT)
         createProjectThread.set(Thread({

@@ -1,5 +1,8 @@
 package com.loadingbyte.cinecred.ui.comms
 
+import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
+import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
@@ -46,7 +49,9 @@ interface WelcomeCtrlComms {
     fun projects_createConfigure_onClickBack()
     fun projects_createConfigure_onClickDone(
         locale: Locale,
-        scale: Int,
+        resolution: Resolution,
+        fps: FPS,
+        timecodeFormat: TimecodeFormat,
         sample: Boolean,
         creditsLocation: CreditsLocation,
         creditsFormat: SpreadsheetFormat,

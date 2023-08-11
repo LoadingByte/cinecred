@@ -3,15 +3,15 @@
 ,,,,,,,,,
 ,,,,,,,,,
 ,,,,,,,,,
-A,Dirc Director,Film,,{project.PageBehavior.CARD},,,{project.PageBehavior.CARD},00:00:05:00,
+A,Dirc Director,Film,,{project.PageBehavior.CARD},,,{project.PageBehavior.CARD},[5s],
 ,,,,,,,,,
 ,,,,,,,,,
-,,,,,,,,,00:00:01:00
-Executive Producers,Callie Cash,,,,,,{project.PageBehavior.CARD},00:00:05:00,
+,,,,,,,,,[1s]
+Executive Producers,Callie Cash,,,,,,{project.PageBehavior.CARD},[5s],
 ,Molly Money,,,,,,,,
 ,,,,,,,,,
 ,,,,,,,,,
-,,,,,,,,,00:00:01:00
+,,,,,,,,,[1s]
 ,Cast,,,{project.template.contentStyleHeading},,,{project.PageBehavior.SCROLL},,
 ,(in order of appearance),,,{project.template.contentStyleSubheading},,,,,
 ,,,,,,,,,
@@ -104,4 +104,4 @@ University,Desmond Desperation,,,,,,,,
 ,"Here’s to all the lawyers who rejoice us by dint of their writing and printing and scripture; those finest of people who uswards bestow the greatest of delights in virtue of their wonderous wisdom, which wretched creatures as thee and me may never fully fathom ourself.",,,{project.template.contentStyleBlurb},,,,,
 ,Go now henceforth and forevermore recite thy verbiage which brings thee the most splendid of joys.,,,,,,,,
 ,,,15,,,,,,{projectIO.credits.table.melt}
-,Copyright © 2023 {{{projectIO.credits.table.style} {project.template.letterStyleName}}}Callie Cash{{{projectIO.credits.table.style}}} and {{{projectIO.credits.table.style} {project.template.letterStyleName}}}Molly Money,,,,,,{project.PageBehavior.CARD},00:00:03:00,
+,Copyright © 2023 {{{projectIO.credits.table.style} {project.template.letterStyleName}}}Callie Cash{{{projectIO.credits.table.style}}} and {{{projectIO.credits.table.style} {project.template.letterStyleName}}}Molly Money,,,,,,{project.PageBehavior.CARD},[3s],

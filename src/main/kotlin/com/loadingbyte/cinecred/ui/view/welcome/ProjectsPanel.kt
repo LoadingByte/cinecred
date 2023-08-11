@@ -1,10 +1,9 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.formdev.flatlaf.FlatClientProperties.*
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.toPathSafely
+import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.project.PRESET_GLOBAL
+import com.loadingbyte.cinecred.project.label
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
@@ -37,7 +36,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedStartCreateButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartOpenButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedStartDropLabel: JLabel
-    @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgScaleWidget get() = createConfigureForm.scaleWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgLocWidget get() = createConfigureForm.creditsLocationWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgFormatWidget get() = createConfigureForm.creditsFormatWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCreCfgAccWidget get() = createConfigureForm.creditsAccountWidget
@@ -172,7 +170,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             .addActionListener {
                 welcomeCtrl.projects_createConfigure_onClickDone(
                     createConfigureForm.localeWidget.value,
-                    createConfigureForm.scaleWidget.value,
+                    createConfigureForm.resolutionWidget.value,
+                    createConfigureForm.fpsWidget.value,
+                    createConfigureForm.timecodeFormatWidget.value,
                     createConfigureForm.contentWidget.value,
                     createConfigureForm.creditsLocationWidget.value,
                     createConfigureForm.creditsFormatWidget.value,
@@ -378,18 +378,22 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         val localeWidget = addWidget(
             l10n("ui.styling.global.locale"),
-            ComboBoxWidget(
-                Locale::class.java, TRANSLATED_LOCALES, widthSpec = WidthSpec.WIDE,
-                toString = { it.displayName }
-            )
+            ComboBoxWidget(Locale::class.java, TRANSLATED_LOCALES, toString = { it.displayName })
         )
 
-        val scaleWidget = addWidget(
+        val resolutionWidget = addWidget(
             l10n("ui.styling.global.resolution"),
-            ToggleButtonGroupWidget(
-                listOf(1, 2),
-                toLabel = { "${it * 2}K" }
-            )
+            ResolutionWidget()
+        )
+
+        val fpsWidget = addWidget(
+            l10n("ui.styling.global.fps"),
+            FPSWidget()
+        )
+
+        val timecodeFormatWidget = addWidget(
+            l10n("ui.styling.global.timecodeFormat"),
+            ComboBoxWidget(TimecodeFormat::class.java, emptyList(), TimecodeFormat::label)
         )
 
         val contentWidget = addWidget(
@@ -441,10 +445,17 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         init {
             localeWidget.value = Locale.getDefault()
+            resolutionWidget.value = PRESET_GLOBAL.resolution
+            fpsWidget.value = PRESET_GLOBAL.fps
+            timecodeFormatWidget.value = PRESET_GLOBAL.timecodeFormat
+            // Populate the timecode format combo box.
+            onChange(fpsWidget)
         }
 
         override fun onChange(widget: Widget<*>) {
             super.onChange(widget)
+            if (widget == fpsWidget)
+                timecodeFormatWidget.items = fpsWidget.value.canonicalTimecodeFormats
             createConfigureDoneButton.isEnabled = isErrorFree
         }
 

@@ -1,8 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.createDirectoriesSafely
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.useResourceStream
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.service.*
 import java.io.IOException
 import java.nio.file.Files
@@ -10,6 +8,8 @@ import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.notExists
 import kotlin.io.path.writeText
+import kotlin.math.max
+import kotlin.math.min
 
 
 /** @throws IOException */
@@ -33,9 +33,15 @@ fun tryCopyTemplate(destDir: Path, template: Template, creditsAccount: Account, 
 
 class Template(
     val locale: Locale,
-    val scale: Int,
+    val resolution: Resolution,
+    val fps: FPS,
+    val timecodeFormat: TimecodeFormat,
     val sample: Boolean
-)
+) {
+    // We use a heuristic to determine by how much to scale all sizes in the template:
+    // For image widths < 3000, we scale by 1. For image widths >= 3000 and < 5000, we scale by 2. And so on...
+    val scale: Int = min(1, (resolution.widthPx + 1000) / 2000)
+}
 
 
 private fun tryCopyTemplate(
@@ -124,13 +130,26 @@ private fun tryCopyAuxiliaryFiles(destDir: Path) {
 
 private fun fillIn(string: String, template: Template): String = string
     .replace(PLACEHOLDER_REGEX) { match ->
-        val key = match.groups[1]!!.value
-        if (key == "locale") template.locale.toLanguageTag() else l10n(key, template.locale)
+        when (val key = match.groups[1]!!.value) {
+            "locale" -> template.locale.toLanguageTag()
+            "resolution" -> template.resolution.toTimes()
+            "fps" -> template.fps.toFraction()
+            "timecodeFormat" -> template.timecodeFormat.name
+            "cardFadeFrames" -> template.fps.run { numerator / (2 * denominator) }.toString()
+            "scrollPxPerFrame" -> max(1, template.fps.run { 78 * denominator / numerator } * template.scale).toString()
+            else -> l10n(key, template.locale)
+        }
     }
     .replace(SCALING_REGEX) { match ->
         val num = match.groups[1]!!.value
         (num.toInt() * template.scale).toString()
     }
+    .replace(TIMECODE_REGEX) { match ->
+        val num = match.groups[1]!!.value
+        val frames = Timecode.Clock(num.toLong(), 1).toFramesCeil(template.fps).frames
+        formatTimecode(template.fps, template.timecodeFormat, frames)
+    }
 
 private val PLACEHOLDER_REGEX = Regex("\\{([a-zA-Z0-9.]+)}")
 private val SCALING_REGEX = Regex("<([0-9]+)>")
+private val TIMECODE_REGEX = Regex("\\[([0-9]+)s]")

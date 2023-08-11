@@ -31,8 +31,6 @@ object GuideProjectFolderCreateProjectDemo : ScreencastDemo("$DIR/create-project
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedStartPanel))
         dt.mouseUp()
         sc.hold(8 * hold)
-        sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgScaleWidget.components[0].getComponent(1)))
-        sc.click(2 * hold)
         projectsPanel.projects_createConfigure_setAccounts(listOf(DummyAccount))
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgLocWidget.components[0].getComponent(1)))
         sc.click(2 * hold)

@@ -12,6 +12,8 @@ Cinecred Changelog
 - The runtime of cards is now set via the spreadsheet's page runtime column.
 - The temporal gap between pages and whether to melt pages together is now
   controlled via a new page gap column in the spreadsheet.
+- When creating a new project, the resolution, frame rate, and timecode format
+  can now be chosen, and the timings and scroll speed are adjusted accordingly.
 
 ### UI Fixes
 

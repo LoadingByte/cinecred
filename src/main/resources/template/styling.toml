@@ -1,16 +1,20 @@
 [global]
-resolution = "<2048>x<858>"
+resolution = "{resolution}"
+fps = "{fps}"
+timecodeFormat = "{timecodeFormat}"
 unitVGapPx = <32>
 locale = "{locale}"
 
 [[pageStyle]]
 name = "{project.PageBehavior.CARD}"
 behavior = "CARD"
+cardFadeInFrames = {cardFadeFrames}
+cardFadeOutFrames = {cardFadeFrames}
 
 [[pageStyle]]
 name = "{project.PageBehavior.SCROLL}"
 behavior = "SCROLL"
-scrollPxPerFrame = <3>
+scrollPxPerFrame = {scrollPxPerFrame}
 
 [[contentStyle]]
 name = "{project.template.contentStyleHeading}"

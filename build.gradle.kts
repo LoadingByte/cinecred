@@ -19,6 +19,7 @@ val poiVersion = "5.2.3"
 val batikVersion = "1.16"
 val javacppVersion = "1.5.8"
 val ffmpegVersion = "5.1.2-$javacppVersion"
+val flatlafVersion = "3.1.1"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
@@ -40,10 +41,8 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(jdkVersion))
 }
 
-val natives by configurations.creating
-val implementationAndNatives by configurations.creating {
-    configurations.implementation.get().extendsFrom(this)
-    natives.extendsFrom(this)
+val natives = Platform.values().associateWith { platform ->
+    configurations.create("${platform.label}Natives") { isTransitive = false }
 }
 
 val demoImplementation by configurations.getting { extendsFrom(configurations.implementation.get()) }
@@ -91,13 +90,15 @@ dependencies {
     implementation("org.bytedeco", "javacpp", javacppVersion)
     implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
     for (platform in Platform.values()) {
-        natives("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slugDeps)
-        natives("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugDeps}-gpl")
+        natives.getValue(platform)("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slugJavacpp)
+        natives.getValue(platform)("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugJavacpp}-gpl")
     }
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.1")
-    implementationAndNatives("com.formdev", "flatlaf", "3.1.1")
+    implementation("com.formdev", "flatlaf", flatlafVersion)
+    for (pl in listOf(Platform.WINDOWS, Platform.LINUX))
+        natives.getValue(pl)("com.formdev", "flatlaf", flatlafVersion, classifier = pl.slug, ext = pl.os.nativesExt)
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing
@@ -181,12 +182,14 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory
         from(layout.projectDirectory.dir("src/main/natives/${platform.slug}"))
-        for (dep in natives.resolvedConfiguration.resolvedArtifacts)
-            from(zipTree(dep.file)) {
-                include("**/*${platform.slugDeps}*/**/*.${platform.os.nativesExt}*")
-                include("**/*${platform.slugDeps}*.${platform.os.nativesExt}*")
-                exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
-            }
+        for (dep in natives.getValue(platform).resolvedConfiguration.resolvedArtifacts)
+            if (dep.file.extension == platform.os.nativesExt)
+                from(dep.file)
+            else
+                from(zipTree(dep.file)) {
+                    include("**/*.${platform.os.nativesExt}*")
+                    exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
+                }
         into(layout.buildDirectory.dir("natives/${platform.slug}"))
         eachFile { path = name }
         includeEmptyDirs = false

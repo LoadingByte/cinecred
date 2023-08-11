@@ -13,10 +13,10 @@ enum class Platform(
     LINUX("linux", OS.LINUX, Arch.X86_64);
 
     val slug: String = os.slug + "-" + arch.slug
-    val slugDeps: String = os.slugDeps + "-" + arch.slug
+    val slugJavacpp: String = os.slugJavacpp + "-" + arch.slug
 
 
-    enum class OS(val slug: String, val slugDeps: String, val nativesExt: String) {
+    enum class OS(val slug: String, val slugJavacpp: String, val nativesExt: String) {
         WINDOWS("windows", "windows", "dll"),
         MAC("mac", "macosx", "dylib"),
         LINUX("linux", "linux", "so")

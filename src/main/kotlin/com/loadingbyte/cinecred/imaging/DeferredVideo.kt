@@ -918,6 +918,10 @@ class DeferredVideo private constructor(
             /**
              * For file sequence tapes, [timecode] is a [Timecode.Frames] which refers to a frame, but looses
              * information on which field inside that frame it refers to. This boolean retrofits that information.
+             *
+             * This field is only relevant when we're reading an interlaced image sequence and composite it onto an
+             * interlaced output video. As the former can never happen at this moment in time, this is really useless
+             * code at the moment, but we've kept it anyway in view of possible changes in the future.
              */
             val fileSeqFirstField: Boolean,
             val x: Int,

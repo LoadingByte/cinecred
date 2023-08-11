@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
+import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
 import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
 import com.loadingbyte.cinecred.ui.helper.tryMail
@@ -165,9 +166,7 @@ private fun mainSwing(args: Array<String>) {
 
     // On macOS, allow the user to open the preferences via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
-        Desktop.getDesktop().setPreferencesHandler {
-            masterCtrl.showPreferences()
-        }
+        Desktop.getDesktop().setPreferencesHandler { masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES) }
 
     // On macOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
     // all windows, which in turn triggers all "unsaved changes" dialogs.

@@ -112,6 +112,9 @@ configurations.configureEach {
     // This is only required for adding pictures to workbooks via code, which we don't do.
     exclude("commons-codec", "commons-codec")
 
+    // Google Client: This dependency is totally empty and only serves to avoid some conflict not relevant to us.
+    exclude("com.google.guava", "listenablefuture")
+
     // Batik & PDFBox: We replace this commons-logging dependency by the slf4j bridge.
     exclude("commons-logging", "commons-logging")
 

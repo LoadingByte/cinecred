@@ -519,7 +519,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     val h = (pic.height * scaling).roundToInt()
                     // Note: Directly drawing with bilinear or bicubic interpolation exhibits poor quality when
                     // downscaling by more than a factor of two, and Image.getScaledInstance() with SCALE_AREA_AVERAGING
-                    // is way too slow, so we use swscale with the Lanczos algorithm instead.
+                    // is way too slow, so we use zimg with the Lanczos algorithm instead.
                     // Scaling happens in the sRGB color space, as opposed to the often recommended linear RGB space.
                     // This has a couple of reasons:
                     //   - Converting from the sRGB to a linear transfer characteristic is slow.
@@ -603,7 +603,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }
 
         private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
-            val pi = shape.getPathIterator(AffineTransform())
+            val pi = shape.getPathIterator(null)
             val coords = FloatArray(6)
             while (!pi.isDone) {
                 when (pi.currentSegment(coords)) {

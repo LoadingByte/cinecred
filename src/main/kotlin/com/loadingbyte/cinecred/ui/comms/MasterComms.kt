@@ -10,7 +10,6 @@ interface MasterCtrlComms {
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean
     fun showWelcomeFrame(openProjectDir: Path? = null, tab: WelcomeTab? = null)
-    fun showPreferences()
     fun tryCloseProjectsAndDisposeAllFrames(force: Boolean = false): Boolean
 
     // ========== FOR WELCOME CTRL ==========

@@ -12,8 +12,8 @@ later version. For details, refer to the [license](LICENSE) file.
 For information on how to compile, run, and maintain this software, refer to the
 [maintenance](MAINTENANCE.md) file.
 
-Cinecred uses Weblate for translations. You are invited to
-[contribute translations](https://hosted.weblate.org/engage/cinecred/)!
-Here's how things currently stand:
+You are welcome to
+[contribute translations](https://hosted.weblate.org/engage/cinecred/) on
+Weblate! Here's how things currently stand:
 
 ![Translation status](https://hosted.weblate.org/widgets/cinecred/-/multi-auto.svg)

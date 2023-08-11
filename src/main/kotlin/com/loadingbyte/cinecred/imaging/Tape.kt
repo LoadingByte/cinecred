@@ -376,7 +376,7 @@ class Tape private constructor(
         constructor(tape: Tape) : this(tape, tape.resolution, 0, 0, 0, 0, tape.availableRange)
 
         init {
-            require(tape.resolution.run { widthPx > 0 && heightPx > 0 })
+            require(resolution.run { widthPx > 0 && heightPx > 0 })
             require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
             require(leftFadeFrames >= 0 && rightFadeFrames >= 0)
             val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.

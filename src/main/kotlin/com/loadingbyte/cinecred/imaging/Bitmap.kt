@@ -24,7 +24,7 @@ import java.nio.ByteOrder
  * available to convert between bitmaps and BufferedImages, or even only between BufferedImages, but using FFmpeg's
  * APIs underneath.
  *
- * Bitmaps are memory-managed by the gargabe collector. Still, if need be, they can be released early via [close].
+ * Bitmaps are memory-managed by the garbage collector. Still, if need be, they can be released early via [close].
  */
 class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : Closeable {
 

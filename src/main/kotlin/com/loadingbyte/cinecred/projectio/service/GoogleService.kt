@@ -394,7 +394,7 @@ object GoogleService : Service {
             try {
                 ServerSocket(0).use { socket -> socket.reuseAddress = true; socket.localPort }
             } catch (e: IOException) {
-                throw IOException("No free TCP/IP port to start embedded HTTP Server on")
+                throw IOException("No free TCP/IP port to start embedded HTTP Server on.", e)
             }
 
         override fun waitForCode(): String? {

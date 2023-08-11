@@ -223,7 +223,7 @@ object OdsFormat : SpreadsheetFormat {
 
         // Make all columns use the raw text data format.
         val defaultStyle = createStyle()
-        for (col in 0 until spreadsheet.numColumns)
+        for (col in 0..<spreadsheet.numColumns)
             sheet.setDefaultColumnCellStyle(col, defaultStyle)
 
         for (record in spreadsheet) {

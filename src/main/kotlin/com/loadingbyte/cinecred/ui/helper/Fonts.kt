@@ -131,7 +131,9 @@ abstract class FontSorter<Font, Family> {
                     ?: getNamesAndStylesFromFamNames(font, typo = true, matchEveryLocale)
                     ?: getNamesAndStylesFromFullName(font, rsub = true, matchEveryLocale)
                     ?: getNamesAndStylesFromFamNames(font, typo = false, matchEveryLocale)
-                    ?: getNamesAndStylesFromFullName(font, rsub = false, matchEveryLocale)!!
+                    ?: getNamesAndStylesFromFullName(font, rsub = false, matchEveryLocale)
+                    // As the font doesn't provider any naming information whatsoever, we just skip it.
+                    ?: continue
 
             var weight: Int? = null
             var width: Int? = null
@@ -176,7 +178,7 @@ abstract class FontSorter<Font, Family> {
             // assigning penalty points to each font according to how much it differs from a regular font, and selecting
             // the one which received the smallest penalty.
             val canonicalFont =
-                richFonts.minByOrNull { abs(it.weight / 100.0 - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }!!.font
+                richFonts.minBy { abs(it.weight / 100.0 - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }.font
 
             makeFamily(family, subfamilies, sampleTexts, richFonts.map { it.font }, canonicalFont)
         }

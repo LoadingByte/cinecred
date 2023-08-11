@@ -168,7 +168,7 @@ class CustomGlyphLayoutEngine private constructor(
                             hb_blob_create(cArr, javaArr.size, HB_MEMORY_MODE_WRITABLE(), NULL, destroyFunc(blobScope))
                         } catch (t: Throwable) {
                             // We have to catch all exceptions because if one escapes, a segfault happens.
-                            runCatching { LOGGER.error("Cannot read table $tag of font ${font.postscriptName}", t) }
+                            runCatching { LOGGER.error("Cannot read table {} of font {}", tag, font.postscriptName, t) }
                             NULL
                         }
                     }, faceScope)

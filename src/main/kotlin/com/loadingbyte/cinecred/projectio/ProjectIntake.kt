@@ -176,7 +176,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
                 // An IO exception can occur if the credits file has disappeared in the meantime. If that happens,
-                // the file watcher should quickly trigger a call to this method again. Still, we add a push an
+                // the file watcher should quickly trigger a call to this method again. Still, we push an
                 // error message in case something else goes wrong too.
                 val msg = l10n("projectIO.credits.cannotReadCreditsFile", activeFile.fileName, e.toString())
                 val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
@@ -303,7 +303,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 }
         }
 
-        fun hasCreditsFilename(file: Path): Boolean {
+        private fun hasCreditsFilename(file: Path): Boolean {
             val fileExt = file.extension
             return file.nameWithoutExtension.equals("Credits", ignoreCase = true) &&
                     CREDITS_EXTS.any { ext -> ext.equals(fileExt, ignoreCase = true) }

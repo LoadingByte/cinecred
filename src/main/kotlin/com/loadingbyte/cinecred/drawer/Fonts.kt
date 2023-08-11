@@ -46,7 +46,7 @@ val SYSTEM_FONTS: List<Font> =
                     Font.createFonts(it.toFile()).asSequence()
                 } catch (_: Exception) {
                     // This happens quite regularly on macOS, so do not log the stacktrace to not spam the log.
-                    LOGGER.error("Skipping system font '{}' because it is corrupt or cannot be read.", it)
+                    LOGGER.warn("Skipping system font '{}' because it cannot be read.", it)
                     emptySequence()
                 }
             }

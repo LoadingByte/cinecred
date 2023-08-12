@@ -32,6 +32,9 @@ import kotlin.io.path.*
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
+val COPYRIGHT = useResourceStream("/copyright") { it.bufferedReader().readText().trim() }
+
+
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 val CLEANER: Cleaner = Cleaner.create()
 

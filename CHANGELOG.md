@@ -14,6 +14,7 @@ Cinecred Changelog
   controlled via a new page gap column in the spreadsheet.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
+- Added an about tab listing all contributors to the welcome window.
 
 ### UI Fixes
 

@@ -140,6 +140,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     // @formatter:on
 
     override fun setChangelog(changelog: String) = panel.setChangelog(changelog)
+    override fun setAbout(about: String) = panel.setAbout(about)
     override fun setLicenses(licenses: List<License>) = panel.setLicenses(licenses)
     override fun setUpdate(version: String) = panel.setUpdate(version)
 

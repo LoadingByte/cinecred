@@ -27,6 +27,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
+import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
@@ -133,6 +134,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_configureOverlay_setImageFileExtAssortment(FileExtAssortment(Picture.EXTS.toList()))
 
         welcomeView.setChangelog(CHANGELOG_HTML)
+        welcomeView.setAbout(ABOUT_HTML)
         welcomeView.setLicenses(LICENSES)
     }
 
@@ -595,6 +597,11 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 </html>
             """
         }
+
+        private val ABOUT_HTML = MessageFormat.format(
+            useResourceStream("/about.html") { it.bufferedReader().readText() },
+            VERSION, l10n("slogan"), COPYRIGHT, l10n("ui.about.translators")
+        )
 
         private val LICENSES = run {
             val rawAppLicenses = useResourcePath("/licenses") { appLicensesDir ->

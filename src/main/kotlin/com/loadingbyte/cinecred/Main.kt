@@ -164,7 +164,9 @@ private fun mainSwing(args: Array<String>) {
     comprehensivelyApplyLocale(UI_LOCALE_PREFERENCE.get().locale)
     UI_LOCALE_PREFERENCE.addListener { wish -> comprehensivelyApplyLocale(wish.locale) }
 
-    // On macOS, allow the user to open the preferences via the OS.
+    // On macOS, allow the user to open the about and preferences tabs via the OS.
+    if (Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT))
+        Desktop.getDesktop().setAboutHandler { masterCtrl.showWelcomeFrame(tab = WelcomeTab.ABOUT) }
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
         Desktop.getDesktop().setPreferencesHandler { masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES) }
 

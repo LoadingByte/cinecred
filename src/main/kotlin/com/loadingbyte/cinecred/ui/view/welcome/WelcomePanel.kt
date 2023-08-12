@@ -29,6 +29,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val tabPane: JTabbedPane
     private val changelogScrollPane: JScrollPane
     private val changelogEditorPane: JEditorPane
+    private val aboutTextArea: JEditorPane
     private val licenseComboBox: JComboBox<License>
 
     private val updatePanel: JPanel
@@ -86,8 +87,11 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                 licenseScrollPane.verticalScrollBar.value = 0
             }
         }
-        val licensesPanel = JPanel(MigLayout("insets 20")).apply {
+        aboutTextArea = newLabelEditorPane("text/html")
+        val aboutPanel = JPanel(MigLayout("insets 20")).apply {
             putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
+            add(aboutTextArea, "growx")
+            add(JLabel(l10n("ui.about.viewLicense")), "newline, gaptop 26, split 2")
             add(licenseComboBox, "growx")
             add(licenseScrollPane, "newline, grow, push, gaptop 10")
         }
@@ -123,7 +127,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             addTab(l10n("ui.welcome.projects"), FOLDER_ICON, projectsPanel)
             addTab(l10n("ui.welcome.preferences"), PREFERENCES_ICON, preferencesPanel)
             addTab(l10n("ui.welcome.changelog"), GIFT_ICON, changelogPanel)
-            addTab(l10n("ui.welcome.licenses"), PAGE_ICON, licensesPanel)
+            addTab(l10n("ui.welcome.about"), INFO_ICON.getRecoloredIcon(PALETTE_GRAY_COLOR), aboutPanel)
         }
         layout = BorderLayout()
         add(tabPane, BorderLayout.CENTER)
@@ -149,6 +153,10 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     fun setChangelog(changelog: String) {
         changelogEditorPane.text = changelog
+    }
+
+    fun setAbout(about: String) {
+        aboutTextArea.text = about
     }
 
     fun setLicenses(licenses: List<License>) {

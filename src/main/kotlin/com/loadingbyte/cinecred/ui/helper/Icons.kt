@@ -541,6 +541,7 @@ class SVGIcon private constructor(
     private val svg: SVGResource,
     private val xScaling: Double,
     private val yScaling: Double,
+    private val recolor: Color?,
     private val isDisabled: Boolean
 ) : FlatAbstractIcon((svg.width * abs(xScaling)).roundToInt(), (svg.height * abs(yScaling)).roundToInt(), null),
     FlatLaf.DisabledIconProvider {
@@ -560,18 +561,36 @@ class SVGIcon private constructor(
                 }
         }
 
-        // Custom composites are not universally supported. If they were, we could also use the gray filter from inside
-        // a custom composite. Instead, we use a Graphics2D proxy that intercepts calls to setColor() and setPaint().
-        if (!isDisabled) paintTo(g2) else paintTo(GrayFilteredGraphics2D(g2))
+        // Custom composites are not universally supported. If they were, we could also recolor and filter from inside
+        // a custom composite. Instead, we use Graphics2D proxies that intercept calls to setColor() and setPaint().
+        var effG2 = g2
+        if (isDisabled)
+            effG2 = GrayFilteredGraphics2D(effG2)
+        if (recolor != null)
+            effG2 = RecoloredGraphics2D(effG2, recolor)
+        paintTo(effG2)
     }
 
-    override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, isDisabled = true)
+    override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, recolor, isDisabled = true)
+    fun getRecoloredIcon(recolor: Color) = SVGIcon(svg, xScaling, yScaling, recolor, isDisabled)
     fun getScaledIcon(scaling: Double) = getScaledIcon(scaling, scaling)
     fun getScaledIcon(xScaling: Double, yScaling: Double) =
-        SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, isDisabled)
+        SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, recolor, isDisabled)
 
     companion object {
-        fun load(name: String) = SVGIcon(SVGResource(name), 1.0, 1.0, false)
+        fun load(name: String) = SVGIcon(SVGResource(name), 1.0, 1.0, null, false)
+    }
+
+
+    private class RecoloredGraphics2D(delegate: Graphics2D, private val recolor: Color) : Graphics2DProxy(delegate) {
+
+        override fun create() = RecoloredGraphics2D(super.create() as Graphics2D, recolor)
+        override fun create(x: Int, y: Int, width: Int, height: Int) =
+            RecoloredGraphics2D(super.create(x, y, width, height) as Graphics2D, recolor)
+
+        override fun setColor(c: Color) = super.setColor(recolor)
+        override fun setPaint(p: Paint) = super.setPaint(if (p is Color) recolor else p)
+
     }
 
 

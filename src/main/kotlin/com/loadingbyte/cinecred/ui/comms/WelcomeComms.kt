@@ -150,6 +150,7 @@ interface WelcomeViewComms {
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?)
 
     fun setChangelog(changelog: String)
+    fun setAbout(about: String)
     fun setLicenses(licenses: List<License>)
     fun setUpdate(version: String)
 
@@ -165,7 +166,7 @@ interface WelcomeViewComms {
 }
 
 
-enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, LICENSES, UPDATE }
+enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, ABOUT, UPDATE }
 enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
 enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT, CONFIGURE_OVERLAY }

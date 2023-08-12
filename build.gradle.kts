@@ -3,6 +3,7 @@ import com.loadingbyte.cinecred.Platform
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.time.Year
 import java.util.*
 
 
@@ -27,6 +28,8 @@ val addModules = javaProperties.getProperty("addModules").split(' ')
 val addOpens = javaProperties.getProperty("addOpens").split(' ')
 val splashScreen = javaProperties.getProperty("splashScreen")!!
 val javaOptions = javaProperties.getProperty("javaOptions")!!
+
+val copyright = "Copyright \u00A9 ${Year.now().value} Felix Mujkanovic, licensed under the GPLv3 or any later version"
 
 
 sourceSets {
@@ -145,6 +148,11 @@ val writeVersionFile by tasks.registering(WriteFile::class) {
     outputFile.set(layout.buildDirectory.file("generated/version/version"))
 }
 
+val writeCopyrightFile by tasks.registering(WriteFile::class) {
+    text.set(copyright)
+    outputFile.set(layout.buildDirectory.file("generated/copyright/copyright"))
+}
+
 val drawSplash by tasks.registering(DrawSplash::class) {
     version.set(project.version.toString())
     logoFile.set(mainResource("logo.svg"))
@@ -160,6 +168,7 @@ val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
 
 tasks.processResources {
     from(writeVersionFile)
+    from(writeCopyrightFile)
     from(drawSplash)
     from("CHANGELOG.md")
     into("licenses") {
@@ -271,6 +280,7 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "felix@cinecred.com",
+                "COPYRIGHT" to copyright,
                 "LINUX_SHORTCUT_COMMENTS" to mainTranslations.get().entries.mapNotNull { (locale, prop) ->
                     prop.getProperty("slogan")?.let { "Comment" + (if (locale.isEmpty()) "" else "[$locale]") + "=$it" }
                 }.joinToString("\n"),

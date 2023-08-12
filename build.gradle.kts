@@ -267,12 +267,13 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "ARCH_TEMURIN" to platform.arch.slugTemurin,
                 "ARCH_WIX" to platform.arch.slugWix,
                 "ARCH_DEBIAN" to platform.arch.slugDebian,
-                "DESCRIPTION" to "Create beautiful film credits without the pain",
-                "DESCRIPTION_DE" to "Wunderschöne Filmabspänne schmerzfrei erstellen",
-                "DESCRIPTION_ZH_CN" to "高效简洁且功能多样的电影片尾字幕处理方案",
+                "DESCRIPTION" to mainTranslations.get().getValue("").getProperty("slogan")!!,
                 "URL" to "https://cinecred.com",
                 "VENDOR" to "Felix Mujkanovic",
                 "EMAIL" to "felix@cinecred.com",
+                "LINUX_SHORTCUT_COMMENTS" to mainTranslations.get().entries.mapNotNull { (locale, prop) ->
+                    prop.getProperty("slogan")?.let { "Comment" + (if (locale.isEmpty()) "" else "[$locale]") + "=$it" }
+                }.joinToString("\n"),
                 "LEGAL_PATH_RUNTIME" to when (platform.os) {
                     Platform.OS.WINDOWS -> "runtime\\legal"
                     Platform.OS.MAC -> "runtime/Contents/Home/legal"
@@ -335,6 +336,15 @@ val allJar by tasks.registering(Jar::class) {
 
 fun mainResource(path: String): Provider<RegularFile> =
     sourceSets.main.map { layout.projectDirectory.file(it.resources.matching { include("/$path") }.singleFile.path) }
+
+val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
+    val result = TreeMap<String, Properties>()
+    for (file in it.resources.matching { include("/l10n/strings*.properties") })
+        result[file.name.drop(8).dropLast(11)] = Properties().apply { file.bufferedReader().use(::load) }
+    if (result.isEmpty())
+        throw GradleException("No l10n files have been found; has the l10n system changed?")
+    result
+}
 
 // We need to retrofit this property in a hacky and not entirely compliant way because it's sadly not migrated yet.
 val Copy.destDirProvider: Directory

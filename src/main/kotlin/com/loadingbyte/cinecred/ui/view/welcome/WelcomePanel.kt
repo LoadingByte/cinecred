@@ -53,7 +53,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         projectsPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
         preferencesPanel.putClientProperty(STYLE, "background: $CONTENT_BG_COLOR")
 
-        changelogEditorPane = newLabelEditorPane("text/html").apply {
+        changelogEditorPane = newLabelEditorPane("text/html", insets = true).apply {
             // Allow the user to select and copy text.
             isFocusable = true
         }

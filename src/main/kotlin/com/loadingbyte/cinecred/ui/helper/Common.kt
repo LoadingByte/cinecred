@@ -57,7 +57,7 @@ fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : J
         wrapStyleWord = true
         // If requested, set insets to 0, as JLabels also have insets of 0 and the text area should behave like a label.
         if (!insets)
-            border = null
+            margin = null
         // Without setting an explicit minimum width, the component would never ever again shrink once it has grown.
         // This would of course lead to trouble when first enlarging and then shrinking a container which contains
         // a label text area. By setting an explicit minimum width, we turn off this undesired behavior.
@@ -82,11 +82,14 @@ fun newLabelTextPane() = object : JTextPane() {
 }
 
 
-fun newLabelEditorPane(type: String, text: String? = null) = object : JEditorPane(type, text) {
+fun newLabelEditorPane(type: String, text: String? = null, insets: Boolean = false) = object : JEditorPane(type, text) {
     init {
         background = null
         isEditable = false
         isFocusable = false
+        // If requested, set insets to 0, as JLabels also have insets of 0 and the pane should behave like a label.
+        if (!insets)
+            margin = null
     }
 
     // Disable the ability to scroll for the same reason as explained above.

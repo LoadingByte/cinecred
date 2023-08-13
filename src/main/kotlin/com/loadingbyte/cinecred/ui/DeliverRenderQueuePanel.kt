@@ -2,10 +2,12 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.delivery.MAX_RENDER_PROGRESS
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.BorderLayout
+import java.text.DecimalFormat
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -185,7 +187,9 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
     private class ProgressCellRenderer : TableCellRenderer {
 
-        private val progressBar = JProgressBar().apply { putClientProperty(PROGRESS_BAR_SQUARE, true) }
+        private val progressBar = JProgressBar(0, MAX_RENDER_PROGRESS).apply {
+            putClientProperty(PROGRESS_BAR_SQUARE, true)
+        }
         private val wordWrapCellRenderer = WordWrapCellRenderer()
 
         override fun getTableCellRendererComponent(
@@ -197,22 +201,23 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                 setTableCellBackground(table, rowIdx)
                 if (row.startTime != null) {
                     isStringPainted = true
+                    val percentage = DecimalFormat("0.0 %").format(progress / MAX_RENDER_PROGRESS.toDouble())
                     string = if (progress == 0)
-                        "0 %"
+                        percentage
                     else {
                         val d = Duration.between(row.startTime, Instant.now())
-                            .multipliedBy(100L - progress).dividedBy(progress.toLong())
+                            .multipliedBy(MAX_RENDER_PROGRESS - progress.toLong()).dividedBy(progress.toLong())
                         val timeRemaining = l10n(
                             "ui.deliverRenderQueue.timeRemaining",
                             "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
                         )
-                        "$progress %  \u2013  $timeRemaining"
+                        "$percentage  \u2013  $timeRemaining"
                     }
                 } else
                     isStringPainted = false
             }
             FINISHED -> progressBar.apply {
-                model.value = 100
+                model.value = MAX_RENDER_PROGRESS
                 putClientProperty(STYLE, "foreground: $PALETTE_GREEN")
                 setTableCellBackground(table, rowIdx)
                 isStringPainted = false

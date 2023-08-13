@@ -103,7 +103,7 @@ class WholePageSequenceRenderJob(
                 }
             }
 
-            progressCallback(100 * (idx + 1) / pageDefImages.size)
+            progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)
         }
     }
 
@@ -164,7 +164,7 @@ class WholePagePDFRenderJob(
                 page.materialize(pdfDoc, pdfPage, cs, listOf(STATIC, TAPES))
             }
 
-            progressCallback(100 * (idx + 1) / pageDefImages.size)
+            progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)
         }
 
         pdfDoc.save(file.toFile())

@@ -77,7 +77,7 @@ class VideoRenderJob(
                 var frameIdx = 0
                 while (true) {
                     (backend.materializeNextFrame() ?: break).use(videoWriter::write)
-                    progressCallback(100 * (frameIdx++ + 1) / scaledVideo.numFrames)
+                    progressCallback(MAX_RENDER_PROGRESS * (frameIdx++ + 1) / scaledVideo.numFrames)
                     if (Thread.interrupted())
                         throw InterruptedException()
                 }

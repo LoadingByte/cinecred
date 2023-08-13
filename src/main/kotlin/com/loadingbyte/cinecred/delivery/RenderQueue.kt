@@ -10,6 +10,9 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 
+const val MAX_RENDER_PROGRESS = 1000
+
+
 interface RenderJob {
     val prefix: Path
     fun render(progressCallback: (Int) -> Unit)
@@ -67,7 +70,7 @@ object RenderQueue {
                         job.progressCallback(0)
                         job.job.render(job.progressCallback)
                         pollJobLock.withLock { runningJob = null }
-                        job.progressCallback(100)
+                        job.progressCallback(MAX_RENDER_PROGRESS)
                         job.finishCallback(null)
                     } catch (e: Exception) {
                         // Note that this catch also catches InterruptedExceptions,

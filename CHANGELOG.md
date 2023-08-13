@@ -19,6 +19,7 @@ Cinecred Changelog
 ### UI Fixes
 
 - The custom resolution chooser now defaults to the last selected resolution.
+- Increased the resolution of render progress bars to the 10th of a percent.
 
 ### Compatibility Notes
 

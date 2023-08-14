@@ -31,24 +31,51 @@ echo Assembling ZIP archive...
 powershell Compress-Archive work\image\Cinecred -DestinationPath out\cinecred-@VERSION@-@OS@-@ARCH@.zip
 
 echo Assembling MSI package...
+REM Collect all languages for which we have .wxl files in three variables (en-US always comes first):
+REM lang_tags = en-US de-DE ...
+REM lang_codes = 1033 1031 ...
+REM lang_tags_and_codes = en-US/1033 de-DE/1031 ...
+set lang_tags=
+set lang_codes=
+set lang_tags_and_codes=
+FOR %%F IN (resources\msi\l10n\*) DO (
+    FOR /F "tokens=1 USEBACKQ" %%C IN (`powershell "(Select-XML -Path %%F -XPath '//ns:String[@Id=''LanguageCode'']' -Namespace @{ ns = 'http://schemas.microsoft.com/wix/2006/localization'; }).Node.'#text'"`) DO (
+        call :append_lang %%~nF %%C
+    )
+)
+REM Generate a .wxs file that lists all installed files
 work\wix\heat.exe dir work\image\cinecred\ -nologo -ag -cg Files -dr INSTALLDIR -srd -sfrag -scom -sreg -indent 2 -o work\Files.wxs
+REM Compile all .wxs files to .wxo files
 work\wix\candle.exe resources\msi\*.wxs work\Files.wxs -nologo -arch @ARCH_WIX@ -o work\wixobj\
-work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\en-US.wxl -cultures:en-US -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\en-US.msi
-work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\cs-CZ.wxl -cultures:cs-CZ -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\cs-CZ.msi -reusecab
-work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\de-DE.wxl -cultures:de-DE -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\de-DE.msi -reusecab
-work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\fr-FR.wxl -cultures:fr-FR -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\fr-FR.msi -reusecab
-work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\zh-CN.wxl -cultures:zh-CN -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\zh-CN.msi -reusecab
-work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\cs-CZ.msi -t language -o work\wixmst\cs-CZ.mst
-work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\de-DE.msi -t language -o work\wixmst\de-DE.mst
-work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\fr-FR.msi -t language -o work\wixmst\fr-FR.mst
-work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\zh-CN.msi -t language -o work\wixmst\zh-CN.mst
+REM Assemble a separate .msi for each language
+FOR %%T IN (%lang_tags%) DO (
+    IF "%%T" == "en-US" (set extra_arg=) else (set extra_arg=-reusecab)
+    work\wix\light.exe work\wixobj\* -nologo -b work\image\cinecred -loc resources\msi\l10n\%%T.wxl -cultures:%%T -ext WixUIExtension -cc work\wixcab\ -spdb -o work\wixmsi\%%T.msi %extra_arg%
+)
+REM Obtain .mst transformations from the en-US .msi to each other language's .msi
+FOR %%T IN (%lang_tags%) DO (
+    IF not "%%T" == "en-US" (work\wix\torch.exe -nologo work\wixmsi\en-US.msi work\wixmsi\%%T.msi -t language -o work\wixmst\%%T.mst)
+)
+REM Add the transformations as substorages to the en-US .msi
 copy work\wixmsi\en-US.msi work\out.msi
-resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\cs-CZ.mst 1029
-resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\de-DE.mst 1031
-resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\fr-FR.mst 1036
-resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\zh-CN.mst 2052
-resources\msi\scripts\SetPackageLanguage.vbs work\out.msi 1033,1029,1031,1036,2052
+FOR %%P IN (%lang_tags_and_codes%) DO (FOR /F "tokens=1,2 delims=/" %%T IN ("%%P") DO (
+    IF not "%%T" == "en-US" (resources\msi\scripts\AddSubstorage.vbs work\out.msi work\wixmst\%%T.mst %%U)
+))
+REM Write all available language codes into the .msi
+resources\msi\scripts\SetPackageLanguage.vbs work\out.msi %lang_codes%
 move work\out.msi out\cinecred-@VERSION@-@ARCH@.msi
 
 echo Cleaning up...
 rmdir /S /Q work\
+
+goto :eof
+
+
+:append_lang
+IF not defined lang_tags (
+    set lang_tags=%1& set lang_codes=%2& set lang_tags_and_codes=%1/%2
+) ELSE (IF "%1" == "en-US" (
+    set lang_tags=%1,%lang_tags%& set lang_codes=%2,%lang_codes%& set lang_tags_and_codes=%1/%2,%lang_tags_and_codes%
+) ELSE (
+    set lang_tags=%lang_tags%,%1& set lang_codes=%lang_codes%,%2& set lang_tags_and_codes=%lang_tags_and_codes%,%1/%2
+))

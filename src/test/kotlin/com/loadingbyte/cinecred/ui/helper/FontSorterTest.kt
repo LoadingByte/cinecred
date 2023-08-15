@@ -156,6 +156,17 @@ private fun makeExpectedFamilies() = listOf(
             outStrs(DE, DE to "Fett"),
         )
     ),
+    // The real-world Mitra Mono font:
+    Family(
+        fonts = listOf(
+            Font(
+                full = mapOf(US to "Mitra Mono", Locale("bn", "IN") to "SomethingElseEntirely"),
+                fam = mapOf(US to "Mitra"), sub = mapOf(US to "Regular"), w = 5, b = 400, i = F, canon = T
+            )
+        ),
+        family = outStrs(US, US to "Mitra", Locale("bn", "IN") to "SomethingElseEntirely"),
+        subfamilies = listOf(outStrs(US, US to "Regular"))
+    ),
     // The real-world Courier New font (abbreviated to New):
     Family(
         fonts = listOf(

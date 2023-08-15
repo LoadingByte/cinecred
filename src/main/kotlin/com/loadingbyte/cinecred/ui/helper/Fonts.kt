@@ -346,7 +346,10 @@ abstract class FontSorter<Font, Family> {
                     ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchLocaleLangu)
                     ?: concatLocFamilyAndSubfamily(typo = false, matchEveryLocale, matchLocaleCntry)
                     ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchEveryLocale)
-                    ?: throw IllegalStateException("Mysterious locale $locale in font ${richFont.font}.")
+                    // We only get here if (a) the locale only appears in the full name field and (b) the localized full
+                    // name is the same across all fonts in the family (or there's just one font in the family). If that
+                    // happens, we skip the localized subfamily and fall back to another locale's subfamily.
+                    ?: continue
 
             subfamily[locale] = subfamily(familyPlusSubfamily)
         }

@@ -16,6 +16,10 @@ Cinecred Changelog
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
 - Added an about tab listing all contributors to the welcome window.
 
+### Fixes
+
+- Certain fonts with bad naming metadata no longer cause a crash.
+
 ### UI Fixes
 
 - The custom resolution chooser now defaults to the last selected resolution.

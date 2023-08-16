@@ -12,6 +12,8 @@ Cinecred Changelog
 - The runtime of cards is now set via the spreadsheet's page runtime column.
 - The temporal gap between pages and whether to melt pages together is now
   controlled via a new page gap column in the spreadsheet.
+- Embedded videos can now be aligned in the middle or at the end of the time
+  range in which they appear.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
 - Added an about tab listing all contributors to the welcome window.

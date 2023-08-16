@@ -825,6 +825,8 @@ private class CreditsReader(
                 val isFade = hint in FADE_KW
                 val isIn = hint in IN_KW
                 val isOut = hint in OUT_KW
+                val isMid = hint in MIDDLE_KW
+                val isEnd = hint in END_KW
                 if (isMargin || isFade) {
                     hints.remove()
                     val projFPS = styling.global.fps
@@ -861,6 +863,9 @@ private class CreditsReader(
                             table.log(row, l10nColName, WARN, msg)
                         }
                     }
+                } else if (isMid || isEnd) {
+                    embTape = embTape.copy(align = if (isMid) Tape.Embedded.Align.MIDDLE else Tape.Embedded.Align.END)
+                    hints.remove()
                 } else {
                     embTape = try {
                         when {
@@ -881,7 +886,7 @@ private class CreditsReader(
             l10n(
                 "projectIO.credits.videoIllFormatted",
                 l10n(MARGIN_KW.key), l10n(FADE_KW.key), styling.global.timecodeFormat.label,
-                l10n(IN_KW.key), l10n(OUT_KW.key), tagKey
+                l10n(IN_KW.key), l10n(OUT_KW.key), l10n(MIDDLE_KW.key), l10n(END_KW.key), tagKey
             )
         }
     )
@@ -975,6 +980,7 @@ private class CreditsReader(
         val VIDEO_KW = Keyword("projectIO.credits.table.video")
         val MARGIN_KW = Keyword("projectIO.credits.table.margin")
         val FADE_KW = Keyword("projectIO.credits.table.fade")
+        val END_KW = Keyword("projectIO.credits.table.end")
         val IN_KW = Keyword("projectIO.credits.table.in")
         val OUT_KW = Keyword("projectIO.credits.table.out")
 

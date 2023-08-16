@@ -369,11 +369,14 @@ class Tape private constructor(
         val rightMarginFrames: Int,
         val leftFadeFrames: Int,
         val rightFadeFrames: Int,
-        val range: OpenEndRange<Timecode>
+        val range: OpenEndRange<Timecode>,
+        val align: Align
     ) {
 
+        enum class Align { START, MIDDLE, END }
+
         /** @throws Exception */
-        constructor(tape: Tape) : this(tape, tape.resolution, 0, 0, 0, 0, tape.availableRange)
+        constructor(tape: Tape) : this(tape, tape.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
 
         init {
             require(resolution.run { widthPx > 0 && heightPx > 0 })

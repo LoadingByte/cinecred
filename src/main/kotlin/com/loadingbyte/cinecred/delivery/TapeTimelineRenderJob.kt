@@ -53,7 +53,7 @@ class TapeTimelineRenderJob(
             val startFrame = startField / extraFPSMul
             val stopFrame = ceilDiv(stopField, extraFPSMul)
             val tapeFPS = tapeSpan.embeddedTape.tape.fps ?: global.fps
-            val tapeStartExact = tapeSpan.embeddedTape.range.start
+            val tapeStartExact = tapeSpan.firstReadTimecode
             val tapeStartRounded = when (tapeStartExact) {
                 is Timecode.Frames -> tapeStartExact
                 is Timecode.Clock -> tapeStartExact.toSMPTENonDropFrame(tapeFPS)
@@ -95,7 +95,7 @@ class TapeTimelineRenderJob(
             val clipStart = Timecode.Frames(startFrame)
             val clipLength = Timecode.Frames(stopFrame - startFrame)
             if (clipLength.frames > 0) {
-                val tapeStart = tapeSpan.embeddedTape.range.start
+                val tapeStart = tapeSpan.firstReadTimecode
                 val tapeLength = if (tapeStart is Timecode.Frames) clipLength else clipLength.toClock(projFPS)
                 // In a well-behaved project, the tape FPS equals the project FPS, and only in those cases, we can
                 // actually produce and in-spec EDL. Otherwise, importing software usually assumes that the frame

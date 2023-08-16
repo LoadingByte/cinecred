@@ -11,6 +11,7 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.io.Closeable
 import java.lang.ref.SoftReference
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.sumOf
@@ -101,8 +102,12 @@ class DeferredVideo private constructor(
             flows.add(Flow.DefImg(image, mutableListOf(phase)))
     }
 
-    fun collectTapeSpans(layers: List<DeferredImage.Layer>): List<TapeSpan> =
-        TapeTracker<Unit>(this, layers).collectSpans()
+    fun collectTapeSpans(layers: List<DeferredImage.Layer>): List<TapeSpan> {
+        val tapeTracker = TapeTracker<Unit>(this, layers)
+        return tapeTracker.collectSpanFirstFrameIndices().flatMap(tapeTracker::query).map { resp ->
+            TapeSpan(resp.embeddedTape, resp.firstFrameIdx, resp.lastFrameIdx, resp.timecode)
+        }
+    }
 
     private val instructions: List<Instruction> by lazy {
         val list = mutableListOf<Instruction>()
@@ -175,11 +180,12 @@ class DeferredVideo private constructor(
     }
 
 
-    interface TapeSpan {
-        val embeddedTape: Tape.Embedded
-        val firstFrameIdx: Int
-        val lastFrameIdx: Int
-    }
+    class TapeSpan(
+        val embeddedTape: Tape.Embedded,
+        val firstFrameIdx: Int,
+        val lastFrameIdx: Int,
+        val firstReadTimecode: Timecode
+    )
 
 
     private sealed interface Flow {
@@ -324,7 +330,7 @@ class DeferredVideo private constructor(
             for (resp in tapeTracker.query(frameIdx)) {
                 require(draft) { "The BufferedImageBackend can only embed tapes when in draft mode." }
                 val previewFrame = try {
-                    resp.span.embeddedTape.tape.getPreviewFrame(resp.timecode)
+                    resp.embeddedTape.tape.getPreviewFrame(resp.timecode)
                 } catch (_: Exception) {
                     // In case of errors, draw a missing media placeholder instead.
                     bufImage.withG2 { g2 ->
@@ -499,7 +505,7 @@ class DeferredVideo private constructor(
                     userData.compositor.compose(out, frame, resp.x, dstParity + y * 2, 2, overlayParity, resp.alpha)
                 } else {
                     // When the tape is interlaced, bring overlay fields into action alternatingly.
-                    val fileSeq = resp.span.embeddedTape.tape.fileSeq
+                    val fileSeq = resp.embeddedTape.tape.fileSeq
                     val frame = userData.reader.read(resp.timecode).bitmap
                     if (userData.topField == null) {
                         // If the tape has just appeared, immediately bring in both fields from the tape's first frame.
@@ -554,7 +560,7 @@ class DeferredVideo private constructor(
         private fun dropTapeUserData(resp: TapeTracker.Response<TapeUserData>, frameIdx: Int) {
             // Close the reader early and dereference the user data if we no longer need it. Notice that in case of
             // errors, the close() function on this object will be called and will close all remaining readers.
-            if (frameIdx >= /* use >= instead of == just to be sure */ resp.span.lastFrameIdx) {
+            if (frameIdx >= /* use >= instead of == just to be sure */ resp.lastFrameIdx) {
                 resp.userData?.run { reader.close() }
                 resp.userData = null
             }
@@ -569,7 +575,7 @@ class DeferredVideo private constructor(
 
         private class TapeUserData(canvasSpec: Bitmap.Spec, resp: TapeTracker.Response<*>) {
 
-            val reader = resp.span.embeddedTape.tape.SequentialReader(resp.timecode /* the span's first timecode */)
+            val reader = resp.embeddedTape.tape.SequentialReader(resp.timecode /* the span's first timecode */)
             lateinit var compositor: BitmapCompositor; private set
             lateinit var topFieldCompositor: BitmapCompositor; private set
             lateinit var botFieldCompositor: BitmapCompositor; private set
@@ -597,7 +603,7 @@ class DeferredVideo private constructor(
                     } else {
                         val tapeFrameRes = tapeSpec.resolution
                         require(tapeFrameRes.heightPx % 2 == 0) {
-                            "The interlaced tape '${resp.span.embeddedTape.tape.fileOrDir.name}' must have even height."
+                            "The interlaced tape '${resp.embeddedTape.tape.fileOrDir.name}' must have even height."
                         }
                         val tapeFieldSpec =
                             tapeSpec.copy(resolution = tapeFrameRes.copy(heightPx = tapeFrameRes.heightPx / 2))
@@ -833,12 +839,21 @@ class DeferredVideo private constructor(
                         is Timecode.Clock -> rangeDiff.toFramesCeil(video.fps).frames
                         else -> throw IllegalStateException("Wrong timecode format: ${rangeDiff.javaClass.simpleName}")
                     }
-                    val firstFrameIdx =
+                    var firstFrameIdx =
                         insn.firstFrameIdx + relFirstFrameIdx + placed.embeddedTape.leftMarginFrames * video.fpsScaling
-                    val lastFrameIdx = min(
-                        insn.firstFrameIdx + relLastFrameIdx - placed.embeddedTape.rightMarginFrames * video.fpsScaling,
-                        firstFrameIdx + rangeFrames - 1
-                    )
+                    var lastFrameIdx =
+                        insn.firstFrameIdx + relLastFrameIdx - placed.embeddedTape.rightMarginFrames * video.fpsScaling
+                    val extraneousFrames = (lastFrameIdx - firstFrameIdx + 1) - rangeFrames
+                    if (extraneousFrames > 0)
+                        when (placed.embeddedTape.align) {
+                            Tape.Embedded.Align.START -> lastFrameIdx -= extraneousFrames
+                            Tape.Embedded.Align.END -> firstFrameIdx += extraneousFrames
+                            Tape.Embedded.Align.MIDDLE -> {
+                                val half = extraneousFrames / 2
+                                firstFrameIdx += half
+                                lastFrameIdx -= extraneousFrames - half  // account for odd numbers
+                            }
+                        }
                     if (firstFrameIdx > lastFrameIdx)
                         continue
                     add(Span(insn, placed, firstFrameIdx, lastFrameIdx))
@@ -884,12 +899,33 @@ class DeferredVideo private constructor(
                     val futureFrames = span.lastFrameIdx - frameIdx
 
                     val start = span.embeddedTape.range.start
-                    val timecode = start + when {
-                        span.embeddedTape.tape.fileSeq -> Timecode.Frames(pastFrames / video.fpsScaling)
-                        else -> Timecode.Frames(pastFrames).toClock(video.fps)
+                    val endExcl = span.embeddedTape.range.endExclusive
+                    var tmp = 0
+                    val timecode = when {
+                        span.embeddedTape.tape.fileSeq -> when (span.embeddedTape.align) {
+                            Tape.Embedded.Align.START -> start + Timecode.Frames(pastFrames / video.fpsScaling)
+                            Tape.Embedded.Align.END -> endExcl - Timecode.Frames(futureFrames / video.fpsScaling + 1)
+                            Tape.Embedded.Align.MIDDLE -> {
+                                tmp = (((start + endExcl) as Timecode.Frames).frames - 1) * video.fpsScaling +
+                                        frameIdx * 2 - (span.firstFrameIdx + span.lastFrameIdx)
+                                Timecode.Frames(tmp / (2 * video.fpsScaling))
+                            }
+                        }
+                        else -> when (span.embeddedTape.align) {
+                            Tape.Embedded.Align.START -> start + Timecode.Frames(pastFrames).toClock(video.fps)
+                            Tape.Embedded.Align.END -> endExcl - Timecode.Frames(futureFrames).toClock(video.fps) -
+                                    Timecode.Frames(1).toClock(video.origFPS)
+                            Tape.Embedded.Align.MIDDLE ->
+                                (start + endExcl - Timecode.Frames(1).toClock(video.origFPS)) / 2 +
+                                        Timecode.Frames(frameIdx).toClock(video.fps) -
+                                        Timecode.Frames(span.firstFrameIdx + span.lastFrameIdx).toClock(video.fps) / 2
+                        }
                     }
-                    val fileSeqFirstField = span.embeddedTape.tape.fileSeq &&
-                            ((start as Timecode.Frames).frames + pastFrames * 2 / video.fpsScaling) % 2 == 0
+                    val fileSeqFirstField = span.embeddedTape.tape.fileSeq && when (span.embeddedTape.align) {
+                        Tape.Embedded.Align.START -> (pastFrames * 2 / video.fpsScaling) % 2 == 0
+                        Tape.Embedded.Align.END -> (futureFrames * 2 / video.fpsScaling) % 2 == 1
+                        Tape.Embedded.Align.MIDDLE -> (tmp / video.fpsScaling) % 2 == 0
+                    }
 
                     val relFrameIdx = frameIdx - span.insn.firstFrameIdx
                     val x = span.placed.x.roundToInt()
@@ -909,7 +945,7 @@ class DeferredVideo private constructor(
                 }
         }
 
-        fun collectSpans(): List<TapeSpan> = spans
+        fun collectSpanFirstFrameIndices(): SortedSet<Int> = spans.mapTo(TreeSet(), Span<U>::firstFrameIdx)
         fun collectUserData(): List<U> = spans.mapNotNull(Span<U>::userData)
 
         class Response<U>(
@@ -929,18 +965,20 @@ class DeferredVideo private constructor(
             val resolution: Resolution,
             val alpha: Double
         ) {
-            val span: TapeSpan get() = _span
+            val firstFrameIdx get() = _span.firstFrameIdx
+            val lastFrameIdx get() = _span.lastFrameIdx
+            val embeddedTape get() = _span.embeddedTape
             var userData: U? by _span::userData
         }
 
         private class Span<U>(
             val insn: Instruction,
             val placed: DeferredImage.PlacedTape,
-            override val firstFrameIdx: Int,
-            override val lastFrameIdx: Int
-        ) : TapeSpan {
+            val firstFrameIdx: Int,
+            val lastFrameIdx: Int
+        ) {
             var userData: U? = null
-            override val embeddedTape get() = placed.embeddedTape
+            val embeddedTape get() = placed.embeddedTape
         }
 
     }

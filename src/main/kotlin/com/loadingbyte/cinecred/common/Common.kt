@@ -109,6 +109,15 @@ fun roundingDiv(a: Long, b: Long): Long = (a + (b shr 1)) / b
 fun roundingDivLog2(a: Long, bLog2: Int): Long = (a + ((1L shl bLog2) shr 1)) shr bLog2
 
 
+inline fun throwableAwareTask(crossinline task: () -> Unit) = Runnable {
+    try {
+        task()
+    } catch (t: Throwable) {
+        Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), t)
+    }
+}
+
+
 inline fun <R> useResourceStream(path: String, action: (InputStream) -> R): R =
     Severity::class.java.getResourceAsStream(path)!!.use(action)
 

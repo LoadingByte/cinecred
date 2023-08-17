@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.throwableAwareTask
 import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.imaging.Tape
@@ -73,14 +74,14 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         pushAuxiliaryFileChanges()
 
         // Load the initially present credits file in the executor thread.
-        executor.submit { reloadCreditsFile(Path("")) }
+        executor.submit(throwableAwareTask { reloadCreditsFile(Path("")) })
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
             if (hasCreditsFilename(file)) {
                 // Process changes to the credits file in the executor thread.
                 // Also wait a moment so that the file has been fully written.
-                executor.schedule({ reloadCreditsFile(file) }, 100, TimeUnit.MILLISECONDS)
+                executor.schedule(throwableAwareTask { reloadCreditsFile(file) }, 100, TimeUnit.MILLISECONDS)
             } else {
                 // Changes to auxiliary files are batched to reduce the number of pushes when, e.g., a long image
                 // sequence is copied into the project dir.
@@ -91,7 +92,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 batch[file] = event
                 batch[parent] = if (parent.exists()) MODIFY else DELETE
                 // We then schedule a task that will later apply the batched changes in one go.
-                val newProcessor = executor.schedule({
+                val newProcessor = executor.schedule(throwableAwareTask {
                     for ((defFile, defEvent) in auxFileEventBatch.getAndSet(HashMap())) {
                         removeAuxFileOrDir(defFile)
                         if (defEvent == MODIFY)
@@ -117,7 +118,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         // Cancel the previous project dir change watching order.
         RecursiveFileWatcher.unwatch(projectDir)
 
-        executor.submit {
+        executor.submit(throwableAwareTask {
             // Dispose of all loaded pictures.
             for (pictureLoader in pictureLoaders.values())
                 pictureLoader.dispose()
@@ -129,7 +130,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             // Stop watching for online changes.
             linkedCreditsWatcher?.cancel()
             linkedCreditsWatcher = null
-        }
+        })
 
         executor.shutdown()
     }

@@ -21,6 +21,7 @@ Cinecred Changelog
 ### Fixes
 
 - Certain fonts with bad naming metadata no longer cause a crash.
+- The crash window now also opens when the error occurred in a background task.
 
 ### UI Fixes
 

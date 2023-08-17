@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.loadingbyte.cinecred.common.throwableAwareTask
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -15,12 +16,8 @@ class JobSlot {
         lock.withLock {
             val hadJob = this.job != null
             this.job = job
-            if (!hadJob && !isRunning) {
-                // Note: By using execute() instead of submit(), exceptions thrown by the job will propagate upward
-                // and eventually kill the program in a controlled fashion with a useful error message. This is the
-                // behavior we want.
-                executor.execute(::run)
-            }
+            if (!hadJob && !isRunning)
+                executor.submit(throwableAwareTask(::run))
         }
     }
 
@@ -34,11 +31,8 @@ class JobSlot {
         job.run()
         lock.withLock {
             isRunning = false
-            if (this.job != null) {
-                // Once again, we're using execute() instead of submit() because of the reasons mentioned above
-                // in this class's submit() method.
-                executor.execute(::run)
-            }
+            if (this.job != null)
+                executor.submit(throwableAwareTask(::run))
         }
     }
 

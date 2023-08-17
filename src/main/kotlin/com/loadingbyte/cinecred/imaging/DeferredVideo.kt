@@ -758,7 +758,7 @@ class DeferredVideo private constructor(
         private fun queueChunkPreloading(chunk: Chunk) {
             if (chunk.microShifts != null &&
                 chunk.withLock(chunk::microShiftedRenders).let { it == null || it.refersTo(null) }
-            ) PRELOADING_EXECUTOR.submit { loadChunk(chunk) }
+            ) PRELOADING_EXECUTOR.submit(throwableAwareTask { loadChunk(chunk) })
         }
 
         // Apart from code design, there is an important reason for why this method returns the renders: to ensure that

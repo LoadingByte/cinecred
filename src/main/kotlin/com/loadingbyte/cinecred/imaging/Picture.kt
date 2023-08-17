@@ -278,10 +278,10 @@ sealed interface Picture {
             try {
                 val cmd = arrayOf(gs.pathString, "-sDEVICE=pdfwrite", "-o", tmpFile.pathString, psFile.pathString)
                 val process = Runtime.getRuntime().exec(cmd)
-                GS_STREAM_GOBBLER_EXECUTOR.submit {
+                GS_STREAM_GOBBLER_EXECUTOR.submit(throwableAwareTask {
                     process.inputReader().lines().forEach { GS_LOGGER.info(it) }
                     process.errorReader().lines().forEach { GS_LOGGER.error(it) }
-                }
+                })
                 val exitCode = process.waitFor()
                 if (exitCode != 0)
                     throw RuntimeException("Ghostscript terminated with error exit code $exitCode.")

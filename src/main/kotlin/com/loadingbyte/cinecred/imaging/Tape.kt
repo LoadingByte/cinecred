@@ -447,7 +447,7 @@ class Tape private constructor(
             val slice = Slice<I>(start, stop, inertia)
             val future = slice.getItemOrSplitSlice(start).future!!
             slices.add(slice)
-            EXECUTOR.submit {
+            EXECUTOR.submit(throwableAwareTask {
                 try {
                     createLoader(start).use { loader ->
                         while (slice.claimNextPointForLoading())
@@ -457,7 +457,7 @@ class Tape private constructor(
                     LOGGER.error("Error while generating preview for tape '{}'; will close the cache.", tapeName, e)
                     close()
                 }
-            }
+            })
             return future
         }
 

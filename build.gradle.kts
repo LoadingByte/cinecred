@@ -20,7 +20,7 @@ val poiVersion = "5.2.3"
 val batikVersion = "1.16"
 val javacppVersion = "1.5.8"
 val ffmpegVersion = "5.1.2-$javacppVersion"
-val flatlafVersion = "3.1.1"
+val flatlafVersion = "3.2"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
@@ -231,7 +231,7 @@ for (platform in Platform.values()) {
         dependsOn(platformNatives)
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
         mainClass.set("com.loadingbyte.cinecred.DemoMain")
-        jvmArgs = jvmArgs_
+        jvmArgs = jvmArgs_ + listOf("--add-opens", "java.desktop/javax.swing=ALL-UNNAMED")
     }
 }
 

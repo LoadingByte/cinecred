@@ -13,73 +13,49 @@ import kotlin.math.roundToLong
 
 
 class BitmapCompositor(
-    private val canvasSpec: Bitmap.Spec,
-    overlaySpec: Bitmap.Spec,
+    private val canvasRepresentation: Bitmap.Representation,
+    private val overlaySpec: Bitmap.Spec,
     private val composedOverlayResolution: Resolution
 ) {
 
-    private val convertedOverlay: Bitmap
-    private val overlayConverter: Bitmap2BitmapConverter
-
-    private val slice: Bitmap?
-    private val intermediate: Bitmap?
-    private val slice2intermediateConverter: Bitmap2BitmapConverter?
-    private val intermediate2sliceConverter: Bitmap2BitmapConverter?
+    private val opaqueEnv: Environment
+    private val alphaEnv: Environment
 
     init {
-        require(!canvasSpec.representation.isAlphaPremultiplied)
+        require(!canvasRepresentation.isAlphaPremultiplied)
 
-        // Compositing needs to be done in a pixel format without chroma subsampling. So if the canvas uses chroma
-        // subsampling, find an intermediate pixel format that we can use for compositing.
-        val canvasPixFmt = canvasSpec.representation.pixelFormat
-        val workPixFmt = when {
-            !canvasPixFmt.hasChromaSub -> canvasPixFmt
-            // There shouldn't exist RGB pixel formats with chroma subsampling, but check just to be sure.
-            canvasPixFmt.isRGB -> throw IllegalArgumentException("Chroma subsampling compositing only supports YUV.")
-            canvasPixFmt.hasAlpha -> Bitmap.PixelFormat.of(AV_PIX_FMT_YUVA444P16)
-            else -> Bitmap.PixelFormat.of(AV_PIX_FMT_YUV444P16)
-        }
-        val workRepr = canvasSpec.representation.copy(
-            pixelFormat = workPixFmt, chromaLocation = AVCHROMA_LOC_UNSPECIFIED
+        // Determine a high quality intermediate representation that can be used for compositing if required.
+        val canvasPixFmt = canvasRepresentation.pixelFormat
+        val intermediatePixFmtCode =
+            if (canvasPixFmt.isRGB)
+                if (canvasPixFmt.hasAlpha) AV_PIX_FMT_GBRAP16 else AV_PIX_FMT_GBRP16
+            else
+                if (canvasPixFmt.hasAlpha) AV_PIX_FMT_YUVA444P16 else AV_PIX_FMT_YUV444P16
+        val intermediateRepr = canvasRepresentation.copy(
+            pixelFormat = Bitmap.PixelFormat.of(intermediatePixFmtCode), chromaLocation = AVCHROMA_LOC_UNSPECIFIED
         )
 
-        // Allocate a bitmap and a converter for converting the overlay to the canvas spec or intermediate spec.
-        convertedOverlay = Bitmap.allocate(
-            Bitmap.Spec(composedOverlayResolution, workRepr, overlaySpec.scan, overlaySpec.content)
-        )
-        overlayConverter = Bitmap2BitmapConverter(overlaySpec, convertedOverlay.spec)
-
-        // If we're using an intermediate pixel format for compositing, we need to allocate bitmaps and converters for
-        // converting slices of the canvas to the intermediate format, and later converting them back after composition.
-        if (workPixFmt != canvasPixFmt) {
-            // Add enough room to compensate for offsets between the overlay position and the chroma subsampling grid.
-            val xGrid = 1 shl canvasPixFmt.hChromaSub
-            val yGrid = 1 shl canvasPixFmt.vChromaSub
-            val workRes = Resolution(
-                ceilToPowerOf2((xGrid - 1) + composedOverlayResolution.widthPx, xGrid),
-                ceilToPowerOf2((yGrid - 1) + composedOverlayResolution.heightPx, yGrid),
-            )
-            slice = Bitmap.allocate(Bitmap.Spec(workRes, canvasSpec.representation, PROGRESSIVE, PROGRESSIVE_FRAME))
-            intermediate = Bitmap.allocate(Bitmap.Spec(workRes, workRepr, PROGRESSIVE, PROGRESSIVE_FRAME))
-            slice2intermediateConverter = Bitmap2BitmapConverter(slice.spec, intermediate.spec)
-            intermediate2sliceConverter = Bitmap2BitmapConverter(intermediate.spec, slice.spec)
-        } else {
-            slice = null
-            intermediate = null
-            slice2intermediateConverter = null
-            intermediate2sliceConverter = null
-        }
+        // Compositing needs to happen in a pixel format without chroma subsampling.
+        opaqueEnv =
+            if (!canvasPixFmt.hasChromaSub)
+                DirectEnvironment()
+            else
+                IntermediateEnvironment(intermediateRepr)
+        // Alpha compositing additionally needs to happen in a color space with a linear transfer characteristic.
+        alphaEnv =
+            if (!canvasPixFmt.hasChromaSub && canvasRepresentation.transferCharacteristic == AVCOL_TRC_LINEAR)
+                DirectEnvironment()
+            else
+                IntermediateEnvironment(intermediateRepr.copy(transferCharacteristic = AVCOL_TRC_LINEAR))
     }
-
-    private fun ceilToPowerOf2(value: Int, powerOf2: Int): Int =
-        if (value and (powerOf2 - 1) == 0) value else (value or (powerOf2 - 1)) + 1
 
     /**
      * When the [canvas] uses chroma subsampling, it is assumed that its top left corner is the start of a
      * "subsampling cell". This property is not checked at runtime.
      */
     fun compose(canvas: Bitmap, overlay: Bitmap, x: Int, y: Int, yStep: Int, overlayYTrim: Int, alpha: Double) {
-        require(canvas.spec.representation == canvasSpec.representation)
+        require(canvas.spec.representation == canvasRepresentation)
+        require(overlay.spec == overlaySpec)
         require(yStep >= 1)
         require(overlayYTrim >= 0)
 
@@ -97,43 +73,33 @@ class BitmapCompositor(
         if (viewW <= 0 || viewH <= 0)
             return
 
-        val alphaMatrix = Bitmap2BitmapConverter.AlphaMatrix()
-        overlayConverter.convert(overlay, convertedOverlay, alphaMatrix)
+        // Determine which environment to use.
+        val env = if (alpha >= 1.0 && !overlaySpec.representation.pixelFormat.hasAlpha) opaqueEnv else alphaEnv
 
-        val canvasPixFmt = canvasSpec.representation.pixelFormat
-        val xGrid = 1 shl canvasPixFmt.hChromaSub
-        val yGrid = 1 shl canvasPixFmt.vChromaSub
-        val sliceOffsetX = cViewX % xGrid
-        val sliceOffsetY = cViewY % yGrid
-        val sliceX = cViewX - sliceOffsetX
-        val sliceY = cViewY - sliceOffsetY
-        val sliceW = ceilToPowerOf2(sliceOffsetX + viewW, xGrid)
-        val sliceH = ceilToPowerOf2(sliceOffsetY + viewH, yGrid)
-        val canvasView = if (intermediate != null) {
-            slice!!.blit(canvas, sliceX, sliceY, sliceW, sliceH, 0, 0, 1)
-            slice2intermediateConverter!!.convert(slice, intermediate)
-            intermediate.view(sliceOffsetX, sliceOffsetY, viewW, viewH, yStep)
-        } else
-            canvas.view(cViewX, cViewY, viewW, viewH, yStep)
+        // Get a bitmap filled with the content of the canvas at the location where the overlay should go.
+        // We will perform compositing on this canvas view bitmap.
+        val canvasView = env.extractCanvasView(canvas, cViewX, cViewY, viewW, viewH, yStep)
 
+        // Convert the overlay into the same representation as the canvas view bitmap...
+        val (convertedOverlay, alphaMatrix) = env.convertOverlay(overlay)
+        // ... and crop it as needed.
         val convertedOverlayView = convertedOverlay.view(oViewX, oViewY, viewW, viewH, yStep)
         alphaMatrix.matrix?.let { alphaMatrix.matrix = arrayView(it, ow, oViewX, oViewY, viewW, viewH, yStep) }
 
+        // Composite.
         val alphaNumerators = prepareAlphaNumerators(alpha.coerceIn(0.0, 1.0), alphaMatrix)
         if (alphaNumerators == null)
             canvasView.blit(convertedOverlayView, 0, 0, viewW, canvasView.spec.resolution.heightPx, 0, 0, 1)
-        else if (!canvasSpec.representation.pixelFormat.hasAlpha)
+        else if (!canvasRepresentation.pixelFormat.hasAlpha)
             blendOntoOpaqueCanvas(canvasView, convertedOverlayView, alphaNumerators)
         else
             blendOntoTranslucentCanvas(canvasView, convertedOverlayView, alphaNumerators)
 
+        // If necessary, write the changes made to the canvas view bitmap back to the canvas.
+        env.flushCanvasView()
+
         canvasView.close()
         convertedOverlayView.close()
-
-        if (intermediate != null) {
-            intermediate2sliceConverter!!.convert(intermediate, slice!!)
-            canvas.blit(slice, 0, 0, sliceW, sliceH, sliceX, sliceY, 1)
-        }
     }
 
     private fun arrayView(array: LongArray, stride: Int, x: Int, y: Int, w: Int, h: Int, yStep: Int): LongArray {
@@ -245,6 +211,99 @@ class BitmapCompositor(
     companion object {
         private const val ALPHA_DENOMINATOR_LOG2 = 16
         private const val ALPHA_DENOMINATOR = 1 shl ALPHA_DENOMINATOR_LOG2
+    }
+
+
+    private interface Environment {
+        fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap2BitmapConverter.AlphaMatrix>
+        fun extractCanvasView(canvas: Bitmap, x: Int, y: Int, w: Int, h: Int, yStep: Int): Bitmap
+        fun flushCanvasView()
+    }
+
+
+    private abstract inner class AbstractEnvironment(workRepresentation: Bitmap.Representation) : Environment {
+
+        // Allocate a bitmap and a converter for converting the overlay to the work representation.
+        private val convertedOverlay = Bitmap.allocate(
+            Bitmap.Spec(composedOverlayResolution, workRepresentation, overlaySpec.scan, overlaySpec.content)
+        )
+        private val overlayConverter = Bitmap2BitmapConverter(overlaySpec, convertedOverlay.spec)
+
+        override fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap2BitmapConverter.AlphaMatrix> {
+            val alphaMatrix = Bitmap2BitmapConverter.AlphaMatrix()
+            overlayConverter.convert(overlay, convertedOverlay, alphaMatrix)
+            return Pair(convertedOverlay, alphaMatrix)
+        }
+
+    }
+
+
+    private inner class DirectEnvironment : AbstractEnvironment(canvasRepresentation) {
+
+        override fun extractCanvasView(canvas: Bitmap, x: Int, y: Int, w: Int, h: Int, yStep: Int) =
+            canvas.view(x, y, w, h, yStep)
+
+        override fun flushCanvasView() {}
+
+    }
+
+
+    private inner class IntermediateEnvironment(workRepresentation: Bitmap.Representation) :
+        AbstractEnvironment(workRepresentation) {
+
+        private val xGrid: Int
+        private val yGrid: Int
+
+        private val slice: Bitmap
+        private val intermediate: Bitmap
+        private val slice2intermediateConverter: Bitmap2BitmapConverter
+        private val intermediate2sliceConverter: Bitmap2BitmapConverter
+
+        private var canvas: Bitmap? = null
+        private var sliceX = 0
+        private var sliceY = 0
+        private var sliceW = 0
+        private var sliceH = 0
+
+        init {
+            val canvasPixFmt = canvasRepresentation.pixelFormat
+            xGrid = 1 shl canvasPixFmt.hChromaSub
+            yGrid = 1 shl canvasPixFmt.vChromaSub
+            // Add enough room to compensate for offsets between the overlay position and the chroma subsampling grid.
+            val workRes = Resolution(
+                ceilToPowerOf2((xGrid - 1) + composedOverlayResolution.widthPx, xGrid),
+                ceilToPowerOf2((yGrid - 1) + composedOverlayResolution.heightPx, yGrid),
+            )
+            // As we're using an intermediate representation for compositing, we need to allocate bitmaps and converters
+            // for converting slices of the canvas to the intermediate format, and later converting them back.
+            slice = Bitmap.allocate(Bitmap.Spec(workRes, canvasRepresentation, PROGRESSIVE, PROGRESSIVE_FRAME))
+            intermediate = Bitmap.allocate(Bitmap.Spec(workRes, workRepresentation, PROGRESSIVE, PROGRESSIVE_FRAME))
+            slice2intermediateConverter = Bitmap2BitmapConverter(slice.spec, intermediate.spec)
+            intermediate2sliceConverter = Bitmap2BitmapConverter(intermediate.spec, slice.spec)
+        }
+
+        override fun extractCanvasView(canvas: Bitmap, x: Int, y: Int, w: Int, h: Int, yStep: Int): Bitmap {
+            this.canvas = canvas
+            val sliceOffsetX = x % xGrid
+            val sliceOffsetY = y % yGrid
+            sliceX = x - sliceOffsetX
+            sliceY = y - sliceOffsetY
+            sliceW = ceilToPowerOf2(sliceOffsetX + w, xGrid)
+            sliceH = ceilToPowerOf2(sliceOffsetY + h, yGrid)
+            slice.blit(canvas, sliceX, sliceY, sliceW, sliceH, 0, 0, 1)
+            slice2intermediateConverter.convert(slice, intermediate)
+            return intermediate.view(sliceOffsetX, sliceOffsetY, w, h, yStep)
+        }
+
+        override fun flushCanvasView() {
+            intermediate2sliceConverter.convert(intermediate, slice)
+            canvas!!.blit(slice, 0, 0, sliceW, sliceH, sliceX, sliceY, 1)
+            canvas = null
+        }
+
+        private fun ceilToPowerOf2(value: Int, powerOf2: Int): Int =
+            if (value and (powerOf2 - 1) == 0) value else (value or (powerOf2 - 1)) + 1
+
     }
 
 }

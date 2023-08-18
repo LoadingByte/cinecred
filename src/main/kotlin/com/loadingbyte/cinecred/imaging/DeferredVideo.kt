@@ -593,13 +593,14 @@ class DeferredVideo private constructor(
 
             init {
                 setupSafely({
+                    val canvasRepr = canvasSpec.representation
                     val tapeSpec = reader.spec
                     val tapeIsProgressive = tapeSpec.scan == Bitmap.Scan.PROGRESSIVE
                     if (canvasSpec.scan == Bitmap.Scan.PROGRESSIVE || tapeIsProgressive) {
                         // If the tape is interlaced, make it have even height in the final output.
                         val composedOverlayRes = if (tapeIsProgressive) resp.resolution else
                             resp.resolution.copy(heightPx = resp.resolution.heightPx / 2 * 2)
-                        compositor = BitmapCompositor(canvasSpec, tapeSpec, composedOverlayRes)
+                        compositor = BitmapCompositor(canvasRepr, tapeSpec, composedOverlayRes)
                     } else {
                         val tapeFrameRes = tapeSpec.resolution
                         require(tapeFrameRes.heightPx % 2 == 0) {
@@ -609,10 +610,10 @@ class DeferredVideo private constructor(
                             tapeSpec.copy(resolution = tapeFrameRes.copy(heightPx = tapeFrameRes.heightPx / 2))
                         val composedFieldRes = resp.resolution.copy(heightPx = resp.resolution.heightPx / 2)
                         topFieldCompositor = BitmapCompositor(
-                            canvasSpec, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_TOP_FIELD), composedFieldRes
+                            canvasRepr, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_TOP_FIELD), composedFieldRes
                         )
                         botFieldCompositor = BitmapCompositor(
-                            canvasSpec, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD), composedFieldRes
+                            canvasRepr, tapeFieldSpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD), composedFieldRes
                         )
                     }
                 }, reader::close)

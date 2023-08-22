@@ -361,7 +361,7 @@ typealias StyledString = List<Pair<String, LetterStyle>>
 sealed interface BodyElement {
     class Nil(val sty: LetterStyle) : BodyElement
     class Str(val str: StyledString) : BodyElement
-    class Pic(val pic: Picture) : BodyElement
+    class Pic(val pic: Picture.Embedded) : BodyElement
     class Tap(val emb: Tape.Embedded) : BodyElement
 }
 

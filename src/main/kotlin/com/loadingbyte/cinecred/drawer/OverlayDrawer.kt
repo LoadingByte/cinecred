@@ -135,8 +135,8 @@ fun drawPictureOverlay(
 ) {
     for (cardInfo in stageInfo)
         if (cardInfo is DrawnStageInfo.Card)
-            image.drawPicture(
-                picture,
+            image.drawEmbeddedPicture(
+                Picture.Embedded(picture),
                 x = (resolution.widthPx - picture.width) / 2.0,
                 y = cardInfo.middleY - picture.height / 2.0,
                 layer

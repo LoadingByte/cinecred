@@ -664,7 +664,7 @@ private fun DeferredImage.drawJustifiedBodyElem(
     is BodyElement.Pic ->
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.pic.width, elem.pic.height.toY()
-        ) { objX, objY -> drawPicture(elem.pic, objX, objY) }
+        ) { objX, objY -> drawEmbeddedPicture(elem.pic, objX, objY) }
     is BodyElement.Tap ->
         drawJustified(
             hJustify, vJustify, areaX, areaY, areaWidth, areaHeight, elem.getWidth(textCtx), elem.getHeight().toY()

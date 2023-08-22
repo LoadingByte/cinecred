@@ -2,10 +2,7 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.Picture
-import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
 import com.loadingbyte.cinecred.ui.*
@@ -545,14 +542,17 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 if (edited is ImageOverlay && imageFile == Path(""))
                     ImageOverlay(uuid, name, edited.raster, imageUnderlay)
                 else try {
-                    val picture = Picture.read(imageFile)
-                    val image = BufferedImage(
-                        picture.width.roundToInt(), picture.height.roundToInt(), BufferedImage.TYPE_4BYTE_ABGR
-                    )
-                    DeferredImage(picture.width, picture.height.toY()).apply {
-                        drawPicture(picture, 0.0, 0.0.toY())
-                    }.materialize(image, listOf(STATIC))
-                    picture.dispose()
+                    val image = Picture.read(imageFile).use { pic ->
+                        when (pic) {
+                            is Picture.Raster -> pic.img
+                            is Picture.Vector -> BufferedImage(
+                                pic.width.roundToInt(), pic.height.roundToInt(), BufferedImage.TYPE_4BYTE_ABGR
+                            ).withG2 { g2 ->
+                                g2.setHighQuality()
+                                pic.drawTo(g2)
+                            }
+                        }
+                    }
                     ImageOverlay(uuid, name, Picture.Raster(image), imageUnderlay)
                 } catch (e: Exception) {
                     welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())

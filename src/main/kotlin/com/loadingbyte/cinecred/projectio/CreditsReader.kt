@@ -61,7 +61,7 @@ private class CreditsReader(
     val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
 
     // Prepare resolvers for pictures and tape.
-    val pictureResolver = AuxiliaryFileResolver(pictureLoaders, PictureLoader::filename)
+    val picResolver = AuxiliaryFileResolver(pictureLoaders, PictureLoader::filename)
     val tapeResolver = AuxiliaryFileResolver(tapes) { tape -> tape.fileOrDir.name }
 
 
@@ -703,7 +703,7 @@ private class CreditsReader(
         var blankTagKey: String? = null
         var multipleBlanks = false
         var pictureOrVideoTagKey: String? = null
-        var picture: Picture? = null
+        var embeddedPic: Picture.Embedded? = null
         var embeddedTape: Tape.Embedded? = null
         var multiplePicturesOrVideos = false
         parseTaggedString(str) { plain, tagKey, tagVal ->
@@ -739,7 +739,7 @@ private class CreditsReader(
                             null -> {
                                 pictureOrVideoTagKey = tagKey
                                 when (tagKey) {
-                                    in PIC_KW -> picture = getPicture(l10nColName, tagKey, tagVal)
+                                    in PIC_KW -> embeddedPic = getEmbeddedPic(l10nColName, tagKey, tagVal)
                                     in VIDEO_KW -> embeddedTape = getEmbeddedTape(l10nColName, tagKey, tagVal)
                                 }
                             }
@@ -761,7 +761,7 @@ private class CreditsReader(
             pictureOrVideoTagKey != null -> {
                 if (!isStyledStringBlank || curLetterStyle != null || multiplePicturesOrVideos)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureOrVideoTagKey))
-                picture?.let(BodyElement::Pic)
+                embeddedPic?.let(BodyElement::Pic)
                     ?: embeddedTape?.let(BodyElement::Tap)
                     ?: BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
             }
@@ -773,29 +773,28 @@ private class CreditsReader(
         }
     }
 
-    fun getPicture(l10nColName: String, tagKey: String, tagVal: String?): Picture? = pictureResolver.resolve(
+    fun getEmbeddedPic(l10nColName: String, tagKey: String, tagVal: String?): Picture.Embedded? = picResolver.resolve(
         l10nColName, tagVal,
-        prepare = PictureLoader::picture,
-        applyHints = { pic0, hints ->
-            var pic = pic0
+        prepare = { picLoader -> picLoader.picture?.let { pic -> Picture.Embedded(pic) } },
+        applyHints = { embPic0, hints ->
+            var embPic = embPic0
             while (hints.hasNext()) {
                 val hint = hints.next()
-                pic = try {
+                embPic = try {
                     when {
                         // Crop the picture.
-                        hint in CROP_KW -> when (pic) {
-                            is Picture.SVG -> pic.cropped()
-                            is Picture.PDF -> pic.cropped()
+                        hint in CROP_KW -> when (embPic) {
+                            is Picture.Embedded.Vector -> embPic.cropped()
                             // Raster images cannot be cropped.
-                            is Picture.Raster -> {
+                            is Picture.Embedded.Raster -> {
                                 val msg = l10n("projectIO.credits.pictureRasterCrop", l10n(CROP_KW.key))
                                 table.log(row, l10nColName, WARN, msg)
                                 continue
                             }
                         }
                         // Apply scaling hints.
-                        hint.startsWith('x') -> pic.withHeight(hint.drop(1).toFiniteDouble(nonNeg = true, non0 = true))
-                        hint.endsWith('x') -> pic.withWidth(hint.dropLast(1).toFiniteDouble(nonNeg = true, non0 = true))
+                        hint.startsWith('x') -> embPic.withHeightPreservingAspectRatio(hint.drop(1).toDouble())
+                        hint.endsWith('x') -> embPic.withWidthPreservingAspectRatio(hint.dropLast(1).toDouble())
                         else -> continue
                     }
                 } catch (_: IllegalArgumentException) {
@@ -803,7 +802,7 @@ private class CreditsReader(
                 }
                 hints.remove()
             }
-            pic
+            embPic
         },
         illFormattedMsg = { l10n("projectIO.credits.pictureIllFormatted", l10n(CROP_KW.key), tagKey) }
     )

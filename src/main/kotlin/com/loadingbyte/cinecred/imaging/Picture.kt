@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.formdev.flatlaf.util.Graphics2DProxy
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
@@ -14,37 +15,41 @@ import org.apache.batik.bridge.SVGUtilities
 import org.apache.batik.bridge.svg12.SVG12BridgeContext
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
+import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
+import org.apache.pdfbox.rendering.PDFRenderer
+import org.apache.pdfbox.rendering.RenderDestination
 import org.apache.poi.xslf.draw.SVGUserAgent
 import org.slf4j.LoggerFactory
+import java.awt.Graphics2D
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
 import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR
+import java.io.Closeable
 import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import javax.swing.FocusManager
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
+import kotlin.concurrent.withLock
 import kotlin.io.path.*
 import kotlin.math.roundToInt
 
 
 /** An abstraction over all the kinds of input images that a [DeferredImage] can work with: Raster, SVG, and PDF. */
-sealed interface Picture {
+sealed interface Picture : Closeable {
 
     val width: Double
     val height: Double
-    fun withWidth(width: Double): Picture
-    fun withHeight(height: Double): Picture
-    fun dispose() {}
+    override fun close() {}
 
 
-    class Raster private constructor(img: BufferedImage, val resolution: Resolution) : Picture {
-
-        constructor(img: BufferedImage) : this(img, Resolution(img.width, img.height))
+    class Raster(img: BufferedImage) : Picture {
 
         // Conform non-standard raster images to the 8-bit (A)BGR pixel format and the sRGB color space. This needs to
         // be done at some point because some of our code expects (A)BGR, and we're compositing in sRGB.
@@ -55,93 +60,180 @@ sealed interface Picture {
                 BufferedImage(img.width, img.height, if (img.colorModel.hasAlpha()) TYPE_4BYTE_ABGR else TYPE_3BYTE_BGR)
                     .withG2 { g2 -> g2.drawImage(img, 0, 0, null) }
 
-        override val width get() = resolution.widthPx.toDouble()
-        override val height get() = resolution.heightPx.toDouble()
-
-        fun withWidth(width: Int) = Raster(img, Resolution(width, roundingDiv(img.height * width, img.width)))
-        fun withHeight(height: Int) = Raster(img, Resolution(roundingDiv(img.width * height, img.height), height))
-        override fun withWidth(width: Double) = withWidth(width.roundToInt())
-        override fun withHeight(height: Double) = withHeight(height.roundToInt())
-
-        /** In contrast to the other sizing methods, this one doesn't preserve the aspect ratio. */
-        fun withForcedResolution(resolution: Resolution) = Raster(img, resolution)
+        override val width get() = img.width.toDouble()
+        override val height get() = img.height.toDouble()
 
     }
 
 
-    sealed class Vector(
-        protected val targetDim: Int, protected val targetSize: Double, val isCropped: Boolean
-    ) : Picture {
+    sealed interface Vector : Picture {
 
-        protected abstract val bw: Double
-        protected abstract val bh: Double
-
-        val scaling: Double get() = if (targetDim == 0) 1.0 else targetSize / if (targetDim == 1) bw else bh
-        override val width get() = scaling * bw
-        override val height get() = scaling * bh
-
-        abstract override fun withWidth(width: Double): Vector
-        abstract override fun withHeight(height: Double): Vector
-        abstract fun cropped(): Vector
+        val cropX: Double
+        val cropY: Double
+        val cropWidth: Double
+        val cropHeight: Double
+        fun drawTo(g2: Graphics2D)
 
     }
 
 
-    class SVG private constructor(
-        val gvtRoot: GraphicsNode, private val docWidth: Double, private val docHeight: Double,
-        targetDim: Int, targetSize: Double, isCropped: Boolean
-    ) : Vector(targetDim, targetSize, isCropped) {
+    class SVG(
+        private val gvtRoot: GraphicsNode,
+        override val width: Double,
+        override val height: Double,
+    ) : Vector {
 
-        constructor(gvtRoot: GraphicsNode, docWidth: Double, docHeight: Double) :
-                this(gvtRoot, docWidth, docHeight, 0, 0.0, false)
+        private val lock = ReentrantLock()
 
-        override val bw get() = if (isCropped) gvtRoot.bounds.width else docWidth
-        override val bh get() = if (isCropped) gvtRoot.bounds.height else docHeight
+        override val cropX get() = gvtRoot.bounds.x
+        override val cropY get() = gvtRoot.bounds.y
+        override val cropWidth get() = gvtRoot.bounds.width
+        override val cropHeight get() = gvtRoot.bounds.height
 
-        override fun withWidth(width: Double) = SVG(gvtRoot, docWidth, docHeight, 1, width, isCropped)
-        override fun withHeight(height: Double) = SVG(gvtRoot, docWidth, docHeight, 2, height, isCropped)
-        override fun cropped() = SVG(gvtRoot, docWidth, docHeight, targetDim, targetSize, isCropped = true)
-
-    }
-
-
-    class PDF private constructor(
-        private val aDoc: AugmentedDoc,
-        targetDim: Int, targetSize: Double, isCropped: Boolean
-    ) : Vector(targetDim, targetSize, isCropped) {
-
-        constructor(doc: PDDocument) : this(AugmentedDoc(doc), 0, 0.0, false)
-
-        val doc get() = aDoc.doc
-        val minBox get() = aDoc.minBox
-
-        override val bw get() = if (isCropped) minBox.width else doc.pages[0].cropBox.width.toDouble()
-        override val bh get() = if (isCropped) minBox.height else doc.pages[0].cropBox.height.toDouble()
-
-        override fun withWidth(width: Double) = PDF(aDoc, 1, width, isCropped)
-        override fun withHeight(height: Double) = PDF(aDoc, 2, height, isCropped)
-        override fun cropped() = PDF(aDoc, targetDim, targetSize, isCropped = true)
-
-        override fun dispose() {
-            // Synchronize the closing operation so that other threads can safely check whether a document is closed
-            // and then use it in their own synchronized block.
-            synchronized(doc) {
-                doc.close()
-            }
+        override fun drawTo(g2: Graphics2D) {
+            // Batik might not be thread-safe, even though we haven't tested that.
+            lock.withLock { gvtRoot.paint(g2) }
         }
 
-        private class AugmentedDoc(val doc: PDDocument) {
-            val minBox: Rectangle2D by lazy(::computeMinBox)
-            private fun computeMinBox() = synchronized(doc) {
-                // If the document has already been closed, the responsible project has just been closed. In that case,
-                // just return a dummy rectangle here to let the project closing finish regularly.
-                if (doc.document.isClosed)
-                    return Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
+    }
+
+
+    class PDF(private val doc: PDDocument) : Vector {
+
+        private val lock = ReentrantLock()
+
+        private val minBox: Rectangle2D by lazy {
+            safely {
                 val raw = BoundingBoxFinder(doc.pages[0]).apply { processPage(doc.pages[0]) }.boundingBox
                 // The raw bounding box y coordinate is actually relative to the bottom of the crop box, so we need
                 // to convert it such that it is relative to the top because the rest of our program works like that.
-                Rectangle2D.Double(raw.x, doc.pages[0].cropBox.height - raw.y - raw.height, raw.width, raw.height)
+                Rectangle2D.Double(raw.x, height - raw.y - raw.height, raw.width, raw.height)
             }
+            // If the document has already been closed, this picture is worthless, so just return a dummy rectangle.
+                ?: Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
+        }
+
+        override val width get() = doc.pages[0].cropBox.width.toDouble()
+        override val height get() = doc.pages[0].cropBox.height.toDouble()
+        override val cropX get() = minBox.x
+        override val cropY get() = minBox.y
+        override val cropWidth get() = minBox.width
+        override val cropHeight get() = minBox.height
+
+        override fun drawTo(g2: Graphics2D) {
+            // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
+            // and sometimes even makes it totally unusable.
+            @Suppress("NAME_SHADOWING")
+            g2.withNewG2 { g2 ->
+                // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
+                // box even if g2.background is set to a transparent color. The most thorough fix is
+                // to just block all calls to clearRect().
+                val g2Proxy = object : Graphics2DProxy(g2) {
+                    override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
+                        // Block call.
+                    }
+                }
+                safely { PDFRenderer(doc).renderPageToGraphics(0, g2Proxy, 1f, 1f, RenderDestination.EXPORT) }
+            }
+        }
+
+        fun import(importer: LayerUtility): PDFormXObject? = safely { importer.importPageAsForm(doc, 0) }
+
+        override fun close() {
+            safely(doc::close)
+        }
+
+        private inline fun <R> safely(block: () -> R): R? {
+            // PDFBox is definitely not thread-safe. Also, we check whether the document has been closed prior
+            // to using it and do not want it to close later while we are using it. Since the closing operation
+            // in the Picture class is also synchronized, we avoid such a situation.
+            return lock.withLock {
+                // If the project that opened this document has been closed and with it the document (which is
+                // possible because materialization might happen in a background thread), do not render the
+                // PDF to avoid provoking an exception.
+                if (!doc.document.isClosed) block() else null
+            }
+        }
+
+    }
+
+
+    sealed interface Embedded {
+
+        val picture: Picture
+        val width: Double
+        val height: Double
+        fun withWidthPreservingAspectRatio(width: Double): Embedded
+        fun withHeightPreservingAspectRatio(height: Double): Embedded
+
+        companion object {
+            operator fun invoke(picture: Picture): Embedded = when (picture) {
+                is Picture.Raster -> Raster(picture)
+                is Picture.Vector -> Vector(picture)
+            }
+        }
+
+        class Raster private constructor(
+            override val picture: Picture.Raster,
+            val resolution: Resolution
+        ) : Embedded {
+
+            constructor(picture: Picture.Raster) : this(picture, Resolution(picture.img.width, picture.img.height))
+
+            init {
+                require(resolution.run { widthPx > 0 && heightPx > 0 })
+            }
+
+            val scalingX: Double get() = width / picture.width
+            val scalingY: Double get() = height / picture.height
+
+            override val width = resolution.widthPx.toDouble()
+            override val height = resolution.heightPx.toDouble()
+
+            override fun withWidthPreservingAspectRatio(width: Double) =
+                withWidthPreservingAspectRatio(width.roundToInt())
+
+            override fun withHeightPreservingAspectRatio(height: Double) =
+                withHeightPreservingAspectRatio(height.roundToInt())
+
+            fun withWidthPreservingAspectRatio(width: Int) =
+                Raster(picture, Resolution(width, roundingDiv(picture.img.height * width, picture.img.width)))
+
+            fun withHeightPreservingAspectRatio(height: Int) =
+                Raster(picture, Resolution(roundingDiv(picture.img.width * height, picture.img.height), height))
+
+            /** In contrast to the other sizing methods, this one doesn't preserve the aspect ratio. */
+            fun withForcedResolution(resolution: Resolution) = Raster(picture, resolution)
+
+        }
+
+        class Vector private constructor(
+            override val picture: Picture.Vector,
+            private val targetDim: Int,
+            private val targetSize: Double,
+            val isCropped: Boolean
+        ) : Embedded {
+
+            constructor(picture: Picture.Vector) : this(picture, 0, 0.0, false)
+
+            init {
+                require(targetDim == 0 || targetSize > 0.0)
+            }
+
+            val scaling: Double
+                get() = when (targetDim) {
+                    1 -> targetSize / if (isCropped) picture.cropWidth else picture.width
+                    2 -> targetSize / if (isCropped) picture.cropHeight else picture.height
+                    else -> 1.0
+                }
+
+            override val width get() = scaling * if (isCropped) picture.cropWidth else picture.width
+            override val height get() = scaling * if (isCropped) picture.cropHeight else picture.height
+
+            override fun withWidthPreservingAspectRatio(width: Double) = Vector(picture, 1, width, isCropped)
+            override fun withHeightPreservingAspectRatio(height: Double) = Vector(picture, 2, height, isCropped)
+            fun cropped() = Vector(picture, targetDim, targetSize, isCropped = true)
+
         }
 
     }

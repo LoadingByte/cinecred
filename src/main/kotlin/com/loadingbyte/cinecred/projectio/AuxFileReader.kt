@@ -45,7 +45,7 @@ class PictureLoader(file: Path) {
     val filename: String = file.name
     val picture: Picture? get() = lazy.value
     fun dispose() {
-        if (lazy.isInitialized()) lazy.value?.dispose()
+        if (lazy.isInitialized()) lazy.value?.close()
     }
 }
 

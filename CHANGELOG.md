@@ -22,6 +22,8 @@ Cinecred Changelog
 
 - Alpha blending of embedded videos is now performed in linear gamma.
 - Certain fonts with bad naming metadata no longer cause a crash.
+- Exported PDFs now contain only one instance of each SVG or PDF picture, even
+  when it has multiple occurrences.
 - The crash window now also opens when the error occurred in a background task.
 
 ### UI Fixes

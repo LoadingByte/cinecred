@@ -32,6 +32,7 @@ Cinecred Changelog
 
 - The custom resolution chooser now defaults to the last selected resolution.
 - Increased the resolution of render progress bars to the 10th of a percent.
+- Swapping the image of an image overlay is now actually persisted to disk.
 
 ### Compatibility Notes
 

@@ -133,7 +133,7 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                     LOGGER.error("Cannot read overlay image file '{}'.", file, e)
                     return@mapNotNull null
                 }
-                ImageOverlay(uuid, name, Picture.Raster(image), underlay)
+                ImageOverlay(uuid, name, Picture.Raster(image), rasterPersisted = true, underlay)
             }
             else -> null
         }
@@ -155,10 +155,11 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
         for (overlay in value)
             if (overlay is ImageOverlay) {
                 val file = IMAGE_DIR.resolve("${overlay.uuid}.png")
-                if (!file.exists())
+                if (!file.exists() || !overlay.rasterPersisted)
                     try {
                         file.parent.createDirectoriesSafely()
                         ImageIO.write(overlay.raster.img, "png", file.toFile())
+                        overlay.rasterPersisted = true
                     } catch (e: IOException) {
                         LOGGER.error("Cannot write the overlay image file '{}'.", file, e)
                     }

@@ -540,7 +540,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             LinesOverlay::class.java -> LinesOverlay(uuid, name, linesColor, linesH, linesV)
             ImageOverlay::class.java ->
                 if (edited is ImageOverlay && imageFile == Path(""))
-                    ImageOverlay(uuid, name, edited.raster, imageUnderlay)
+                    ImageOverlay(uuid, name, edited.raster, edited.rasterPersisted, imageUnderlay)
                 else try {
                     val image = Picture.read(imageFile).use { pic ->
                         when (pic) {
@@ -553,7 +553,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                             }
                         }
                     }
-                    ImageOverlay(uuid, name, Picture.Raster(image), imageUnderlay)
+                    ImageOverlay(uuid, name, Picture.Raster(image), rasterPersisted = false, imageUnderlay)
                 } catch (e: Exception) {
                     welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())
                     welcomeView.preferences_setCard(PreferencesCard.START)
@@ -569,6 +569,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         OVERLAYS_PREFERENCE.set(newOverlays)
         if (done)
             welcomeView.preferences_setCard(PreferencesCard.START)
+        // If the user stays in the form, ensure that the image is not saved again the next time he confirms.
+        else if (type == ImageOverlay::class.java)
+            welcomeView.preferences_configureOverlay_clearImageFile()
     }
 
 

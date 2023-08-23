@@ -154,6 +154,7 @@ class ImageOverlay(
     override val uuid: UUID,
     val name: String,
     val raster: Picture.Raster,
+    var rasterPersisted: Boolean,
     val underlay: Boolean
 ) : ConfigurableOverlay {
 

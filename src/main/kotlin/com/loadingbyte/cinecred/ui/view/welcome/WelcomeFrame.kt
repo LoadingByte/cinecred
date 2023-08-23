@@ -135,6 +135,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     ) = panel.preferencesPanel.preferences_configureOverlay_setForm(
         type, name, aspectRatioH, aspectRatioV, linesColor, linesH, linesV, imageFile, imageUnderlay
     )
+    override fun preferences_configureOverlay_clearImageFile() =
+        panel.preferencesPanel.preferences_configureOverlay_clearImageFile()
     override fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) =
         panel.preferencesPanel.preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment)
     // @formatter:on

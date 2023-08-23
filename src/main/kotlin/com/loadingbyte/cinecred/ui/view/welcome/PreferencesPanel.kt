@@ -19,6 +19,7 @@ import java.awt.*
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
+import kotlin.io.path.Path
 import kotlin.jvm.optionals.getOrNull
 
 
@@ -288,6 +289,10 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             imageFileWidget.value = imageFile
             imageUnderlayWidget.value = imageUnderlay
         }
+    }
+
+    fun preferences_configureOverlay_clearImageFile() {
+        configureOverlayForm.imageFileWidget.value = Path("")
     }
 
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) {

@@ -147,6 +147,7 @@ interface WelcomeViewComms {
         imageUnderlay: Boolean
     )
 
+    fun preferences_configureOverlay_clearImageFile()
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?)
 
     fun setChangelog(changelog: String)

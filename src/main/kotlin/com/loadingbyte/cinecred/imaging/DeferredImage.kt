@@ -42,6 +42,7 @@ import java.awt.image.BufferedImage
 import java.awt.image.ConvolveOp
 import java.awt.image.Kernel
 import java.io.DataInputStream
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.*
@@ -340,16 +341,25 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
 
     interface Text {
+
         val width: Double
         val heightAboveBaseline: Double
         val heightBelowBaseline: Double
         /** The outline of the entire text, with the [transform] already applied. */
         val transformedOutline: Shape
-        val font: Font
+        val fontSize: Double
         val glyphCodes: IntArray
         fun getGlyphOffsetX(glyphIdx: Int): Double
         /** Applying this to the drawn [glyphCodes] positioned by [getGlyphOffsetX] yields [transformedOutline]. */
         val transform: AffineTransform
+        val fundamentalFontInfo: FundamentalFontInfo
+
+        /** Provides access to fundamental properties of a font face, irrespective of any user configuration. */
+        interface FundamentalFontInfo {
+            val fontName: String
+            val fontFile: Path
+        }
+
     }
 
 
@@ -650,13 +660,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             cs.saveGraphicsState()
             cs.beginText()
 
-            val pdFont = getPDFont(text.font)
+            val pdFont = getPDFont(text.fundamentalFontInfo)
             val glyphs = text.glyphCodes
             val xShifts = FloatArray(glyphs.size - 1) { glyphIdx ->
                 val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
                 val wantedWidth = ((text.getGlyphOffsetX(glyphIdx + 1) - text.getGlyphOffsetX(glyphIdx)).toFloat()
                         // Convert to the special PDF text coordinates.
-                        * 1000f / text.font.size2D)
+                        * 1000f / text.fontSize.toFloat())
                 actualWidth - wantedWidth
             }
 
@@ -677,7 +687,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 scale(scaling)
             }
 
-            cs.setFont(pdFont, text.font.size2D)
+            cs.setFont(pdFont, text.fontSize.toFloat())
             setCoat(coat.transform(coatTx), fill = true, textBBox)
             cs.setTextMatrix(Matrix(textTx))
             cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
@@ -859,12 +869,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             appendRawCommands(" $opSCN\n")
         }
 
-        private fun getPDFont(font: Font): PDFont {
-            val psName = font.psName
+        private fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont {
+            val psName = fundamentalFontInfo.fontName
 
             if (psName !in docRes.pdFonts)
                 try {
-                    val fontFile = font.getFontFile().toFile()
+                    val fontFile = fundamentalFontInfo.fontFile.toFile()
                     when (DataInputStream(fontFile.inputStream()).use { it.readInt() }) {
                         // TrueType Collection
                         0x74746366 -> {

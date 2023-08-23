@@ -545,7 +545,7 @@ class FormattedString private constructor(
         }
 
         override val width get() = gs.width
-        override val font get() = gs.font.awtFont
+        override val fontSize get() = gs.font.awtFont.size2D.toDouble()
         override val transformedOutline by lazy {
             // Note: Glyph outlines turn out to be float paths, and hence, the transformation by tx is really efficient.
             if (postTx == null) gs.outline else Path2D.Float(gs.outline, postTx)
@@ -553,6 +553,13 @@ class FormattedString private constructor(
         override val glyphCodes get() = gs.glyphCodes
         // Since we apply hScaling in the layout engine, we have to divide it out again here.
         override fun getGlyphOffsetX(glyphIdx: Int) = gs.getGlyphOffsetX(glyphIdx) / gs.font.hScaling
+
+        override val fundamentalFontInfo = FFontInfoImpl(gs.font.baseAWTFont)
+
+        private class FFontInfoImpl(private val baseAWTFont: java.awt.Font) : DeferredImage.Text.FundamentalFontInfo {
+            override val fontName: String get() = baseAWTFont.psName
+            override val fontFile get() = baseAWTFont.getFontFile()
+        }
 
     }
 
@@ -655,7 +662,7 @@ class FormattedString private constructor(
 
 
     class Font(
-        baseAWTFont: java.awt.Font,
+        val baseAWTFont: java.awt.Font,
         val fontHeightPx: Double,
         leadingTopPx: Double = 0.0,
         leadingBottomPx: Double = 0.0,

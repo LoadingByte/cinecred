@@ -232,62 +232,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
         val transformedShape = if (shape is Path2D.Float) Path2D.Float(shape, tx) else Path2D.Double(shape, tx)
         val transformedCoat = coat.transform(tx)
-        if (blurRadius <= 0.0)
-            backend.materializeShape(transformedShape, transformedCoat, fill, dash)
-        else {
-            // For both backends, the only conceivable way to implement blurring appears to be to first draw the shape
-            // to an image, blur that, and then to send it to the backend.
-            check(fill) { "Blurring is only supported for filled shapes." }
-            // Build the horizontal and vertical Gaussian kernels and determine the necessary image padding.
-            val kernelVec = gaussianKernelVector(blurRadius)
-            val hKernel = Kernel(kernelVec.size, 1, kernelVec)
-            val vKernel = Kernel(1, kernelVec.size, kernelVec)
-            val halfPad = (kernelVec.size - 1) / 2
-            val fullPad = 2 * halfPad
-            // Determine the bounds of the shape, and the whole and fractional parts of the shape's coordinates.
-            val bounds = transformedShape.bounds2D
-            val xWhole = floor(bounds.x)
-            val yWhole = floor(bounds.y)
-            val xFrac = bounds.x - xWhole
-            val yFrac = bounds.y - yWhole
-            // Paint the shape to an intermediate image with sufficient padding.
-            var img = BufferedImage(
-                ceil(xFrac + bounds.width).toInt() + 2 * fullPad,
-                ceil(yFrac + bounds.height).toInt() + 2 * fullPad,
-                // If the image did not have premultiplied alpha, transparent pixels would have black color channels
-                // and would hence spill blackness when blurred into other pixels.
-                BufferedImage.TYPE_4BYTE_ABGR_PRE
-            ).withG2 { g2 ->
-                g2.setHighQuality()
-                g2.paint = transformedCoat.toPaint()
-                g2.translate(fullPad - xWhole, fullPad - yWhole)
-                g2.fill(transformedShape)
-            }
-            // Apply the convolution kernels.
-            val tmp = ConvolveOp(hKernel).filter(img, null)
-            img = ConvolveOp(vKernel).filter(tmp, img)
-            // Cut off the padding that is guaranteed to be empty due to the convolutions' EDGE_ZERO_FILL behavior.
-            img = img.getSubimage(halfPad, halfPad, img.width - fullPad, img.height - fullPad)
-            // Send the resulting image to the backend.
-            val embeddedPic = Picture.Embedded.Raster(Picture.Raster(img))
-            backend.materializeEmbeddedPicture(xWhole - halfPad, yWhole - halfPad, 1.0, embeddedPic, draft = false)
-        }
-    }
-
-    private fun gaussianKernelVector(radius: Double): FloatArray {
-        val sigma = radius / 2.0
-        val twoSigmaSq = 2.0 * sigma * sigma
-        val sqrtOfTwoPiSigma = sqrt(2.0 * PI * sigma)
-        // Compute the Gaussian curve.
-        val intRadius = floor(radius).toInt()
-        val vecSize = intRadius * 2 + 1
-        val vec = FloatArray(vecSize) { idx ->
-            val distToCenter = idx - intRadius
-            (exp(-distToCenter * distToCenter / twoSigmaSq) / sqrtOfTwoPiSigma).toFloat()
-        }
-        // Normalize the curve to fix numerical inaccuracies.
-        val sum = vec.sum()
-        return FloatArray(vecSize) { idx -> vec[idx] / sum }
+        backend.materializeShape(transformedShape, transformedCoat, fill, dash, blurRadius)
     }
 
     private fun materializeText(
@@ -364,6 +309,24 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             is Coat.Gradient -> GradientPaint(point1, color1, point2, color2)
         }
 
+        private fun gaussianStdDev(radius: Double) = radius / 2.0
+
+        private fun gaussianKernelVector(radius: Double): FloatArray {
+            val sigma = gaussianStdDev(radius)
+            val twoSigmaSq = 2.0 * sigma * sigma
+            val sqrtOfTwoPiSigma = sqrt(2.0 * PI * sigma)
+            // Compute the Gaussian curve.
+            val intRadius = floor(radius).toInt()
+            val vecSize = intRadius * 2 + 1
+            val vec = FloatArray(vecSize) { idx ->
+                val distToCenter = idx - intRadius
+                (exp(-distToCenter * distToCenter / twoSigmaSq) / sqrtOfTwoPiSigma).toFloat()
+            }
+            // Normalize the curve to fix numerical inaccuracies.
+            val sum = vec.sum()
+            return FloatArray(vecSize) { idx -> vec[idx] / sum }
+        }
+
     }
 
 
@@ -427,15 +390,77 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private interface MaterializationBackend {
 
         // The default implementations skip materialization.
-        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {}
+        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {}
         fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {}
         fun materializeEmbeddedPicture(
             x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
         ) {
         }
 
-        // The default implementation materializes the tape's thumbnail or a "missing media" placeholder, respectively.
         fun materializeEmbeddedTape(
+            x: Double,
+            y: Double,
+            scaling: Double,
+            embeddedTape: Tape.Embedded,
+            thumbnail: Picture.Raster?
+        )
+
+    }
+
+
+    /** Implements blurring by first rasterizing the shape to an image and blurring that. */
+    private interface RasterBlurBackend : MaterializationBackend {
+
+        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean)
+
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
+            if (blurRadius <= 0.0)
+                materializeShape(shape, coat, fill, dash)
+            else {
+                check(fill) { "Blurring is only supported for filled shapes." }
+                // Build the horizontal and vertical Gaussian kernels and determine the necessary image padding.
+                val kernelVec = gaussianKernelVector(blurRadius)
+                val hKernel = Kernel(kernelVec.size, 1, kernelVec)
+                val vKernel = Kernel(1, kernelVec.size, kernelVec)
+                val halfPad = (kernelVec.size - 1) / 2
+                val fullPad = 2 * halfPad
+                // Determine the bounds of the shape, and the whole and fractional parts of the shape's coordinates.
+                val bounds = shape.bounds2D
+                val xWhole = floor(bounds.x)
+                val yWhole = floor(bounds.y)
+                val xFrac = bounds.x - xWhole
+                val yFrac = bounds.y - yWhole
+                // Paint the shape to an intermediate image with sufficient padding.
+                var img = BufferedImage(
+                    ceil(xFrac + bounds.width).toInt() + 2 * fullPad,
+                    ceil(yFrac + bounds.height).toInt() + 2 * fullPad,
+                    // If the image did not have premultiplied alpha, transparent pixels would have black color channels
+                    // and would hence spill blackness when blurred into other pixels.
+                    BufferedImage.TYPE_4BYTE_ABGR_PRE
+                ).withG2 { g2 ->
+                    g2.setHighQuality()
+                    g2.paint = coat.toPaint()
+                    g2.translate(fullPad - xWhole, fullPad - yWhole)
+                    g2.fill(shape)
+                }
+                // Apply the convolution kernels.
+                val tmp = ConvolveOp(hKernel).filter(img, null)
+                img = ConvolveOp(vKernel).filter(tmp, img)
+                // Cut off the padding that is guaranteed to be empty due to the convolutions' EDGE_ZERO_FILL behavior.
+                img = img.getSubimage(halfPad, halfPad, img.width - fullPad, img.height - fullPad)
+                // Send the resulting image to the backend.
+                val embeddedPic = Picture.Embedded.Raster(Picture.Raster(img))
+                materializeEmbeddedPicture(xWhole - halfPad, yWhole - halfPad, 1.0, embeddedPic, draft = false)
+            }
+        }
+
+    }
+
+
+    /** Materializes tapes by rendering the tape's thumbnail or a "missing media" placeholder. */
+    private interface TapeThumbnailBackend : MaterializationBackend {
+
+        override fun materializeEmbeddedTape(
             x: Double,
             y: Double,
             scaling: Double,
@@ -452,7 +477,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     Tape.MISSING_MEDIA_TOP_COLOR, Tape.MISSING_MEDIA_BOT_COLOR,
                     Point2D.Double(0.0, rect.minY), Point2D.Double(0.0, rect.maxY)
                 )
-                materializeShape(rect, coat, fill = true, dash = false)
+                materializeShape(rect, coat, fill = true, dash = false, blurRadius = 0.0)
             }
         }
 
@@ -462,7 +487,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private class Graphics2DBackend(
         private val g2: Graphics2D,
         private val rasterOutput: Boolean
-    ) : MaterializationBackend {
+    ) : RasterBlurBackend, TapeThumbnailBackend {
 
         override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
             g2.paint = coat.toPaint()
@@ -575,7 +600,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val doc: PDDocument,
         private val page: PDPage,
         private val cs: PDPageContentStream,
-    ) : MaterializationBackend {
+    ) : RasterBlurBackend, TapeThumbnailBackend {
 
         private val csHeight = page.mediaBox.height
         private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }

@@ -1,27 +1,28 @@
 package com.loadingbyte.cinecred.delivery
 
-import com.loadingbyte.cinecred.common.createDirectoriesSafely
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.withG2
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import org.apache.batik.dom.GenericDOMImplementation
-import org.apache.batik.svggen.SVGGeneratorContext
-import org.apache.batik.svggen.SVGGraphics2D
 import org.apache.commons.io.FileUtils
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import java.awt.Color
-import java.awt.Dimension
 import java.awt.image.BufferedImage
 import java.nio.file.Path
+import java.util.*
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import javax.imageio.stream.FileImageOutputStream
+import javax.xml.XMLConstants.*
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -31,6 +32,7 @@ import kotlin.math.roundToInt
 class WholePageSequenceRenderJob(
     private val pageDefImages: List<DeferredImage>,
     private val grounding: Color?,
+    private val locale: Locale,
     private val format: Format,
     val dir: Path,
     val filenamePattern: String
@@ -87,19 +89,39 @@ class WholePageSequenceRenderJob(
                 }
                 Format.SVG -> {
                     val doc = GenericDOMImplementation.getDOMImplementation()
-                        .createDocument("http://www.w3.org/2000/svg", "svg", null)
-                    val ctx = SVGGeneratorContext.createDefault(doc)
-                    ctx.comment = null
+                        .createDocument(SVG_NS_URI, "svg", null)
+                    val svg = doc.documentElement
 
-                    val g2 = SVGGraphics2D(ctx, true)
-                    g2.svgCanvasSize = Dimension(pageWidth, pageHeight)
-                    if (grounding != null) {
-                        g2.color = grounding
-                        g2.fillRect(0, 0, pageWidth, pageHeight)
+                    svg.setAttributeNS(XMLNS_ATTRIBUTE_NS_URI, "xmlns:xlink", XLINK_NS_URI)
+                    svg.setAttributeNS(XML_NS_URI, "xml:lang", locale.toLanguageTag())
+                    svg.setAttribute("width", pageWidth.toString())
+                    svg.setAttribute("height", pageHeight.toString())
+                    svg.setAttribute("viewBox", "0 0 $pageWidth $pageHeight")
+                    if (grounding != null)
+                        svg.appendChild(doc.createElementNS(SVG_NS_URI, "rect").apply {
+                            setAttribute("width", pageWidth.toString())
+                            setAttribute("height", pageHeight.toString())
+                            setAttribute("fill", grounding.toHex24())
+                        })
+                    pageDefImage.materialize(svg, listOf(STATIC, TAPES))
+
+                    // Get rid of, e.g., strange whitespace in nested SVGs.
+                    doc.normalizeDocument()
+                    pageFile.bufferedWriter().use { writer ->
+                        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                        // Note: We have verified that the XML writer used a bit further down writes system-dependent
+                        // line breaks, so we do too.
+                        writer.newLine()
+                        writer.write("<!-- Created with Cinecred $VERSION -->")
+                        // The XML writer sadly doesn't put a newline after a comment placed before the root element.
+                        // The simplest solution is to just write this comment ourselves.
+                        writer.newLine()
+                        TransformerFactory.newInstance().newTransformer().apply {
+                            setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
+                            setOutputProperty(OutputKeys.INDENT, "yes")
+                            setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+                        }.transform(DOMSource(doc), StreamResult(writer))
                     }
-                    pageDefImage.materialize(g2, listOf(STATIC, TAPES))
-
-                    pageFile.bufferedWriter().use { writer -> g2.stream(writer, true) }
                 }
             }
 

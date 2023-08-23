@@ -3,7 +3,9 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
+import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
+import org.apache.batik.svggen.SVGIDGenerator
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.OpenTypeFont
 import org.apache.fontbox.ttf.TTFParser
@@ -34,6 +36,8 @@ import org.apache.pdfbox.pdmodel.graphics.shading.PDShadingType2
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.util.Matrix
+import org.w3c.dom.*
+import org.w3c.dom.traversal.NodeFilter.*
 import java.awt.*
 import java.awt.RenderingHints.KEY_INTERPOLATION
 import java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
@@ -41,10 +45,15 @@ import java.awt.geom.*
 import java.awt.image.BufferedImage
 import java.awt.image.ConvolveOp
 import java.awt.image.Kernel
+import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.nio.file.Path
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import javax.imageio.ImageIO
+import javax.xml.XMLConstants.XML_NS_URI
 import kotlin.math.*
 
 
@@ -126,7 +135,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         bufImage.withG2 { g2 ->
             g2.setHighQuality()
             composite?.let(g2::setComposite)
-            val backend = Graphics2DBackend(g2, rasterOutput = true)
+            val backend = Graphics2DBackend(g2)
             // If only a portion of the deferred image is materialized, cull the rest to improve performance.
             // Notice that because the culling rect is aligned with the pixel grid, we correctly include all content
             // that at least partially lies inside one of the buffered image's pixels.
@@ -135,9 +144,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
     }
 
-    /** Draws the content of this deferred image onto an SVG via the given [SVGGraphics2D]. */
-    fun materialize(g2: SVGGraphics2D, layers: List<Layer>) {
-        materializeDeferredImage(Graphics2DBackend(g2, rasterOutput = false), 0.0, 0.0, 1.0, 1.0, null, this, layers)
+    /** Draws the content of this deferred image onto an SVG element. */
+    fun materialize(svg: Element, layers: List<Layer>) {
+        materializeDeferredImage(SVGBackend(svg), 0.0, 0.0, 1.0, 1.0, null, this, layers)
     }
 
     /** Draws the content of this deferred onto a PDF page. */
@@ -358,6 +367,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         interface FundamentalFontInfo {
             val fontName: String
             val fontFile: Path
+            /** Retrieves the outline of a particular glyph, assuming a non-transformed font of the given size. */
+            fun getGlyphOutline(glyphCode: Int, fontSize: Double): Shape
         }
 
     }
@@ -494,10 +505,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    private class Graphics2DBackend(
-        private val g2: Graphics2D,
-        private val rasterOutput: Boolean
-    ) : RasterBlurBackend, TapeThumbnailBackend {
+    private class Graphics2DBackend(private val g2: Graphics2D) : RasterBlurBackend, TapeThumbnailBackend {
 
         override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
             g2.paint = coat.toPaint()
@@ -545,15 +553,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             when (embeddedPic) {
                 is Picture.Embedded.Raster -> g2.preserveTransform {
                     val pic = embeddedPic.picture
-                    // When drawing vector graphics, neither care about aligning with the pixel grid nor creating a
-                    // scaled copy with the target resolution.
-                    if (!rasterOutput) {
-                        g2.translate(x, y)
-                        g2.scale(embeddedPic.scalingX * scaling)
-                        g2.drawImage(pic.img, 0, 0, null)
-                        return@preserveTransform
-                    }
-                    // When drawing to a raster output, align the raster picture with the pixel grid and force the
+                    // Align the raster picture with the pixel grid and force the
                     // picture to have integer size to prevent interpolation.
                     g2.translate(x.roundToInt(), y.roundToInt())
                     val w = (embeddedPic.width * scaling).roundToInt()
@@ -601,6 +601,301 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         companion object {
             private val scaledImgCache = ConcurrentHashMap<BufferedImage, BufferedImage>()
+        }
+
+    }
+
+
+    private class SVGBackend(private val svg: Element) : TapeThumbnailBackend {
+
+        private val doc get() = svg.ownerDocument
+
+        private val defs by lazy {
+            doc.createElementNS(SVG_NS_URI, "defs").also { svg.insertBefore(it, svg.firstChild) }
+        }
+        private val glyphPathIds = HashMap<Pair<String /* font name */, Int /* glyph code */>, String?>()
+        private val picElementIds = HashMap<Picture, String>()
+        private var gradientCtr = 0
+        private val gradientIds = HashMap<Pair<Color, Color>, String>()
+        private val blurFilterIds = HashMap<Double, String>()
+
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
+            check(!dash) { "The SVG backend does not support dashing." }
+            val path = makePath(shape) ?: return
+            applyCoat(path, coat, fill)
+
+            if (blurRadius > 0.0) {
+                val blurFilterId = blurFilterIds.computeIfAbsent(blurRadius) {
+                    val filter = doc.createElementNS(SVG_NS_URI, "filter")
+                    val id = "blur${blurFilterIds.size + 1}"
+                    filter.setAttribute("id", id)
+                    filter.appendChild(doc.createElementNS(SVG_NS_URI, "feGaussianBlur").apply {
+                        setAttribute("stdDeviation", F.format(gaussianStdDev(blurRadius)))
+                    })
+                    defs.appendChild(filter)
+                    id
+                }
+                path.setAttribute("filter", "url(#$blurFilterId)")
+            }
+
+            svg.appendChild(path)
+        }
+
+        override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
+            val defFontSize = 12.0
+            val defToUseScaling = text.fontSize / defFontSize
+
+            val textOnlyTx = AffineTransform().apply {
+                scale(defToUseScaling)
+                concatenate(text.transform)
+            }
+            val textTx = AffineTransform().apply {
+                translate(x, yBaseline)
+                scale(scaling)
+                concatenate(textOnlyTx)
+            }
+            // Compute the coat transform before processing any glyphs. This way, if this calculation fails, we don't
+            // add orphaned glyph defs that might never be used in the SVG.
+            val coatTx = try {
+                textOnlyTx.createInverse()
+            } catch (_: NoninvertibleTransformException) {
+                // If the transform's determinant is 0, we try to fill a collapsed shape, so just abort.
+                return
+            }
+
+            val g = doc.createElementNS(SVG_NS_URI, "g")
+
+            val m00 = F.format(textTx.scaleX)
+            val m10 = F.format(textTx.shearY)
+            val m01 = F.format(textTx.shearX)
+            val m11 = F.format(textTx.scaleY)
+            val m02 = F.format(textTx.translateX)
+            val m12 = F.format(textTx.translateY)
+            g.setAttribute("transform", "matrix($m00 $m10 $m01 $m11 $m02 $m12)")
+
+            val fontName = text.fundamentalFontInfo.fontName
+            for ((glyphIdx, glyphCode) in text.glyphCodes.withIndex()) {
+                val use = doc.createElementNS(SVG_NS_URI, "use")
+                val glyphPathId = glyphPathIds.computeIfAbsent(Pair(fontName, glyphCode)) {
+                    val id = "glyph${glyphPathIds.size + 1}"
+                    val glyphOutline = text.fundamentalFontInfo.getGlyphOutline(glyphCode, defFontSize)
+                    defs.appendChild((makePath(glyphOutline) ?: return@computeIfAbsent null).apply {
+                        setAttribute("id", id)
+                    })
+                    id
+                } ?: continue
+                use.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$glyphPathId")
+                use.setAttribute("x", F.format(text.getGlyphOffsetX(glyphIdx) / defToUseScaling))
+                g.appendChild(use)
+            }
+
+            if (g.hasChildNodes()) {
+                // We wait with applying the coat until we are sure that g will actually be added to the tree.
+                // Otherwise, we could end up creating orphaned gradient defs.
+                applyCoat(g, coat.transform(coatTx), fill = true)
+                svg.appendChild(g)
+            }
+        }
+
+        private fun applyCoat(coatedElement: Element, coat: Coat, fill: Boolean) {
+            when (coat) {
+                is Coat.Plain -> {
+                    val prefix = if (fill) "fill" else {
+                        coatedElement.setAttribute("fill", "none")
+                        "stroke"
+                    }
+                    coatedElement.setAttribute(prefix, coat.color.toHex24())
+                    if (coat.color.alpha != 255)
+                        coatedElement.setAttribute("$prefix-opacity", F.format(coat.color.alpha / 255.0))
+                }
+                is Coat.Gradient -> {
+                    val gradientId = "gradient${++gradientCtr}"
+                    coatedElement.setAttribute(if (fill) "fill" else "stroke", "url(#$gradientId)")
+                    val key = Pair(coat.color1, coat.color2)
+                    defs.appendChild(makeLinearGradient(coat, gradientIds[key]).apply {
+                        setAttribute("id", gradientId)
+                    })
+                    gradientIds.putIfAbsent(key, gradientId)
+                }
+            }
+        }
+
+        override fun materializeEmbeddedPicture(
+            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
+        ) {
+            val use = doc.createElementNS(SVG_NS_URI, "use")
+
+            val picElementId = picElementIds.computeIfAbsent(embeddedPic.picture) {
+                val id = "picture${picElementIds.size + 1}"
+                defs.appendChild(makePictureElement(embeddedPic.picture, id))
+                id
+            }
+            use.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$picElementId")
+
+            val transforms = mutableListOf<String>()
+            // Notice that we can't use the "x" and "y" attributes to specify the translation because they would be
+            // affected by the scale() transform.
+            if (x != 0.0 || y != 0.0)
+                transforms += "translate(${F.format(x)} ${F.format(y)})"
+            when (embeddedPic) {
+                is Picture.Embedded.Raster -> {
+                    val sx = embeddedPic.scalingX
+                    val sy = embeddedPic.scalingY
+                    if (sx != 1.0 || sy != 1.0)
+                        transforms += "scale(${F.format(sx)} ${F.format(sy)})"
+                }
+                is Picture.Embedded.Vector -> {
+                    val s = scaling * embeddedPic.scaling
+                    if (s != 1.0)
+                        transforms += "scale(${F.format(s)})"
+                    if (embeddedPic.isCropped) {
+                        val pic = embeddedPic.picture
+                        transforms += "translate(${F.format(-pic.cropX)} ${F.format(-pic.cropY)})"
+                    }
+                }
+            }
+            if (transforms.isNotEmpty())
+                use.setAttribute("transform", transforms.joinToString(" "))
+
+            svg.appendChild(use)
+        }
+
+        private fun makePath(shape: Shape): Element? = when (shape) {
+            is Rectangle2D -> if (shape.isEmpty) null else doc.createElementNS(SVG_NS_URI, "rect").apply {
+                setAttribute("x", F.format(shape.x))
+                setAttribute("y", F.format(shape.y))
+                setAttribute("width", F.format(shape.width))
+                setAttribute("height", F.format(shape.height))
+            }
+            else -> {
+                val d = StringBuilder()
+                val pi = shape.getPathIterator(null)
+                val coords = DoubleArray(6)
+                while (!pi.isDone) {
+                    when (pi.currentSegment(coords)) {
+                        PathIterator.SEG_MOVETO ->
+                            d.append(" M ").append(F.format(coords[0])).append(" ").append(F.format(coords[1]))
+                        PathIterator.SEG_LINETO ->
+                            d.append(" L ").append(F.format(coords[0])).append(" ").append(F.format(coords[1]))
+                        PathIterator.SEG_QUADTO ->
+                            d.append(" Q ").append(F.format(coords[0])).append(" ").append(F.format(coords[1]))
+                                .append(" ").append(F.format(coords[2])).append(" ").append(F.format(coords[3]))
+                        PathIterator.SEG_CUBICTO ->
+                            d.append(" C ").append(F.format(coords[0])).append(" ").append(F.format(coords[1]))
+                                .append(" ").append(F.format(coords[2])).append(" ").append(F.format(coords[3]))
+                                .append(" ").append(F.format(coords[4])).append(" ").append(F.format(coords[5]))
+                        PathIterator.SEG_CLOSE ->
+                            d.append(" Z")
+                    }
+                    pi.next()
+                }
+                if (d.isEmpty()) null else
+                    doc.createElementNS(SVG_NS_URI, "path").apply { setAttribute("d", d.substring(1)) }
+            }
+        }
+
+        private fun makeLinearGradient(coat: Coat.Gradient, refStopsFromId: String?): Element {
+            val linearGradient = doc.createElementNS(SVG_NS_URI, "linearGradient")
+            linearGradient.setAttribute("gradientUnits", "userSpaceOnUse")
+            linearGradient.setAttribute("x1", F.format(coat.point1.x))
+            linearGradient.setAttribute("y1", F.format(coat.point1.y))
+            linearGradient.setAttribute("x2", F.format(coat.point2.x))
+            linearGradient.setAttribute("y2", F.format(coat.point2.y))
+            if (refStopsFromId != null)
+                linearGradient.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$refStopsFromId")
+            else {
+                linearGradient.appendChild(makeGradientStop("0", coat.color1))
+                linearGradient.appendChild(makeGradientStop("1", coat.color2))
+            }
+            return linearGradient
+        }
+
+        private fun makeGradientStop(offset: String, color: Color): Element {
+            return doc.createElementNS(SVG_NS_URI, "stop").apply {
+                setAttribute("offset", offset)
+                setAttribute("stop-color", color.toHex24())
+                if (color.alpha != 255)
+                    setAttribute("stop-opacity", F.format(color.alpha / 255.0))
+            }
+        }
+
+        private fun makePictureElement(pic: Picture, picElementId: String): Element {
+            val picElement = when (pic) {
+                is Picture.Raster -> {
+                    val bos = ByteArrayOutputStream()
+                    ImageIO.write(pic.img, "png", bos)
+                    val data = Base64.getEncoder().encodeToString(bos.toByteArray())
+                    val image = doc.createElementNS(SVG_NS_URI, "image")
+                    image.setAttributeNS(XLINK_NS_URI, "xlink:href", "data:image/png;base64,$data")
+                    image
+                }
+                is Picture.SVG -> {
+                    val picSVG = pic.import(doc)
+                    // If the nested SVG has a viewBox, it must also specify its width and height, or else it vanishes.
+                    picSVG.setAttribute("width", F.format(pic.width))
+                    picSVG.setAttribute("height", F.format(pic.height))
+                    // This attribute messes up our formatting and is deprecated anyway.
+                    picSVG.removeAttributeNS(XML_NS_URI, "space")
+                    // Mangle IDs and classes to ensure they are unique to the picture.
+                    val mangling = HashMap<String, String>()
+                    picSVG.forEachNodeInSubtree(SHOW_ELEMENT) { elem ->
+                        elem as Element
+                        val id = elem.getAttribute("id")
+                        if (id.isNotEmpty()) {
+                            val mangledId = "$picElementId-$id"
+                            mangling["#$id"] = "#$mangledId"
+                            elem.setAttribute("id", mangledId)
+                        }
+                        val classes = elem.getAttribute("class")
+                        if (classes.isNotEmpty())
+                            elem.setAttribute("class",
+                                classes.split(CLASS_DELIMITER).filter(String::isNotEmpty).joinToString(" ") { clazz ->
+                                    val mangledClass = "$picElementId-$clazz"
+                                    mangling[".$clazz"] = ".$mangledClass"
+                                    mangledClass
+                                })
+                    }
+                    picSVG.forEachNodeInSubtree(SHOW_ELEMENT or SHOW_TEXT or SHOW_CDATA_SECTION) { node ->
+                        if (node is org.w3c.dom.Text) {
+                            val data = node.data
+                            var mangledData = data
+                            for ((old, new) in mangling)
+                                mangledData = mangledData.replace(old, new)
+                            if (data != mangledData)
+                                node.data = mangledData
+                            return@forEachNodeInSubtree
+                        }
+                        val attrs = node.attributes
+                        for (idx in 0 until attrs.length) {
+                            val attr = attrs.item(idx) as Attr
+                            val value = attr.value
+                            var mangledValue = value
+                            for ((old, new) in mangling)
+                                mangledValue = mangledValue.replace(old, new)
+                            if (value != mangledValue)
+                                attr.value = mangledValue
+                        }
+                    }
+                    picSVG
+                }
+                is Picture.PDF -> {
+                    val ctx = SVGGeneratorContext.createDefault(doc)
+                    ctx.idGenerator = object : SVGIDGenerator() {
+                        override fun generateID(prefix: String) = "$picElementId-${super.generateID(prefix)}"
+                    }
+                    ctx.comment = null
+                    val g2 = SVGGraphics2D(ctx, true)
+                    pic.drawTo(g2)
+                    g2.root
+                }
+            }
+            picElement.setAttribute("id", picElementId)
+            return picElement
+        }
+
+        companion object {
+            private val F = DecimalFormat("#.####", DecimalFormatSymbols(Locale.ROOT))
+            private val CLASS_DELIMITER = Regex("[ \t\n\r]+")
         }
 
     }

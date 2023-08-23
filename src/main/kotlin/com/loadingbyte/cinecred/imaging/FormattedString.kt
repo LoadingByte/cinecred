@@ -559,6 +559,9 @@ class FormattedString private constructor(
         private class FFontInfoImpl(private val baseAWTFont: java.awt.Font) : DeferredImage.Text.FundamentalFontInfo {
             override val fontName: String get() = baseAWTFont.psName
             override val fontFile get() = baseAWTFont.getFontFile()
+            override fun getGlyphOutline(glyphCode: Int, fontSize: Double): Shape =
+                baseAWTFont.deriveFont(mapOf(TextAttribute.SIZE to fontSize))
+                    .createGlyphVector(REF_FRC, intArrayOf(glyphCode)).getGlyphOutline(0)
         }
 
     }

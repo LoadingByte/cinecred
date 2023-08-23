@@ -22,6 +22,9 @@ import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.rendering.RenderDestination
 import org.apache.poi.xslf.draw.SVGUserAgent
 import org.slf4j.LoggerFactory
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.svg.SVGDocument
 import java.awt.Graphics2D
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
@@ -78,6 +81,7 @@ sealed interface Picture : Closeable {
 
 
     class SVG(
+        private val doc: SVGDocument,
         private val gvtRoot: GraphicsNode,
         override val width: Double,
         override val height: Double,
@@ -94,6 +98,8 @@ sealed interface Picture : Closeable {
             // Batik might not be thread-safe, even though we haven't tested that.
             lock.withLock { gvtRoot.paint(g2) }
         }
+
+        fun import(importer: Document): Element = importer.importNode(doc.rootElement, true) as Element
 
     }
 
@@ -298,7 +304,7 @@ sealed interface Picture : Closeable {
                     ctx.animationEngine.currentTime = SVGUtilities.convertSnapshotTime(docRoot, null)
             }
 
-            return SVG(gvtRoot, width, height)
+            return SVG(doc, gvtRoot, width, height)
         }
 
         private fun loadPDF(pdfFile: Path): PDF {

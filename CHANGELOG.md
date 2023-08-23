@@ -16,6 +16,7 @@ Cinecred Changelog
   range in which they appear.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
+- Exported SVGs are now more compact and less often fall back to rasterization.
 - Added an about tab listing all contributors to the welcome window.
 
 ### Fixes

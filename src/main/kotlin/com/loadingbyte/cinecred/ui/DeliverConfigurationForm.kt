@@ -357,7 +357,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is WholePageSequenceRenderJob.Format -> {
                     renderJob = WholePageSequenceRenderJob(
                         getScaledPageDefImages(),
-                        grounding, format,
+                        grounding, project.styling.global.locale, format,
                         dir = fileOrDir, filenamePattern = hashPatternToFormatStr(getFilenameHashPattern())
                     )
                     destination = fileOrDir.resolve(getFilenameHashPattern()).pathString

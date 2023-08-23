@@ -7,6 +7,8 @@ import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.w3c.dom.Node
+import org.w3c.dom.traversal.DocumentTraversal
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics
@@ -282,6 +284,22 @@ fun comprehensivelyApplyLocale(locale: Locale) {
     UIManager.getLookAndFeelDefaults().defaultLocale = locale
     JComponent.setDefaultLocale(locale)
     changeLocaleOfToolkitResources(locale)
+}
+
+
+const val XLINK_NS_URI = "http://www.w3.org/1999/xlink"
+const val SVG_NS_URI = "http://www.w3.org/2000/svg"
+
+
+/** Notice that the subtree contains the root node itself, and that the subtree may be modified during iteration. */
+inline fun Node.forEachNodeInSubtree(whatToShow: Int, action: (Node) -> Unit) {
+    val iter = (ownerDocument as DocumentTraversal).createNodeIterator(this, whatToShow, null, true)
+    try {
+        while (true)
+            action(iter.nextNode() ?: break)
+    } finally {
+        iter.detach()
+    }
 }
 
 

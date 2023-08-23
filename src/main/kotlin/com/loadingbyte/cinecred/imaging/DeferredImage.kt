@@ -672,9 +672,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 val t = text.transform
                 concatenate(AffineTransform(t.scaleX, t.shearY, -t.shearX, t.scaleY, t.translateX, -t.translateY))
             }
+            val coatTx = AffineTransform().apply {
+                translate(x, yBaseline)
+                scale(scaling)
+            }
 
             cs.setFont(pdFont, text.font.size2D)
-            setCoat(coat.transform(AffineTransform.getTranslateInstance(x, yBaseline)), fill = true, textBBox)
+            setCoat(coat.transform(coatTx), fill = true, textBBox)
             cs.setTextMatrix(Matrix(textTx))
             cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
 

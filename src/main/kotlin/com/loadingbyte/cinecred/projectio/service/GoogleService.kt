@@ -11,11 +11,13 @@ import com.google.api.client.http.GenericUrl
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.http.UrlEncodedContent
 import com.google.api.client.json.gson.GsonFactory
+import com.google.api.client.util.store.DataStore
 import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsRequest
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.projectio.Spreadsheet
@@ -24,6 +26,7 @@ import com.loadingbyte.cinecred.ui.helper.tryBrowse
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import org.apache.http.client.utils.URLEncodedUtils
 import java.io.IOException
@@ -40,6 +43,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.io.path.notExists
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -51,11 +55,36 @@ object GoogleService : Service {
 
     override val accounts: List<Account> get() = _accounts.get()
 
-    private val credentialDataStore by lazy {
-        StoredCredential.getDefaultDataStore(FileDataStoreFactory(SERVICE_CONFIG_DIR.resolve("google").toFile()))
-    }
-    private var _accounts =
-        AtomicReference(credentialDataStore.keySet().sorted().map(::GoogleAccount).toPersistentList())
+    private val credDir = SERVICE_CONFIG_DIR.resolve("google")
+    private var _credDataStore: DataStore<StoredCredential>? = null
+    private var _credDataStoreErr: String? = null
+    private val _credDataStoreLock = ReentrantLock()
+
+    private val credentialDataStore: DataStore<StoredCredential>
+        get() = _credDataStoreLock.withLock {
+            if (_credDataStore == null && _credDataStoreErr == null)
+                try {
+                    _credDataStore = StoredCredential.getDefaultDataStore(FileDataStoreFactory(credDir.toFile()))
+                } catch (e: Exception /* Catch more than just IOException to ensure Cinecred can always launch. */) {
+                    LOGGER.error("Cannot access the Google credential store at '{}'.", credDir, e)
+                    _credDataStoreErr = e.toString()
+                }
+            _credDataStore
+                ?: throw IOException("Cannot access the Google credential store at '$credDir': $_credDataStoreErr")
+        }
+
+    private val _accounts = AtomicReference(
+        // Only initialize the lazy credentialDataStore variable if the data store folder already exists. Thereby,
+        // we ensure that we don't create an empty data store on the disk, which is important as some users have
+        // reported strange file permissions issues with the data store even if they never used the Google service.
+        if (credDir.notExists()) persistentListOf() else try {
+            credentialDataStore.keySet().sorted().map(::GoogleAccount).toPersistentList()
+        } catch (_: IOException) {
+            // Don't throw now as that would inhibit Cinecred's launch. And even though keySet() claims to throw, it
+            // in fact does not, so any exception would already have been logged by the credentialDataStore getter.
+            persistentListOf()
+        }
+    )
 
     private val watchersForPolling = LinkedBlockingQueue<GoogleWatcher>()
     private val watchersPoller = AtomicReference<Thread?>()
@@ -284,7 +313,12 @@ object GoogleService : Service {
                 else {
                     // The account doesn't have tokens stored locally, so we can remove it (without revoking, as we
                     // don't have any tokens to revoke).
-                    forceRemoveAccount(this)
+                    try {
+                        forceRemoveAccount(this)
+                    } catch (e: IOException) {
+                        // If we can't remove it, that's no big issue, but at least log the error.
+                        LOGGER.error("Failed to remove Google account '{}', which is missing credentials.", id, e)
+                    }
                     return null
                 }
 
@@ -358,7 +392,12 @@ object GoogleService : Service {
                 when {
                     e is TokenResponseException && e.details != null && e.details.error == "invalid_grant" -> {
                         // If the refresh token is revoked, the account is no longer authorized, so we can remove it.
-                        forceRemoveAccount(this)
+                        try {
+                            forceRemoveAccount(this)
+                        } catch (e2: IOException) {
+                            // If we can't remove it, that's no big issue, but at least log the error.
+                            LOGGER.error("Failed to remove Google account '{}', whose credentials are revoked.", id, e2)
+                        }
                         throw ForbiddenException()
                     }
                     e is HttpResponseException -> when (e.statusCode) {

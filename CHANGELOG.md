@@ -27,6 +27,8 @@ Cinecred Changelog
   when it has multiple occurrences.
 - Exported PDFs no longer squish gradients when the export resolution is scaled.
 - The crash window now also opens when the error occurred in a background task.
+- The file that stores Google access tokens is now only created when needed, and
+  any errors related to that file are gracefully handled.
 
 ### UI Fixes
 

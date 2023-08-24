@@ -7,7 +7,6 @@ import org.apache.batik.svggen.SVGGeneratorContext
 import org.apache.batik.svggen.SVGGraphics2D
 import org.apache.batik.svggen.SVGIDGenerator
 import org.apache.fontbox.ttf.OTFParser
-import org.apache.fontbox.ttf.OpenTypeFont
 import org.apache.fontbox.ttf.TTFParser
 import org.apache.fontbox.ttf.TrueTypeCollection
 import org.apache.pdfbox.contentstream.operator.OperatorName
@@ -1174,7 +1173,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         // TrueType Collection
                         0x74746366 -> {
                             TrueTypeCollection(fontFile).processAllFonts { ttf ->
-                                docRes.pdFonts[ttf.name] = PDType0Font.load(doc, ttf, ttf !is OpenTypeFont)
+                                docRes.pdFonts[ttf.name] = PDType0Font.load(doc, ttf, false)
                             }
                             if (psName !in docRes.pdFonts) {
                                 val msg = "Successfully loaded the font file '{}' for PDF embedding, but the font " +

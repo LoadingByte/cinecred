@@ -155,6 +155,7 @@ class WholePageSequenceRenderJob(
 class WholePagePDFRenderJob(
     private val pageDefImages: List<DeferredImage>,
     private val grounding: Color?,
+    private val locale: Locale,
     val file: Path
 ) : RenderJob {
 
@@ -165,6 +166,14 @@ class WholePagePDFRenderJob(
         file.parent.createDirectoriesSafely()
 
         val pdfDoc = PDDocument()
+
+        // We're embedding OpenType fonts, which requires PDF 1.6.
+        pdfDoc.version = 1.6f
+        pdfDoc.documentInformation.apply {
+            creator = "Cinecred $VERSION"
+            creationDate = Calendar.getInstance()
+        }
+        pdfDoc.documentCatalog.language = locale.toLanguageTag()
 
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return

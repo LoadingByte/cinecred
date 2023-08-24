@@ -365,7 +365,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 WholePagePDFRenderJob.FORMAT -> {
                     renderJob = WholePagePDFRenderJob(
                         getScaledPageDefImages(),
-                        grounding,
+                        grounding, project.styling.global.locale,
                         file = fileOrDir
                     )
                     destination = fileOrDir.pathString

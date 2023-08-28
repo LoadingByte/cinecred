@@ -155,9 +155,9 @@ val writeCopyrightFile by tasks.registering(WriteFile::class) {
 
 val drawSplash by tasks.registering(DrawSplash::class) {
     version.set(project.version.toString())
-    logoFile.set(mainResource("logo.svg"))
-    reguFontFile.set(mainResource("fonts/Titillium-RegularUpright.otf"))
-    semiFontFile.set(mainResource("fonts/Titillium-SemiboldUpright.otf"))
+    logoFile.set(srcMainResources.file("logo.svg"))
+    reguFontFile.set(srcMainResources.file("fonts/Titillium-RegularUpright.otf"))
+    semiFontFile.set(srcMainResources.file("fonts/Titillium-SemiboldUpright.otf"))
     outputFile.set(layout.buildDirectory.file("generated/splash/splash.png"))
 }
 
@@ -193,7 +193,7 @@ tasks.processResources {
 val platformNativesTasks = Platform.values().associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory
-        from(layout.projectDirectory.dir("src/main/natives/${platform.slug}"))
+        from(srcMainNatives(platform))
         for (dep in natives.getValue(platform).resolvedConfiguration.resolvedArtifacts)
             if (dep.file.extension == platform.os.nativesExt)
                 from(dep.file)
@@ -241,9 +241,9 @@ val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
     tasks.register<DrawImages>("draw${os.slug.capitalized()}Images") {
         version.set(project.version.toString())
         forOS.set(os)
-        logoFile.set(mainResource("logo.svg"))
-        semiFontFile.set(mainResource("fonts/Titillium-SemiboldUpright.otf"))
-        boldFontFile.set(mainResource("fonts/Titillium-BoldUpright.otf"))
+        logoFile.set(srcMainResources.file("logo.svg"))
+        semiFontFile.set(srcMainResources.file("fonts/Titillium-SemiboldUpright.otf"))
+        boldFontFile.set(srcMainResources.file("fonts/Titillium-BoldUpright.otf"))
         outputDir.set(layout.buildDirectory.dir("generated/packaging/${os.slug}"))
     }
 }
@@ -251,7 +251,7 @@ val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
 
 val preparePlatformPackagingTasks = Platform.values().map { platform ->
     // Collect all files needed for packaging in a folder.
-    val preparePlatformPackaging = tasks.register<Sync>("prepare${platform.label.capitalized()}Packaging") {
+    tasks.register<Sync>("prepare${platform.label.capitalized()}Packaging") {
         doFirst {
             if (!Regex("\\d+\\.\\d+\\.\\d+").matches(version.toString()))
                 throw GradleException("Non-release versions cannot be packaged.")
@@ -301,14 +301,12 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
             from(tasks.jar)
             from(configurations.runtimeClasspath)
             from(platformNativesTasks[platform])
-            from(tasks.processResources.map { it.destDirProvider.file(splashScreen) })
+            from(drawSplash)
         }
         into("images") {
             from(drawOSImagesTasks[platform.os])
         }
     }
-
-    return@map preparePlatformPackaging
 }
 
 val preparePackaging by tasks.registering {
@@ -344,8 +342,7 @@ val allJar by tasks.registering(Jar::class) {
 }
 
 
-fun mainResource(path: String): Provider<RegularFile> =
-    sourceSets.main.map { layout.projectDirectory.file(it.resources.matching { include("/$path") }.singleFile.path) }
+val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
 
 val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
     val result = TreeMap<String, Properties>()
@@ -355,7 +352,3 @@ val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
         throw GradleException("No l10n files have been found; has the l10n system changed?")
     result
 }
-
-// We need to retrofit this property in a hacky and not entirely compliant way because it's sadly not migrated yet.
-val Copy.destDirProvider: Directory
-    get() = layout.projectDirectory.dir(destinationDir.path)

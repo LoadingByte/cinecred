@@ -22,6 +22,10 @@ val javacppVersion = "1.5.8"
 val ffmpegVersion = "5.1.2-$javacppVersion"
 val flatlafVersion = "3.2"
 
+// Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
+val harfBuzzVersion = "7.1.0"
+val zimgVersion = "release-3.0.4"
+
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
 val addModules = javaProperties.getProperty("addModules").split(' ')
@@ -342,7 +346,70 @@ val allJar by tasks.registering(Jar::class) {
 }
 
 
+val checkoutHarfBuzz by tasks.registering(CheckoutGitRef::class) {
+    uri.set("https://github.com/harfbuzz/harfbuzz.git")
+    ref.set(harfBuzzVersion)
+    repositoryDir.set(layout.buildDirectory.dir("repositories/harfbuzz"))
+}
+
+val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
+    uri.set("https://github.com/sekrit-twc/zimg.git")
+    ref.set(zimgVersion)
+    repositoryDir.set(layout.buildDirectory.dir("repositories/zimg"))
+}
+
+for (platform in Platform.values()) {
+    tasks.register<BuildHarfBuzz>("buildHarfBuzzFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the HarfBuzz native library for ${platform.label.capitalized()}."
+        forPlatform.set(platform)
+        repositoryDir.set(checkoutHarfBuzz.flatMap { it.repositoryDir })
+        outputFile.set(srcMainNatives(platform, "harfbuzz"))
+    }
+
+    tasks.register<BuildZimg>("buildZimgFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the zimg native library for ${platform.label.capitalized()}."
+        forPlatform.set(platform)
+        repositoryDir.set(checkoutZimg.flatMap { it.repositoryDir })
+        outputFile.set(srcMainNatives(platform, "zimg"))
+    }
+}
+
+tasks.register<Jextract>("jextractHarfBuzz") {
+    group = "Native"
+    description = "Extracts Java bindings for the HarfBuzz native library."
+    targetPackage.set("com.loadingbyte.cinecred.natives.harfbuzz")
+    addHarfBuzzIncludes()
+    includeDir.set(checkoutHarfBuzz.flatMap { it.repositoryDir }.map { it.dir("src") })
+    headerFile.set(includeDir.map { it.file("hb.h") })
+    outputDir.set(srcMainJava)
+}
+
+tasks.register<Jextract>("jextractZimg") {
+    group = "Native"
+    description = "Extracts Java bindings for the zimg native library."
+    targetPackage.set("com.loadingbyte.cinecred.natives.zimg")
+    // It is necessary to replace all occurrences of C_LONG with C_LONG_LONG, as the former is 32-bit even on 64-bit
+    // Windows machines, while the original C source code actually specifies 64-bit size_t and ptrdiff_t types.
+    patchCLongToCLongLong.set(true)
+    headerFile.set(checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") })
+    outputDir.set(srcMainJava)
+}
+
+
+val srcMainJava get() = layout.projectDirectory.dir("src/main/java")
 val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
+
+val srcMainNatives get() = layout.projectDirectory.dir("src/main/natives")
+fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
+fun srcMainNatives(platform: Platform, libName: String) = srcMainNatives(platform).file(
+    when (platform.os) {
+        Platform.OS.WINDOWS -> "$libName.dll"
+        Platform.OS.MAC -> "lib$libName.dylib"
+        Platform.OS.LINUX -> "lib$libName.so"
+    }
+)
 
 val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
     val result = TreeMap<String, Properties>()

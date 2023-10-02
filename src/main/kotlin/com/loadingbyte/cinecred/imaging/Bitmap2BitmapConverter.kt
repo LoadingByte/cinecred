@@ -24,9 +24,8 @@ class Bitmap2BitmapConverter(
     forceProgressive: Boolean = false
 ) {
 
-    class AlphaMatrix {
-        var matrix: LongArray? = null
-        var depth: Int = -1
+    class AlphaPointer {
+        var bitmap: Bitmap? = null
     }
 
     private val processors = mutableListOf<Processor>()
@@ -262,25 +261,21 @@ class Bitmap2BitmapConverter(
         return eqPixelFormat
     }
 
-    /** @param dstAlpha If supplied, converted alpha data is written there even if [dst] no longer has alpha. */
-    fun convert(src: Bitmap, dst: Bitmap, dstAlpha: AlphaMatrix? = null) {
+    /**
+     * @param dstAlpha If supplied, a bitmap whose last component houses the converted alpha is written there
+     *                 even if [dst] no longer has alpha. Notice that alpha components always use full range,
+     *                 even if the rest of the frame uses limited range.
+     */
+    fun convert(src: Bitmap, dst: Bitmap, dstAlpha: AlphaPointer? = null) {
         require(src.spec == srcSpec) { "Actual input bitmap's spec doesn't match spec expected by converter." }
         require(dst.spec == dstSpec) { "Actual output bitmap's spec doesn't match spec expected by converter." }
         for ((i, processor) in processors.withIndex()) {
             val processorSrc = if (i == 0) src else intermediates[i - 1]
             val processorDst = if (i == processors.lastIndex) dst else intermediates[i]
             processor.process(processorSrc, processorDst)
-            // If dstAlpha has been requested, extract alpha from the zimg processor's output bitmap which has alpha.
-            if (processor is ZimgProcessor && dstAlpha != null && src.spec.representation.pixelFormat.hasAlpha) {
-                val alphaBitmap = processor.alp ?: processorDst
-                val alphaComp = alphaBitmap.spec.representation.pixelFormat.components.last()
-                val matrix = LongArray(alphaBitmap.spec.resolution.run { widthPx * heightPx })
-                var j = 0
-                alphaBitmap.consumeComponent(alphaComp) { alpha -> matrix[j++] = alpha }
-                dstAlpha.matrix = matrix
-                // Note: Alpha components are always uses full range, even if the rest of the frame uses limited range.
-                dstAlpha.depth = alphaComp.depth
-            }
+            // If dstAlpha has been requested and is available, return a bitmap that contains converted alpha.
+            if (processor is ZimgProcessor && dstAlpha != null && src.spec.representation.pixelFormat.hasAlpha)
+                dstAlpha.bitmap = processor.alp ?: processorDst
         }
     }
 

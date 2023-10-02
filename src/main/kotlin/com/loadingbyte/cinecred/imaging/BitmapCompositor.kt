@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.ceilDiv
 import com.loadingbyte.cinecred.common.roundingDiv
 import com.loadingbyte.cinecred.common.roundingDivLog2
 import com.loadingbyte.cinecred.imaging.Bitmap.Content.PROGRESSIVE_FRAME
@@ -27,7 +26,10 @@ class BitmapCompositor(
         // Determine a high quality intermediate representation that can be used for compositing if required.
         val canvasPixFmt = canvasRepresentation.pixelFormat
         val intermediatePixFmtCode =
-            if (canvasPixFmt.isRGB)
+            if (canvasPixFmt.isFloat) {
+                check(canvasPixFmt.isRGB) { "There are no non-RGB float pixel formats." }
+                if (canvasPixFmt.hasAlpha) AV_PIX_FMT_GBRAPF32 else AV_PIX_FMT_GBRPF32
+            } else if (canvasPixFmt.isRGB)
                 if (canvasPixFmt.hasAlpha) AV_PIX_FMT_GBRAP16 else AV_PIX_FMT_GBRP16
             else
                 if (canvasPixFmt.hasAlpha) AV_PIX_FMT_YUVA444P16 else AV_PIX_FMT_YUV444P16
@@ -81,19 +83,23 @@ class BitmapCompositor(
         val canvasView = env.extractCanvasView(canvas, cViewX, cViewY, viewW, viewH, yStep)
 
         // Convert the overlay into the same representation as the canvas view bitmap...
-        val (convertedOverlay, alphaMatrix) = env.convertOverlay(overlay)
+        val (convertedOverlay, convertedOverlayAlpha) = env.convertOverlay(overlay)
         // ... and crop it as needed.
         val convertedOverlayView = convertedOverlay.view(oViewX, oViewY, viewW, viewH, yStep)
-        alphaMatrix.matrix?.let { alphaMatrix.matrix = arrayView(it, ow, oViewX, oViewY, viewW, viewH, yStep) }
+        val convertedOverlayAlphaView = convertedOverlayAlpha?.view(oViewX, oViewY, viewW, viewH, yStep)
+
+        // Extract the alpha from the alpha bitmap and write it into a float or long array.
+        val alphaFloatsOrNumerators = prepareAlphaFloatsOrNumerators(
+            alpha.coerceIn(0.0, 1.0), convertedOverlayAlphaView, canvasRepresentation.pixelFormat.isFloat
+        )
 
         // Composite.
-        val alphaNumerators = prepareAlphaNumerators(alpha.coerceIn(0.0, 1.0), alphaMatrix)
-        if (alphaNumerators == null)
+        if (alphaFloatsOrNumerators == null)
             canvasView.blit(convertedOverlayView, 0, 0, viewW, canvasView.spec.resolution.heightPx, 0, 0, 1)
         else if (!canvasRepresentation.pixelFormat.hasAlpha)
-            blendOntoOpaqueCanvas(canvasView, convertedOverlayView, alphaNumerators)
+            blendOntoOpaqueCanvas(canvasView, convertedOverlayView, alphaFloatsOrNumerators)
         else
-            blendOntoTranslucentCanvas(canvasView, convertedOverlayView, alphaNumerators)
+            blendOntoTranslucentCanvas(canvasView, convertedOverlayView, alphaFloatsOrNumerators)
 
         // If necessary, write the changes made to the canvas view bitmap back to the canvas.
         env.flushCanvasView()
@@ -102,29 +108,39 @@ class BitmapCompositor(
         convertedOverlayView.close()
     }
 
-    private fun arrayView(array: LongArray, stride: Int, x: Int, y: Int, w: Int, h: Int, yStep: Int): LongArray {
-        if (x == 0 && y == 0 && w == stride && h * stride == array.size && yStep == 1)
-            return array
-        val view = LongArray(w * h)
-        for (i in 0..<ceilDiv(h, yStep))
-            System.arraycopy(array, (y + i * yStep) * stride + x, view, i * w, w)
-        return view
-    }
-
-    private fun prepareAlphaNumerators(alpha: Double, alphaMatrix: Bitmap2BitmapConverter.AlphaMatrix): LongArray? {
-        val externalAlphaNum = (alpha * ALPHA_DENOMINATOR).roundToLong()
-        return alphaMatrix.matrix?.also { m ->
-            val depth = alphaMatrix.depth
-            val shift = ALPHA_DENOMINATOR_LOG2 - depth
-            require(shift >= 0) { "Alpha depths larger than $ALPHA_DENOMINATOR_LOG2 bit are not supported." }
-            if (alpha == 1.0)
-                for (i in m.indices)
-                    m[i] = widen(m[i], depth) shl shift
-            else
-                for (i in m.indices)
-                    m[i] = roundingDivLog2((widen(m[i], depth) shl shift) * externalAlphaNum, ALPHA_DENOMINATOR_LOG2)
-        }
-            ?: if (alpha != 1.0) longArrayOf(externalAlphaNum) else null
+    private fun prepareAlphaFloatsOrNumerators(externalAlpha: Double, alphaBitmap: Bitmap?, isFloat: Boolean): Any? {
+        val externalAlphaNum = (externalAlpha * ALPHA_DENOMINATOR).roundToLong()
+        val externalAlphaF = externalAlpha.toFloat()
+        if (alphaBitmap != null) {
+            val (w, h) = alphaBitmap.spec.resolution
+            val comp = alphaBitmap.spec.representation.pixelFormat.components.last()
+            val acc = Bitmap.Accessor(alphaBitmap, comp)
+            if (isFloat) {
+                val m = FloatArray(w * h)
+                var i = 0
+                for (y in 0..<h) for (x in 0..<w)
+                    m[i++] = acc.getF(x, y) * externalAlphaF
+                return m
+            } else {
+                val depth = comp.depth
+                val shift = ALPHA_DENOMINATOR_LOG2 - depth
+                require(shift >= 0) { "Alpha depths larger than $ALPHA_DENOMINATOR_LOG2 bit are not supported." }
+                val m = LongArray(w * h)
+                var i = 0
+                if (externalAlpha == 1.0)
+                    for (y in 0..<h) for (x in 0..<w)
+                        m[i++] = widen(acc.getL(x, y), depth) shl shift
+                else
+                    for (y in 0..<h) for (x in 0..<w) {
+                        val v = acc.getL(x, y)
+                        m[i++] = roundingDivLog2((widen(v, depth) shl shift) * externalAlphaNum, ALPHA_DENOMINATOR_LOG2)
+                    }
+                return m
+            }
+        } else if (externalAlpha != 1.0)
+            return if (isFloat) floatArrayOf(externalAlphaF) else longArrayOf(externalAlphaNum)
+        else
+            return null
     }
 
     /** Widens the range "0 to (2^depth - 1)" to the range "0 to 2^depth". */
@@ -142,69 +158,99 @@ class BitmapCompositor(
      * we also don't need to specially handle the limited range case in the computation of the resulting alpha.
      */
 
-    private fun blendOntoOpaqueCanvas(canvas: Bitmap, overlay: Bitmap, alphaNumerators: LongArray) {
-        val inc = if (alphaNumerators.size == 1) 0 else 1
+    private fun blendOntoOpaqueCanvas(canvas: Bitmap, overlay: Bitmap, alphaFloatsOrNumerators: Any) {
         // Compute the new color/chroma/luma components using this formula:
         //     v_out = v_overlay * alpha_overlay + v_canvas * (1 - alpha_overlay)
-        for (component in canvas.spec.representation.pixelFormat.components) {
+        val (w, h) = canvas.spec.resolution
+        val components = canvas.spec.representation.pixelFormat.components
+        val (c1, c2, c3) = components.map { Bitmap.Accessor(canvas, it) }
+        val (o1, o2, o3) = components.map { Bitmap.Accessor(overlay, it) }
+        if (alphaFloatsOrNumerators is FloatArray) {
+            val alphaFloats: FloatArray = alphaFloatsOrNumerators
+            val inc = if (alphaFloats.size == 1) 0 else 1
             var i = 0
-            canvas.mergeComponent(overlay, component) { vc, vo ->
-                val alphaNum = alphaNumerators[i]; i += inc
-                roundingDivLog2(vo * alphaNum + vc * (ALPHA_DENOMINATOR - alphaNum), ALPHA_DENOMINATOR_LOG2)
+            for (y in 0..<h) for (x in 0..<w) {
+                val a = alphaFloats[i]; i += inc
+                val a1M = 1f - a
+                c1.putF(x, y, o1.getF(x, y) * a + c1.getF(x, y) * a1M)
+                c2.putF(x, y, o2.getF(x, y) * a + c2.getF(x, y) * a1M)
+                c3.putF(x, y, o3.getF(x, y) * a + c3.getF(x, y) * a1M)
+            }
+        } else if (alphaFloatsOrNumerators is LongArray) {
+            val alphaNumerators: LongArray = alphaFloatsOrNumerators
+            val inc = if (alphaNumerators.size == 1) 0 else 1
+            var i = 0
+            for (y in 0..<h) for (x in 0..<w) {
+                val aNum = alphaNumerators[i]; i += inc
+                val a1MNum = ALPHA_DENOMINATOR - aNum
+                c1.putL(x, y, roundingDivLog2(o1.getL(x, y) * aNum + c1.getL(x, y) * a1MNum, ALPHA_DENOMINATOR_LOG2))
+                c2.putL(x, y, roundingDivLog2(o2.getL(x, y) * aNum + c2.getL(x, y) * a1MNum, ALPHA_DENOMINATOR_LOG2))
+                c3.putL(x, y, roundingDivLog2(o3.getL(x, y) * aNum + c3.getL(x, y) * a1MNum, ALPHA_DENOMINATOR_LOG2))
             }
         }
     }
 
-    private fun blendOntoTranslucentCanvas(canvas: Bitmap, overlay: Bitmap, alphaNumerators: LongArray) {
-        val inc = if (alphaNumerators.size == 1) 0 else 1
-        val (w, h) = canvas.spec.resolution
-        val pixelFormat = canvas.spec.representation.pixelFormat
-        val alphaComp = pixelFormat.components.last()
-        val alphaDepth = alphaComp.depth
-        val alphaShift = ALPHA_DENOMINATOR_LOG2 - alphaDepth
-        require(alphaShift >= 0) { "Alpha depths larger than $ALPHA_DENOMINATOR_LOG2 bit are not supported." }
-
+    private fun blendOntoTranslucentCanvas(canvas: Bitmap, overlay: Bitmap, alphaFloatsOrNumerators: Any) {
         // First compute the new alpha component using this formular:
         //     alpha_out = alpha_overlay + alpha_canvas - alpha_overlay * alpha_canvas
-        // Remember convenient representations of both alpha_canvas and alpha_out for later use.
-        val canvasAlphaNumerators = LongArray(w * h)
-        val outCanvasAlphaNumNums = LongArray(w * h)
-        var i = 0
-        var j = 0
-        canvas.modifyComponent(alphaComp) { ac ->
-            val overlayAlphaNum = alphaNumerators[i]; i += inc
-            val canvasAlphaNum = widen(ac, alphaDepth) shl alphaShift
-            // In contrast to the other numbers, which we store as numerators of the fraction X / ALPHA_DENOM, we store
-            // this number as the numerator of the fraction X / ALPHA_DENOM^2, which allows us to defer division and
-            // later do it in one single step.
-            val outCanvasAlphaNumNum = ((overlayAlphaNum + canvasAlphaNum) shl ALPHA_DENOMINATOR_LOG2) -
-                    overlayAlphaNum * canvasAlphaNum
-            canvasAlphaNumerators[j] = canvasAlphaNum
-            outCanvasAlphaNumNums[j++] = outCanvasAlphaNumNum
-            narrow(roundingDivLog2(outCanvasAlphaNumNum, ALPHA_DENOMINATOR_LOG2 + alphaShift), alphaDepth)
-        }
-
         // Then compute the new color/chroma/luma components using this formula:
         //     v_out = (v_overlay * alpha_overlay + v_canvas * alpha_canvas - v_canvas * alpha_canvas * alpha_overlay)
         //                 / alpha_out
-        for (component in pixelFormat.components.let { c -> c.subList(0, c.size - 1) }) {
-            var k = 0
-            var l = 0
-            canvas.mergeComponent(overlay, component) { vc, vo ->
-                val overlayAlphaNum = alphaNumerators[k]; k += inc
-                val canvasAlphaNum = canvasAlphaNumerators[l]
-                val outCanvasAlphaNumNum = outCanvasAlphaNumNums[l++]
-                // In this division, both the dividend and the divisor are numerators of the fraction X / ALPHA_DENOM^2,
-                // so the denominators cancel out, which is why they don't appear in the computation.
-                roundingDiv(
-                    ((vo * overlayAlphaNum + vc * canvasAlphaNum) shl ALPHA_DENOMINATOR_LOG2) -
-                            vc * canvasAlphaNum * overlayAlphaNum,
-                    // We protect against divisions by 0 by making the divisor extremely large if it's 0.
-                    // As a result, the color/chroma/luma components of pixels with 0 alpha also become 0.
-                    outCanvasAlphaNumNum or ((outCanvasAlphaNumNum - 1) and (1L shl 62))
-                )
+        val (w, h) = canvas.spec.resolution
+        val components = canvas.spec.representation.pixelFormat.components
+        val (c1, c2, c3, ca) = components.map { Bitmap.Accessor(canvas, it) }
+        val (o1, o2, o3) = components.map { Bitmap.Accessor(overlay, it) }
+        if (alphaFloatsOrNumerators is FloatArray) {
+            val alphaFloats: FloatArray = alphaFloatsOrNumerators
+            val inc = if (alphaFloats.size == 1) 0 else 1
+            var i = 0
+            for (y in 0..<h) for (x in 0..<w) {
+                val aOlay = alphaFloats[i]; i += inc
+                val aCanv = ca.getF(x, y)
+                val aCanvXaOlay = aCanv * aOlay
+                val aOut = aOlay + aCanv - aCanvXaOlay
+                ca.putF(x, y, aOut)
+                val aCanvMaCanvXaOlay = aCanv - aCanvXaOlay
+                val aOutInv = 1f / aOut
+                c1.putF(x, y, (o1.getF(x, y) * aOlay + c1.getF(x, y) * aCanvMaCanvXaOlay) * aOutInv)
+                c2.putF(x, y, (o2.getF(x, y) * aOlay + c2.getF(x, y) * aCanvMaCanvXaOlay) * aOutInv)
+                c3.putF(x, y, (o3.getF(x, y) * aOlay + c3.getF(x, y) * aCanvMaCanvXaOlay) * aOutInv)
+            }
+        } else if (alphaFloatsOrNumerators is LongArray) {
+            val alphaNumerators: LongArray = alphaFloatsOrNumerators
+            val alphaDepth = components.last().depth
+            val alphaShift = ALPHA_DENOMINATOR_LOG2 - alphaDepth
+            require(alphaShift >= 0) { "Alpha depths larger than $ALPHA_DENOMINATOR_LOG2 bit are not supported." }
+            val inc = if (alphaNumerators.size == 1) 0 else 1
+            var i = 0
+            for (y in 0..<h) for (x in 0..<w) {
+                val aOlayNum = alphaNumerators[i]; i += inc
+                val aCanvNum = widen(ca.getL(x, y), alphaDepth) shl alphaShift
+                val aCanvNumXaOlayNum = aCanvNum * aOlayNum
+                // In contrast to the other numbers, which we store as numerators of the fraction X / ALPHA_DENOM,
+                // we store this number as the numerator of the fraction X / ALPHA_DENOM^2, which allows us to defer
+                // division and later do it in one single step.
+                val aOutNumNum = ((aOlayNum + aCanvNum) shl ALPHA_DENOMINATOR_LOG2) - aCanvNumXaOlayNum
+                ca.putL(x, y, narrow(roundingDivLog2(aOutNumNum, ALPHA_DENOMINATOR_LOG2 + alphaShift), alphaDepth))
+                // We protect against divisions by 0 by making the divisor extremely large if it's 0.
+                // As a result, the color/chroma/luma components of pixels with 0 alpha also become 0.
+                val aOutSafeNumNum = aOutNumNum or ((aOutNumNum - 1) and (1L shl 62))
+                c1.putL(x, y, bl(o1.getL(x, y), c1.getL(x, y), aOlayNum, aCanvNum, aCanvNumXaOlayNum, aOutSafeNumNum))
+                c2.putL(x, y, bl(o2.getL(x, y), c2.getL(x, y), aOlayNum, aCanvNum, aCanvNumXaOlayNum, aOutSafeNumNum))
+                c3.putL(x, y, bl(o3.getL(x, y), c3.getL(x, y), aOlayNum, aCanvNum, aCanvNumXaOlayNum, aOutSafeNumNum))
             }
         }
+    }
+
+    private fun bl(
+        vo: Long, vc: Long, aOverlayNum: Long, aCanvasNum: Long, aCanvasNumXaOverlayNum: Long, aOutSafeNumNum: Long
+    ): Long {
+        // In this division, both the dividend and the divisor are numerators of the fraction X / ALPHA_DENOM^2,
+        // so the denominators cancel out, which is why they don't appear in the computation.
+        return roundingDiv(
+            ((vo * aOverlayNum + vc * aCanvasNum) shl ALPHA_DENOMINATOR_LOG2) - vc * aCanvasNumXaOverlayNum,
+            aOutSafeNumNum
+        )
     }
 
 
@@ -215,7 +261,7 @@ class BitmapCompositor(
 
 
     private interface Environment {
-        fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap2BitmapConverter.AlphaMatrix>
+        fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap?>
         fun extractCanvasView(canvas: Bitmap, x: Int, y: Int, w: Int, h: Int, yStep: Int): Bitmap
         fun flushCanvasView()
     }
@@ -229,10 +275,10 @@ class BitmapCompositor(
         )
         private val overlayConverter = Bitmap2BitmapConverter(overlaySpec, convertedOverlay.spec)
 
-        override fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap2BitmapConverter.AlphaMatrix> {
-            val alphaMatrix = Bitmap2BitmapConverter.AlphaMatrix()
-            overlayConverter.convert(overlay, convertedOverlay, alphaMatrix)
-            return Pair(convertedOverlay, alphaMatrix)
+        override fun convertOverlay(overlay: Bitmap): Pair<Bitmap, Bitmap?> {
+            val alphaPointer = Bitmap2BitmapConverter.AlphaPointer()
+            overlayConverter.convert(overlay, convertedOverlay, alphaPointer)
+            return Pair(convertedOverlay, alphaPointer.bitmap)
         }
 
     }

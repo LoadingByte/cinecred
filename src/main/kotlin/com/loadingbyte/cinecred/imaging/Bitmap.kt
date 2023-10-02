@@ -10,6 +10,9 @@ import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.Pointer
 import java.io.Closeable
+import java.lang.Byte.toUnsignedLong
+import java.lang.Short.toUnsignedLong
+import java.lang.foreign.MemorySegment
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -146,151 +149,6 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
                 val dstPtr = dstData.position(((dstY shr vChromaSub) + l) * dstLs + (dstX shr hChromaSub) * step)
                 Pointer.memcpy(dstPtr, srcPtr, (srcWidth shr hChromaSub) * step)
                 l += yStep
-            }
-        }
-    }
-
-
-    /* *******************************
-       ********** ITERATION **********
-       ******************************* */
-
-    inline fun consumeComponent(component: PixelFormat.Component, consume: (Long) -> Unit) {
-        internalValidateIteration(component)
-        when {
-            component.depth <= 8 -> internalConsumeComponentByte(component, consume)
-            component.depth <= 16 -> internalConsumeComponentShort(component, consume)
-        }
-    }
-
-    inline fun modifyComponent(component: PixelFormat.Component, modify: (Long) -> Long) {
-        internalValidateIteration(component)
-        when {
-            component.depth <= 8 -> internalModifyComponentByte(component, modify)
-            component.depth <= 16 -> internalModifyComponentShort(component, modify)
-        }
-    }
-
-    inline fun mergeComponent(other: Bitmap, component: PixelFormat.Component, merge: (Long, Long) -> Long) {
-        internalValidateIteration(component)
-        when {
-            component.depth <= 8 -> internalMergeComponentByte(other, component, merge)
-            component.depth <= 16 -> internalMergeComponentShort(other, component, merge)
-        }
-    }
-
-    fun internalValidateIteration(c: PixelFormat.Component) {
-        val pixelFormat = spec.representation.pixelFormat
-        require(c in pixelFormat.components)
-        require(!pixelFormat.isBitstream) { "Cannot iterate over bitstream bitmaps." }
-        require(!pixelFormat.isFloat) { "Cannot iterate over float bitmaps." }
-        require(c.shift == 0) { "Cannot iterate over shifted bitmap components." }
-        require(c.depth <= 16) { "Bit depth ${c.depth} exceeds 16." }
-    }
-
-    inline fun internalConsumeComponentByte(c: PixelFormat.Component, consume: (Long) -> Unit) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0..<h) {
-            var addr = y * ls + offset
-            for (x in 0..<w) {
-                consume(buf.get(addr).toLong() and mask)
-                addr += step
-            }
-        }
-    }
-
-    inline fun internalConsumeComponentShort(c: PixelFormat.Component, consume: (Long) -> Unit) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0..<h) {
-            var addr = y * ls + offset
-            for (x in 0..<w) {
-                consume(buf.getShort(addr).toLong() and mask)
-                addr += step
-            }
-        }
-    }
-
-    inline fun internalModifyComponentByte(c: PixelFormat.Component, modify: (Long) -> Long) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0..<h) {
-            var addr = y * ls + offset
-            for (x in 0..<w) {
-                buf.put(addr, modify(buf.get(addr).toLong() and mask).toByte())
-                addr += step
-            }
-        }
-    }
-
-    inline fun internalModifyComponentShort(c: PixelFormat.Component, modify: (Long) -> Long) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls, buf) = InternalBitmapIterationKit.create(this, c)
-        for (y in 0..<h) {
-            var addr = y * ls + offset
-            for (x in 0..<w) {
-                buf.putShort(addr, modify(buf.getShort(addr).toLong() and mask).toShort())
-                addr += step
-            }
-        }
-    }
-
-    inline fun internalMergeComponentByte(o: Bitmap, c: PixelFormat.Component, merge: (Long, Long) -> Long) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls1, buf1) = InternalBitmapIterationKit.create(this, c)
-        val (ls2, buf2) = InternalBitmapIterationKit.create(o, c)
-        for (y in 0..<h) {
-            var addr1 = y * ls1 + offset
-            var addr2 = y * ls2 + offset
-            for (x in 0..<w) {
-                val v1 = buf1.get(addr1).toLong() and mask
-                val v2 = buf2.get(addr2).toLong() and mask
-                buf1.put(addr1, merge(v1, v2).toByte())
-                addr1 += step
-                addr2 += step
-            }
-        }
-    }
-
-    inline fun internalMergeComponentShort(o: Bitmap, c: PixelFormat.Component, merge: (Long, Long) -> Long) {
-        val (w, h, offset, mask, step) = InternalSharedIterationKit.create(spec, c)
-        val (ls1, buf1) = InternalBitmapIterationKit.create(this, c)
-        val (ls2, buf2) = InternalBitmapIterationKit.create(o, c)
-        for (y in 0..<h) {
-            var addr1 = y * ls1 + offset
-            var addr2 = y * ls2 + offset
-            for (x in 0..<w) {
-                val v1 = buf1.getShort(addr1).toLong() and mask
-                val v2 = buf2.getShort(addr2).toLong() and mask
-                buf1.putShort(addr1, merge(v1, v2).toShort())
-                addr1 += step
-                addr2 += step
-            }
-        }
-    }
-
-    data class InternalSharedIterationKit(val w: Int, val h: Int, val offset: Int, val mask: Long, val step: Int) {
-        companion object {
-            fun create(spec: Spec, c: PixelFormat.Component): InternalSharedIterationKit {
-                var (w, h) = spec.resolution
-                w = w shr spec.representation.pixelFormat.hChromaSub
-                h = h shr spec.representation.pixelFormat.vChromaSub
-                return InternalSharedIterationKit(w, h, c.offset, (1L shl c.depth) - 1L, c.step)
-            }
-        }
-    }
-
-    // Note: We have empirically confirmed that at least in JDK 17, ByteBuffer is faster than MemoryAccess.
-    // This might of course change in future versions.
-    data class InternalBitmapIterationKit(val ls: Int, val buf: ByteBuffer) {
-        companion object {
-            fun create(bitmap: Bitmap, c: PixelFormat.Component): InternalBitmapIterationKit {
-                val ls = bitmap.frame.linesize(c.plane)
-                val size = ls * bitmap.spec.resolution.heightPx.toLong()
-                val segment = MemorySegment.globalNativeSegment().asSlice(bitmap.frame.data(c.plane).address(), size)
-                val buf = segment.asByteBuffer().order(bitmap.spec.representation.pixelFormat.byteOrder)
-                return InternalBitmapIterationKit(ls, buf)
             }
         }
     }
@@ -496,6 +354,71 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         INTERLACED_TOP_FIELD_FIRST,
         /** The video stream is interlaced, and the bottom field is displayed first. */
         INTERLACED_BOT_FIELD_FIRST
+    }
+
+
+    /**
+     * This class provides methods for reading and writing pixels in one component of a bitmap.
+     *
+     * The class is written in such a way that it hopefully exploits the JIT optimizations of method inlining and
+     * code motion (specifically expression hoisting and loop unswitching). For optimal performance, do not store
+     * accessor objects in an array, but only directly in local fields.
+     */
+    class Accessor(bitmap: Bitmap, component: PixelFormat.Component) {
+
+        private val depthSwitch: Boolean
+        private val offset: Int
+        private val step: Int
+        private val ls: Int
+        // Note: We have empirically confirmed that at least in JDK 17, ByteBuffer is faster than MemoryAccess.
+        // This might of course change in future versions.
+        private val buf: ByteBuffer
+
+        init {
+            val pixelFormat = bitmap.spec.representation.pixelFormat
+            val componentIdx = pixelFormat.components.indexOf(component)
+
+            require(componentIdx != -1)
+            require(!pixelFormat.isBitstream) { "Cannot access bitstream bitmaps." }
+            require(component.shift == 0) { "Cannot access shifted bitmap components." }
+
+            depthSwitch = if (!pixelFormat.isFloat) {
+                require(component.depth <= 16) { "Integer pixel bit depth ${component.depth} exceeds 16." }
+                component.depth <= 8
+            } else {
+                require(component.depth == 32) { "Float pixel bit depth ${component.depth} is not 32." }
+                false
+            }
+
+            offset = component.offset
+            step = component.step
+            ls = bitmap.frame.linesize(component.plane)
+
+            val size = ls * bitmap.spec.resolution.heightPx.toLong()
+            val seg = MemorySegment.globalNativeSegment().asSlice(bitmap.frame.data(component.plane).address(), size)
+            buf = seg.asByteBuffer().order(bitmap.spec.representation.pixelFormat.byteOrder)
+        }
+
+        fun getL(x: Int, y: Int): Long {
+            val addr = offset + y * ls + x * step
+            return if (depthSwitch) toUnsignedLong(buf.get(addr)) else toUnsignedLong(buf.getShort(addr))
+        }
+
+        fun putL(x: Int, y: Int, value: Long) {
+            val addr = offset + y * ls + x * step
+            if (depthSwitch) buf.put(addr, value.toByte()) else buf.putShort(addr, value.toShort())
+        }
+
+        fun getF(x: Int, y: Int): Float {
+            val addr = offset + y * ls + x * step
+            return buf.getFloat(addr)
+        }
+
+        fun putF(x: Int, y: Int, value: Float) {
+            val addr = offset + y * ls + x * step
+            buf.putFloat(addr, value)
+        }
+
     }
 
 }

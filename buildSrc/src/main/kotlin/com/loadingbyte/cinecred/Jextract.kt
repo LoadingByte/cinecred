@@ -18,14 +18,11 @@ abstract class Jextract : DefaultTask() {
     @get:Input
     abstract val includeFunctions: ListProperty<String>
     @get:Input
-    abstract val includeMacros: ListProperty<String>
+    abstract val includeConstants: ListProperty<String>
     @get:Input
     abstract val includeStructs: ListProperty<String>
     @get:Input
     abstract val includeTypedefs: ListProperty<String>
-    @get:Input
-    @get:Optional
-    abstract val patchCLongToCLongLong: Property<Boolean>
 
     @get:InputFile
     abstract val headerFile: RegularFileProperty
@@ -58,7 +55,7 @@ abstract class Jextract : DefaultTask() {
             add("hb_language_from_string")
             add("hb_shape")
         }
-        includeMacros.apply {
+        includeConstants.apply {
             add("HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES")
             add("HB_DIRECTION_LTR")
             add("HB_DIRECTION_RTL")
@@ -131,33 +128,28 @@ abstract class Jextract : DefaultTask() {
         val outputDir = outputDir.get().asFile
 
         val bin = System.getProperty("jextract")
-        if (bin.isNullOrBlank() || !File(bin).canExecute()) {
+        val java = File(bin).resolve("java")
+        if (bin.isNullOrBlank() || !java.canExecute()) {
             val ver = project.extensions.getByType(JavaPluginExtension::class.java).toolchain.languageVersion.get()
             throw InvalidUserDataException(
-                "You must download the jextract tool for JDK $ver and point the system property 'jextract' at it.\n" +
-                        "The property's current value '$bin' does not point to an executable binary.\n" +
-                        "Example on Linux: ./gradlew -Djextract=/path/to/jextract"
+                "You must download jextract for JDK $ver and point the VM property 'jextract' to its 'bin' folder.\n" +
+                        "The property's current value '$bin' does not point to such a folder.\n" +
+                        "Example on Linux: ./gradlew -Djextract=/path/to/jextract/bin ..."
             )
         }
 
-        val cmd = mutableListOf(bin, "--source", "--target-package", targetPackage)
+        val cmd = mutableListOf(java, "-Djextract.constants.per.class=1000")
+        cmd += listOf("-m", "org.openjdk.jextract/org.openjdk.jextract.JextractTool")
+        cmd += listOf("--source", "--target-package", targetPackage)
         cmd += includeFunctions.get().flatMap { listOf("--include-function", it) }
-        cmd += includeMacros.get().flatMap { listOf("--include-macro", it) }
+        cmd += includeConstants.get().flatMap { listOf("--include-constant", it) }
         cmd += includeStructs.get().flatMap { listOf("--include-struct", it) }
         cmd += includeTypedefs.get().flatMap { listOf("--include-typedef", it) }
         if (includeDir.isPresent)
             cmd += listOf("-I", includeDir.get().asFile.absolutePath)
-        cmd += listOf("-d", outputDir.absolutePath, headerFile.absolutePath)
+        cmd += listOf("--output", outputDir.absolutePath, headerFile.absolutePath)
 
         project.exec { commandLine(cmd) }.rethrowFailure().assertNormalExitValue()
-
-        if (patchCLongToCLongLong.isPresent && patchCLongToCLongLong.get())
-            for (javaFile in outputDir.resolve(targetPackage.replace('.', '/')).listFiles()!!) {
-                val oldText = javaFile.readText()
-                val newText = oldText.replace(Regex("C_LONG(?!_)"), "C_LONG_LONG")
-                if (oldText != newText)
-                    javaFile.writeText(newText)
-            }
     }
 
 }

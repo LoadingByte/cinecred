@@ -6,13 +6,15 @@ import com.loadingbyte.cinecred.natives.zimg.zimg_h.*
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_buffer
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_buffer_const
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_format
-import jdk.incubator.foreign.*
-import jdk.incubator.foreign.MemoryAddress.NULL
-import jdk.incubator.foreign.MemoryLayout.PathElement.groupElement
-import jdk.incubator.foreign.MemoryLayout.PathElement.sequenceElement
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.ffmpeg.global.swscale.*
 import org.bytedeco.javacpp.DoublePointer
+import java.lang.foreign.Arena
+import java.lang.foreign.MemoryLayout.PathElement.groupElement
+import java.lang.foreign.MemoryLayout.PathElement.sequenceElement
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.MemorySegment.NULL
+import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.lang.invoke.VarHandle
 import kotlin.math.max
 
@@ -319,9 +321,9 @@ class Bitmap2BitmapConverter(
         override val dstSpec: Bitmap.Spec
     ) : Processor {
 
-        private val scope = ResourceScope.newConfinedScope()
-        private var graph1: MemoryAddress? = null
-        private var graph2: MemoryAddress? = null
+        private val arena = Arena.ofConfined()
+        private var graph1: MemorySegment? = null
+        private var graph2: MemorySegment? = null
         private var srcBuf: MemorySegment? = null
         private var dstBuf: MemorySegment? = null
         private var tmpMem: MemorySegment? = null
@@ -381,8 +383,8 @@ class Bitmap2BitmapConverter(
             }
 
             // Populate the buffer structs.
-            srcBuf = zimg_image_buffer_const.allocate(scope)
-            dstBuf = zimg_image_buffer.allocate(scope)
+            srcBuf = zimg_image_buffer_const.allocate(arena)
+            dstBuf = zimg_image_buffer.allocate(arena)
             zimg_image_buffer_const.`version$set`(srcBuf, ZIMG_API_VERSION())
             zimg_image_buffer.`version$set`(dstBuf, ZIMG_API_VERSION())
             for (plane in 0L..<4L) {
@@ -393,15 +395,15 @@ class Bitmap2BitmapConverter(
             // Find how much temporary memory we need, and allocate it.
             var tmpSize = getTmpSize(graph1!!)
             graph2?.let { tmpSize = max(tmpSize, getTmpSize(it)) }
-            tmpMem = MemorySegment.allocateNative(tmpSize, Bitmap.BYTE_ALIGNMENT.toLong(), scope)
+            tmpMem = arena.allocate(tmpSize, Bitmap.BYTE_ALIGNMENT.toLong())
         }
 
-        private fun buildFieldGraph(fieldParity: Int): MemoryAddress {
+        private fun buildFieldGraph(fieldParity: Int): MemorySegment {
             // Populate the format structs.
             val srcFmt = populateImageFormat(srcSpec, fieldParity)
             val dstFmt = populateImageFormat(dstSpec, fieldParity)
             // Populate the params struct.
-            val params = zimg_graph_builder_params.allocate(scope)
+            val params = zimg_graph_builder_params.allocate(arena)
             zimg_graph_builder_params_default(params, ZIMG_API_VERSION())
             zimg_graph_builder_params.`resample_filter$set`(params, ZIMG_RESIZE_LANCZOS())
             zimg_graph_builder_params.`cpu_type$set`(params, ZIMG_CPU_AUTO_64B())
@@ -444,7 +446,7 @@ class Bitmap2BitmapConverter(
             for (component in pixFmt.components)
                 require(component.depth == depth) { "For zimg, all components must have equal bit depth." }
 
-            val fmt = zimg_image_format.allocate(scope)
+            val fmt = zimg_image_format.allocate(arena)
             zimg_image_format_default(fmt, ZIMG_API_VERSION())
             zimg_image_format.`width$set`(fmt, spec.resolution.widthPx)
             zimg_image_format.`height$set`(fmt, height)
@@ -465,17 +467,17 @@ class Bitmap2BitmapConverter(
             return fmt
         }
 
-        private fun getTmpSize(graph: MemoryAddress): Long {
-            val out = MemorySegment.allocateNative(MemoryLayouts.JAVA_LONG, scope)
+        private fun getTmpSize(graph: MemorySegment): Long {
+            val out = arena.allocate(JAVA_LONG)
             zimg_filter_graph_get_tmp_size(graph, out)
                 .zimgThrowIfErrnum("Could not obtain the temp zimg buffer size")
-            return out.toLongArray().single()
+            return out.get(JAVA_LONG, 0L)
         }
 
         override fun release() {
             graph1?.let(::zimg_filter_graph_free)
             graph2?.let(::zimg_filter_graph_free)
-            scope?.close()
+            arena?.close()
         }
 
         override fun process(src: Bitmap, dst: Bitmap) {
@@ -489,7 +491,7 @@ class Bitmap2BitmapConverter(
             }
         }
 
-        private fun processField(graph: MemoryAddress, src: Bitmap, dst: Bitmap, offset: Int, step: Int) {
+        private fun processField(graph: MemorySegment, src: Bitmap, dst: Bitmap, offset: Int, step: Int) {
             val srcFrame = src.frame
             for (i in srcSpec.representation.pixelFormat.components.indices) {
                 val srcPlane = srcSpec.representation.pixelFormat.components[i].plane
@@ -497,7 +499,7 @@ class Bitmap2BitmapConverter(
                 val srcStride = srcFrame.linesize(srcPlane).toLong()
                 require(srcData % Bitmap.BYTE_ALIGNMENT == 0L) { "Conversion src data[$srcPlane] is misaligned." }
                 require(srcStride % Bitmap.BYTE_ALIGNMENT == 0L) { "Conversion src stride[$srcPlane] is misaligned." }
-                ZIMG_BUF_CONST_DATA.set(srcBuf, i.toLong(), srcData + offset * srcStride)
+                ZIMG_BUF_CONST_DATA.set(srcBuf, i.toLong(), MemorySegment.ofAddress(srcData + offset * srcStride))
                 ZIMG_BUF_CONST_STRIDE.set(srcBuf, i.toLong(), srcStride * step)
             }
 
@@ -509,7 +511,7 @@ class Bitmap2BitmapConverter(
                 val dstStride = dstFrame.linesize(dstPlane).toLong()
                 require(dstData % Bitmap.BYTE_ALIGNMENT == 0L) { "Conversion dst data[$dstPlane] is misaligned." }
                 require(dstStride % Bitmap.BYTE_ALIGNMENT == 0L) { "Conversion dst stride[$dstPlane] is misaligned." }
-                ZIMG_BUF_DATA.set(dstBuf, i.toLong(), dstData + offset * dstStride)
+                ZIMG_BUF_DATA.set(dstBuf, i.toLong(), MemorySegment.ofAddress(dstData + offset * dstStride))
                 ZIMG_BUF_STRIDE.set(dstBuf, i.toLong(), dstStride * step)
                 i++
             }
@@ -527,8 +529,8 @@ class Bitmap2BitmapConverter(
                 .zimgThrowIfErrnum("Error while converting a frame or field with zimg")
         }
 
-        private fun MemoryAddress?.zimgThrowIfNull(message: String): MemoryAddress =
-            if (this == null || this.toRawLongValue() == 0L)
+        private fun MemorySegment?.zimgThrowIfNull(message: String): MemorySegment =
+            if (this == null || this == NULL)
                 throw ZimgException(zimgExcStr(message))
             else this
 
@@ -538,9 +540,9 @@ class Bitmap2BitmapConverter(
             else this
 
         private fun zimgExcStr(message: String): String {
-            val string = MemorySegment.allocateNative(1024, scope)
+            val string = arena.allocate(1024)
             val errnum = zimg_get_last_error(string, string.byteSize())
-            return "$message: ${CLinker.toJavaString(string)} (zimg error number $errnum)."
+            return "$message: ${string.getUtf8String(0)} (zimg error number $errnum)."
         }
 
         companion object {
@@ -556,12 +558,12 @@ class Bitmap2BitmapConverter(
                 val planePath = arrayOf(groupElement("plane"), sequenceElement())
                 val bufConst = zimg_image_buffer_const.`$LAYOUT`()
                 val buf = zimg_image_buffer.`$LAYOUT`()
-                ZIMG_BUF_CONST_DATA = bufConst.varHandle(Long::class.java, *planePath, groupElement("data"))
-                ZIMG_BUF_CONST_STRIDE = bufConst.varHandle(Long::class.java, *planePath, groupElement("stride"))
-                ZIMG_BUF_CONST_MASK = bufConst.varHandle(Int::class.java, *planePath, groupElement("mask"))
-                ZIMG_BUF_DATA = buf.varHandle(Long::class.java, *planePath, groupElement("data"))
-                ZIMG_BUF_STRIDE = buf.varHandle(Long::class.java, *planePath, groupElement("stride"))
-                ZIMG_BUF_MASK = buf.varHandle(Int::class.java, *planePath, groupElement("mask"))
+                ZIMG_BUF_CONST_DATA = bufConst.varHandle(*planePath, groupElement("data"))
+                ZIMG_BUF_CONST_STRIDE = bufConst.varHandle(*planePath, groupElement("stride"))
+                ZIMG_BUF_CONST_MASK = bufConst.varHandle(*planePath, groupElement("mask"))
+                ZIMG_BUF_DATA = buf.varHandle(*planePath, groupElement("data"))
+                ZIMG_BUF_STRIDE = buf.varHandle(*planePath, groupElement("stride"))
+                ZIMG_BUF_MASK = buf.varHandle(*planePath, groupElement("mask"))
             }
 
             private fun zimgRange(range: Int): Int = when (range) {

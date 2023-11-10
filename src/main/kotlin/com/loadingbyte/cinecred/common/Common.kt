@@ -94,6 +94,8 @@ fun fpsFromFraction(fraction: String): FPS {
 }
 
 
+// Note: We don't use Java's inbuilt floorDiv() and ceilDiv() because they contain branches, which make them slower.
+
 /** Implements `floor(a / b)`, but works only for non-negative denominators! */
 fun floorDiv(a: Int, b: Int) = (a - ((b - 1) and (a shr 31))) / b
 
@@ -238,11 +240,11 @@ val CONFIG_DIR: Path = when {
 
 
 val TRANSLATED_LOCALES: List<Locale> = listOf(
-    Locale("en"),
-    Locale("cs"),
-    Locale("de"),
-    Locale("fr"),
-    Locale("zh", "CN")
+    Locale.of("en"),
+    Locale.of("cs"),
+    Locale.of("de"),
+    Locale.of("fr"),
+    Locale.of("zh", "CN")
 )
 val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 

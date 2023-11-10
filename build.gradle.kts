@@ -8,13 +8,13 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "1.9.0"
+    kotlin("jvm") version "1.9.20"
 }
 
 group = "com.loadingbyte"
 version = "1.6.0-SNAPSHOT"
 
-val jdkVersion = 17
+val jdkVersion = 21
 val slf4jVersion = "2.0.7"
 val poiVersion = "5.2.3"
 val batikVersion = "1.16"
@@ -135,7 +135,7 @@ configurations.configureEach {
 
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(jdkVersion)
-    options.compilerArgs = listOf("--add-modules") + addModules
+    options.compilerArgs = listOf("--enable-preview", "--add-modules", addModules.joinToString(","))
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -390,9 +390,6 @@ tasks.register<Jextract>("jextractZimg") {
     group = "Native"
     description = "Extracts Java bindings for the zimg native library."
     targetPackage.set("com.loadingbyte.cinecred.natives.zimg")
-    // It is necessary to replace all occurrences of C_LONG with C_LONG_LONG, as the former is 32-bit even on 64-bit
-    // Windows machines, while the original C source code actually specifies 64-bit size_t and ptrdiff_t types.
-    patchCLongToCLongLong.set(true)
     headerFile.set(checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") })
     outputDir.set(srcMainJava)
 }

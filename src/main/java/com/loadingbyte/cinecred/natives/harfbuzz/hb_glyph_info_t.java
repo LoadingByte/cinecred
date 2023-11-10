@@ -5,81 +5,104 @@ package com.loadingbyte.cinecred.natives.harfbuzz;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
+/**
+ * {@snippet :
+ * struct hb_glyph_info_t {
+ *     hb_codepoint_t codepoint;
+ *     hb_mask_t mask;
+ *     uint32_t cluster;
+ *     hb_var_int_t var1;
+ *     hb_var_int_t var2;
+ * };
+ * }
+ */
 public class hb_glyph_info_t {
 
-    static final MemoryLayout $struct$LAYOUT = MemoryLayout.structLayout(
-        C_INT.withName("codepoint"),
-        C_INT.withName("mask"),
-        C_INT.withName("cluster"),
-        MemoryLayout.unionLayout(
-            C_INT.withName("u32"),
-            C_INT.withName("i32"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("u16"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("i16"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("u8"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("i8")
-        ).withName("var1"),
-        MemoryLayout.unionLayout(
-            C_INT.withName("u32"),
-            C_INT.withName("i32"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("u16"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("i16"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("u8"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("i8")
-        ).withName("var2")
-    ).withName("hb_glyph_info_t");
     public static MemoryLayout $LAYOUT() {
-        return hb_glyph_info_t.$struct$LAYOUT;
+        return constants$0.const$25;
     }
-    static final VarHandle codepoint$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("codepoint"));
     public static VarHandle codepoint$VH() {
-        return hb_glyph_info_t.codepoint$VH;
+        return constants$0.const$26;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_codepoint_t codepoint;
+     * }
+     */
     public static int codepoint$get(MemorySegment seg) {
-        return (int)hb_glyph_info_t.codepoint$VH.get(seg);
+        return (int)constants$0.const$26.get(seg);
     }
-    public static void codepoint$set( MemorySegment seg, int x) {
-        hb_glyph_info_t.codepoint$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_codepoint_t codepoint;
+     * }
+     */
+    public static void codepoint$set(MemorySegment seg, int x) {
+        constants$0.const$26.set(seg, x);
     }
     public static int codepoint$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_info_t.codepoint$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$26.get(seg.asSlice(index*sizeof()));
     }
     public static void codepoint$set(MemorySegment seg, long index, int x) {
-        hb_glyph_info_t.codepoint$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$26.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle mask$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("mask"));
     public static VarHandle mask$VH() {
-        return hb_glyph_info_t.mask$VH;
+        return constants$0.const$27;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_mask_t mask;
+     * }
+     */
     public static int mask$get(MemorySegment seg) {
-        return (int)hb_glyph_info_t.mask$VH.get(seg);
+        return (int)constants$0.const$27.get(seg);
     }
-    public static void mask$set( MemorySegment seg, int x) {
-        hb_glyph_info_t.mask$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_mask_t mask;
+     * }
+     */
+    public static void mask$set(MemorySegment seg, int x) {
+        constants$0.const$27.set(seg, x);
     }
     public static int mask$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_info_t.mask$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$27.get(seg.asSlice(index*sizeof()));
     }
     public static void mask$set(MemorySegment seg, long index, int x) {
-        hb_glyph_info_t.mask$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$27.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle cluster$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("cluster"));
     public static VarHandle cluster$VH() {
-        return hb_glyph_info_t.cluster$VH;
+        return constants$0.const$28;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * uint32_t cluster;
+     * }
+     */
     public static int cluster$get(MemorySegment seg) {
-        return (int)hb_glyph_info_t.cluster$VH.get(seg);
+        return (int)constants$0.const$28.get(seg);
     }
-    public static void cluster$set( MemorySegment seg, int x) {
-        hb_glyph_info_t.cluster$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * uint32_t cluster;
+     * }
+     */
+    public static void cluster$set(MemorySegment seg, int x) {
+        constants$0.const$28.set(seg, x);
     }
     public static int cluster$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_info_t.cluster$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$28.get(seg.asSlice(index*sizeof()));
     }
     public static void cluster$set(MemorySegment seg, long index, int x) {
-        hb_glyph_info_t.cluster$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$28.set(seg.asSlice(index*sizeof()), x);
     }
     public static MemorySegment var1$slice(MemorySegment seg) {
         return seg.asSlice(12, 4);
@@ -89,14 +112,10 @@ public class hb_glyph_info_t {
     }
     public static long sizeof() { return $LAYOUT().byteSize(); }
     public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocate(ResourceScope scope) { return allocate(SegmentAllocator.ofScope(scope)); }
-    public static MemorySegment allocateArray(int len, SegmentAllocator allocator) {
+    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
         return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
     }
-    public static MemorySegment allocateArray(int len, ResourceScope scope) {
-        return allocateArray(len, SegmentAllocator.ofScope(scope));
-    }
-    public static MemorySegment ofAddress(MemoryAddress addr, ResourceScope scope) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, scope); }
+    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
 }
 
 

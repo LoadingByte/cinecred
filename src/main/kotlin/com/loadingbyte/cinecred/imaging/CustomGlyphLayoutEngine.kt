@@ -5,18 +5,11 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.natives.harfbuzz.*
 import com.loadingbyte.cinecred.natives.harfbuzz.hb_h.*
-import jdk.incubator.foreign.CLinker.toCString
-import jdk.incubator.foreign.MemoryAddress
-import jdk.incubator.foreign.MemoryAddress.NULL
-import jdk.incubator.foreign.MemoryLayouts.JAVA_BYTE
-import jdk.incubator.foreign.MemoryLayouts.JAVA_CHAR
-import jdk.incubator.foreign.MemorySegment
-import jdk.incubator.foreign.MemorySegment.globalNativeSegment
-import jdk.incubator.foreign.ResourceScope
-import jdk.incubator.foreign.ResourceScope.newConfinedScope
-import jdk.incubator.foreign.SegmentAllocator.ofScope
 import sun.font.*
 import java.awt.geom.Point2D
+import java.lang.foreign.Arena
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.MemorySegment.NULL
 import java.util.*
 
 
@@ -51,7 +44,7 @@ class CustomGlyphLayoutEngine private constructor(
         // Note: Whenever we allocate memory here, we do not have to check for allocation errors in the form of a NULL
         // pointer since (a) Java throws an OutOfMemoryError whenever some allocation we directly request fails and (b)
         // HarfBuzz returns empty singletons instead of NULL pointers whenever it can't allocate memory.
-        newConfinedScope().use { scope ->
+        Arena.ofConfined().use { arena ->
             // Create an HB font object with the requested size.
             val hbFont = hb_font_create(hbFace)
             val fixedPtSize = (ptSize * FLOAT_TO_HB_FIXED).toUInt().toInt()
@@ -60,16 +53,16 @@ class CustomGlyphLayoutEngine private constructor(
             // Create an HB buffer, configure it and fill it with the text.
             val hbBuffer = hb_buffer_create()
             hb_buffer_set_script(hbBuffer, icuToHBScriptCode(script))
-            hb_buffer_set_language(hbBuffer, hb_language_from_string(toCString(lang, scope), -1))
+            hb_buffer_set_language(hbBuffer, hb_language_from_string(arena.allocateUtf8String(lang), -1))
             hb_buffer_set_direction(hbBuffer, if (rtl) HB_DIRECTION_RTL() else HB_DIRECTION_LTR())
             // Note: We need this cluster level for correctly identifying graphemes, which tracking shouldn't break.
             hb_buffer_set_cluster_level(hbBuffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES())
-            val chars = ofScope(scope).allocateArray(JAVA_CHAR, tr.text)
+            val chars = arena.allocateArray(tr.text)
             hb_buffer_add_utf16(hbBuffer, chars, tr.text.size, tr.start, tr.limit - tr.start)
 
             // Create an HB feature array and fill it.
             val numFeatures = 1 + LIGATURES_FONT_FEATS.size + config.features.size
-            val hbFeatures = hb_feature_t.allocateArray(numFeatures, scope)
+            val hbFeatures = hb_feature_t.allocateArray(numFeatures.toLong(), arena)
             var featureIdx = 0L
             configureFeature(hbFeatures, featureIdx++, KERNING_FONT_FEAT, if (kern) 1 else 0)
             for (tag in LIGATURES_FONT_FEATS)
@@ -82,8 +75,8 @@ class CustomGlyphLayoutEngine private constructor(
 
             // Extract the shaping result.
             val glyphCount = hb_buffer_get_length(hbBuffer)
-            val glyphInfo = globalNativeSegment().asSlice(hb_buffer_get_glyph_infos(hbBuffer, NULL))
-            val glyphPos = globalNativeSegment().asSlice(hb_buffer_get_glyph_positions(hbBuffer, NULL))
+            val glyphInfo = hb_buffer_get_glyph_infos(hbBuffer, NULL)
+            val glyphPos = hb_buffer_get_glyph_positions(hbBuffer, NULL)
 
             // For easier access, get the array into which we will store the shaping result.
             val glyphs = gvData._glyphs
@@ -154,46 +147,47 @@ class CustomGlyphLayoutEngine private constructor(
         }
 
 
-        private val hbFaces = WeakHashMap<Font2D, MemoryAddress>()
+        private val hbFaces = WeakHashMap<Font2D, MemorySegment>()
 
         private fun getHBFace(font: Font2D) =
             synchronized(hbFaces) {
                 hbFaces.computeIfAbsent(font) {
-                    val faceScope = newConfinedScope()
-                    val tableFunc = hb_reference_table_func_t.allocate({ _: MemoryAddress, tag: Int, _: MemoryAddress ->
+                    // Note: We use shared arenas because the cleaner thread will call the close() method.
+                    val faceArena = Arena.ofShared()
+                    val tableFunc = hb_reference_table_func_t.allocate({ _: MemorySegment, tag: Int, _: MemorySegment ->
                         try {
                             val javaArr = font.getTableBytes(tag) ?: return@allocate NULL
-                            val blobScope = newConfinedScope()
-                            val cArr = ofScope(blobScope).allocateArray(JAVA_BYTE, javaArr)
-                            hb_blob_create(cArr, javaArr.size, HB_MEMORY_MODE_WRITABLE(), NULL, destroyFunc(blobScope))
+                            val blobArena = Arena.ofShared()
+                            val cArr = blobArena.allocateArray(javaArr)
+                            hb_blob_create(cArr, javaArr.size, HB_MEMORY_MODE_WRITABLE(), NULL, destroyFunc(blobArena))
                         } catch (t: Throwable) {
                             // We have to catch all exceptions because if one escapes, a segfault happens.
                             runCatching { LOGGER.error("Cannot read table {} of font {}", tag, font.postscriptName, t) }
                             NULL
                         }
-                    }, faceScope)
-                    val face = hb_face_create_for_tables(tableFunc, NULL, destroyFunc(faceScope))
+                    }, faceArena)
+                    val face = hb_face_create_for_tables(tableFunc, NULL, destroyFunc(faceArena))
                     CLEANER.register(font, FaceCleanerAction(face))
                     face
                 }
             }
 
         // Use a static class to absolutely ensure that no unwanted references leak into this object.
-        private class FaceCleanerAction(private val face: MemoryAddress) : Runnable {
+        private class FaceCleanerAction(private val face: MemorySegment) : Runnable {
             override fun run() {
                 hb_face_destroy(face)
             }
         }
 
-        private fun destroyFunc(scope: ResourceScope) =
+        private fun destroyFunc(arena: Arena) =
             hb_destroy_func_t.allocate({
                 try {
-                    scope.close()
+                    arena.close()
                 } catch (t: Throwable) {
                     // We have to catch all exceptions because if one escapes, a segfault happens.
                     runCatching { LOGGER.error("Cannot close native memory resource scope", t) }
                 }
-            }, scope)
+            }, arena)
 
 
         private const val FLOAT_TO_HB_FIXED = (1 shl 16).toFloat()

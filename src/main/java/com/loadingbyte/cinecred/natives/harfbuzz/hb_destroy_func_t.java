@@ -5,21 +5,24 @@ package com.loadingbyte.cinecred.natives.harfbuzz;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
+/**
+ * {@snippet :
+ * void (*hb_destroy_func_t)(void* user_data);
+ * }
+ */
 public interface hb_destroy_func_t {
 
-    void apply(jdk.incubator.foreign.MemoryAddress x0);
-    static MemoryAddress allocate(hb_destroy_func_t fi) {
-        return RuntimeHelper.upcallStub(hb_destroy_func_t.class, fi, constants$0.hb_destroy_func_t$FUNC, "(Ljdk/incubator/foreign/MemoryAddress;)V");
+    void apply(java.lang.foreign.MemorySegment user_data);
+    static MemorySegment allocate(hb_destroy_func_t fi, Arena scope) {
+        return RuntimeHelper.upcallStub(constants$0.const$3, fi, constants$0.const$2, scope);
     }
-    static MemoryAddress allocate(hb_destroy_func_t fi, ResourceScope scope) {
-        return RuntimeHelper.upcallStub(hb_destroy_func_t.class, fi, constants$0.hb_destroy_func_t$FUNC, "(Ljdk/incubator/foreign/MemoryAddress;)V", scope);
-    }
-    static hb_destroy_func_t ofAddress(MemoryAddress addr) {
-        return (jdk.incubator.foreign.MemoryAddress x0) -> {
+    static hb_destroy_func_t ofAddress(MemorySegment addr, Arena arena) {
+        MemorySegment symbol = addr.reinterpret(arena, null);
+        return (java.lang.foreign.MemorySegment _user_data) -> {
             try {
-                constants$0.hb_destroy_func_t$MH.invokeExact((Addressable)addr, x0);
+                constants$0.const$4.invokeExact(symbol, _user_data);
             } catch (Throwable ex$) {
                 throw new AssertionError("should not reach here", ex$);
             }

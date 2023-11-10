@@ -5,407 +5,1022 @@ package com.loadingbyte.cinecred.natives.zimg;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
 public class zimg_h  {
 
-    static {
-    }
-
-    static final SymbolLookup LIBRARIES = RuntimeHelper.lookup();    /* package-private */ zimg_h() {}
+    public static final OfByte C_CHAR = JAVA_BYTE;
+    public static final OfShort C_SHORT = JAVA_SHORT;
+    public static final OfInt C_INT = JAVA_INT;
+    public static final OfLong C_LONG = JAVA_LONG;
+    public static final OfLong C_LONG_LONG = JAVA_LONG;
+    public static final OfFloat C_FLOAT = JAVA_FLOAT;
+    public static final OfDouble C_DOUBLE = JAVA_DOUBLE;
+    public static final AddressLayout C_POINTER = RuntimeHelper.POINTER;
+    /**
+     * {@snippet :
+     * #define ZIMG_API_VERSION_MAJOR 2
+     * }
+     */
     public static int ZIMG_API_VERSION_MAJOR() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_API_VERSION_MINOR 4
+     * }
+     */
     public static int ZIMG_API_VERSION_MINOR() {
         return (int)4L;
     }
-    public static ValueLayout ptrdiff_t = C_LONG_LONG;
-    public static ValueLayout wchar_t = C_INT;
+    /**
+     * {@snippet :
+     * typedef long ptrdiff_t;
+     * }
+     */
+    public static final OfLong ptrdiff_t = JAVA_LONG;
+    /**
+     * {@snippet :
+     * typedef unsigned long size_t;
+     * }
+     */
+    public static final OfLong size_t = JAVA_LONG;
+    /**
+     * {@snippet :
+     * typedef int wchar_t;
+     * }
+     */
+    public static final OfInt wchar_t = JAVA_INT;
     public static MethodHandle zimg_get_version_info$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_get_version_info$MH,"zimg_get_version_info");
+        return RuntimeHelper.requireNonNull(constants$0.const$3,"zimg_get_version_info");
     }
-    public static void zimg_get_version_info ( Addressable major,  Addressable minor,  Addressable micro) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_get_version_info$MH, "zimg_get_version_info");
+    /**
+     * {@snippet :
+     * void zimg_get_version_info(unsigned int* major, unsigned int* minor, unsigned int* micro);
+     * }
+     */
+    public static void zimg_get_version_info(MemorySegment major, MemorySegment minor, MemorySegment micro) {
+        var mh$ = zimg_get_version_info$MH();
         try {
-            mh$.invokeExact(major.address(), minor.address(), micro.address());
+            mh$.invokeExact(major, minor, micro);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_get_api_version$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_get_api_version$MH,"zimg_get_api_version");
+        return RuntimeHelper.requireNonNull(constants$0.const$5,"zimg_get_api_version");
     }
-    public static int zimg_get_api_version ( Addressable major,  Addressable minor) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_get_api_version$MH, "zimg_get_api_version");
+    /**
+     * {@snippet :
+     * unsigned int zimg_get_api_version(unsigned int* major, unsigned int* minor);
+     * }
+     */
+    public static int zimg_get_api_version(MemorySegment major, MemorySegment minor) {
+        var mh$ = zimg_get_api_version$MH();
         try {
-            return (int)mh$.invokeExact(major.address(), minor.address());
+            return (int)mh$.invokeExact(major, minor);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_UNKNOWN = -1;
+     * }
+     */
     public static int ZIMG_ERROR_UNKNOWN() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_SUCCESS = 0;
+     * }
+     */
     public static int ZIMG_ERROR_SUCCESS() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_OUT_OF_MEMORY = 1;
+     * }
+     */
     public static int ZIMG_ERROR_OUT_OF_MEMORY() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_USER_CALLBACK_FAILED = 2;
+     * }
+     */
     public static int ZIMG_ERROR_USER_CALLBACK_FAILED() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_LOGIC = 1024;
+     * }
+     */
     public static int ZIMG_ERROR_LOGIC() {
         return (int)1024L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_GREYSCALE_SUBSAMPLING = 1025;
+     * }
+     */
     public static int ZIMG_ERROR_GREYSCALE_SUBSAMPLING() {
         return (int)1025L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_COLOR_FAMILY_MISMATCH = 1026;
+     * }
+     */
     public static int ZIMG_ERROR_COLOR_FAMILY_MISMATCH() {
         return (int)1026L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_IMAGE_NOT_DIVISIBLE = 1027;
+     * }
+     */
     public static int ZIMG_ERROR_IMAGE_NOT_DIVISIBLE() {
         return (int)1027L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_BIT_DEPTH_OVERFLOW = 1028;
+     * }
+     */
     public static int ZIMG_ERROR_BIT_DEPTH_OVERFLOW() {
         return (int)1028L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_ILLEGAL_ARGUMENT = 2048;
+     * }
+     */
     public static int ZIMG_ERROR_ILLEGAL_ARGUMENT() {
         return (int)2048L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_ENUM_OUT_OF_RANGE = 2049;
+     * }
+     */
     public static int ZIMG_ERROR_ENUM_OUT_OF_RANGE() {
         return (int)2049L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_INVALID_IMAGE_SIZE = 2050;
+     * }
+     */
     public static int ZIMG_ERROR_INVALID_IMAGE_SIZE() {
         return (int)2050L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_UNSUPPORTED_OPERATION = 3072;
+     * }
+     */
     public static int ZIMG_ERROR_UNSUPPORTED_OPERATION() {
         return (int)3072L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_UNSUPPORTED_SUBSAMPLING = 3073;
+     * }
+     */
     public static int ZIMG_ERROR_UNSUPPORTED_SUBSAMPLING() {
         return (int)3073L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_NO_COLORSPACE_CONVERSION = 3074;
+     * }
+     */
     public static int ZIMG_ERROR_NO_COLORSPACE_CONVERSION() {
         return (int)3074L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_NO_FIELD_PARITY_CONVERSION = 3075;
+     * }
+     */
     public static int ZIMG_ERROR_NO_FIELD_PARITY_CONVERSION() {
         return (int)3075L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_error_code_e.ZIMG_ERROR_RESAMPLING_NOT_AVAILABLE = 3076;
+     * }
+     */
     public static int ZIMG_ERROR_RESAMPLING_NOT_AVAILABLE() {
         return (int)3076L;
     }
     public static MethodHandle zimg_get_last_error$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_get_last_error$MH,"zimg_get_last_error");
+        return RuntimeHelper.requireNonNull(constants$0.const$7,"zimg_get_last_error");
     }
-    public static int zimg_get_last_error ( Addressable err_msg,  long n) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_get_last_error$MH, "zimg_get_last_error");
+    /**
+     * {@snippet :
+     * zimg_error_code_e zimg_get_last_error(char* err_msg, size_t n);
+     * }
+     */
+    public static int zimg_get_last_error(MemorySegment err_msg, long n) {
+        var mh$ = zimg_get_last_error$MH();
         try {
-            return (int)mh$.invokeExact(err_msg.address(), n);
+            return (int)mh$.invokeExact(err_msg, n);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_clear_last_error$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_clear_last_error$MH,"zimg_clear_last_error");
+        return RuntimeHelper.requireNonNull(constants$0.const$9,"zimg_clear_last_error");
     }
-    public static void zimg_clear_last_error () {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_clear_last_error$MH, "zimg_clear_last_error");
+    /**
+     * {@snippet :
+     * void zimg_clear_last_error();
+     * }
+     */
+    public static void zimg_clear_last_error() {
+        var mh$ = zimg_clear_last_error$MH();
         try {
             mh$.invokeExact();
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_NONE = 0;
+     * }
+     */
     public static int ZIMG_CPU_NONE() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_AUTO = 1;
+     * }
+     */
     public static int ZIMG_CPU_AUTO() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_AUTO_64B = 2;
+     * }
+     */
     public static int ZIMG_CPU_AUTO_64B() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_MMX = 1000;
+     * }
+     */
     public static int ZIMG_CPU_X86_MMX() {
         return (int)1000L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSE = 1001;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSE() {
         return (int)1001L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSE2 = 1002;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSE2() {
         return (int)1002L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSE3 = 1003;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSE3() {
         return (int)1003L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSSE3 = 1004;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSSE3() {
         return (int)1004L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSE41 = 1005;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSE41() {
         return (int)1005L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_SSE42 = 1006;
+     * }
+     */
     public static int ZIMG_CPU_X86_SSE42() {
         return (int)1006L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX = 1007;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX() {
         return (int)1007L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_F16C = 1008;
+     * }
+     */
     public static int ZIMG_CPU_X86_F16C() {
         return (int)1008L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX2 = 1009;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX2() {
         return (int)1009L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512F = 1010;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX512F() {
         return (int)1010L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_SKX = 1011;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX512_SKX() {
         return (int)1011L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_CLX = 1012;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX512_CLX() {
         return (int)1012L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_PMC = 1013;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX512_PMC() {
         return (int)1013L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_SNC = 1014;
+     * }
+     */
     public static int ZIMG_CPU_X86_AVX512_SNC() {
         return (int)1014L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_type_e.ZIMG_PIXEL_BYTE = 0;
+     * }
+     */
     public static int ZIMG_PIXEL_BYTE() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_type_e.ZIMG_PIXEL_WORD = 1;
+     * }
+     */
     public static int ZIMG_PIXEL_WORD() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_type_e.ZIMG_PIXEL_HALF = 2;
+     * }
+     */
     public static int ZIMG_PIXEL_HALF() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_type_e.ZIMG_PIXEL_FLOAT = 3;
+     * }
+     */
     public static int ZIMG_PIXEL_FLOAT() {
         return (int)3L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_range_e.ZIMG_RANGE_INTERNAL = -1;
+     * }
+     */
     public static int ZIMG_RANGE_INTERNAL() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_range_e.ZIMG_RANGE_LIMITED = 0;
+     * }
+     */
     public static int ZIMG_RANGE_LIMITED() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_pixel_range_e.ZIMG_RANGE_FULL = 1;
+     * }
+     */
     public static int ZIMG_RANGE_FULL() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_family_e.ZIMG_COLOR_GREY = 0;
+     * }
+     */
     public static int ZIMG_COLOR_GREY() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_family_e.ZIMG_COLOR_RGB = 1;
+     * }
+     */
     public static int ZIMG_COLOR_RGB() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_family_e.ZIMG_COLOR_YUV = 2;
+     * }
+     */
     public static int ZIMG_COLOR_YUV() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_alpha_type_e.ZIMG_ALPHA_NONE = 0;
+     * }
+     */
     public static int ZIMG_ALPHA_NONE() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_alpha_type_e.ZIMG_ALPHA_STRAIGHT = 1;
+     * }
+     */
     public static int ZIMG_ALPHA_STRAIGHT() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_alpha_type_e.ZIMG_ALPHA_PREMULTIPLIED = 2;
+     * }
+     */
     public static int ZIMG_ALPHA_PREMULTIPLIED() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_field_parity_e.ZIMG_FIELD_PROGRESSIVE = 0;
+     * }
+     */
     public static int ZIMG_FIELD_PROGRESSIVE() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_field_parity_e.ZIMG_FIELD_TOP = 1;
+     * }
+     */
     public static int ZIMG_FIELD_TOP() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_field_parity_e.ZIMG_FIELD_BOTTOM = 2;
+     * }
+     */
     public static int ZIMG_FIELD_BOTTOM() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_INTERNAL = -1;
+     * }
+     */
     public static int ZIMG_CHROMA_INTERNAL() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_LEFT = 0;
+     * }
+     */
     public static int ZIMG_CHROMA_LEFT() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_CENTER = 1;
+     * }
+     */
     public static int ZIMG_CHROMA_CENTER() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_TOP_LEFT = 2;
+     * }
+     */
     public static int ZIMG_CHROMA_TOP_LEFT() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_TOP = 3;
+     * }
+     */
     public static int ZIMG_CHROMA_TOP() {
         return (int)3L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_BOTTOM_LEFT = 4;
+     * }
+     */
     public static int ZIMG_CHROMA_BOTTOM_LEFT() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_chroma_location_e.ZIMG_CHROMA_BOTTOM = 5;
+     * }
+     */
     public static int ZIMG_CHROMA_BOTTOM() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_INTERNAL = -1;
+     * }
+     */
     public static int ZIMG_MATRIX_INTERNAL() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_RGB = 0;
+     * }
+     */
     public static int ZIMG_MATRIX_RGB() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_BT709 = 1;
+     * }
+     */
     public static int ZIMG_MATRIX_BT709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_UNSPECIFIED = 2;
+     * }
+     */
     public static int ZIMG_MATRIX_UNSPECIFIED() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_FCC = 4;
+     * }
+     */
     public static int ZIMG_MATRIX_FCC() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_BT470_BG = 5;
+     * }
+     */
     public static int ZIMG_MATRIX_BT470_BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ST170_M = 6;
+     * }
+     */
     public static int ZIMG_MATRIX_ST170_M() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ST240_M = 7;
+     * }
+     */
     public static int ZIMG_MATRIX_ST240_M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_YCGCO = 8;
+     * }
+     */
     public static int ZIMG_MATRIX_YCGCO() {
         return (int)8L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_BT2020_NCL = 9;
+     * }
+     */
     public static int ZIMG_MATRIX_BT2020_NCL() {
         return (int)9L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_BT2020_CL = 10;
+     * }
+     */
     public static int ZIMG_MATRIX_BT2020_CL() {
         return (int)10L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_CHROMATICITY_DERIVED_NCL = 12;
+     * }
+     */
     public static int ZIMG_MATRIX_CHROMATICITY_DERIVED_NCL() {
         return (int)12L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_CHROMATICITY_DERIVED_CL = 13;
+     * }
+     */
     public static int ZIMG_MATRIX_CHROMATICITY_DERIVED_CL() {
         return (int)13L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ICTCP = 14;
+     * }
+     */
     public static int ZIMG_MATRIX_ICTCP() {
         return (int)14L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_INTERNAL = -1;
+     * }
+     */
     public static int ZIMG_TRANSFER_INTERNAL() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT709 = 1;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_UNSPECIFIED = 2;
+     * }
+     */
     public static int ZIMG_TRANSFER_UNSPECIFIED() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT470_M = 4;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT470_M() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT470_BG = 5;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT470_BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT601 = 6;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT601() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_ST240_M = 7;
+     * }
+     */
     public static int ZIMG_TRANSFER_ST240_M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_LINEAR = 8;
+     * }
+     */
     public static int ZIMG_TRANSFER_LINEAR() {
         return (int)8L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_LOG_100 = 9;
+     * }
+     */
     public static int ZIMG_TRANSFER_LOG_100() {
         return (int)9L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_LOG_316 = 10;
+     * }
+     */
     public static int ZIMG_TRANSFER_LOG_316() {
         return (int)10L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_IEC_61966_2_4 = 11;
+     * }
+     */
     public static int ZIMG_TRANSFER_IEC_61966_2_4() {
         return (int)11L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_IEC_61966_2_1 = 13;
+     * }
+     */
     public static int ZIMG_TRANSFER_IEC_61966_2_1() {
         return (int)13L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT2020_10 = 14;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT2020_10() {
         return (int)14L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT2020_12 = 15;
+     * }
+     */
     public static int ZIMG_TRANSFER_BT2020_12() {
         return (int)15L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_ST2084 = 16;
+     * }
+     */
     public static int ZIMG_TRANSFER_ST2084() {
         return (int)16L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_ARIB_B67 = 18;
+     * }
+     */
     public static int ZIMG_TRANSFER_ARIB_B67() {
         return (int)18L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_INTERNAL = -1;
+     * }
+     */
     public static int ZIMG_PRIMARIES_INTERNAL() {
         return (int)-1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_BT709 = 1;
+     * }
+     */
     public static int ZIMG_PRIMARIES_BT709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_UNSPECIFIED = 2;
+     * }
+     */
     public static int ZIMG_PRIMARIES_UNSPECIFIED() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_BT470_M = 4;
+     * }
+     */
     public static int ZIMG_PRIMARIES_BT470_M() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_BT470_BG = 5;
+     * }
+     */
     public static int ZIMG_PRIMARIES_BT470_BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_ST170_M = 6;
+     * }
+     */
     public static int ZIMG_PRIMARIES_ST170_M() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_ST240_M = 7;
+     * }
+     */
     public static int ZIMG_PRIMARIES_ST240_M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_FILM = 8;
+     * }
+     */
     public static int ZIMG_PRIMARIES_FILM() {
         return (int)8L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_BT2020 = 9;
+     * }
+     */
     public static int ZIMG_PRIMARIES_BT2020() {
         return (int)9L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_ST428 = 10;
+     * }
+     */
     public static int ZIMG_PRIMARIES_ST428() {
         return (int)10L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_ST431_2 = 11;
+     * }
+     */
     public static int ZIMG_PRIMARIES_ST431_2() {
         return (int)11L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_ST432_1 = 12;
+     * }
+     */
     public static int ZIMG_PRIMARIES_ST432_1() {
         return (int)12L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_EBU3213_E = 22;
+     * }
+     */
     public static int ZIMG_PRIMARIES_EBU3213_E() {
         return (int)22L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_dither_type_e.ZIMG_DITHER_NONE = 0;
+     * }
+     */
     public static int ZIMG_DITHER_NONE() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_dither_type_e.ZIMG_DITHER_ORDERED = 1;
+     * }
+     */
     public static int ZIMG_DITHER_ORDERED() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_dither_type_e.ZIMG_DITHER_RANDOM = 2;
+     * }
+     */
     public static int ZIMG_DITHER_RANDOM() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_dither_type_e.ZIMG_DITHER_ERROR_DIFFUSION = 3;
+     * }
+     */
     public static int ZIMG_DITHER_ERROR_DIFFUSION() {
         return (int)3L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_POINT = 0;
+     * }
+     */
     public static int ZIMG_RESIZE_POINT() {
         return (int)0L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_BILINEAR = 1;
+     * }
+     */
     public static int ZIMG_RESIZE_BILINEAR() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_BICUBIC = 2;
+     * }
+     */
     public static int ZIMG_RESIZE_BICUBIC() {
         return (int)2L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_SPLINE16 = 3;
+     * }
+     */
     public static int ZIMG_RESIZE_SPLINE16() {
         return (int)3L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_SPLINE36 = 4;
+     * }
+     */
     public static int ZIMG_RESIZE_SPLINE36() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_SPLINE64 = 6;
+     * }
+     */
     public static int ZIMG_RESIZE_SPLINE64() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * enum zimg_resample_filter_e.ZIMG_RESIZE_LANCZOS = 5;
+     * }
+     */
     public static int ZIMG_RESIZE_LANCZOS() {
         return (int)5L;
     }
     public static MethodHandle zimg_select_buffer_mask$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.zimg_select_buffer_mask$MH,"zimg_select_buffer_mask");
+        return RuntimeHelper.requireNonNull(constants$0.const$15,"zimg_select_buffer_mask");
     }
-    public static int zimg_select_buffer_mask ( int count) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$0.zimg_select_buffer_mask$MH, "zimg_select_buffer_mask");
+    /**
+     * {@snippet :
+     * unsigned int zimg_select_buffer_mask(unsigned int count);
+     * }
+     */
+    public static int zimg_select_buffer_mask(int count) {
+        var mh$ = zimg_select_buffer_mask$MH();
         try {
             return (int)mh$.invokeExact(count);
         } catch (Throwable ex$) {
@@ -413,156 +1028,306 @@ public class zimg_h  {
         }
     }
     public static MethodHandle zimg_filter_graph_free$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_free$MH,"zimg_filter_graph_free");
+        return RuntimeHelper.requireNonNull(constants$0.const$20,"zimg_filter_graph_free");
     }
-    public static void zimg_filter_graph_free ( Addressable ptr) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_free$MH, "zimg_filter_graph_free");
+    /**
+     * {@snippet :
+     * void zimg_filter_graph_free(zimg_filter_graph* ptr);
+     * }
+     */
+    public static void zimg_filter_graph_free(MemorySegment ptr) {
+        var mh$ = zimg_filter_graph_free$MH();
         try {
-            mh$.invokeExact(ptr.address());
+            mh$.invokeExact(ptr);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_filter_graph_get_tmp_size$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_tmp_size$MH,"zimg_filter_graph_get_tmp_size");
+        return RuntimeHelper.requireNonNull(constants$0.const$21,"zimg_filter_graph_get_tmp_size");
     }
-    public static int zimg_filter_graph_get_tmp_size ( Addressable ptr,  Addressable out) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_tmp_size$MH, "zimg_filter_graph_get_tmp_size");
+    /**
+     * {@snippet :
+     * zimg_error_code_e zimg_filter_graph_get_tmp_size(const zimg_filter_graph* ptr, size_t* out);
+     * }
+     */
+    public static int zimg_filter_graph_get_tmp_size(MemorySegment ptr, MemorySegment out) {
+        var mh$ = zimg_filter_graph_get_tmp_size$MH();
         try {
-            return (int)mh$.invokeExact(ptr.address(), out.address());
+            return (int)mh$.invokeExact(ptr, out);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_filter_graph_get_input_buffering$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_input_buffering$MH,"zimg_filter_graph_get_input_buffering");
+        return RuntimeHelper.requireNonNull(constants$0.const$22,"zimg_filter_graph_get_input_buffering");
     }
-    public static int zimg_filter_graph_get_input_buffering ( Addressable ptr,  Addressable out) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_input_buffering$MH, "zimg_filter_graph_get_input_buffering");
+    /**
+     * {@snippet :
+     * zimg_error_code_e zimg_filter_graph_get_input_buffering(const zimg_filter_graph* ptr, unsigned int* out);
+     * }
+     */
+    public static int zimg_filter_graph_get_input_buffering(MemorySegment ptr, MemorySegment out) {
+        var mh$ = zimg_filter_graph_get_input_buffering$MH();
         try {
-            return (int)mh$.invokeExact(ptr.address(), out.address());
+            return (int)mh$.invokeExact(ptr, out);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_filter_graph_get_output_buffering$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_output_buffering$MH,"zimg_filter_graph_get_output_buffering");
+        return RuntimeHelper.requireNonNull(constants$0.const$23,"zimg_filter_graph_get_output_buffering");
     }
-    public static int zimg_filter_graph_get_output_buffering ( Addressable ptr,  Addressable out) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_get_output_buffering$MH, "zimg_filter_graph_get_output_buffering");
+    /**
+     * {@snippet :
+     * zimg_error_code_e zimg_filter_graph_get_output_buffering(const zimg_filter_graph* ptr, unsigned int* out);
+     * }
+     */
+    public static int zimg_filter_graph_get_output_buffering(MemorySegment ptr, MemorySegment out) {
+        var mh$ = zimg_filter_graph_get_output_buffering$MH();
         try {
-            return (int)mh$.invokeExact(ptr.address(), out.address());
+            return (int)mh$.invokeExact(ptr, out);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_filter_graph_process$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_process$MH,"zimg_filter_graph_process");
+        return RuntimeHelper.requireNonNull(constants$0.const$25,"zimg_filter_graph_process");
     }
-    public static int zimg_filter_graph_process ( Addressable ptr,  Addressable src,  Addressable dst,  Addressable tmp,  Addressable unpack_cb,  Addressable unpack_user,  Addressable pack_cb,  Addressable pack_user) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$1.zimg_filter_graph_process$MH, "zimg_filter_graph_process");
+    /**
+     * {@snippet :
+     * zimg_error_code_e zimg_filter_graph_process(const zimg_filter_graph* ptr, const zimg_image_buffer_const* src, const zimg_image_buffer* dst, void* tmp, zimg_filter_graph_callback unpack_cb, void* unpack_user, zimg_filter_graph_callback pack_cb, void* pack_user);
+     * }
+     */
+    public static int zimg_filter_graph_process(MemorySegment ptr, MemorySegment src, MemorySegment dst, MemorySegment tmp, MemorySegment unpack_cb, MemorySegment unpack_user, MemorySegment pack_cb, MemorySegment pack_user) {
+        var mh$ = zimg_filter_graph_process$MH();
         try {
-            return (int)mh$.invokeExact(ptr.address(), src.address(), dst.address(), tmp.address(), unpack_cb.address(), unpack_user.address(), pack_cb.address(), pack_user.address());
+            return (int)mh$.invokeExact(ptr, src, dst, tmp, unpack_cb, unpack_user, pack_cb, pack_user);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_image_format_default$MH() {
-        return RuntimeHelper.requireNonNull(constants$2.zimg_image_format_default$MH,"zimg_image_format_default");
+        return RuntimeHelper.requireNonNull(constants$0.const$60,"zimg_image_format_default");
     }
-    public static void zimg_image_format_default ( Addressable ptr,  int version) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_image_format_default$MH, "zimg_image_format_default");
+    /**
+     * {@snippet :
+     * void zimg_image_format_default(zimg_image_format* ptr, unsigned int version);
+     * }
+     */
+    public static void zimg_image_format_default(MemorySegment ptr, int version) {
+        var mh$ = zimg_image_format_default$MH();
         try {
-            mh$.invokeExact(ptr.address(), version);
+            mh$.invokeExact(ptr, version);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_graph_builder_params_default$MH() {
-        return RuntimeHelper.requireNonNull(constants$2.zimg_graph_builder_params_default$MH,"zimg_graph_builder_params_default");
+        return RuntimeHelper.requireNonNull(constants$0.const$61,"zimg_graph_builder_params_default");
     }
-    public static void zimg_graph_builder_params_default ( Addressable ptr,  int version) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_graph_builder_params_default$MH, "zimg_graph_builder_params_default");
+    /**
+     * {@snippet :
+     * void zimg_graph_builder_params_default(zimg_graph_builder_params* ptr, unsigned int version);
+     * }
+     */
+    public static void zimg_graph_builder_params_default(MemorySegment ptr, int version) {
+        var mh$ = zimg_graph_builder_params_default$MH();
         try {
-            mh$.invokeExact(ptr.address(), version);
+            mh$.invokeExact(ptr, version);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle zimg_filter_graph_build$MH() {
-        return RuntimeHelper.requireNonNull(constants$2.zimg_filter_graph_build$MH,"zimg_filter_graph_build");
+        return RuntimeHelper.requireNonNull(constants$0.const$63,"zimg_filter_graph_build");
     }
-    public static MemoryAddress zimg_filter_graph_build ( Addressable src_format,  Addressable dst_format,  Addressable params) {
-        var mh$ = RuntimeHelper.requireNonNull(constants$2.zimg_filter_graph_build$MH, "zimg_filter_graph_build");
+    /**
+     * {@snippet :
+     * zimg_filter_graph* zimg_filter_graph_build(const zimg_image_format* src_format, const zimg_image_format* dst_format, const zimg_graph_builder_params* params);
+     * }
+     */
+    public static MemorySegment zimg_filter_graph_build(MemorySegment src_format, MemorySegment dst_format, MemorySegment params) {
+        var mh$ = zimg_filter_graph_build$MH();
         try {
-            return (jdk.incubator.foreign.MemoryAddress)mh$.invokeExact(src_format.address(), dst_format.address(), params.address());
+            return (java.lang.foreign.MemorySegment)mh$.invokeExact(src_format, dst_format, params);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MemoryAddress NULL() {
-        return constants$2.NULL$ADDR;
+    /**
+     * {@snippet :
+     * #define NULL 0
+     * }
+     */
+    public static MemorySegment NULL() {
+        return constants$0.const$64;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_API_VERSION 516
+     * }
+     */
     public static int ZIMG_API_VERSION() {
         return (int)516L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_709 1
+     * }
+     */
     public static int ZIMG_MATRIX_709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_470BG 5
+     * }
+     */
     public static int ZIMG_MATRIX_470BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_170M 6
+     * }
+     */
     public static int ZIMG_MATRIX_170M() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_240M 7
+     * }
+     */
     public static int ZIMG_MATRIX_240M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_2020_NCL 9
+     * }
+     */
     public static int ZIMG_MATRIX_2020_NCL() {
         return (int)9L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_2020_CL 10
+     * }
+     */
     public static int ZIMG_MATRIX_2020_CL() {
         return (int)10L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_709 1
+     * }
+     */
     public static int ZIMG_TRANSFER_709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_470_M 4
+     * }
+     */
     public static int ZIMG_TRANSFER_470_M() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_470_BG 5
+     * }
+     */
     public static int ZIMG_TRANSFER_470_BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_601 6
+     * }
+     */
     public static int ZIMG_TRANSFER_601() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_240M 7
+     * }
+     */
     public static int ZIMG_TRANSFER_240M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_2020_10 14
+     * }
+     */
     public static int ZIMG_TRANSFER_2020_10() {
         return (int)14L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_TRANSFER_2020_12 15
+     * }
+     */
     public static int ZIMG_TRANSFER_2020_12() {
         return (int)15L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_709 1
+     * }
+     */
     public static int ZIMG_PRIMARIES_709() {
         return (int)1L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_470_M 4
+     * }
+     */
     public static int ZIMG_PRIMARIES_470_M() {
         return (int)4L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_470_BG 5
+     * }
+     */
     public static int ZIMG_PRIMARIES_470_BG() {
         return (int)5L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_170M 6
+     * }
+     */
     public static int ZIMG_PRIMARIES_170M() {
         return (int)6L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_240M 7
+     * }
+     */
     public static int ZIMG_PRIMARIES_240M() {
         return (int)7L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_PRIMARIES_2020 9
+     * }
+     */
     public static int ZIMG_PRIMARIES_2020() {
         return (int)9L;
     }
+    /**
+     * {@snippet :
+     * #define ZIMG_BUFFER_MAX 4294967295
+     * }
+     */
     public static int ZIMG_BUFFER_MAX() {
         return (int)4294967295L;
     }

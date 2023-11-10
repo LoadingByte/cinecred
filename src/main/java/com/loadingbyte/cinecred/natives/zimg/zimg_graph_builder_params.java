@@ -5,214 +5,333 @@ package com.loadingbyte.cinecred.natives.zimg;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
+/**
+ * {@snippet :
+ * struct zimg_graph_builder_params {
+ *     unsigned int version;
+ *     zimg_resample_filter_e resample_filter;
+ *     double filter_param_a;
+ *     double filter_param_b;
+ *     zimg_resample_filter_e resample_filter_uv;
+ *     double filter_param_a_uv;
+ *     double filter_param_b_uv;
+ *     zimg_dither_type_e dither_type;
+ *     zimg_cpu_type_e cpu_type;
+ *     double nominal_peak_luminance;
+ *     char allow_approximate_gamma;
+ * };
+ * }
+ */
 public class zimg_graph_builder_params {
 
-    static final MemoryLayout $struct$LAYOUT = MemoryLayout.structLayout(
-        C_INT.withName("version"),
-        C_INT.withName("resample_filter"),
-        C_DOUBLE.withName("filter_param_a"),
-        C_DOUBLE.withName("filter_param_b"),
-        C_INT.withName("resample_filter_uv"),
-        MemoryLayout.paddingLayout(32),
-        C_DOUBLE.withName("filter_param_a_uv"),
-        C_DOUBLE.withName("filter_param_b_uv"),
-        C_INT.withName("dither_type"),
-        C_INT.withName("cpu_type"),
-        C_DOUBLE.withName("nominal_peak_luminance"),
-        C_CHAR.withName("allow_approximate_gamma"),
-        MemoryLayout.paddingLayout(56)
-    ).withName("zimg_graph_builder_params");
     public static MemoryLayout $LAYOUT() {
-        return zimg_graph_builder_params.$struct$LAYOUT;
+        return constants$0.const$47;
     }
-    static final VarHandle version$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("version"));
     public static VarHandle version$VH() {
-        return zimg_graph_builder_params.version$VH;
+        return constants$0.const$48;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * unsigned int version;
+     * }
+     */
     public static int version$get(MemorySegment seg) {
-        return (int)zimg_graph_builder_params.version$VH.get(seg);
+        return (int)constants$0.const$48.get(seg);
     }
-    public static void version$set( MemorySegment seg, int x) {
-        zimg_graph_builder_params.version$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * unsigned int version;
+     * }
+     */
+    public static void version$set(MemorySegment seg, int x) {
+        constants$0.const$48.set(seg, x);
     }
     public static int version$get(MemorySegment seg, long index) {
-        return (int)zimg_graph_builder_params.version$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$48.get(seg.asSlice(index*sizeof()));
     }
     public static void version$set(MemorySegment seg, long index, int x) {
-        zimg_graph_builder_params.version$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$48.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle resample_filter$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("resample_filter"));
     public static VarHandle resample_filter$VH() {
-        return zimg_graph_builder_params.resample_filter$VH;
+        return constants$0.const$49;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * zimg_resample_filter_e resample_filter;
+     * }
+     */
     public static int resample_filter$get(MemorySegment seg) {
-        return (int)zimg_graph_builder_params.resample_filter$VH.get(seg);
+        return (int)constants$0.const$49.get(seg);
     }
-    public static void resample_filter$set( MemorySegment seg, int x) {
-        zimg_graph_builder_params.resample_filter$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * zimg_resample_filter_e resample_filter;
+     * }
+     */
+    public static void resample_filter$set(MemorySegment seg, int x) {
+        constants$0.const$49.set(seg, x);
     }
     public static int resample_filter$get(MemorySegment seg, long index) {
-        return (int)zimg_graph_builder_params.resample_filter$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$49.get(seg.asSlice(index*sizeof()));
     }
     public static void resample_filter$set(MemorySegment seg, long index, int x) {
-        zimg_graph_builder_params.resample_filter$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$49.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle filter_param_a$VH = $struct$LAYOUT.varHandle(double.class, MemoryLayout.PathElement.groupElement("filter_param_a"));
     public static VarHandle filter_param_a$VH() {
-        return zimg_graph_builder_params.filter_param_a$VH;
+        return constants$0.const$50;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * double filter_param_a;
+     * }
+     */
     public static double filter_param_a$get(MemorySegment seg) {
-        return (double)zimg_graph_builder_params.filter_param_a$VH.get(seg);
+        return (double)constants$0.const$50.get(seg);
     }
-    public static void filter_param_a$set( MemorySegment seg, double x) {
-        zimg_graph_builder_params.filter_param_a$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * double filter_param_a;
+     * }
+     */
+    public static void filter_param_a$set(MemorySegment seg, double x) {
+        constants$0.const$50.set(seg, x);
     }
     public static double filter_param_a$get(MemorySegment seg, long index) {
-        return (double)zimg_graph_builder_params.filter_param_a$VH.get(seg.asSlice(index*sizeof()));
+        return (double)constants$0.const$50.get(seg.asSlice(index*sizeof()));
     }
     public static void filter_param_a$set(MemorySegment seg, long index, double x) {
-        zimg_graph_builder_params.filter_param_a$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$50.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle filter_param_b$VH = $struct$LAYOUT.varHandle(double.class, MemoryLayout.PathElement.groupElement("filter_param_b"));
     public static VarHandle filter_param_b$VH() {
-        return zimg_graph_builder_params.filter_param_b$VH;
+        return constants$0.const$51;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * double filter_param_b;
+     * }
+     */
     public static double filter_param_b$get(MemorySegment seg) {
-        return (double)zimg_graph_builder_params.filter_param_b$VH.get(seg);
+        return (double)constants$0.const$51.get(seg);
     }
-    public static void filter_param_b$set( MemorySegment seg, double x) {
-        zimg_graph_builder_params.filter_param_b$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * double filter_param_b;
+     * }
+     */
+    public static void filter_param_b$set(MemorySegment seg, double x) {
+        constants$0.const$51.set(seg, x);
     }
     public static double filter_param_b$get(MemorySegment seg, long index) {
-        return (double)zimg_graph_builder_params.filter_param_b$VH.get(seg.asSlice(index*sizeof()));
+        return (double)constants$0.const$51.get(seg.asSlice(index*sizeof()));
     }
     public static void filter_param_b$set(MemorySegment seg, long index, double x) {
-        zimg_graph_builder_params.filter_param_b$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$51.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle resample_filter_uv$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("resample_filter_uv"));
     public static VarHandle resample_filter_uv$VH() {
-        return zimg_graph_builder_params.resample_filter_uv$VH;
+        return constants$0.const$52;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * zimg_resample_filter_e resample_filter_uv;
+     * }
+     */
     public static int resample_filter_uv$get(MemorySegment seg) {
-        return (int)zimg_graph_builder_params.resample_filter_uv$VH.get(seg);
+        return (int)constants$0.const$52.get(seg);
     }
-    public static void resample_filter_uv$set( MemorySegment seg, int x) {
-        zimg_graph_builder_params.resample_filter_uv$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * zimg_resample_filter_e resample_filter_uv;
+     * }
+     */
+    public static void resample_filter_uv$set(MemorySegment seg, int x) {
+        constants$0.const$52.set(seg, x);
     }
     public static int resample_filter_uv$get(MemorySegment seg, long index) {
-        return (int)zimg_graph_builder_params.resample_filter_uv$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$52.get(seg.asSlice(index*sizeof()));
     }
     public static void resample_filter_uv$set(MemorySegment seg, long index, int x) {
-        zimg_graph_builder_params.resample_filter_uv$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$52.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle filter_param_a_uv$VH = $struct$LAYOUT.varHandle(double.class, MemoryLayout.PathElement.groupElement("filter_param_a_uv"));
     public static VarHandle filter_param_a_uv$VH() {
-        return zimg_graph_builder_params.filter_param_a_uv$VH;
+        return constants$0.const$53;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * double filter_param_a_uv;
+     * }
+     */
     public static double filter_param_a_uv$get(MemorySegment seg) {
-        return (double)zimg_graph_builder_params.filter_param_a_uv$VH.get(seg);
+        return (double)constants$0.const$53.get(seg);
     }
-    public static void filter_param_a_uv$set( MemorySegment seg, double x) {
-        zimg_graph_builder_params.filter_param_a_uv$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * double filter_param_a_uv;
+     * }
+     */
+    public static void filter_param_a_uv$set(MemorySegment seg, double x) {
+        constants$0.const$53.set(seg, x);
     }
     public static double filter_param_a_uv$get(MemorySegment seg, long index) {
-        return (double)zimg_graph_builder_params.filter_param_a_uv$VH.get(seg.asSlice(index*sizeof()));
+        return (double)constants$0.const$53.get(seg.asSlice(index*sizeof()));
     }
     public static void filter_param_a_uv$set(MemorySegment seg, long index, double x) {
-        zimg_graph_builder_params.filter_param_a_uv$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$53.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle filter_param_b_uv$VH = $struct$LAYOUT.varHandle(double.class, MemoryLayout.PathElement.groupElement("filter_param_b_uv"));
     public static VarHandle filter_param_b_uv$VH() {
-        return zimg_graph_builder_params.filter_param_b_uv$VH;
+        return constants$0.const$54;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * double filter_param_b_uv;
+     * }
+     */
     public static double filter_param_b_uv$get(MemorySegment seg) {
-        return (double)zimg_graph_builder_params.filter_param_b_uv$VH.get(seg);
+        return (double)constants$0.const$54.get(seg);
     }
-    public static void filter_param_b_uv$set( MemorySegment seg, double x) {
-        zimg_graph_builder_params.filter_param_b_uv$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * double filter_param_b_uv;
+     * }
+     */
+    public static void filter_param_b_uv$set(MemorySegment seg, double x) {
+        constants$0.const$54.set(seg, x);
     }
     public static double filter_param_b_uv$get(MemorySegment seg, long index) {
-        return (double)zimg_graph_builder_params.filter_param_b_uv$VH.get(seg.asSlice(index*sizeof()));
+        return (double)constants$0.const$54.get(seg.asSlice(index*sizeof()));
     }
     public static void filter_param_b_uv$set(MemorySegment seg, long index, double x) {
-        zimg_graph_builder_params.filter_param_b_uv$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$54.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle dither_type$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("dither_type"));
     public static VarHandle dither_type$VH() {
-        return zimg_graph_builder_params.dither_type$VH;
+        return constants$0.const$55;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * zimg_dither_type_e dither_type;
+     * }
+     */
     public static int dither_type$get(MemorySegment seg) {
-        return (int)zimg_graph_builder_params.dither_type$VH.get(seg);
+        return (int)constants$0.const$55.get(seg);
     }
-    public static void dither_type$set( MemorySegment seg, int x) {
-        zimg_graph_builder_params.dither_type$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * zimg_dither_type_e dither_type;
+     * }
+     */
+    public static void dither_type$set(MemorySegment seg, int x) {
+        constants$0.const$55.set(seg, x);
     }
     public static int dither_type$get(MemorySegment seg, long index) {
-        return (int)zimg_graph_builder_params.dither_type$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$55.get(seg.asSlice(index*sizeof()));
     }
     public static void dither_type$set(MemorySegment seg, long index, int x) {
-        zimg_graph_builder_params.dither_type$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$55.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle cpu_type$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("cpu_type"));
     public static VarHandle cpu_type$VH() {
-        return zimg_graph_builder_params.cpu_type$VH;
+        return constants$0.const$56;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * zimg_cpu_type_e cpu_type;
+     * }
+     */
     public static int cpu_type$get(MemorySegment seg) {
-        return (int)zimg_graph_builder_params.cpu_type$VH.get(seg);
+        return (int)constants$0.const$56.get(seg);
     }
-    public static void cpu_type$set( MemorySegment seg, int x) {
-        zimg_graph_builder_params.cpu_type$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * zimg_cpu_type_e cpu_type;
+     * }
+     */
+    public static void cpu_type$set(MemorySegment seg, int x) {
+        constants$0.const$56.set(seg, x);
     }
     public static int cpu_type$get(MemorySegment seg, long index) {
-        return (int)zimg_graph_builder_params.cpu_type$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$56.get(seg.asSlice(index*sizeof()));
     }
     public static void cpu_type$set(MemorySegment seg, long index, int x) {
-        zimg_graph_builder_params.cpu_type$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$56.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle nominal_peak_luminance$VH = $struct$LAYOUT.varHandle(double.class, MemoryLayout.PathElement.groupElement("nominal_peak_luminance"));
     public static VarHandle nominal_peak_luminance$VH() {
-        return zimg_graph_builder_params.nominal_peak_luminance$VH;
+        return constants$0.const$57;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * double nominal_peak_luminance;
+     * }
+     */
     public static double nominal_peak_luminance$get(MemorySegment seg) {
-        return (double)zimg_graph_builder_params.nominal_peak_luminance$VH.get(seg);
+        return (double)constants$0.const$57.get(seg);
     }
-    public static void nominal_peak_luminance$set( MemorySegment seg, double x) {
-        zimg_graph_builder_params.nominal_peak_luminance$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * double nominal_peak_luminance;
+     * }
+     */
+    public static void nominal_peak_luminance$set(MemorySegment seg, double x) {
+        constants$0.const$57.set(seg, x);
     }
     public static double nominal_peak_luminance$get(MemorySegment seg, long index) {
-        return (double)zimg_graph_builder_params.nominal_peak_luminance$VH.get(seg.asSlice(index*sizeof()));
+        return (double)constants$0.const$57.get(seg.asSlice(index*sizeof()));
     }
     public static void nominal_peak_luminance$set(MemorySegment seg, long index, double x) {
-        zimg_graph_builder_params.nominal_peak_luminance$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$57.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle allow_approximate_gamma$VH = $struct$LAYOUT.varHandle(byte.class, MemoryLayout.PathElement.groupElement("allow_approximate_gamma"));
     public static VarHandle allow_approximate_gamma$VH() {
-        return zimg_graph_builder_params.allow_approximate_gamma$VH;
+        return constants$0.const$58;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * char allow_approximate_gamma;
+     * }
+     */
     public static byte allow_approximate_gamma$get(MemorySegment seg) {
-        return (byte)zimg_graph_builder_params.allow_approximate_gamma$VH.get(seg);
+        return (byte)constants$0.const$58.get(seg);
     }
-    public static void allow_approximate_gamma$set( MemorySegment seg, byte x) {
-        zimg_graph_builder_params.allow_approximate_gamma$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * char allow_approximate_gamma;
+     * }
+     */
+    public static void allow_approximate_gamma$set(MemorySegment seg, byte x) {
+        constants$0.const$58.set(seg, x);
     }
     public static byte allow_approximate_gamma$get(MemorySegment seg, long index) {
-        return (byte)zimg_graph_builder_params.allow_approximate_gamma$VH.get(seg.asSlice(index*sizeof()));
+        return (byte)constants$0.const$58.get(seg.asSlice(index*sizeof()));
     }
     public static void allow_approximate_gamma$set(MemorySegment seg, long index, byte x) {
-        zimg_graph_builder_params.allow_approximate_gamma$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$58.set(seg.asSlice(index*sizeof()), x);
     }
     public static long sizeof() { return $LAYOUT().byteSize(); }
     public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocate(ResourceScope scope) { return allocate(SegmentAllocator.ofScope(scope)); }
-    public static MemorySegment allocateArray(int len, SegmentAllocator allocator) {
+    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
         return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
     }
-    public static MemorySegment allocateArray(int len, ResourceScope scope) {
-        return allocateArray(len, SegmentAllocator.ofScope(scope));
-    }
-    public static MemorySegment ofAddress(MemoryAddress addr, ResourceScope scope) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, scope); }
+    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
 }
 
 

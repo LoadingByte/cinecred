@@ -4,16 +4,16 @@ import com.loadingbyte.cinecred.common.CLEANER
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.ceilDiv
 import com.loadingbyte.cinecred.imaging.Bitmap.Spec
-import jdk.incubator.foreign.MemorySegment
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.Pointer
 import java.io.Closeable
 import java.lang.Byte.toUnsignedLong
+import java.lang.Float.float16ToFloat
+import java.lang.Float.floatToFloat16
 import java.lang.Short.toUnsignedLong
 import java.lang.foreign.MemorySegment
-import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 
@@ -366,13 +366,11 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
      */
     class Accessor(bitmap: Bitmap, component: PixelFormat.Component) {
 
-        private val depthSwitch: Boolean
+        private val switch: Int
         private val offset: Int
         private val step: Int
         private val ls: Int
-        // Note: We have empirically confirmed that at least in JDK 17, ByteBuffer is faster than MemoryAccess.
-        // This might of course change in future versions.
-        private val buf: ByteBuffer
+        private val seg: MemorySegment
 
         init {
             val pixelFormat = bitmap.spec.representation.pixelFormat
@@ -382,41 +380,62 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
             require(!pixelFormat.isBitstream) { "Cannot access bitstream bitmaps." }
             require(component.shift == 0) { "Cannot access shifted bitmap components." }
 
-            depthSwitch = if (!pixelFormat.isFloat) {
+            val isShallow = if (!pixelFormat.isFloat) {
                 require(component.depth <= 16) { "Integer pixel bit depth ${component.depth} exceeds 16." }
                 component.depth <= 8
             } else {
-                require(component.depth == 32) { "Float pixel bit depth ${component.depth} is not 32." }
-                false
+                require(component.depth <= 32) { "Float pixel bit depth ${component.depth} exceeds 32." }
+                component.depth == 16
             }
+            val isLE = bitmap.spec.representation.pixelFormat.byteOrder == ByteOrder.LITTLE_ENDIAN
+            switch = (if (isShallow) 0 else 2) or (if (isLE) 0 else 1)
 
             offset = component.offset
             step = component.step
             ls = bitmap.frame.linesize(component.plane)
 
             val size = ls * bitmap.spec.resolution.heightPx.toLong()
-            val seg = MemorySegment.globalNativeSegment().asSlice(bitmap.frame.data(component.plane).address(), size)
-            buf = seg.asByteBuffer().order(bitmap.spec.representation.pixelFormat.byteOrder)
+            seg = MemorySegment.ofAddress(bitmap.frame.data(component.plane).address()).reinterpret(size)
         }
 
         fun getL(x: Int, y: Int): Long {
-            val addr = offset + y * ls + x * step
-            return if (depthSwitch) toUnsignedLong(buf.get(addr)) else toUnsignedLong(buf.getShort(addr))
+            val addr = (offset + y * ls + x * step).toLong()
+            return when (switch) {
+                0, 1 -> toUnsignedLong(seg.getByte(addr))
+                2 -> toUnsignedLong(seg.getShortLE(addr))
+                3 -> toUnsignedLong(seg.getShortBE(addr))
+                else -> throw IllegalStateException()
+            }
         }
 
         fun putL(x: Int, y: Int, value: Long) {
-            val addr = offset + y * ls + x * step
-            if (depthSwitch) buf.put(addr, value.toByte()) else buf.putShort(addr, value.toShort())
+            val addr = (offset + y * ls + x * step).toLong()
+            when (switch) {
+                0, 1 -> seg.putByte(addr, value.toByte())
+                2 -> seg.putShortLE(addr, value.toShort())
+                3 -> seg.putShortBE(addr, value.toShort())
+            }
         }
 
         fun getF(x: Int, y: Int): Float {
-            val addr = offset + y * ls + x * step
-            return buf.getFloat(addr)
+            val addr = (offset + y * ls + x * step).toLong()
+            return when (switch) {
+                0 -> float16ToFloat(seg.getShortLE(addr))
+                1 -> float16ToFloat(seg.getShortBE(addr))
+                2 -> seg.getFloatLE(addr)
+                3 -> seg.getFloatBE(addr)
+                else -> throw IllegalStateException()
+            }
         }
 
         fun putF(x: Int, y: Int, value: Float) {
-            val addr = offset + y * ls + x * step
-            buf.putFloat(addr, value)
+            val addr = (offset + y * ls + x * step).toLong()
+            when (switch) {
+                0 -> seg.putShortLE(addr, floatToFloat16(value))
+                1 -> seg.putShortBE(addr, floatToFloat16(value))
+                2 -> seg.putFloatLE(addr, value)
+                3 -> seg.putFloatBE(addr, value)
+            }
         }
 
     }

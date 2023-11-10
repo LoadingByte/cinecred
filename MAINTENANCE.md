@@ -8,7 +8,7 @@ wish to contribute to its development.
 Running
 -------
 
-Cinecred requires JDK 17. Gradle's toolchain mechanism enforces that version,
+Cinecred requires JDK 21. Gradle's toolchain mechanism enforces that version,
 but automatic JDK downloading is disabled.
 
 Depending on your platform, use the command `gradle runOnWindows`,

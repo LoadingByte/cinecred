@@ -289,7 +289,7 @@ private object JULFormatter : Formatter() {
         while (rootGroup.enumerate(allThreads) == allThreads.size)
             allThreads = arrayOfNulls(allThreads.size * 2)
         // Find the thread we are looking for.
-        return allThreads.find { it != null && it.id == threadID }
+        return allThreads.find { it != null && it.threadId() == threadID }
     }
 }
 

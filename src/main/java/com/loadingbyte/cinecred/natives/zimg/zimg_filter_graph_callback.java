@@ -5,21 +5,24 @@ package com.loadingbyte.cinecred.natives.zimg;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
+/**
+ * {@snippet :
+ * int (*zimg_filter_graph_callback)(void* user,unsigned int i,unsigned int left,unsigned int right);
+ * }
+ */
 public interface zimg_filter_graph_callback {
 
-    int apply(jdk.incubator.foreign.MemoryAddress x0, int x1, int x2, int x3);
-    static MemoryAddress allocate(zimg_filter_graph_callback fi) {
-        return RuntimeHelper.upcallStub(zimg_filter_graph_callback.class, fi, constants$0.zimg_filter_graph_callback$FUNC, "(Ljdk/incubator/foreign/MemoryAddress;III)I");
+    int apply(java.lang.foreign.MemorySegment user, int i, int left, int right);
+    static MemorySegment allocate(zimg_filter_graph_callback fi, Arena scope) {
+        return RuntimeHelper.upcallStub(constants$0.const$17, fi, constants$0.const$16, scope);
     }
-    static MemoryAddress allocate(zimg_filter_graph_callback fi, ResourceScope scope) {
-        return RuntimeHelper.upcallStub(zimg_filter_graph_callback.class, fi, constants$0.zimg_filter_graph_callback$FUNC, "(Ljdk/incubator/foreign/MemoryAddress;III)I", scope);
-    }
-    static zimg_filter_graph_callback ofAddress(MemoryAddress addr) {
-        return (jdk.incubator.foreign.MemoryAddress x0, int x1, int x2, int x3) -> {
+    static zimg_filter_graph_callback ofAddress(MemorySegment addr, Arena arena) {
+        MemorySegment symbol = addr.reinterpret(arena, null);
+        return (java.lang.foreign.MemorySegment _user, int _i, int _left, int _right) -> {
             try {
-                return (int)constants$1.zimg_filter_graph_callback$MH.invokeExact((Addressable)addr, x0, x1, x2, x3);
+                return (int)constants$0.const$18.invokeExact(symbol, _user, _i, _left, _right);
             } catch (Throwable ex$) {
                 throw new AssertionError("should not reach here", ex$);
             }

@@ -5,104 +5,141 @@ package com.loadingbyte.cinecred.natives.harfbuzz;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
-import jdk.incubator.foreign.*;
-import static jdk.incubator.foreign.CLinker.*;
+import java.lang.foreign.*;
+import static java.lang.foreign.ValueLayout.*;
+/**
+ * {@snippet :
+ * struct hb_glyph_position_t {
+ *     hb_position_t x_advance;
+ *     hb_position_t y_advance;
+ *     hb_position_t x_offset;
+ *     hb_position_t y_offset;
+ *     hb_var_int_t var;
+ * };
+ * }
+ */
 public class hb_glyph_position_t {
 
-    static final MemoryLayout $struct$LAYOUT = MemoryLayout.structLayout(
-        C_INT.withName("x_advance"),
-        C_INT.withName("y_advance"),
-        C_INT.withName("x_offset"),
-        C_INT.withName("y_offset"),
-        MemoryLayout.unionLayout(
-            C_INT.withName("u32"),
-            C_INT.withName("i32"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("u16"),
-            MemoryLayout.sequenceLayout(2, C_SHORT).withName("i16"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("u8"),
-            MemoryLayout.sequenceLayout(4, C_CHAR).withName("i8")
-        ).withName("var")
-    ).withName("hb_glyph_position_t");
     public static MemoryLayout $LAYOUT() {
-        return hb_glyph_position_t.$struct$LAYOUT;
+        return constants$0.const$29;
     }
-    static final VarHandle x_advance$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("x_advance"));
     public static VarHandle x_advance$VH() {
-        return hb_glyph_position_t.x_advance$VH;
+        return constants$0.const$30;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_position_t x_advance;
+     * }
+     */
     public static int x_advance$get(MemorySegment seg) {
-        return (int)hb_glyph_position_t.x_advance$VH.get(seg);
+        return (int)constants$0.const$30.get(seg);
     }
-    public static void x_advance$set( MemorySegment seg, int x) {
-        hb_glyph_position_t.x_advance$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_position_t x_advance;
+     * }
+     */
+    public static void x_advance$set(MemorySegment seg, int x) {
+        constants$0.const$30.set(seg, x);
     }
     public static int x_advance$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_position_t.x_advance$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$30.get(seg.asSlice(index*sizeof()));
     }
     public static void x_advance$set(MemorySegment seg, long index, int x) {
-        hb_glyph_position_t.x_advance$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$30.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle y_advance$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("y_advance"));
     public static VarHandle y_advance$VH() {
-        return hb_glyph_position_t.y_advance$VH;
+        return constants$0.const$31;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_position_t y_advance;
+     * }
+     */
     public static int y_advance$get(MemorySegment seg) {
-        return (int)hb_glyph_position_t.y_advance$VH.get(seg);
+        return (int)constants$0.const$31.get(seg);
     }
-    public static void y_advance$set( MemorySegment seg, int x) {
-        hb_glyph_position_t.y_advance$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_position_t y_advance;
+     * }
+     */
+    public static void y_advance$set(MemorySegment seg, int x) {
+        constants$0.const$31.set(seg, x);
     }
     public static int y_advance$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_position_t.y_advance$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$31.get(seg.asSlice(index*sizeof()));
     }
     public static void y_advance$set(MemorySegment seg, long index, int x) {
-        hb_glyph_position_t.y_advance$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$31.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle x_offset$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("x_offset"));
     public static VarHandle x_offset$VH() {
-        return hb_glyph_position_t.x_offset$VH;
+        return constants$0.const$32;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_position_t x_offset;
+     * }
+     */
     public static int x_offset$get(MemorySegment seg) {
-        return (int)hb_glyph_position_t.x_offset$VH.get(seg);
+        return (int)constants$0.const$32.get(seg);
     }
-    public static void x_offset$set( MemorySegment seg, int x) {
-        hb_glyph_position_t.x_offset$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_position_t x_offset;
+     * }
+     */
+    public static void x_offset$set(MemorySegment seg, int x) {
+        constants$0.const$32.set(seg, x);
     }
     public static int x_offset$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_position_t.x_offset$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$32.get(seg.asSlice(index*sizeof()));
     }
     public static void x_offset$set(MemorySegment seg, long index, int x) {
-        hb_glyph_position_t.x_offset$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$32.set(seg.asSlice(index*sizeof()), x);
     }
-    static final VarHandle y_offset$VH = $struct$LAYOUT.varHandle(int.class, MemoryLayout.PathElement.groupElement("y_offset"));
     public static VarHandle y_offset$VH() {
-        return hb_glyph_position_t.y_offset$VH;
+        return constants$0.const$33;
     }
+    /**
+     * Getter for field:
+     * {@snippet :
+     * hb_position_t y_offset;
+     * }
+     */
     public static int y_offset$get(MemorySegment seg) {
-        return (int)hb_glyph_position_t.y_offset$VH.get(seg);
+        return (int)constants$0.const$33.get(seg);
     }
-    public static void y_offset$set( MemorySegment seg, int x) {
-        hb_glyph_position_t.y_offset$VH.set(seg, x);
+    /**
+     * Setter for field:
+     * {@snippet :
+     * hb_position_t y_offset;
+     * }
+     */
+    public static void y_offset$set(MemorySegment seg, int x) {
+        constants$0.const$33.set(seg, x);
     }
     public static int y_offset$get(MemorySegment seg, long index) {
-        return (int)hb_glyph_position_t.y_offset$VH.get(seg.asSlice(index*sizeof()));
+        return (int)constants$0.const$33.get(seg.asSlice(index*sizeof()));
     }
     public static void y_offset$set(MemorySegment seg, long index, int x) {
-        hb_glyph_position_t.y_offset$VH.set(seg.asSlice(index*sizeof()), x);
+        constants$0.const$33.set(seg.asSlice(index*sizeof()), x);
     }
     public static MemorySegment var_$slice(MemorySegment seg) {
         return seg.asSlice(16, 4);
     }
     public static long sizeof() { return $LAYOUT().byteSize(); }
     public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocate(ResourceScope scope) { return allocate(SegmentAllocator.ofScope(scope)); }
-    public static MemorySegment allocateArray(int len, SegmentAllocator allocator) {
+    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
         return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
     }
-    public static MemorySegment allocateArray(int len, ResourceScope scope) {
-        return allocateArray(len, SegmentAllocator.ofScope(scope));
-    }
-    public static MemorySegment ofAddress(MemoryAddress addr, ResourceScope scope) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, scope); }
+    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
 }
 
 

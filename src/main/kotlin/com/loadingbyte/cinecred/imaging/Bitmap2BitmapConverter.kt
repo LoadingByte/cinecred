@@ -558,12 +558,12 @@ class Bitmap2BitmapConverter(
                 val planePath = arrayOf(groupElement("plane"), sequenceElement())
                 val bufConst = zimg_image_buffer_const.`$LAYOUT`()
                 val buf = zimg_image_buffer.`$LAYOUT`()
-                ZIMG_BUF_CONST_DATA = bufConst.varHandle(*planePath, groupElement("data"))
-                ZIMG_BUF_CONST_STRIDE = bufConst.varHandle(*planePath, groupElement("stride"))
-                ZIMG_BUF_CONST_MASK = bufConst.varHandle(*planePath, groupElement("mask"))
-                ZIMG_BUF_DATA = buf.varHandle(*planePath, groupElement("data"))
-                ZIMG_BUF_STRIDE = buf.varHandle(*planePath, groupElement("stride"))
-                ZIMG_BUF_MASK = buf.varHandle(*planePath, groupElement("mask"))
+                ZIMG_BUF_CONST_DATA = bufConst.varHandle(*planePath, groupElement("data")).withInvokeExactBehavior()
+                ZIMG_BUF_CONST_STRIDE = bufConst.varHandle(*planePath, groupElement("stride")).withInvokeExactBehavior()
+                ZIMG_BUF_CONST_MASK = bufConst.varHandle(*planePath, groupElement("mask")).withInvokeExactBehavior()
+                ZIMG_BUF_DATA = buf.varHandle(*planePath, groupElement("data")).withInvokeExactBehavior()
+                ZIMG_BUF_STRIDE = buf.varHandle(*planePath, groupElement("stride")).withInvokeExactBehavior()
+                ZIMG_BUF_MASK = buf.varHandle(*planePath, groupElement("mask")).withInvokeExactBehavior()
             }
 
             private fun zimgRange(range: Int): Int = when (range) {

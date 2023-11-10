@@ -36,7 +36,7 @@ fun Font.getFontFile(): Path {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is PhysicalFont)
         throw IllegalArgumentException("A non-physical font has no font file.")
-    return Path(get_platName(font2D) as String)
+    return Path(get_platName.invokeExact(font2D as PhysicalFont) as String)
 }
 
 
@@ -53,7 +53,7 @@ fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return@computeIfAbsent EMPTY_FONT_STRINGS
-    val nameTable = getTableBuffer(font2D, TrueTypeFont.nameTag) as ByteBuffer?
+    val nameTable = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.nameTag) as ByteBuffer?
     if (nameTable == null || nameTable.capacity() < 6)
         return@computeIfAbsent EMPTY_FONT_STRINGS
     val nameCount = nameTable.getShort(2).toUShort().toInt()
@@ -77,7 +77,8 @@ fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
         val targetMap = nameMaps[nameId] ?: continue
         val stringBytes = ByteArray(stringLength)
         nameTable.get(stringOffset, stringBytes)
-        val string = makeString(font2D, stringBytes, stringLength, platformId, encodingId) as String
+        val string = makeString.invokeExact(font2D as TrueTypeFont, stringBytes, stringLength, platformId, encodingId)
+                as String
         val locale = if (platformId == MAC_PLATFORM) Locale.US else LCID_TO_LOCALE[languageId] ?: continue
         targetMap[locale] = string.trim()
     }
@@ -100,8 +101,8 @@ private val LCID_TO_LOCALE: Map<Short, Locale> = HashMap<Short, Locale>().apply 
 }
 
 
-fun Font.getWeight(): Int = getWeight(FontUtilities.getFont2D(this)) as Int
-fun Font.getWidth(): Int = getWidth(FontUtilities.getFont2D(this)) as Int
+fun Font.getWeight(): Int = FontUtilities.getFont2D(this).weight
+fun Font.getWidth(): Int = FontUtilities.getFont2D(this).width
 fun Font.isItalic2D(): Boolean = (FontUtilities.getFont2D(this) as Font2D).style and Font.ITALIC != 0
 
 
@@ -114,8 +115,8 @@ fun Font.getSuperscriptMetrics(): SuperscriptMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toDouble()
-    val os2Table = getTableBuffer(font2D, TrueTypeFont.os_2Tag) as ByteBuffer?
+    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D) as Long).toDouble()
+    val os2Table = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 26)
         return null
     val subscriptYSize = os2Table.getShort(12)
@@ -137,8 +138,8 @@ fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm(font2D) as Long).toDouble()
-    val os2Table = getTableBuffer(font2D, TrueTypeFont.os_2Tag) as ByteBuffer?
+    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D) as Long).toDouble()
+    val os2Table = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 90 || os2Table.getShort(0) /* version */ < 2)
         return null
     val xHeight = os2Table.getShort(86)
@@ -152,8 +153,8 @@ fun Font.getSupportedFeatures(): SortedSet<String> = supportedFeaturesCache.comp
     if (font2D !is TrueTypeFont)
         return@computeIfAbsent Collections.emptySortedSet()
     val feats = TreeSet<String>() // ordered alphabetically
-    extractFeatures(getTableBuffer(font2D, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
-    extractFeatures(getTableBuffer(font2D, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)
+    extractFeatures(getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
+    extractFeatures(getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)
     feats
 }
 
@@ -173,7 +174,7 @@ private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {
 
 
 fun Font2D.getTableBytes(tag: Int): ByteArray? =
-    getTableBytes(this, tag) as ByteArray?
+    getTableBytes.invokeExact(this, tag) as ByteArray?
 
 
 fun TextLayout.getGlyphVectors(): List<GlyphVector> {
@@ -207,8 +208,8 @@ fun TextLayout.getGlyphVectorX(gvIdx: Int): Float {
 }
 
 
-fun GlyphLayout.LayoutEngineKey.getFont(): Font2D = font(this) as Font2D
-fun GlyphLayout.LayoutEngineKey.getScript(): Int = script(this) as Int
+fun GlyphLayout.LayoutEngineKey.getFont(): Font2D = font.invokeExact(this) as Font2D
+fun GlyphLayout.LayoutEngineKey.getScript(): Int = script.invokeExact(this) as Int
 
 
 fun changeLocaleOfToolkitResources(locale: Locale) {
@@ -227,11 +228,11 @@ fun changeLocaleOfToolkitResources(locale: Locale) {
 fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: FloatArray, bytesPerGlyph: Int) {
     require(glyphs.size == shifts.size + 1)
 
-    val os = get_output(this) as OutputStream
+    val os = get_output.invokeExact(this) as OutputStream
     os.write('['.code)
     for (idx in glyphs.indices) {
         if (idx != 0)
-            writeOperandFloat(this, shifts[idx - 1])
+            writeOperandFloat.invokeExact(this, shifts[idx - 1])
 
         val glyph = glyphs[idx]
         val glyphBytes = ByteArray(bytesPerGlyph)
@@ -244,7 +245,7 @@ fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: Floa
 
 
 fun resolveGnomeFont(): Font {
-    return getGnomeFont() as Font
+    return getGnomeFont.invokeExact() as Font
 }
 
 
@@ -273,10 +274,6 @@ private val getGnomeFont = LinuxFontPolicy
 private val resources = Toolkit::class.java.findStaticVar("resources", ResourceBundle::class.java)
 private val platformResources = Toolkit::class.java.findStaticVar("platformResources", ResourceBundle::class.java)
 
-private val getWeight = Font2D::class.java
-    .findVirtual("getWeight", methodType(Int::class.java))
-private val getWidth = Font2D::class.java
-    .findVirtual("getWidth", methodType(Int::class.java))
 private val getTableBytes = Font2D::class.java
     .findVirtual("getTableBytes", methodType(ByteArray::class.java, Int::class.java))
 private val getUnitsPerEm = Font2D::class.java
@@ -314,6 +311,7 @@ private fun Class<*>.findStatic(name: String, type: MethodType) =
 
 private fun Class<*>.findStaticVar(name: String, type: Class<*>) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findStaticVarHandle(this, name, type)
+        .withInvokeExactBehavior()
 
 private fun Class<*>.findVirtual(name: String, type: MethodType) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findVirtual(this, name, type)

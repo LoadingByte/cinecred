@@ -166,7 +166,9 @@ val drawSplash by tasks.registering(DrawSplash::class) {
 }
 
 val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
-    configuration.set(configurations.runtimeClasspath)
+    artifactIds.set(
+        configurations.runtimeClasspath.flatMap { it.incoming.artifacts.resolvedArtifacts }.map { it.map { a -> a.id } }
+    )
     outputDir.set(layout.buildDirectory.dir("generated/licenses"))
 }
 
@@ -181,12 +183,14 @@ tasks.processResources {
     }
     // Collect all licenses (and related files) from the dependencies.
     // Rename these files such that each one carries the name of the JAR it originated from.
-    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts)
-        from(zipTree(dep.file)) {
+    for (artifact in configurations.runtimeClasspath.get().incoming.artifacts.resolvedArtifacts.get()) {
+        val id = artifact.id.componentIdentifier as? ModuleComponentIdentifier ?: continue
+        from(zipTree(artifact.file)) {
             include(listOf("COPYRIGHT", "LICENSE", "NOTICE", "README").map { "**/*$it*" })
-            eachFile { path = "licenses/libraries/${dep.name}-${file.nameWithoutExtension}" }
+            eachFile { path = "licenses/libraries/${id.module}-${file.nameWithoutExtension}" }
             includeEmptyDirs = false
         }
+    }
     into("licenses/libraries") {
         from(collectPOMLicenses)
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -198,11 +202,11 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory
         from(srcMainNatives(platform))
-        for (dep in natives.getValue(platform).resolvedConfiguration.resolvedArtifacts)
-            if (dep.file.extension == platform.os.nativesExt)
-                from(dep.file)
+        for (file in natives.getValue(platform))
+            if (file.extension == platform.os.nativesExt)
+                from(file)
             else
-                from(zipTree(dep.file)) {
+                from(zipTree(file)) {
                     include("**/*.${platform.os.nativesExt}*")
                     exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
                 }
@@ -321,7 +325,7 @@ val preparePackaging by tasks.registering {
 
 
 val mergeServices by tasks.registering(MergeServices::class) {
-    configuration.set(configurations.runtimeClasspath)
+    classpath.from(configurations.runtimeClasspath)
     outputDir.set(layout.buildDirectory.dir("generated/allJar/services"))
 }
 
@@ -336,10 +340,9 @@ val allJar by tasks.registering(Jar::class) {
     )
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(sourceSets.main.map { it.output })
-    for (dep in configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts)
-        from(zipTree(dep.file)) {
-            exclude("META-INF/**", "**/module-info.class")
-        }
+    from(configurations.runtimeClasspath.map { it.map(::zipTree) }) {
+        exclude("META-INF/**", "**/module-info.class")
+    }
     into("META-INF/services") {
         from(mergeServices)
     }

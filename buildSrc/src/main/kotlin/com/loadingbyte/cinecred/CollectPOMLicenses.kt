@@ -1,9 +1,10 @@
 package com.loadingbyte.cinecred
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -18,21 +19,21 @@ import javax.xml.xpath.XPathFactory
 abstract class CollectPOMLicenses : DefaultTask() {
 
     @get:Input
-    abstract val configuration: Property<Configuration>
+    abstract val artifactIds: ListProperty<ComponentArtifactIdentifier>
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
     fun run() {
-        val configuration = configuration.get()
+        val artifactIds = artifactIds.get()
         val outputDir = outputDir.get().asFile
 
         outputDir.deleteRecursively()
         outputDir.mkdirs()
-        for (dep in configuration.resolvedConfiguration.resolvedArtifacts) {
-            val id = dep.moduleVersion.id
-            resolveLicenseElements(id.group, id.name, id.version)?.let { licenseElems ->
-                val content = StringBuilder("${id.group}:${id.name} is licensed under:").appendLine()
+        for (artifactId in artifactIds) {
+            val id = artifactId.componentIdentifier as? ModuleComponentIdentifier ?: continue
+            resolveLicenseElements(id.group, id.module, id.version)?.let { licenseElems ->
+                val content = StringBuilder("${id.group}:${id.module} is licensed under:").appendLine()
                 for (idx in 0 until licenseElems.length) {
                     val licenseElem = licenseElems.item(idx) as Element
                     val urlElems = licenseElem.getElementsByTagName("url")
@@ -40,7 +41,7 @@ abstract class CollectPOMLicenses : DefaultTask() {
                     if (urlElems.length != 0)
                         content.appendLine(urlElems.item(0).textContent)
                 }
-                outputDir.resolve("${dep.name}-LICENSE").writeText(content.toString())
+                outputDir.resolve("${id.module}-LICENSE").writeText(content.toString())
             }
         }
     }

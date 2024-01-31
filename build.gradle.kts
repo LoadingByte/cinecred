@@ -1,7 +1,6 @@
 import com.loadingbyte.cinecred.*
 import com.loadingbyte.cinecred.Platform
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.time.Year
 import java.util.*
@@ -45,7 +44,7 @@ sourceSets {
 
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(jdkVersion))
+    toolchain.languageVersion = JavaLanguageVersion.of(jdkVersion)
 }
 
 val natives = Platform.values().associateWith { platform ->
@@ -134,7 +133,7 @@ configurations.configureEach {
 
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(jdkVersion)
+    options.release = jdkVersion
     options.compilerArgs = listOf("--enable-preview", "--add-modules", addModules.joinToString(","))
 }
 
@@ -148,28 +147,27 @@ tasks.test {
 
 
 val writeVersionFile by tasks.registering(WriteFile::class) {
-    text.set(version.toString())
-    outputFile.set(layout.buildDirectory.file("generated/version/version"))
+    text = version.toString()
+    outputFile = layout.buildDirectory.file("generated/version/version")
 }
 
 val writeCopyrightFile by tasks.registering(WriteFile::class) {
-    text.set(copyright)
-    outputFile.set(layout.buildDirectory.file("generated/copyright/copyright"))
+    text = copyright
+    outputFile = layout.buildDirectory.file("generated/copyright/copyright")
 }
 
 val drawSplash by tasks.registering(DrawSplash::class) {
-    version.set(project.version.toString())
-    logoFile.set(srcMainResources.file("logo.svg"))
-    reguFontFile.set(srcMainResources.file("fonts/Titillium-RegularUpright.otf"))
-    semiFontFile.set(srcMainResources.file("fonts/Titillium-SemiboldUpright.otf"))
-    outputFile.set(layout.buildDirectory.file("generated/splash/splash.png"))
+    version = project.version.toString()
+    logoFile = srcMainResources.file("logo.svg")
+    reguFontFile = srcMainResources.file("fonts/Titillium-RegularUpright.otf")
+    semiFontFile = srcMainResources.file("fonts/Titillium-SemiboldUpright.otf")
+    outputFile = layout.buildDirectory.file("generated/splash/splash.png")
 }
 
 val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
-    artifactIds.set(
+    artifactIds =
         configurations.runtimeClasspath.flatMap { it.incoming.artifacts.resolvedArtifacts }.map { it.map { a -> a.id } }
-    )
-    outputDir.set(layout.buildDirectory.dir("generated/licenses"))
+    outputDir = layout.buildDirectory.dir("generated/licenses")
 }
 
 tasks.processResources {
@@ -230,7 +228,7 @@ for (platform in Platform.values()) {
         description = "Runs the program on ${platform.label.capitalized()}."
         dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
-        mainClass.set(mainClass_)
+        mainClass = mainClass_
         jvmArgs = jvmArgs_
     }
     tasks.register<JavaExec>("runDemoOn${platform.label.capitalized()}") {
@@ -238,7 +236,7 @@ for (platform in Platform.values()) {
         description = "Runs the demo on ${platform.label.capitalized()}."
         dependsOn(platformNatives)
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
-        mainClass.set("com.loadingbyte.cinecred.DemoMain")
+        mainClass = "com.loadingbyte.cinecred.DemoMain"
         jvmArgs = jvmArgs_ + listOf("--add-opens", "java.desktop/javax.swing=ALL-UNNAMED")
     }
 }
@@ -247,12 +245,12 @@ for (platform in Platform.values()) {
 val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
     // Draw the images that are needed for the OS.
     tasks.register<DrawImages>("draw${os.slug.capitalized()}Images") {
-        version.set(project.version.toString())
-        forOS.set(os)
-        logoFile.set(srcMainResources.file("logo.svg"))
-        semiFontFile.set(srcMainResources.file("fonts/Titillium-SemiboldUpright.otf"))
-        boldFontFile.set(srcMainResources.file("fonts/Titillium-BoldUpright.otf"))
-        outputDir.set(layout.buildDirectory.dir("generated/packaging/${os.slug}"))
+        version = project.version.toString()
+        forOS = os
+        logoFile = srcMainResources.file("logo.svg")
+        semiFontFile = srcMainResources.file("fonts/Titillium-SemiboldUpright.otf")
+        boldFontFile = srcMainResources.file("fonts/Titillium-BoldUpright.otf")
+        outputDir = layout.buildDirectory.dir("generated/packaging/${os.slug}")
     }
 }
 
@@ -326,13 +324,13 @@ val preparePackaging by tasks.registering {
 
 val mergeServices by tasks.registering(MergeServices::class) {
     classpath.from(configurations.runtimeClasspath)
-    outputDir.set(layout.buildDirectory.dir("generated/allJar/services"))
+    outputDir = layout.buildDirectory.dir("generated/allJar/services")
 }
 
 val allJar by tasks.registering(Jar::class) {
     group = "Build"
     description = "Assembles a jar archive containing the program classes and all dependencies, excluding natives."
-    archiveClassifier.set("all")
+    archiveClassifier = "all"
     manifest.attributes(
         "Main-Class" to mainClass,
         "SplashScreen-Image" to splashScreen,
@@ -350,51 +348,51 @@ val allJar by tasks.registering(Jar::class) {
 
 
 val checkoutHarfBuzz by tasks.registering(CheckoutGitRef::class) {
-    uri.set("https://github.com/harfbuzz/harfbuzz.git")
-    ref.set(harfBuzzVersion)
-    repositoryDir.set(layout.buildDirectory.dir("repositories/harfbuzz"))
+    uri = "https://github.com/harfbuzz/harfbuzz.git"
+    ref = harfBuzzVersion
+    repositoryDir = layout.buildDirectory.dir("repositories/harfbuzz")
 }
 
 val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
-    uri.set("https://github.com/sekrit-twc/zimg.git")
-    ref.set(zimgVersion)
-    repositoryDir.set(layout.buildDirectory.dir("repositories/zimg"))
+    uri = "https://github.com/sekrit-twc/zimg.git"
+    ref = zimgVersion
+    repositoryDir = layout.buildDirectory.dir("repositories/zimg")
 }
 
 for (platform in Platform.values()) {
     tasks.register<BuildHarfBuzz>("buildHarfBuzzFor${platform.label.capitalized()}") {
         group = "Native"
         description = "Builds the HarfBuzz native library for ${platform.label.capitalized()}."
-        forPlatform.set(platform)
-        repositoryDir.set(checkoutHarfBuzz.flatMap { it.repositoryDir })
-        outputFile.set(srcMainNatives(platform, "harfbuzz"))
+        forPlatform = platform
+        repositoryDir = checkoutHarfBuzz.flatMap { it.repositoryDir }
+        outputFile = srcMainNatives(platform, "harfbuzz")
     }
 
     tasks.register<BuildZimg>("buildZimgFor${platform.label.capitalized()}") {
         group = "Native"
         description = "Builds the zimg native library for ${platform.label.capitalized()}."
-        forPlatform.set(platform)
-        repositoryDir.set(checkoutZimg.flatMap { it.repositoryDir })
-        outputFile.set(srcMainNatives(platform, "zimg"))
+        forPlatform = platform
+        repositoryDir = checkoutZimg.flatMap { it.repositoryDir }
+        outputFile = srcMainNatives(platform, "zimg")
     }
 }
 
 tasks.register<Jextract>("jextractHarfBuzz") {
     group = "Native"
     description = "Extracts Java bindings for the HarfBuzz native library."
-    targetPackage.set("com.loadingbyte.cinecred.natives.harfbuzz")
+    targetPackage = "com.loadingbyte.cinecred.natives.harfbuzz"
     addHarfBuzzIncludes()
-    includeDir.set(checkoutHarfBuzz.flatMap { it.repositoryDir }.map { it.dir("src") })
-    headerFile.set(includeDir.map { it.file("hb.h") })
-    outputDir.set(srcMainJava)
+    includeDir = checkoutHarfBuzz.flatMap { it.repositoryDir }.map { it.dir("src") }
+    headerFile = includeDir.map { it.file("hb.h") }
+    outputDir = srcMainJava
 }
 
 tasks.register<Jextract>("jextractZimg") {
     group = "Native"
     description = "Extracts Java bindings for the zimg native library."
-    targetPackage.set("com.loadingbyte.cinecred.natives.zimg")
-    headerFile.set(checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") })
-    outputDir.set(srcMainJava)
+    targetPackage = "com.loadingbyte.cinecred.natives.zimg"
+    headerFile = checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") }
+    outputDir = srcMainJava
 }
 
 
@@ -419,3 +417,6 @@ val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
         throw GradleException("No l10n files have been found; has the l10n system changed?")
     result
 }
+
+
+fun String.capitalized(): String = replaceFirstChar(Char::uppercase)

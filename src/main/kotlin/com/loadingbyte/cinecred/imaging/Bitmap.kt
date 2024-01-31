@@ -8,7 +8,6 @@ import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.Pointer
-import java.io.Closeable
 import java.lang.Byte.toUnsignedLong
 import java.lang.Float.float16ToFloat
 import java.lang.Float.floatToFloat16
@@ -29,7 +28,7 @@ import java.nio.ByteOrder
  *
  * Bitmaps are memory-managed by the garbage collector. Still, if need be, they can be released early via [close].
  */
-class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : Closeable {
+class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : AutoCloseable {
 
     init {
         CLEANER.register(this, CleanerAction(_frame))

@@ -9,7 +9,6 @@ import java.awt.Color
 import java.awt.GradientPaint
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
-import java.io.Closeable
 import java.lang.ref.SoftReference
 import java.util.*
 import java.util.concurrent.Executors
@@ -361,7 +360,7 @@ class DeferredVideo private constructor(
         tapeLayers: List<DeferredImage.Layer>,
         private val grounding: Color?,
         private val spec: Bitmap.Spec
-    ) : Closeable {
+    ) : AutoCloseable {
 
         init {
             require(video.resolution == spec.resolution)

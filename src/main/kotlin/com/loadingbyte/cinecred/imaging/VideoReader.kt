@@ -13,7 +13,6 @@ import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avformat.*
 import org.bytedeco.ffmpeg.global.avutil.*
-import java.io.Closeable
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.isRegularFile
@@ -35,7 +34,7 @@ class VideoReader(
      * in the video to start reading. Be aware that reading can start earlier than this timecode, but never later.
      */
     startTimecode: Timecode?
-) : Closeable {
+) : AutoCloseable {
 
     class Frame(val bitmap: Bitmap, val timecode: Timecode)
 

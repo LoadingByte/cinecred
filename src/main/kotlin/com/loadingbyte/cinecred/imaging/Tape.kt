@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
 import java.awt.image.BufferedImage
-import java.io.Closeable
 import java.io.IOException
 import java.lang.ref.SoftReference
 import java.nio.file.Path
@@ -23,7 +22,7 @@ class Tape private constructor(
     val edlFilename: String,
     firstNumber: Int,
     lastNumber: Int
-) : Closeable {
+) : AutoCloseable {
 
     private val zeroTimecode: Timecode?
         get() = if (fileSeq) availableRange.start else null
@@ -324,7 +323,7 @@ class Tape private constructor(
 
 
     /** A wrapper around [VideoReader] for obtaining frames at monotonically increasing arbitrary timecodes. */
-    inner class SequentialReader(private val startTimecode: Timecode) : Closeable {
+    inner class SequentialReader(private val startTimecode: Timecode) : AutoCloseable {
 
         private val videoReader = VideoReader(fileOrPattern, startTimecode)
 
@@ -410,7 +409,7 @@ class Tape private constructor(
         private val createLoader: (start: Int) -> Loader<I>
     ) {
 
-        interface Loader<I> : Closeable {
+        interface Loader<I> : AutoCloseable {
             fun loadNextItem(): I
         }
 

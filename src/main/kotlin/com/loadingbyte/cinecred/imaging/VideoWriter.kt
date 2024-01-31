@@ -14,7 +14,6 @@ import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avformat.*
 import org.bytedeco.ffmpeg.global.avutil.*
-import java.io.Closeable
 import java.nio.file.Path
 import kotlin.io.path.name
 import kotlin.io.path.pathString
@@ -33,7 +32,7 @@ class VideoWriter(
     codecProfile: Int,
     codecOptions: Map<String, String>,
     muxerOptions: Map<String, String>
-) : Closeable {
+) : AutoCloseable {
 
     private var oc: AVFormatContext? = null
     private var st: AVStream? = null

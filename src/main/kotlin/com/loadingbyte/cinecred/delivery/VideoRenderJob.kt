@@ -49,7 +49,9 @@ class VideoRenderJob(
         // that no information is lost.
         val deeperPixelFormat = if (transparentGrounding) format.deeperAlphaPixelFormat else format.deeperPixelFormat
         val pixelFormat = if (deeperPixelFormat != null &&
-            video.collectTapeSpans(listOf(TAPES)).any { it.embeddedTape.tape.exceeds8Bit }
+            video.collectTapeSpans(listOf(TAPES)).any { tapeSpan ->
+                tapeSpan.embeddedTape.tape.spec.representation.pixelFormat.components.any { it.depth > 8 }
+            }
         ) deeperPixelFormat else if (transparentGrounding) format.alphaPixelFormat!! else format.pixelFormat
 
         val spec = Bitmap.Spec(

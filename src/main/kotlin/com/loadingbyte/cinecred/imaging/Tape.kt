@@ -34,21 +34,17 @@ class Tape private constructor(
 
     private var metadataInitialized = false
     private var metadataInitException: Exception? = null
-    private var _resolution: Resolution? = null
+    private var _spec: Bitmap.Spec? = null
     private var _fps: FPS? = null
-    private var _exceeds8Bit: Boolean = false
     private var _availableRange: OpenEndRange<Timecode>? = if (!fileSeq) null else
         Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
 
     /** @throws Exception */
-    val resolution: Resolution
-        get() = run { ensureMetadataIsInitialized(); _resolution!! }
+    val spec: Bitmap.Spec
+        get() = run { ensureMetadataIsInitialized(); _spec!! }
     /** @throws Exception */
     val fps: FPS?
         get() = run { ensureMetadataIsInitialized(); _fps }
-    /** @throws Exception */
-    val exceeds8Bit: Boolean
-        get() = run { ensureMetadataIsInitialized(); _exceeds8Bit }
     /** @throws Exception */
     val availableRange: OpenEndRange<Timecode>
         get() = if (fileSeq) _availableRange!! else run { ensureMetadataIsInitialized(); _availableRange!! }
@@ -63,9 +59,8 @@ class Tape private constructor(
             val start: Timecode.Clock?
             val dur: Timecode.Clock?
             VideoReader(fileOrPattern, zeroTimecode).use { videoReader ->
-                _resolution = videoReader.spec.resolution
+                _spec = videoReader.spec
                 _fps = videoReader.fps
-                _exceeds8Bit = videoReader.spec.representation.pixelFormat.components.any { it.depth > 8 }
                 start = if (fileSeq) null else videoReader.read()!!.timecode as Timecode.Clock
                 dur = videoReader.estimatedDuration
             }
@@ -375,7 +370,7 @@ class Tape private constructor(
         enum class Align { START, MIDDLE, END }
 
         /** @throws Exception */
-        constructor(tape: Tape) : this(tape, tape.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
+        constructor(tape: Tape) : this(tape, tape.spec.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
 
         init {
             require(resolution.run { widthPx > 0 && heightPx > 0 })
@@ -387,12 +382,12 @@ class Tape private constructor(
         }
 
         fun withWidthPreservingAspectRatio(width: Int): Embedded {
-            val base = tape.resolution
+            val base = tape.spec.resolution
             return copy(resolution = Resolution(width, roundingDiv(base.heightPx * width, base.widthPx)))
         }
 
         fun withHeightPreservingAspectRatio(height: Int): Embedded {
-            val base = tape.resolution
+            val base = tape.spec.resolution
             return copy(resolution = Resolution(roundingDiv(base.widthPx * height, base.heightPx), height))
         }
 

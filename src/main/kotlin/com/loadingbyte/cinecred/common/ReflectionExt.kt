@@ -3,6 +3,7 @@
 package com.loadingbyte.cinecred.common
 
 import org.apache.pdfbox.contentstream.operator.OperatorName
+import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.pdfwriter.COSWriter
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.poi.util.LocaleID
@@ -225,10 +226,18 @@ fun changeLocaleOfToolkitResources(locale: Locale) {
 }
 
 
+fun appendCOSName(contentStream: Any /* PD(Page|Form)ContentStream */, name: COSName) {
+    name.writePDF(get_outputStream(contentStream) as OutputStream)
+}
+
+fun appendRawCommands(contentStream: Any /* PD(Page|Form)ContentStream */, commands: String) {
+    (get_outputStream(contentStream) as OutputStream).write(commands.toByteArray(Charsets.US_ASCII))
+}
+
 fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: FloatArray, bytesPerGlyph: Int) {
     require(glyphs.size == shifts.size + 1)
 
-    val os = get_output.invokeExact(this) as OutputStream
+    val os = get_outputStream(this) as OutputStream
     os.write('['.code)
     for (idx in glyphs.indices) {
         if (idx != 0)
@@ -266,6 +275,7 @@ fun trySetAWTAppClassNameLinux(awtAppClassName: String) {
 
 private val TextLine = Class.forName("java.awt.font.TextLine")
 private val ExtendedTextSourceLabel = Class.forName("sun.font.ExtendedTextSourceLabel")
+private val PDAbstractContentStream = Class.forName("org.apache.pdfbox.pdmodel.PDAbstractContentStream")
 private val LinuxFontPolicy = Class.forName("com.formdev.flatlaf.LinuxFontPolicy")
 
 private val getGnomeFont = LinuxFontPolicy
@@ -303,7 +313,7 @@ private val get_platName = PhysicalFont::class.java.findGetter("platName", Strin
 private val get_textLine = TextLayout::class.java.findGetter("textLine", TextLine)
 private val get_fComponents = TextLine.findGetter("fComponents", TextLineComponent::class.java.arrayType())
 private val get_locs = TextLine.findGetter("locs", FloatArray::class.java)
-private val get_output = PDPageContentStream::class.java.findGetter("output", OutputStream::class.java)
+private val get_outputStream = PDAbstractContentStream.findGetter("outputStream", OutputStream::class.java)
 
 
 private fun Class<*>.findStatic(name: String, type: MethodType) =

@@ -89,7 +89,7 @@ dependencies {
     implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
 
     // PDF IO
-    implementation("org.apache.pdfbox", "pdfbox", "2.0.28")
+    implementation("org.apache.pdfbox", "pdfbox", "3.0.2")
     implementation("de.rototor.pdfbox", "graphics2d", "0.42")
 
     // Video IO

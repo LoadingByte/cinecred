@@ -11,17 +11,16 @@ import org.apache.fontbox.ttf.TTFParser
 import org.apache.fontbox.ttf.TrueTypeCollection
 import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.cos.*
+import org.apache.pdfbox.io.RandomAccessReadBufferedFile
 import org.apache.pdfbox.multipdf.LayerUtility
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.pdmodel.PDPage
-import org.apache.pdfbox.pdmodel.PDPageContentStream
-import org.apache.pdfbox.pdmodel.PDResources
+import org.apache.pdfbox.pdmodel.*
 import org.apache.pdfbox.pdmodel.common.PDRange
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2
 import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
@@ -1088,7 +1087,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         // Paint the alpha gradient into the XObject.
                         val trGroupPatternName =
                             pdTrGroupResources.add(makeShadingPattern(coat, forAlpha = true))
-                        PDPageContentStream(doc, pdTrGroup, pdTrGroup.stream.createOutputStream()).use { csTr ->
+                        PDFormContentStream(pdTrGroup).use { csTr ->
                             csTr.saveGraphicsState()
                             csTr.setPattern(trGroupPatternName, stroking = false)
                             csTr.addRect(bboxX, bboxY, bboxW, bboxH)
@@ -1152,13 +1151,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
         }
 
-        @Suppress("DEPRECATION")
-        private fun PDPageContentStream.setPattern(patternName: COSName, stroking: Boolean) {
+        private fun Any /* PD(Page|Form)ContentStream */.setPattern(patternName: COSName, stroking: Boolean) {
             val opCS = if (stroking) OperatorName.STROKING_COLORSPACE else OperatorName.NON_STROKING_COLORSPACE
             val opSCN = if (stroking) OperatorName.STROKING_COLOR_N else OperatorName.NON_STROKING_COLOR_N
-            appendRawCommands("/Pattern $opCS\n")
-            appendCOSName(patternName)
-            appendRawCommands(" $opSCN\n")
+            appendRawCommands(this, "/Pattern $opCS\n")
+            appendCOSName(this, patternName)
+            appendRawCommands(this, " $opSCN\n")
         }
 
         private fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont {
@@ -1178,12 +1176,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                                         "'{}' which lead to that file can for some reason not be found in there."
                                 LOGGER.error(msg, fontFile, psName)
                                 // Memoize the fallback font to avoid trying to load the font file again.
-                                docRes.pdFonts[psName] = PDType1Font.HELVETICA
+                                docRes.pdFonts[psName] = PDType1Font(Standard14Fonts.FontName.HELVETICA)
                             }
                         }
                         // OpenType Font
                         0x4F54544F ->
-                            docRes.pdFonts[psName] = PDType0Font.load(doc, OTFParser().parse(fontFile), false)
+                            docRes.pdFonts[psName] =
+                                PDType0Font.load(doc, OTFParser().parse(RandomAccessReadBufferedFile(fontFile)), false)
                         // TrueType Font
                         else ->
                             // Here, one could theoretically enable embedSubset. However, our string writing logic
@@ -1191,12 +1190,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             // the only way we can leverage the power of TextLayout and also the only way we can write
                             // some special ligatures that have no unicode codepoint. Now, since PDFBox's font
                             // subsetting mechanism only works on codepoints and not on glyphs, we cannot use it.
-                            docRes.pdFonts[psName] = PDType0Font.load(doc, TTFParser().parse(fontFile), false)
+                            docRes.pdFonts[psName] =
+                                PDType0Font.load(doc, TTFParser().parse(RandomAccessReadBufferedFile(fontFile)), false)
                     }
                 } catch (e: Exception) {
                     LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
                     // Memoize the fallback font to avoid trying to load the font file again.
-                    docRes.pdFonts[psName] = PDType1Font.HELVETICA
+                    docRes.pdFonts[psName] = PDType1Font(Standard14Fonts.FontName.HELVETICA)
                 }
 
             return docRes.pdFonts.getValue(psName)

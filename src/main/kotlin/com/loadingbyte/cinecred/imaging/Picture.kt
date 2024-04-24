@@ -15,6 +15,7 @@ import org.apache.batik.bridge.SVGUtilities
 import org.apache.batik.bridge.svg12.SVG12BridgeContext
 import org.apache.batik.gvt.GraphicsNode
 import org.apache.batik.util.XMLResourceDescriptor
+import org.apache.pdfbox.Loader
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
@@ -308,9 +309,7 @@ sealed interface Picture : Closeable {
         }
 
         private fun loadPDF(pdfFile: Path): PDF {
-            // Note: We manually create an input stream and pass it to PDDocument.load() because when passing a
-            // file object to that method and letting PDFBox create the input stream, it seems to forget to close it.
-            val doc = pdfFile.inputStream().use { stream -> PDDocument.load(stream) }
+            val doc = Loader.loadPDF(pdfFile.toFile())
             if (doc.numberOfPages != 0)
                 return PDF(doc)
             else

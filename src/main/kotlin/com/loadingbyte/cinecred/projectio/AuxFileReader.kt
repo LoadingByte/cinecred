@@ -36,7 +36,7 @@ fun tryReadPictureLoader(pictureFile: Path): PictureLoader? =
 class PictureLoader(file: Path) {
     private val lazy = lazy {
         try {
-            Picture.read(file)
+            Picture.load(file)
         } catch (e: Exception) {
             LOGGER.error("Skipping picture '{}' because it is corrupt or cannot be read.", file, e)
             null

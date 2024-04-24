@@ -1,9 +1,7 @@
 package com.loadingbyte.cinecred.imaging
 
 import org.bytedeco.ffmpeg.avutil.AVDictionary
-import org.bytedeco.ffmpeg.global.avutil
-import org.bytedeco.ffmpeg.global.avutil.av_dict_free
-import org.bytedeco.ffmpeg.global.avutil.av_dict_set
+import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Pointer
 import java.lang.foreign.MemorySegment
@@ -61,8 +59,8 @@ fun Int.ffmpegThrowIfErrnum(message: String): Int =
 
 // Replicates the macro of the same name from error.h.
 private fun err2str(errnum: Int): String {
-    val string = BytePointer(avutil.AV_ERROR_MAX_STRING_SIZE.toLong())
-    avutil.av_make_error_string(string, avutil.AV_ERROR_MAX_STRING_SIZE.toLong(), errnum)
+    val string = BytePointer(AV_ERROR_MAX_STRING_SIZE.toLong())
+    av_make_error_string(string, AV_ERROR_MAX_STRING_SIZE.toLong(), errnum)
     string.limit(BytePointer.strlen(string))
     return string.string
 }

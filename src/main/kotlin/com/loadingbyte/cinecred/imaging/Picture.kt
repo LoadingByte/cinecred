@@ -256,7 +256,7 @@ sealed interface Picture : Closeable {
         val EXTS = (RASTER_EXTS + SVG_EXT + PDF_EXT + POSTSCRIPT_EXTS).toSortedSet(String.CASE_INSENSITIVE_ORDER)
 
         /** @throws Exception */
-        fun read(file: Path): Picture {
+        fun load(file: Path): Picture {
             val ext = file.extension
             if (file.isRegularFile())
                 when {

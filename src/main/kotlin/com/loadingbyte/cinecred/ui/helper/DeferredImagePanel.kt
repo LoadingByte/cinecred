@@ -107,7 +107,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     private var lowResMaterialized: BufferedImage? = null
     private val materializingJobSlot = JobSlot()
 
-    private val canvas = Canvas()
+    private val canvas = CanvasPanel()
     private val xScrollbar = Scrollbar(JScrollBar.HORIZONTAL)
     private val yScrollbar = Scrollbar(JScrollBar.VERTICAL)
     private var disableScrollbarListeners = false
@@ -409,7 +409,7 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
     }
 
 
-    private inner class Canvas : JPanel() {
+    private inner class CanvasPanel : JPanel() {
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)

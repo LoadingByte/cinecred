@@ -326,10 +326,18 @@ class Tape private constructor(
         private var behind: VideoReader.Frame? = null
         private var ahead: VideoReader.Frame? = null
 
-        override fun close() = videoReader.close()
+        override fun close() {
+            videoReader.close()
+            behind?.run { bitmap.close() }
+            ahead?.run { bitmap.close() }
+        }
+
         val spec get() = videoReader.spec
 
-        /** Bitmaps returned by this method must NEVER be [Bitmap.close]d. */
+        /**
+         * Bitmaps returned by this method must NEVER be [Bitmap.close]d by the caller. They will however automatically
+         * be closed when the next frame is read or when the reader is closed. You can keep them around by making views.
+         */
         fun read(timecode: Timecode): VideoReader.Frame {
             require(timecode >= startTimecode) { "Timecode is lower than start timecode." }
             require(lastTimecode.let { it == null || timecode >= it }) { "Timecodes are not increasing." }

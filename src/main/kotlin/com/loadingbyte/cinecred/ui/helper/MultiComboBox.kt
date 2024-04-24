@@ -79,7 +79,6 @@ class MultiComboBox<E : Any>(
         }
         addMouseListener(toggleMouseListener)
         arrowButton.addMouseListener(toggleMouseListener)
-
     }
 
     var toString: (E) -> String = toString

@@ -100,6 +100,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         return view
     }
 
+    /** This method is guaranteed to return a new instance, which can be [close]d without closing the original one. */
     fun topFieldView(): Bitmap =
         when (spec.content) {
             Content.INTERLEAVED_FIELDS -> view(0, 0, spec.resolution.widthPx, spec.resolution.heightPx, 2)
@@ -107,6 +108,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
             else -> throw IllegalArgumentException("Cannot get top field view as bitmap is not interleaved fields.")
         }
 
+    /** This method is guaranteed to return a new instance, which can be [close]d without closing the original one. */
     fun botFieldView(): Bitmap =
         when (spec.content) {
             Content.INTERLEAVED_FIELDS -> view(0, 1, spec.resolution.widthPx, spec.resolution.heightPx - 1, 2)
@@ -134,14 +136,14 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val srcFrame = src.frame
         val dstFrame = frame
         val pixelFormat = spec.representation.pixelFormat
-        for (plane in 0..<4) {
-            val srcData = srcFrame.data(plane) ?: continue
+        for (plane in 0..<pixelFormat.planes) {
+            val srcData = srcFrame.data(plane)
             val dstData = dstFrame.data(plane)
             val srcLs = srcFrame.linesize(plane)
             val dstLs = dstFrame.linesize(plane)
             val step = pixelFormat.stepOfPlane(plane).toLong()
-            val hChromaSub = if (plane == 0) 0 else pixelFormat.hChromaSub
-            val vChromaSub = if (plane == 0) 0 else pixelFormat.vChromaSub
+            val hChromaSub = if (plane in 1..2) pixelFormat.hChromaSub else 0
+            val vChromaSub = if (plane in 1..2) pixelFormat.vChromaSub else 0
             var l = 0
             while (l < srcHeight shr vChromaSub) {
                 val srcPtr = srcData.position(((srcY shr vChromaSub) + l) * srcLs + (srcX shr hChromaSub) * step)
@@ -216,6 +218,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
         val content: Content
     ) {
         init {
+            require(resolution.widthPx > 0 && resolution.heightPx > 0)
             require((scan == Scan.PROGRESSIVE) == (content == Content.PROGRESSIVE_FRAME))
             // Disallow interlacing if vertical chroma subsampling is enabled, as that introduces all kinds of problems.
             require(scan == Scan.PROGRESSIVE || representation.pixelFormat.vChromaSub == 0) {
@@ -272,7 +275,7 @@ class Bitmap private constructor(val spec: Spec, private val _frame: AVFrame) : 
                 .ffmpegThrowIfNull("Could not retrieve pixel format descriptor")
             val f = desc.flags()
 
-            require(code != AV_PIX_FMT_XYZ12LE && code != AV_PIX_FMT_XYZ12BE) { "XYZ color space is not supported." }
+            require(code != AV_PIX_FMT_XYZ12LE && code != AV_PIX_FMT_XYZ12BE) { "XYZ pixel formats are not supported." }
             require(f and AV_PIX_FMT_FLAG_PAL.toLong() == 0L) { "Palette pixel formats are not supported." }
             require(f and AV_PIX_FMT_FLAG_BAYER.toLong() == 0L) { "Bayer pixel formats are not supported." }
             require(f and AV_PIX_FMT_FLAG_HWACCEL.toLong() == 0L) { "Hardware accel pixel formats are not supported." }

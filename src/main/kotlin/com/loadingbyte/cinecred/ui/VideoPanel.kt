@@ -182,7 +182,8 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
-                restartDrawing()
+                if (!actualSizeButton.isSelected)
+                    restartDrawing()
             }
         })
     }

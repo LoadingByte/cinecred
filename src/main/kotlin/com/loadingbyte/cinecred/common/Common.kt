@@ -241,9 +241,9 @@ val CONFIG_DIR: Path = when {
 
 
 val TRANSLATED_LOCALES: List<Locale> = listOf(
-    Locale.of("en"),
     Locale.of("cs"),
     Locale.of("de"),
+    Locale.of("en"),
     Locale.of("fr"),
     Locale.of("zh", "CN")
 )
@@ -277,7 +277,7 @@ fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): 
     var str = l10n(key, locale)
     if ("{{" in str || "}}" in str)
         str = str.replace(DOUBLE_BRACE_REGEX, "'$0'")
-    return MessageFormat.format(str, *effArgs)
+    return MessageFormat(str).format(effArgs)
 }
 
 fun comprehensivelyApplyLocale(locale: Locale) {
@@ -307,10 +307,7 @@ inline fun Node.forEachNodeInSubtree(whatToShow: Int, action: (Node) -> Unit) {
 
 
 // This is a reference font render context used to measure the size of fonts.
-val REF_FRC: FontRenderContext = BufferedImage(16, 16, BufferedImage.TYPE_3BYTE_BGR)
-    .createGraphics()
-    .apply { setHighQuality() }
-    .fontRenderContext
+val REF_FRC = FontRenderContext(null, true, true)
 
 
 fun AffineTransform.scale(s: Double) = scale(s, s)
@@ -344,8 +341,11 @@ inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
 
 inline fun Graphics2D.preserveTransform(block: () -> Unit) {
     val prevTransform = transform  // creates a defensive copy
-    block()
-    transform = prevTransform
+    try {
+        block()
+    } finally {
+        transform = prevTransform
+    }
 }
 
 
@@ -371,8 +371,6 @@ fun Graphics2D.setHighQuality() {
     // With pure strokes, layout guides turn out to look very uneven and often too dark.
     setRenderingHint(KEY_STROKE_CONTROL, VALUE_STROKE_NORMALIZE)
     setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
-    // Note that we not only activate fractional font metrics because the result obviously looks better, but also
-    // because if we don't, the getStringWidth() method sometimes yields incorrect results.
     setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }
 

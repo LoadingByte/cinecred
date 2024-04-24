@@ -47,7 +47,7 @@ class CustomGlyphLayoutEngine private constructor(
         Arena.ofConfined().use { arena ->
             // Create an HB font object with the requested size.
             val hbFont = hb_font_create(hbFace)
-            val fixedPtSize = (ptSize * FLOAT_TO_HB_FIXED).toUInt().toInt()
+            val fixedPtSize = (ptSize * FLOAT_TO_HB_FIXED).toInt()
             hb_font_set_scale(hbFont, fixedPtSize, fixedPtSize)
 
             // Create an HB buffer, configure it and fill it with the text.

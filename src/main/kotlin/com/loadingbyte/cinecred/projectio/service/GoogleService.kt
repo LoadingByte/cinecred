@@ -32,7 +32,6 @@ import org.apache.http.client.utils.URLEncodedUtils
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.StringReader
-import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.URI
@@ -459,7 +458,7 @@ object GoogleService : Service {
                     error = q["error"]
                     code = q["code"]
                     exchange.responseHeaders.add("Content-Type", "text/html")
-                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, 0)
+                    exchange.sendResponseHeaders(200, 0)
                     OutputStreamWriter(exchange.responseBody).apply { write(landingHtml(error)); flush() }
                     exchange.close()
                 } finally {

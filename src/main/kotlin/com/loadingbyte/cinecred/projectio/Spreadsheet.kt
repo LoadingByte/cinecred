@@ -145,7 +145,7 @@ class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
         for ((col, width) in look.colWidths.withIndex())
             sheet.setColumnWidth(col, width * 138)
 
-        file.outputStream().use(workbook::write)
+        file.outputStream().buffered().use(workbook::write)
     }
 
     private fun createDeduplicatedRowStyles(

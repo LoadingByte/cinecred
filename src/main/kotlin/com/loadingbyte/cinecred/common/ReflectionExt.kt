@@ -14,6 +14,7 @@ import java.awt.Window
 import java.awt.font.GlyphVector
 import java.awt.font.TextLayout
 import java.io.OutputStream
+import java.lang.Short.toUnsignedInt
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodType.methodType
@@ -57,8 +58,8 @@ fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
     val nameTable = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.nameTag) as ByteBuffer?
     if (nameTable == null || nameTable.capacity() < 6)
         return@computeIfAbsent EMPTY_FONT_STRINGS
-    val nameCount = nameTable.getShort(2).toUShort().toInt()
-    val stringAreaOffset = nameTable.getShort(4).toUShort().toInt()
+    val nameCount = toUnsignedInt(nameTable.getShort(2))
+    val stringAreaOffset = toUnsignedInt(nameTable.getShort(4))
 
     // These numbers are the name IDs associated with all the fields of "FontStrings" in the same order.
     val nameMaps = shortArrayOf(1, 2, 4, 16, 17, 19).associateWithTo(LinkedHashMap()) { HashMap<Locale, String>() }
@@ -72,8 +73,8 @@ fun Font.getStrings(): FontStrings = fontStringsCache.computeIfAbsent(this) {
         if (platformId == MAC_PLATFORM && (encodingId != MAC_ROMAN_ENCODING || languageId != MAC_ENGLISH_LANG))
             continue
         val nameId = nameTable.getShort(recordOffset + 6)
-        val stringLength = nameTable.getShort(recordOffset + 8).toUShort().toInt()
-        val stringOffset = stringAreaOffset + nameTable.getShort(recordOffset + 10).toUShort().toInt()
+        val stringLength = toUnsignedInt(nameTable.getShort(recordOffset + 8))
+        val stringOffset = stringAreaOffset + toUnsignedInt(nameTable.getShort(recordOffset + 10))
 
         val targetMap = nameMaps[nameId] ?: continue
         val stringBytes = ByteArray(stringLength)
@@ -156,7 +157,7 @@ fun Font.getSupportedFeatures(): SortedSet<String> = supportedFeaturesCache.comp
     val feats = TreeSet<String>() // ordered alphabetically
     extractFeatures(getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.GPOSTag) as ByteBuffer?, feats)
     extractFeatures(getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.GSUBTag) as ByteBuffer?, feats)
-    feats
+    Collections.unmodifiableSortedSet(feats)
 }
 
 private val supportedFeaturesCache = WeakHashMap<Font, SortedSet<String>>()
@@ -164,8 +165,8 @@ private val supportedFeaturesCache = WeakHashMap<Font, SortedSet<String>>()
 // Works for the GPOS and GSUB tables.
 private fun extractFeatures(table: ByteBuffer?, out: MutableSet<String>) {
     if (table != null && table.capacity() >= 8) {
-        val featListOffset = table.getShort(6).toUShort().toInt()
-        val featCount = table.getShort(featListOffset).toUShort().toInt()
+        val featListOffset = toUnsignedInt(table.getShort(6))
+        val featCount = toUnsignedInt(table.getShort(featListOffset))
         for (idx in 0..<featCount) {
             val c = table.getInt(featListOffset + 2 + idx * 6)
             out.add(String(intArrayOf(c ushr 24, (c ushr 16) and 0xFF, (c ushr 8) and 0xFF, c and 0xFF), 0, 4))

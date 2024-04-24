@@ -72,7 +72,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             // dragging a project folder onto the program.
             GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
                 .map { dev -> dev.defaultConfiguration }
-                .maxByOrNull { cfg -> cfg.bounds.intersection(bounds).run { width * height } }!!
+                .maxByOrNull { cfg -> cfg.bounds.intersection(bounds).run { if (isEmpty) 0 else width * height } }!!
         }
 
     override fun playHintTrack() {

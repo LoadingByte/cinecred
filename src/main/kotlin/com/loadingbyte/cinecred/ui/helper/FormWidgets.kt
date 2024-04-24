@@ -799,18 +799,18 @@ class ToggleButtonGroupWidget<V : Any>(
 
     private class GroupPanel : JPanel(GroupPanelLayout()) {
 
-        val arc = (UIManager.get("Component.arc") as Number).toFloat()
-        val focusWidth = (UIManager.get("Component.focusWidth") as Number).toFloat()
-        val borderWidth = (UIManager.get("Component.borderWidth") as Number).toFloat()
-        val innerOutlineWidth = (UIManager.get("Component.innerOutlineWidth") as Number).toFloat()
-        val normalBorderColor: Color = UIManager.getColor("Component.borderColor")
-        val disabledBorderColor: Color = UIManager.getColor("Component.disabledBorderColor")
-        val errorBorderColor: Color = UIManager.getColor("Component.error.borderColor")
-        val errorFocusedBorderColor: Color = UIManager.getColor("Component.error.focusedBorderColor")
-        val warningBorderColor: Color = UIManager.getColor("Component.warning.borderColor")
-        val warningFocusedBorderColor: Color = UIManager.getColor("Component.warning.focusedBorderColor")
-        val normalBackground: Color = UIManager.getColor("ComboBox.background")
-        val disabledBackground: Color = UIManager.getColor("ComboBox.disabledBackground")
+        private val arc = (UIManager.get("Component.arc") as Number).toFloat()
+        private val focusWidth = (UIManager.get("Component.focusWidth") as Number).toFloat()
+        private val borderWidth = (UIManager.get("Component.borderWidth") as Number).toFloat()
+        private val innerOutlineWidth = (UIManager.get("Component.innerOutlineWidth") as Number).toFloat()
+        private val normalBorderColor = UIManager.getColor("Component.borderColor")
+        private val disabledBorderColor = UIManager.getColor("Component.disabledBorderColor")
+        private val errorBorderColor = UIManager.getColor("Component.error.borderColor")
+        private val errorFocusedBorderColor = UIManager.getColor("Component.error.focusedBorderColor")
+        private val warningBorderColor = UIManager.getColor("Component.warning.borderColor")
+        private val warningFocusedBorderColor = UIManager.getColor("Component.warning.focusedBorderColor")
+        private val normalBackground = UIManager.getColor("ComboBox.background")
+        private val disabledBackground = UIManager.getColor("ComboBox.disabledBackground")
 
         init {
             border = BorderFactory.createEmptyBorder(1, 1, 1, 1)

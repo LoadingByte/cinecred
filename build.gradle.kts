@@ -335,6 +335,7 @@ val allJar by tasks.registering(Jar::class) {
     manifest.attributes(
         "Main-Class" to mainClass,
         "SplashScreen-Image" to splashScreen,
+        "Enable-Native-Access" to "ALL-UNNAMED",
         "Add-Opens" to addOpens.joinToString(" ")
     )
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -384,7 +385,7 @@ tasks.register<Jextract>("jextractHarfBuzz") {
     description = "Extracts Java bindings for the HarfBuzz native library."
     targetPackage = "com.loadingbyte.cinecred.natives.harfbuzz"
     addHarfBuzzIncludes()
-    includeDir = checkoutHarfBuzz.flatMap { it.repositoryDir }.map { it.dir("src") }
+    includeDir = checkoutHarfBuzz.flatMap { it.repositoryDir.dir("src") }
     headerFile = includeDir.map { it.file("hb.h") }
     outputDir = srcMainJava
 }

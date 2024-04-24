@@ -3,18 +3,13 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.FlatLaf
 import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.formdev.flatlaf.util.Graphics2DProxy
+import com.github.weisj.jsvg.SVGDocument
+import com.github.weisj.jsvg.parser.SVGLoader
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import com.loadingbyte.cinecred.projectio.service.GoogleService
 import com.loadingbyte.cinecred.projectio.service.Service
-import org.apache.batik.anim.dom.SAXSVGDocumentFactory
-import org.apache.batik.anim.dom.SVGOMDocument
-import org.apache.batik.bridge.BridgeContext
-import org.apache.batik.bridge.GVTBuilder
-import org.apache.batik.bridge.UserAgentAdapter
-import org.apache.batik.gvt.GraphicsNode
-import org.apache.batik.util.XMLResourceDescriptor
 import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics2D
@@ -22,6 +17,7 @@ import java.awt.Paint
 import java.awt.image.BufferedImage
 import java.awt.image.RGBImageFilter
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.math.abs
 import kotlin.math.max
@@ -32,12 +28,12 @@ const val ICON_ICON_GAP = 4
 
 
 val WINDOW_ICON_IMAGES = run {
-    val logo = SVGResource("/logo.svg")
+    val logo = requireNotNull(useResourceStream("/logo.svg", SVGLoader()::load)) { "Failed to load SVG logo." }
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
             g2.setHighQuality()
-            g2.scale(size / logo.width)
-            logo.paint(g2)
+            g2.scale(size / logo.size().width.toDouble())
+            logo.render(null, g2)
         }
     }
 }
@@ -513,51 +509,30 @@ val Service.icon
     }
 
 
-private class SVGResource(name: String) {
-
-    private val node: GraphicsNode
-    val width: Double
-    val height: Double
-
-    init {
-        val doc = useResourceStream(name) {
-            SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-                .createDocument(null, it) as SVGOMDocument
-        }
-        val ctx = BridgeContext(UserAgentAdapter())
-        node = GVTBuilder().build(ctx, doc)
-        width = ctx.documentSize.width
-        height = ctx.documentSize.height
-    }
-
-    fun paint(g2: Graphics2D) {
-        node.paint(g2)
-    }
-
-}
-
-
 class SVGIcon private constructor(
-    private val svg: SVGResource,
+    private val svg: SVGDocument,
     private val xScaling: Double,
     private val yScaling: Double,
     private val recolor: Color?,
     private val isDisabled: Boolean
-) : FlatAbstractIcon((svg.width * abs(xScaling)).roundToInt(), (svg.height * abs(yScaling)).roundToInt(), null),
-    FlatLaf.DisabledIconProvider {
+) : FlatAbstractIcon(
+    (svg.size().width * abs(xScaling)).roundToInt(),
+    (svg.size().height * abs(yScaling)).roundToInt(),
+    null
+), FlatLaf.DisabledIconProvider {
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         fun paintTo(g2: Graphics2D) {
             if (xScaling == 1.0 && yScaling == 1.0)
-                svg.paint(g2)
+                svg.render(c as? JComponent, g2)
             else
                 g2.preserveTransform {
                     if (xScaling < 0)
-                        g2.translate(-svg.width * xScaling, 0.0)
+                        g2.translate(-svg.size().width * xScaling, 0.0)
                     if (yScaling < 0)
-                        g2.translate(0.0, -svg.width * yScaling)
+                        g2.translate(0.0, -svg.size().height * yScaling)
                     g2.scale(xScaling, yScaling)
-                    svg.paint(g2)
+                    svg.render(c as? JComponent, g2)
                 }
         }
 
@@ -578,7 +553,10 @@ class SVGIcon private constructor(
         SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, recolor, isDisabled)
 
     companion object {
-        fun load(name: String) = SVGIcon(SVGResource(name), 1.0, 1.0, null, false)
+        fun load(name: String) = SVGIcon(
+            requireNotNull(useResourceStream(name, SVGLoader()::load)) { "Failed to load SVG icon: $name" },
+            1.0, 1.0, null, false
+        )
     }
 
 

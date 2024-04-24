@@ -105,6 +105,7 @@ dependencies {
     implementation("com.formdev", "flatlaf", flatlafVersion)
     for (pl in listOf(Platform.WINDOWS, Platform.LINUX))
         natives.getValue(pl)("com.formdev", "flatlaf", flatlafVersion, classifier = pl.slug, ext = pl.os.nativesExt)
+    implementation("com.github.weisj", "jsvg", "1.4.0")
     implementation("org.commonmark", "commonmark", "0.21.0")
 
     // Testing

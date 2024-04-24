@@ -70,6 +70,6 @@ respectively, run
 to build the native libraries and put them into the source tree. Then, on any
 machine, run
 
-    gradlew[.bat] -Djextract=/path/to/jextract jextract(HarfBuzz|Zimg)
+    gradlew[.bat] jextract(HarfBuzz|Zimg)
 
 to regenerate the Java bindings and also put them into the source tree.

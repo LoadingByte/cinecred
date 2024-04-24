@@ -1,14 +1,11 @@
 package com.loadingbyte.cinecred
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
-import java.io.File
 
 
 abstract class Jextract : DefaultTask() {
@@ -127,18 +124,7 @@ abstract class Jextract : DefaultTask() {
         val headerFile = headerFile.get().asFile
         val outputDir = outputDir.get().asFile
 
-        val bin = System.getProperty("jextract")
-        val java = File(bin).resolve("java")
-        if (bin.isNullOrBlank() || !java.canExecute()) {
-            val ver = project.extensions.getByType(JavaPluginExtension::class.java).toolchain.languageVersion.get()
-            throw InvalidUserDataException(
-                "You must download jextract for JDK $ver and point the VM property 'jextract' to its 'bin' folder.\n" +
-                        "The property's current value '$bin' does not point to such a folder.\n" +
-                        "Example on Linux: ./gradlew -Djextract=/path/to/jextract/bin ..."
-            )
-        }
-
-        val cmd = mutableListOf(java, "-Djextract.constants.per.class=1000")
+        val cmd = mutableListOf(Tools.jextractJava(project), "-Djextract.constants.per.class=1000")
         cmd += listOf("-m", "org.openjdk.jextract/org.openjdk.jextract.JextractTool")
         cmd += listOf("--source", "--target-package", targetPackage)
         cmd += includeFunctions.get().flatMap { listOf("--include-function", it) }
@@ -149,6 +135,7 @@ abstract class Jextract : DefaultTask() {
             cmd += listOf("-I", includeDir.get().asFile.absolutePath)
         cmd += listOf("--output", outputDir.absolutePath, headerFile.absolutePath)
 
+        outputDir.resolve(targetPackage.replace('.', '/')).deleteRecursively()
         project.exec { commandLine(cmd) }.rethrowFailure().assertNormalExitValue()
     }
 

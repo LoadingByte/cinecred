@@ -1,12 +1,6 @@
 package com.loadingbyte.cinecred
 
-import org.apache.batik.anim.dom.SAXSVGDocumentFactory
-import org.apache.batik.bridge.BridgeContext
-import org.apache.batik.bridge.GVTBuilder
-import org.apache.batik.bridge.UserAgentAdapter
-import org.apache.batik.ext.awt.image.GraphicsUtil
-import org.apache.batik.gvt.GraphicsNode
-import org.apache.batik.util.XMLResourceDescriptor
+import com.github.weisj.jsvg.parser.SVGLoader
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
@@ -17,26 +11,17 @@ import javax.imageio.stream.FileImageOutputStream
 
 class Logo(file: File) {
 
-    private val node: GraphicsNode
-    private val width: Double
-
-    init {
-        val doc = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-            .createDocument(null, file.bufferedReader())
-        val ctx = BridgeContext(UserAgentAdapter())
-        node = GVTBuilder().build(ctx, doc)
-        width = ctx.documentSize.width
-    }
+    private val svg = requireNotNull(file.inputStream().use(SVGLoader()::load)) { "Failed to load SVG: $file" }
 
     fun rasterize(size: Int, margin: Double = 0.0, imageType: Int = BufferedImage.TYPE_INT_ARGB): BufferedImage {
         val img = BufferedImage(size, size, imageType)
-        val g2 = GraphicsUtil.createGraphics(img)
+        val g2 = img.createGraphics()
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         val transl = margin * size
-        val scaling = (size * (1 - 2 * margin)) / width
+        val scaling = (size * (1 - 2 * margin)) / svg.size().width
         g2.translate(transl, transl)
         g2.scale(scaling, scaling)
-        node.paint(g2)
+        svg.render(null, g2)
         g2.dispose()
         return img
     }

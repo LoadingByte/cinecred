@@ -239,9 +239,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         // We first transform the shape and then draw it without scaling the canvas.
         // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
-        val transformedShape = if (shape is Path2D.Float) Path2D.Float(shape, tx) else Path2D.Double(shape, tx)
-        val transformedCoat = coat.transform(tx)
-        backend.materializeShape(transformedShape, transformedCoat, fill, dash, blurRadius)
+        backend.materializeShape(shape.transformedBy(tx), coat.transform(tx), fill, dash, blurRadius)
     }
 
     private fun materializeText(

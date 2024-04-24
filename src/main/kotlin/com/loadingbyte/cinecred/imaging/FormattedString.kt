@@ -463,7 +463,7 @@ class FormattedString private constructor(
 
             override fun transform(tx: AffineTransform) = AWTShape(
                 anchor = tx.transform(anchor, null),
-                awtShape = if (awtShape is Path2D.Float) Path2D.Float(awtShape, tx) else Path2D.Double(awtShape, tx)
+                awtShape = awtShape.transformedBy(tx)
             )
 
             override fun drawTo(

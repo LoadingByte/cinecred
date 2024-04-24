@@ -9,14 +9,13 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Node
 import org.w3c.dom.traversal.DocumentTraversal
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics
-import java.awt.Graphics2D
+import java.awt.*
 import java.awt.RenderingHints.*
 import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
+import java.awt.geom.Path2D
+import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -31,6 +30,8 @@ import java.util.*
 import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.io.path.*
+import kotlin.math.abs
+import kotlin.math.min
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -317,6 +318,18 @@ fun Graphics2D.scale(s: Double) = scale(s, s)
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
 fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
 fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
+
+
+fun Shape.transformedBy(transform: AffineTransform?): Shape = when {
+    transform == null || transform.isIdentity -> this
+    this is Rectangle2D && transform.shearX == 0.0 && transform.shearY == 0.0 -> {
+        val p = doubleArrayOf(minX, minY, maxX, maxY)
+        transform.transform(p, 0, p, 0, 2)
+        Rectangle2D.Double(min(p[0], p[2]), min(p[1], p[3]), abs(p[0] - p[2]), abs(p[1] - p[3]))
+    }
+    this is Path2D.Float -> Path2D.Float(this, transform)
+    else -> Path2D.Double(this, transform)
+}
 
 
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {

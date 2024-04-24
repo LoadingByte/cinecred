@@ -357,6 +357,7 @@ val checkoutHarfBuzz by tasks.registering(CheckoutGitRef::class) {
 val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
     uri = "https://github.com/sekrit-twc/zimg.git"
     ref = zimgVersion
+    patch = "/zimg.patch"
     repositoryDir = layout.buildDirectory.dir("repositories/zimg")
 }
 

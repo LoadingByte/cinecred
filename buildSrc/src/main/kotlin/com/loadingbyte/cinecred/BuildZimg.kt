@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.Platform.Arch.ARM64
 import com.loadingbyte.cinecred.Platform.Arch.X86_64
 import com.loadingbyte.cinecred.Platform.OS.*
 import org.gradle.api.DefaultTask
-import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -27,23 +26,7 @@ abstract class BuildZimg : DefaultTask() {
     @TaskAction
     fun run() {
         val forPlatform = forPlatform.get()
-        val repositoryDir = repositoryDir.get().asFile
-
-        // Create a copy of the sources because we modify them on Windows.
-        val srcDir = temporaryDir.resolve("sources")
-        check(srcDir.deleteRecursively())
-        repositoryDir.resolve("src/zimg").copyRecursively(srcDir)
-
-        // Edit zimg.h to make the Windows DLL actually export symbols.
-        if (forPlatform.os == WINDOWS) {
-            val apiFile = srcDir.resolve("api/zimg.h")
-            val apiText = apiFile.readText()
-            val search = "#if defined(_WIN32) || defined(__CYGWIN__)\n  #define ZIMG_VISIBILITY"
-            val parts = apiText.split(search)
-            if (parts.size != 2)
-                throw InvalidUserDataException("This version of zimg misses an expected declaration.")
-            apiFile.writeText(parts[0] + search + " __declspec(dllexport)" + parts[1])
-        }
+        val srcDir = repositoryDir.get().asFile.resolve("src/zimg")
         val outFile = outputFile.get().asFile
 
         // Build the native library. For that, compile the sources for each SIMD flavor (e.g., SSE vs SSE2) separately,
@@ -114,7 +97,7 @@ abstract class BuildZimg : DefaultTask() {
         val cpps = srcDir.walk().onEnter { it.name != excludeDirname }.filter { it.extension == "cpp" }
             .groupBy { simdFlavors.keys.find(it.nameWithoutExtension::endsWith) }
 
-        val objDir = temporaryDir.resolve("objects")
+        val objDir = temporaryDir
         check(objDir.deleteRecursively())
         check(objDir.mkdir())
 

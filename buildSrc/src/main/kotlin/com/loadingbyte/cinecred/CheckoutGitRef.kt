@@ -6,6 +6,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
@@ -16,6 +17,9 @@ abstract class CheckoutGitRef : DefaultTask() {
     abstract val uri: Property<String>
     @get:Input
     abstract val ref: Property<String>
+    @get:Input
+    @get:Optional
+    abstract val patch: Property<String>
     @get:OutputDirectory
     abstract val repositoryDir: DirectoryProperty
 
@@ -33,6 +37,8 @@ abstract class CheckoutGitRef : DefaultTask() {
         git.reset().setMode(ResetCommand.ResetType.HARD).call()
         git.clean().setForce(true).setCleanDirectories(true).call()
         git.checkout().setName(ref).call()
+        if (patch.isPresent)
+            git.apply().setPatch(javaClass.getResourceAsStream(patch.get())).call()
     }
 
 }

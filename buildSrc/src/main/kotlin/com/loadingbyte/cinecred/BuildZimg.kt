@@ -28,7 +28,6 @@ abstract class BuildZimg : DefaultTask() {
     fun run() {
         val forPlatform = forPlatform.get()
         val repositoryDir = repositoryDir.get().asFile
-        val outputFile = outputFile.get().asFile
 
         // Create a copy of the sources because we modify them on Windows.
         val srcDir = temporaryDir.resolve("sources")
@@ -45,6 +44,7 @@ abstract class BuildZimg : DefaultTask() {
                 throw InvalidUserDataException("This version of zimg misses an expected declaration.")
             apiFile.writeText(parts[0] + search + " __declspec(dllexport)" + parts[1])
         }
+        val outFile = outputFile.get().asFile
 
         // Build the native library. For that, compile the sources for each SIMD flavor (e.g., SSE vs SSE2) separately,
         // then link the resulting object files to produce the library.
@@ -57,7 +57,6 @@ abstract class BuildZimg : DefaultTask() {
         // Side note 2: On Linux, the compiled libraries will depend on libstdc++ and libgcc_s. We are fine with these
         // dependencies because the FFmpeg native libraries would declare them anyway.
 
-        val lib = outputFile.absolutePath
         val macros = listOf("NDEBUG") +
                 if (forPlatform.arch == X86_64) listOf("ZIMG_X86", "ZIMG_X86_AVX512") else listOf("ZIMG_ARM")
 
@@ -66,9 +65,10 @@ abstract class BuildZimg : DefaultTask() {
         val obj: String
         val simdFlavors: Map<String, List<String>>
         if (forPlatform.os == WINDOWS) {
-            cc += listOf("clang-cl", "/c", "/EHsc", "/O2", "/GS-", "-flto", "/I", srcDir.absolutePath, "-Wno-assume")
+            cc += listOf(Tools.clangCl(project), "/c", "/std:c++14", "/EHsc", "/O2", "/GS-", "-flto", "-Wno-assume")
             cc += macros.map { "/D$it" }
-            ld += listOf("lld-link", "/DLL", "/OUT:$lib")
+            cc += listOf("/I", srcDir.absolutePath)
+            ld += listOf(Tools.lldLink(project), "/DLL", "/NOIMPLIB", "/OUT:${outFile.absolutePath}")
             obj = "obj"
             // Note: There are no switches for SSE and SSE2 in clang-cl; both are always enabled.
             simdFlavors = mapOf(
@@ -83,14 +83,16 @@ abstract class BuildZimg : DefaultTask() {
         } else {
             if (forPlatform.os == MAC) {
                 cc += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11")
-                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11", "-dynamiclib", "-o", lib)
+                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11", "-dynamiclib")
+                ld += "-Wl,-install_name,@rpath/${outFile.name}"
             } else if (forPlatform.os == LINUX) {
                 cc += listOf("g++")
-                ld += listOf("g++", "-shared", "-o", lib)
+                ld += listOf("g++", "-shared", "-s")
             }
-            cc += listOf("-c", "-std=c++14", "-O2", "-fPIC", "-flto", "-fvisibility=hidden", "-I", srcDir.absolutePath)
+            cc += listOf("-c", "-std=c++14", "-O2", "-fPIC", "-flto", "-fvisibility=hidden")
             cc += macros.map { "-D$it" }
-            ld += "-s"
+            cc += listOf("-I", srcDir.absolutePath)
+            ld += listOf("-o", outFile.absolutePath)
             obj = "o"
             simdFlavors = if (forPlatform.arch == ARM64) emptyMap() else mapOf(
                 "sse" to listOf("-msse"),

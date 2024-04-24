@@ -54,9 +54,10 @@ come with JAR dependencies, but others need to be rebuilt manually for each
 update, which means:
 
 - Building a dynamic library for each platform, which goes into `src/natives`.
-    - You need both `cl` and `clang-cl` on Windows, the Xcode command line tools
-      on macOS, and both `gcc` and `clang` on Linux.
-    - On all platforms, you need `git`.
+    - On Windows, you need the Build Tools for Visual Studio (both MSVC and
+      Clang, which must be explicitly selected in the Visual Studio Installer).
+    - On macOS, you need the Xcode command line tools.
+    - On Linux, you need both GCC and Clang.
     - For macOS, we build on and for macOS 11 because JavaCPP does that too.
     - Also on macOS, cross-compiling for ARM on x86 works flawlessly.
 - Generating Java bindings using jextract, which go into `src/main/java`.

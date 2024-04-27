@@ -18,7 +18,7 @@ val slf4jVersion = "2.0.7"
 val poiVersion = "5.2.3"
 val javacppVersion = "1.5.9"
 val ffmpegVersion = "6.0-$javacppVersion"
-val flatlafVersion = "3.2"
+val flatlafVersion = "3.4.1"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
@@ -95,9 +95,9 @@ dependencies {
 
     // UI
     implementation("com.miglayout", "miglayout-swing", "11.1")
-    implementation("com.formdev", "flatlaf", flatlafVersion)
-    for (pl in listOf(Platform.WINDOWS, Platform.LINUX))
-        natives.getValue(pl)("com.formdev", "flatlaf", flatlafVersion, classifier = pl.slug, ext = pl.os.nativesExt)
+    implementation("com.formdev", "flatlaf", flatlafVersion, classifier = "no-natives")
+    for (p in Platform.values())
+        natives.getValue(p)("com.formdev", "flatlaf", flatlafVersion, classifier = p.slugFlatLaf, ext = p.os.codeLibExt)
     implementation("com.github.weisj", "jsvg", "1.4.0")
     implementation("org.commonmark", "commonmark", "0.21.0")
 
@@ -192,7 +192,9 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
         }
         for (file in natives.getValue(platform))
             if (file.extension == platform.os.codeLibExt)
-                from(file)
+                from(file) {
+                    eachFile { if ("flatlaf" in name) name = platform.os.codeLib("flatlaf-${platform.slugFlatLaf}") }
+                }
             else
                 from(zipTree(file)) {
                     include("**/*.${platform.os.codeLibExt}*")

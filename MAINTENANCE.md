@@ -58,18 +58,22 @@ update, which means:
       Clang, which must be explicitly selected in the Visual Studio Installer).
     - On macOS, you need the Xcode command line tools.
     - On Linux, you need both GCC and Clang.
-    - For macOS, we build on and for macOS 11 because JavaCPP does that too.
+    - To build Skia, you also need Python and Git on all platforms. If there are
+      Python errors, just running the Gradle task again usually works. And on
+      Windows, the build works best when launched from the Git Bash.
+    - For macOS, we build on and for macOS 11 as Skia and JavaCPP do that too.
     - Also on macOS, cross-compiling for ARM on x86 works flawlessly.
+    - For Linux, we build on Debian 11 to guarantee a low enough GLIBC version.
 - Generating Java bindings using jextract, which go into `src/main/java`.
 
 This process is fully automated using Gradle. On Windows, macOS x86, and Linux
 respectively, run
 
-    gradlew[.bat] build(HarfBuzz|Zimg)For(Windows|MacX86|MacARM|Linux)
+    gradlew[.bat] build(Skia|SkiaCAPI|HarfBuzz|Zimg)For(Windows|MacX86|MacARM|Linux)
 
 to build the native libraries and put them into the source tree. Then, on any
 machine, run
 
-    gradlew[.bat] jextract(HarfBuzz|Zimg)
+    gradlew[.bat] jextract(SkiaCAPI|Skcms|HarfBuzz|Zimg)
 
 to regenerate the Java bindings and also put them into the source tree.

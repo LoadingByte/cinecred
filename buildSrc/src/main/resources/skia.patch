@@ -1,0 +1,13 @@
+diff --git a/modules/svg/include/SkSVGDOM.h b/modules/svg/include/SkSVGDOM.h
+index f2915f49c6..88cbe061eb 100644
+--- a/modules/svg/include/SkSVGDOM.h
++++ b/modules/svg/include/SkSVGDOM.h
+@@ -24,7 +24,7 @@ class SkSVGSVG;
+ 
+ class SK_API SkSVGDOM : public SkRefCnt {
+ public:
+-    class Builder final {
++    class SK_API Builder final {
+     public:
+         /**
+          * Specify a font manager for loading fonts (e.g. from the system) to render <text>

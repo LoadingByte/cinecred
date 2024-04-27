@@ -42,7 +42,7 @@ class VideoWriter(
     private var frameCounter = 0L
 
     init {
-        require(!spec.representation.isAlphaPremultiplied) { "FFmpeg does not support pre-multiplied alpha." }
+        require(spec.representation.alpha != Bitmap.Alpha.PREMULTIPLIED) { "FFmpeg does not support premul alpha." }
         setupSafely({
             setup(
                 fileOrPattern, fps,
@@ -127,11 +127,19 @@ class VideoWriter(
         enc.pix_fmt(spec.representation.pixelFormat.code)
 
         // Specify color space metadata.
-        enc.color_primaries(spec.representation.primaries)
-        enc.color_trc(spec.representation.transferCharacteristic)
-        enc.colorspace(spec.representation.yCbCrCoefficients)
-        enc.color_range(spec.representation.range)
+        spec.representation.colorSpace?.let { colorSpace ->
+            enc.color_primaries(colorSpace.primaries.code)
+            enc.color_trc(colorSpace.transfer.code)
+        }
+        enc.color_range(spec.representation.range.code)
         enc.chroma_sample_location(spec.representation.chromaLocation)
+
+        val cs = when (spec.representation.pixelFormat.family) {
+            Bitmap.PixelFormat.Family.GRAY -> AVCOL_SPC_UNSPECIFIED
+            Bitmap.PixelFormat.Family.RGB -> AVCOL_SPC_RGB
+            Bitmap.PixelFormat.Family.YUV -> spec.representation.yuvCoefficients!!.code
+        }
+        enc.colorspace(cs)
 
         // Specify progressive or interlaced scan.
         val fieldOrder = when {
@@ -165,7 +173,7 @@ class VideoWriter(
     /** Writes the next frame to the video. */
     fun write(bitmap: Bitmap) {
         require(bitmap.spec == spec)
-        writeFrame(bitmap.frame)
+        bitmap.requireNotClosed { writeFrame(bitmap.frame) }
     }
 
     /** Encodes one video frame and sends it to the muxer. */

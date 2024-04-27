@@ -1,6 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_COMPLIANCE_STRICT
+import org.bytedeco.ffmpeg.global.avcodec.FF_COMPLIANCE_STRICT
 import org.bytedeco.ffmpeg.global.avcodec.av_codec_iterate
 import org.bytedeco.ffmpeg.global.avformat.*
 import org.bytedeco.javacpp.BytePointer

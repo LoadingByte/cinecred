@@ -2,10 +2,6 @@ package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D
-import org.apache.batik.svggen.SVGGeneratorContext
-import org.apache.batik.svggen.SVGGraphics2D
-import org.apache.batik.svggen.SVGIDGenerator
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.TTFParser
 import org.apache.fontbox.ttf.TrueTypeCollection
@@ -21,12 +17,12 @@ import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
+import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray
-import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB
+import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroup
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroupAttributes
-import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.pdmodel.graphics.pattern.PDShadingPattern
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading
@@ -35,22 +31,17 @@ import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.util.Matrix
 import org.w3c.dom.*
-import org.w3c.dom.traversal.NodeFilter.*
-import java.awt.*
-import java.awt.RenderingHints.KEY_INTERPOLATION
-import java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
+import java.awt.BasicStroke
+import java.awt.Color
+import java.awt.Shape
 import java.awt.geom.*
-import java.awt.image.BufferedImage
-import java.awt.image.ConvolveOp
-import java.awt.image.Kernel
-import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
+import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import javax.imageio.ImageIO
 import javax.xml.XMLConstants.XML_NS_URI
 import kotlin.math.*
 
@@ -118,7 +109,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     fun drawEmbeddedTape(embeddedTape: Tape.Embedded, x: Double, y: Y, layer: Layer = TAPES) {
         val thumbnail = try {
-            Picture.Raster(embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)!!)
+            embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)
         } catch (_: Exception) {
             null
         }
@@ -126,20 +117,17 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     /**
-     * Draws the content of this deferred image onto the given [BufferedImage]. Any raster content is aligned with the
-     * buffered image's pixel grid to prevent interpolation and retain as much quality as possible.
+     * Draws the content of this deferred image onto the given [Canvas]. The canvas must be backed by a bitmap. Raster
+     * content is aligned with the canvas' pixel grid to prevent interpolation and retain as much quality as possible.
      */
-    fun materialize(bufImage: BufferedImage, layers: List<Layer>, composite: Composite? = null) {
-        bufImage.withG2 { g2 ->
-            g2.setHighQuality()
-            composite?.let(g2::setComposite)
-            val backend = Graphics2DBackend(g2)
-            // If only a portion of the deferred image is materialized, cull the rest to improve performance.
-            // Notice that because the culling rect is aligned with the pixel grid, we correctly include all content
-            // that at least partially lies inside one of the buffered image's pixels.
-            val culling = Rectangle2D.Double(0.0, 0.0, bufImage.width.toDouble(), bufImage.height.toDouble())
-            materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, culling, this, layers)
-        }
+    fun materialize(canvas: Canvas, cache: CanvasMaterializationCache?, layers: List<Layer>) {
+        require(canvas.bitmap != null) { "To materialize to an SVG or PDF, use the specialized methods." }
+        val backend = CanvasBackend(canvas, cache as CanvasMaterializationCacheImpl?)
+        // If only a portion of the deferred image is materialized, cull the rest to improve performance.
+        // Notice that because the culling rect is aligned with the pixel grid, we correctly include all content
+        // that at least partially lies inside one of the surface's pixels.
+        val culling = Rectangle2D.Double(0.0, 0.0, canvas.width, canvas.height)
+        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, culling, this, layers)
     }
 
     /** Draws the content of this deferred image onto an SVG element. */
@@ -148,8 +136,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     /** Draws the content of this deferred onto a PDF page. */
-    fun materialize(doc: PDDocument, page: PDPage, cs: PDPageContentStream, layers: List<Layer>) {
-        materializeDeferredImage(PDFBackend(doc, page, cs), 0.0, 0.0, 1.0, 1.0, null, this, layers)
+    fun materialize(doc: PDDocument, page: PDPage, cs: PDPageContentStream, cSpace: ColorSpace, layers: List<Layer>) {
+        val backend = PDFBackend(doc, page, cs, cSpace)
+        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
+        backend.end()
     }
 
     fun collectPlacedTapes(layers: List<Layer>): List<PlacedTape> {
@@ -236,7 +226,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             )
         ) return
         // We first transform the shape and then draw it without scaling the canvas.
-        // This ensures that the shape will exhibit the default stroke width, which is usually 1 pixel.
+        // This simplifies code in the SVG and PDF backends, and is also required for snapping hairlines to pixels.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
         backend.materializeShape(shape.transformedBy(tx), coat.transform(tx), fill, dash, blurRadius)
     }
@@ -299,39 +289,25 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             is Coat.Gradient -> Coat.Gradient(color1, color2, tx.transform(point1, null), tx.transform(point2, null))
         }
 
-        private fun Coat.toPaint(): Paint = when (this) {
-            is Coat.Plain -> color
-            // Here, we use GradientPaint, which interpolates in the sRGB color space, instead of LinearGradientPaint,
-            // which would offer us to interpolate in the linear RGB color space, for a couple of reasons:
+        private fun Coat.toShader() = when (this) {
+            is Coat.Plain -> Canvas.Shader.Solid(color)
+            // We interpolate Gradients in the sRGB color space instead of a better alternative (like linear RGB or
+            // Oklab) for a couple of reasons:
             //   - Gradient interpolation in sRGB is pretty much the default at this point, for better or for worse.
             //     Artists expect it when they specify a gradient.
             //   - Implementing a gradient in linear RGB in a PDF or SVG file is surprisingly difficult. While it may be
             //     possible for PDFs, it seems outright impossible at this point in SVGs; even though the standards are
             //     in place, it's not supported by any browser or viewer.
             //   - Apart from the famous red-to-green case, gradients in sRGB actually often look superior to those
-            //     interpolated in linear RGB. This is because sRGB's transfer characteristic kind of models the human
+            //     interpolated in linear RGB. This is because sRGB's transfer characteristics kind of model the human
             //     perception of light intensity, so gradients look more perceptually uniform. For examples, see:
             //     https://aras-p.info/blog/2021/11/29/Gradients-in-linear-space-arent-better/
-            is Coat.Gradient -> GradientPaint(point1, color1, point2, color2)
+            //   - Still, Oklab seems to be the future of gradient interpolation (i.e., Photoshop already defaults
+            //     to it), so maybe we'll switch to it too.
+            is Coat.Gradient -> Canvas.Shader.LinearGradient(point1, point2, listOf(color1, color2))
         }
 
         private fun gaussianStdDev(radius: Double) = radius / 2.0
-
-        private fun gaussianKernelVector(radius: Double): FloatArray {
-            val sigma = gaussianStdDev(radius)
-            val twoSigmaSq = 2.0 * sigma * sigma
-            val sqrtOfTwoPiSigma = sqrt(2.0 * PI * sigma)
-            // Compute the Gaussian curve.
-            val intRadius = floor(radius).toInt()
-            val vecSize = intRadius * 2 + 1
-            val vec = FloatArray(vecSize) { idx ->
-                val distToCenter = idx - intRadius
-                (exp(-distToCenter * distToCenter / twoSigmaSq) / sqrtOfTwoPiSigma).toFloat()
-            }
-            // Normalize the curve to fix numerical inaccuracies.
-            val sum = vec.sum()
-            return FloatArray(vecSize) { idx -> vec[idx] / sum }
-        }
 
     }
 
@@ -367,6 +343,23 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             fun getGlyphOutline(glyphCode: Int, fontSize: Double): Shape
         }
 
+    }
+
+
+    sealed interface CanvasMaterializationCache {
+        companion object {
+            operator fun invoke(): CanvasMaterializationCache = CanvasMaterializationCacheImpl()
+        }
+    }
+
+    private class CanvasMaterializationCacheImpl : CanvasMaterializationCache {
+        private val prepPics = Collections.synchronizedMap(WeakHashMap<Picture, SoftReference<Canvas.PreparedBitmap>>())
+        // It is vital that this method removes the prepared bitmap and doesn't just retrieve it, because if thread A
+        // has it while thread B replaces it with put...(), the bitmap could be closed while thread A is still using it.
+        fun popPreparedPicture(picture: Picture): Canvas.PreparedBitmap? = prepPics.remove(picture)?.get()
+        fun putPreparedPicture(picture: Picture, prepared: Canvas.PreparedBitmap) {
+            prepPics.put(picture, SoftReference(prepared))?.get()?.bitmap?.close()
+        }
     }
 
 
@@ -425,55 +418,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    /** Implements blurring by first rasterizing the shape to an image and blurring that. */
-    private interface RasterBlurBackend : MaterializationBackend {
-
-        fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean)
-
-        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
-            if (blurRadius <= 0.0)
-                materializeShape(shape, coat, fill, dash)
-            else {
-                check(fill) { "Blurring is only supported for filled shapes." }
-                // Build the horizontal and vertical Gaussian kernels and determine the necessary image padding.
-                val kernelVec = gaussianKernelVector(blurRadius)
-                val hKernel = Kernel(kernelVec.size, 1, kernelVec)
-                val vKernel = Kernel(1, kernelVec.size, kernelVec)
-                val halfPad = (kernelVec.size - 1) / 2
-                val fullPad = 2 * halfPad
-                // Determine the bounds of the shape, and the whole and fractional parts of the shape's coordinates.
-                val bounds = shape.bounds2D
-                val xWhole = floor(bounds.x)
-                val yWhole = floor(bounds.y)
-                val xFrac = bounds.x - xWhole
-                val yFrac = bounds.y - yWhole
-                // Paint the shape to an intermediate image with sufficient padding.
-                var img = BufferedImage(
-                    ceil(xFrac + bounds.width).toInt() + 2 * fullPad,
-                    ceil(yFrac + bounds.height).toInt() + 2 * fullPad,
-                    // If the image did not have premultiplied alpha, transparent pixels would have black color channels
-                    // and would hence spill blackness when blurred into other pixels.
-                    BufferedImage.TYPE_4BYTE_ABGR_PRE
-                ).withG2 { g2 ->
-                    g2.setHighQuality()
-                    g2.paint = coat.toPaint()
-                    g2.translate(fullPad - xWhole, fullPad - yWhole)
-                    g2.fill(shape)
-                }
-                // Apply the convolution kernels.
-                val tmp = ConvolveOp(hKernel).filter(img, null)
-                img = ConvolveOp(vKernel).filter(tmp, img)
-                // Cut off the padding that is guaranteed to be empty due to the convolutions' EDGE_ZERO_FILL behavior.
-                img = img.getSubimage(halfPad, halfPad, img.width - fullPad, img.height - fullPad)
-                // Send the resulting image to the backend.
-                val embeddedPic = Picture.Embedded.Raster(Picture.Raster(img))
-                materializeEmbeddedPicture(xWhole - halfPad, yWhole - halfPad, 1.0, embeddedPic, draft = false)
-            }
-        }
-
-    }
-
-
     /** Materializes tapes by rendering the tape's thumbnail or a "missing media" placeholder. */
     private interface TapeThumbnailBackend : MaterializationBackend {
 
@@ -486,6 +430,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) {
             if (thumbnail != null) {
                 val embeddedThumbnail = Picture.Embedded.Raster(thumbnail).withForcedResolution(embeddedTape.resolution)
+                // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
+                // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
             } else {
                 val (w, h) = embeddedTape.resolution
@@ -501,27 +447,44 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    private class Graphics2DBackend(private val g2: Graphics2D) : RasterBlurBackend, TapeThumbnailBackend {
+    private class CanvasBackend(
+        private val canvas: Canvas,
+        private val cache: CanvasMaterializationCacheImpl?
+    ) : TapeThumbnailBackend {
 
-        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
-            g2.paint = coat.toPaint()
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
             if (fill)
-                g2.fill(shape)
-            else if (dash) {
-                val oldStroke = g2.stroke
-                g2.stroke =
-                    BasicStroke(1f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 8f), 0f)
-                g2.draw(shape)
-                g2.stroke = oldStroke
-            } else
-                g2.draw(shape)
+                canvas.fillShape(shape, coat.toShader(), blurSigma = gaussianStdDev(blurRadius))
+            else {
+                val dashPattern = if (dash) floatArrayOf(4f, 8f) else null
+                // Note: A stroke width of 0f makes Skia draw hairlines, which we desire for our layout guides.
+                val stroke = BasicStroke(0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10f, dashPattern, 0f)
+                // Snap the shape's coordinates to the nearest pixel center. This makes our hairlines very crisp.
+                val pi = shape.getPathIterator(null)
+                val s = Path2D.Double(pi.windingRule)
+                val c = DoubleArray(6)
+                while (!pi.isDone) {
+                    when (pi.currentSegment(c)) {
+                        PathIterator.SEG_MOVETO -> s.moveTo(snap(c[0]), snap(c[1]))
+                        PathIterator.SEG_LINETO -> s.lineTo(snap(c[0]), snap(c[1]))
+                        PathIterator.SEG_QUADTO -> s.quadTo(snap(c[0]), snap(c[1]), snap(c[2]), snap(c[3]))
+                        PathIterator.SEG_CUBICTO ->
+                            s.curveTo(snap(c[0]), snap(c[1]), snap(c[2]), snap(c[3]), snap(c[4]), snap(c[5]))
+                        PathIterator.SEG_CLOSE -> s.closePath()
+                    }
+                    pi.next()
+                }
+                canvas.strokeShape(s, stroke, coat.toShader(), blurSigma = gaussianStdDev(blurRadius))
+            }
         }
+
+        private fun snap(coordinate: Double) = ceil(coordinate) - 0.5
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
             // We render the text by first converting the string to a path via FormattedString and then
             // filling that path. This has the following vital advantages:
-            //   - Native text rendering via TextLayout.draw() etc., which internally eventually calls
-            //     Graphics2D.drawGlyphVector(), typically ensures that each glyph is aligned at pixel
+            //   - We can render using Skia while still using AWT's excellent text layout capabilities.
+            //   - Native text rendering usually applies hinting, which aligns each glyph at pixel
             //     boundaries. To achieve this, glyphs are slightly shifted to the left or right. This
             //     leads to inconsistent glyph spacing, which is acceptable for desktop purposes in
             //     exchange for higher readability, but not acceptable in a movie context. By converting
@@ -531,77 +494,58 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             //     counterproductive glyph shifting.
             //   - Vector-based means of imaging like SVG exactly match the raster-based means.
             // For these advantages, we put up with the following disadvantages:
-            //   - Rendering this way is slower than natively rendering text via TextLayout.draw().
             //   - Since the glyphs are no longer aligned at pixel boundaries, heavier antialiasing kicks
             //     in, leading to the rendered text sometimes appearing more blurry. However, this is an
             //     inherent disadvantage of rendering text with perfect glyph spacing and is typically
             //     acceptable in a movie context.
-            g2.preserveTransform {
-                g2.translate(x, yBaseline)
-                g2.scale(scaling)
-                materializeShape(text.transformedOutline, coat, fill = true, dash = false)
+            val transform = AffineTransform().apply {
+                translate(x, yBaseline)
+                scale(scaling)
             }
+            canvas.fillShape(text.transformedOutline, coat.toShader(), transform = transform)
         }
 
         override fun materializeEmbeddedPicture(
             x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
         ) {
+            val transform = AffineTransform.getTranslateInstance(x, y)
             when (embeddedPic) {
-                is Picture.Embedded.Raster -> g2.preserveTransform {
+                is Picture.Embedded.Raster -> {
                     val pic = embeddedPic.picture
-                    // Align the raster picture with the pixel grid and force the
-                    // picture to have integer size to prevent interpolation.
-                    g2.translate(x.roundToInt(), y.roundToInt())
-                    val w = (embeddedPic.width * scaling).roundToInt()
-                    val h = (embeddedPic.height * scaling).roundToInt()
-                    // Note: Directly drawing with bilinear or bicubic interpolation exhibits poor quality when
-                    // downscaling by more than a factor of two, and Image.getScaledInstance() with SCALE_AREA_AVERAGING
-                    // is way too slow, so we use zimg with the Lanczos algorithm instead.
-                    // Scaling happens in the sRGB color space, as opposed to the often recommended linear RGB space.
-                    // This has a couple of reasons:
-                    //   - Converting from the sRGB to a linear transfer characteristic is slow.
-                    //   - Scaling in linear RGB is not always advantageous, as is shown here:
-                    //     https://entropymine.com/imageworsener/gamma/
-                    // Nevertheless, if "draft" is true, directly draw using Java2D's interpolation as it's very fast.
-                    if (draft) {
-                        // Set the interpolation mode to nearest neighbor to achieve a "pixelated preview" effect and
-                        // thereby clearly communicate that this picture is drawn in draft mode.
-                        val hint = g2.getRenderingHint(KEY_INTERPOLATION)
-                        g2.setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
-                        g2.drawImage(pic.img, 0, 0, w, h, null)
-                        g2.setRenderingHint(KEY_INTERPOLATION, hint)
-                        return@preserveTransform
-                    }
-                    var scaledImg = scaledImgCache[pic.img]
-                    if (scaledImg == null || scaledImg.width != w || scaledImg.height != h) {
-                        scaledImg = Image2ImageConverter(
-                            srcResolution = Resolution(pic.img.width, pic.img.height),
-                            dstResolution = Resolution(w, h),
-                            hasAlpha = pic.img.colorModel.hasAlpha(),
-                            isAlphaPremultiplied = pic.img.isAlphaPremultiplied
-                        ).convert(pic.img)
-                        scaledImgCache[pic.img] = scaledImg
-                    }
-                    g2.drawImage(scaledImg, 0, 0, null)
+                    transform.scale(embeddedPic.width / pic.width * scaling, embeddedPic.height / pic.height * scaling)
                 }
-                is Picture.Embedded.Vector -> g2.preserveTransform {
+                is Picture.Embedded.Vector -> {
                     val pic = embeddedPic.picture
-                    g2.translate(x, y)
-                    g2.scale(embeddedPic.scaling * scaling)
+                    transform.scale(embeddedPic.scaling * scaling)
                     if (embeddedPic.isCropped)
-                        g2.translate(-pic.cropX, -pic.cropY)
-                    pic.drawTo(g2)
+                        transform.translate(-pic.cropX, -pic.cropY)
+                    // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
+                    // them with the pixel grid, they will always be reusable unless the scaling changes.
+                    if (cache != null) {
+                        val tx = transform.translateX.let { round(it) - it }
+                        val ty = transform.translateY.let { round(it) - it }
+                        transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
+                    }
                 }
             }
-        }
-
-        companion object {
-            private val scaledImgCache = ConcurrentHashMap<BufferedImage, BufferedImage>()
+            val pic = embeddedPic.picture
+            val prep = pic.prepareAsBitmap(canvas, if (draft) null else transform, cache?.popPreparedPicture(pic))
+                ?: return
+            canvas.drawImage(
+                prep.bitmap ?: return, prep.promiseOpaque, promiseClamped = true, nearestNeighbor = draft,
+                transform = if (draft) transform else prep.transform
+            )
+            // Put the bitmap into the cache only after we're done drawing, because as soon as it's in there, it could
+            // be closed by another thread.
+            cache?.putPreparedPicture(pic, prep)
         }
 
     }
 
 
+    // Note: SVG blending is always in sRGB and there's no way to change that, so this backend doesn't accept a color
+    // space parameter. Technically, one could use SVG filters to at least blend in linear light, but that's very
+    // convoluted and still doesn't give us general color space support.
     private class SVGBackend(private val svg: Element) : TapeThumbnailBackend {
 
         private val doc get() = svg.ownerDocument
@@ -818,9 +762,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private fun makePictureElement(pic: Picture, picElementId: String): Element {
             val picElement = when (pic) {
                 is Picture.Raster -> {
-                    val bos = ByteArrayOutputStream()
-                    ImageIO.write(pic.img, "png", bos)
-                    val data = Base64.getEncoder().encodeToString(bos.toByteArray())
+                    // Use sRGB for raster images embedded into the SVG.
+                    val transparent = pic.bitmap.spec.representation.alpha != Bitmap.Alpha.OPAQUE
+                    val png = BitmapWriter.PNG(Bitmap.PixelFormat.Family.RGB, transparent, ColorSpace.SRGB)
+                        .convertAndWrite(pic.bitmap)
+                    val data = Base64.getEncoder().encodeToString(png)
                     val image = doc.createElementNS(SVG_NS_URI, "image")
                     image.setAttributeNS(XLINK_NS_URI, "xlink:href", "data:image/png;base64,$data")
                     image
@@ -832,7 +778,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     picSVG.setAttribute("height", F.format(pic.height))
                     // This attribute messes up our formatting and is deprecated anyway.
                     picSVG.removeAttributeNS(XML_NS_URI, "space")
-                    // Mangle IDs and classes to ensure they are unique to the picture.
+                    // Mangle IDs to ensure they are unique to the picture.
                     val mangling = HashMap<String, String>()
                     picSVG.forEachNodeInSubtree(SHOW_ELEMENT) { elem ->
                         elem as Element
@@ -842,27 +788,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             mangling["#$id"] = "#$mangledId"
                             elem.setAttribute("id", mangledId)
                         }
-                        val classes = elem.getAttribute("class")
-                        if (classes.isNotEmpty())
-                            elem.setAttribute("class",
-                                classes.split(CLASS_DELIMITER).filter(String::isNotEmpty).joinToString(" ") { clazz ->
-                                    val mangledClass = "$picElementId-$clazz"
-                                    mangling[".$clazz"] = ".$mangledClass"
-                                    mangledClass
-                                })
                     }
-                    picSVG.forEachNodeInSubtree(SHOW_ELEMENT or SHOW_TEXT or SHOW_CDATA_SECTION) { node ->
-                        if (node is org.w3c.dom.Text) {
-                            val data = node.data
-                            var mangledData = data
-                            for ((old, new) in mangling)
-                                mangledData = mangledData.replace(old, new)
-                            if (data != mangledData)
-                                node.data = mangledData
-                            return@forEachNodeInSubtree
-                        }
+                    picSVG.forEachNodeInSubtree(SHOW_ELEMENT) { node ->
                         val attrs = node.attributes
-                        for (idx in 0 until attrs.length) {
+                        for (idx in 0..<attrs.length) {
                             val attr = attrs.item(idx) as Attr
                             val value = attr.value
                             var mangledValue = value
@@ -875,14 +804,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     picSVG
                 }
                 is Picture.PDF -> {
-                    val ctx = SVGGeneratorContext.createDefault(doc)
-                    ctx.idGenerator = object : SVGIDGenerator() {
-                        override fun generateID(prefix: String) = "$picElementId-${super.generateID(prefix)}"
-                    }
-                    ctx.comment = null
-                    val g2 = SVGGraphics2D(ctx, true)
-                    pic.drawTo(g2)
-                    g2.root
+                    setNativeNumericLocaleToC()
+                    val canvas = Canvas.forSVG(pic.width, pic.height)
+                    pic.drawTo(canvas)
+                    return makePictureElement(Picture.SVG.load(canvas.closeAndGetOutput()), picElementId)
                 }
             }
             picElement.setAttribute("id", picElementId)
@@ -891,7 +816,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         companion object {
             private val F = DecimalFormat("#.####", DecimalFormatSymbols(Locale.ROOT))
-            private val CLASS_DELIMITER = Regex("[ \t\n\r]+")
         }
 
     }
@@ -901,12 +825,26 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val doc: PDDocument,
         private val page: PDPage,
         private val cs: PDPageContentStream,
-    ) : RasterBlurBackend, TapeThumbnailBackend {
+        private val masterColorSpace: ColorSpace
+    ) : TapeThumbnailBackend {
 
         private val csHeight = page.mediaBox.height
         private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }
 
+        init {
+            page.cosObject.setItem(COSName.GROUP, PDTransparencyGroupAttributes().apply {
+                cosObject.setItem(COSName.TYPE, COSName.GROUP)
+                cosObject.setItem(COSName.CS, obtainICCBasedCS(masterColorSpace))
+            })
+        }
+
         private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
+            if (shape is Rectangle2D) {
+                cs.addRect(shape.x.toFloat(), shape.y.toFloat(), shape.width.toFloat(), shape.height.toFloat())
+                if (fill) cs.fill() else cs.stroke()
+                return
+            }
+
             val pi = shape.getPathIterator(null)
             val coords = FloatArray(6)
             while (!pi.isDone) {
@@ -938,8 +876,35 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 cs.stroke()
         }
 
-        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean) {
+        override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
             check(!dash) { "The PDF backend does not support dashing." }
+            if (blurRadius > 0.0) {
+                check(fill) { "The PDF backend does not support blurring stroke shapes." }
+                // We add this padding on every side to have enough room for the blur to spill into.
+                val pad = floor(blurRadius).toInt()
+                // Determine the bounds of the shape, and the whole and fractional parts of the shape's coordinates.
+                val bounds = shape.bounds2D
+                val xWhole = floor(bounds.x)
+                val yWhole = floor(bounds.y)
+                val xFrac = bounds.x - xWhole
+                val yFrac = bounds.y - yWhole
+                // Draw the shape onto a bitmap in a blurred fashion.
+                val w = ceil(xFrac + bounds.width).toInt() + 2 * pad
+                val h = ceil(yFrac + bounds.height).toInt() + 2 * pad
+                val rep = Canvas.compatibleRepresentation(masterColorSpace)
+                Bitmap.allocate(Bitmap.Spec(Resolution(w, h), rep)).use { bitmap ->
+                    Canvas.forBitmap(bitmap.zero()).use { canvas ->
+                        canvas.fillShape(
+                            shape, coat.toShader(), blurSigma = gaussianStdDev(blurRadius),
+                            transform = AffineTransform.getTranslateInstance(pad - xWhole, pad - yWhole)
+                        )
+                    }
+                    // Place the bitmap in the PDF.
+                    val embeddedPic = Picture.Embedded.Raster(Picture.Raster(bitmap))
+                    materializeEmbeddedPicture(xWhole - pad, yWhole - pad, 1.0, embeddedPic, draft = false)
+                }
+                return
+            }
             cs.saveGraphicsState()
             setCoat(coat, fill, shape.bounds2D)
             cs.transform(Matrix().apply { translate(0f, csHeight); scale(1f, -1f) })
@@ -995,8 +960,16 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             mat.scale(scaling)
             when (embeddedPic) {
                 is Picture.Embedded.Raster -> {
+                    val pic = embeddedPic.picture
                     mat.scale(embeddedPic.width, embeddedPic.height)
-                    cs.drawImage(docRes.pdImages.computeIfAbsent(embeddedPic.picture, ::makeImageXObject), mat)
+                    cs.drawImage(docRes.pdImages.computeIfAbsent(pic) {
+                        // Note: The first occurrence decides whether a picture is in draft-mode or not, but that's fine
+                        // since draft true only for tape thumbnails; hence a single picture never mixes both modes.
+                        PDImageXObject(doc).apply { interpolate = !draft }
+                    }, mat)
+                    val w = ceil(embeddedPic.width * scaling).toInt()
+                    val h = ceil(embeddedPic.height * scaling).toInt()
+                    docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
                 is Picture.Embedded.Vector -> {
                     val pic = embeddedPic.picture
@@ -1008,45 +981,20 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     cs.drawForm(docRes.pdForms.getOrPut(pic) {
                         when (pic) {
                             is Picture.SVG -> {
-                                val g2 = PdfBoxGraphics2D(doc, pic.width.toFloat(), pic.height.toFloat())
-                                pic.drawTo(g2)
-                                g2.dispose()
-                                g2.xFormObject
+                                val canvas = Canvas.forPDF(pic.width, pic.height, ColorSpace.SRGB)
+                                pic.drawTo(canvas)
+                                Picture.PDF.load(canvas.closeAndGetOutput()).import(docRes.layerUtil).apply {
+                                    // Set the transparency group's blending color space to sRGB.
+                                    group.cosObject.setItem(COSName.CS, obtainICCBasedCS(ColorSpace.SRGB))
+                                }
                             }
                             is Picture.PDF ->
-                                pic.import(docRes.layerUtil) ?: return
+                                pic.import(docRes.layerUtil)
                         }
                     })
                     cs.restoreGraphicsState()
                 }
             }
-        }
-
-        private fun makeImageXObject(pic: Picture.Raster): PDImageXObject {
-            val img = pic.img
-            // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
-            // images to produce smaller files.
-            // Adapted from JPEGFactory, but uses AlphaComposite to discard the alpha channel instead of
-            // ColorConvertOp, because the latter just draws the image onto a black background, thereby
-            // tinting all non-opaque pixels black depending on their transparency. Notice that even though
-            // JPEGFactory.getColorImage() warns about using AlphaComposite, we cannot reproduce the
-            // problems that they describe.
-            if (img.colorModel.hasAlpha()) {
-                val alphaRaster = img.alphaRaster
-                if (alphaRaster != null) {
-                    val alphaImg = BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_GRAY)
-                        .apply { data = alphaRaster }
-                    val colorImg = BufferedImage(img.width, img.height, BufferedImage.TYPE_3BYTE_BGR)
-                        .withG2 { g2 ->
-                            g2.composite = AlphaComposite.Src
-                            g2.drawImage(img, 0, 0, null)
-                        }
-                    return JPEGFactory.createFromImage(doc, colorImg).apply {
-                        cosObject.setItem(COSName.SMASK, JPEGFactory.createFromImage(doc, alphaImg))
-                    }
-                }
-            }
-            return JPEGFactory.createFromImage(doc, img)
         }
 
         /** This function expects both the Coat and the bound box to be in global coordinates (but Y is not flipped). */
@@ -1119,9 +1067,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 if (forAlpha)
                     add(COSFloat(color.alpha / 255f))
                 else {
-                    add(COSFloat(color.red / 255f))
-                    add(COSFloat(color.green / 255f))
-                    add(COSFloat(color.blue / 255f))
+                    val c = color.getRGBColorComponents(null)
+                    ColorSpace.SRGB.convert(masterColorSpace, c, alpha = false, clamp = true)
+                    add(COSFloat(c[0]))
+                    add(COSFloat(c[1]))
+                    add(COSFloat(c[2]))
                 }
             }
 
@@ -1141,7 +1091,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val pdShading = PDShadingType2(COSDictionary()).apply {
                 shadingType = PDShading.SHADING_TYPE2
                 extend = COSArray().apply { add(COSBoolean.TRUE); add(COSBoolean.TRUE) }
-                colorSpace = if (forAlpha) PDDeviceGray.INSTANCE else PDDeviceRGB.INSTANCE
+                colorSpace = if (forAlpha) PDDeviceGray.INSTANCE else obtainICCBasedCS(masterColorSpace)
                 coords = cosCoords
                 function = pdFunc
             }
@@ -1202,14 +1152,63 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             return docRes.pdFonts.getValue(psName)
         }
 
+        fun end() {
+            for ((pic, pdImage) in docRes.pdImages)
+                endRasterPicture(pic, pdImage, docRes.pdImageResolutions.getValue(pic))
+        }
+
+        private fun endRasterPicture(pic: Picture.Raster, pdImage: PDImageXObject, resolutions: List<Resolution>) {
+            val (pRes, rep) = pic.bitmap.spec
+            // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
+            // images to produce smaller files. This means encoding them as JPEG and reducing their resolution
+            // if they are drawn scaled down.
+            // First determine the desired resolution of the image, which is 2x the largest embedded resolution (so that
+            // there's still enough detail when zooming in). However, if the original picture is actually smaller than
+            // that, don't blow it up. Notice that reducing the resolution asymmetrically is fine because PDF squeezes
+            // all images into a 1x1 square anyway.
+            val maxEmbRes = resolutions.reduce { (w1, h1), (w2, h2) -> Resolution(max(w1, w2), max(h1, h2)) }
+            val res = Resolution(min(maxEmbRes.widthPx * 2, pRes.widthPx), min(maxEmbRes.heightPx * 2, pRes.heightPx))
+            // Next, reduce the bitmap's resolution.
+            Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
+                BitmapConverter.convert(pic.bitmap, bitmap)
+                // Now split the color and alpha components into a color image...
+                populateImageXObject(pdImage, bitmap, masterColorSpace, obtainICCBasedCS(masterColorSpace))
+                // ... and a grayscale alpha image. We can use alphaPlaneView() because picture bitmaps are planar.
+                if (rep.alpha != Bitmap.Alpha.OPAQUE) {
+                    val pdAlphaImage = PDImageXObject(doc)
+                    bitmap.alphaPlaneView().use { populateImageXObject(pdAlphaImage, it, null, PDDeviceGray.INSTANCE) }
+                    pdImage.cosObject.setItem(COSName.SMASK, pdAlphaImage)
+                }
+            }
+        }
+
+        private fun populateImageXObject(pdImage: PDImageXObject, bitmap: Bitmap, cs: ColorSpace?, pdCS: PDColorSpace) {
+            val (res, rep) = bitmap.spec
+            val jpeg = BitmapWriter.JPEG(rep.pixelFormat.family, cs).convertAndWrite(bitmap)
+            pdImage.apply {
+                cosObject.createRawOutputStream().use { it.write(jpeg) }
+                cosObject.setItem(COSName.FILTER, COSName.DCT_DECODE)
+                bitsPerComponent = 8
+                width = res.widthPx
+                height = res.heightPx
+                colorSpace = pdCS
+            }
+        }
+
+        private fun obtainICCBasedCS(colorSpace: ColorSpace) = docRes.pdColorSpaces.computeIfAbsent(colorSpace) {
+            makePDICCBased(doc, 3, ICCProfile.of(colorSpace).bytes)
+        }
+
         companion object {
             private val docResMap = WeakHashMap<PDDocument, DocRes>()
         }
 
         private class DocRes(doc: PDDocument) {
             val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
+            val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
             val pdFonts = HashMap<String /* font name */, PDFont>()
             val pdImages = HashMap<Picture.Raster, PDImageXObject>()
+            val pdImageResolutions = HashMap<Picture.Raster, MutableList<Resolution>>()
             val pdForms = HashMap<Picture.Vector, PDFormXObject>()
             val layerUtil by lazy { LayerUtility(doc) }
         }

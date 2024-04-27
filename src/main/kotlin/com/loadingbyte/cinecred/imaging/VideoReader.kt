@@ -139,21 +139,28 @@ class VideoReader(
 
         // Extract a bitmap spec from the decoder parameters. If some metadata is unspecified, assume Rec. 709.
         val pixelFormat = Bitmap.PixelFormat.of(dec.pix_fmt())
+        val pri = dec.color_primaries()
+        val trc = dec.color_trc()
         val cs = dec.colorspace()
         val chromaLoc = dec.chroma_sample_location()
         spec = Bitmap.Spec(
             Resolution(dec.width(), dec.height()),
             Bitmap.Representation(
                 pixelFormat,
-                if (dec.color_range() != AVCOL_RANGE_UNSPECIFIED) dec.color_range() else AVCOL_RANGE_MPEG,
-                if (dec.color_primaries() != AVCOL_PRI_UNSPECIFIED) dec.color_primaries() else AVCOL_PRI_BT709,
-                if (dec.color_trc() != AVCOL_TRC_UNSPECIFIED) dec.color_trc() else AVCOL_TRC_BT709,
-                if (pixelFormat.isRGB) AVCOL_SPC_RGB else if (cs != AVCOL_SPC_UNSPECIFIED) cs else AVCOL_SPC_BT709,
+                if (dec.color_range() != AVCOL_RANGE_UNSPECIFIED) Bitmap.Range.of(dec.color_range()) else
+                    Bitmap.Range.LIMITED,
+                ColorSpace.of(
+                    if (pri != AVCOL_PRI_UNSPECIFIED) ColorSpace.Primaries.of(pri) else ColorSpace.Primaries.BT709,
+                    if (trc != AVCOL_TRC_UNSPECIFIED) ColorSpace.Transfer.of(trc) else ColorSpace.Transfer.BT1886
+                ),
+                if (pixelFormat.family != Bitmap.PixelFormat.Family.YUV) null else
+                    if (cs != AVCOL_SPC_UNSPECIFIED) Bitmap.YUVCoefficients.of(cs)
+                    else Bitmap.YUVCoefficients.BT709_NCL,
                 if (!pixelFormat.hasChromaSub) AVCHROMA_LOC_UNSPECIFIED else
                     if (chromaLoc != AVCHROMA_LOC_UNSPECIFIED) chromaLoc else AVCHROMA_LOC_LEFT,
                 // According to the documentation of the flag AV_PIX_FMT_FLAG_ALPHA, alpha is always straight in FFmpeg,
                 // never pre-multiplied.
-                isAlphaPremultiplied = false
+                if (pixelFormat.hasAlpha) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
             when (dec.field_order()) {
                 AV_FIELD_TT, AV_FIELD_BT -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST

@@ -2,12 +2,10 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.*
+import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.YUV
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
-import com.loadingbyte.cinecred.imaging.DeferredVideo
-import com.loadingbyte.cinecred.imaging.VideoContainerFormat
-import com.loadingbyte.cinecred.imaging.VideoWriter
 import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.avcodec.AVCodecContext.*
@@ -59,12 +57,11 @@ class VideoRenderJob(
             Bitmap.Representation(
                 pixelFormat,
                 // RGB image sequences are always in full range.
-                if (pixelFormat.isRGB) AVCOL_RANGE_JPEG else colorSpace.range,
-                colorSpace.primaries,
-                colorSpace.transferCharacteristic,
-                if (pixelFormat.isRGB) AVCOL_SPC_RGB else colorSpace.yCbCrCoefficients,
+                if (pixelFormat.family == YUV) colorSpace.range else Bitmap.Range.FULL,
+                colorSpace.colorSpace,
+                if (pixelFormat.family == YUV) colorSpace.yuvCoefficients else null,
                 if (pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,
-                isAlphaPremultiplied = false
+                if (transparentGrounding) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
             scan,
             if (scan == Bitmap.Scan.PROGRESSIVE) Bitmap.Content.PROGRESSIVE_FRAME else Bitmap.Content.INTERLEAVED_FIELDS
@@ -78,7 +75,7 @@ class VideoRenderJob(
             DeferredVideo.BitmapBackend(scaledVideo, listOf(STATIC), listOf(TAPES), grounding, spec).use { backend ->
                 var frameIdx = 0
                 while (true) {
-                    (backend.materializeNextFrame() ?: break).use(videoWriter::write)
+                    (backend.materializeFrame(frameIdx) ?: break).use(videoWriter::write)
                     progressCallback(MAX_RENDER_PROGRESS * (frameIdx++ + 1) / scaledVideo.numFrames)
                     if (Thread.interrupted())
                         throw InterruptedException()
@@ -89,13 +86,20 @@ class VideoRenderJob(
 
 
     enum class ColorSpace(
-        val range: Int,
-        val primaries: Int,
-        val transferCharacteristic: Int,
-        val yCbCrCoefficients: Int
+        val range: Bitmap.Range,
+        val colorSpace: com.loadingbyte.cinecred.imaging.ColorSpace,
+        val yuvCoefficients: Bitmap.YUVCoefficients
     ) {
-        REC_709(AVCOL_RANGE_MPEG, AVCOL_PRI_BT709, AVCOL_TRC_BT709, AVCOL_SPC_BT709),
-        SRGB(AVCOL_RANGE_JPEG, AVCOL_PRI_BT709, AVCOL_TRC_IEC61966_2_1, AVCOL_SPC_BT470BG)
+        REC_709(
+            Bitmap.Range.LIMITED,
+            com.loadingbyte.cinecred.imaging.ColorSpace.BT709,
+            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709)
+        ),
+        SRGB(
+            Bitmap.Range.FULL,
+            com.loadingbyte.cinecred.imaging.ColorSpace.SRGB,
+            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT470BG)
+        )
     }
 
 

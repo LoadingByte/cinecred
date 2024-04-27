@@ -7,13 +7,6 @@ package com.loadingbyte.cinecred.common
  */
 
 
-inline fun DoubleArray.anyBetween(startIdx: Int, endIdx: Int, predicate: (Double) -> Boolean): Boolean {
-    for (idx in startIdx..<endIdx)
-        if (predicate(this[idx]))
-            return true
-    return false
-}
-
 inline fun FloatArray.allBetween(startIdx: Int, endIdx: Int, predicate: (Float) -> Boolean): Boolean {
     for (idx in startIdx..<endIdx)
         if (!predicate(this[idx]))

@@ -1,47 +1,44 @@
 package com.loadingbyte.cinecred.imaging
 
-import com.formdev.flatlaf.util.Graphics2DProxy
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.pdf.PDFDrawer
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
-import mkl.testarea.pdfbox2.extract.BoundingBoxFinder
-import org.apache.batik.anim.dom.SAXSVGDocumentFactory
-import org.apache.batik.anim.dom.SVGOMDocument
-import org.apache.batik.bridge.BaseScriptingEnvironment
-import org.apache.batik.bridge.BridgeContext
-import org.apache.batik.bridge.GVTBuilder
-import org.apache.batik.bridge.SVGUtilities
-import org.apache.batik.bridge.svg12.SVG12BridgeContext
-import org.apache.batik.gvt.GraphicsNode
-import org.apache.batik.util.XMLResourceDescriptor
 import org.apache.pdfbox.Loader
+import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
-import org.apache.pdfbox.rendering.PDFRenderer
-import org.apache.pdfbox.rendering.RenderDestination
-import org.apache.poi.xslf.draw.SVGUserAgent
+import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroupAttributes
+import org.bytedeco.ffmpeg.global.avutil.*
 import org.slf4j.LoggerFactory
+import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import org.w3c.dom.svg.SVGDocument
-import java.awt.Graphics2D
+import org.w3c.dom.Text
+import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
+import org.w3c.dom.traversal.NodeFilter.SHOW_TEXT
+import java.awt.geom.AffineTransform
 import java.awt.geom.Rectangle2D
-import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
-import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR
-import java.io.Closeable
-import java.io.IOException
+import java.io.*
 import java.nio.file.Path
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import javax.swing.FocusManager
 import javax.swing.JOptionPane
 import javax.swing.event.HyperlinkEvent
+import javax.xml.XMLConstants.XMLNS_ATTRIBUTE_NS_URI
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
+import kotlin.math.ceil
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 
@@ -50,116 +47,391 @@ sealed interface Picture : Closeable {
 
     val width: Double
     val height: Double
-    override fun close() {}
+
+    fun drawTo(canvas: Canvas, transform: AffineTransform? = null)
+
+    fun prepareAsBitmap(canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?):
+            Canvas.PreparedBitmap?
 
 
-    class Raster(img: BufferedImage) : Picture {
+    class Raster private constructor(
+        /**
+         * A planar float32 RBG(A) bitmap with full range, linear transfer characteristics, and premultiplied alpha.
+         *
+         * We have chosen that format as it can directly be understood by zimg, which we use for scaling and other
+         * transformations before passing the result to Skia for blitting. We use premultiplied alpha because scaling is
+         * performed with premultiplied alpha, so we want the picture to already be in the correct format for that.
+         */
+        val bitmap: Bitmap
+    ) : Picture {
 
-        // Conform non-standard raster images to the 8-bit (A)BGR pixel format and the sRGB color space. This needs to
-        // be done at some point because some of our code expects (A)BGR, and we're compositing in sRGB.
-        val img =
-            if (img.colorModel.colorSpace.isCS_sRGB && img.type.let { it == TYPE_3BYTE_BGR || it == TYPE_4BYTE_ABGR })
-                img
-            else
-                BufferedImage(img.width, img.height, if (img.colorModel.hasAlpha()) TYPE_4BYTE_ABGR else TYPE_3BYTE_BGR)
-                    .withG2 { g2 -> g2.drawImage(img, 0, 0, null) }
+        override val width get() = bitmap.spec.resolution.widthPx.toDouble()
+        override val height get() = bitmap.spec.resolution.heightPx.toDouble()
 
-        override val width get() = img.width.toDouble()
-        override val height get() = img.height.toDouble()
-
-    }
-
-
-    sealed interface Vector : Picture {
-
-        val cropX: Double
-        val cropY: Double
-        val cropWidth: Double
-        val cropHeight: Double
-        fun drawTo(g2: Graphics2D)
-
-    }
-
-
-    class SVG(
-        private val doc: SVGDocument,
-        private val gvtRoot: GraphicsNode,
-        override val width: Double,
-        override val height: Double,
-    ) : Vector {
-
-        private val lock = ReentrantLock()
-
-        override val cropX get() = gvtRoot.bounds.x
-        override val cropY get() = gvtRoot.bounds.y
-        override val cropWidth get() = gvtRoot.bounds.width
-        override val cropHeight get() = gvtRoot.bounds.height
-
-        override fun drawTo(g2: Graphics2D) {
-            // Batik might not be thread-safe, even though we haven't tested that.
-            lock.withLock { gvtRoot.paint(g2) }
+        // If the project that opened the picture has been closed and with it the picture (which is possible because
+        // materialization happens in a background thread), just silently skip the operation.
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
+            bitmap.ifNotClosed { canvas.drawImage(bitmap, transform = transform) }
         }
 
-        fun import(importer: Document): Element = importer.importNode(doc.rootElement, true) as Element
-
-    }
-
-
-    class PDF(private val doc: PDDocument) : Vector {
-
-        private val lock = ReentrantLock()
-
-        private val minBox: Rectangle2D by lazy {
-            safely {
-                val raw = BoundingBoxFinder(doc.pages[0]).apply { processPage(doc.pages[0]) }.boundingBox
-                // The raw bounding box y coordinate is actually relative to the bottom of the crop box, so we need
-                // to convert it such that it is relative to the top because the rest of our program works like that.
-                Rectangle2D.Double(raw.x, height - raw.y - raw.height, raw.width, raw.height)
-            }
-            // If the document has already been closed, this picture is worthless, so just return a dummy rectangle.
-                ?: Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
-        }
-
-        override val width get() = doc.pages[0].cropBox.width.toDouble()
-        override val height get() = doc.pages[0].cropBox.height.toDouble()
-        override val cropX get() = minBox.x
-        override val cropY get() = minBox.y
-        override val cropWidth get() = minBox.width
-        override val cropHeight get() = minBox.height
-
-        override fun drawTo(g2: Graphics2D) {
-            // Note: We have to create a new Graphics2D object here because PDFBox modifies it heavily
-            // and sometimes even makes it totally unusable.
-            @Suppress("NAME_SHADOWING")
-            g2.withNewG2 { g2 ->
-                // PDFBox calls clearRect() before starting to draw. This sometimes results in a black
-                // box even if g2.background is set to a transparent color. The most thorough fix is
-                // to just block all calls to clearRect().
-                val g2Proxy = object : Graphics2DProxy(g2) {
-                    override fun clearRect(x: Int, y: Int, width: Int, height: Int) {
-                        // Block call.
-                    }
-                }
-                safely { PDFRenderer(doc).renderPageToGraphics(0, g2Proxy, 1f, 1f, RenderDestination.EXPORT) }
-            }
-        }
-
-        fun import(importer: LayerUtility): PDFormXObject? = safely { importer.importPageAsForm(doc, 0) }
+        override fun prepareAsBitmap(
+            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+        ) = bitmap.ifNotClosed { canvas.prepareBitmap(bitmap, transform = transform, cached = cached) }
 
         override fun close() {
-            safely(doc::close)
+            bitmap.close()
         }
 
-        private inline fun <R> safely(block: () -> R): R? {
-            // PDFBox is definitely not thread-safe. Also, we check whether the document has been closed prior
-            // to using it and do not want it to close later while we are using it. Since the closing operation
-            // in the Picture class is also synchronized, we avoid such a situation.
-            return lock.withLock {
-                // If the project that opened this document has been closed and with it the document (which is
-                // possible because materialization might happen in a background thread), do not render the
-                // PDF to avoid provoking an exception.
-                if (!doc.document.isClosed) block() else null
+        companion object {
+
+            fun compatibleRepresentation(primaries: ColorSpace.Primaries, hasAlpha: Boolean) = Bitmap.Representation(
+                Bitmap.PixelFormat.of(if (hasAlpha) AV_PIX_FMT_GBRAPF32 else AV_PIX_FMT_GBRPF32),
+                Bitmap.Range.FULL,
+                ColorSpace.of(primaries, ColorSpace.Transfer.LINEAR),
+                yuvCoefficients = null,
+                AVCHROMA_LOC_UNSPECIFIED,
+                if (hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
+            )
+
+            /** After this constructor returns, [bitmap] may be closed without affecting the new picture object. */
+            operator fun invoke(bitmap: Bitmap): Raster {
+                val (res, rep, scan) = bitmap.spec
+                val cs = requireNotNull(rep.colorSpace) { "Cannot create picture from a bitmap without a color space." }
+                val requiredRep = compatibleRepresentation(cs.primaries, rep.pixelFormat.hasAlpha)
+                val newBitmap = when {
+                    rep != requiredRep ->
+                        Bitmap.allocate(Bitmap.Spec(res, requiredRep)).also { BitmapConverter.convert(bitmap, it) }
+                    scan != Bitmap.Scan.PROGRESSIVE -> bitmap.reinterpretedView(Bitmap.Spec(res, rep))
+                    else -> bitmap.view()
+                }
+                return Raster(newBitmap)
             }
+
+            /** @throws IOException */
+            fun load(bytes: ByteArray): Raster = Raster(BitmapReader.read(bytes, planar = true))
+            /** @throws IOException */
+            fun load(file: Path): Raster = Raster(BitmapReader.read(file, planar = true))
+
+        }
+
+    }
+
+
+    sealed class Vector : Picture {
+
+        val cropX: Double get() = minBox.x
+        val cropY: Double get() = minBox.y
+        val cropWidth: Double get() = minBox.width
+        val cropHeight: Double get() = minBox.height
+
+        private val minBox: Rectangle2D by lazy {
+            val origBox = Rectangle2D.Double(0.0, 0.0, width, height)
+            val minBox = empiricallyFindMinBox(origBox)
+            // If the reduction is severe, do a second pass to better identify the exact boundaries.
+            if (minBox.width >= 0.5 * origBox.width && minBox.height >= 0.5 * origBox.height) minBox else
+                empiricallyFindMinBox(minBox.apply { x -= 2.0; y -= 2.0; width += 4.0; height += 4.0 })
+        }
+
+        // This method finds the minimal bounding box by just rendering the picture and looking at the pixels.
+        private fun empiricallyFindMinBox(curBox: Rectangle2D.Double): Rectangle2D.Double {
+            if (curBox.width < 0.001 || curBox.height < 0.001)
+                return curBox
+            val s = 1000.0 / max(curBox.width, curBox.height)
+            val res = Resolution(ceil(curBox.width * s).toInt(), ceil(curBox.height * s).toInt())
+            if (res.widthPx <= 0 || res.heightPx <= 0)
+                return curBox
+            // The sRGB color space is correct for SVGs and a good guess for most PDFs.
+            val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
+            val px = Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
+                Canvas.forBitmap(bitmap.zero()).use { canvas ->
+                    drawTo(canvas, AffineTransform.getScaleInstance(s, s).apply { translate(-curBox.x, -curBox.y) })
+                }
+                bitmap.getF(res.widthPx * 4)
+            }
+            val minX = locateBoundary(px, 0, res.widthPx, 1, res.heightPx, 1, res.widthPx, true)
+            // All pixels are transparent, so just abort.
+            if (minX.isNaN())
+                return curBox
+            val minY = locateBoundary(px, 0, res.heightPx, 1, res.widthPx, res.widthPx, 1, true)
+            val maxX = locateBoundary(px, res.widthPx - 1, -1, -1, res.heightPx, 1, res.widthPx, false)
+            val maxY = locateBoundary(px, res.heightPx - 1, -1, -1, res.widthPx, res.widthPx, 1, false)
+            return Rectangle2D.Double(curBox.x + minX / s, curBox.y + minY / s, (maxX - minX) / s, (maxY - minY) / s)
+        }
+
+        private fun locateBoundary(
+            px: FloatArray, uStart: Int, uEnd: Int, uStep: Int, vEnd: Int, uStride: Int, vStride: Int, invAlpha: Boolean
+        ): Double {
+            var u = uStart
+            while (u != uEnd) {
+                var alpha = 0f
+                var i = u * uStride * 4 + 3
+                for (v in 0..<vEnd) {
+                    alpha = max(alpha, px[i])
+                    i += vStride * 4
+                }
+                // We look at the outermost pixel with non-zero alpha, and then place the boundary at a point inside
+                // that pixel that depends on the pixel's alpha. In other words, we exploit the antialiasing to locate
+                // the boundary at sub-pixel accuracy. Of course, this will give ever so slightly wrong results if the
+                // drawn object is partially transparent, but the deviation is only a fraction of a pixel, so it's fine.
+                if (alpha != 0f)
+                    return u + if (invAlpha) 1.0 - alpha else alpha.toDouble()
+                u += uStep
+            }
+            return Double.NaN
+        }
+
+    }
+
+
+    class SVG private constructor(
+        private val doc: Document,
+        private val src: Canvas.SourceSVG,
+        override val width: Double,
+        override val height: Double
+    ) : Vector() {
+
+        private val lock = ReentrantLock()
+
+        // If the project that opened the picture has been closed and with it the picture (which is possible because
+        // materialization happens in a background thread), just silently skip the operation.
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
+            lock.withLock { if (src.handle.scope().isAlive) canvas.drawSVG(src, transform) }
+        }
+
+        override fun prepareAsBitmap(
+            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+        ) = lock.withLock {
+            if (src.handle.scope().isAlive) canvas.prepareSVGAsBitmap(src, transform, cached) else null
+        }
+
+        fun import(importer: Document): Element =
+            lock.withLock { importer.importNode(doc.documentElement, true) as Element }
+
+        override fun close() {
+            lock.withLock(src::close)
+        }
+
+        companion object {
+
+            /** @throws Exception */
+            fun load(bytes: ByteArray): SVG = load(ByteArrayInputStream(bytes))
+
+            /** @throws Exception */
+            fun load(file: Path): SVG = file.inputStream().use(::load)
+
+            private fun load(stream: InputStream): SVG {
+                val doc = DocumentBuilderFactory.newNSInstance().apply {
+                    isCoalescing = true
+                    // When this wasn't disabled, we've observed huge latencies due to the DTD being downloaded.
+                    setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                }.newDocumentBuilder().parse(stream)
+                cleanDoc(doc)
+                return parseDoc(doc)
+            }
+
+            private fun cleanDoc(doc: Document) {
+                val root = doc.documentElement
+                val rootNS = root.namespaceURI
+                if (root.localName != "svg")
+                    throw IOException("SVG is missing root <svg> element.")
+                if (rootNS != null && rootNS != SVG_NS_URI)
+                    throw IOException("SVG has wrong namespace '$rootNS'")
+
+                // Clean up the XML:
+                //   - Remove all stretches of pure whitespace in between markup.
+                //   - Assign the SVG namespace to elements which don't have one.
+                //   - Assign the xlink namespace to href attributes to make Skia see them.
+                //   - Strip namespace prefixes from all SVG elements and SVG attributes.
+                //   - Remove elements and attributes with namespaces other than SVG or xlink.
+                //   - Parse all <style> elements and then remove them from the document.
+                //     We mainly do this because Skia doesn't understand CSS, but it also makes for nicer SVG exports.
+                //   - Remove all <text> elements, because our build of Skia doesn't implement text rendering. However,
+                //     SVG text rendering varies a lot across user agents anyway, so SVGs usually use paths instead.
+                var usesXlink = false
+                val cssRulesets = mutableListOf<CSS.Ruleset>()
+                root.forEachNodeInSubtree(SHOW_ELEMENT or SHOW_TEXT) { elem ->
+                    if (elem is Text) {
+                        if (elem.data.isBlank())
+                            elem.parentNode.removeChild(elem)
+                        return@forEachNodeInSubtree
+                    }
+                    val elemNS = elem.namespaceURI
+                    if (elemNS != null && elemNS != SVG_NS_URI)
+                        elem.parentNode.removeChild(elem)
+                    else {
+                        if (elemNS == null || elem.prefix != null)
+                            doc.renameNode(elem, SVG_NS_URI, elem.localName)
+                        val attrs = elem.attributes
+                        for (idx in attrs.length - 1 downTo 0) {
+                            val attr = attrs.item(idx)
+                            val attrNS = attr.namespaceURI
+                            when (attrNS) {
+                                null -> {}
+                                XLINK_NS_URI -> usesXlink = true
+                                SVG_NS_URI -> doc.renameNode(attr, null, attr.localName)
+                                else -> (elem as Element).removeAttributeNode(attr as Attr)
+                            }
+                            if (attr.localName == "href" && attrNS == null) {
+                                usesXlink = true
+                                doc.renameNode(attr, XLINK_NS_URI, "xlink:href")
+                            }
+                        }
+                    }
+                    when (elem.localName) {
+                        "style" -> {
+                            cssRulesets += CSS.parseStylesheet(elem.textContent)
+                            elem.parentNode.removeChild(elem)
+                        }
+                        "text" ->
+                            elem.parentNode.removeChild(elem)
+                    }
+                }
+
+                // Introduce the xlink namespace on the root element, as otherwise, each element would re-introduce it.
+                if (usesXlink)
+                    root.setAttributeNS(XMLNS_ATTRIBUTE_NS_URI, "xmlns:xlink", XLINK_NS_URI)
+
+                // Apply the parsed styling rules to all matching elements.
+                // Also consider inline "style" attributes, and remove them from the document as well.
+                root.forEachNodeInSubtree(SHOW_ELEMENT) { elem ->
+                    elem as Element
+                    val attrCascades = HashMap<String, Cascade>()
+                    for (ruleset in cssRulesets) {
+                        val maxSpecificity = ruleset.selectors.maxOf { if (it.matches(elem)) it.specificity else -1 }
+                        if (maxSpecificity != -1)
+                            for (decl in ruleset.declarations)
+                                attrCascades.computeIfAbsent(decl.property) { Cascade() }.apply(decl, maxSpecificity)
+                    }
+                    val styleAttr = elem.getAttribute("style")
+                    if (styleAttr.isNotEmpty()) {
+                        elem.removeAttribute("style")
+                        for (decl in CSS.parseDeclarations(styleAttr))
+                            attrCascades.computeIfAbsent(decl.property) { Cascade() }.apply(decl, 1 shl 24)
+                    }
+                    // Note: As per the SVG specification, CSS properties always override attribute-declared properties.
+                    for ((attr, cascade) in attrCascades)
+                        elem.setAttribute(attr, cascade.value)
+                }
+            }
+
+            private class Cascade {
+                var value = ""
+                private var weight = -1
+                fun apply(decl: CSS.Declaration, specificity: Int) {
+                    var declWeight = specificity
+                    if (decl.important) declWeight = declWeight or 1 shl 25
+                    if (weight <= declWeight) {
+                        weight = declWeight
+                        value = decl.value
+                    }
+                }
+            }
+
+            private fun parseDoc(doc: Document): SVG {
+                val writer = StringWriter()
+                TransformerFactory.newInstance().newTransformer().transform(DOMSource(doc), StreamResult(writer))
+                val xml = writer.toString()
+                val sourceSVG = try {
+                    Canvas.SourceSVG(xml)
+                } catch (e: IllegalArgumentException) {
+                    throw IOException(e)
+                }
+                return SVG(doc, sourceSVG, sourceSVG.width, sourceSVG.height)
+            }
+
+        }
+
+    }
+
+
+    class PDF private constructor(
+        private val doc: PDDocument,
+        override val width: Double,
+        override val height: Double
+    ) : Vector() {
+
+        private val lock = ReentrantLock()
+
+        // If the project that opened the picture has been closed and with it the picture (which is possible because
+        // materialization happens in a background thread), just silently skip the operation.
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
+            lock.withLock { if (!doc.document.isClosed) canvas.drawPDF(doc, transform) }
+        }
+
+        override fun prepareAsBitmap(
+            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+        ) = lock.withLock { if (!doc.document.isClosed) canvas.preparePDFAsBitmap(doc, transform, cached) else null }
+
+        fun import(importer: LayerUtility): PDFormXObject = lock.withLock {
+            if (!doc.document.isClosed) {
+                val page = doc.getPage(0)
+                val form = importer.importPageAsForm(doc, page)
+                // The matrix set by LayerUtility does wrong scaling if the page is rotated, so we'll set it ourselves.
+                form.setMatrix(PDFDrawer.compensateForCropBoxAndRotation(andFlip = false, page))
+                // Our implementation of Canvas.drawPDF() composites the picture against a transparent backdrop, and
+                // then draws the result to the canvas in one go. To replicate this behavior in exported PDFs, we treat
+                // imported PDFs as isolated transparency groups.
+                if (form.group == null)
+                    form.cosObject.setItem(COSName.GROUP, PDTransparencyGroupAttributes().apply {
+                        cosObject.setItem(COSName.TYPE, COSName.GROUP)
+                    })
+                // The I (isolated) entry is not needed on page groups, but must be explicitly set on nested groups.
+                form.group.cosObject.setBoolean(COSName.I, true)
+                // If the page doesn't define a page group color space, but it does define an RGB output intent, section
+                // 11.4.7 of the PDF specification says that the output intent's color space is used for blending. To
+                // preserve that blending color space after the page has been embedded into another PDF, we set it as
+                // the form's transparency group color space. Notice that this group color space is inherited to nested
+                // groups, just like the output intent.
+                // In addition, output intents redefine the Device* color spaces (tested in Acrobat). As a transparency
+                // group color space doesn't do that (also tested in Acrobat), we need to supply the output intent color
+                // spaces as Default* color spaces. Technically, this needs to be applied to all nested transparency
+                // groups as well except those sub-hierarchies used as softmasks, but that's complicated to implement
+                // (because we'd need to traverse the nested transparency groups ourselves and also clone their
+                // resources dicts manually, since LayerUtility only clones the root page's resources dict), so for now,
+                // we only add Default* color spaces for the root page.
+                val devCS = PDFDrawer.getDeviceColorSpaces(doc, page)
+                val pdCSGray = devCS.deviceGray?.let { makePDICCBased(doc, 1, it.bytes) }
+                val pdCSRGB = devCS.deviceRGB?.let { makePDICCBased(doc, 3, it.bytes) }
+                val pdCSCMYK = devCS.deviceCMYK?.let { makePDICCBased(doc, 4, it.bytes) }
+                val resources = form.resources
+                if (pdCSGray != null && !resources.hasColorSpace(COSName.DEFAULT_GRAY))
+                    resources.put(COSName.DEFAULT_GRAY, pdCSGray)
+                if (pdCSRGB != null && !resources.hasColorSpace(COSName.DEFAULT_RGB))
+                    resources.put(COSName.DEFAULT_RGB, pdCSRGB)
+                if (pdCSCMYK != null && !resources.hasColorSpace(COSName.DEFAULT_CMYK))
+                    resources.put(COSName.DEFAULT_CMYK, pdCSCMYK)
+                if (pdCSRGB != null && !form.group.cosObject.containsKey(COSName.CS))
+                    form.group.cosObject.setItem(COSName.CS, pdCSRGB)
+                form
+            } else
+                PDFormXObject(importer.document)
+        }
+
+        override fun close() {
+            lock.withLock(doc::close)
+        }
+
+        companion object {
+
+            /** @throws IOException */
+            fun load(bytes: ByteArray): PDF = wrap(Loader.loadPDF(bytes))
+
+            /** @throws IOException */
+            fun load(file: Path): PDF = wrap(Loader.loadPDF(file.toFile()))
+
+            private fun wrap(doc: PDDocument): PDF {
+                if (doc.numberOfPages == 0) {
+                    doc.close()
+                    throw IOException("PDF has 0 pages.")
+                }
+                val size = PDFDrawer.sizeOfRotatedCropBox(doc.getPage(0))
+                if (size.width < 0.001 || size.height < 0.001f) {
+                    doc.close()
+                    throw IOException("PDF's crop box is vanishingly small.")
+                }
+                return PDF(doc, size.width, size.height)
+            }
+
         }
 
     }
@@ -185,7 +457,7 @@ sealed interface Picture : Closeable {
             val resolution: Resolution
         ) : Embedded {
 
-            constructor(picture: Picture.Raster) : this(picture, Resolution(picture.img.width, picture.img.height))
+            constructor(picture: Picture.Raster) : this(picture, Resolution(picture.intWidth, picture.intHeight))
 
             init {
                 require(resolution.run { widthPx > 0 && heightPx > 0 })
@@ -204,13 +476,18 @@ sealed interface Picture : Closeable {
                 withHeightPreservingAspectRatio(height.roundToInt())
 
             fun withWidthPreservingAspectRatio(width: Int) =
-                Raster(picture, Resolution(width, roundingDiv(picture.img.height * width, picture.img.width)))
+                Raster(picture, Resolution(width, roundingDiv(picture.intHeight * width, picture.intWidth)))
 
             fun withHeightPreservingAspectRatio(height: Int) =
-                Raster(picture, Resolution(roundingDiv(picture.img.width * height, picture.img.height), height))
+                Raster(picture, Resolution(roundingDiv(picture.intWidth * height, picture.intHeight), height))
 
             /** In contrast to the other sizing methods, this one doesn't preserve the aspect ratio. */
             fun withForcedResolution(resolution: Resolution) = Raster(picture, resolution)
+
+            companion object {
+                private val Picture.Raster.intWidth get() = bitmap.spec.resolution.widthPx
+                private val Picture.Raster.intHeight get() = bitmap.spec.resolution.heightPx
+            }
 
         }
 
@@ -260,60 +537,12 @@ sealed interface Picture : Closeable {
             val ext = file.extension
             if (file.isRegularFile())
                 when {
-                    ext in RASTER_EXTS -> return loadRaster(file)
-                    ext.equals(SVG_EXT, ignoreCase = true) -> return loadSVG(file)
-                    ext.equals(PDF_EXT, ignoreCase = true) -> return loadPDF(file)
+                    ext in RASTER_EXTS -> return Raster.load(file)
+                    ext.equals(SVG_EXT, ignoreCase = true) -> return SVG.load(file)
+                    ext.equals(PDF_EXT, ignoreCase = true) -> return PDF.load(file)
                     ext in POSTSCRIPT_EXTS -> return loadPostScript(file)
                 }
             throw IllegalArgumentException("Not a picture file: $file")
-        }
-
-        private fun loadRaster(rasterFile: Path): Raster =
-            Raster(ImageIO.read(rasterFile.toFile()))
-
-        // Look here for references:
-        // https://github.com/apache/xmlgraphics-batik/blob/trunk/batik-transcoder/src/main/java/org/apache/batik/transcoder/SVGAbstractTranscoder.java
-        private fun loadSVG(svgFile: Path): SVG {
-            val factory = SAXSVGDocumentFactory(XMLResourceDescriptor.getXMLParserClassName())
-            val doc = svgFile.bufferedReader().use {
-                factory.createDocument(svgFile.toUri().toString(), it) as SVGOMDocument
-            }
-            val docRoot = doc.rootElement
-            // By default, Batik assumes that the viewport has size (1,1). If the SVG doesn't have the width and height
-            // attributes, Batik fits the SVG into the viewport, and as such, the SVG basically vanishes. Of course, the
-            // user can still get the SVG to show by scaling it back up in the program, but we'd like a better default.
-            // So we read the viewBox attribute of the SVG (which must exist when width/height are missing) and set the
-            // viewport size to the viewBox size. Apache POI has already implemented this, so we just steal their class.
-            val userAgent = SVGUserAgent().apply { initViewbox(doc) }
-            val ctx = when {
-                doc.isSVG12 -> SVG12BridgeContext(userAgent)
-                else -> BridgeContext(userAgent)
-            }
-            ctx.isDynamic = true
-
-            val gvtRoot = GVTBuilder().build(ctx, doc)
-
-            val width = ctx.documentSize.width
-            val height = ctx.documentSize.height
-
-            // Dispatch an 'onload' event if needed.
-            if (ctx.isDynamic) {
-                val se = BaseScriptingEnvironment(ctx)
-                se.loadScripts()
-                se.dispatchSVGLoadEvent()
-                if (ctx.isSVG12)
-                    ctx.animationEngine.currentTime = SVGUtilities.convertSnapshotTime(docRoot, null)
-            }
-
-            return SVG(doc, gvtRoot, width, height)
-        }
-
-        private fun loadPDF(pdfFile: Path): PDF {
-            val doc = Loader.loadPDF(pdfFile.toFile())
-            if (doc.numberOfPages != 0)
-                return PDF(doc)
-            else
-                throw IOException()
         }
 
         private val GS_EXECUTABLE: Path? by lazy {
@@ -389,7 +618,9 @@ sealed interface Picture : Closeable {
                 while (true) {
                     tries++
                     try {
-                        return loadPDF(tmpFile)
+                        // First read the entire file into memory and then pass it to the PDF library.
+                        // If we don't do this, the library later complains that the file has been deleted.
+                        return PDF.load(tmpFile.readBytes())
                     } catch (e: Exception) {
                         if (tries == 10)
                             throw e

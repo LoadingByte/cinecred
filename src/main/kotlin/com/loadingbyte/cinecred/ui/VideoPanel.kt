@@ -3,14 +3,18 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.formatTimecode
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.scale
+import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.BitmapJ2DBridge
+import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Transparency
@@ -20,7 +24,9 @@ import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
+import java.util.concurrent.locks.ReentrantLock
 import javax.swing.*
+import kotlin.concurrent.withLock
 import kotlin.math.*
 
 
@@ -95,8 +101,9 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val makeVideoBackendJobSlot = JobSlot()
     private val materializeFrameJobSlot = JobSlot()
-    @Volatile
-    private var curVideoBackend: Triple<DeferredVideo.BufferedImageBackend, Resolution, Color>? = null
+    private val materializationCache = DeferredImage.CanvasMaterializationCache()
+    private var curVideoBackend: Pair<DeferredVideo.BitmapBackend, BitmapJ2DBridge>? = null
+    private val curVideoBackendLock = ReentrantLock()
     private var curFrame: BufferedImage? = null
     private var systemScaling = 1.0
 
@@ -243,7 +250,10 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         playRate = 0
         if (avail.isEmpty()) {
             makeVideoBackendJobSlot.submit {
-                curVideoBackend = null
+                curVideoBackendLock.withLock {
+                    curVideoBackend?.first?.close()
+                    curVideoBackend = null
+                }
                 materializeAndDrawFrame(0)
             }
             timecodeLabel.text = "\u2014 / \u2014"
@@ -277,29 +287,32 @@ class VideoPanel(private val ctrl: ProjectController) : JPanel() {
         val currentFrameIdx = frameSlider.value
 
         makeVideoBackendJobSlot.submit {
+            // Notice: If the canvas was disposed in the meantime, return early to avoid crashing.
+            val nativeCM = canvas.graphicsConfiguration.getColorModel(Transparency.OPAQUE) ?: return@submit
+            val bitmapJ2DBridge = BitmapJ2DBridge(nativeCM)
             val scaledVideo = video.copy(resolutionScaling = scaling)
-            val scaledVideoBackend = object : DeferredVideo.BufferedImageBackend(
-                scaledVideo, listOf(STATIC), listOf(TAPES), draft = true, preloading = true
-            ) {
-                override fun createIntermediateImage(width: Int, height: Int) =
-                    // If the canvas was disposed in the meantime, create a dummy image to avoid crashing.
-                    canvas.graphicsConfiguration.createCompatibleImage(width, height, Transparency.TRANSLUCENT)
-                        ?: BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
-            }
+            val scaledVideoBackend = DeferredVideo.BitmapBackend(
+                scaledVideo, listOf(STATIC), listOf(TAPES), project.styling.global.grounding,
+                Bitmap.Spec(scaledVideo.resolution, bitmapJ2DBridge.nativeRepresentation),
+                cache = materializationCache, randomAccessDraftMode = true
+            )
             // Simulate materializing the currently selected frame in the background thread. As expensive operations
             // are cached, the subsequent materialization of that frame will be very fast.
             scaledVideoBackend.preloadFrame(currentFrameIdx)
-            curVideoBackend = Triple(scaledVideoBackend, scaledVideo.resolution, project.styling.global.grounding)
+            curVideoBackendLock.withLock {
+                curVideoBackend?.first?.close()
+                curVideoBackend = Pair(scaledVideoBackend, bitmapJ2DBridge)
+            }
             materializeAndDrawFrame(currentFrameIdx)
         }
     }
 
     private fun materializeAndDrawFrame(frameIdx: Int) {
         materializeFrameJobSlot.submit {
-            val frame = curVideoBackend?.let { (scaledVideoBackend, resolution, grounding) ->
-                canvas.graphicsConfiguration.createCompatibleImage(resolution.widthPx, resolution.heightPx)
-                    ?.withG2 { g2 -> g2.color = grounding; g2.fillRect(0, 0, resolution.widthPx, resolution.heightPx) }
-                    ?.also { scaledVideoBackend.materializeFrame(it, frameIdx) }
+            val frame = curVideoBackendLock.withLock {
+                curVideoBackend?.let { (scaledVideoBackend, bitmapJ2DBridge) ->
+                    scaledVideoBackend.materializeFrame(frameIdx)?.use(bitmapJ2DBridge::toNativeImage)
+                }
             }
             SwingUtilities.invokeLater {
                 curFrame = frame

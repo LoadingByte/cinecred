@@ -1,11 +1,14 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
+import com.loadingbyte.cinecred.imaging.BitmapWriter
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.Picture
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
-import javax.imageio.ImageIO
 import kotlin.io.path.*
 
 
@@ -127,13 +130,13 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                     return@mapNotNull null
                 }
                 val file = IMAGE_DIR.resolve("$uuid.png")
-                val image = try {
-                    ImageIO.read(file.toFile())
+                val raster = try {
+                    Picture.Raster.load(file)
                 } catch (e: IOException) {
                     LOGGER.error("Cannot read overlay image file '{}'.", file, e)
                     return@mapNotNull null
                 }
-                ImageOverlay(uuid, name, Picture.Raster(image), rasterPersisted = true, underlay)
+                ImageOverlay(uuid, name, raster, rasterPersisted = true, underlay)
             }
             else -> null
         }
@@ -158,7 +161,10 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                 if (!file.exists() || !overlay.rasterPersisted)
                     try {
                         file.parent.createDirectoriesSafely()
-                        ImageIO.write(overlay.raster.img, "png", file.toFile())
+                        val bitmap = overlay.raster.bitmap
+                        // For now, we save overlay images in the sRGB color space.
+                        BitmapWriter.PNG(RGB, bitmap.spec.representation.alpha != Bitmap.Alpha.OPAQUE, ColorSpace.SRGB)
+                            .convertAndWrite(bitmap, file)
                         overlay.rasterPersisted = true
                     } catch (e: IOException) {
                         LOGGER.error("Cannot write the overlay image file '{}'.", file, e)

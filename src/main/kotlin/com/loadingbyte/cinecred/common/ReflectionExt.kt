@@ -1,4 +1,4 @@
-@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
+@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE", "USELESS_CAST")
 
 package com.loadingbyte.cinecred.common
 
@@ -6,13 +6,21 @@ import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.pdfwriter.COSWriter
 import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.common.function.PDFunction
+import org.apache.pdfbox.pdmodel.graphics.color.*
+import org.apache.pdfbox.pdmodel.graphics.shading.PDShading
+import org.apache.pdfbox.util.Matrix
 import org.apache.poi.util.LocaleID
 import sun.font.*
 import java.awt.Font
+import java.awt.Point
 import java.awt.Toolkit
 import java.awt.Window
+import java.awt.color.ICC_ColorSpace
 import java.awt.font.GlyphVector
 import java.awt.font.TextLayout
+import java.awt.geom.AffineTransform
+import java.awt.geom.Point2D
 import java.io.OutputStream
 import java.lang.Short.toUnsignedInt
 import java.lang.invoke.MethodHandles
@@ -254,6 +262,41 @@ fun PDPageContentStream.showGlyphsWithPositioning(glyphs: IntArray, shifts: Floa
 }
 
 
+fun PDICCBased.getAWTColorSpace(): ICC_ColorSpace? = get_awtColorSpace.invokeExact(this) as ICC_ColorSpace?
+fun PDICCBased.getActivatedAlternateColorSpace(): PDColorSpace? =
+    get_alternateColorSpace.invokeExact(this) as PDColorSpace?
+@Suppress("UNCHECKED_CAST")
+fun PDIndexed.getColorTable(): Array<FloatArray> = get_colorTable.invokeExact(this) as Array<FloatArray>
+fun PDSeparation.getTintTransform(): PDFunction = get_tintTransform.invokeExact(this) as PDFunction
+fun PDDeviceN.getColorantToComponent(): IntArray = get_colorantToComponent.invokeExact(this) as IntArray
+fun PDDeviceN.getProcessColorSpace(): PDColorSpace = get_processColorSpace.invokeExact(this) as PDColorSpace
+@Suppress("UNCHECKED_CAST")
+fun PDDeviceN.getSpotColorSpaces(): Array<PDSeparation?> = get_spotColorSpaces.invokeExact(this) as Array<PDSeparation?>
+
+
+@Suppress("UNCHECKED_CAST")
+fun PDShading.collectTriangles(transform: AffineTransform): List<Any> =
+    collectTriangles(this, transform, Matrix()) as List<Any>
+
+@Suppress("UNCHECKED_CAST")
+fun PDShading.collectTrianglesOfPatches(transform: AffineTransform, ctlPoints: Int): List<Any> =
+    (collectPatches(this, transform, Matrix(), ctlPoints) as List<Any>).flatMap { get_listOfTriangles(it) as List<Any> }
+
+@Suppress("UNCHECKED_CAST")
+fun shadedTriangleGetCorner(tri: Any): Array<Point2D> = get_corner(tri) as Array<Point2D>
+@Suppress("UNCHECKED_CAST")
+fun shadedTriangleGetColor(tri: Any): Array<FloatArray> = get_color(tri) as Array<FloatArray>
+fun shadedTriangleGetDeg(tri: Any): Int = getDeg(tri) as Int
+fun shadedTriangleGetLine(tri: Any): Any = getLine(tri)
+fun shadedTriangleContains(tri: Any, p: Point2D): Boolean = contains(tri, p) as Boolean
+fun shadedTriangleCalcColor(tri: Any, p: Point2D): FloatArray = calcColor_tri(tri, p) as FloatArray
+
+fun newLine(p0: Point, p1: Point, c0: FloatArray, c1: FloatArray): Any = newLine.invoke(p0, p1, c0, c1)
+@Suppress("UNCHECKED_CAST")
+fun lineGetLinePoints(line: Any): Set<Point> = get_linePoints(line) as Set<Point>
+fun lineCalcColor(line: Any, p: Point): FloatArray = calcColor_line(line, p) as FloatArray
+
+
 fun resolveGnomeFont(): Font {
     return getGnomeFont.invokeExact() as Font
 }
@@ -277,6 +320,12 @@ fun trySetAWTAppClassNameLinux(awtAppClassName: String) {
 private val TextLine = Class.forName("java.awt.font.TextLine")
 private val ExtendedTextSourceLabel = Class.forName("sun.font.ExtendedTextSourceLabel")
 private val PDAbstractContentStream = Class.forName("org.apache.pdfbox.pdmodel.PDAbstractContentStream")
+private val PDTriangleBasedShadingType =
+    Class.forName("org.apache.pdfbox.pdmodel.graphics.shading.PDTriangleBasedShadingType")
+private val PDMeshBasedShadingType = Class.forName("org.apache.pdfbox.pdmodel.graphics.shading.PDMeshBasedShadingType")
+private val ShadedTriangle = Class.forName("org.apache.pdfbox.pdmodel.graphics.shading.ShadedTriangle")
+private val Patch = Class.forName("org.apache.pdfbox.pdmodel.graphics.shading.Patch")
+private val Line = Class.forName("org.apache.pdfbox.pdmodel.graphics.shading.Line")
 private val LinuxFontPolicy = Class.forName("com.formdev.flatlaf.LinuxFontPolicy")
 
 private val getGnomeFont = LinuxFontPolicy
@@ -284,6 +333,14 @@ private val getGnomeFont = LinuxFontPolicy
 
 private val resources = Toolkit::class.java.findStaticVar("resources", ResourceBundle::class.java)
 private val platformResources = Toolkit::class.java.findStaticVar("platformResources", ResourceBundle::class.java)
+
+private val newLine = Line
+    .findConstructor(
+        methodType(
+            Void::class.javaPrimitiveType,
+            Point::class.java, Point::class.java, FloatArray::class.java, FloatArray::class.java
+        )
+    )
 
 private val getTableBytes = Font2D::class.java
     .findVirtual("getTableBytes", methodType(ByteArray::class.java, Int::class.java))
@@ -309,12 +366,40 @@ private val script = GlyphLayout.LayoutEngineKey::class.java
     .findVirtual("script", methodType(Int::class.java))
 private val writeOperandFloat = PDPageContentStream::class.java
     .findVirtual("writeOperand", methodType(Void::class.javaPrimitiveType, Float::class.java))
+private val collectTriangles = PDTriangleBasedShadingType
+    .findVirtual("collectTriangles", methodType(List::class.java, AffineTransform::class.java, Matrix::class.java))
+private val collectPatches = PDMeshBasedShadingType
+    .findVirtual(
+        "collectPatches", methodType(List::class.java, AffineTransform::class.java, Matrix::class.java, Int::class.java)
+    )
+private val getDeg = ShadedTriangle
+    .findVirtual("getDeg", methodType(Int::class.java))
+private val getLine = ShadedTriangle
+    .findVirtual("getLine", methodType(Line))
+private val contains = ShadedTriangle
+    .findVirtual("contains", methodType(Boolean::class.java, Point2D::class.java))
+private val calcColor_tri = ShadedTriangle
+    .findVirtual("calcColor", methodType(FloatArray::class.java, Point2D::class.java))
+private val calcColor_line = Line
+    .findVirtual("calcColor", methodType(FloatArray::class.java, Point::class.java))
 
 private val get_platName = PhysicalFont::class.java.findGetter("platName", String::class.java)
 private val get_textLine = TextLayout::class.java.findGetter("textLine", TextLine)
 private val get_fComponents = TextLine.findGetter("fComponents", TextLineComponent::class.java.arrayType())
 private val get_locs = TextLine.findGetter("locs", FloatArray::class.java)
 private val get_outputStream = PDAbstractContentStream.findGetter("outputStream", OutputStream::class.java)
+private val get_awtColorSpace = PDICCBased::class.java.findGetter("awtColorSpace", ICC_ColorSpace::class.java)
+private val get_alternateColorSpace = PDICCBased::class.java.findGetter("alternateColorSpace", PDColorSpace::class.java)
+private val get_colorTable = PDIndexed::class.java.findGetter("colorTable", FloatArray::class.java.arrayType())
+private val get_tintTransform = PDSeparation::class.java.findGetter("tintTransform", PDFunction::class.java)
+private val get_colorantToComponent = PDDeviceN::class.java.findGetter("colorantToComponent", IntArray::class.java)
+private val get_processColorSpace = PDDeviceN::class.java.findGetter("processColorSpace", PDColorSpace::class.java)
+private val get_spotColorSpaces = PDDeviceN::class.java
+    .findGetter("spotColorSpaces", PDSeparation::class.java.arrayType())
+private val get_listOfTriangles = Patch.findGetter("listOfTriangles", List::class.java)
+private val get_corner = ShadedTriangle.findGetter("corner", Point2D::class.java.arrayType())
+private val get_color = ShadedTriangle.findGetter("color", FloatArray::class.java.arrayType())
+private val get_linePoints = Line.findGetter("linePoints", Set::class.java)
 
 
 private fun Class<*>.findStatic(name: String, type: MethodType) =
@@ -323,6 +408,9 @@ private fun Class<*>.findStatic(name: String, type: MethodType) =
 private fun Class<*>.findStaticVar(name: String, type: Class<*>) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findStaticVarHandle(this, name, type)
         .withInvokeExactBehavior()
+
+private fun Class<*>.findConstructor(type: MethodType) =
+    MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findConstructor(this, type)
 
 private fun Class<*>.findVirtual(name: String, type: MethodType) =
     MethodHandles.privateLookupIn(this, MethodHandles.lookup()).findVirtual(this, name, type)

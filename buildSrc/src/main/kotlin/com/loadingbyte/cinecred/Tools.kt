@@ -18,6 +18,7 @@ object Tools {
         throw InvalidUserDataException("You must install the MSVC compiler from the Build Tools for Visual Studio.")
     }
 
+    fun vsLlvmHome(project: Project): String = locateVisualStudioLlvmHome(project).absolutePath
     fun clangCl(project: Project): String = locateVisualStudioLlvmHome(project).resolve("bin/clang-cl.exe").absolutePath
     fun lldLink(project: Project): String = locateVisualStudioLlvmHome(project).resolve("bin/lld-link.exe").absolutePath
 

@@ -813,6 +813,14 @@ public class zimg_h  {
     }
     /**
      * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_ST428 = 17;
+     * }
+     */
+    public static int ZIMG_TRANSFER_ST428() {
+        return (int)17L;
+    }
+    /**
+     * {@snippet :
      * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_ARIB_B67 = 18;
      * }
      */
@@ -826,6 +834,14 @@ public class zimg_h  {
      */
     public static int ZIMG_PRIMARIES_INTERNAL() {
         return (int)-1L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_color_primaries_e.ZIMG_PRIMARIES_XYZ_D50 = 100;
+     * }
+     */
+    public static int ZIMG_PRIMARIES_XYZ_D50() {
+        return (int)100L;
     }
     /**
      * {@snippet :

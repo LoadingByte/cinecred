@@ -199,6 +199,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
         }
 
+    private val highResCache = DeferredImage.CanvasMaterializationCache()
+    private val lowResCache = DeferredImage.CanvasMaterializationCache()
+
     private var drawnProject: DrawnProject? = null
 
     private fun newToolbarButtonWithKeyListener(
@@ -452,7 +455,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         while (pageTabs.tabCount < numPages) {
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val imagePanel = DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT).apply {
+            val imagePanel = DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT, highResCache, lowResCache).apply {
                 zoom = zoomSlider.zoom
                 layers = getVisibleLayers()
                 zoomListeners.add { zoom -> zoomSlider.zoom = zoom }

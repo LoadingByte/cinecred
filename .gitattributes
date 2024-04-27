@@ -4,6 +4,7 @@
 *.dll binary
 *.dylib binary
 *.jar binary
+*.lib binary
 *.otf binary
 *.png binary
 *.so binary

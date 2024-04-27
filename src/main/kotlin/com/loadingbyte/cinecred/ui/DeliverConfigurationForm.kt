@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
+import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.YUV
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnProject
@@ -231,7 +232,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             if (format is TapeTimelineRenderJob.Format) "\u2014" else when (cs) {
                 VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
                 VideoRenderJob.ColorSpace.SRGB ->
-                    if (format !is VideoRenderJob.Format || format.pixelFormat.isRGB) "sRGB" else "sYCC"
+                    if (format is VideoRenderJob.Format && format.pixelFormat.family == YUV) "sYCC" else "sRGB"
             }
         panel.specsLabels[3].text =
             if (format !is VideoRenderJob.Format || scrollSpeeds.isEmpty()) "\u2014" else {

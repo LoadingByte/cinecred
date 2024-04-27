@@ -1,5 +1,19 @@
+diff --git a/src/zimg/api/zimg.cpp b/src/zimg/api/zimg.cpp
+index 87bc9ea..3a7ea60 100644
+--- a/src/zimg/api/zimg.cpp
++++ b/src/zimg/api/zimg.cpp
+@@ -291,7 +291,8 @@ zimg::colorspace::ColorPrimaries translate_primaries(zimg_color_primaries_e prim
+ {
+ 	using zimg::colorspace::ColorPrimaries;
+
+-	static SM_CONSTEXPR_14 const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 12> map{
++	static SM_CONSTEXPR_14 const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 13> map{
++		{ ZIMG_PRIMARIES_XYZ_D50,     ColorPrimaries::XYZ_D50 },
+ 		{ ZIMG_PRIMARIES_BT470_M,     ColorPrimaries::REC_470_M },
+ 		{ ZIMG_PRIMARIES_BT470_BG,    ColorPrimaries::REC_470_BG },
+ 		{ ZIMG_PRIMARIES_BT709,       ColorPrimaries::REC_709 },
 diff --git a/src/zimg/api/zimg.h b/src/zimg/api/zimg.h
-index 1a4fb14..5e4fe0b 100644
+index 1a4fb14..df28a5d 100644
 --- a/src/zimg/api/zimg.h
 +++ b/src/zimg/api/zimg.h
 @@ -5,7 +5,7 @@
@@ -11,3 +25,66 @@ index 1a4fb14..5e4fe0b 100644
  #elif defined(__GNUC__)
    #define ZIMG_VISIBILITY __attribute__((visibility("default")))
  #else
+@@ -328,6 +328,7 @@ typedef enum zimg_transfer_characteristics_e {
+
+ typedef enum zimg_color_primaries_e {
+ 	ZIMG_PRIMARIES_INTERNAL    = -1, /**< Not part of the API. */
++	ZIMG_PRIMARIES_XYZ_D50     = 100,
+ 	ZIMG_PRIMARIES_BT709       = 1,
+ 	ZIMG_PRIMARIES_UNSPECIFIED = 2,
+ 	ZIMG_PRIMARIES_BT470_M     = 4,
+diff --git a/src/zimg/colorspace/colorspace.h b/src/zimg/colorspace/colorspace.h
+index 4dfba19..a7c8c75 100644
+--- a/src/zimg/colorspace/colorspace.h
++++ b/src/zimg/colorspace/colorspace.h
+@@ -52,6 +52,7 @@ enum class TransferCharacteristics {
+
+ enum class ColorPrimaries {
+ 	UNSPECIFIED,
++	XYZ_D50,
+ 	REC_470_M,
+ 	REC_470_BG,
+ 	SMPTE_C,
+diff --git a/src/zimg/colorspace/colorspace_param.cpp b/src/zimg/colorspace/colorspace_param.cpp
+index 9c1edee..27f5eaf 100644
+--- a/src/zimg/colorspace/colorspace_param.cpp
++++ b/src/zimg/colorspace/colorspace_param.cpp
+@@ -56,6 +56,8 @@ Vector3 xy_to_xyz(double x, double y)
+ Vector3 get_white_point(ColorPrimaries primaries)
+ {
+ 	switch (primaries) {
++	case ColorPrimaries::XYZ_D50:
++		return xy_to_xyz(ILLUMINANT_D50[0], ILLUMINANT_D50[1]);
+ 	case ColorPrimaries::REC_470_M:
+ 	case ColorPrimaries::FILM:
+ 		return xy_to_xyz(ILLUMINANT_C[0], ILLUMINANT_C[1]);
+@@ -248,7 +250,7 @@ Matrix3x3 lms_to_ictcp_matrix(TransferCharacteristics transfer)
+ // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+ Matrix3x3 gamut_rgb_to_xyz_matrix(ColorPrimaries primaries)
+ {
+-	if (primaries == ColorPrimaries::XYZ)
++	if (primaries == ColorPrimaries::XYZ || primaries == ColorPrimaries::XYZ_D50)
+ 		return Matrix3x3::identity();
+
+ 	Matrix3x3 xyz_matrix = get_primaries_xyz(primaries);
+@@ -262,7 +264,7 @@ Matrix3x3 gamut_rgb_to_xyz_matrix(ColorPrimaries primaries)
+
+ Matrix3x3 gamut_xyz_to_rgb_matrix(ColorPrimaries primaries)
+ {
+-	if (primaries == ColorPrimaries::XYZ)
++	if (primaries == ColorPrimaries::XYZ || primaries == ColorPrimaries::XYZ_D50)
+ 		return Matrix3x3::identity();
+
+ 	return inverse(gamut_rgb_to_xyz_matrix(primaries));
+diff --git a/src/zimg/colorspace/colorspace_param.h b/src/zimg/colorspace/colorspace_param.h
+index a78faa0..bc4a373 100644
+--- a/src/zimg/colorspace/colorspace_param.h
++++ b/src/zimg/colorspace/colorspace_param.h
+@@ -34,6 +34,7 @@ constexpr double DCI_P3_PRIMARIES[3][2] = { { 0.680, 0.320 } , { 0.265, 0.690 },
+ constexpr double JEDEC_P22_PRIMARIES[3][2] = { { 0.630, 0.340 }, { 0.295, 0.605 }, { 0.155, 0.077 } };
+
+ // White points in XY.
++constexpr double ILLUMINANT_D50[2] = { 0.3457, 0.3585 };
+ constexpr double ILLUMINANT_C[2]   = { 0.31, 0.316 };
+ constexpr double ILLUMINANT_DCI[2] = { 0.314, 0.351 };
+ constexpr double ILLUMINANT_D65[2] = { 0.3127, 0.3290 };

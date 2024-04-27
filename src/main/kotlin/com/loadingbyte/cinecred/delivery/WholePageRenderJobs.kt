@@ -1,30 +1,31 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.*
+import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
+import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF.Compression.DEFLATE
+import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF.Compression.PACK_BITS
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
-import org.apache.batik.dom.GenericDOMImplementation
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.apache.commons.io.FileUtils
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent
 import java.awt.Color
-import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.nio.file.Path
 import java.util.*
-import javax.imageio.IIOImage
-import javax.imageio.ImageIO
-import javax.imageio.ImageWriteParam
-import javax.imageio.stream.FileImageOutputStream
-import javax.xml.XMLConstants.*
+import javax.xml.XMLConstants.XMLNS_ATTRIBUTE_NS_URI
+import javax.xml.XMLConstants.XML_NS_URI
+import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.bufferedWriter
-import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.math.roundToInt
 
@@ -46,6 +47,13 @@ class WholePageSequenceRenderJob(
             FileUtils.cleanDirectory(dir.toFile())
         dir.createDirectoriesSafely()
 
+        val bitmapWriter = when (format) {
+            Format.PNG -> BitmapWriter.PNG(RGB, grounding == null, ColorSpace.SRGB)
+            Format.TIFF_PACK_BITS -> BitmapWriter.TIFF(RGB, grounding == null, ColorSpace.SRGB, compression = PACK_BITS)
+            Format.TIFF_DEFLATE -> BitmapWriter.TIFF(RGB, grounding == null, ColorSpace.SRGB, compression = DEFLATE)
+            else -> null
+        }
+
         for ((idx, pageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
@@ -55,40 +63,18 @@ class WholePageSequenceRenderJob(
 
             when (format) {
                 Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
-                    val imgType = if (grounding == null) BufferedImage.TYPE_4BYTE_ABGR else BufferedImage.TYPE_3BYTE_BGR
-                    val pageImage = BufferedImage(pageWidth, pageHeight, imgType)
-
-                    if (grounding != null)
-                        pageImage.withG2 { g2 ->
-                            g2.color = grounding
-                            g2.fillRect(0, 0, pageWidth, pageHeight)
+                    val res = Resolution(pageWidth, pageHeight)
+                    val rep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
+                    Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
+                        Canvas.forBitmap(bitmap).use { canvas ->
+                            if (grounding == null) bitmap.zero() else canvas.fill(Canvas.Shader.Solid(grounding))
+                            pageDefImage.materialize(canvas, cache = null, layers = listOf(STATIC, TAPES))
                         }
-                    pageDefImage.materialize(pageImage, listOf(STATIC, TAPES))
-
-                    // Note: We do not use ImageIO.write() for two reasons:
-                    //   - We need to support TIFF compression.
-                    //   - ImageIO.write() eventually uses the com.sun class FileImageOutputStreamSpi,
-                    //     which swallows IO exceptions. Eventually, another exception for the same error
-                    //     will be thrown, but the error message is lost.
-                    val writer = ImageIO.getImageWritersBySuffix(format.fileExts.single()).next()
-                    try {
-                        pageFile.deleteIfExists()
-                        FileImageOutputStream(pageFile.toFile()).use { stream ->
-                            writer.output = stream
-                            val param = writer.defaultWriteParam
-                            param.compressionMode = ImageWriteParam.MODE_EXPLICIT
-                            when (format) {
-                                Format.TIFF_PACK_BITS -> param.compressionType = "PackBits"
-                                Format.TIFF_DEFLATE -> param.compressionType = "Deflate"
-                            }
-                            writer.write(null, IIOImage(pageImage, null, null), param)
-                        }
-                    } finally {
-                        writer.dispose()
+                        bitmapWriter!!.convertAndWrite(bitmap, pageFile, promiseOpaque = grounding != null)
                     }
                 }
                 Format.SVG -> {
-                    val doc = GenericDOMImplementation.getDOMImplementation()
+                    val doc = DocumentBuilderFactory.newNSInstance().newDocumentBuilder().domImplementation
                         .createDocument(SVG_NS_URI, "svg", null)
                     val svg = doc.documentElement
 
@@ -105,8 +91,6 @@ class WholePageSequenceRenderJob(
                         })
                     pageDefImage.materialize(svg, listOf(STATIC, TAPES))
 
-                    // Get rid of, e.g., strange whitespace in nested SVGs.
-                    doc.normalizeDocument()
                     pageFile.bufferedWriter().use { writer ->
                         writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
                         // Note: We have verified that the XML writer used a bit further down writes system-dependent
@@ -175,24 +159,27 @@ class WholePagePDFRenderJob(
         }
         pdfDoc.documentCatalog.language = locale.toLanguageTag()
 
+        // Add an output intent with the blending color space.
+        val iccBytes = ICCProfile.of(ColorSpace.BLENDING).bytes
+        pdfDoc.documentCatalog.addOutputIntent(PDOutputIntent(pdfDoc, ByteArrayInputStream(iccBytes)).apply {
+            val id = if (ColorSpace.BLENDING == ColorSpace.SRGB) "sRGB IEC61966-2.1" else "Custom"
+            outputConditionIdentifier = id
+            info = id
+        })
+
         for ((idx, page) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pageWidth = page.width.toFloat()
-            val pageHeight = page.height.resolve().toFloat()
-
-            val pdfPage = PDPage(PDRectangle(pageWidth, pageHeight))
+            val pdfPage = PDPage(PDRectangle(page.width.toFloat(), page.height.resolve().toFloat()))
             pdfDoc.addPage(pdfPage)
 
             PDPageContentStream(pdfDoc, pdfPage).use { cs ->
-                if (grounding != null) {
-                    cs.saveGraphicsState()
-                    cs.setNonStrokingColor(grounding)
-                    cs.addRect(0f, 0f, pageWidth, pageHeight)
-                    cs.fill()
-                    cs.restoreGraphicsState()
-                }
-                page.materialize(pdfDoc, pdfPage, cs, listOf(STATIC, TAPES))
+                // Let the backend draw the grounding so that it takes care of all the color space stuff.
+                DeferredImage(page.width, page.height).apply {
+                    if (grounding != null)
+                        drawRect(grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
+                    drawDeferredImage(page, 0.0, 0.0.toY())
+                }.materialize(pdfDoc, pdfPage, cs, ColorSpace.BLENDING, listOf(STATIC, TAPES))
             }
 
             progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)

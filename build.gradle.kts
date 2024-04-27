@@ -16,14 +16,14 @@ version = "1.6.0-SNAPSHOT"
 val jdkVersion = 21
 val slf4jVersion = "2.0.7"
 val poiVersion = "5.2.3"
-val batikVersion = "1.16"
-val javacppVersion = "1.5.8"
-val ffmpegVersion = "5.1.2-$javacppVersion"
+val javacppVersion = "1.5.9"
+val ffmpegVersion = "6.0-$javacppVersion"
 val flatlafVersion = "3.2"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
+val skiaVersion = "e2ea2eb" // head of branch chrome/m124
 val harfBuzzVersion = "7.1.0"
-val zimgVersion = "release-3.0.4"
+val zimgVersion = "release-3.0.5"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
@@ -64,7 +64,7 @@ dependencies {
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
     // Redirect other logging frameworks to slf4j.
-    // Batik & PDFBox use Jakarta Commons Logging. POI uses log4j2.
+    // PDFBox uses Jakarta Commons Logging. POI uses log4j2.
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
     implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.20.0")
 
@@ -82,15 +82,8 @@ dependencies {
     // Raster Image IO
     implementation("com.twelvemonkeys.imageio", "imageio-tga", "3.9.4")
 
-    // SVG IO
-    implementation("org.apache.xmlgraphics", "batik-bridge", batikVersion)
-    implementation("org.apache.xmlgraphics", "batik-svggen", batikVersion)
-    // For pictures embedded in the SVG:
-    implementation("org.apache.xmlgraphics", "batik-codec", batikVersion)
-
     // PDF IO
     implementation("org.apache.pdfbox", "pdfbox", "3.0.2")
-    implementation("de.rototor.pdfbox", "graphics2d", "0.42")
 
     // Video IO
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -122,14 +115,8 @@ configurations.configureEach {
     // Google Client: This dependency is totally empty and only serves to avoid some conflict not relevant to us.
     exclude("com.google.guava", "listenablefuture")
 
-    // Batik & PDFBox: We replace this commons-logging dependency by the slf4j bridge.
+    // PDFBox: We replace this commons-logging dependency by the slf4j bridge.
     exclude("commons-logging", "commons-logging")
-
-    // Batik:
-    // The Java XML APIs are part of the JDK itself since Java 5.
-    exclude("xml-apis", "xml-apis")
-    // Batik functions well without the big xalan dependency.
-    exclude("xalan", "xalan")
 }
 
 
@@ -199,8 +186,10 @@ tasks.processResources {
 
 val platformNativesTasks = Platform.values().associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
-        // Collect all natives for the platform in a single directory
-        from(srcMainNatives(platform))
+        // Collect all natives for the platform in a single directory.
+        from(srcMainNatives(platform)) {
+            include("*.${platform.os.nativesExt}")
+        }
         for (file in natives.getValue(platform))
             if (file.extension == platform.os.nativesExt)
                 from(file)
@@ -349,6 +338,13 @@ val allJar by tasks.registering(Jar::class) {
 }
 
 
+val checkoutSkia by tasks.registering(CheckoutGitRef::class) {
+    uri = "https://skia.googlesource.com/skia.git"
+    ref = skiaVersion
+    patch = "/skia.patch"
+    repositoryDir = layout.buildDirectory.dir("repositories/skia")
+}
+
 val checkoutHarfBuzz by tasks.registering(CheckoutGitRef::class) {
     uri = "https://github.com/harfbuzz/harfbuzz.git"
     ref = harfBuzzVersion
@@ -363,12 +359,30 @@ val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
 }
 
 for (platform in Platform.values()) {
+    tasks.register<BuildSkia>("buildSkiaFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the Skia native library for ${platform.label.capitalized()}."
+        forPlatform = platform
+        repositoryDir = checkoutSkia.flatMap { it.repositoryDir }
+        outputFile = srcMainNatives(platform, "skia", "dll")
+    }
+
+    tasks.register<BuildSkiaCAPI>("buildSkiaCAPIFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the Skia CAPI native library for ${platform.label.capitalized()}."
+        forPlatform = platform
+        capiDir = srcSkiacapiCpp
+        repositoryDir = checkoutSkia.flatMap { it.repositoryDir }
+        linkedFile = srcMainNatives(platform, "skia", "lib")
+        outputFile = srcMainNatives(platform, "skiacapi", "dll")
+    }
+
     tasks.register<BuildHarfBuzz>("buildHarfBuzzFor${platform.label.capitalized()}") {
         group = "Native"
         description = "Builds the HarfBuzz native library for ${platform.label.capitalized()}."
         forPlatform = platform
         repositoryDir = checkoutHarfBuzz.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform, "harfbuzz")
+        outputFile = srcMainNatives(platform, "harfbuzz", "dll")
     }
 
     tasks.register<BuildZimg>("buildZimgFor${platform.label.capitalized()}") {
@@ -376,8 +390,24 @@ for (platform in Platform.values()) {
         description = "Builds the zimg native library for ${platform.label.capitalized()}."
         forPlatform = platform
         repositoryDir = checkoutZimg.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform, "zimg")
+        outputFile = srcMainNatives(platform, "zimg", "dll")
     }
+}
+
+tasks.register<Jextract>("jextractSkiaCAPI") {
+    group = "Native"
+    description = "Extracts Java bindings for the Skia CAPI native library."
+    targetPackage = "com.loadingbyte.cinecred.natives.skiacapi"
+    headerFile = srcSkiacapiCpp.file("skiacapi.h")
+    outputDir = srcMainJava
+}
+
+tasks.register<Jextract>("jextractSkcms") {
+    group = "Native"
+    description = "Extracts Java bindings for skcms, which is part of the Skia native library."
+    targetPackage = "com.loadingbyte.cinecred.natives.skcms"
+    headerFile = checkoutSkia.flatMap { it.repositoryDir.file("modules/skcms/skcms.h") }
+    outputDir = srcMainJava
 }
 
 tasks.register<Jextract>("jextractHarfBuzz") {
@@ -404,13 +434,15 @@ val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
 
 val srcMainNatives get() = layout.projectDirectory.dir("src/main/natives")
 fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
-fun srcMainNatives(platform: Platform, libName: String) = srcMainNatives(platform).file(
+fun srcMainNatives(platform: Platform, libName: String, winExt: String) = srcMainNatives(platform).file(
     when (platform.os) {
-        Platform.OS.WINDOWS -> "$libName.dll"
+        Platform.OS.WINDOWS -> "$libName.$winExt"
         Platform.OS.MAC -> "lib$libName.dylib"
         Platform.OS.LINUX -> "lib$libName.so"
     }
 )
+
+val srcSkiacapiCpp get() = layout.projectDirectory.dir("src/skiacapi/cpp")
 
 val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
     val result = TreeMap<String, Properties>()

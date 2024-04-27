@@ -16,19 +16,26 @@ Cinecred Changelog
   range in which they appear.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
+- Exported whole page stills now carry color space information.
 - Exported SVGs are now more compact and less often fall back to rasterization.
 - Added an about tab listing all contributors to the welcome window.
 
 ### Fixes
 
-- Alpha blending of embedded videos is now performed in linear gamma.
+- Alpha blending of embedded videos is now performed in the same gamma as all
+  other alpha blending.
+- SVGs and PDFs are now rendered more faithfully.
+- SVGs and PDFs are now cropped based on rendered pixels instead of guesswork.
+- Rotated PDFs are now positioned correctly and given the right dimensions.
 - Certain fonts with bad naming metadata no longer cause a crash.
-- Exported PDFs now contain only one instance of each SVG or PDF picture, even
-  when it has multiple occurrences.
+- Exported PDFs now reduce the resolution of very large raster pictures.
+- Exported PDFs now contain only one instance of each picture, even when it has
+  multiple occurrences.
 - Exported PDFs no longer squish gradients when the export resolution is scaled.
 - The crash window now also opens when the error occurred in a background task.
 - The file that stores Google access tokens is now only created when needed, and
   any errors related to that file are gracefully handled.
+- On Linux, the required GLIBC version has been reduced to 2.29.
 
 ### UI Fixes
 

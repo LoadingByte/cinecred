@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.common
 import com.electronwill.toml.Toml
 import com.electronwill.toml.TomlWriter
 import com.formdev.flatlaf.util.SystemInfo
-import org.apache.batik.ext.awt.image.GraphicsUtil
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -32,6 +31,8 @@ import javax.swing.UIManager
 import kotlin.io.path.*
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -107,11 +108,6 @@ fun ceilDiv(a: Long, b: Long) = (a + ((b - 1L) and (a.inv() shr 31))) / b
 
 /** Implements `round(a / b)`, but works only for non-negative numbers! */
 fun roundingDiv(a: Int, b: Int): Int = (a + (b shr 1)) / b
-/** Implements `round(a / b)`, but works only for non-negative numbers! */
-fun roundingDiv(a: Long, b: Long): Long = (a + (b shr 1)) / b
-
-/** Implements `round(a / 2^b)`, but works only for non-negative numbers! */
-fun roundingDivLog2(a: Long, bLog2: Int): Long = (a + ((1L shl bLog2) shr 1)) shr bLog2
 
 
 inline fun throwableAwareTask(crossinline task: () -> Unit) = Runnable {
@@ -316,6 +312,10 @@ fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloa
 fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
 fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
 
+// See PDFBox's Matrix.getScalingFactorX/Y() for the derivation.
+val AffineTransform.scalingFactorX: Double get() = sqrt(scaleX.pow(2) + shearY.pow(2))
+val AffineTransform.scalingFactorY: Double get() = sqrt(scaleY.pow(2) + shearX.pow(2))
+
 
 fun Shape.transformedBy(transform: AffineTransform?): Shape = when {
     transform == null || transform.isIdentity -> this
@@ -350,8 +350,7 @@ inline fun Graphics2D.preserveTransform(block: () -> Unit) {
 
 
 inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
-    // Let Batik create the graphics object. It makes sure that SVG content can be painted correctly.
-    val g2 = GraphicsUtil.createGraphics(this)
+    val g2 = createGraphics()
     try {
         block(g2)
     } finally {
@@ -368,8 +367,6 @@ fun Graphics2D.setHighQuality() {
     setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
     setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
     setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
-    // With pure strokes, layout guides turn out to look very uneven and often too dark.
-    setRenderingHint(KEY_STROKE_CONTROL, VALUE_STROKE_NORMALIZE)
     setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
     setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }

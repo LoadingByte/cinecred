@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
-import java.awt.image.BufferedImage
 import java.io.IOException
 import java.lang.ref.SoftReference
 import java.nio.file.Path
@@ -85,26 +84,26 @@ class Tape private constructor(
        ********** PREVIEW **********
        ***************************** */
 
-    private var fileSeqPreviewCache: PreviewCache<BufferedImage?>? = null
-    private var containerPreviewCache: PreviewCache<List<BufImgAndClock>>? = null
+    private var fileSeqPreviewCache: PreviewCache<Picture.Raster?>? = null
+    private var containerPreviewCache: PreviewCache<List<RasterPictureAndClock>>? = null
 
     init {
         if (fileSeq)
             fileSeqPreviewCache = PreviewCache(fileOrDir.name, 500, 50) { startFrames ->
                 val reader = VideoReader(fileOrPattern, Timecode.Frames(startFrames))
-                object : AbstractPreviewCacheLoader<BufferedImage?>(reader) {
-                    override fun loadNextItem() = reader.read()?.run { bitmap.use(converter::convert) }
+                object : AbstractPreviewCacheLoader<Picture.Raster?>(reader) {
+                    override fun loadNextItem() = reader.read()?.let(::toPreviewPicture)
                 }
             }
         else
             containerPreviewCache = PreviewCache(fileOrDir.name, 10, 1) { startSeconds ->
                 val reader = VideoReader(fileOrPattern, Timecode.Clock(startSeconds.toLong(), 1L))
-                object : AbstractPreviewCacheLoader<List<BufImgAndClock>>(reader) {
+                object : AbstractPreviewCacheLoader<List<RasterPictureAndClock>>(reader) {
                     var curSeconds = startSeconds - 1
                     var over: VideoReader.Frame? = null
-                    override fun loadNextItem(): List<BufImgAndClock> {
+                    override fun loadNextItem(): List<RasterPictureAndClock> {
                         curSeconds++
-                        val item = mutableListOf<BufImgAndClock>()
+                        val item = mutableListOf<RasterPictureAndClock>()
                         while (true) {
                             val readFrame = over?.also { over = null } ?: reader.read() ?: return item
                             val readFrameSeconds = (readFrame.timecode as Timecode.Clock).seconds
@@ -113,7 +112,7 @@ class Tape private constructor(
                                 return item
                             }
                             if (readFrameSeconds == curSeconds)
-                                item += BufImgAndClock(converter.convert(readFrame.bitmap), readFrame.timecode)
+                                item += RasterPictureAndClock(toPreviewPicture(readFrame), readFrame.timecode)
                             readFrame.bitmap.close()
                         }
                     }
@@ -121,28 +120,43 @@ class Tape private constructor(
             }
     }
 
-    private class BufImgAndClock(val bufImg: BufferedImage, val clock: Timecode.Clock)
+    private class RasterPictureAndClock(val picture: Picture.Raster, val clock: Timecode.Clock)
 
-    private abstract inner class AbstractPreviewCacheLoader<I>(val reader: VideoReader) : PreviewCache.Loader<I> {
-        // Lazily initialize the converter so that when its creation fails, we're in a try-finally block that closes
-        // the loader and consequently the reader.
-        val converter by lazy {
+    private abstract class AbstractPreviewCacheLoader<I>(val reader: VideoReader) : PreviewCache.Loader<I> {
+
+        private val previewSpec: Bitmap.Spec
+
+        init {
+            val (tapeW, tapeH) = reader.spec.resolution
+            val tapeRep = reader.spec.representation
+            val tapeHasAlpha = tapeRep.pixelFormat.hasAlpha
             val maxDim = 128
-            val previewResolution = reader.spec.resolution.run {
-                if (widthPx > heightPx) Resolution(maxDim, maxDim * heightPx / widthPx)
-                else Resolution(maxDim * widthPx / heightPx, maxDim)
-            }
-            Bitmap2ImageConverter(reader.spec, previewResolution)
+            val previewRes = if (tapeW > tapeH)
+                Resolution(maxDim, maxDim * tapeH / tapeW)
+            else
+                Resolution(maxDim * tapeW / tapeH, maxDim)
+            val previewRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
+            previewSpec = Bitmap.Spec(previewRes, previewRep)
         }
 
+        // Lazily initialize the converter so that when its creation fails, we're in a try-finally block that closes
+        // the loader and consequently the reader.
+        private val previewConverter by lazy {
+            BitmapConverter(reader.spec, previewSpec, srcAligned = false, approxTransfer = true)
+        }
+
+        fun toPreviewPicture(frame: VideoReader.Frame) =
+            Picture.Raster(Bitmap.allocate(previewSpec).also { previewConverter.convert(frame.bitmap, it) })
+
         override fun close() = reader.close()
+
     }
 
     /**
      * @return null when the timecode is out of bounds.
      * @throws Exception
      */
-    fun getPreviewFrame(timecode: Timecode): BufferedImage? {
+    fun getPreviewFrame(timecode: Timecode): Picture.Raster? {
         if (timecode !in availableRange)
             return null
 
@@ -150,11 +164,11 @@ class Tape private constructor(
             return fileSeqPreviewCache!!.getItem((timecode as Timecode.Frames).frames).get()
         } else {
             val previewCache = containerPreviewCache!!
-            var previewFrame: BufImgAndClock? = null
+            var previewFrame: RasterPictureAndClock? = null
             var curSeconds = (timecode as Timecode.Clock).seconds
             while (previewFrame == null) {
                 val item = previewCache.getItem(curSeconds).get()
-                val idx = item.binarySearchBy(timecode, selector = BufImgAndClock::clock)
+                val idx = item.binarySearchBy(timecode, selector = RasterPictureAndClock::clock)
                 when {
                     idx >= 0 -> previewFrame = item[idx]
                     idx < -1 -> previewFrame = item[-idx - 2]
@@ -164,7 +178,7 @@ class Tape private constructor(
             // For video files, start loading in the next second if it's not already loaded to ensure fluid playback.
             // We do not preload file sequences as (a) they're quicker to load on the fly, and (b) it's harder.
             previewCache.getItem(timecode.seconds + 1)
-            return previewFrame.bufImg
+            return previewFrame.picture
         }
     }
 
@@ -331,8 +345,6 @@ class Tape private constructor(
             behind?.run { bitmap.close() }
             ahead?.run { bitmap.close() }
         }
-
-        val spec get() = videoReader.spec
 
         /**
          * Bitmaps returned by this method must NEVER be [Bitmap.close]d by the caller. They will however automatically

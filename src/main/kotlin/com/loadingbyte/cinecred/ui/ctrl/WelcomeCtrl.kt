@@ -2,6 +2,9 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.Canvas
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
@@ -15,7 +18,6 @@ import java.awt.Color
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.VK_ESCAPE
-import java.awt.image.BufferedImage
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI
@@ -30,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileSystemView
 import kotlin.io.path.*
-import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 
 class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
@@ -542,18 +544,22 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 if (edited is ImageOverlay && imageFile == Path(""))
                     ImageOverlay(uuid, name, edited.raster, edited.rasterPersisted, imageUnderlay)
                 else try {
-                    val image = Picture.read(imageFile).use { pic ->
+                    val raster = Picture.load(imageFile).use { pic ->
                         when (pic) {
-                            is Picture.Raster -> pic.img
-                            is Picture.Vector -> BufferedImage(
-                                pic.width.roundToInt(), pic.height.roundToInt(), BufferedImage.TYPE_4BYTE_ABGR
-                            ).withG2 { g2 ->
-                                g2.setHighQuality()
-                                pic.drawTo(g2)
+                            is Picture.Raster -> pic
+                            is Picture.Vector -> {
+                                val res = Resolution(ceil(pic.width).toInt(), ceil(pic.height).toInt())
+                                // For now, we materialize vector overlays in the sRGB color space. SVGs draw natively
+                                // in this color space, as do most PDFs, and those who use another color space are drawn
+                                // in that and the result is converted to sRGB.
+                                val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
+                                val bitmap = Bitmap.allocate(Bitmap.Spec(res, rep))
+                                Canvas.forBitmap(bitmap.zero()).use(pic::drawTo)
+                                Picture.Raster(bitmap)
                             }
                         }
                     }
-                    ImageOverlay(uuid, name, Picture.Raster(image), rasterPersisted = false, imageUnderlay)
+                    ImageOverlay(uuid, name, raster, rasterPersisted = false, imageUnderlay)
                 } catch (e: Exception) {
                     welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())
                     welcomeView.preferences_setCard(PreferencesCard.START)

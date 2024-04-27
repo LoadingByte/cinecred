@@ -68,6 +68,8 @@ fun main(args: Array<String>) {
     rootLogger.addHandler(JULBuilderHandler)
 
     // Load our native libraries.
+    System.loadLibrary("skia")
+    System.loadLibrary("skiacapi")
     System.loadLibrary("harfbuzz")
     System.loadLibrary("zimg")
 

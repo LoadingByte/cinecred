@@ -1,10 +1,11 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.util.UIScale
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.scale
-import com.loadingbyte.cinecred.common.withG2
 import com.loadingbyte.cinecred.common.withNewG2
-import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.*
+import com.loadingbyte.cinecred.imaging.Canvas
 import com.loadingbyte.cinecred.imaging.DeferredImage.Layer
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import net.miginfocom.swing.MigLayout
@@ -16,6 +17,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent.*
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
+import java.awt.image.ColorModel
 import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.SwingUtilities
@@ -27,7 +29,12 @@ import kotlin.math.*
  * we devise our own scrollable panel for displaying a [DeferredImage]. We also implement additional features
  * like panning (via clicking and dragging) and zooming.
  */
-class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement: Double) :
+class DeferredImagePanel(
+    private val maxZoom: Double,
+    private val zoomIncrement: Double,
+    private val highResCache: DeferredImage.CanvasMaterializationCache,
+    private val lowResCache: DeferredImage.CanvasMaterializationCache
+) :
     JPanel(MigLayout("gap 0, insets 0")) {
 
     // ========== ENCAPSULATION LEAKS ==========
@@ -292,8 +299,10 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
             // previous low-res version is discarded.
             val lowRes = contentChanged || lowResMaterialized == null
             submitMaterializeJob(
-                materializingJobSlot, image, canvas,
-                physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers, grounding
+                highResCache, lowResCache, materializingJobSlot,
+                // Abort if the canvas was disposed already.
+                canvas.graphicsConfiguration.colorModel ?: return,
+                image, physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers, grounding
             ) { mat, matStartY, matStopY, lowResMat ->
                 SwingUtilities.invokeLater {
                     materialized = mat
@@ -339,12 +348,16 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
         // We use this external static method to absolutely ensure all variables have been captured.
         // We can now use these variables from another thread without fearing they might change suddenly.
         private fun submitMaterializeJob(
-            jobSlot: JobSlot, image: DeferredImage, canvas: Canvas,
+            highResCache: DeferredImage.CanvasMaterializationCache,
+            lowResCache: DeferredImage.CanvasMaterializationCache,
+            jobSlot: JobSlot, nativeCM: ColorModel,
+            image: DeferredImage,
             physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
             layers: List<Layer>, grounding: Color, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
         ) {
             jobSlot.submit {
                 val imgHeight = image.height.resolve()
+                val bitmapJ2DBridge = BitmapJ2DBridge(nativeCM)
 
                 // If a raster image with the given physical scaling would exceed MAX_PIXELS, we only materialize the
                 // portion of the deferred image around the current viewport. For that, we find the height of the
@@ -360,19 +373,14 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                 // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
                 val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
                 val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
-                // Abort if the canvas was disposed in the meantime.
-                val materialized = (canvas.createImage(matWidth, matHeight) ?: return@submit) as BufferedImage
-                // Paint the grounding.
-                materialized.withG2 { g2 ->
-                    g2.color = grounding
-                    g2.fillRect(0, 0, matWidth, matHeight)
+                val materialized = drawToBufferedImage(matWidth, matHeight, grounding, bitmapJ2DBridge) { canvas ->
+                    // Paint a scaled version of the deferred image onto the raster image.
+                    DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
+                        // If only a portion is materialized, scroll the deferred image to that portion.
+                        val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
+                        drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
+                    }.materialize(canvas, highResCache, layers)
                 }
-                // Paint a scaled version of the deferred image onto the raster image.
-                DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
-                    // If only a portion is materialized, scroll the deferred image to that portion.
-                    val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
-                    drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
-                }.materialize(materialized, layers)
 
                 // If only a portion is materialized, we generate another more low-res image that covers the whole
                 // deferred image. We momentarily paint this placeholder image when the user scrolls out of the
@@ -383,17 +391,29 @@ class DeferredImagePanel(private val maxZoom: Double, private val zoomIncrement:
                     val lowResMatWidth = max(1, (theoreticalLowResScaling * image.width).toInt())
                     val lowResScaling = lowResMatWidth / image.width
                     val lowResMatHeight = max(1, ceil(lowResScaling * imgHeight).toInt())
-                    // Abort if the canvas was disposed in the meantime.
-                    val img = (canvas.createImage(lowResMatWidth, lowResMatHeight) ?: return@submit) as BufferedImage
-                    img.withG2 { g2 ->
-                        g2.color = grounding
-                        g2.fillRect(0, 0, lowResMatWidth, lowResMatHeight)
+                    drawToBufferedImage(lowResMatWidth, lowResMatHeight, grounding, bitmapJ2DBridge) { canvas ->
+                        image.copy(universeScaling = lowResScaling).materialize(canvas, lowResCache, layers)
                     }
-                    image.copy(universeScaling = lowResScaling).materialize(img, layers)
-                    img
                 }
 
                 onFinish(materialized, startY, startY + clippedImgHeight, lowResMaterialized)
+            }
+        }
+
+        private inline fun drawToBufferedImage(
+            w: Int, h: Int, grounding: Color, bitmapJ2DBridge: BitmapJ2DBridge, draw: (Canvas) -> Unit
+        ): BufferedImage {
+            val res = Resolution(w, h)
+            val canvasRep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
+            Bitmap.allocate(Bitmap.Spec(res, canvasRep)).use { canvasBmp ->
+                Bitmap.allocate(Bitmap.Spec(res, bitmapJ2DBridge.nativeRepresentation)).use { nativeBmp ->
+                    Canvas.forBitmap(canvasBmp).use { canvas ->
+                        canvas.fill(Canvas.Shader.Solid(grounding))
+                        draw(canvas)
+                    }
+                    BitmapConverter.convert(canvasBmp, nativeBmp, promiseOpaque = true, approxTransfer = true)
+                    return bitmapJ2DBridge.toNativeImage(nativeBmp)
+                }
             }
         }
 

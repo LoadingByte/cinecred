@@ -28,6 +28,7 @@ class DeferredVideo private constructor(
     private val resolutionScaling: Double,
     private val fpsScaling: Int,
     private val roundShifts: Boolean,
+    private var frozen: Boolean,
     private val flows: MutableList<Flow>
 ) {
 
@@ -49,38 +50,40 @@ class DeferredVideo private constructor(
         }
         private set
 
-    constructor(resolution: Resolution, fps: FPS) : this(resolution, fps, 1.0, 1, false, ArrayList())
+    constructor(resolution: Resolution, fps: FPS) : this(resolution, fps, 1.0, 1, false, false, ArrayList())
 
     fun copy(resolutionScaling: Double = 1.0, fpsScaling: Int = 1, roundShifts: Boolean = false): DeferredVideo {
         require(resolutionScaling > 0.0)
         require(fpsScaling >= 1)
+        frozen = true
         return DeferredVideo(
             origResolution,
             origFPS,
             this.resolutionScaling * resolutionScaling,
             this.fpsScaling * fpsScaling,
             this.roundShifts || roundShifts,
-            ArrayList(flows)
+            frozen = true,
+            flows
         )
     }
 
     /** Note that [numFrames] can be negative. */
     fun playBlank(numFrames: Int) {
         if (numFrames == 0) return
+        mutate()
         flows.add(Flow.Blank(numFrames))
-        this.numFrames = -1
     }
 
     fun playStatic(image: DeferredImage, numFrames: Int, shift: Double, alpha: Double) {
         if (numFrames <= 0) return
+        mutate()
         playPhase(image, Phase.Static(numFrames, shift, alpha))
-        this.numFrames = -1
     }
 
     fun playFade(image: DeferredImage, numFrames: Int, shift: Double, startAlpha: Double, stopAlpha: Double) {
         if (numFrames <= 0) return
+        mutate()
         playPhase(image, Phase.Fade(numFrames, shift, startAlpha, stopAlpha))
-        this.numFrames = -1
     }
 
     fun playScroll(
@@ -88,12 +91,12 @@ class DeferredVideo private constructor(
         initialAdvance: Double, alpha: Double
     ) {
         if (numFrames <= 0) return
+        mutate()
         val newSection = Phase.Scroll.Section(numFrames, speed, startShift, stopShift, initialAdvance)
         val curFlow = flows.lastOrNull() as? Flow.DefImg
         if (image == curFlow?.image)
             (curFlow.phases.lastOrNull() as? Phase.Scroll)?.let { it.addSection(newSection); return }
         playPhase(image, Phase.Scroll(alpha).apply { addSection(newSection) })
-        this.numFrames = -1
     }
 
     private fun playPhase(image: DeferredImage, phase: Phase) {
@@ -104,6 +107,11 @@ class DeferredVideo private constructor(
             flows.add(Flow.DefImg(image, mutableListOf(phase)))
     }
 
+    private fun mutate() {
+        check(!frozen) { "This DeferredVideo is frozen because a copy was made or a backend was created." }
+        numFrames = -1
+    }
+
     fun collectTapeSpans(layers: List<DeferredImage.Layer>): List<TapeSpan> {
         val tapeTracker = TapeTracker<Unit>(this, layers)
         return tapeTracker.collectSpanFirstFrameIndices().flatMap(tapeTracker::query).map { resp ->
@@ -112,6 +120,7 @@ class DeferredVideo private constructor(
     }
 
     private val instructions: List<Instruction> by lazy {
+        frozen = true
         val list = mutableListOf<Instruction>()
         var firstFrameIdx = 0
         for (flow in flows)

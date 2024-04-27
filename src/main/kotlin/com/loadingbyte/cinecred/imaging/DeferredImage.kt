@@ -309,6 +309,22 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         private fun gaussianStdDev(radius: Double) = radius / 2.0
 
+        private fun embeddedPictureTransform(
+            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded
+        ): AffineTransform {
+            val transform = AffineTransform.getTranslateInstance(x, y)
+            transform.scale(scaling)
+            when (embeddedPic) {
+                is Picture.Embedded.Raster -> transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
+                is Picture.Embedded.Vector -> {
+                    transform.scale(embeddedPic.scaling)
+                    if (embeddedPic.isCropped)
+                        transform.translate(-embeddedPic.picture.cropX, -embeddedPic.picture.cropY)
+                }
+            }
+            return transform
+        }
+
     }
 
 
@@ -508,25 +524,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         override fun materializeEmbeddedPicture(
             x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
         ) {
-            val transform = AffineTransform.getTranslateInstance(x, y)
-            when (embeddedPic) {
-                is Picture.Embedded.Raster -> {
-                    val pic = embeddedPic.picture
-                    transform.scale(embeddedPic.width / pic.width * scaling, embeddedPic.height / pic.height * scaling)
-                }
-                is Picture.Embedded.Vector -> {
-                    val pic = embeddedPic.picture
-                    transform.scale(embeddedPic.scaling * scaling)
-                    if (embeddedPic.isCropped)
-                        transform.translate(-pic.cropX, -pic.cropY)
-                    // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
-                    // them with the pixel grid, they will always be reusable unless the scaling changes.
-                    if (cache != null) {
-                        val tx = transform.translateX.let { round(it) - it }
-                        val ty = transform.translateY.let { round(it) - it }
-                        transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
-                    }
-                }
+            val transform = embeddedPictureTransform(x, y, scaling, embeddedPic)
+            // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
+            // them with the pixel grid, they will always be reusable unless the scaling changes.
+            if (cache != null && embeddedPic is Picture.Embedded.Vector) {
+                val tx = transform.translateX.let { round(it) - it }
+                val ty = transform.translateY.let { round(it) - it }
+                transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
             }
             val pic = embeddedPic.picture
             val prep = pic.prepareAsBitmap(canvas, if (draft) null else transform, cache?.popPreparedPicture(pic))
@@ -604,14 +608,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
 
             val g = doc.createElementNS(SVG_NS_URI, "g")
-
-            val m00 = F.format(textTx.scaleX)
-            val m10 = F.format(textTx.shearY)
-            val m01 = F.format(textTx.shearX)
-            val m11 = F.format(textTx.scaleY)
-            val m02 = F.format(textTx.translateX)
-            val m12 = F.format(textTx.translateY)
-            g.setAttribute("transform", "matrix($m00 $m10 $m01 $m11 $m02 $m12)")
+            g.setAttribute("transform", transformAttr(textTx))
 
             val fontName = text.fundamentalFontInfo.fontName
             for ((glyphIdx, glyphCode) in text.glyphCodes.withIndex()) {
@@ -671,31 +668,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 id
             }
             use.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$picElementId")
-
-            val transforms = mutableListOf<String>()
-            // Notice that we can't use the "x" and "y" attributes to specify the translation because they would be
-            // affected by the scale() transform.
-            if (x != 0.0 || y != 0.0)
-                transforms += "translate(${F.format(x)} ${F.format(y)})"
-            when (embeddedPic) {
-                is Picture.Embedded.Raster -> {
-                    val sx = embeddedPic.scalingX
-                    val sy = embeddedPic.scalingY
-                    if (sx != 1.0 || sy != 1.0)
-                        transforms += "scale(${F.format(sx)} ${F.format(sy)})"
-                }
-                is Picture.Embedded.Vector -> {
-                    val s = scaling * embeddedPic.scaling
-                    if (s != 1.0)
-                        transforms += "scale(${F.format(s)})"
-                    if (embeddedPic.isCropped) {
-                        val pic = embeddedPic.picture
-                        transforms += "translate(${F.format(-pic.cropX)} ${F.format(-pic.cropY)})"
-                    }
-                }
-            }
-            if (transforms.isNotEmpty())
-                use.setAttribute("transform", transforms.joinToString(" "))
+            use.setAttribute("transform", transformAttr(embeddedPictureTransform(x, y, scaling, embeddedPic)))
 
             svg.appendChild(use)
         }
@@ -812,6 +785,16 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
             picElement.setAttribute("id", picElementId)
             return picElement
+        }
+
+        private fun transformAttr(tx: AffineTransform): String {
+            val m00 = F.format(tx.scaleX)
+            val m10 = F.format(tx.shearY)
+            val m01 = F.format(tx.shearX)
+            val m11 = F.format(tx.scaleY)
+            val m02 = F.format(tx.translateX)
+            val m12 = F.format(tx.translateY)
+            return "matrix($m00 $m10 $m01 $m11 $m02 $m12)"
         }
 
         companion object {

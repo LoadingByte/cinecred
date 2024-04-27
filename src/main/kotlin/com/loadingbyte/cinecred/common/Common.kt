@@ -8,14 +8,14 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Node
 import org.w3c.dom.traversal.DocumentTraversal
-import java.awt.*
-import java.awt.RenderingHints.*
+import java.awt.Color
+import java.awt.Font
+import java.awt.Shape
 import java.awt.font.FontRenderContext
 import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.geom.Path2D
 import java.awt.geom.Rectangle2D
-import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -307,7 +307,6 @@ val REF_FRC = FontRenderContext(null, true, true)
 
 
 fun AffineTransform.scale(s: Double) = scale(s, s)
-fun Graphics2D.scale(s: Double) = scale(s, s)
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
 fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
 fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
@@ -326,49 +325,6 @@ fun Shape.transformedBy(transform: AffineTransform?): Shape = when {
     }
     this is Path2D.Float -> Path2D.Float(this, transform)
     else -> Path2D.Double(this, transform)
-}
-
-
-inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
-    val g2 = create() as Graphics2D
-    try {
-        block(g2)
-    } finally {
-        g2.dispose()
-    }
-}
-
-
-inline fun Graphics2D.preserveTransform(block: () -> Unit) {
-    val prevTransform = transform  // creates a defensive copy
-    try {
-        block()
-    } finally {
-        transform = prevTransform
-    }
-}
-
-
-inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
-    val g2 = createGraphics()
-    try {
-        block(g2)
-    } finally {
-        g2.dispose()
-    }
-    return this
-}
-
-
-fun Graphics2D.setHighQuality() {
-    setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_ON)
-    setRenderingHint(KEY_RENDERING, VALUE_RENDER_QUALITY)
-    setRenderingHint(KEY_DITHERING, VALUE_DITHER_DISABLE)
-    setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
-    setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
-    setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
-    setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
-    setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
 }
 
 

@@ -6,12 +6,13 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
-import com.loadingbyte.cinecred.common.preserveTransform
 import java.awt.*
+import java.awt.RenderingHints.*
 import java.awt.event.*
 import java.awt.event.KeyEvent.*
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -39,6 +40,48 @@ val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
 val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
 
 val OVERLAY_COLOR: Color = Color.GRAY
+
+
+inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {
+    val g2 = create() as Graphics2D
+    try {
+        block(g2)
+    } finally {
+        g2.dispose()
+    }
+}
+
+inline fun Graphics2D.preserveTransform(block: () -> Unit) {
+    val prevTransform = transform  // creates a defensive copy
+    try {
+        block()
+    } finally {
+        transform = prevTransform
+    }
+}
+
+inline fun BufferedImage.withG2(block: (Graphics2D) -> Unit): BufferedImage {
+    val g2 = createGraphics()
+    try {
+        block(g2)
+    } finally {
+        g2.dispose()
+    }
+    return this
+}
+
+fun Graphics2D.setHighQuality() {
+    setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_ON)
+    setRenderingHint(KEY_RENDERING, VALUE_RENDER_QUALITY)
+    setRenderingHint(KEY_DITHERING, VALUE_DITHER_DISABLE)
+    setRenderingHint(KEY_INTERPOLATION, VALUE_INTERPOLATION_BICUBIC)
+    setRenderingHint(KEY_ALPHA_INTERPOLATION, VALUE_ALPHA_INTERPOLATION_QUALITY)
+    setRenderingHint(KEY_COLOR_RENDERING, VALUE_COLOR_RENDER_QUALITY)
+    setRenderingHint(KEY_TEXT_ANTIALIASING, VALUE_TEXT_ANTIALIAS_ON)
+    setRenderingHint(KEY_FRACTIONALMETRICS, VALUE_FRACTIONALMETRICS_ON)
+}
+
+fun Graphics2D.scale(s: Double) = scale(s, s)
 
 
 /**

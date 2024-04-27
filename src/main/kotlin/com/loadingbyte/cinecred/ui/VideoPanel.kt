@@ -5,7 +5,6 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.scale
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.BitmapJ2DBridge
 import com.loadingbyte.cinecred.imaging.DeferredImage

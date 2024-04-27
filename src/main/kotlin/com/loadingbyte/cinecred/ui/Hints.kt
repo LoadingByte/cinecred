@@ -3,9 +3,9 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
+import com.loadingbyte.cinecred.ui.helper.withNewG2
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
 import net.miginfocom.swing.MigLayout
 import java.awt.*

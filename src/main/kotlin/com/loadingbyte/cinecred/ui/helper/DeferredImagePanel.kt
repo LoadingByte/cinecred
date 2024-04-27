@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.scale
-import com.loadingbyte.cinecred.common.withNewG2
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Canvas
 import com.loadingbyte.cinecred.imaging.DeferredImage.Layer

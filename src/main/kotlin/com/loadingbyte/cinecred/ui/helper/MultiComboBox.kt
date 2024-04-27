@@ -5,7 +5,6 @@ import com.formdev.flatlaf.ui.FlatArrowButton
 import com.formdev.flatlaf.ui.FlatRoundBorder
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.ceilDiv
-import com.loadingbyte.cinecred.common.withNewG2
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.ItemSelectable

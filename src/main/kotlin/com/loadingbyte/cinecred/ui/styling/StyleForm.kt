@@ -106,8 +106,8 @@ class StyleForm<S : Style>(
         settingConstraints: List<StyleConstraint<S, *>>,
         settingWidgetSpecs: List<StyleWidgetSpec<S>>
     ): Widget<*> {
-        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, E>>()
-        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, E>>()
+        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, *>>()
+        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
@@ -202,8 +202,8 @@ class StyleForm<S : Style>(
     ): Widget<V> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val doubleConstr = settingConstraints.oneOf<DoubleConstr<S>>()
-        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, V>>()
-        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, V>>()
+        val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, *>>()
+        val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
@@ -281,7 +281,8 @@ class StyleForm<S : Style>(
                     )
                     fixedChoiceConstr != null || dynChoiceConstr != null -> InconsistentComboBoxWidget(
                         setting.type,
-                        items = fixedChoiceConstr?.run { choices.toList() } ?: emptyList(),
+                        items = fixedChoiceConstr?.run { choices.toList().requireIsInstance(setting.type) }
+                            ?: emptyList(),
                         toString = { (it as Enum<*>).label }, widthSpec
                     )
                     else -> ComboBoxWidget(

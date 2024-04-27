@@ -892,8 +892,8 @@ private class CreditsReader(
 
     private fun parseTapeTimecode(l10nColName: String, kw: String, str: String?, tape: Tape): Timecode? {
         val fps = if (tape.fileSeq) styling.global.fps else tape.fps
-        val permittedTcFmts = if (tape.fileSeq) listOf(TimecodeFormat.FRAMES) else
-            (fps ?: FPS(1, 2)).canonicalTimecodeFormats - TimecodeFormat.FRAMES
+        val permittedTcFmts = if (tape.fileSeq) EnumSet.of(TimecodeFormat.FRAMES) else
+            (fps ?: FPS(1, 2)).canonicalTimecodeFormats.apply { remove(TimecodeFormat.FRAMES) }
 
         fun permittedTcSamples() = permittedTcFmts.joinToString { formatTimecode(fps ?: FPS(30000, 1001), it, 7127) }
 

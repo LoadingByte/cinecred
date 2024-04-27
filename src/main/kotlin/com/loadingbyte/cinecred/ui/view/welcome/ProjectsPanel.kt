@@ -455,7 +455,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         override fun onChange(widget: Widget<*>) {
             super.onChange(widget)
             if (widget == fpsWidget)
-                timecodeFormatWidget.items = fpsWidget.value.canonicalTimecodeFormats
+                timecodeFormatWidget.items = fpsWidget.value.canonicalTimecodeFormats.toList()
             createConfigureDoneButton.isEnabled = isErrorFree
         }
 

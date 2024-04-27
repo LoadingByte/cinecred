@@ -31,7 +31,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     ResolutionConstr(ERROR, Global::resolution.st()),
     FPSConstr(ERROR, Global::fps.st()),
     DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
-        TreeSet(global.fps.canonicalTimecodeFormats)
+        global.fps.canonicalTimecodeFormats
     },
     IntConstr(ERROR, Global::runtimeFrames.st(), min = 1),
     ColorConstr(ERROR, Global::grounding.st(), allowAlpha = false),
@@ -62,20 +62,20 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     },
     DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
         when (style.blockOrientation) {
-            VERTICAL -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+            VERTICAL -> EnumSet.of(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             HORIZONTAL -> when {
-                !style.hasHead && !style.hasTail -> sortedSetOf(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
-                style.hasHead && !style.hasTail -> sortedSetOf(
+                !style.hasHead && !style.hasTail -> EnumSet.of(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
+                style.hasHead && !style.hasTail -> EnumSet.of(
                     OVERALL_CENTER,
                     HEAD_LEFT, HEAD_CENTER, HEAD_RIGHT, HEAD_GAP_CENTER,
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT
                 )
-                !style.hasHead && style.hasTail -> sortedSetOf(
+                !style.hasHead && style.hasTail -> EnumSet.of(
                     OVERALL_CENTER,
                     BODY_LEFT, BODY_CENTER, BODY_RIGHT,
                     TAIL_GAP_CENTER, TAIL_LEFT, TAIL_CENTER, TAIL_RIGHT
                 )
-                else -> SpineAttachment.entries.toSortedSet()
+                else -> EnumSet.allOf(SpineAttachment::class.java)
             }
         }
     },
@@ -83,7 +83,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     FixedChoiceConstr(
         WARN, ContentStyle::gridMatchColWidths.st(), ContentStyle::headMatchWidth.st(),
         ContentStyle::tailMatchWidth.st(),
-        choices = sortedSetOf(OFF, ACROSS_BLOCKS)
+        choices = EnumSet.of(OFF, ACROSS_BLOCKS)
     ),
     StyleNameConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
@@ -94,9 +94,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
         val forceColWidth = style.gridForceColWidthPx.isActive
         when {
-            forceColWidth && style.gridForceRowHeightPx.isActive -> sortedSetOf(FREE)
-            forceColWidth || style.gridCellHJustifyPerCol.size < 2 -> sortedSetOf(FREE, SQUARE_CELLS)
-            else -> GridStructure.entries.toSortedSet()
+            forceColWidth && style.gridForceRowHeightPx.isActive -> EnumSet.of(FREE)
+            forceColWidth || style.gridCellHJustifyPerCol.size < 2 -> EnumSet.of(FREE, SQUARE_CELLS)
+            else -> EnumSet.allOf(GridStructure::class.java)
         }
     },
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
@@ -111,8 +111,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
-        if (style.gridStructure == SQUARE_CELLS) sortedSetOf(OFF, ACROSS_BLOCKS)
-        else MatchExtent.entries.toSortedSet()
+        if (style.gridStructure == SQUARE_CELLS) EnumSet.of(OFF, ACROSS_BLOCKS)
+        else EnumSet.allOf(MatchExtent::class.java)
     },
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
@@ -129,8 +129,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellHeightPx.st(), min = 0.0),
     DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
-        if (sty.flowSquareCells) sortedSetOf(OFF, ACROSS_BLOCKS)
-        else MatchExtent.entries.toSortedSet()
+        if (sty.flowSquareCells) EnumSet.of(OFF, ACROSS_BLOCKS)
+        else EnumSet.allOf(MatchExtent::class.java)
     },
     StyleNameConstr(
         ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
@@ -256,8 +256,8 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
     DynChoiceConstr(WARN, Layer::anchor.st()) { _, _, style ->
-        if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) LayerAnchor.entries.toSortedSet()
-        else sortedSetOf(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
+        if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) EnumSet.allOf(LayerAnchor::class.java)
+        else EnumSet.of(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
     },
     SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, _, style, _, sibling, siblingOrdinal ->
         siblingOrdinal in style.cloneLayers && sibling.shape != LayerShape.CLONE
@@ -333,17 +333,17 @@ class DoubleConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Double>>(setting)
 
 
-class FixedChoiceConstr<S : Style, SUBJ : Any>(
+class FixedChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
-    val choices: SortedSet<SUBJ>
+    val choices: EnumSet<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 
-class DynChoiceConstr<S : Style, SUBJ : Any>(
+class DynChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
-    val choices: (StylingContext, Styling, S) -> SortedSet<SUBJ>
+    val choices: (StylingContext, Styling, S) -> EnumSet<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 
@@ -389,7 +389,7 @@ class FontNameConstr<S : Style>(
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
-    val getAvailableTags: (StylingContext, Styling, S) -> SortedSet<String>
+    val getAvailableTags: (StylingContext, Styling, S) -> SequencedSet<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 

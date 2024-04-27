@@ -38,11 +38,11 @@ fun parseTimecode(format: TimecodeFormat, str: String): Timecode = when (format)
         Timecode.fromFramesString(str)
 }
 
-val FPS.canonicalTimecodeFormats: List<TimecodeFormat>
+val FPS.canonicalTimecodeFormats: EnumSet<TimecodeFormat>
     get() = when {
-        supportsDropFrameTimecode -> TimecodeFormat.entries
-        isFractional -> listOf(TimecodeFormat.EXACT_FRAMES_IN_SECOND, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
-        else -> listOf(TimecodeFormat.SMPTE_NON_DROP_FRAME, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
+        supportsDropFrameTimecode -> EnumSet.allOf(TimecodeFormat::class.java)
+        isFractional -> EnumSet.of(TimecodeFormat.EXACT_FRAMES_IN_SECOND, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
+        else -> EnumSet.of(TimecodeFormat.SMPTE_NON_DROP_FRAME, TimecodeFormat.CLOCK, TimecodeFormat.FRAMES)
     }
 
 

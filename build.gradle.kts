@@ -188,14 +188,14 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory.
         from(srcMainNatives(platform)) {
-            include("*.${platform.os.nativesExt}")
+            include("*.${platform.os.codeLibExt}")
         }
         for (file in natives.getValue(platform))
-            if (file.extension == platform.os.nativesExt)
+            if (file.extension == platform.os.codeLibExt)
                 from(file)
             else
                 from(zipTree(file)) {
-                    include("**/*.${platform.os.nativesExt}*")
+                    include("**/*.${platform.os.codeLibExt}*")
                     exclude("**/*avdevice*", "**/*avfilter*", "**/*postproc*")
                 }
         into(layout.buildDirectory.dir("natives/${platform.slug}"))
@@ -364,7 +364,7 @@ for (platform in Platform.values()) {
         description = "Builds the Skia native library for ${platform.label.capitalized()}."
         forPlatform = platform
         repositoryDir = checkoutSkia.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform, "skia", "dll")
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("skia"))
     }
 
     tasks.register<BuildSkiaCAPI>("buildSkiaCAPIFor${platform.label.capitalized()}") {
@@ -373,8 +373,8 @@ for (platform in Platform.values()) {
         forPlatform = platform
         capiDir = srcSkiacapiCpp
         repositoryDir = checkoutSkia.flatMap { it.repositoryDir }
-        linkedFile = srcMainNatives(platform, "skia", "lib")
-        outputFile = srcMainNatives(platform, "skiacapi", "dll")
+        linkedFile = srcMainNatives(platform).file(platform.os.importLib("skia"))
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("skiacapi"))
     }
 
     tasks.register<BuildHarfBuzz>("buildHarfBuzzFor${platform.label.capitalized()}") {
@@ -382,7 +382,7 @@ for (platform in Platform.values()) {
         description = "Builds the HarfBuzz native library for ${platform.label.capitalized()}."
         forPlatform = platform
         repositoryDir = checkoutHarfBuzz.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform, "harfbuzz", "dll")
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("harfbuzz"))
     }
 
     tasks.register<BuildZimg>("buildZimgFor${platform.label.capitalized()}") {
@@ -390,7 +390,7 @@ for (platform in Platform.values()) {
         description = "Builds the zimg native library for ${platform.label.capitalized()}."
         forPlatform = platform
         repositoryDir = checkoutZimg.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform, "zimg", "dll")
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("zimg"))
     }
 }
 
@@ -434,13 +434,6 @@ val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
 
 val srcMainNatives get() = layout.projectDirectory.dir("src/main/natives")
 fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
-fun srcMainNatives(platform: Platform, libName: String, winExt: String) = srcMainNatives(platform).file(
-    when (platform.os) {
-        Platform.OS.WINDOWS -> "$libName.$winExt"
-        Platform.OS.MAC -> "lib$libName.dylib"
-        Platform.OS.LINUX -> "lib$libName.so"
-    }
-)
 
 val srcSkiacapiCpp get() = layout.projectDirectory.dir("src/skiacapi/cpp")
 

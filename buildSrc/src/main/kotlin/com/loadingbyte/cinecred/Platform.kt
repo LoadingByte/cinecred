@@ -16,10 +16,16 @@ enum class Platform(
     val slugJavacpp: String = os.slugJavacpp + "-" + arch.slug
 
 
-    enum class OS(val slug: String, val slugJavacpp: String, val nativesExt: String) {
-        WINDOWS("windows", "windows", "dll"),
-        MAC("mac", "macosx", "dylib"),
-        LINUX("linux", "linux", "so")
+    enum class OS(
+        val slug: String, val slugJavacpp: String,
+        val libPrefix: String, val codeLibExt: String, val importLibExt: String
+    ) {
+        WINDOWS("windows", "windows", "", "dll", "lib"),
+        MAC("mac", "macosx", "lib", "dylib", "dylib"),
+        LINUX("linux", "linux", "lib", "so", "so");
+
+        fun codeLib(name: String) = "$libPrefix$name.$codeLibExt"
+        fun importLib(name: String) = "$libPrefix$name.$importLibExt"
     }
 
 

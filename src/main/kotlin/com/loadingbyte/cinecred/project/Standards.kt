@@ -39,9 +39,9 @@ val PRESET_GLOBAL = Global(
 
 val PRESET_PAGE_STYLE = PageStyle(
     name = "???",
-    afterwardSlugFrames = Int.MAX_VALUE,
+    subsequentGapFrames = 24,
     behavior = PageBehavior.SCROLL,
-    cardDurationFrames = Int.MAX_VALUE,
+    cardRuntimeFrames = 120,
     cardFadeInFrames = 12,
     cardFadeOutFrames = 12,
     scrollMeltWithPrev = false,

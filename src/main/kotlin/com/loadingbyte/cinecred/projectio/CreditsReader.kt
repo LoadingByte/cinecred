@@ -12,7 +12,6 @@ import kotlinx.collections.immutable.toPersistentList
 import java.text.DecimalFormat
 import java.util.*
 import kotlin.io.path.name
-import kotlin.math.abs
 
 
 fun readCredits(
@@ -183,17 +182,8 @@ private class CreditsReader(
                 else
                     pageStages.removeAt(idx)
             }
-            val gapAfterFrames = pageGapAfterFrames ?: if (stageStyle == null) 0 else {
-                val style = pageStages.last().style
-                val styleSlug = style.afterwardSlugFrames
-                if (styleSlug == PRESET_PAGE_STYLE.afterwardSlugFrames) 0 else {
-                    val g = styling.global
-                    val tc = (if (styleSlug < 0) "-" else "") + formatTimecode(g.fps, g.timecodeFormat, abs(styleSlug))
-                    val mds = MigrationDataSource(style, PageStyle::afterwardSlugFrames.st())
-                    table.logMigrationPut(row - 1, "pageGap", tc, mds)
-                    styleSlug
-                }
-            }
+            val gapAfterFrames = pageGapAfterFrames ?: if (stageStyle == null) 0 else
+                pageStages.last().style.subsequentGapFrames
             val page = Page(pageStages.toPersistentList(), gapAfterFrames)
             pages.add(page)
         }
@@ -201,31 +191,13 @@ private class CreditsReader(
         pageGapAfterFrames = null
     }
 
-    fun concludeStage(vGapAfter: Double, isLastOnPage: Boolean) {
+    fun concludeStage(vGapAfter: Double) {
         // Note: We allow empty scroll stages to connect card stages.
         if (stageStyle?.behavior == PageBehavior.SCROLL || stageCompounds.isNotEmpty()) {
             val stageStyle = this.stageStyle!!
             when (stageStyle.behavior) {
                 PageBehavior.CARD -> {
-                    val cardRuntimeFrames = stageRuntimeFrames ?: when {
-                        stageStyle.cardDurationFrames == PRESET_PAGE_STYLE.cardDurationFrames -> {
-                            if (table.isEmpty(stageDeclaredRow, "pageRuntime")) {
-                                val m = l10n("projectIO.credits.cardNeedsRuntime", timecodeFormatLabel, sampleTimecode)
-                                table.log(stageDeclaredRow, "pageRuntime", WARN, m)
-                            }
-                            96
-                        }
-                        else -> {
-                            val f = stageStyle.cardDurationFrames +
-                                    (if (pageStages.isEmpty()) stageStyle.cardFadeInFrames else 0) +
-                                    (if (isLastOnPage) stageStyle.cardFadeOutFrames else 0)
-                            val g = styling.global
-                            val tc = formatTimecode(g.fps, g.timecodeFormat, f)
-                            val mds = MigrationDataSource(stageStyle, PageStyle::cardDurationFrames.st())
-                            table.logMigrationPut(stageDeclaredRow, "pageRuntime", tc, mds)
-                            f
-                        }
-                    }
+                    val cardRuntimeFrames = stageRuntimeFrames ?: stageStyle.cardRuntimeFrames
                     pageStages += Stage(stageStyle, cardRuntimeFrames, stageCompounds.toPersistentList(), vGapAfter)
                 }
                 PageBehavior.SCROLL -> {
@@ -335,7 +307,7 @@ private class CreditsReader(
         concludeBlock(0.0)
         concludeSpine()
         concludeCompound(0.0)
-        concludeStage(0.0, isLastOnPage = true)
+        concludeStage(0.0)
         concludePage()
 
         // If there is not a single page, that's an error.
@@ -627,7 +599,7 @@ private class CreditsReader(
                     else -> true
                 }
                 stageMeltWithNext = false
-                concludeStage(vGap, isLastOnPage)
+                concludeStage(vGap)
                 if (isLastOnPage)
                     concludePage()
             } else if (isCompoundConclusionMarked) {

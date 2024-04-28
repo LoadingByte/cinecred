@@ -83,11 +83,9 @@ data class Global(
 
 data class PageStyle(
     override val name: String,
-    /** Only retained for backwards compatibility. */
-    val afterwardSlugFrames: Int,
+    val subsequentGapFrames: Int,
     val behavior: PageBehavior,
-    /** Only retained for backwards compatibility. */
-    val cardDurationFrames: Int,
+    val cardRuntimeFrames: Int,
     val cardFadeInFrames: Int,
     val cardFadeOutFrames: Int,
     /** Only retained for backwards compatibility. */

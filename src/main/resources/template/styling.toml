@@ -7,12 +7,15 @@ locale = "{locale}"
 
 [[pageStyle]]
 name = "{project.PageBehavior.CARD}"
+subsequentGapFrames = {subsequentGapFrames}
 behavior = "CARD"
+cardRuntimeFrames = {cardRuntimeFrames}
 cardFadeInFrames = {cardFadeFrames}
 cardFadeOutFrames = {cardFadeFrames}
 
 [[pageStyle]]
 name = "{project.PageBehavior.SCROLL}"
+subsequentGapFrames = {subsequentGapFrames}
 behavior = "SCROLL"
 scrollPxPerFrame = {scrollPxPerFrame}
 

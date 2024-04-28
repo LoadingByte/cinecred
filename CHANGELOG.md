@@ -9,8 +9,9 @@ Cinecred Changelog
 
 - The credits spreadsheet file may now have multiple sheets, each of which is
   treated as an isolated credits sequence.
-- The runtime of cards is now set via the spreadsheet's page runtime column.
-- The temporal gap between pages and whether to melt pages together is now
+- Card runtime can now also be set via the spreadsheet's page runtime column.
+  Both that and the style setting now specify the total runtime including fades.
+- The temporal gap between pages and whether to melt pages together can now be
   controlled via a new page gap column in the spreadsheet.
 - Embedded videos can now be aligned in the middle or at the end of the time
   range in which they appear.
@@ -46,10 +47,11 @@ Cinecred Changelog
 ### Compatibility Notes
 
 - Cards can no longer be members of runtime groups.
-- The page slug, card duration, and page melting settings have been removed from
+- The page melting settings have been moved to the credits spreadsheet from the
   page styles, but this information is still retained so that the credits are
   rendered exactly as in the previous version; warning messages tell the user
   what to type into which cells in the spreadsheet to complete the migration.
+- In some cases, the runtime of melted cards may slightly change.
 
 
 1.5.1

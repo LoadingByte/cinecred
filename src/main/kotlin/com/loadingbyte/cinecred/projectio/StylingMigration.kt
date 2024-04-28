@@ -250,6 +250,20 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
         (contentStyle["headVJustify"] as? String)?.let { contentStyle["headVJustify"] = patch(it) }
         (contentStyle["tailVJustify"] as? String)?.let { contentStyle["tailVJustify"] = patch(it) }
     }
+
+    // 1.5.1 -> 1.6.0: "afterwardSlugFrames" is renamed to "subsequentGapFrames".
+    for (pageStyle in rawStyling.pageStyles)
+        pageStyle["afterwardSlugFrames"]?.let { pageStyle["subsequentGapFrames"] = it }
+
+    // 1.5.1 -> 1.6.0: The card runtime setting now includes the fade-in/out time.
+    for (pageStyle in rawStyling.pageStyles) {
+        var cardRuntimeFrames = (pageStyle["cardDurationFrames"] as? Number ?: continue).toInt()
+        if (pageStyle["scrollMeltWithPrev"] != true)
+            (pageStyle["cardFadeInFrames"] as? Number)?.let { cardRuntimeFrames += it.toInt() }
+        if (pageStyle["scrollMeltWithNext"] != true)
+            (pageStyle["cardFadeOutFrames"] as? Number)?.let { cardRuntimeFrames += it.toInt() }
+        pageStyle["cardRuntimeFrames"] = cardRuntimeFrames
+    }
 }
 
 

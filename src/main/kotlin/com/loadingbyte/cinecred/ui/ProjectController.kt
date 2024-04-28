@@ -198,10 +198,7 @@ class ProjectController(
         fun <SUBJ : Any> clearSetting(style: PageStyle, setting: DirectStyleSetting<PageStyle, SUBJ>): PageStyle =
             style.copy(setting.notarize(setting.get(PRESET_PAGE_STYLE)))
 
-        val legacySettings = arrayOf(
-            PageStyle::afterwardSlugFrames.st(), PageStyle::cardDurationFrames.st(),
-            PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st()
-        )
+        val legacySettings = arrayOf(PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st())
         val usedLegacySettings = log.mapNotNullTo(HashSet(), ParserMsg::migrationDataSource)
 
         var clearedStyles: MutableList<PageStyle>? = null

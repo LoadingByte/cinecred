@@ -135,6 +135,8 @@ private fun fillIn(string: String, template: Template): String = string
             "resolution" -> template.resolution.toTimes()
             "fps" -> template.fps.toFraction()
             "timecodeFormat" -> template.timecodeFormat.name
+            "subsequentGapFrames" -> template.fps.run { numerator / denominator }.toString()
+            "cardRuntimeFrames" -> template.fps.run { 5 * numerator / denominator }.toString()
             "cardFadeFrames" -> template.fps.run { numerator / (2 * denominator) }.toString()
             "scrollPxPerFrame" -> max(1, template.fps.run { 78 * denominator / numerator } * template.scale).toString()
             else -> l10n(key, template.locale)

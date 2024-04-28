@@ -167,7 +167,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     override fun onChange(widget: Widget<*>) {
         // If another spreadsheet name is selected, set the output location fields to a reasonable default.
         if (widget == spreadsheetNameWidget) {
-            val dir = ctrl.projectDir.toAbsolutePath().parent
+            // We've actually had a bug report where the project dir didn't have a parent, so in that case, just put the
+            // default output location inside the project dir to at least avoid a crash.
+            val dir = ctrl.projectDir.toAbsolutePath().let { it.parent ?: it }
             val filename = "${ctrl.projectDir.fileName} ${spreadsheetNameWidget.value.getOrNull() ?: ""} Render"
             singleFileWidget.value = (singleFileWidget.value.parent ?: dir).resolve(filename)
             seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve(filename)

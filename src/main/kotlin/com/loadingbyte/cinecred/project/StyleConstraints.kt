@@ -51,7 +51,8 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     JudgeConstr(INFO, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
         val value = sty.scrollPxPerFrame
         floor(value) == value
-    }
+    },
+    IntConstr(ERROR, PageStyle::scrollRuntimeFrames.st(), min = 1)
 )
 
 

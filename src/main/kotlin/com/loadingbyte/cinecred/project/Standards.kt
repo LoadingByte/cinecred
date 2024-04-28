@@ -46,7 +46,8 @@ val PRESET_PAGE_STYLE = PageStyle(
     cardFadeOutFrames = 12,
     scrollMeltWithPrev = false,
     scrollMeltWithNext = false,
-    scrollPxPerFrame = 3.0
+    scrollPxPerFrame = 3.0,
+    scrollRuntimeFrames = Opt(false, 0)
 )
 
 

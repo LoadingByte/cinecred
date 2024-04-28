@@ -210,6 +210,7 @@ private class CreditsReader(
                         namedRuntimeGroups[groupName] = RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames)
                     } else {
                         val groupFrames = stageRuntimeFrames
+                            ?: stageStyle.scrollRuntimeFrames.run { if (isActive) value else null }
                         if (groupFrames != null)
                             if (groupName != null)
                                 namedRuntimeGroups[groupName] = RuntimeGroup(persistentListOf(stage), groupFrames)

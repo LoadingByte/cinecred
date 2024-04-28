@@ -92,7 +92,8 @@ data class PageStyle(
     val scrollMeltWithPrev: Boolean,
     /** Only retained for backwards compatibility. */
     val scrollMeltWithNext: Boolean,
-    val scrollPxPerFrame: Double
+    val scrollPxPerFrame: Double,
+    val scrollRuntimeFrames: Opt<Int>
 ) : ListedStyle
 
 

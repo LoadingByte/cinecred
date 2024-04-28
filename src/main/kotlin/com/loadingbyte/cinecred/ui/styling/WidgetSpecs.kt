@@ -36,7 +36,7 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
     ToggleButtonGroupWidgetSpec(PageStyle::behavior.st(), LABEL),
     TimecodeWidgetSpec(
         PageStyle::subsequentGapFrames.st(), PageStyle::cardRuntimeFrames.st(),
-        PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
+        PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(), PageStyle::scrollRuntimeFrames.st(),
         getFPS = { _, styling, _ -> styling.global.fps },
         getTimecodeFormat = { _, styling, _ -> styling.global.timecodeFormat }
     ),

@@ -47,6 +47,7 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
     ),
     StyleEffectivitySpec(
         PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st(), PageStyle::scrollPxPerFrame.st(),
+        PageStyle::scrollRuntimeFrames.st(),
         isTotallyIneffective = { _, _, style -> style.behavior != SCROLL }
     ),
     StyleEffectivitySpec(

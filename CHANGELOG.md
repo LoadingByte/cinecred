@@ -11,6 +11,7 @@ Cinecred Changelog
   treated as an isolated credits sequence.
 - Card runtime can now also be set via the spreadsheet's page runtime column.
   Both that and the style setting now specify the total runtime including fades.
+- The runtime of a single scroll page can now also be set via the page style.
 - The temporal gap between pages and whether to melt pages together can now be
   controlled via a new page gap column in the spreadsheet.
 - Embedded videos can now be aligned in the middle or at the end of the time

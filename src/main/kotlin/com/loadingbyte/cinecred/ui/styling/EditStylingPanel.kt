@@ -67,8 +67,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // of the same widget but in different styles.
     private var openCounter = 0
 
-    // Remember the runtime of the latest render of the project.
+    // Remember the runtime of the latest render of the project, as well as the runtime of the first occurrences of
+    // individual scroll styles.
     private var mostRecentRuntime = 0
+    private val mostRecentScrollRuntimes = HashMap<String, Int>()
 
     init {
         stylingTree.onDeselect = ::openBlank
@@ -258,7 +260,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
-            val newStyle = form.save()
+            var newStyle = form.save()
+            // If the scroll page runtime setting is 0 and has now been activated, initialize the corresponding timecode
+            // spinner with the scroll page's current runtime. This is to provide a good starting value for the user.
+            if (newStyle is PageStyle && newStyle.scrollRuntimeFrames.run { isActive && value == 0 }) {
+                val newValue = Opt(true, mostRecentScrollRuntimes.getOrDefault(newStyle.name, 1))
+                form.castToStyle(PageStyle::class.java).openSingleSetting(PageStyle::scrollRuntimeFrames.st(), newValue)
+                newStyle = form.save()
+            }
             stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
             val newStyling = buildStyling()
             val updates = consistencyRetainer.ensureConsistencyAfterEdit(ctrl.stylingCtx, newStyling, newStyle)
@@ -315,6 +324,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
         }
         drawnProject.drawnCredits.firstOrNull()?.let { mostRecentRuntime = it.video.numFrames }
+        for (drawnCredits in drawnProject.drawnCredits)
+            for (drawnPage in drawnCredits.drawnPages)
+                for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
+                    if (stageInfo is DrawnStageInfo.Scroll)
+                        mostRecentScrollRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
     }
 
     private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {

@@ -52,17 +52,19 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
 
     private fun makeSpinner(model: SpinnerNumberModel, onChange: () -> Unit) =
         JSpinner(model).apply {
-            if (model.value is Double)
-                editor = NumberEditor(this, "#.#")
+            editor = (if (model.value is Double) NumberEditor(this, "#.#") else NumberEditor(this))
+                .also { setCommitsOnValidEdit(it.textField) }
             addChangeListener { onChange() }
         }
 
     private fun makeHexTextField() =
-        JFormattedTextField(HexColorFormatter(allowAlpha))
-            .apply { addPropertyChangeListener("value") { onHexChange() } }
+        JFormattedTextField(HexColorFormatter(allowAlpha)).apply {
+            setCommitsOnValidEdit(this)
+            addPropertyChangeListener("value") { onHexChange() }
+        }
 
     init {
-        resetUI()
+        resetUIInit()
         updateHexFromRGBAndAlpha()
 
         layout = MigLayout(
@@ -212,6 +214,7 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
                     textField.formatterFactory = DefaultFormatterFactory(Alpha100Formatter())
                 }
             }
+            setCommitsOnValidEdit(newEditor.textField)
             withoutOnChange {
                 alphaSpinner.editor = newEditor
             }
@@ -252,7 +255,24 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
     // @formatter:on
 
     fun resetUI() {
+        resetUIInit()
+        // When the color picker is part of a popup that is closed while an invalid value is entered into a text field,
+        // that value will persist once the popup is re-opened. To fix that, we force all text fields to update.
+        resetSpinner(hueSpinner)
+        resetSpinner(satSpinner)
+        resetSpinner(briSpinner)
+        resetSpinner(redSpinner)
+        resetSpinner(grnSpinner)
+        resetSpinner(bluSpinner)
+        hexTextField.value = hexTextField.value
+    }
+
+    private fun resetUIInit() {
         alphaRange = AlphaRange.RANGE_255
+    }
+
+    private fun resetSpinner(spinner: JSpinner) {
+        (spinner.editor as NumberEditor).textField.apply { value = value }
     }
 
     private fun fireStateChanged() {
@@ -264,6 +284,10 @@ class ColorPicker(private val allowAlpha: Boolean) : JComponent() {
                 (listeners[idx + 1] as ChangeListener).stateChanged(e)
             idx -= 2
         }
+    }
+
+    private fun setCommitsOnValidEdit(textField: JFormattedTextField) {
+        (textField.formatter as DefaultFormatter).commitsOnValidEdit = true
     }
 
 

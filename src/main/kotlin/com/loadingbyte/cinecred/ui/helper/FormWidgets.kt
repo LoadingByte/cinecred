@@ -1574,6 +1574,8 @@ class SimpleListWidget<E : Any>(
 
         for ((comp, constr) in widget.components.zip(widget.constraints))
             panel.add(comp, constr)
+
+        panel.revalidate()
     }
 
     override fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean) {

@@ -30,6 +30,7 @@ Cinecred Changelog
 - SVGs and PDFs are now cropped based on rendered pixels instead of guesswork.
 - Rotated PDFs are now positioned correctly and given the right dimensions.
 - Certain fonts with bad naming metadata no longer cause a crash.
+- Empty columns of an unbalanced vertically-filled grid no longer cause a crash.
 - Exported PDFs now reduce the resolution of very large raster pictures.
 - Exported PDFs now contain only one instance of each picture, even when it has
   multiple occurrences.

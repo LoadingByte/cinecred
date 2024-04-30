@@ -259,7 +259,7 @@ private fun <E> flowIntoGridCols(
             List(numCols) { colIdx ->
                 val useLastRow = !balanced || lRowElems == 0 || colIdx in lRowStart..<lRowStop && colIdx != lRowSkip
                 val take = numRows - if (useLastRow) 0 else 1
-                val col = list.subList(idx, min(idx + take, list.size))
+                val col = if (idx < list.size) list.subList(idx, min(idx + take, list.size)) else emptyList()
                 idx += take
                 col
             }

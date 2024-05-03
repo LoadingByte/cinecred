@@ -348,6 +348,10 @@ private class CreditsReader(
         // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
         // specified page style for the stage that starts immediately afterwards. Also reset the spine positioning info.
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
+            if (stageMeltWithNext && newPageStyle === stageStyle) {
+                table.log(row, "pageStyle", WARN, l10n("projectIO.credits.redundantMeltedScroll"))
+                return@let
+            }
             nextStageStyle = newPageStyle
             nextStageDeclaredRow = row
             nextSpineHookTo = 0

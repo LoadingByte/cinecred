@@ -86,17 +86,13 @@ class DeferredVideo private constructor(
         playPhase(image, Phase.Fade(numFrames, shift, startAlpha, stopAlpha))
     }
 
+    /** Note that [startShift] is exclusive, so the first displayed frame has shift `startShift + 1 * speed`. */
     fun playScroll(
-        image: DeferredImage, numFrames: Int, speed: Double, startShift: Double, stopShift: Double,
-        initialAdvance: Double, alpha: Double
+        image: DeferredImage, numFrames: Int, speed: Double, startShift: Double, stopShift: Double, alpha: Double
     ) {
         if (numFrames <= 0) return
         mutate()
-        val newSection = Phase.Scroll.Section(numFrames, speed, startShift, stopShift, initialAdvance)
-        val curFlow = flows.lastOrNull() as? Flow.DefImg
-        if (image == curFlow?.image)
-            (curFlow.phases.lastOrNull() as? Phase.Scroll)?.let { it.addSection(newSection); return }
-        playPhase(image, Phase.Scroll(alpha).apply { addSection(newSection) })
+        playPhase(image, Phase.Scroll(numFrames, speed, startShift, stopShift, alpha))
     }
 
     private fun playPhase(image: DeferredImage, phase: Phase) {
@@ -208,40 +204,24 @@ class DeferredVideo private constructor(
                 startAlpha + (stopAlpha - startAlpha) * (frameIdx + 1) / (numFrames(fpsScaling) + 1)
         }
 
-        class Scroll(private val alpha: Double) : Phase {
-
-            class Section(
-                val numFrames: Int,
-                val speed: Double,
-                val startShift: Double,
-                val stopShift: Double,
-                val initialAdvance: Double
-            ) {
-                var startFrames = 0.0
-            }
-
-            private val sections = mutableListOf<Section>()
-
-            fun addSection(section: Section) {
-                section.startFrames = sections.sumOf(Section::numFrames) - section.initialAdvance
-                sections.add(section)
-            }
+        class Scroll(
+            private val numFrames: Int,
+            private val speed: Double,
+            private val startShift: Double,
+            private val stopShift: Double,
+            private val alpha: Double
+        ) : Phase {
 
             override fun numFrames(fpsScaling: Int): Int {
-                var n = sections.sumOf(Section::numFrames) * fpsScaling
-                if (fpsScaling != 1) {
-                    val stopShift = sections.last().stopShift
+                var n = numFrames * fpsScaling
+                if (fpsScaling != 1)
                     while (shift(fpsScaling, n + 1) < stopShift - 0.001)
                         n++
-                }
                 return n
             }
 
-            override fun shift(fpsScaling: Int, frameIdx: Int): Double {
-                val unscaledFrameIdx = (frameIdx - (fpsScaling - 1)) / fpsScaling.toDouble()
-                val sec = sections.firstOrNull { unscaledFrameIdx < it.startFrames + it.numFrames } ?: sections.last()
-                return sec.startShift + sec.speed * (unscaledFrameIdx - sec.startFrames)
-            }
+            override fun shift(fpsScaling: Int, frameIdx: Int) =
+                startShift + speed * ((frameIdx + 1) / fpsScaling.toDouble())
 
             override fun alpha(fpsScaling: Int, frameIdx: Int) = alpha
 

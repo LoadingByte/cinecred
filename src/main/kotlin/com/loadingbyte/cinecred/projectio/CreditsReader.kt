@@ -348,10 +348,6 @@ private class CreditsReader(
         // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
         // specified page style for the stage that starts immediately afterwards. Also reset the spine positioning info.
         table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
-            if (stageMeltWithNext && newPageStyle === stageStyle) {
-                table.log(row, "pageStyle", WARN, l10n("projectIO.credits.redundantMeltedScroll"))
-                return@let
-            }
             nextStageStyle = newPageStyle
             nextStageDeclaredRow = row
             nextSpineHookTo = 0
@@ -585,8 +581,9 @@ private class CreditsReader(
                 val nextStyle = nextStageStyle!!
                 val isLastOnPage = when {
                     stageMeltWithNext ->
-                        if (currStyle?.behavior == PageBehavior.CARD && nextStyle.behavior == PageBehavior.CARD) {
-                            table.log(stageMeltDeclaredRow, "pageGap", WARN, l10n("projectIO.credits.cannotMeltCards"))
+                        if (currStyle?.behavior == nextStyle.behavior) {
+                            val msg = l10n("projectIO.credits.cannotMeltSameBehavior")
+                            table.log(stageMeltDeclaredRow, "pageGap", WARN, msg)
                             true
                         } else false
                     // If no page gap has been declared and the two adjacent page styles still have the legacy melting
@@ -594,7 +591,7 @@ private class CreditsReader(
                     pageGapAfterFrames == null -> {
                         val c = currStyle?.behavior == PageBehavior.SCROLL && currStyle.scrollMeltWithNext
                         val n = nextStyle.behavior == PageBehavior.SCROLL && nextStyle.scrollMeltWithPrev
-                        if (c || n) {
+                        if ((c || n) && currStyle?.behavior != nextStyle.behavior) {
                             val msd = if (c) MigrationDataSource(currStyle!!, PageStyle::scrollMeltWithNext.st())
                             else MigrationDataSource(nextStyle, PageStyle::scrollMeltWithPrev.st())
                             table.logMigrationPut(row - 1, "pageGap", l10n(MELT_KW.key), msd)

@@ -44,7 +44,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                         drawnPage.defImage, stageInfo.frames, stage.style.scrollPxPerFrame,
                         startShift = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
                         stopShift = stageInfo.scrollStopY.resolve() - video.resolution.heightPx / 2.0,
-                        stageInfo.initialAdvance, alpha = 1.0
+                        alpha = 1.0
                     )
             }
         if (pageIdx != drawnPages.lastIndex)

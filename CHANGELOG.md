@@ -53,6 +53,7 @@ Cinecred Changelog
 ### Compatibility Notes
 
 - Cards can no longer be members of runtime groups.
+- Scroll pages can no longer be melted back to back.
 - The page melting settings have been moved to the credits spreadsheet from the
   page styles, but this information is still retained so that the credits are
   rendered exactly as in the previous version; warning messages tell the user

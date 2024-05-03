@@ -116,9 +116,7 @@ private fun layoutStages(
     //       - Recall that scroll stages can scroll into melted card stages. As such, these coordinates can lie inside
     //         of card stages. For some purposes however, we need the portion of the scrolled height which is truly
     //         occupied by the scroll stage.
-    //       - The number of frames that make up the scroll, and a fraction of a frame that should be skipped prior to
-    //         the beginning of the scroll.
-    var nextScrollInitAdvance = Double.NaN
+    //       - The number of frames that make up the scroll.
     val stageInfo = page.stages.mapIndexed { stageIdx, stage ->
         val (topY, botY) = stageRanges[stageIdx]
         when (stage.style.behavior) {
@@ -131,54 +129,34 @@ private fun layoutStages(
                 // Find the scroll start and end y coordinates.
                 val scrollStartY = when (prevStageBehavior) {
                     CARD -> stageRanges[stageIdx - 1].top + drawnStages.getValue(prevStage).middleYInImage!!
-                    SCROLL, null -> topY - resolution.heightPx / 2.0
+                    null -> topY - resolution.heightPx / 2.0
+                    SCROLL -> throw IllegalStateException("Scroll stages can't be melted back to back.")
                 }
                 val scrollStopY = when (nextStageBehavior) {
                     CARD -> stageRanges[stageIdx + 1].top + drawnStages.getValue(nextStage).middleYInImage!!
-                    SCROLL -> botY - resolution.heightPx / 2.0
                     null -> botY + resolution.heightPx / 2.0
+                    SCROLL -> throw IllegalStateException("Scroll stages can't be melted back to back.")
                 }
                 // Find the portion of the scrolled height which really belongs to the scroll stage itself. If you are
                 // confused, recall that scroll stages can scroll into melted card stages.
                 val ownedScrollStartY = if (prevStageBehavior == CARD) topY else scrollStartY
                 val ownedScrollStopY = if (nextStageBehavior == CARD) botY else scrollStopY
                 val ownedScrollHeight = ownedScrollStopY - ownedScrollStartY
-                // Find (a) how much of a single frame to advance the scroll prior to the first frame actually being
-                // rendered (initAdvance) and (b) the number of frames required for the scroll.
-                // To understand this, consider a scenario with the following immediate sequence of scroll stages:
-                //  1. height = 10px & scroll speed = 2px per frame
-                //  2. height = 10px & scroll speed = 3px per frame
-                //  3. height =  9px & scroll speed = 2px per frame
-                // This sequence is surrounded either by nothing or card stages. In either case, the scroll itself
-                // should only contain "moving" frames, since the static ones (blank screen or still card) are already
-                // fully covered by the frame gaps between pages or the card stages.
-                //  1. We start with the first scroll stage. Its "moving" frames (i.e., all frames except the start
-                //     and end ones) perfectly fit into 4 frames, with a 1 frame gap to both the start and end frames.
-                //     The pixel offsets of each frame are 2, 4, 6, and 8, with the offsets 0 and 10 being excluded.
-                //     In the code, initAdvance is 1 (because the previous stage's behavior is not scroll), meaning that
-                //     the scroll skips the start frame at 0px offset. fracFrames comes out as 4.0, and hence frames is
-                //     4 and the next scroll stage's initAdvance is set to 0.0.
-                //  2. The second stage follows a scroll stage, so this time its start frame is a "moving" one and needs
-                //     to be included. Since the first stage had a perfect 1 frame gap to its excluded end frame, we
-                //     include the second stage's topmost frame, which is the same frame. This is realized by the
-                //     initAdvance of 0.0 inherited from before. In the second stage however, the "moving" do not fit
-                //     perfectly into any number of frames since fracFrames, i.e. height / scroll speed, is fractional,
-                //     namely 3.33... This tells us that (a) we need 4 frames to represent the moving part (pixel
-                //     offsets are 0, 3, 6, 9) and (b) the last frame only has a 0.33 gap to the excluded end frame at
-                //     10px offset. In the code, frames is indeed ceil(3.33) = 4, and the next stage's initAdvance is
-                //     0.66 to pay for the 1-0.33 residual frames left by the shorter gap to the excluded end frame.
-                //  3. Hence, the third stage skips the first 0.66 frames. The pixel offsets are then 1.33, 3.33, 5.33,
-                //     and 7.33; as always, the end frame at 9px offset is excluded. In the code, fracFrames comes out
-                //     as "9 / 2 - 0.66 = 3.833", and frames is indeed ceil(3.833) = 4.
-                val initAdvance = if (prevStageBehavior == SCROLL) nextScrollInitAdvance else 1.0
-                val fracFrames =
-                    (scrollStopY.resolve() - scrollStartY.resolve()) / stage.style.scrollPxPerFrame - initAdvance
+                // Find the number of frames required for the scroll. The scroll should only contain "moving" frames,
+                // since the static ones (blank screen or still card) are already fully covered by the frame gaps
+                // between pages or the card stages.
+                // For example, if there is a scroll height "scrollStopY - scrollStartY" of exactly 10 pixels, and we
+                // scroll 2 pixels per frame, dividing the first by the second would yield 5 frames. However, we only
+                // want 4 frames (at the pixel offsets 2, 4, 6, 8), as the frames at the offsets 0 and 10 are not
+                // "moving" frames. So we subtract 1 here.
+                // In accordance with this, DeferredVideo is programmed to start drawing at the pixel offset 2, and the
+                // matchRuntimeInOneDir() further down in this file performs the same -1.
+                val fracFrames = (scrollStopY.resolve() - scrollStartY.resolve()) / stage.style.scrollPxPerFrame - 1.0
                 // If fracFrames is just slightly larger than an integer, we want it to be handled as if it was that
                 // integer to compensate for floating point inaccuracy. That is why we have the -0.01 in there.
                 val frames = safeCeil(fracFrames)
-                nextScrollInitAdvance = (-fracFrames).mod(1.0)  // Using mod() ensures that the result is positive.
                 // Construct the info object.
-                DrawnStageInfo.Scroll(scrollStartY, scrollStopY, ownedScrollHeight, frames, initAdvance)
+                DrawnStageInfo.Scroll(scrollStartY, scrollStopY, ownedScrollHeight, frames)
             }
         }
     }
@@ -329,9 +307,6 @@ private fun matchRuntimeInOneDir(
     groups: MutableSet<RuntimeGroup>,
     frozenCards: MutableSet<Stage>
 ): Int {
-    fun prevCard(scroll: Stage) = prevStages[scroll]?.let { prev -> if (prev.style.behavior == CARD) prev else null }
-    fun nextCard(scroll: Stage) = nextStages[scroll]?.let { next -> if (next.style.behavior == CARD) next else null }
-
     // If the given card has not been frozen yet, this function first scales its vertical gaps and then freezes it
     // similar to before, i.e., makes the height of the card's image rigid.
     fun tryFreezeCard(card: Stage, elasticScaling: Double) {
@@ -357,47 +332,33 @@ private fun matchRuntimeInOneDir(
         var modestDiscreteFrames = -1
         for (group in groups) {
             // Here, we do not store a stretchable length in a Y object, but instead a stretchable number of frames.
-            // For each continuous and uninterrupted stretch of adjacent scroll stages, find the number of frames needed
-            // by that stretch. Be aware that we assume that group.stages contains the stages in the same order as they
-            // appear in the credits.
-            val stretchFrames = mutableListOf<Y>()
-            for (scroll in group.stages) {
-                val prevStage = prevStages[scroll]
-                // If the previous stretch ended, start a new one.
-                if (prevStage == null || prevStage.style.behavior != SCROLL || prevStage !in group.stages)
-                    stretchFrames.add(0.0.toY())
+            // For each scroll stage, find the number of frames needed by that stage.
+            val scrollFrames = group.stages.map { scroll ->
                 // The number of frames needed for this scroll stage is the vertical scrolled distance divided by the
                 // scrolling speed. Apart from space owned by the scroll stage itself, the distance includes additional
                 // space of adjacent cards. Although the precomputed scrollStartY and scrollStopY values could already
                 // provide access to this distance, we need to account for the dynamically frozen card heights. As such,
                 // we manually collect the scrolled distance here.
                 var scrolledDist = (stageLayouts.getValue(scroll).info as DrawnStageInfo.Scroll).ownedScrollHeight
-                prevCard(scroll)?.let { prevCard ->
+                prevStages[scroll]?.let { prevCard ->
                     scrolledDist += drawnStages.getValue(prevCard).run { defImage.height - middleYInImage!! }
                 }
-                nextCard(scroll)?.let { nextCard -> scrolledDist += drawnStages.getValue(nextCard).middleYInImage!! }
-                var frames = stretchFrames.last() + scrolledDist / scroll.style.scrollPxPerFrame
-                // The scroll frames we just computed do not contain the frame at DrawnStageInfo.Scroll.scrollStopY.
-                // For example, if there is a scroll height "scrollStopY - scrollStartY" of 10 pixels, and we scroll
-                // 2 pixels per frame, the result is 5 frames (at the pixel offsets 0, 2, 4, 6, 8): the first frame at
-                // the top is included, but the last frame at the bottom is not.
-                // However, if the stage is not preceded by another scroll stage, but instead either by void or by a
-                // card stage, we need to also drop the frame at scrollStartY. As a result, the scroll now contains only
-                // "moving" frames along the continuous stretch of scroll stages, but not the still frames at the
-                // stretch's start and end.
-                if (prevStage == null || prevStage.style.behavior != SCROLL)
-                    frames -= 1.0
-                stretchFrames[stretchFrames.lastIndex] = frames
+                nextStages[scroll]?.let { nextCard ->
+                    scrolledDist += drawnStages.getValue(nextCard).middleYInImage!!
+                }
+                // See the computation of fracFrames in the layoutStages() function in this file for the reason why we
+                // subtract 1 here.
+                scrolledDist / scroll.style.scrollPxPerFrame - 1.0
             }
 
             // Find the elastic scaling which, when applied, makes the runtime group attain its desired runtime.
-            var elasticScaling = stretchFrames.reduce(Y::plus).deresolve(group.runtimeFrames.toDouble())
+            var elasticScaling = scrollFrames.reduce(Y::plus).deresolve(group.runtimeFrames.toDouble())
 
-            // The above operation is only correct if there is only one continuous stretch of scroll stages in the
-            // runtime group. If there are however two or more stretches, the total number of frames can no longer be
-            // found by just adding up the fractional frames of all stretches. Instead, before the addition, there has
-            // to be a ceiling operation applied to each stretch individually to discretize the stretch's frames. This
-            // ceiling operation would turn the Y curve that models a stretch's frames into a stepwise function. All
+            // The above operation is only correct if there is only one scroll stage in the runtime group. If there
+            // are however two or more scroll stages, the total number of frames can no longer be found by just
+            // adding up the fractional frames of all scroll stages. Instead, before the summation, there has to be
+            // a ceiling operation applied to each scroll stage individually to discretize the stage's frames. This
+            // ceiling operation would turn the Y curve that models a stage's frames into a stepwise function. All
             // stepwise functions would then be added together to an overall stepwise function. As this is difficult to
             // implement explicitly, we instead go another route.
             // We first estimate the elastic scaling using the regular deresolve() function above. Then, we find the
@@ -407,8 +368,8 @@ private fun matchRuntimeInOneDir(
             // Notice that due to the stepwise nature of the overall function, there are some very special cases in
             // which the desired frames can't be attained exactly; in those cases, we just stop when we have surpassed
             // the desired frames.
-            var discreteFrames = stretchFrames.sumOf { frames -> safeCeil(frames.resolve(elasticScaling)) }
-            if (stretchFrames.size > 1) {
+            var discreteFrames = scrollFrames.sumOf { frames -> safeCeil(frames.resolve(elasticScaling)) }
+            if (scrollFrames.size > 1) {
                 // Find whether we need to increase or decrease the elastic scaling.
                 val up = discreteFrames < group.runtimeFrames
                 var ctr = 0  // failsafe
@@ -420,13 +381,13 @@ private fun matchRuntimeInOneDir(
                     if (up) discreteFrames < group.runtimeFrames else discreteFrames > group.runtimeFrames
                 ) {
                     // Take one step up or down the overall stepwise function. We do this by adjusting the elastic
-                    // scaling such that just one of the stretch's stepwise functions (which make up the overall
+                    // scaling such that just one of the scroll stages' stepwise functions (which make up the overall
                     // function) takes a single step.
                     elasticScaling = when (up) {
-                        true -> stretchFrames.minOf { it.deresolve(floor(it.resolve(elasticScaling) + 1.0)) }
-                        false -> stretchFrames.maxOf { it.deresolve(ceil(it.resolve(elasticScaling) - 1.0)) }
+                        true -> scrollFrames.minOf { it.deresolve(floor(it.resolve(elasticScaling) + 1.0)) }
+                        false -> scrollFrames.maxOf { it.deresolve(ceil(it.resolve(elasticScaling) - 1.0)) }
                     }
-                    discreteFrames = stretchFrames.sumOf { frames -> safeCeil(frames.resolve(elasticScaling)) }
+                    discreteFrames = scrollFrames.sumOf { frames -> safeCeil(frames.resolve(elasticScaling)) }
                 }
             }
 
@@ -443,8 +404,8 @@ private fun matchRuntimeInOneDir(
         for (scroll in modestGroup!!.stages) {
             val drawnScroll = drawnStages.getValue(scroll)
             drawnStages[scroll] = DrawnStage(drawnScroll.defImage.copy(elasticScaling = modestElasticScaling), null)
-            prevCard(scroll)?.let { prevCard -> tryFreezeCard(prevCard, modestElasticScaling) }
-            nextCard(scroll)?.let { nextCard -> tryFreezeCard(nextCard, modestElasticScaling) }
+            prevStages[scroll]?.let { prevCard -> tryFreezeCard(prevCard, modestElasticScaling) }
+            nextStages[scroll]?.let { nextCard -> tryFreezeCard(nextCard, modestElasticScaling) }
         }
 
         // Record by how many frames the actually attained runtime diverges from the group's desired one. If there is a

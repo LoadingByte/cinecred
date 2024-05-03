@@ -21,8 +21,7 @@ sealed interface DrawnStageInfo {
         val scrollStartY: Y,
         val scrollStopY: Y,
         val ownedScrollHeight: Y,
-        val frames: Int,
-        val initialAdvance: Double
+        val frames: Int
     ) : DrawnStageInfo
 
 }

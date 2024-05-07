@@ -58,8 +58,8 @@ private fun convert(ctx: StylingContext, styling: Styling, value: Any): Any = wh
     is Enum<*> -> value.name
     is Locale -> value.toLanguageTag()
     is Color -> value.toHex32()
-    is Resolution -> value.toTimes()
-    is FPS -> value.toFraction()
+    is Resolution -> value.toString()
+    is FPS -> value.toString()
     is FontFeature -> "${value.tag}=${value.value}"
     is Style -> writeStyle(ctx, styling, value)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")

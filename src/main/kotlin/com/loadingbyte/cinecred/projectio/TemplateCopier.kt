@@ -132,8 +132,8 @@ private fun fillIn(string: String, template: Template): String = string
     .replace(PLACEHOLDER_REGEX) { match ->
         when (val key = match.groups[1]!!.value) {
             "locale" -> template.locale.toLanguageTag()
-            "resolution" -> template.resolution.toTimes()
-            "fps" -> template.fps.toFraction()
+            "resolution" -> template.resolution.toString()
+            "fps" -> template.fps.toString()
             "timecodeFormat" -> template.timecodeFormat.name
             "subsequentGapFrames" -> template.fps.run { numerator / denominator }.toString()
             "cardRuntimeFrames" -> template.fps.run { 5 * numerator / denominator }.toString()

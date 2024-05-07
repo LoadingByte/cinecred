@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.common
 import com.electronwill.toml.Toml
 import com.electronwill.toml.TomlWriter
 import com.formdev.flatlaf.util.SystemInfo
+import com.google.common.math.IntMath
 import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,13 +51,55 @@ val GLOBAL_THREAD_POOL: ExecutorService = Executors.newCachedThreadPool { runnab
 
 enum class Severity { INFO, WARN, MIGRATE, ERROR }
 
-data class Resolution(val widthPx: Int, val heightPx: Int)
 
-data class FPS(val numerator: Int, val denominator: Int) {
+data class Resolution(val widthPx: Int, val heightPx: Int) {
+
+    override fun toString() = "${widthPx}x${heightPx}"
+
+    companion object {
+        fun fromString(str: String): Resolution {
+            val parts = str.split("x")
+            require(parts.size == 2)
+            return Resolution(parts[0].toInt(), parts[1].toInt())
+        }
+    }
+
+}
+
+
+class FPS(numerator: Int, denominator: Int) {
+
+    val numerator: Int
+    val denominator: Int
+
+    init {
+        val gcd = IntMath.gcd(numerator, denominator)
+        this.numerator = numerator / gcd
+        this.denominator = denominator / gcd
+    }
+
     val frac: Double
         get() = numerator.toDouble() / denominator
     val isFractional: Boolean
         get() = numerator / denominator * denominator != numerator
+
+    override fun equals(other: Any?) =
+        this === other || other is FPS && numerator == other.numerator && denominator == other.denominator
+
+    override fun hashCode() = 31 * numerator + denominator
+    override fun toString() = if (denominator == 1) "$numerator" else "$numerator/$denominator"
+
+    companion object {
+        fun fromString(str: String): FPS {
+            val parts = str.split("/")
+            return when (parts.size) {
+                1 -> FPS(str.toInt(), 1)
+                2 -> FPS(parts[0].toInt(), parts[1].toInt())
+                else -> throw IllegalArgumentException()
+            }
+        }
+    }
+
 }
 
 
@@ -79,25 +122,6 @@ fun Color.toHex32() = "#%08x".format(rgb)
 fun colorFromHex(hex: String): Color {
     require((hex.length == 7 || hex.length == 9) && hex[0] == '#')
     return Color(hex.drop(1).toLong(16).toInt(), hex.length == 9)
-}
-
-fun Resolution.toTimes() = "${widthPx}x${heightPx}"
-
-fun resolutionFromTimes(quote: String): Resolution {
-    val parts = quote.split("x")
-    require(parts.size == 2)
-    return Resolution(parts[0].toInt(), parts[1].toInt())
-}
-
-fun FPS.toFraction() = if (denominator == 1) "$numerator" else "$numerator/$denominator"
-
-fun fpsFromFraction(fraction: String): FPS {
-    val parts = fraction.split("/")
-    return when (parts.size) {
-        1 -> FPS(fraction.toInt(), 1)
-        2 -> FPS(parts[0].toInt(), parts[1].toInt())
-        else -> throw IllegalArgumentException()
-    }
 }
 
 

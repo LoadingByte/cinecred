@@ -96,8 +96,8 @@ private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     String::class.java -> raw as String
     Locale::class.java -> Locale.forLanguageTag(raw as String)
     Color::class.java -> colorFromHex(raw as String)
-    Resolution::class.java -> resolutionFromTimes(raw as String)
-    FPS::class.java -> fpsFromFraction(raw as String)
+    Resolution::class.java -> Resolution.fromString(raw as String)
+    FPS::class.java -> FPS.fromString(raw as String)
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)

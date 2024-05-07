@@ -34,7 +34,7 @@ class DeferredVideo private constructor(
         (origResolution.widthPx * resolutionScaling).roundToInt(),
         (origResolution.heightPx * resolutionScaling).roundToInt()
     )
-    val fps: FPS = if (fpsScaling == 1) origFPS else origFPS.copy(numerator = origFPS.numerator * fpsScaling)
+    val fps: FPS = if (fpsScaling == 1) origFPS else FPS(origFPS.numerator * fpsScaling, origFPS.denominator)
 
     // Convenient accessors:
     private val width get() = resolution.widthPx

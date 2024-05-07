@@ -6,7 +6,6 @@ import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
@@ -461,7 +460,7 @@ class Tape private constructor(
             val slice = Slice<I>(start, stop, inertia)
             val future = slice.getItemOrSplitSlice(start).future!!
             slices.add(slice)
-            EXECUTOR.submit(throwableAwareTask {
+            GLOBAL_THREAD_POOL.submit(throwableAwareTask {
                 try {
                     createLoader(start).use { loader ->
                         while (slice.claimNextPointForLoading())
@@ -482,12 +481,6 @@ class Tape private constructor(
             }
             for (slice in slices)
                 (slice as Slice).close()
-        }
-
-        companion object {
-            private val EXECUTOR = Executors.newCachedThreadPool { runnable ->
-                Thread(runnable, "TapePreviewLoader").apply { isDaemon = true }
-            }
         }
 
         private open class BaseSlice<I>(val start: Int) : Comparable<BaseSlice<I>> {

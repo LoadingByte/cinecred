@@ -9,11 +9,9 @@ import java.awt.Rectangle
 import java.awt.geom.AffineTransform
 import java.lang.ref.SoftReference
 import java.util.*
-import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.sumOf
-import kotlin.concurrent.withLock
 import kotlin.io.path.name
 import kotlin.math.*
 
@@ -239,6 +237,7 @@ class DeferredVideo private constructor(
     )
 
 
+    /** This class is not thread-safe. */
     class BitmapBackend(
         video: DeferredVideo,
         private val staticLayers: List<DeferredImage.Layer>,
@@ -346,6 +345,9 @@ class DeferredVideo private constructor(
                 override fun createRenders(
                     image: DeferredImage, baseShift: Int, microShifts: DoubleArray, height: Int
                 ): List<Render> {
+                    // IMPORTANT: This method will be called from different threads at the same time when stuff is
+                    // pre-rendered in the background. As such, we can't use any BitmapConverters or other stateful
+                    // objects in this method!
                     val h = closestWorkResolution(height, userPixelFormat.vChromaSub)
                     val resolution = Resolution(workWidth, h)
                     val renderCanvasSpec = Bitmap.Spec(resolution, canvasRepresentation)
@@ -770,6 +772,7 @@ class DeferredVideo private constructor(
      * This class can be queried for the excerpt of a page visible at a certain frame index. In the background, it
      * caches large rendered chunks of each page, so that it can quickly respond to a query by slicing a cached chunk.
      * The consumer needs to implement the method [createRenders], which renders a certain chunk of a given page.
+     * That method must be safe to be called from different threads at the same time!
      *
      * In practice, the response to a query is not necessarily a rendered excerpt of a single page. If pages overlap
      * in time, there could be multiple excerpts. And if it is not possible to cache page chunks because the frames
@@ -901,8 +904,11 @@ class DeferredVideo private constructor(
             }
 
             val chunk = chunks[chunkIdx]
-            // Get the cached renders for the current chunk, or compute them now if they are not cached.
-            val microShiftedRenders = loadChunk(chunk)
+            // Get the cached renders for the current chunk, or render them now if they are not cached, or await their
+            // rendering if another thread is already doing that right now.
+            chunk.semaphore.acquire()
+            var microShiftedRenders = chunk.microShiftedRenders.get()?.get()
+            if (microShiftedRenders != null) chunk.semaphore.release() else microShiftedRenders = loadChunk(chunk)
             // Determine the micro shift for the given shift and select the corresponding cached render that can be
             // passed to the consumer with only integer shifting.
             val microShift = shift - floor(shift)
@@ -916,36 +922,36 @@ class DeferredVideo private constructor(
         }
 
         private fun queueChunkPreloading(chunk: Chunk<R>) {
-            if (chunk.microShiftedRenders.get().let { it == null || it.refersTo(null) })
-                PRELOADING_EXECUTOR.submit(throwableAwareTask { loadChunk(chunk) })
+            // If the chunk is being rendered right now, return. If not, we acquired the exclusive right to render it.
+            if (!chunk.semaphore.tryAcquire())
+                return
+            // If the chunk has already been rendered previously, immediately release the rendering right.
+            // Otherwise, start rendering in another thread.
+            if (chunk.microShiftedRenders.get().let { it != null && !it.refersTo(null) })
+                chunk.semaphore.release()
+            else
+                GLOBAL_THREAD_POOL.submit(throwableAwareTask { loadChunk(chunk) })
         }
 
         // Apart from code design, there is an important reason for why this method returns the renders: to ensure that
         // there is a strong reference to them. Otherwise, the garbage collector could discard them immediately when the
         // method returns.
         private fun loadChunk(chunk: Chunk<R>): List<R> {
-            // If the chunk was already materialized and the renders are still in the cache, return them.
-            chunk.microShiftedRenders.get()?.get()?.let { return it }
-            // Otherwise, materialize the renders now and cache them.
-            chunk.renderingLock.withLock {
+            try {
                 val microShiftedRenders = createRenders(chunk.image, chunk.shift, chunk.microShifts, chunk.height)
                 chunk.microShiftedRenders.set(SoftReference(microShiftedRenders))
                 return microShiftedRenders
+            } finally {
+                chunk.semaphore.release()
             }
         }
 
 
         companion object {
-
             private const val EPS = 0.001
             private const val MIN_CHUNK_BUFFER = 200
             private const val MAX_CHUNK_PIXELS = 20_000_000
             private const val MAX_MICRO_SHIFTS = 16
-
-            private val PRELOADING_EXECUTOR = Executors.newSingleThreadExecutor { runnable ->
-                Thread(runnable, "DeferredVideoPreloader").apply { isDaemon = true }
-            }
-
         }
 
 
@@ -962,7 +968,7 @@ class DeferredVideo private constructor(
             val microShifts: DoubleArray
         ) {
             val microShiftedRenders = AtomicReference<SoftReference<List<R>>?>()
-            val renderingLock = ReentrantLock()
+            val semaphore = Semaphore(1)
         }
 
     }

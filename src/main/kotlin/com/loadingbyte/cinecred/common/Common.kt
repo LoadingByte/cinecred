@@ -26,6 +26,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
 import java.text.NumberFormat
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.io.path.*
@@ -41,6 +43,9 @@ val COPYRIGHT = useResourceStream("/copyright") { it.bufferedReader().readText()
 
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 val CLEANER: Cleaner = Cleaner.create()
+val GLOBAL_THREAD_POOL: ExecutorService = Executors.newCachedThreadPool { runnable ->
+    Thread(runnable, "GlobalThreadPool").apply { isDaemon = true }
+}
 
 
 enum class Severity { INFO, WARN, MIGRATE, ERROR }

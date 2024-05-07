@@ -24,7 +24,6 @@ import java.awt.geom.Rectangle2D
 import java.io.*
 import java.nio.file.Path
 import java.util.*
-import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import javax.swing.FocusManager
@@ -593,9 +592,6 @@ sealed interface Picture : Closeable {
             null
         }
 
-        private val GS_STREAM_GOBBLER_EXECUTOR = Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "GhostscriptStreamGobbler").apply { isDaemon = true }
-        }
         private val GS_LOGGER = LoggerFactory.getLogger("Ghostscript")
 
         private fun loadPostScript(psFile: Path): PDF {
@@ -604,7 +600,7 @@ sealed interface Picture : Closeable {
             try {
                 val cmd = arrayOf(gs.pathString, "-sDEVICE=pdfwrite", "-o", tmpFile.pathString, psFile.pathString)
                 val process = Runtime.getRuntime().exec(cmd)
-                GS_STREAM_GOBBLER_EXECUTOR.submit(throwableAwareTask {
+                GLOBAL_THREAD_POOL.submit(throwableAwareTask {
                     process.inputReader().lines().forEach { GS_LOGGER.info(it) }
                     process.errorReader().lines().forEach { GS_LOGGER.error(it) }
                 })

@@ -16,7 +16,6 @@ import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.Color
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.VK_ESCAPE
 import java.io.IOException
 import java.io.StringReader
@@ -235,7 +234,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
         if (welcomeView.isFromWelcomeWindow(event) && welcomeView.getTab() == WelcomeTab.PROJECTS &&
-            event.id == KEY_PRESSED && event.modifiersEx == 0 && event.keyCode == VK_ESCAPE
+            event.modifiersEx == 0 && event.keyCode == VK_ESCAPE
         ) {
             welcomeView.projects_setCard(ProjectsCard.START)
             return true

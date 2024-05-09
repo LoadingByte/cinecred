@@ -585,7 +585,7 @@ class KeyListener(
     private val listener: () -> Unit
 ) {
     fun onKeyEvent(e: KeyEvent): Boolean {
-        val match = e.id == KEY_PRESSED && e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
+        val match = e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
         if (match)
             listener()
         return match

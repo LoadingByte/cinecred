@@ -12,6 +12,8 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.nio.file.Path
+import javax.swing.JTree
+import javax.swing.text.JTextComponent
 
 
 class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
@@ -32,8 +34,18 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         }
     }
 
-    override fun onGlobalKeyEvent(event: KeyEvent) =
-        welcomeCtrl?.onGlobalKeyEvent(event) ?: false || projectCtrls.any { it.onGlobalKeyEvent(event) }
+    override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
+        if (event.isConsumed ||
+            event.id != KeyEvent.KEY_PRESSED ||
+            // Some components consume the KEY_TYPED instead of the KEY_PRESSED event. If we didn't do anything about
+            // this, non-modifier key bindings (like L for playing the video preview) would activate while, e.g., typing
+            // in a text field. So as a workaround, we just block any non-modifier key events when any component
+            // susceptible to this behavior is focused.
+            event.modifiersEx == 0 && event.component.let { it is JTextComponent || it is JTree }
+        ) return false
+        welcomeCtrl?.let { if (it.onGlobalKeyEvent(event)) return true }
+        return projectCtrls.any { it.onGlobalKeyEvent(event) }
+    }
 
     override fun showWelcomeFrame(openProjectDir: Path?, tab: WelcomeTab?) {
         if (welcomeCtrl == null)

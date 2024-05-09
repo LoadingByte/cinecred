@@ -154,7 +154,7 @@ private fun mainSwing(args: Array<String>) {
     masterCtrl = UIFactory().master()
 
     // Globally listen to all key events.
-    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::onGlobalKeyEvent)
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(masterCtrl::onGlobalKeyEvent)
 
     // Apply the locale configured by the user. If it changes in the future, re-apply it.
     comprehensivelyApplyLocale(UI_LOCALE_PREFERENCE.get().locale)

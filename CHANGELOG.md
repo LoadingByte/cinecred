@@ -31,6 +31,7 @@ Cinecred Changelog
 - Rotated PDFs are now positioned correctly and given the right dimensions.
 - Certain fonts with bad naming metadata no longer cause a crash.
 - Empty columns of an unbalanced vertically-filled grid no longer cause a crash.
+- Any fractional FPS now admit the (drifting) SMPTE Non-Drop Frame timecode.
 - Exported PDFs now reduce the resolution of very large raster pictures.
 - Exported PDFs now contain only one instance of each picture, even when it has
   multiple occurrences.

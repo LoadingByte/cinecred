@@ -416,20 +416,21 @@ class CheckBoxWidget : Form.AbstractWidget<Boolean>() {
 
 
 abstract class AbstractComboBoxWidget<V : Any, E : Any>(
-    protected val itemClass: Class<E>,
+    private val itemClass: Class<E>,
     items: List<E>,
     toString: (E) -> String,
     widthSpec: WidthSpec?,
     private val scrollbar: Boolean = true,
-    private val decorateRenderer: ((ListCellRenderer<E>) -> ListCellRenderer<E>) = { it }
+    rendererDecorator: RendererDecorator? = null
 ) : Form.AbstractWidget<V>(), Form.Choice<E> {
 
-    protected val cb = JComboBox<E>().apply {
+    protected val cb = JComboBox<Wrapper>().apply {
         addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) notifyChangeListeners() }
-        keySelectionManager = CustomToStringKeySelectionManager(itemClass, toString)
+        if (rendererDecorator != null)
+            renderer = rendererDecorator.decorate(renderer)
     }
 
-    override val components = listOf(cb)
+    override val components = listOf<JComponent>(cb)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.FIT).mig)
 
     final override var items: List<E> = listOf()
@@ -437,9 +438,13 @@ abstract class AbstractComboBoxWidget<V : Any, E : Any>(
             if (field == items)
                 return
             field = items
-            val oldSelectedItem = cb.selectedItem?.let(itemClass::cast)
-            cb.model = makeModel(Vector(items), oldSelectedItem)
-            if (cb.selectedItem != oldSelectedItem)
+            val oldSelected = unwrap(cb.selectedItem)
+            val keepSelected = shouldKeepSelected(oldSelected)
+            cb.model = DefaultComboBoxModel(items.mapTo(Vector(), ::Wrapper)).apply {
+                if (keepSelected)
+                    selectedItem = oldSelected?.let(::Wrapper)
+            }
+            if (!keepSelected)
                 notifyChangeListeners()
             if (!scrollbar)
                 cb.maximumRowCount = items.size
@@ -450,23 +455,30 @@ abstract class AbstractComboBoxWidget<V : Any, E : Any>(
             if (field == toString)
                 return
             field = toString
-            updateToString()
+            cb.invalidate()
         }
 
-    private fun updateToString() {
-        val toString = this.toString  // capture
-        cb.renderer = decorateRenderer(CustomToStringListCellRenderer(itemClass) { toString(it).ifEmpty { " " } })
-    }
+    protected fun unwrap(wrapper: Any?): E? =
+        (wrapper as AbstractComboBoxWidget<*, *>.Wrapper?)?.item?.let(itemClass::cast)
 
-    protected open fun makeModel(items: Vector<E>, oldSelectedItem: E?) =
-        DefaultComboBoxModel(items).apply {
-            if (oldSelectedItem in items)
-                selectedItem = oldSelectedItem
-        }
+    protected open fun shouldKeepSelected(selected: E?): Boolean =
+        selected in items
 
     init {
-        updateToString()
         this.items = items
+    }
+
+
+    interface RendererDecorator {
+        fun <I> decorate(renderer: ListCellRenderer<I>): ListCellRenderer<I>
+    }
+
+
+    protected inner class Wrapper(val item: E) {
+        override fun toString() = toString(item).ifEmpty { " " }
+        override fun hashCode() = item.hashCode()
+        override fun equals(other: Any?) =
+            this === other || other is AbstractComboBoxWidget<*, *>.Wrapper && item == other.item
     }
 
 }
@@ -478,13 +490,13 @@ open class ComboBoxWidget<V : Any>(
     toString: (V) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
     scrollbar: Boolean = true,
-    decorateRenderer: ((ListCellRenderer<V>) -> ListCellRenderer<V>) = { it }
-) : AbstractComboBoxWidget<V, V>(valueClass, items, toString, widthSpec, scrollbar, decorateRenderer) {
+    rendererDecorator: RendererDecorator? = null
+) : AbstractComboBoxWidget<V, V>(valueClass, items, toString, widthSpec, scrollbar, rendererDecorator) {
 
     override var value: V
-        get() = itemClass.cast(cb.selectedItem!!)
+        get() = unwrap(cb.selectedItem)!!
         set(value) {
-            cb.selectedItem = value
+            cb.selectedItem = Wrapper(value)
         }
 
 }
@@ -497,11 +509,8 @@ class InconsistentComboBoxWidget<V : Any>(
     widthSpec: WidthSpec? = null
 ) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
 
-    override fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
-        DefaultComboBoxModel(items).apply {
-            // Also sets selectedItem to null if oldSelectedItem was null before.
-            selectedItem = oldSelectedItem
-        }
+    // Also sets selectedItem to null if it was null before.
+    override fun shouldKeepSelected(selected: V?) = true
 
     override var value: V
         get() = super.value
@@ -527,11 +536,8 @@ open class EditableComboBoxWidget<V : Any>(
         cb.editor = CustomComboBoxEditor()
     }
 
-    override fun makeModel(items: Vector<V>, oldSelectedItem: V?) =
-        DefaultComboBoxModel(items).apply {
-            if (oldSelectedItem != null)
-                selectedItem = oldSelectedItem
-        }
+    override fun shouldKeepSelected(selected: V?) =
+        selected != null
 
 
     private inner class CustomComboBoxEditor : BasicComboBoxEditor() {
@@ -554,11 +560,11 @@ open class EditableComboBoxWidget<V : Any>(
         }
 
         override fun valueToString(value: Any?): String =
-            value?.let { toString(itemClass.cast(it)) } ?: ""
+            unwrap(value)?.let(toString) ?: ""
 
         override fun stringToValue(string: String?): Any =
             try {
-                fromString(string!!)
+                Wrapper(fromString(string!!))
             } catch (_: Exception) {
                 throw ParseException("", 0)
             }
@@ -575,9 +581,9 @@ class OptionalComboBoxWidget<E : Any>(
 ) : AbstractComboBoxWidget<Optional<E>, E>(itemClass, items, toString, widthSpec) {
 
     override var value: Optional<E>
-        get() = Optional.ofNullable(itemClass.cast(cb.selectedItem))
+        get() = Optional.ofNullable(unwrap(cb.selectedItem))
         set(value) {
-            cb.selectedItem = value.getOrNull()
+            cb.selectedItem = value.getOrNull()?.let(::Wrapper)
         }
 
 }
@@ -1102,25 +1108,16 @@ class FontChooserWidget(
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<String>() {
 
-    private val familyComboBox = JComboBox<FontFamily>().apply {
+    private val familyComboBox = JComboBox<FamilyWrapper>().apply {
         maximumRowCount = 20
-        keySelectionManager = CustomToStringKeySelectionManager(FontFamily::class.java) { family ->
-            family.getFamily(Locale.getDefault())
-        }
     }
 
-    private val fontComboBox = JComboBox<Any>(emptyArray()).apply {
+    private val fontComboBox = JComboBox<FontWrapper>(Vector()).apply {
         maximumRowCount = 20
-        fun toString(value: Any) = when (value) {
-            // Retrieve the subfamily name from the font's family object. The fallback should never be needed.
-            is Font -> getFamilyOf(value)?.getSubfamilyOf(value, Locale.getDefault()) ?: value.fontName
-            else -> value as String
-        }
-        renderer = FontSampleListCellRenderer<Any>(::toString) { if (it is Font) it else null }
-        keySelectionManager = CustomToStringKeySelectionManager(Any::class.java, ::toString)
+        renderer = FontSampleListCellRenderer()
     }
 
-    override val components = listOf(familyComboBox, fontComboBox)
+    override val components = listOf<JComponent>(familyComboBox, fontComboBox)
     override val constraints = ("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.WIDE).mig)
         .let { listOf(it, "newline, $it") }
 
@@ -1133,22 +1130,23 @@ class FontChooserWidget(
         }
 
     override var value: String
-        get() {
-            val selectedFont = fontComboBox.selectedItem
-            return if (selectedFont is Font) selectedFont.getFontName(Locale.ROOT) else selectedFont as String? ?: ""
+        get() = when (val selectedFontWrapper = fontComboBox.selectedItem as FontWrapper?) {
+            is FontWrapper.ForFont -> selectedFontWrapper.font.getFontName(Locale.ROOT)
+            is FontWrapper.ForName -> selectedFontWrapper.name
+            null -> ""
         }
         set(value) {
             val family = projectFamilies.getFamily(value)
                 ?: BUNDLED_FAMILIES.getFamily(value)
                 ?: SYSTEM_FAMILIES.getFamily(value)
             if (family != null) {
-                familyComboBox.selectedItem = family
-                fontComboBox.selectedItem = family.getFont(value)
+                familyComboBox.selectedItem = FamilyWrapper(family)
+                fontComboBox.selectedItem = FontWrapper.ForFont(family.getFont(value)!!, family)
                 fontComboBox.isEnabled = true
             } else {
                 familyComboBox.selectedItem = null
                 fontComboBox.isEditable = true
-                fontComboBox.selectedItem = value
+                fontComboBox.selectedItem = FontWrapper.ForName(value)
                 fontComboBox.isEditable = false
                 fontComboBox.isEnabled = false
             }
@@ -1158,14 +1156,13 @@ class FontChooserWidget(
         get() = super.isEnabled
         set(isEnabled) {
             super.isEnabled = isEnabled
-            if (isEnabled && fontComboBox.selectedItem is String)
+            if (isEnabled && fontComboBox.selectedItem is FontWrapper.ForName)
                 fontComboBox.isEnabled = false
         }
 
     init {
         // Equip the family combo box with a custom renderer that shows category headers.
-        val baseRenderer = FontSampleListCellRenderer({ it.getFamily(Locale.getDefault()) }, FontFamily::canonicalFont)
-        familyComboBox.renderer = LabeledListCellRenderer(baseRenderer, groupSpacing = 10) { index: Int ->
+        familyComboBox.renderer = LabeledListCellRenderer(FontSampleListCellRenderer(), groupSpacing = 10) { index ->
             buildList {
                 val projectHeaderIdx = 0
                 val bundledHeaderIdx = projectHeaderIdx + projectFamilies.list.size
@@ -1184,12 +1181,12 @@ class FontChooserWidget(
 
         familyComboBox.addItemListener { e ->
             if (e.stateChange == ItemEvent.SELECTED) {
-                val selectedFamily = familyComboBox.selectedItem as FontFamily?
+                val selectedFamily = (familyComboBox.selectedItem as FamilyWrapper?)?.family
                 fontComboBox.model = when (selectedFamily) {
                     null -> DefaultComboBoxModel()
-                    else -> DefaultComboBoxModel<Any>(selectedFamily.fonts.toTypedArray()).apply {
-                        selectedItem = selectedFamily.canonicalFont
-                    }
+                    else -> DefaultComboBoxModel<FontWrapper>(
+                        selectedFamily.fonts.mapTo(Vector()) { FontWrapper.ForFont(it, selectedFamily) }
+                    ).apply { selectedItem = FontWrapper.ForFont(selectedFamily.canonicalFont, selectedFamily) }
                 }
                 fontComboBox.isEnabled = isEnabled
                 notifyChangeListeners()
@@ -1210,7 +1207,9 @@ class FontChooserWidget(
             // It is important that the family combo box initially has no selection, so that the value setter we call
             // one line later always triggers the family combo box's selection listener (even if when the value setter
             // sets the first family as selected!) and hence correctly populates the font combo box.
-            familyComboBox.model = DefaultComboBoxModel(families.toTypedArray()).apply { selectedItem = null }
+            familyComboBox.model = DefaultComboBoxModel(families.mapTo(Vector(), ::FamilyWrapper)).apply {
+                selectedItem = null
+            }
             value = selected
         }
     }
@@ -1219,10 +1218,34 @@ class FontChooserWidget(
         projectFamilies.getFamily(font) ?: BUNDLED_FAMILIES.getFamily(font) ?: SYSTEM_FAMILIES.getFamily(font)
 
 
-    private inner class FontSampleListCellRenderer<E>(
-        private val toString: (E) -> String,
-        private val toFont: (E) -> Font?
-    ) : ListCellRenderer<E> {
+    private interface FontProvider {
+        val font: Font?
+    }
+
+
+    // We also use this wrapper so that a user can type a family name while the combo box is in focus to select it.
+    private data class FamilyWrapper(val family: FontFamily) : FontProvider {
+        override fun toString() = family.getFamily(Locale.getDefault())
+        override val font get() = family.canonicalFont
+    }
+
+
+    private sealed interface FontWrapper : FontProvider {
+
+        data class ForFont(override val font: Font, private val family: FontFamily?) : FontWrapper {
+            // Retrieve the subfamily name from the font's family object. The fallback should never be needed.
+            override fun toString(): String = family?.getSubfamilyOf(font, Locale.getDefault()) ?: font.fontName
+        }
+
+        data class ForName(val name: String) : FontWrapper {
+            override fun toString() = name
+            override val font get() = null
+        }
+
+    }
+
+
+    private inner class FontSampleListCellRenderer<E : FontProvider> : ListCellRenderer<E> {
 
         private val label1 = JLabel()
         private val label2 = JLabel()
@@ -1249,7 +1272,7 @@ class FontChooserWidget(
             panel.background = bg
             panel.foreground = fg
 
-            label1.text = value?.let(toString) ?: ""
+            label1.text = value?.toString() ?: ""
 
             // Show the sample text only in the popup menu, but not in the combo box. Make the label invisible
             // in the combo box to ensure that fonts with large ascent don't stretch out the combo box.
@@ -1258,7 +1281,7 @@ class FontChooserWidget(
             label2.font = list.font
             if (index != -1) {
                 label1.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
-                value?.let(toFont)?.let { sampleFont ->
+                value?.font?.let { sampleFont ->
                     val effSampleFont = sampleFont.deriveFont(list.font.size2D * 1.25f)
                     // Try to get the sample text from the font, and if none is specified, use a standard one.
                     val effSampleText = getFamilyOf(sampleFont)?.getSampleTextOf(sampleFont, Locale.getDefault())

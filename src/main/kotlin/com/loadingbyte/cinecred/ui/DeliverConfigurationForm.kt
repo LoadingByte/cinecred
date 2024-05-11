@@ -13,6 +13,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path
 import java.text.DecimalFormat
 import javax.swing.JOptionPane.*
+import javax.swing.ListCellRenderer
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
@@ -60,8 +61,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 "$prefix  \u2013  ${format.label}$suffix"
             },
             // User a custom render that shows category headers.
-            decorateRenderer = { baseRenderer ->
-                LabeledListCellRenderer(baseRenderer) { index ->
+            rendererDecorator = object : AbstractComboBoxWidget.RendererDecorator {
+                override fun <I> decorate(renderer: ListCellRenderer<I>) = LabeledListCellRenderer(renderer) { index ->
                     when (index) {
                         0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
                         WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))

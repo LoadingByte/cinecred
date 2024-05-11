@@ -381,24 +381,6 @@ class WordWrapCellRenderer(allowHtml: Boolean = false, private val shrink: Boole
 }
 
 
-class CustomToStringListCellRenderer<E>(
-    private val itemClass: Class<E>,
-    private val toString: (E) -> String
-) : ListCellRenderer<E> {
-
-    private val delegate = DefaultListCellRenderer()
-
-    override fun getListCellRendererComponent(
-        list: JList<out E>?, value: E, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-    ): Component {
-        delegate.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-        delegate.text = value?.let { toString(itemClass.cast(it)) } ?: ""
-        return delegate
-    }
-
-}
-
-
 class LabeledListCellRenderer<E>(
     private val wrapped: ListCellRenderer<in E>,
     private val groupSpacing: Int = 0,
@@ -412,8 +394,10 @@ class LabeledListCellRenderer<E>(
         // Show the label lines only in the popup menu, but not in the combo box.
         if (index != -1) {
             val labelLines = getLabelLines(index)
-            if (labelLines.isNotEmpty())
-                (cell as JComponent).border = CompoundBorder(LabelListCellBorder(list, labelLines), cell.border)
+            var b = (cell as JComponent).border
+            if (b is CompoundBorder && b.outsideBorder is LabeledListCellRenderer<*>.LabelListCellBorder)
+                b = b.insideBorder
+            cell.border = if (labelLines.isEmpty()) b else CompoundBorder(LabelListCellBorder(list, labelLines), b)
         }
         return cell
     }
@@ -463,47 +447,6 @@ class LabeledListCellRenderer<E>(
             }
         }
 
-    }
-
-}
-
-
-class CustomToStringKeySelectionManager<E>(
-    private val itemClass: Class<E>,
-    private val toString: (E) -> String
-) : JComboBox.KeySelectionManager {
-
-    private var lastTime = 0L
-    private var prefix = ""
-
-    override fun selectionForKey(key: Char, model: ComboBoxModel<*>): Int {
-        var startIdx = model.getElements().indexOfFirst { it === model.selectedItem }
-
-        val timeFactor = UIManager.get("ComboBox.timeFactor") as Long? ?: 1000L
-        val currTime = System.currentTimeMillis()
-        if (currTime - lastTime < timeFactor)
-            if (prefix.length == 1 && key == prefix[0])
-                startIdx++
-            else
-                prefix += key
-        else {
-            startIdx++
-            prefix = key.toString()
-        }
-        lastTime = currTime
-
-        fun startsWith(elem: E) = toString(elem).startsWith(prefix, ignoreCase = true)
-        val foundIdx = model.getElements(startIdx).indexOfFirst(::startsWith)
-        return if (foundIdx != -1)
-            startIdx + foundIdx
-        else
-            model.getElements(0, startIdx).indexOfFirst(::startsWith)
-    }
-
-    private fun ComboBoxModel<*>.getElements(startIdx: Int = 0, endIdx: Int = -1): List<E> = mutableListOf<E>().also {
-        val endIdx2 = if (endIdx == -1) size else endIdx
-        for (idx in startIdx..<endIdx2)
-            it.add(itemClass.cast(getElementAt(idx)))
     }
 
 }

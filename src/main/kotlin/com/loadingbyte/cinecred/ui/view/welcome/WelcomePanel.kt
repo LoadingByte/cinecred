@@ -30,7 +30,7 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val changelogScrollPane: JScrollPane
     private val changelogEditorPane: JEditorPane
     private val aboutTextArea: JEditorPane
-    private val licenseComboBox: JComboBox<License>
+    private val licenseComboBox: JComboBox<LicenseWrapper>
 
     private val updatePanel: JPanel
     private val updateVersionLabel = JLabel()
@@ -77,13 +77,12 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
             viewport.background = null
         }
-        licenseComboBox = JComboBox<License>().apply {
+        licenseComboBox = JComboBox<LicenseWrapper>().apply {
             maximumRowCount = 30
-            renderer = CustomToStringListCellRenderer(License::class.java, License::name)
         }
         licenseComboBox.addItemListener { e ->
             if (e.stateChange == ItemEvent.SELECTED) {
-                licenseTextArea.text = (licenseComboBox.selectedItem as License).body
+                licenseTextArea.text = (licenseComboBox.selectedItem as LicenseWrapper).license.body
                 licenseScrollPane.verticalScrollBar.value = 0
             }
         }
@@ -160,7 +159,9 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
     fun setLicenses(licenses: List<License>) {
-        (licenseComboBox.model as DefaultComboBoxModel<License>).apply { removeAllElements(); addAll(licenses) }
+        val model = licenseComboBox.model as DefaultComboBoxModel<LicenseWrapper>
+        model.removeAllElements()
+        model.addAll(licenses.map(::LicenseWrapper))
         licenseComboBox.selectedIndex = 0
     }
 
@@ -186,6 +187,11 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         private val H1 = UIManager.getFont("h1.font").size2D
         private val H2 = UIManager.getFont("h2.font").size2D
 
+    }
+
+
+    private class LicenseWrapper(val license: License) {
+        override fun toString() = license.name
     }
 
 }

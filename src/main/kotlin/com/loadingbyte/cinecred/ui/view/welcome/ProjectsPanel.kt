@@ -12,19 +12,17 @@ import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.*
+import java.awt.CardLayout
+import java.awt.Color
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.DropTargetAdapter
 import java.awt.dnd.DropTargetDragEvent
 import java.awt.dnd.DropTargetDropEvent
 import java.awt.dnd.DropTargetEvent
-import java.beans.PropertyChangeListener
 import java.io.File
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
-import javax.swing.filechooser.FileView
-import javax.swing.plaf.basic.BasicFileChooserUI
 import kotlin.io.path.pathString
 import kotlin.jvm.optionals.getOrNull
 
@@ -45,10 +43,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val cards = CardLayout().also { layout = it }
 
     private val startMemorizedPanel: JPanel
-    private val openBrowseFileChooser: JFileChooser
-    private val openBrowseDoneButton: JButton
-    private val createBrowseFileChooser: JFileChooser
-    private val createBrowseNextButton: JButton
     private val createConfigureProjectDirLabel = JLabel()
     private val createConfigureForm: CreateConfigureForm
     private val createConfigureDoneButton: JButton
@@ -101,66 +95,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             })
         }
 
-        openBrowseFileChooser = makeProjectDirChooser()
-        val openBrowseCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
-            addActionListener { welcomeCtrl.projects_openBrowse_onClickCancel() }
-        }
-        openBrowseDoneButton = JButton(l10n("ui.projects.open"), FOLDER_ICON).apply {
-            addActionListener { welcomeCtrl.projects_openBrowse_onClickDone() }
-        }
-
-        // Show the Cinecred icon for project dirs. On Windows, some shortcuts are virtual directories like "PC" and
-        // throw an exception when converting them to Path. As such, we need to filter them out.
-        openBrowseFileChooser.fileView = object : FileView() {
-            override fun getIcon(f: File) =
-                if (openBrowseFileChooser.fileSystemView.isFileSystem(f) &&
-                    welcomeCtrl.projects_openBrowse_shouldShowAppIcon(f.toPath())
-                ) CINECRED_ICON else null
-        }
-
-        openBrowseFileChooser.addRealSelectedFileListener {
-            welcomeCtrl.projects_openBrowse_onChangeSelection(openBrowseFileChooser.realSelectedPath)
-        }
-
-        // Notify the controller when the user double-clicks (which causes the file chooser to navigate).
-        openBrowseFileChooser.addPropertyChangeListener(JFileChooser.DIRECTORY_CHANGED_PROPERTY) { e ->
-            val dir = e.newValue as File
-            // Once again, watch out for virtual directories like "PC", which we cannot convert to Path.
-            if (!openBrowseFileChooser.fileSystemView.isFileSystem(dir))
-                return@addPropertyChangeListener
-            if (welcomeCtrl.projects_openBrowse_onDoubleClickDir(dir.toPath())) {
-                // If requested, cancel navigating into the dir.
-                openBrowseFileChooser.changeToParentDirectory()
-                openBrowseFileChooser.selectedFile = dir
-            }
-        }
-
-        val openBrowsePanel = JPanel(MigLayout("insets 20, gapy 15, wrap")).apply {
-            background = null
-            add(openBrowseFileChooser, "grow, push")
-            add(openBrowseCancelButton, "split 2, right")
-            add(openBrowseDoneButton)
-        }
-
-        createBrowseFileChooser = makeProjectDirChooser()
-        val createBrowseCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
-            addActionListener { welcomeCtrl.projects_createBrowse_onClickCancel() }
-        }
-        createBrowseNextButton = JButton(l10n("next"), ARROW_RIGHT_ICON).apply {
-            addActionListener { welcomeCtrl.projects_createBrowse_onClickNext() }
-        }
-
-        createBrowseFileChooser.addRealSelectedFileListener {
-            welcomeCtrl.projects_createBrowse_onChangeSelection(createBrowseFileChooser.realSelectedPath)
-        }
-
-        val createBrowsePanel = JPanel(MigLayout("insets 20, gapy 15, wrap")).apply {
-            background = null
-            add(createBrowseFileChooser, "grow, push")
-            add(createBrowseCancelButton, "split 2, right")
-            add(createBrowseNextButton)
-        }
-
         val createConfigureBackButton = JButton(l10n("back"), ARROW_LEFT_ICON).apply {
             addActionListener { welcomeCtrl.projects_createConfigure_onClickBack() }
         }
@@ -209,8 +143,6 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
 
         add(startPanel, ProjectsCard.START.name)
-        add(openBrowsePanel, ProjectsCard.OPEN_BROWSE.name)
-        add(createBrowsePanel, ProjectsCard.CREATE_BROWSE.name)
         add(createConfigurePanel, ProjectsCard.CREATE_CONFIGURE.name)
         add(createWaitPanel, ProjectsCard.CREATE_WAIT.name)
 
@@ -231,86 +163,12 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
     }
 
-    private fun makeProjectDirChooser() = JFileChooser().also { fc ->
-        fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-        fc.border = null
-        fc.controlButtonsAreShown = false
-
-        fc.minimumSize = Dimension(0, 0)
-
-        // Remove the file type selection.
-        val bottomPanel = (fc.getComponent(0) as JPanel).getComponent(3) as JPanel
-        bottomPanel.remove(2)  // Remove the file type panel.
-        bottomPanel.remove(1)  // Remove the vertical strut.
-
-        fun nullBackground(comp: Component) {
-            if (comp !is JButton && comp !is JToggleButton && comp !is JComboBox<*> && comp !is JTextField)
-                comp.background = null
-            if (comp is Container)
-                comp.components.forEach(::nullBackground)
-        }
-        nullBackground(fc)
-    }
-
-    /**
-     * Gets around various quirks of the file chooser to determine the file really selected by the user instead of
-     * relying on the selectedFile property. Essentially, we determine the file from the filename currently visible in
-     * the corresponding text field. To do this, we follow the same steps as used by the official Swing code.
-     *
-     * We also make sure that the file determined this way is real and not virtual (checked by isFileSystem()) and lies
-     * on a ready device (checked by the try-catch).
-     *
-     * There is still one case not properly handled by this method, namely if the user is currently in a real directory
-     * and first selects a real file and then a virtual file. In that case, we return the current directory instead of
-     * null. Luckily, this actually mirrors the behavior of the filename text field. Also, handling this rare case
-     * appears to be difficult without exploiting internal members.
-     */
-    private val JFileChooser.realSelectedPath: Path?
-        get() {
-            // Adapted from BasicFileChooserUI.ApproveSelectionAction.actionPerformed().
-            val filename = (ui as BasicFileChooserUI).fileName
-            if (filename.isNullOrBlank())
-                return null
-            var selF = fileSystemView.createFileObject(filename)
-            if (!selF.isAbsolute)
-                selF = fileSystemView.getChild(currentDirectory, filename)
-            if (!fileSystemView.isFileSystem(selF))
-                return null
-            // Note: Some disallowed paths only now throw an exception when converting them to Path objects. This safe
-            // conversion method catches that exception.
-            return selF.toPathSafely()
-        }
-
-    /**
-     * This method should be used instead of directly adding a property change listener to the selected file because one
-     * also needs to listen for changes to the current directory property as the selected file can actually change
-     * without triggering the listener when the user ascends the directory hierarchy.
-     */
-    private fun JFileChooser.addRealSelectedFileListener(listener: () -> Unit) {
-        val eventHandler = PropertyChangeListener { listener() }
-        addPropertyChangeListener(JFileChooser.SELECTED_FILE_CHANGED_PROPERTY, eventHandler)
-        addPropertyChangeListener(JFileChooser.DIRECTORY_CHANGED_PROPERTY, eventHandler)
-
-        val bottomPanel = (getComponent(0) as JPanel).getComponent(3) as JPanel
-        val fileNameTextField = (bottomPanel.getComponent(0) as JPanel).getComponent(1) as JTextField
-        fileNameTextField.document.addDocumentListener { listener() }
-    }
-
 
     /* ***************************
        ********** COMMS **********
        *************************** */
 
     fun projects_setCard(card: ProjectsCard) {
-        // Notify the controller about the initially selected directory and refresh the directory listing.
-        if (card == ProjectsCard.OPEN_BROWSE) {
-            welcomeCtrl.projects_openBrowse_onChangeSelection(openBrowseFileChooser.realSelectedPath)
-            openBrowseFileChooser.rescanCurrentDirectory()
-        } else if (card == ProjectsCard.CREATE_BROWSE) {
-            welcomeCtrl.projects_createBrowse_onChangeSelection(createBrowseFileChooser.realSelectedPath)
-            createBrowseFileChooser.rescanCurrentDirectory()
-        }
-        // Show the card.
         cards.show(this, card.name)
     }
 
@@ -326,22 +184,17 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         }
     }
 
-    // @formatter:off
-    fun projects_openBrowse_setCurrentDir(dir: Path) { openBrowseFileChooser.currentDirectory = dir.toFile() }
-    fun projects_openBrowse_setDoneEnabled(enabled: Boolean) { openBrowseDoneButton.isEnabled = enabled }
-    fun projects_createBrowse_setCurrentDir(dir: Path) { createBrowseFileChooser.currentDirectory = dir.toFile() }
-    fun projects_createBrowse_setSelection(dir: Path) {
-        createBrowseFileChooser.fullySetSelectedFile(dir.toFile())
+    fun projects_createConfigure_setProjectDir(prjDir: Path) {
+        createConfigureProjectDirLabel.text = prjDir.pathString
     }
-    fun projects_createBrowse_setNextEnabled(enabled: Boolean) { createBrowseNextButton.isEnabled = enabled }
-    fun projects_createConfigure_setProjectDir(prjDir: Path) { createConfigureProjectDirLabel.text = prjDir.pathString }
+
     fun projects_createConfigure_setAccounts(accounts: List<Account>) {
         createConfigureForm.creditsAccountWidget.items = accounts
     }
+
     fun projects_createConfigure_setCreditsFilename(filename: String) {
         createConfigureForm.creditsFilenameWidget.value = filename
     }
-    // @formatter:on
 
     fun projects_createWait_setError(error: String?) {
         val hasError = error != null

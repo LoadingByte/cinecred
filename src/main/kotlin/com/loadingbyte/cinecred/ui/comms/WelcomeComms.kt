@@ -32,19 +32,11 @@ interface WelcomeCtrlComms {
     fun onPassHintTrack()
 
     fun projects_start_onClickOpen()
-    fun projects_start_onClickCreate()
+    fun projects_start_onCompleteOpenDialog(projectDir: Path?)
     fun projects_start_onClickOpenMemorized(projectDir: Path)
+    fun projects_start_onClickCreate()
+    fun projects_start_onCompleteCreateDialog(projectDir: Path?)
     fun projects_start_onDrop(path: Path)
-
-    fun projects_openBrowse_shouldShowAppIcon(dir: Path): Boolean
-    fun projects_openBrowse_onChangeSelection(dir: Path?)
-    fun projects_openBrowse_onDoubleClickDir(dir: Path): Boolean // Returns whether to cancel the double click.
-    fun projects_openBrowse_onClickCancel()
-    fun projects_openBrowse_onClickDone()
-
-    fun projects_createBrowse_onChangeSelection(dir: Path?)
-    fun projects_createBrowse_onClickCancel()
-    fun projects_createBrowse_onClickNext()
 
     fun projects_createConfigure_onClickBack()
     fun projects_createConfigure_onClickDone(
@@ -106,13 +98,8 @@ interface WelcomeViewComms {
     fun projects_setCard(card: ProjectsCard)
 
     fun projects_start_setMemorized(projectDirs: List<Path>)
-
-    fun projects_openBrowse_setCurrentDir(dir: Path)
-    fun projects_openBrowse_setDoneEnabled(enabled: Boolean)
-
-    fun projects_createBrowse_setCurrentDir(dir: Path)
-    fun projects_createBrowse_setSelection(dir: Path)
-    fun projects_createBrowse_setNextEnabled(enabled: Boolean)
+    fun projects_start_showOpenDialog(dir: Path?)
+    fun projects_start_showCreateDialog(dir: Path?)
 
     fun projects_createConfigure_setProjectDir(projectDir: Path)
     fun projects_createConfigure_setAccounts(accounts: List<Account>)
@@ -168,7 +155,7 @@ interface WelcomeViewComms {
 
 
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, ABOUT, UPDATE }
-enum class ProjectsCard { START, OPEN_BROWSE, CREATE_BROWSE, CREATE_CONFIGURE, CREATE_WAIT }
+enum class ProjectsCard { START, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
 enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT, CONFIGURE_OVERLAY }
 

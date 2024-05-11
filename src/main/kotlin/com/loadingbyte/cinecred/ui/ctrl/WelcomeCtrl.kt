@@ -29,7 +29,6 @@ import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
-import javax.swing.filechooser.FileSystemView
 import kotlin.io.path.*
 import kotlin.math.ceil
 
@@ -88,7 +87,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
      */
     private var blockOpening = false
 
-    private var openBrowseSelection: Path? = null
     private var newBrowseSelection: Path? = null
     private var currentlyEditedOverlay: ConfigurableOverlay? = null
 
@@ -122,14 +120,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         // Show "open" buttons for the memorized projects.
         welcomeView.projects_start_setMemorized(memProjectDirs)
 
-        // Start the project dir file choosers where the previous project was opened, or at the default location. It is
-        // imperative that we set the current dir either case, as we need to trigger the selected dir change listeners.
-        val dir = memProjectDirs.firstOrNull()?.parent ?: FileSystemView.getFileSystemView().defaultDirectory.toPath()
-        welcomeView.projects_openBrowse_setCurrentDir(dir)
-        welcomeView.projects_createBrowse_setCurrentDir(dir)
+        // Start the project creation file chooser where the previous project was opened.
+        newBrowseSelection = memProjectDirs.firstOrNull()?.parent
 
         // We will later use the Picture mechanism for reading overlay images, so tell the UI which files that accepts.
-        welcomeView.preferences_configureOverlay_setImageFileExtAssortment(FileExtAssortment(Picture.EXTS.toList()))
+        val imageAss = FileExtAssortment(l10n("ui.preferences.overlays.configure.fileType"), Picture.EXTS.toList())
+        welcomeView.preferences_configureOverlay_setImageFileExtAssortment(imageAss)
 
         welcomeView.setChangelog(CHANGELOG_HTML)
         welcomeView.setAbout(ABOUT_HTML)
@@ -184,10 +180,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         isProjectDir(projectDir) -> tryOpenProject(projectDir)
         else -> {
             welcomeView.setTab(WelcomeTab.PROJECTS)
-            welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
-            welcomeView.projects_createBrowse_setSelection(projectDir)
+            welcomeView.projects_setCard(ProjectsCard.START)
             welcomeView.display()
-            projects_createBrowse_onClickNext()
+            projects_start_onCompleteCreateDialog(projectDir)
             false
         }
     }
@@ -233,11 +228,16 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
        *************************** */
 
     override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
-        if (welcomeView.isFromWelcomeWindow(event) && welcomeView.getTab() == WelcomeTab.PROJECTS &&
-            event.modifiersEx == 0 && event.keyCode == VK_ESCAPE
-        ) {
-            welcomeView.projects_setCard(ProjectsCard.START)
-            return true
+        if (welcomeView.isFromWelcomeWindow(event) && event.modifiersEx == 0 && event.keyCode == VK_ESCAPE) {
+            val tab = welcomeView.getTab()
+            if (tab == WelcomeTab.PROJECTS) {
+                projects_createWait_onClickCancel()
+                return true
+            } else if (tab == WelcomeTab.PREFERENCES) {
+                preferences_authorizeAccount_onClickCancel()
+                preferences_configureOverlay_onClickCancel()
+                return true
+            }
         }
         return false
     }
@@ -320,62 +320,40 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.set(false)
     }
 
-    override fun projects_start_onClickOpen() = welcomeView.projects_setCard(ProjectsCard.OPEN_BROWSE)
-    override fun projects_start_onClickCreate() = welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
-    override fun projects_openBrowse_onClickCancel() = welcomeView.projects_setCard(ProjectsCard.START)
-    override fun projects_createBrowse_onClickCancel() = welcomeView.projects_setCard(ProjectsCard.START)
-    override fun projects_createConfigure_onClickBack() = welcomeView.projects_setCard(ProjectsCard.CREATE_BROWSE)
+    override fun projects_start_onClickOpen() {
+        welcomeView.projects_start_showOpenDialog(PROJECT_DIRS_PREFERENCE.get().firstOrNull())
+    }
+
+    override fun projects_start_onCompleteOpenDialog(projectDir: Path?) {
+        tryOpenProject(projectDir ?: return)
+    }
 
     override fun projects_start_onClickOpenMemorized(projectDir: Path) {
         tryOpenProject(projectDir)
+    }
+
+    override fun projects_start_onClickCreate() {
+        welcomeView.projects_start_showCreateDialog(newBrowseSelection)
+    }
+
+    override fun projects_start_onCompleteCreateDialog(projectDir: Path?) {
+        projectDir ?: return
+        // Ask for confirmation if the selected directory is not empty; maybe the user made a mistake.
+        if (projectDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true)) {
+            if (!welcomeView.showNotEmptyQuestion(projectDir))
+                return
+        }
+        newBrowseSelection = projectDir
+        welcomeView.projects_createConfigure_setProjectDir(projectDir)
+        welcomeView.projects_createConfigure_setCreditsFilename("${projectDir.name} Credits")
+        welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 
     override fun projects_start_onDrop(path: Path) {
         tryOpenOrCreateProject(path)
     }
 
-    override fun projects_openBrowse_shouldShowAppIcon(dir: Path) =
-        isProjectDir(dir)
-
-    override fun projects_openBrowse_onChangeSelection(dir: Path?) {
-        openBrowseSelection = dir?.normalize()
-        if (openBrowseSelection?.let(::isProjectDir) == false) openBrowseSelection = null
-        // Gray out the "open" button if the selected directory is not real or not a project dir.
-        welcomeView.projects_openBrowse_setDoneEnabled(openBrowseSelection != null)
-    }
-
-    override fun projects_openBrowse_onDoubleClickDir(dir: Path): Boolean =
-        if (isProjectDir(dir)) {
-            // Try opening the project dir.
-            tryOpenProject(dir)
-            // Do not navigate into the project dir as opening the project might have come back with an error,
-            // in which case we want to still be in the parent dir.
-            true
-        } else
-            false
-
-    override fun projects_openBrowse_onClickDone() {
-        tryOpenProject(openBrowseSelection ?: return)
-    }
-
-    override fun projects_createBrowse_onChangeSelection(dir: Path?) {
-        newBrowseSelection = dir?.normalize()
-        if (newBrowseSelection?.let(::isAllowedToBeProjectDir) == false) newBrowseSelection = null
-        // Gray out the "next" button if the selected directory is not real or not allowed to be a project dir.
-        welcomeView.projects_createBrowse_setNextEnabled(newBrowseSelection != null)
-    }
-
-    override fun projects_createBrowse_onClickNext() {
-        val projectDir = newBrowseSelection ?: return
-        // Ask for confirmation if the selected directory is not empty; maybe the user made a mistake.
-        if (projectDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true)) {
-            if (!welcomeView.showNotEmptyQuestion(projectDir))
-                return
-        }
-        welcomeView.projects_createConfigure_setProjectDir(projectDir)
-        welcomeView.projects_createConfigure_setCreditsFilename("${projectDir.name} Credits")
-        welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
-    }
+    override fun projects_createConfigure_onClickBack() = welcomeView.projects_setCard(ProjectsCard.START)
 
     override fun projects_createConfigure_onClickDone(
         locale: Locale,

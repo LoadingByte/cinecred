@@ -24,6 +24,7 @@ val flatlafVersion = "3.4.1"
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
 val harfBuzzVersion = "7.1.0"
 val zimgVersion = "release-3.0.5"
+val nfdVersion = "17b6e8c"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }
 val mainClass = javaProperties.getProperty("mainClass")!!
@@ -360,6 +361,13 @@ val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
     repositoryDir = layout.buildDirectory.dir("repositories/zimg")
 }
 
+val checkoutNFD by tasks.registering(CheckoutGitRef::class) {
+    uri = "https://github.com/btzy/nativefiledialog-extended.git"
+    ref = nfdVersion
+    patch = "/nfd.patch"
+    repositoryDir = layout.buildDirectory.dir("repositories/nfd")
+}
+
 for (platform in Platform.values()) {
     tasks.register<BuildSkia>("buildSkiaFor${platform.label.capitalized()}") {
         group = "Native"
@@ -394,6 +402,14 @@ for (platform in Platform.values()) {
         repositoryDir = checkoutZimg.flatMap { it.repositoryDir }
         outputFile = srcMainNatives(platform).file(platform.os.codeLib("zimg"))
     }
+
+    tasks.register<BuildNFD>("buildNFDFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the NFD native library for ${platform.label.capitalized()}."
+        forPlatform = platform
+        repositoryDir = checkoutNFD.flatMap { it.repositoryDir }
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("nfd"))
+    }
 }
 
 tasks.register<Jextract>("jextractSkiaCAPI") {
@@ -427,6 +443,14 @@ tasks.register<Jextract>("jextractZimg") {
     description = "Extracts Java bindings for the zimg native library."
     targetPackage = "com.loadingbyte.cinecred.natives.zimg"
     headerFile = checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") }
+    outputDir = srcMainJava
+}
+
+tasks.register<Jextract>("jextractNFD") {
+    group = "Native"
+    description = "Extracts Java bindings for the NFD native library."
+    targetPackage = "com.loadingbyte.cinecred.natives.nfd"
+    headerFile = checkoutNFD.flatMap { it.repositoryDir.file("src/include/nfd.h") }
     outputDir = srcMainJava
 }
 

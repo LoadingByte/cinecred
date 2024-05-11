@@ -13,7 +13,6 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.dnd.*
 import java.awt.event.*
-import java.io.File
 import java.nio.file.Path
 import java.text.NumberFormat
 import java.text.ParseException
@@ -22,10 +21,10 @@ import javax.swing.*
 import javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
 import javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
 import javax.swing.Timer
-import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.plaf.basic.BasicComboBoxEditor
 import javax.swing.text.*
 import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.pathString
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
@@ -107,7 +106,7 @@ class TextListWidget(
 }
 
 
-class FileExtAssortment(val choices: List<String>, val default: String? = null) {
+class FileExtAssortment(val name: String, val choices: List<String>, val default: String? = null) {
     init {
         require(default == null || default in choices)
     }
@@ -169,44 +168,25 @@ class FileWidget(
 
     init {
         browse.addActionListener {
-            val ass = fileExtAssortment
-
-            val fc = JFileChooser()
-            fc.fileSelectionMode = when (fileType) {
-                FileType.FILE -> JFileChooser.FILES_ONLY
-                FileType.DIRECTORY -> JFileChooser.DIRECTORIES_ONLY
-            }
-            // It is important that we only need to convert to File and not to Path here, as converting to Path throws
-            // an exception if the Path is illegal on the OS.
-            fc.fullySetSelectedFile(File(text))
-
-            if (ass != null) {
-                fc.isAcceptAllFileFilterUsed = false
-                when (fileAction) {
-                    FileAction.OPEN -> {
-                        val desc = ass.choices.joinToString { "*.$it" }
-                        fc.addChoosableFileFilter(FileNameExtensionFilter(desc, *ass.choices.toTypedArray()))
-                    }
-                    FileAction.SAVE ->
-                        for (fileExt in ass.choices) {
-                            val filter = FileNameExtensionFilter("*.$fileExt", fileExt)
-                            fc.addChoosableFileFilter(filter)
-                            if (text.endsWith(".$fileExt"))
-                                fc.fileFilter = filter
-                        }
-                }
-            }
-
             val win = SwingUtilities.getWindowAncestor(browse)
-            val result = when (fileAction) {
-                FileAction.OPEN -> fc.showOpenDialog(win)
-                FileAction.SAVE -> fc.showSaveDialog(win)
+            var initial = text.toPathSafely()
+            val selected = when (fileType) {
+                FileType.FILE -> {
+                    if (fileAction == FileAction.OPEN)
+                        initial = initial?.parent
+                    val ass = checkNotNull(fileExtAssortment) { "File ext assortment is required." }
+                    showFileDialog(win, fileAction == FileAction.OPEN, ass.name, ass.choices, initial)
+                }
+                FileType.DIRECTORY ->
+                    showFolderDialog(win, initial)
             }
-            if (result == JFileChooser.APPROVE_OPTION) {
-                var newText = fc.selectedFile.absolutePath
-                if (ass != null && fileAction == FileAction.SAVE) {
-                    val selectedFileExt = (fc.fileFilter as FileNameExtensionFilter).extensions.single()
-                    newText = newText.removeAnySuffix(ass.choices.map { ".$it" }) + ".$selectedFileExt"
+            if (selected != null) {
+                var newText = selected.absolutePathString()
+                // When saving, ensure that the path ends with an admissible file extension.
+                if (fileAction == FileAction.SAVE) {
+                    val ass = fileExtAssortment
+                    if (ass?.default != null && ass.choices.none { newText.endsWith(".$it", ignoreCase = true) })
+                        newText += ".${ass.default}"
                 }
                 text = newText
             }

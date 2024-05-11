@@ -16,6 +16,7 @@ Cinecred Changelog
   controlled via a new page gap column in the spreadsheet.
 - Embedded videos can now be aligned in the middle or at the end of the time
   range in which they appear.
+- The clunky file chooser was replaced with the more familiar OS-native one.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
 - Exported whole page stills now carry color space information.

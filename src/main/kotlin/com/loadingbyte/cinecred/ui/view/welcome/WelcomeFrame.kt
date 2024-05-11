@@ -6,10 +6,7 @@ import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.ui.ConfigurableOverlay
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.*
-import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
-import com.loadingbyte.cinecred.ui.helper.WINDOW_ICON_IMAGES
-import com.loadingbyte.cinecred.ui.helper.center
-import com.loadingbyte.cinecred.ui.helper.setup
+import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.makeWelcomeHintTrack
 import com.loadingbyte.cinecred.ui.play
 import java.awt.Color
@@ -88,16 +85,6 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.projectsPanel.projects_setCard(card)
     override fun projects_start_setMemorized(projectDirs: List<Path>) =
         panel.projectsPanel.projects_start_setMemorized(projectDirs)
-    override fun projects_openBrowse_setCurrentDir(dir: Path) =
-        panel.projectsPanel.projects_openBrowse_setCurrentDir(dir)
-    override fun projects_openBrowse_setDoneEnabled(enabled: Boolean) =
-        panel.projectsPanel.projects_openBrowse_setDoneEnabled(enabled)
-    override fun projects_createBrowse_setCurrentDir(dir: Path) =
-        panel.projectsPanel.projects_createBrowse_setCurrentDir(dir)
-    override fun projects_createBrowse_setSelection(dir: Path) =
-        panel.projectsPanel.projects_createBrowse_setSelection(dir)
-    override fun projects_createBrowse_setNextEnabled(enabled: Boolean) =
-        panel.projectsPanel.projects_createBrowse_setNextEnabled(enabled)
     override fun projects_createConfigure_setProjectDir(projectDir: Path) =
         panel.projectsPanel.projects_createConfigure_setProjectDir(projectDir)
     override fun projects_createConfigure_setAccounts(accounts: List<Account>) =
@@ -145,6 +132,14 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     override fun setAbout(about: String) = panel.setAbout(about)
     override fun setLicenses(licenses: List<License>) = panel.setLicenses(licenses)
     override fun setUpdate(version: String) = panel.setUpdate(version)
+
+    override fun projects_start_showOpenDialog(dir: Path?) {
+        welcomeCtrl.projects_start_onCompleteOpenDialog(showFolderDialog(this, dir))
+    }
+
+    override fun projects_start_showCreateDialog(dir: Path?) {
+        welcomeCtrl.projects_start_onCompleteCreateDialog(showFolderDialog(this, dir))
+    }
 
     override fun showNotADirMessage(path: Path) {
         JOptionPane.showMessageDialog(

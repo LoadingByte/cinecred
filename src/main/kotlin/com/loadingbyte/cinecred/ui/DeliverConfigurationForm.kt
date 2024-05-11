@@ -285,7 +285,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     private fun onFormatChange() {
         val format = formatWidget.value
-        val fileExtAssortment = FileExtAssortment(format.fileExts.sorted(), format.defaultFileExt)
+        val singleExt = format.fileExts.singleOrNull()
+        val assName = if (singleExt != null) l10n("ui.deliverConfig.singleFileTypeExt", singleExt.uppercase()) else
+            l10n("ui.deliverConfig.singleFileTypeVideo")
+        val fileExtAssortment = FileExtAssortment(assName, format.fileExts.sorted(), format.defaultFileExt)
         singleFileWidget.fileExtAssortment = fileExtAssortment
         seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
     }

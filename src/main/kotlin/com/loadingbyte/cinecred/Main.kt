@@ -72,6 +72,7 @@ fun main(args: Array<String>) {
     System.loadLibrary("skiacapi")
     System.loadLibrary("harfbuzz")
     System.loadLibrary("zimg")
+    System.loadLibrary("nfd")
 
     // Make JavaCPP and FlatLaf load their native libraries from java.library.path.
     System.setProperty("org.bytedeco.javacpp.cacheLibraries", "false")

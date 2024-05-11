@@ -1191,6 +1191,7 @@ class FontChooserWidget(
                         selectedItem = selectedFamily.canonicalFont
                     }
                 }
+                fontComboBox.isEnabled = isEnabled
                 notifyChangeListeners()
             }
         }

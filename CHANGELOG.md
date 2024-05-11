@@ -48,6 +48,8 @@ Cinecred Changelog
 - Swapping the image of an image overlay is now actually persisted to disk.
 - The color picker now immediately reacts to typing, and closing it will reset
   entered invalid values.
+- The font chooser no longer stays disabled when selecting another font family
+  because the configured one is missing.
 - New entries added to a list (like page style grid cols) now appear reliably.
 - The delivery dialog no longer crashes when the project folder has no parent.
 

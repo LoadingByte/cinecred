@@ -1,7 +1,12 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.Config
+import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.DeferredVideo.TapeSpan
@@ -13,12 +18,11 @@ import kotlin.io.path.writeText
 import kotlin.math.min
 
 
-class TapeTimelineRenderJob(
+class TapeTimelineRenderJob private constructor(
+    private val format: Format,
+    private val config: Config,
     private val project: Project,
     private val video: DeferredVideo,
-    private val fpsScaling: Int,
-    private val scan: Bitmap.Scan,
-    private val format: Format,
     private val file: Path
 ) : RenderJob {
 
@@ -30,15 +34,15 @@ class TapeTimelineRenderJob(
     //   - The VideoRenderJob does the same thing.
     //   - FPS scaling can slightly shift around parts of the sequence.
     //   - We want to provide field-accurate rec in and out points.
-    private val extraFPSMul = if (scan == Bitmap.Scan.PROGRESSIVE) 1 else 2
+    private val extraFPSMul = if (config[SCAN] == Bitmap.Scan.PROGRESSIVE) 1 else 2
 
     override fun render(progressCallback: (Int) -> Unit) {
-        val tapeSpans = video.copy(fpsScaling = fpsScaling * extraFPSMul).collectTapeSpans(listOf(TAPES)).sortedWith(
-            Comparator.comparingInt(TapeSpan::firstFrameIdx).thenComparingInt(TapeSpan::lastFrameIdx)
-        )
+        val tapeSpans = video.copy(fpsScaling = config[FPS_SCALING] * extraFPSMul)
+            .collectTapeSpans(listOf(TAPES))
+            .sortedWith(Comparator.comparingInt(TapeSpan::firstFrameIdx).thenComparingInt(TapeSpan::lastFrameIdx))
         when (format) {
-            Format.CSV -> writeCSV(tapeSpans)
-            Format.EDL -> writeEDL(tapeSpans)
+            CSV -> writeCSV(tapeSpans)
+            EDL -> writeEDL(tapeSpans)
         }
     }
 
@@ -46,7 +50,9 @@ class TapeTimelineRenderJob(
         val csv = StringBuilder()
         csv.appendLine("Record In,Record Out,Source In,Source In Clock,Source")
 
+        val scan = config[SCAN]
         val global = project.styling.global
+
         for (tapeSpan in tapeSpans) {
             val startField = tapeSpan.firstFrameIdx
             val stopField = tapeSpan.lastFrameIdx + 1
@@ -124,18 +130,25 @@ class TapeTimelineRenderJob(
     private fun StringBuilder.crlf() = append("\r\n")
 
 
-    class Format private constructor(fileExt: String, labelSuffix: String = "") :
-        RenderFormat(fileSeq = false, setOf(fileExt), fileExt, supportsAlpha = false) {
+    companion object {
+        private val CSV = Format("csv")
+        private val EDL = Format("edl", " (CMX3600)")
+        val FORMATS = listOf<RenderFormat>(CSV, EDL)
+    }
 
-        override val label = fileExt.uppercase() + labelSuffix
-        override val notice get() = null
 
-        companion object {
-            val CSV = Format("csv")
-            val EDL = Format("edl", " (CMX3600)")
-            val ALL = listOf(CSV, EDL)
-        }
-
+    private class Format(fileExt: String, labelSuffix: String = "") : RenderFormat(
+        fileExt.uppercase() + labelSuffix, fileSeq = false, setOf(fileExt), fileExt,
+        choice(FPS_SCALING) * choice(SCAN)
+    ) {
+        override fun createRenderJob(
+            config: Config,
+            project: Project,
+            pageDefImages: List<DeferredImage>?,
+            video: DeferredVideo?,
+            fileOrDir: Path,
+            filenamePattern: String?
+        ) = TapeTimelineRenderJob(this, config, project, video!!, fileOrDir)
     }
 
 }

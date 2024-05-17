@@ -367,6 +367,49 @@ class Bitmap private constructor(
             blit(src, newSrcX, newSrcY, newSrcWidth, newSrcHeight, newDstX, newDstY, 1)
     }
 
+    fun blitComponent(src: Bitmap, srcComponent: PixelFormat.Component, dstComponent: PixelFormat.Component) {
+        val srcPixelFormat = src.spec.representation.pixelFormat
+        val dstPixelFormat = spec.representation.pixelFormat
+        val componentSize = ceilDiv(srcComponent.depth, 8)
+        require(spec.resolution == src.spec.resolution) { "Source and dest resolutions differ." }
+        require(srcComponent in srcPixelFormat.components) { "Source component does not belong to source." }
+        require(dstComponent in dstPixelFormat.components) { "Dest component does not belong to dest." }
+        require(srcComponent.depth == dstComponent.depth) { "Source and dest components have different depths." }
+        require(componentSize in 1..2 || componentSize == 4) { "Component has not 1, 2, or 4 bytes." }
+        require(srcComponent.shift == 0) { "Source component has bitshift." }
+        require(dstComponent.shift == 0) { "Dest component has bitshift." }
+        val (width, height) = spec.resolution
+        val srcSeg = src.memorySegment(srcComponent.plane)
+        val dstSeg = memorySegment(dstComponent.plane)
+        val srcLs = src.linesize(srcComponent.plane)
+        val dstLs = linesize(dstComponent.plane)
+        val srcBO = srcPixelFormat.byteOrder
+        val dstBO = dstPixelFormat.byteOrder
+        val srcStep = srcComponent.step
+        val dstStep = dstComponent.step
+        for (y in 0L..<height) {
+            var s = y * srcLs + srcComponent.offset
+            var d = y * dstLs + dstComponent.offset
+            for (x in 0..<width) {
+                when (componentSize) {
+                    1 -> dstSeg.putByte(d, srcSeg.getByte(s))
+                    2 -> dstSeg.putShort(d, dstBO, srcSeg.getShort(s, srcBO))
+                    4 -> dstSeg.putInt(d, dstBO, srcSeg.getInt(s, srcBO))
+                }
+                s += srcStep
+                d += dstStep
+            }
+        }
+    }
+
+    fun blitComponent(src: Bitmap, srcComponentIndex: Int, dstComponentIndex: Int) {
+        blitComponent(
+            src,
+            src.spec.representation.pixelFormat.components[srcComponentIndex],
+            spec.representation.pixelFormat.components[dstComponentIndex]
+        )
+    }
+
     // Be aware that the following bulk get/put functions don't care about the actual pixel format, and hence can,
     // for example, read a 32bpp bitmap into an int array.
     // Implementation note: We've benchmarked MemorySegment.copy against ByteBuffer access, and on JDK 21, MemSeg wins.

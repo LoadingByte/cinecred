@@ -1,20 +1,32 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset
+import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.SRGB
+import com.loadingbyte.cinecred.delivery.RenderFormat.Config
+import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
+import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.imaging.*
+import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
-import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF.Compression.DEFLATE
-import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF.Compression.PACK_BITS
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
+import com.loadingbyte.cinecred.project.Project
 import org.apache.commons.io.FileUtils
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent
-import java.awt.Color
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAYF32
 import java.io.ByteArrayInputStream
 import java.nio.file.Path
 import java.util.*
@@ -27,16 +39,17 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.bufferedWriter
 import kotlin.io.path.exists
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 
-class WholePageSequenceRenderJob(
+class WholePageSequenceRenderJob private constructor(
+    private val format: RenderFormat,
+    private val config: Config,
+    private val project: Project,
     private val pageDefImages: List<DeferredImage>,
-    private val grounding: Color?,
-    private val locale: Locale,
-    private val format: Format,
-    val dir: Path,
-    val filenamePattern: String
+    private val dir: Path,
+    private val filenamePattern: String
 ) : RenderJob {
 
     override val prefix: Path
@@ -47,47 +60,64 @@ class WholePageSequenceRenderJob(
             FileUtils.cleanDirectory(dir.toFile())
         dir.createDirectoriesSafely()
 
+        val ground = config[CHANNELS] == COLOR
+        val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
+        val matte = config[CHANNELS] == ALPHA
+        val family = if (matte) GRAY else RGB
+        val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
+        val colorSpace = if (matte) null else config[COLOR_PRESET].colorSpace
+        val global = project.styling.global
+
         val bitmapWriter = when (format) {
-            Format.PNG -> BitmapWriter.PNG(RGB, grounding == null, ColorSpace.SRGB)
-            Format.TIFF_PACK_BITS -> BitmapWriter.TIFF(RGB, grounding == null, ColorSpace.SRGB, compression = PACK_BITS)
-            Format.TIFF_DEFLATE -> BitmapWriter.TIFF(RGB, grounding == null, ColorSpace.SRGB, compression = DEFLATE)
+            PNG -> BitmapWriter.PNG(family, embedAlpha, colorSpace, config[DEPTH])
+            TIFF -> BitmapWriter.TIFF(family, embedAlpha, colorSpace, config[DEPTH], config[TIFF_COMPRESSION])
+            DPX -> BitmapWriter.DPX(family, embedAlpha, colorSpace, config[DEPTH], config[DPX_COMPRESSION])
             else -> null
         }
 
-        for ((idx, pageDefImage) in pageDefImages.withIndex()) {
+        for ((idx, unscaledPageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
+            val pageDefImage = unscaledPageDefImage.copy(universeScaling = resolutionScaling)
             val pageWidth = pageDefImage.width.roundToInt()
             val pageHeight = pageDefImage.height.resolve().roundToInt()
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
-                Format.PNG, Format.TIFF_PACK_BITS, Format.TIFF_DEFLATE -> {
+                PNG, TIFF, DPX -> {
                     val res = Resolution(pageWidth, pageHeight)
                     val rep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
                     Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
                         Canvas.forBitmap(bitmap).use { canvas ->
-                            if (grounding == null) bitmap.zero() else canvas.fill(Canvas.Shader.Solid(grounding))
+                            if (ground) canvas.fill(Canvas.Shader.Solid(global.grounding)) else bitmap.zero()
                             pageDefImage.materialize(canvas, cache = null, layers = listOf(STATIC, TAPES))
                         }
-                        bitmapWriter!!.convertAndWrite(bitmap, pageFile, promiseOpaque = grounding != null)
+                        if (!matte)
+                            bitmapWriter!!.convertAndWrite(bitmap, pageFile, promiseOpaque = !embedAlpha)
+                        else {
+                            val matteRep = Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_GRAYF32))
+                            Bitmap.allocate(Bitmap.Spec(res, matteRep)).use { matteBitmap ->
+                                matteBitmap.blitComponent(bitmap, 3, 0)
+                                bitmapWriter!!.convertAndWrite(matteBitmap, pageFile, promiseOpaque = true)
+                            }
+                        }
                     }
                 }
-                Format.SVG -> {
+                SVG -> {
                     val doc = DocumentBuilderFactory.newNSInstance().newDocumentBuilder().domImplementation
                         .createDocument(SVG_NS_URI, "svg", null)
                     val svg = doc.documentElement
 
                     svg.setAttributeNS(XMLNS_ATTRIBUTE_NS_URI, "xmlns:xlink", XLINK_NS_URI)
-                    svg.setAttributeNS(XML_NS_URI, "xml:lang", locale.toLanguageTag())
+                    svg.setAttributeNS(XML_NS_URI, "xml:lang", global.locale.toLanguageTag())
                     svg.setAttribute("width", pageWidth.toString())
                     svg.setAttribute("height", pageHeight.toString())
                     svg.setAttribute("viewBox", "0 0 $pageWidth $pageHeight")
-                    if (grounding != null)
+                    if (ground)
                         svg.appendChild(doc.createElementNS(SVG_NS_URI, "rect").apply {
                             setAttribute("width", pageWidth.toString())
                             setAttribute("height", pageHeight.toString())
-                            setAttribute("fill", grounding.toHex24())
+                            setAttribute("fill", global.grounding.toHex24())
                         })
                     pageDefImage.materialize(svg, listOf(STATIC, TAPES))
 
@@ -114,33 +144,56 @@ class WholePageSequenceRenderJob(
     }
 
 
-    class Format private constructor(
-        fileExt: String,
-        labelSuffix: String = "",
-        private val l10nNotice: String? = null
-    ) : RenderFormat(fileSeq = true, setOf(fileExt), fileExt, supportsAlpha = true) {
+    companion object {
 
-        override val label = fileExt.uppercase() + labelSuffix
-        override val notice get() = l10nNotice?.let(::l10n)
+        private val PNG = Format(
+            "png",
+            channelsTimesColorPreset(default = SRGB) * choice(DEPTH, 8, 16)
+        )
+        private val TIFF = Format(
+            "tiff",
+            channelsTimesColorPreset(default = SRGB) * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
+        )
+        private val DPX = Format(
+            "dpx",
+            channelsTimesColorPreset() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
+                    fixed(DEPTH, 10) * fixed(CHANNELS, COLOR_AND_ALPHA)
+        )
+        private val SVG = Format(
+            "svg",
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, SRGB)
+        )
 
-        companion object {
-            val PNG = Format("png")
-            val TIFF_PACK_BITS = Format("tiff", " (PackBits)", "delivery.packBits")
-            val TIFF_DEFLATE = Format("tiff", " (Deflate)", "delivery.deflate")
-            val SVG = Format("svg")
-            val ALL = listOf(PNG, TIFF_PACK_BITS, TIFF_DEFLATE, SVG)
-        }
+        val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, SVG)
 
+        private fun channelsTimesColorPreset(default: ColorPreset = COLOR_PRESET.standardDefault) =
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET, default = default) + fixed(CHANNELS, ALPHA)
+
+    }
+
+
+    private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
+        fileExt.uppercase(), fileSeq = true, setOf(fileExt), fileExt,
+        configAssortment * choice(RESOLUTION_SCALING_LOG2)
+    ) {
+        override fun createRenderJob(
+            config: Config,
+            project: Project,
+            pageDefImages: List<DeferredImage>?,
+            video: DeferredVideo?,
+            fileOrDir: Path,
+            filenamePattern: String?
+        ) = WholePageSequenceRenderJob(this, config, project, pageDefImages!!, fileOrDir, filenamePattern!!)
     }
 
 }
 
 
-class WholePagePDFRenderJob(
+class WholePagePDFRenderJob private constructor(
+    private val config: Config,
+    private val project: Project,
     private val pageDefImages: List<DeferredImage>,
-    private val grounding: Color?,
-    private val locale: Locale,
-    val file: Path
+    private val file: Path
 ) : RenderJob {
 
     override val prefix: Path
@@ -148,6 +201,10 @@ class WholePagePDFRenderJob(
 
     override fun render(progressCallback: (Int) -> Unit) {
         file.parent.createDirectoriesSafely()
+
+        val ground = config[CHANNELS] == COLOR
+        val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
+        val global = project.styling.global
 
         val pdfDoc = PDDocument()
 
@@ -157,7 +214,7 @@ class WholePagePDFRenderJob(
             creator = "Cinecred $VERSION"
             creationDate = Calendar.getInstance()
         }
-        pdfDoc.documentCatalog.language = locale.toLanguageTag()
+        pdfDoc.documentCatalog.language = global.locale.toLanguageTag()
 
         // Add an output intent with the blending color space.
         val iccBytes = ICCProfile.of(ColorSpace.BLENDING).bytes
@@ -167,8 +224,10 @@ class WholePagePDFRenderJob(
             info = id
         })
 
-        for ((idx, page) in pageDefImages.withIndex()) {
+        for ((idx, unscaledPageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
+
+            val page = unscaledPageDefImage.copy(universeScaling = resolutionScaling)
 
             val pdfPage = PDPage(PDRectangle(page.width.toFloat(), page.height.resolve().toFloat()))
             pdfDoc.addPage(pdfPage)
@@ -176,8 +235,8 @@ class WholePagePDFRenderJob(
             PDPageContentStream(pdfDoc, pdfPage).use { cs ->
                 // Let the backend draw the grounding so that it takes care of all the color space stuff.
                 DeferredImage(page.width, page.height).apply {
-                    if (grounding != null)
-                        drawRect(grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
+                    if (ground)
+                        drawRect(global.grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
                     drawDeferredImage(page, 0.0, 0.0.toY())
                 }.materialize(pdfDoc, pdfPage, cs, ColorSpace.BLENDING, listOf(STATIC, TAPES))
             }
@@ -190,11 +249,23 @@ class WholePagePDFRenderJob(
     }
 
 
+    private class Format : RenderFormat(
+        "PDF", fileSeq = false, setOf("pdf"), "pdf",
+        choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(RESOLUTION_SCALING_LOG2) * fixed(COLOR_PRESET, SRGB)
+    ) {
+        override fun createRenderJob(
+            config: Config,
+            project: Project,
+            pageDefImages: List<DeferredImage>?,
+            video: DeferredVideo?,
+            fileOrDir: Path,
+            filenamePattern: String?
+        ) = WholePagePDFRenderJob(config, project, pageDefImages!!, fileOrDir)
+    }
+
+
     companion object {
-        val FORMAT = object : RenderFormat(fileSeq = false, setOf("pdf"), "pdf", supportsAlpha = true) {
-            override val label get() = "PDF"
-            override val notice get() = l10n("delivery.reducedQuality")
-        }
+        val FORMATS = listOf<RenderFormat>(Format())
     }
 
 }

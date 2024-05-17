@@ -36,6 +36,20 @@ fun MemorySegment.putShort(offset: Long, value: Short) = putShort(offset, ByteOr
 fun MemorySegment.putShort(offset: Long, order: ByteOrder, value: Short) =
     if (order === ByteOrder.LITTLE_ENDIAN) putShortLE(offset, value) else putShortBE(offset, value)
 
+fun MemorySegment.getIntLE(offset: Long) = MEM_SEG_INT_LE_HANDLE.get(this, offset) as Int
+fun MemorySegment.getIntBE(offset: Long) = MEM_SEG_INT_BE_HANDLE.get(this, offset) as Int
+
+fun MemorySegment.getInt(offset: Long): Int = getInt(offset, ByteOrder.nativeOrder())
+fun MemorySegment.getInt(offset: Long, order: ByteOrder): Int =
+    if (order === ByteOrder.LITTLE_ENDIAN) getIntLE(offset) else getIntBE(offset)
+
+fun MemorySegment.putIntLE(offset: Long, value: Int) = MEM_SEG_INT_LE_HANDLE.set(this, offset, value)
+fun MemorySegment.putIntBE(offset: Long, value: Int) = MEM_SEG_INT_BE_HANDLE.set(this, offset, value)
+
+fun MemorySegment.putInt(offset: Long, value: Int) = putInt(offset, ByteOrder.nativeOrder(), value)
+fun MemorySegment.putInt(offset: Long, order: ByteOrder, value: Int) =
+    if (order === ByteOrder.LITTLE_ENDIAN) putIntLE(offset, value) else putIntBE(offset, value)
+
 fun MemorySegment.getFloatLE(offset: Long) = MEM_SEG_FLOAT_LE_HANDLE.get(this, offset) as Float
 fun MemorySegment.getFloatBE(offset: Long) = MEM_SEG_FLOAT_BE_HANDLE.get(this, offset) as Float
 
@@ -54,6 +68,8 @@ private val MEM_SEG_BYTE_HANDLE = makeVarHandle(JAVA_BYTE, ByteOrder.LITTLE_ENDI
 // Note: We have benchmarked whether aligned or unaligned ValueLayouts are faster here, and unaligned was ~1.35x faster.
 private val MEM_SEG_SHORT_LE_HANDLE = makeVarHandle(JAVA_SHORT_UNALIGNED, ByteOrder.LITTLE_ENDIAN)
 private val MEM_SEG_SHORT_BE_HANDLE = makeVarHandle(JAVA_SHORT_UNALIGNED, ByteOrder.BIG_ENDIAN)
+private val MEM_SEG_INT_LE_HANDLE = makeVarHandle(JAVA_INT_UNALIGNED, ByteOrder.LITTLE_ENDIAN)
+private val MEM_SEG_INT_BE_HANDLE = makeVarHandle(JAVA_INT_UNALIGNED, ByteOrder.BIG_ENDIAN)
 private val MEM_SEG_FLOAT_LE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOrder.LITTLE_ENDIAN)
 private val MEM_SEG_FLOAT_BE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOrder.BIG_ENDIAN)
 

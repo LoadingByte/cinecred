@@ -4,9 +4,22 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
-import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.YUV
+import com.loadingbyte.cinecred.delivery.RenderFormat.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
+import com.loadingbyte.cinecred.imaging.BitmapWriter.DPX
+import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF
 import com.loadingbyte.cinecred.project.DrawnCredits
+import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
@@ -28,13 +41,17 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
 
     companion object {
-        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.Format.ALL + WholePagePDFRenderJob.FORMAT
-        private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VideoRenderJob.Format.ALL + TapeTimelineRenderJob.Format.ALL
+
+        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.FORMATS + WholePagePDFRenderJob.FORMATS
+        private val VIDEO_FORMATS = VideoContainerRenderJob.FORMATS + ImageSequenceRenderJob.FORMATS
+        private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VIDEO_FORMATS + TapeTimelineRenderJob.FORMATS
+
+        private val VOLATILE_PROPERTIES: Set<Property<*>> = hashSetOf(DEPTH)
+
     }
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedFormatWidget get() = formatWidget
-    @Deprecated("ENCAPSULATION LEAK") val leakedTransparentGroundingWidget get() = transparentGroundingWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedResolutionMultWidget get() = resolutionMultWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedScanWidget get() = scanWidget
     // =========================================
@@ -53,26 +70,73 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             toString = { format ->
                 val prefix = when (format) {
                     in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat")
-                    is VideoRenderJob.Format -> l10n("ui.deliverConfig.videoFormat")
-                    is TapeTimelineRenderJob.Format -> l10n("ui.deliverConfig.timelineFormat")
+                    in VIDEO_FORMATS -> l10n("ui.deliverConfig.videoFormat")
+                    in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat")
                     else -> throw IllegalArgumentException()
                 }
-                val suffix = format.notice.let { if (it == null) "" else "  \u2013  $it" }
-                "$prefix  \u2013  ${format.label}$suffix"
+                val label = when (format) {
+                    in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", format.label)
+                    else -> format.label
+                }
+                val suffix = when (format) {
+                    in WholePagePDFRenderJob.FORMATS, VideoContainerRenderJob.H264, VideoContainerRenderJob.H265 ->
+                        "  \u2013  " + l10n("ui.deliverConfig.reducedQualityFormat")
+                    else -> ""
+                }
+                "$prefix  \u2013  ${label}$suffix"
             },
-            // User a custom render that shows category headers.
+            // Use a custom render that shows category headers.
             rendererDecorator = object : AbstractComboBoxWidget.RendererDecorator {
                 override fun <I> decorate(renderer: ListCellRenderer<I>) = LabeledListCellRenderer(renderer) { index ->
                     when (index) {
                         0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
                         WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
-                        WHOLE_PAGE_FORMATS.size + VideoRenderJob.Format.ALL.size ->
+                        WHOLE_PAGE_FORMATS.size + VIDEO_FORMATS.size ->
                             listOf(l10n("ui.deliverConfig.timelineFormat"))
                         else -> emptyList()
                     }
                 }
             }
-        ).apply { value = VideoRenderJob.Format.ALL.first() }
+        ).apply { value = VideoContainerRenderJob.H264 }
+    )
+
+    private val profileWidget = addWidget(
+        l10n("ui.deliverConfig.profile"),
+        ComboBoxWidget(
+            Enum::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
+            toString = { prof ->
+                fun bigger() = "  \u2013  " + l10n("ui.deliverConfig.profile.biggerCommoner")
+                fun smaller() = "  \u2013  " + l10n("ui.deliverConfig.profile.smallerRarer")
+                when (prof) {
+                    is TIFF.Compression -> when (prof) {
+                        TIFF.Compression.NONE -> l10n("ui.deliverConfig.profile.uncompressed") + bigger()
+                        TIFF.Compression.PACK_BITS -> "PackBits" + bigger()
+                        TIFF.Compression.LZW -> "LZW" + smaller()
+                        TIFF.Compression.DEFLATE -> "Deflate" + smaller()
+                    }
+                    is DPX.Compression -> when (prof) {
+                        DPX.Compression.NONE -> l10n("ui.deliverConfig.profile.uncompressed") + bigger()
+                        DPX.Compression.RLE -> l10n("ui.deliverConfig.profile.rle") + smaller()
+                    }
+                    is ProResProfile -> when (prof) {
+                        ProResProfile.PRORES_422_PROXY -> "ProRes 422 Proxy"
+                        ProResProfile.PRORES_422_LT -> "ProRes 422 LT"
+                        ProResProfile.PRORES_422 -> "ProRes 422"
+                        ProResProfile.PRORES_422_HQ -> "ProRes 422 HQ"
+                        ProResProfile.PRORES_4444 -> "ProRes 4444"
+                        ProResProfile.PRORES_4444_XQ -> "ProRes 4444 XQ"
+                    }
+                    is DNxHRProfile -> when (prof) {
+                        DNxHRProfile.DNXHR_LB -> "DNxHR LB"
+                        DNxHRProfile.DNXHR_SQ -> "DNxHR SQ"
+                        DNxHRProfile.DNXHR_HQ -> "DNxHR HQ"
+                        DNxHRProfile.DNXHR_HQX -> "DNxHR HQX"
+                        DNxHRProfile.DNXHR_444 -> "DNxHR 444"
+                    }
+                    else -> throw IllegalArgumentException()
+                }
+            }
+        )
     )
 
     private val singleFileWidget = addWidget(
@@ -104,29 +168,38 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         }
     )
 
-    private val transparentGroundingWidget = addWidget(
-        l10n("ui.deliverConfig.transparentGrounding"),
-        CheckBoxWidget(),
-        isEnabled = { formatWidget.value.supportsAlpha }
+    private val channelsWidget = addWidget(
+        l10n("ui.deliverConfig.channels"),
+        ComboBoxWidget(
+            Channels::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
+            toString = { l10n("ui.deliverConfig.channels.$it") }
+        )
     )
 
     private val resolutionMultWidget =
         ComboBoxWidget(
-            Int::class.javaObjectType, listOf(-2, -1, 0, 1, 2), widthSpec = WidthSpec.LITTLE,
+            Int::class.javaObjectType, RESOLUTION_SCALING_LOG2.standardOptions.asList(), widthSpec = WidthSpec.LITTLE,
             toString = { if (it >= 0) "\u00D7 ${1 shl it}" else "\u00F7 ${1 shl -it}" }
-        ).apply { value = 0 }
+        ).apply { value = RESOLUTION_SCALING_LOG2.standardDefault }
+
     private val fpsMultWidget =
         ComboBoxWidget(
-            Int::class.javaObjectType, listOf(1, 2, 3, 4), widthSpec = WidthSpec.LITTLE,
+            Int::class.javaObjectType, FPS_SCALING.standardOptions.asList(), widthSpec = WidthSpec.LITTLE,
             toString = { "\u00D7 $it" }
+        ).apply { value = FPS_SCALING.standardDefault }
+
+    private val depthWidget =
+        ComboBoxWidget(
+            Int::class.javaObjectType, emptyList(), widthSpec = WidthSpec.LITTLE,
+            toString = Int::toString
         )
 
     init {
         addWidget(
             l10n("ui.styling.global.resolution"),
             UnionWidget(
-                listOf(resolutionMultWidget, fpsMultWidget),
-                labels = listOf(null, l10n("ui.styling.global.fps"))
+                listOf(resolutionMultWidget, fpsMultWidget, depthWidget),
+                labels = listOf(null, l10n("ui.styling.global.fps"), l10n("bitDepth"))
             )
         )
     }
@@ -134,31 +207,28 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private val scanWidget = addWidget(
         l10n("ui.deliverConfig.scan"),
         ComboBoxWidget(
-            Scan::class.java, Scan.entries, widthSpec = WidthSpec.WIDER,
+            Scan::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
             toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
-        ),
-        isEnabled = {
-            val format = formatWidget.value
-            format is VideoRenderJob.Format && format.interlacing || format is TapeTimelineRenderJob.Format
-        }
+        )
     )
 
-    private val colorSpaceWidget = addWidget(
+    private val colorPresetWidget = addWidget(
         l10n("ui.deliverConfig.colorSpace"),
         ComboBoxWidget(
-            VideoRenderJob.ColorSpace::class.java, VideoRenderJob.ColorSpace.entries,
+            ColorPreset::class.java, ColorPreset.entries,
             widthSpec = WidthSpec.WIDER,
             toString = { cs ->
                 when (cs) {
-                    VideoRenderJob.ColorSpace.REC_709 ->
-                        "Rec. 709  \u2013  BT.709 Gamut, BT.709 Gamma, Limited YCbCr Range, BT.709 YCbCr Coefficients"
-                    VideoRenderJob.ColorSpace.SRGB ->
-                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full YCbCr Range, BT.601 YCbCr Coefficients"
+                    ColorPreset.REC_709 ->
+                        "Rec. 709  \u2013  BT.709 Gamut, BT.1886 Gamma, Limited YUV Range, BT.709 YUV Coefficients"
+                    ColorPreset.SRGB ->
+                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full YUV Range, BT.601 YUV Coefficients"
                 }
             }
-        ).apply { value = VideoRenderJob.ColorSpace.REC_709 },
-        isEnabled = { formatWidget.value is VideoRenderJob.Format }
+        )
     )
+
+    private var disableOnChange = false
 
     init {
         // Get the form into a reasonable state even before the drawn project arrives.
@@ -166,6 +236,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     }
 
     override fun onChange(widget: Widget<*>) {
+        if (disableOnChange)
+            return
+
+        disableOnChange = true
         // If another spreadsheet name is selected, set the output location fields to a reasonable default.
         if (widget == spreadsheetNameWidget) {
             // We've actually had a bug report where the project dir didn't have a parent, so in that case, just put the
@@ -176,17 +250,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve(filename)
             // This ensures that file extensions are sensible.
             onFormatChange()
-        }
-
-        // Notify the file-related fields when the format (and with it the set of admissible file extensions) changes.
-        if (widget == formatWidget)
+        } else if (widget == formatWidget)
             onFormatChange()
+        else if (widget != singleFileWidget && widget != seqDirWidget && widget != seqFilenameSuffixWidget)
+            currentConfig(ignoreVolatile = true)?.let { pushFormatPropertyOptions(it, formatChanged = false) }
+        disableOnChange = false
 
         super.onChange(widget)
-
-        // These isEnabled checks are separate because the multiplier widgets are part of a UnionWidget.
-        resolutionMultWidget.isEnabled = formatWidget.value !is TapeTimelineRenderJob.Format
-        fpsMultWidget.isEnabled = formatWidget.value !in WHOLE_PAGE_FORMATS
 
         // Update the specs labels and determine whether the specs are valid.
         // Then disable the add button if there are errors in the form or the specs are invalid.
@@ -207,10 +277,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val credits = (selectedDrawnCredits ?: return false).credits
 
         val format = formatWidget.value
-        val resMult = if (resolutionMultWidget.isEnabled) 2.0.pow(resolutionMultWidget.value) else 1.0
-        val fpsMult = if (fpsMultWidget.isEnabled) fpsMultWidget.value else 1
-        val scan = if (scanWidget.isEnabled) scanWidget.value else Scan.PROGRESSIVE
-        val cs = if (colorSpaceWidget.isEnabled) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
+        val config = currentConfig() ?: return false
+        val resMult = 2.0.pow(config.getOrDefault(RESOLUTION_SCALING_LOG2))
+        val fpsMult = config.getOrDefault(FPS_SCALING)
+        val scan = config.getOrDefault(SCAN)
+        val colorPreset = config.getOrDefault(COLOR_PRESET)
 
         // Determine the scaled specs.
         val resolution = project.styling.global.resolution
@@ -226,19 +297,18 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         // Display the scaled specs in the specs labels.
         val decFmt = DecimalFormat("0.##")
         panel.specsLabels[0].text =
-            if (format is TapeTimelineRenderJob.Format) "\u2014" else
+            if (RESOLUTION_SCALING_LOG2 !in config) "\u2014" else
                 "$scaledWidth \u00D7 $scaledHeight"
         panel.specsLabels[1].text =
-            if (format in WHOLE_PAGE_FORMATS) "\u2014" else
+            if (FPS_SCALING !in config) "\u2014" else
                 decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
         panel.specsLabels[2].text =
-            if (format is TapeTimelineRenderJob.Format) "\u2014" else when (cs) {
-                VideoRenderJob.ColorSpace.REC_709 -> "Rec. 709"
-                VideoRenderJob.ColorSpace.SRGB ->
-                    if (format is VideoRenderJob.Format && format.pixelFormat.family == YUV) "sYCC" else "sRGB"
+            if (COLOR_PRESET !in config) "\u2014" else when (colorPreset) {
+                ColorPreset.REC_709 -> "Rec. 709"
+                ColorPreset.SRGB -> if (format in VideoContainerRenderJob.FORMATS) "sYCC" else "sRGB"
             }
         panel.specsLabels[3].text =
-            if (format !is VideoRenderJob.Format || scrollSpeeds.isEmpty()) "\u2014" else {
+            if (FPS_SCALING !in config || scrollSpeeds.isEmpty()) "\u2014" else {
                 val speedsDesc = when (scan) {
                     Scan.PROGRESSIVE -> l10n("ui.delivery.scrollPxPerFrame")
                     else -> l10n("ui.delivery.scrollPxPerFrameAndField")
@@ -262,7 +332,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         fun error(msg: String) = panel.addIssue(ERROR_ICON, msg).also { err = true }
         // Check for violated restrictions of the currently selected format.
         val forLabel = format.label
-        if (format is VideoRenderJob.Format) {
+        if (RESOLUTION_SCALING_LOG2 in config) {
             if (format.widthMod2 && scaledWidth % 2 != 0)
                 error(l10n("ui.delivery.issues.widthMod2", forLabel))
             if (format.heightMod2 && scaledHeight % 2 != 0)
@@ -273,7 +343,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
         }
         // Check for fractional scroll speeds.
-        if (format !in WHOLE_PAGE_FORMATS) {
+        if (FPS_SCALING in config) {
             if (scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
                 warn(l10n("ui.delivery.issues.fractionalFrameShift"))
             if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
@@ -291,6 +361,36 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val fileExtAssortment = FileExtAssortment(assName, format.fileExts.sorted(), format.defaultFileExt)
         singleFileWidget.fileExtAssortment = fileExtAssortment
         seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
+        pushFormatPropertyOptions(format.defaultConfig, formatChanged = true)
+    }
+
+    private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
+        pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
+        pushFormatPropertyOptions(CHANNELS, channelsWidget, config, formatChanged)
+        resolutionMultWidget.isEnabled = RESOLUTION_SCALING_LOG2 in config
+        fpsMultWidget.isEnabled = FPS_SCALING in config
+        pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
+        pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)
+        pushFormatPropertyOptions(COLOR_PRESET, colorPresetWidget, config, formatChanged)
+    }
+
+    private fun <T : Any, W> pushFormatPropertyOptions(
+        property: Property<T>?, widget: W, config: Config, formatChanged: Boolean
+    ) where W : Widget<in T>, W : Choice<in T> {
+        val format = formatWidget.value
+        val items = property?.let { format.options(it, config, VOLATILE_PROPERTIES).toList() }.orEmpty()
+        widget.items = items
+        if (property != null && (formatChanged || property !in VOLATILE_PROPERTIES) && property in config)
+            widget.value = config[property]
+        widget.isEnabled = items.size > 1
+    }
+
+    private fun profilePropertyFor(config: Config) = when {
+        TIFF_COMPRESSION in config -> TIFF_COMPRESSION
+        DPX_COMPRESSION in config -> DPX_COMPRESSION
+        PRORES_PROFILE in config -> PRORES_PROFILE
+        DNXHR_PROFILE in config -> DNXHR_PROFILE
+        else -> null
     }
 
     fun addRenderJobToQueue() {
@@ -307,13 +407,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val video = drawnCredits.video
 
             val format = formatWidget.value
+            val config = currentConfig() ?: return
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
-            val transparentGrounding = transparentGroundingWidget.isEnabled && transparentGroundingWidget.value
-            val grounding = if (transparentGrounding) null else project.styling.global.grounding
-            val resolutionScaling = if (resolutionMultWidget.isEnabled) 2.0.pow(resolutionMultWidget.value) else 1.0
-            val fpsScaling = if (fpsMultWidget.isEnabled) fpsMultWidget.value else 1
-            val scan = if (scanWidget.isEnabled) scanWidget.value else Scan.PROGRESSIVE
-            val colorSpace = if (colorSpaceWidget.isEnabled) colorSpaceWidget.value else VideoRenderJob.ColorSpace.SRGB
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
@@ -354,49 +449,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         return
             }
 
-            fun getScaledPageDefImages() = drawnPages.map { it.defImage.copy(universeScaling = resolutionScaling) }
-            fun getFilenameHashPattern() = fileOrDir.name + seqFilenameSuffixWidget.value
-            fun hashPatternToFormatStr(pat: String) = pat.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
+            val pageDefImages = drawnPages.map(DrawnPage::defImage)
+            val filenameHashPattern = fileOrDir.name + seqFilenameSuffixWidget.value
+            val filenamePattern = filenameHashPattern.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
+            val renderJob = format.createRenderJob(config, project, pageDefImages, video, fileOrDir, filenamePattern)
 
-            val renderJob: RenderJob
-            val destination: String
-            when (format) {
-                is WholePageSequenceRenderJob.Format -> {
-                    renderJob = WholePageSequenceRenderJob(
-                        getScaledPageDefImages(),
-                        grounding, project.styling.global.locale, format,
-                        dir = fileOrDir, filenamePattern = hashPatternToFormatStr(getFilenameHashPattern())
-                    )
-                    destination = fileOrDir.resolve(getFilenameHashPattern()).pathString
-                }
-                WholePagePDFRenderJob.FORMAT -> {
-                    renderJob = WholePagePDFRenderJob(
-                        getScaledPageDefImages(),
-                        grounding, project.styling.global.locale,
-                        file = fileOrDir
-                    )
-                    destination = fileOrDir.pathString
-                }
-                is VideoRenderJob.Format -> {
-                    val fileOrPattern: Path
-                    if (format.fileSeq) {
-                        fileOrPattern = fileOrDir.resolve(hashPatternToFormatStr(getFilenameHashPattern()))
-                        destination = fileOrDir.resolve(getFilenameHashPattern()).pathString
-                    } else {
-                        fileOrPattern = fileOrDir
-                        destination = fileOrDir.pathString
-                    }
-                    renderJob = VideoRenderJob(
-                        project, video, transparentGrounding, resolutionScaling, fpsScaling,
-                        scan, colorSpace, format, fileOrPattern
-                    )
-                }
-                is TapeTimelineRenderJob.Format -> {
-                    renderJob = TapeTimelineRenderJob(project, video, fpsScaling, scan, format, fileOrDir)
-                    destination = fileOrDir.pathString
-                }
-                else -> throw IllegalStateException("Internal bug: No renderer known for format '${format.label}'.")
-            }
+            val destination = if (!format.fileSeq) fileOrDir.pathString else
+                fileOrDir.resolve(filenameHashPattern).pathString
 
             ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
         }
@@ -406,6 +465,33 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         get() = spreadsheetNameWidget.value.getOrNull()?.let { selName ->
             drawnProject?.drawnCredits?.find { it.credits.spreadsheetName == selName }
         }
+
+    private fun currentConfig(ignoreVolatile: Boolean = false): Config? {
+        val format = formatWidget.value
+        val lookup = Config.Lookup()
+        if (profileWidget.items.isNotEmpty())
+            when (val value = profileWidget.value) {
+                is TIFF.Compression -> lookup[TIFF_COMPRESSION] = value
+                is DPX.Compression -> lookup[DPX_COMPRESSION] = value
+                is ProResProfile -> lookup[PRORES_PROFILE] = value
+                is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
+            }
+        if (channelsWidget.items.isNotEmpty())
+            lookup[CHANNELS] = channelsWidget.value
+        if (resolutionMultWidget.items.isNotEmpty())
+            lookup[RESOLUTION_SCALING_LOG2] = resolutionMultWidget.value
+        if (fpsMultWidget.items.isNotEmpty())
+            lookup[FPS_SCALING] = fpsMultWidget.value
+        if (depthWidget.items.isNotEmpty())
+            lookup[DEPTH] = depthWidget.value
+        if (scanWidget.items.isNotEmpty())
+            lookup[SCAN] = scanWidget.value
+        if (colorPresetWidget.items.isNotEmpty())
+            lookup[COLOR_PRESET] = colorPresetWidget.value
+        if (ignoreVolatile)
+            lookup -= VOLATILE_PROPERTIES
+        return lookup.findConfig(format)
+    }
 
     fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject

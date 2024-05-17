@@ -19,7 +19,12 @@ Cinecred Changelog
 - The clunky file chooser was replaced with the more familiar OS-native one.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
-- Exported whole page stills now carry color space information.
+- Added matte (alpha channel only) delivery.
+- Added 10-bit, 12-bit, and 16-bit delivery.
+- Image sequence export now exploits all CPU cores.
+- Exported page stills and image sequences now carry color space information.
+- Exported TIFFs now support raw & LZW compression and use the standard Deflate.
+- Exported DPXs now support run-length encoding.
 - Exported SVGs are now more compact and less often fall back to rasterization.
 - Added an about tab listing all contributors to the welcome window.
 
@@ -52,6 +57,7 @@ Cinecred Changelog
 - The font chooser no longer stays disabled when selecting another font family
   because the configured one is missing.
 - New entries added to a list (like page style grid cols) now appear reliably.
+- The delivery format list has been shortened by grouping formats together.
 - The delivery dialog no longer crashes when the project folder has no parent.
 
 ### Compatibility Notes

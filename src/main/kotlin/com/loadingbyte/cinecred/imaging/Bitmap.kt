@@ -216,9 +216,7 @@ class Bitmap private constructor(
                 else -> throw IllegalArgumentException("Cannot get alpha plane of $depth-bit bitmap.")
             }
         }
-        val viewRep = Representation(
-            PixelFormat.of(viewPixelFormatCode), Bitmap.Range.FULL, null, null, AVCHROMA_LOC_UNSPECIFIED, Alpha.OPAQUE
-        )
+        val viewRep = Representation(PixelFormat.of(viewPixelFormatCode))
         return allocateWithoutBufAndSetup(spec.copy(representation = viewRep)) { viewFrame ->
             requireNotClosed { referenceBuffers(frame, viewFrame) }
             viewFrame.data(0, BytePointer().position(memorySegment(comp.plane).address()))
@@ -579,6 +577,7 @@ class Bitmap private constructor(
         val chromaLocation: Int,
         val alpha: Alpha
     ) {
+
         init {
             require(chromaLocation in 0..<AVCHROMA_LOC_NB)
             require((pixelFormat.family == PixelFormat.Family.GRAY) == (colorSpace == null))
@@ -586,6 +585,16 @@ class Bitmap private constructor(
             require(pixelFormat.hasChromaSub == (chromaLocation != AVCHROMA_LOC_UNSPECIFIED))
             require(pixelFormat.hasAlpha == (alpha != Alpha.OPAQUE))
         }
+
+        constructor(pixelFormat: PixelFormat) :
+                this(pixelFormat, Range.FULL, colorSpace = null, Alpha.OPAQUE)
+
+        constructor(pixelFormat: PixelFormat, colorSpace: ColorSpace?, alpha: Alpha) :
+                this(pixelFormat, Range.FULL, colorSpace, alpha)
+
+        constructor(pixelFormat: PixelFormat, range: Range, colorSpace: ColorSpace?, alpha: Alpha) :
+                this(pixelFormat, range, colorSpace, yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, alpha)
+
     }
 
 

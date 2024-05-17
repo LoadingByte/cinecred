@@ -31,7 +31,8 @@ import org.apache.pdfbox.rendering.*
 import org.apache.pdfbox.util.Matrix
 import org.apache.pdfbox.util.Vector
 import org.apache.poi.util.Dimension2DDouble
-import org.bytedeco.ffmpeg.global.avutil.*
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY16LE
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBAF32
 import java.awt.BasicStroke
 import java.awt.Rectangle
 import java.awt.Shape
@@ -593,10 +594,7 @@ class PDFDrawer(
         if (borderAlpha != 0.toShort())
             fillBorder(outPx, ow, oh, borderAlpha)
 
-        val maskRepresentation = Bitmap.Representation(
-            Bitmap.PixelFormat.of(AV_PIX_FMT_GRAY16LE), Bitmap.Range.FULL, colorSpace = null,
-            yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.OPAQUE
-        )
+        val maskRepresentation = Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_GRAY16LE))
         val maskBitmap = Bitmap.allocate(Bitmap.Spec(Resolution(ow, oh), maskRepresentation))
         maskBitmap.put(outPx, ow, byteOrder = ByteOrder.LITTLE_ENDIAN)
         val offset = AffineTransform.getTranslateInstance((tgBounds.x - 1).toDouble(), (tgBounds.y - 1).toDouble())
@@ -646,8 +644,7 @@ class PDFDrawer(
         val res = bitmap.spec.resolution
         val rep = Bitmap.Representation(
             // The transfer function seems to be defined on the output, so we need to convert to the output color space.
-            Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), Bitmap.Range.FULL, group.colorSpace,
-            yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.STRAIGHT
+            Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), group.colorSpace, Bitmap.Alpha.STRAIGHT
         )
         val newBitmap = Bitmap.allocate(Bitmap.Spec(res, rep))
         BitmapConverter.convert(bitmap, newBitmap)

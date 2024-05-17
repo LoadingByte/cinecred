@@ -20,10 +20,7 @@ import kotlin.math.min
 /** Each pixel in the returned gray bitmap is either 0 or 65535 (= -1 in Java's signed representation). */
 fun convert1BitPDFImageToShortMask(pdImage: PDImage): Bitmap? {
     val px = readRawShortPixelsFrom1BitImage(pdImage) ?: return null
-    val rep = Bitmap.Representation(
-        Bitmap.PixelFormat.of(AV_PIX_FMT_GRAY16LE), Bitmap.Range.FULL, colorSpace = null,
-        yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.OPAQUE
-    )
+    val rep = Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_GRAY16LE))
     val bitmap = Bitmap.allocate(Bitmap.Spec(Resolution(pdImage.width, pdImage.height), rep))
     bitmap.put(px, pdImage.width)
     return bitmap
@@ -49,10 +46,7 @@ fun convertPDFImageToXYZAD50(pdImage: PDImage, devCS: DeviceCS?): Pair<Bitmap, B
         }
         else -> return null
     }
-    val rep = Bitmap.Representation(
-        Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), Bitmap.Range.FULL, ColorSpace.XYZD50,
-        yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.STRAIGHT
-    )
+    val rep = Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), ColorSpace.XYZD50, Bitmap.Alpha.STRAIGHT)
     val bitmap = Bitmap.allocate(Bitmap.Spec(Resolution(pdImage.width, pdImage.height), rep))
     bitmap.put(xyzaPx, pdImage.width * 4)
     return Pair(bitmap, promiseOpaque)
@@ -212,10 +206,7 @@ private fun processMask(pdImage: PDImageXObject, rawPx: FloatArray, devCS: Devic
 }
 
 private fun rescaleGrayF32(image: FloatArray, oldW: Int, oldH: Int, newW: Int, newH: Int, nn: Boolean): FloatArray {
-    val rep = Bitmap.Representation(
-        Bitmap.PixelFormat.of(AV_PIX_FMT_GRAYF32), Bitmap.Range.FULL, colorSpace = null,
-        yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.OPAQUE
-    )
+    val rep = Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_GRAYF32))
     Bitmap.allocate(Bitmap.Spec(Resolution(oldW, oldH), rep)).use { oldBitmap ->
         Bitmap.allocate(Bitmap.Spec(Resolution(newW, newH), rep)).use { newBitmap ->
             oldBitmap.put(image, oldW)

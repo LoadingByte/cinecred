@@ -87,9 +87,7 @@ interface BitmapWriter {
                 }
                 Bitmap.PixelFormat.Family.YUV -> throw IllegalArgumentException("YUV is not supported in $formatName.")
             }
-            representation = Bitmap.Representation(
-                Bitmap.PixelFormat.of(pixFmtCode), Bitmap.Range.FULL, colorSpace, null, AVCHROMA_LOC_UNSPECIFIED, alpha
-            )
+            representation = Bitmap.Representation(Bitmap.PixelFormat.of(pixFmtCode), colorSpace, alpha)
 
             val awtCS: AWTColorSpace
             if (isRGB) {

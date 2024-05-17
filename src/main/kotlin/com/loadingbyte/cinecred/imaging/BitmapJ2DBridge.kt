@@ -64,8 +64,7 @@ class BitmapJ2DBridge(private val nativeCM: ColorModel) {
         }
 
         nativeRepresentation = Bitmap.Representation(
-            Bitmap.PixelFormat.of(nativePixFmtCode), Bitmap.Range.FULL, ColorSpace.SRGB,
-            yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, nativeAlpha
+            Bitmap.PixelFormat.of(nativePixFmtCode), ColorSpace.SRGB, nativeAlpha
         )
     }
 

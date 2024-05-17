@@ -8,7 +8,8 @@ import com.loadingbyte.cinecred.natives.skiacapi.loadImage_t
 import com.loadingbyte.cinecred.natives.skiacapi.skiacapi_h.*
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.rendering.RenderDestination
-import org.bytedeco.ffmpeg.global.avutil.*
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY16LE
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBAF32
 import java.awt.BasicStroke
 import java.awt.Rectangle
 import java.awt.Shape
@@ -502,16 +503,8 @@ class Canvas private constructor(
 
     companion object {
 
-        fun compatibleRepresentation(colorSpace: ColorSpace): Bitmap.Representation {
-            return Bitmap.Representation(
-                Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32),
-                Bitmap.Range.FULL,
-                colorSpace,
-                yuvCoefficients = null,
-                AVCHROMA_LOC_UNSPECIFIED,
-                Bitmap.Alpha.PREMULTIPLIED
-            )
-        }
+        fun compatibleRepresentation(colorSpace: ColorSpace): Bitmap.Representation =
+            Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), colorSpace, Bitmap.Alpha.PREMULTIPLIED)
 
         fun forBitmap(bitmap: Bitmap): Canvas {
             val rep = bitmap.spec.representation
@@ -763,8 +756,8 @@ class Canvas private constructor(
             // Create a representation that is supported by Skia and that requires the least possible work by Skia to
             // convert to another color space. We'll convert the bitmap to this representation.
             val outRep = Bitmap.Representation(
-                compatiblePixelFormat, Bitmap.Range.FULL, if (isMask) null else canvasCS,
-                yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED,
+                compatiblePixelFormat,
+                if (isMask) null else canvasCS,
                 if (compatiblePixelFormat.hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
             )
 

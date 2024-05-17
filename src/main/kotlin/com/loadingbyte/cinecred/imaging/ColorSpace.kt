@@ -50,11 +50,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 ) {
                     val res = Resolution(w, 1)
                     val pixelFormat = Bitmap.PixelFormat.of(if (alpha) AV_PIX_FMT_RGBAF32 else AV_PIX_FMT_RGBF32)
-                    val srcRep = Bitmap.Representation(
-                        pixelFormat, Bitmap.Range.FULL, this, null, AVCHROMA_LOC_UNSPECIFIED, alp
-                    )
-                    val srcSpec = Bitmap.Spec(res, srcRep)
-                    val dstSpec = Bitmap.Spec(res, srcRep.copy(colorSpace = dst))
+                    val srcSpec = Bitmap.Spec(res, Bitmap.Representation(pixelFormat, this, alp))
+                    val dstSpec = Bitmap.Spec(res, Bitmap.Representation(pixelFormat, dst, alp))
                     srcBitmap = Bitmap.allocate(srcSpec)
                     dstBitmap = Bitmap.allocate(dstSpec)
                     converter = BitmapConverter(srcSpec, dstSpec)

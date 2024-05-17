@@ -7,7 +7,6 @@ import org.apache.pdfbox.cos.COSArray
 import org.apache.pdfbox.cos.COSBoolean
 import org.apache.pdfbox.cos.COSNumber
 import org.apache.pdfbox.pdmodel.graphics.shading.*
-import org.bytedeco.ffmpeg.global.avutil.AVCHROMA_LOC_UNSPECIFIED
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBAF32
 import java.awt.Point
 import java.awt.Rectangle
@@ -51,8 +50,7 @@ fun materializePDFShadingAsXYZAD50(
     }
 
     val rep = Bitmap.Representation(
-        Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), Bitmap.Range.FULL, ColorSpace.XYZD50,
-        yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED, Bitmap.Alpha.PREMULTIPLIED
+        Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), ColorSpace.XYZD50, Bitmap.Alpha.PREMULTIPLIED
     )
     val bitmap = Bitmap.allocate(Bitmap.Spec(Resolution(bounds.width, bounds.height), rep))
     bitmap.put(xyzaPx, bounds.width * 4)

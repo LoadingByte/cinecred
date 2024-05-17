@@ -11,7 +11,8 @@ import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroupAttributes
-import org.bytedeco.ffmpeg.global.avutil.*
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GBRAPF32
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GBRPF32
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Attr
 import org.w3c.dom.Document
@@ -85,10 +86,7 @@ sealed interface Picture : Closeable {
 
             fun compatibleRepresentation(primaries: ColorSpace.Primaries, hasAlpha: Boolean) = Bitmap.Representation(
                 Bitmap.PixelFormat.of(if (hasAlpha) AV_PIX_FMT_GBRAPF32 else AV_PIX_FMT_GBRPF32),
-                Bitmap.Range.FULL,
                 ColorSpace.of(primaries, ColorSpace.Transfer.LINEAR),
-                yuvCoefficients = null,
-                AVCHROMA_LOC_UNSPECIFIED,
                 if (hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
             )
 

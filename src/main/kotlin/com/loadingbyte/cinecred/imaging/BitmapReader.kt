@@ -72,7 +72,7 @@ object BitmapReader {
             // must also have contiguous memory, i.e., without padding.
             val contiguousRep = Bitmap.Representation(
                 Bitmap.PixelFormat.of(if (hasAlpha) AV_PIX_FMT_RGBAF32 else AV_PIX_FMT_RGBF32),
-                Bitmap.Range.FULL, ColorSpace.XYZD50, yuvCoefficients = null, AVCHROMA_LOC_UNSPECIFIED,
+                ColorSpace.XYZD50,
                 if (hasAlpha) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             )
             Bitmap.allocateContiguous(Bitmap.Spec(res, contiguousRep)).use { contiguous ->
@@ -181,8 +181,9 @@ object BitmapReader {
             else -> AV_PIX_FMT_GBRAPF32
         }
         return Bitmap.Representation(
-            Bitmap.PixelFormat.of(pixelFormatCode), Bitmap.Range.FULL, ColorSpace.XYZD50, yuvCoefficients = null,
-            AVCHROMA_LOC_UNSPECIFIED, if (opaque) Bitmap.Alpha.OPAQUE else Bitmap.Alpha.PREMULTIPLIED
+            Bitmap.PixelFormat.of(pixelFormatCode),
+            ColorSpace.XYZD50,
+            if (opaque) Bitmap.Alpha.OPAQUE else Bitmap.Alpha.PREMULTIPLIED
         )
     }
 

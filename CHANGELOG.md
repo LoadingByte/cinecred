@@ -57,6 +57,7 @@ Cinecred Changelog
 - The font chooser no longer stays disabled when selecting another font family
   because the configured one is missing.
 - New entries added to a list (like page style grid cols) now appear reliably.
+- Embedded videos now bear the text "preview" to explain their low resolution.
 - The delivery format list has been shortened by grouping formats together.
 - The delivery dialog no longer crashes when the project folder has no parent.
 

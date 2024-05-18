@@ -1,15 +1,22 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
+import java.awt.Color
+import java.awt.font.TextLayout
+import java.awt.geom.AffineTransform
 import java.io.IOException
 import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
+import javax.swing.UIManager
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
+import kotlin.math.atan
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
 /** An abstraction for a video that can be drawn onto a [DeferredImage] and is later recognized by [DeferredVideo]. */
@@ -123,7 +130,11 @@ class Tape private constructor(
 
     private abstract class AbstractPreviewCacheLoader<I>(val reader: VideoReader) : PreviewCache.Loader<I> {
 
-        private val previewSpec: Bitmap.Spec
+        private val pictureSpec: Bitmap.Spec
+        private var tape2canvas: BitmapConverter? = null
+        private var canvas2picture: BitmapConverter? = null
+        private var canvasPreviewBitmap: Bitmap? = null
+        private var canvasOverlayBitmap: Bitmap? = null
 
         init {
             val (tapeW, tapeH) = reader.spec.resolution
@@ -134,20 +145,52 @@ class Tape private constructor(
                 Resolution(maxDim, maxDim * tapeH / tapeW)
             else
                 Resolution(maxDim * tapeW / tapeH, maxDim)
-            val previewRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
-            previewSpec = Bitmap.Spec(previewRes, previewRep)
+            val pictureRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
+            pictureSpec = Bitmap.Spec(previewRes, pictureRep)
+            val canvasSpec = Bitmap.Spec(previewRes, Canvas.compatibleRepresentation(pictureRep.colorSpace!!))
+
+            val textShape = TextLayout(l10n("imaging.tapePreview"), UIManager.getFont("defaultFont"), REF_FRC)
+                .getOutline(null)
+            val textRect = textShape.bounds2D
+            val pw = previewRes.widthPx.toDouble()
+            val ph = previewRes.heightPx.toDouble()
+            val diag = sqrt(pw.pow(2) + ph.pow(2))
+            val maxTextH = sqrt(ph.pow(2) + ph.pow(4) / pw.pow(2))
+            val textH = (diag * maxTextH) / (diag + maxTextH * textRect.width / textRect.height)
+            val textTransform = AffineTransform().apply {
+                translate(pw / 2, ph / 2)
+                rotate(-atan(ph / pw))
+                scale(textH / textRect.height)
+                translate(-textRect.centerX, -textRect.centerY)
+            }
+
+            setupSafely({
+                tape2canvas = BitmapConverter(reader.spec, canvasSpec, srcAligned = false, approxTransfer = true)
+                canvas2picture = BitmapConverter(canvasSpec, pictureSpec)
+                canvasPreviewBitmap = Bitmap.allocate(canvasSpec)
+                canvasOverlayBitmap = Bitmap.allocate(canvasSpec)
+                Canvas.forBitmap(canvasOverlayBitmap!!.zero()).use { canvas ->
+                    canvas.fillShape(textShape, Canvas.Shader.Solid(Color.WHITE), transform = textTransform)
+                }
+            }, ::close)
         }
 
-        // Lazily initialize the converter so that when its creation fails, we're in a try-finally block that closes
-        // the loader and consequently the reader.
-        private val previewConverter by lazy {
-            BitmapConverter(reader.spec, previewSpec, srcAligned = false, approxTransfer = true)
+        fun toPreviewPicture(frame: VideoReader.Frame): Picture.Raster {
+            tape2canvas!!.convert(frame.bitmap, canvasPreviewBitmap!!)
+            Canvas.forBitmap(canvasPreviewBitmap!!).use { it.drawImageFast(canvasOverlayBitmap!!) }
+            Bitmap.allocate(pictureSpec).use { picturePreviewBitmap ->
+                canvas2picture!!.convert(canvasPreviewBitmap!!, picturePreviewBitmap)
+                return Picture.Raster(picturePreviewBitmap)
+            }
         }
 
-        fun toPreviewPicture(frame: VideoReader.Frame) =
-            Picture.Raster(Bitmap.allocate(previewSpec).also { previewConverter.convert(frame.bitmap, it) })
-
-        override fun close() = reader.close()
+        override fun close() {
+            reader.close()
+            canvasPreviewBitmap?.close()
+            canvasOverlayBitmap?.close()
+            tape2canvas?.close()
+            canvas2picture?.close()
+        }
 
     }
 

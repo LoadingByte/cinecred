@@ -167,21 +167,7 @@ private class CreditsReader(
     var blockTailDeclaredRow = 0
 
     fun concludePage() {
-        // Note: In concludeStage(), we allow empty scroll stages. However, empty scroll stages do only make sense
-        // when they don't sit next to another scroll stage and when they are not alone on a page.
-        // We remove the empty scroll stages that don't make sense.
-        fun isEmptyScroll(stage: Stage) = stage.style.behavior == PageBehavior.SCROLL && stage.compounds.isEmpty()
-        if (pageStages.isNotEmpty() && !(pageStages.size == 1 && isEmptyScroll(pageStages[0]))) {
-            var idx = 0
-            while (idx < pageStages.size) {
-                val prevStageDoesNotScroll = idx == 0 || pageStages[idx - 1].style.behavior != PageBehavior.SCROLL
-                val nextStageDoesNotScroll = idx == pageStages.lastIndex ||
-                        pageStages[idx + 1].style.behavior != PageBehavior.SCROLL
-                if (!isEmptyScroll(pageStages[idx]) || prevStageDoesNotScroll && nextStageDoesNotScroll)
-                    idx++
-                else
-                    pageStages.removeAt(idx)
-            }
+        if (pageStages.isNotEmpty()) {
             val gapAfterFrames = pageGapAfterFrames ?: if (stageStyle == null) 0 else
                 pageStages.last().style.subsequentGapFrames
             val page = Page(pageStages.toPersistentList(), gapAfterFrames)
@@ -192,8 +178,7 @@ private class CreditsReader(
     }
 
     fun concludeStage(vGapAfter: Double) {
-        // Note: We allow empty scroll stages to connect card stages.
-        if (stageStyle?.behavior == PageBehavior.SCROLL || stageCompounds.isNotEmpty()) {
+        if (stageCompounds.isNotEmpty()) {
             val stageStyle = this.stageStyle!!
             when (stageStyle.behavior) {
                 PageBehavior.CARD -> {

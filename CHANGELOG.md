@@ -21,6 +21,7 @@ Cinecred Changelog
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
 - Added matte (alpha channel only) delivery.
 - Added 10-bit, 12-bit, and 16-bit delivery.
+- Added OpenEXR page still and image sequence delivery.
 - Image sequence export now exploits all CPU cores.
 - Exported page stills and image sequences now carry color space information.
 - Exported TIFFs now support raw & LZW compression and use the standard Deflate.

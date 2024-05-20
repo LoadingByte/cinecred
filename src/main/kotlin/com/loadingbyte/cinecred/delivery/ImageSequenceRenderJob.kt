@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.throwableAwareTask
 import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.LINEAR_REC_709
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
@@ -10,6 +11,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNEL
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
@@ -60,6 +62,9 @@ class ImageSequenceRenderJob private constructor(
             PNG -> BitmapWriter.PNG(family, embedAlpha, colorSpace, config[DEPTH])
             TIFF -> BitmapWriter.TIFF(family, embedAlpha, colorSpace, config[DEPTH], config[TIFF_COMPRESSION])
             DPX -> BitmapWriter.DPX(family, embedAlpha, colorSpace, config[DEPTH], config[DPX_COMPRESSION])
+            EXR -> BitmapWriter.EXR(
+                family, embedAlpha, colorSpace?.primaries, config[DEPTH], config[EXR_COMPRESSION], scaledVideo.fps
+            )
             else -> throw IllegalArgumentException()
         }
 
@@ -134,11 +139,18 @@ class ImageSequenceRenderJob private constructor(
             channelsTimesColorPreset() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
                     fixed(DEPTH, 10) * fixed(CHANNELS, COLOR_AND_ALPHA)
         )
+        private val EXR = Format(
+            "exr",
+            channelsTimesLinearColorPreset() * choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION)
+        )
 
-        val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX)
+        val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR)
 
         private fun channelsTimesColorPreset() =
             choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET) + fixed(CHANNELS, ALPHA)
+
+        private fun channelsTimesLinearColorPreset() =
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, LINEAR_REC_709) + fixed(CHANNELS, ALPHA)
 
     }
 

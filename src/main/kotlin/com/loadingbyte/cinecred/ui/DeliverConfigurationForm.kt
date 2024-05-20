@@ -10,14 +10,14 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_P
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
-import com.loadingbyte.cinecred.imaging.BitmapWriter.DPX
-import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF
+import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnProject
@@ -117,6 +117,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     is DPX.Compression -> when (prof) {
                         DPX.Compression.NONE -> l10n("ui.deliverConfig.profile.uncompressed") + bigger()
                         DPX.Compression.RLE -> l10n("ui.deliverConfig.profile.rle") + smaller()
+                    }
+                    is EXR.Compression -> when (prof) {
+                        EXR.Compression.NONE -> l10n("ui.deliverConfig.profile.uncompressed")
+                        EXR.Compression.RLE -> l10n("ui.deliverConfig.profile.rle")
+                        EXR.Compression.ZIPS -> "ZIPS"
+                        EXR.Compression.ZIP -> "ZIP"
                     }
                     is ProResProfile -> when (prof) {
                         ProResProfile.PRORES_422_PROXY -> "ProRes 422 Proxy"
@@ -219,6 +225,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             widthSpec = WidthSpec.WIDER,
             toString = { cs ->
                 when (cs) {
+                    ColorPreset.LINEAR_REC_709 ->
+                        "Linear Rec. 709  \u2013  BT.709 Gamut, Linear Gamma, Limited YCbCr Range, BT.709 YCbCr Coefficients"
                     ColorPreset.REC_709 ->
                         "Rec. 709  \u2013  BT.709 Gamut, BT.1886 Gamma, Limited YUV Range, BT.709 YUV Coefficients"
                     ColorPreset.SRGB ->
@@ -304,6 +312,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
         panel.specsLabels[2].text =
             if (COLOR_PRESET !in config) "\u2014" else when (colorPreset) {
+                ColorPreset.LINEAR_REC_709 -> "Linear Rec. 709"
                 ColorPreset.REC_709 -> "Rec. 709"
                 ColorPreset.SRGB -> if (format in VideoContainerRenderJob.FORMATS) "sYCC" else "sRGB"
             }
@@ -388,6 +397,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private fun profilePropertyFor(config: Config) = when {
         TIFF_COMPRESSION in config -> TIFF_COMPRESSION
         DPX_COMPRESSION in config -> DPX_COMPRESSION
+        EXR_COMPRESSION in config -> EXR_COMPRESSION
         PRORES_PROFILE in config -> PRORES_PROFILE
         DNXHR_PROFILE in config -> DNXHR_PROFILE
         else -> null
@@ -473,6 +483,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             when (val value = profileWidget.value) {
                 is TIFF.Compression -> lookup[TIFF_COMPRESSION] = value
                 is DPX.Compression -> lookup[DPX_COMPRESSION] = value
+                is EXR.Compression -> lookup[EXR_COMPRESSION] = value
                 is ProResProfile -> lookup[PRORES_PROFILE] = value
                 is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
             }

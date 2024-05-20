@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.ceilDiv
@@ -11,6 +12,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.lang.Byte.toUnsignedInt
+import java.lang.Float.floatToFloat16
 import java.lang.Short.toUnsignedInt
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_SHORT
@@ -18,6 +20,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
 import java.util.*
+import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import javax.imageio.*
 import javax.imageio.metadata.IIOMetadata
@@ -26,6 +29,7 @@ import javax.imageio.stream.FileImageOutputStream
 import javax.imageio.stream.ImageOutputStream
 import javax.imageio.stream.MemoryCacheImageOutputStream
 import kotlin.io.path.outputStream
+import kotlin.math.min
 import kotlin.math.roundToInt
 import java.awt.color.ColorSpace as AWTColorSpace
 
@@ -589,6 +593,276 @@ interface BitmapWriter {
 
         companion object {
             private const val HEADER_SIZE = 1664
+        }
+
+    }
+
+
+    class EXR(
+        family: Bitmap.PixelFormat.Family,
+        private val hasAlpha: Boolean,
+        private val primaries: ColorSpace.Primaries?,
+        private val depth: Int,
+        private val compression: Compression,
+        private val fps: FPS? = null
+    ) : BitmapWriter {
+
+        enum class Compression { NONE, RLE, ZIPS, ZIP }
+
+        private val isGray = family == Bitmap.PixelFormat.Family.GRAY
+        override val representation: Bitmap.Representation
+
+        init {
+            require(depth == 16 || depth == 32) { "Unsupported depth for EXR: $depth" }
+            when (family) {
+                Bitmap.PixelFormat.Family.GRAY ->
+                    require(!hasAlpha) { "Gray with additional alpha is not supported in EXR." }
+                Bitmap.PixelFormat.Family.RGB ->
+                    requireNotNull(primaries) { "Primaries must be supplied when writing color bitmaps." }
+                Bitmap.PixelFormat.Family.YUV ->
+                    throw IllegalArgumentException("YUV is not supported in EXR.")
+            }
+            val pixFmtCode =
+                if (isGray) AV_PIX_FMT_GRAYF32LE else if (hasAlpha) AV_PIX_FMT_GBRAPF32LE else AV_PIX_FMT_GBRPF32LE
+            val colorSpace = primaries?.let { ColorSpace.of(it, ColorSpace.Transfer.LINEAR) }
+            // According to the specification, EXR alpha is premultiplied by convention.
+            val alpha = if (hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
+            representation = Bitmap.Representation(Bitmap.PixelFormat.of(pixFmtCode), colorSpace, alpha)
+        }
+
+        override fun write(bitmap: Bitmap): ByteArray =
+            ByteArrayOutputStream().also { write(bitmap, it) }.toByteArray()
+
+        override fun write(bitmap: Bitmap, file: Path) {
+            // Don't use a buffered stream because our write() method only writes large chunks anyway.
+            file.outputStream().use { write(bitmap, it) }
+        }
+
+        private fun write(bitmap: Bitmap, os: OutputStream) {
+            val (res, rep) = bitmap.spec
+            require(rep == representation) { "Representation mismatch: Expected $representation, got $rep." }
+            val (w, h) = res
+            val rawLineBytes = rep.pixelFormat.planes * w * (depth / 8)
+
+            val headerBytes = writeHeader(w, h, os)
+
+            if (compression == Compression.NONE) {
+                val chunkBytes = 8 + rawLineBytes
+                val chunkOffsetTable = ByteBuffer.allocate(h * 8).order(ByteOrder.LITTLE_ENDIAN)
+                var offset = headerBytes + chunkOffsetTable.capacity().toLong()
+                repeat(h) {
+                    chunkOffsetTable.putLong(offset)
+                    offset += chunkBytes
+                }
+                os.write(chunkOffsetTable.array())
+                val chunk = ByteBuffer.allocate(chunkBytes).order(ByteOrder.LITTLE_ENDIAN)
+                for (y in 0..<h) {
+                    chunk.clear()
+                    chunk.putInt(y)
+                    chunk.putInt(rawLineBytes)
+                    copyLine(bitmap, y, chunk)
+                    os.write(chunk.array())
+                }
+            } else {
+                val chunks = mutableListOf<ByteBuffer>()
+                val chunkH = when (compression) {
+                    Compression.NONE -> throw IllegalStateException()
+                    Compression.RLE, Compression.ZIPS -> 1
+                    Compression.ZIP -> 16
+                }
+                val numChunks = ceilDiv(h, chunkH)
+                val rawBytes = chunkH * rawLineBytes
+                val raw1 = ByteBuffer.allocate(rawBytes).order(ByteOrder.LITTLE_ENDIAN)
+                val raw2 = ByteArray(rawBytes)
+                for (c in 0..<numChunks) {
+                    val curChunkY = c * chunkH
+                    val curChunkH = min(chunkH, h - curChunkY)
+                    val curRawBytes = curChunkH * rawLineBytes
+                    // Copy
+                    raw1.clear()
+                    for (l in 0..<curChunkH)
+                        copyLine(bitmap, curChunkY + l, raw1)
+                    // Reorder
+                    raw1.rewind()
+                    var r21 = 0
+                    var r22 = curRawBytes / 2
+                    repeat(curRawBytes / 2) {
+                        raw2[r21++] = raw1.get()
+                        raw2[r22++] = raw1.get()
+                    }
+                    // Predictor
+                    var prev = raw2[0].toInt()
+                    for (i in 1..<curRawBytes) {
+                        val curr = raw2[i].toInt()
+                        val diff = curr - prev + 384
+                        prev = curr
+                        raw2[i] = diff.toByte()
+                    }
+                    // Compressor
+                    val chunk = ByteBuffer.allocate(8 + curRawBytes - 1).order(ByteOrder.LITTLE_ENDIAN).position(8)
+                    val fits = when (compression) {
+                        Compression.NONE -> throw IllegalStateException()
+                        Compression.RLE -> runLengthEncode(raw2, curRawBytes, chunk)
+                        Compression.ZIPS, Compression.ZIP -> {
+                            val d = Deflater()
+                            d.setInput(raw2, 0, curRawBytes)
+                            d.finish()
+                            d.deflate(chunk)
+                            d.end()
+                            d.finished()
+                        }
+                    }
+                    if (!fits)
+                        chunk.position(8).put(raw1.limit(curRawBytes))
+                    // Chunk header
+                    chunk.putInt(0, curChunkY)
+                    chunk.putInt(4, chunk.position() - 8)
+                    chunks += chunk
+                }
+                val chunkOffsetTable = ByteBuffer.allocate(numChunks * 8).order(ByteOrder.LITTLE_ENDIAN)
+                var offset = headerBytes + chunkOffsetTable.capacity().toLong()
+                for (chunk in chunks) {
+                    chunkOffsetTable.putLong(offset)
+                    offset += chunk.position()
+                }
+                os.write(chunkOffsetTable.array())
+                for (chunk in chunks)
+                    os.write(chunk.array(), 0, chunk.position())
+            }
+        }
+
+        private fun copyLine(src: Bitmap, y: Int, dst: ByteBuffer) {
+            val w = src.spec.resolution.widthPx
+            for (plane in if (isGray) intArrayOf(0) else if (hasAlpha) intArrayOf(3, 1, 0, 2) else intArrayOf(1, 0, 2))
+                if (depth == 32)
+                    dst.put(src.memorySegment(plane).asSlice(y * src.linesize(plane).toLong(), w * 4L).asByteBuffer())
+                else {
+                    val seg = src.memorySegment(plane)
+                    var s = y * src.linesize(plane).toLong()
+                    repeat(w) {
+                        dst.putShort(floatToFloat16(seg.getFloatLE(s)))
+                        s += 4L
+                    }
+                }
+        }
+
+        private fun runLengthEncode(raw: ByteArray, rawBytes: Int, stream: ByteBuffer): Boolean {
+            var i = 0
+            var o = stream.position()
+            val out = stream.array()
+            var run = 1
+            var copy = 0
+            while (i < rawBytes) {
+                while (i + run < rawBytes && raw[i] == raw[i + run] && run < 128)
+                    run++
+                if (run >= 3) {
+                    if (o + 2 >= out.size)
+                        return false
+                    out[o++] = (run - 1).toByte()
+                    out[o++] = raw[i]
+                    i += run
+                } else {
+                    if (i + run < rawBytes)
+                        copy += run
+                    while (i + copy < rawBytes && copy < 127 && raw[i + copy] != raw[i + copy - 1])
+                        copy++
+                    if (o + 1 + copy >= out.size)
+                        return false
+                    out[o++] = (-copy).toByte()
+                    System.arraycopy(raw, i, out, o, copy)
+                    i += copy
+                    o += copy
+                    copy = 0
+                }
+                run = 1
+            }
+            stream.position(o)
+            return true
+        }
+
+        private fun writeHeader(w: Int, h: Int, os: OutputStream): Int {
+            val buf = ByteBuffer.allocate(2048).order(ByteOrder.LITTLE_ENDIAN)
+
+            buf.putInt(20000630)  // magic number
+            buf.putInt(2)  // version & flags
+
+            val channels = if (isGray) charArrayOf('Y') else if (hasAlpha) charArrayOf('A', 'B', 'G', 'R') else
+                charArrayOf('B', 'G', 'R')
+            buf.put("channels\u0000chlist\u0000".toByteArray())
+            buf.putInt(channels.size * 18 + 1)
+            for (channel in channels) {
+                buf.put(channel.code.toByte())
+                buf.put(0)
+                buf.putInt(if (depth == 16) 1 else 2)  // pixel type
+                buf.putInt(0)  // pLinear & reserved
+                buf.putInt(1)  // x sampling
+                buf.putInt(1)  // y sampling
+            }
+            buf.put(0)
+
+            buf.put("compression\u0000compression\u0000".toByteArray())
+            buf.putInt(1)
+            buf.put(compression.ordinal.toByte())
+
+            buf.put("dataWindow\u0000box2i\u0000".toByteArray())
+            buf.putInt(16)
+            buf.putInt(0)
+            buf.putInt(0)
+            buf.putInt(w - 1)
+            buf.putInt(h - 1)
+
+            buf.put("displayWindow\u0000box2i\u0000".toByteArray())
+            buf.putInt(16)
+            buf.putInt(0)
+            buf.putInt(0)
+            buf.putInt(w - 1)
+            buf.putInt(h - 1)
+
+            buf.put("lineOrder\u0000lineOrder\u0000".toByteArray())
+            buf.putInt(1)
+            buf.put(0)
+
+            buf.put("pixelAspectRatio\u0000float\u0000".toByteArray())
+            buf.putInt(4)
+            buf.putFloat(1f)
+
+            buf.put("screenWindowCenter\u0000v2f\u0000".toByteArray())
+            buf.putInt(8)
+            buf.putLong(0)
+
+            buf.put("screenWindowWidth\u0000float\u0000".toByteArray())
+            buf.putInt(4)
+            buf.putFloat(1f)
+
+            primaries?.chromaticities?.let { c ->
+                buf.put("chromaticities\u0000chromaticities\u0000".toByteArray())
+                buf.putInt(32)
+                buf.putFloat(c.rx)
+                buf.putFloat(c.ry)
+                buf.putFloat(c.gx)
+                buf.putFloat(c.gy)
+                buf.putFloat(c.bx)
+                buf.putFloat(c.by)
+                buf.putFloat(c.wx)
+                buf.putFloat(c.wy)
+            }
+
+            if (fps != null) {
+                buf.put("framesPerSecond\u0000rational\u0000".toByteArray())
+                buf.putInt(8)
+                buf.putInt(fps.numerator)
+                buf.putInt(fps.denominator)
+            }
+
+            val writer = "Cinecred $VERSION".toByteArray()
+            buf.put("writer\u0000string\u0000".toByteArray())
+            buf.putInt(writer.size)
+            buf.put(writer)
+
+            buf.put(0)
+
+            os.write(buf.array(), 0, buf.position())
+            return buf.position()
         }
 
     }

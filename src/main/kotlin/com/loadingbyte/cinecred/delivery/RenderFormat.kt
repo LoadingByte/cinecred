@@ -1,8 +1,7 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.imaging.Bitmap
-import com.loadingbyte.cinecred.imaging.BitmapWriter.DPX
-import com.loadingbyte.cinecred.imaging.BitmapWriter.TIFF
+import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredVideo
@@ -74,6 +73,7 @@ abstract class RenderFormat(
             val SCAN = Property(*Bitmap.Scan.values(), default = Bitmap.Scan.PROGRESSIVE)
             val TIFF_COMPRESSION = Property(*TIFF.Compression.values(), default = TIFF.Compression.DEFLATE)
             val DPX_COMPRESSION = Property(*DPX.Compression.values(), default = DPX.Compression.NONE)
+            val EXR_COMPRESSION = Property(*EXR.Compression.values(), default = EXR.Compression.ZIP)
             val PRORES_PROFILE = Property(*ProResProfile.values(), default = ProResProfile.PRORES_422)
             val DNXHR_PROFILE = Property(*DNxHRProfile.values(), default = DNxHRProfile.DNXHR_HQ)
         }
@@ -166,6 +166,11 @@ abstract class RenderFormat(
         val yuvCoefficients: Bitmap.YUVCoefficients,
         val yuvRange: Bitmap.Range
     ) {
+        LINEAR_REC_709(
+            ColorSpace.of(ColorSpace.Primaries.BT709, ColorSpace.Transfer.LINEAR),
+            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709),
+            Bitmap.Range.LIMITED
+        ),
         REC_709(
             ColorSpace.BT709,
             Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709),

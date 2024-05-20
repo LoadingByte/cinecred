@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset
+import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.LINEAR_REC_709
 import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.SRGB
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
@@ -11,6 +12,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNEL
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.imaging.*
@@ -72,6 +74,7 @@ class WholePageSequenceRenderJob private constructor(
             PNG -> BitmapWriter.PNG(family, embedAlpha, colorSpace, config[DEPTH])
             TIFF -> BitmapWriter.TIFF(family, embedAlpha, colorSpace, config[DEPTH], config[TIFF_COMPRESSION])
             DPX -> BitmapWriter.DPX(family, embedAlpha, colorSpace, config[DEPTH], config[DPX_COMPRESSION])
+            EXR -> BitmapWriter.EXR(family, embedAlpha, colorSpace?.primaries, config[DEPTH], config[EXR_COMPRESSION])
             else -> null
         }
 
@@ -84,7 +87,7 @@ class WholePageSequenceRenderJob private constructor(
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
 
             when (format) {
-                PNG, TIFF, DPX -> {
+                PNG, TIFF, DPX, EXR -> {
                     val res = Resolution(pageWidth, pageHeight)
                     val rep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
                     Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
@@ -159,15 +162,22 @@ class WholePageSequenceRenderJob private constructor(
             channelsTimesColorPreset() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
                     fixed(DEPTH, 10) * fixed(CHANNELS, COLOR_AND_ALPHA)
         )
+        private val EXR = Format(
+            "exr",
+            channelsTimesLinearColorPreset() * choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION)
+        )
         private val SVG = Format(
             "svg",
             choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, SRGB)
         )
 
-        val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, SVG)
+        val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR, SVG)
 
         private fun channelsTimesColorPreset(default: ColorPreset = COLOR_PRESET.standardDefault) =
             choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET, default = default) + fixed(CHANNELS, ALPHA)
+
+        private fun channelsTimesLinearColorPreset() =
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, LINEAR_REC_709) + fixed(CHANNELS, ALPHA)
 
     }
 

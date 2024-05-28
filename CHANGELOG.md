@@ -16,6 +16,7 @@ Cinecred Changelog
   controlled via a new page gap column in the spreadsheet.
 - Embedded videos can now be aligned in the middle or at the end of the time
   range in which they appear.
+- DeckLink cards are now supported by the video preview.
 - The clunky file chooser was replaced with the more familiar OS-native one.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
@@ -59,6 +60,9 @@ Cinecred Changelog
   because the configured one is missing.
 - New entries added to a list (like page style grid cols) now appear reliably.
 - Embedded videos now bear the text "preview" to explain their low resolution.
+- The video preview now plays more fluently.
+- The video preview now continues playing when the credits or styling change,
+  but stops when scrubbing.
 - The delivery format list has been shortened by grouping formats together.
 - The delivery dialog no longer crashes when the project folder has no parent.
 

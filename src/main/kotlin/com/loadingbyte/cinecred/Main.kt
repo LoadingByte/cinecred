@@ -9,6 +9,7 @@ import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
@@ -73,6 +74,7 @@ fun main(args: Array<String>) {
     System.loadLibrary("harfbuzz")
     System.loadLibrary("zimg")
     System.loadLibrary("nfd")
+    System.loadLibrary("decklinkcapi")
 
     // Make JavaCPP and FlatLaf load their native libraries from java.library.path.
     System.setProperty("org.bytedeco.javacpp.cacheLibraries", "false")
@@ -88,6 +90,10 @@ fun main(args: Array<String>) {
     avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
     // Redirect FFmpeg's logging output to slf4j.
     avutil.setLogCallback(FFmpegLogCallback)
+
+    // Already load the currently connected DeckLink devices so that they can be later passed to clients all in one go.
+    // This is important because one client preselects the last selected device from the first device list it gets.
+    DeckLink.preload()
 
     // Regularly suggest to run the GC. Without this, the GC usually only runs when there's memory pressure, but as our
     // configured maximum heap size is pretty large, there is rarely pressure. Thus, a lot of garbage lingers around on

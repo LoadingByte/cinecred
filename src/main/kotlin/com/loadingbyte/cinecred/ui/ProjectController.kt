@@ -10,13 +10,17 @@ import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
+import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
+import com.loadingbyte.cinecred.ui.ctrl.PlaybackCtrl
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
+import com.loadingbyte.cinecred.ui.view.playback.PlaybackDialog
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Font
 import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -59,9 +63,10 @@ class ProjectController(
     // STEP 1:
     // Create and open the project UI.
 
+    val playbackCtrl: PlaybackCtrlComms = PlaybackCtrl(this)
     val projectFrame = ProjectFrame(this)
     val stylingDialog = StylingDialog(this)
-    val videoDialog = VideoDialog(this)
+    val playbackDialog = PlaybackDialog(this, playbackCtrl)
     val deliveryDialog = DeliveryDialog(this)
 
     init {
@@ -230,7 +235,7 @@ class ProjectController(
                 if (drawnProject != null) {
                     projectFrame.panel.updateProject(drawnProject)
                     stylingDialog.panel.updateProject(drawnProject)
-                    videoDialog.panel.updateProject(drawnProject)
+                    playbackCtrl.updateProject(drawnProject)
                     deliveryDialog.panel.configurationForm.updateProject(drawnProject)
                 }
             }
@@ -243,6 +248,7 @@ class ProjectController(
         )
             return false
 
+        playbackCtrl.closeProject()
         OVERLAYS_PREFERENCE.removeListener(overlaysListener)
 
         onClose()
@@ -258,15 +264,15 @@ class ProjectController(
 
     private fun getDialog(type: ProjectDialogType) = when (type) {
         ProjectDialogType.STYLING -> stylingDialog
-        ProjectDialogType.VIDEO -> videoDialog
+        ProjectDialogType.VIDEO -> playbackDialog
         ProjectDialogType.DELIVERY -> deliveryDialog
     }
 
     fun setDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
         getDialog(type).isVisible = isVisible
         projectFrame.panel.onSetDialogVisible(type, isVisible)
-        if (type == ProjectDialogType.VIDEO && !isVisible)
-            videoDialog.panel.onHide()
+        if (type == ProjectDialogType.VIDEO)
+            playbackCtrl.setDialogVisibility(isVisible)
     }
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean {
@@ -277,14 +283,37 @@ class ProjectController(
         // process key events even inside the color picker popup.
         while (window is Window && window.type == Window.Type.POPUP)
             window = window.owner
-        return when {
-            window == videoDialog && videoDialog.panel.onKeyEvent(event) -> true
-            (window == projectFrame || window == stylingDialog || window == videoDialog) &&
-                    projectFrame.panel.onKeyEvent(event) -> true
-            (window == projectFrame || window == stylingDialog || window == videoDialog) &&
-                    stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event) -> true
-            else -> false
+        if (window != projectFrame && window != stylingDialog && window != playbackDialog && window != deliveryDialog)
+            return false
+        if (projectFrame.panel.onKeyEvent(event) || stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event))
+            return true
+        when (event.modifiersEx) {
+            0 -> when (event.keyCode) {
+                VK_J -> playbackCtrl.rewind()
+                VK_K -> playbackCtrl.pause()
+                VK_L -> playbackCtrl.play()
+                VK_SPACE -> playbackCtrl.togglePlay()
+                VK_LEFT, VK_KP_LEFT -> playbackCtrl.scrubRelativeFrames(-1)
+                VK_RIGHT, VK_KP_RIGHT -> playbackCtrl.scrubRelativeFrames(1)
+                VK_HOME -> playbackCtrl.scrub(0)
+                VK_END -> playbackCtrl.scrub(Int.MAX_VALUE)
+                VK_F11 -> playbackCtrl.toggleFullScreen()
+                VK_ESCAPE -> playbackCtrl.setFullScreen(false)
+                else -> return false
+            }
+            SHIFT_DOWN_MASK -> when (event.keyCode) {
+                VK_LEFT, VK_KP_LEFT -> playbackCtrl.scrubRelativeSeconds(-1)
+                VK_RIGHT, VK_KP_RIGHT -> playbackCtrl.scrubRelativeSeconds(1)
+                else -> return false
+            }
+            CTRL_DOWN_MASK -> when (event.keyCode) {
+                VK_L -> playbackCtrl.toggleDeckLinkConnected()
+                VK_1 -> playbackCtrl.toggleActualSize()
+                else -> return false
+            }
+            else -> return false
         }
+        return true
     }
 
     fun pollCredits() {

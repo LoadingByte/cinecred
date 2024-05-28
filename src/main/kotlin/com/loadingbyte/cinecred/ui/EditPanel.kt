@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toHex24
 import com.loadingbyte.cinecred.drawer.*
+import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
@@ -13,8 +14,10 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
+import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.*
+import com.loadingbyte.cinecred.ui.view.playback.PlaybackControlsPanel
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -175,6 +178,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.masterCtrl.showWelcomeFrame()
     }
 
+    private val playbackControls = PlaybackControlsPanel(ctrl.playbackCtrl).apply {
+        isVisible = false
+    }
+
     private val creditsTabs = newPreviewTabbedPane().apply {
         addChangeListener { displayRuntimeOfSelectedCredits() }
     }
@@ -239,6 +246,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         // Credits polling is usually disabled; it will be enabled when it's available.
         updateCreditsPolling(false)
 
+        // Hide the playback controls when there are no DeckLink cards available.
+        ctrl.playbackCtrl.registerView(object : PlaybackViewComms {
+            override fun setDeckLinks(deckLinks: List<DeckLink>) {
+                playbackControls.isVisible = deckLinks.isNotEmpty()
+            }
+        })
+
         val zoomTooltip = l10n("ui.edit.zoom") + " (" + intArrayOf(VK_PLUS, VK_MINUS, VK_0).joinToString {
             getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
         } + ")"
@@ -294,6 +308,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(browseProjectDirButton)
             add(JSeparator(JSeparator.VERTICAL), "growy")
             add(homeButton)
+            add(playbackControls, "newline, span, growx, gapx 8 8, hidemode 3")
             add(JSeparator(), "newline, span, growx")
             add(previewPanel, "newline, span, grow, push")
         }

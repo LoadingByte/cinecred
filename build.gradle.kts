@@ -410,6 +410,14 @@ for (platform in Platform.values()) {
         repositoryDir = checkoutNFD.flatMap { it.repositoryDir }
         outputFile = srcMainNatives(platform).file(platform.os.codeLib("nfd"))
     }
+
+    tasks.register<BuildDeckLinkCAPI>("buildDeckLinkCAPIFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the DeckLink CAPI native library for ${platform.label.capitalized()}."
+        forPlatform = platform
+        capiDir = srcDecklinkcapiCpp
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("decklinkcapi"))
+    }
 }
 
 tasks.register<Jextract>("jextractSkiaCAPI") {
@@ -454,6 +462,14 @@ tasks.register<Jextract>("jextractNFD") {
     outputDir = srcMainJava
 }
 
+tasks.register<Jextract>("jextractDeckLinkCAPI") {
+    group = "Native"
+    description = "Extracts Java bindings for the DeckLink CAPI native library."
+    targetPackage = "com.loadingbyte.cinecred.natives.decklinkcapi"
+    headerFile = srcDecklinkcapiCpp.file("decklinkcapi.h")
+    outputDir = srcMainJava
+}
+
 
 val srcMainJava get() = layout.projectDirectory.dir("src/main/java")
 val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
@@ -462,6 +478,7 @@ val srcMainNatives get() = layout.projectDirectory.dir("src/main/natives")
 fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
 
 val srcSkiacapiCpp get() = layout.projectDirectory.dir("src/skiacapi/cpp")
+val srcDecklinkcapiCpp get() = layout.projectDirectory.dir("src/decklinkcapi/cpp")
 
 val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
     val result = TreeMap<String, Properties>()

@@ -26,6 +26,10 @@ val UI_LOCALE_PREFERENCE: Preference<LocaleWish> = LocaleWishPreference("uiLocal
 val CHECK_FOR_UPDATES_PREFERENCE: Preference<Boolean> = BooleanPreference("checkForUpdates", true)
 val WELCOME_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("welcomeHintTrackPending", true)
 val PROJECT_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("projectHintTrackPending", true)
+val DECK_LINK_ID_PREFERENCE: Preference<String> = StringPreference("deckLinkId", "null")
+val DECK_LINK_MODE_PREFERENCE: Preference<String> = StringPreference("deckLinkMode", "null")
+val DECK_LINK_DEPTH_PREFERENCE: Preference<Int> = IntPreference("deckLinkDepth", 8)
+val DECK_LINK_CONNECTED_PREFERENCE: Preference<Boolean> = BooleanPreference("deckLinkConnected", false)
 val PROJECT_DIRS_PREFERENCE: Preference<List<Path>> = PathListPreference("projectDirs")
 val OVERLAYS_PREFERENCE: Preference<List<ConfigurableOverlay>> = OverlayListPreference("overlay")
 
@@ -64,6 +68,18 @@ private abstract class AbstractPreference<P : Any> : Preference<P> {
 private class BooleanPreference(override val key: String, private val def: Boolean) : AbstractPreference<Boolean>() {
     override fun doGet() = PreferencesToml.get(key) as? Boolean ?: def
     override fun doSet(value: Boolean) = PreferencesToml.set(key, value)
+}
+
+
+private class IntPreference(override val key: String, private val def: Int) : AbstractPreference<Int>() {
+    override fun doGet() = PreferencesToml.get(key) as? Int ?: def
+    override fun doSet(value: Int) = PreferencesToml.set(key, value)
+}
+
+
+private class StringPreference(override val key: String, private val def: String) : AbstractPreference<String>() {
+    override fun doGet() = PreferencesToml.get(key) as? String ?: def
+    override fun doSet(value: String) = PreferencesToml.set(key, value)
 }
 
 

@@ -6,6 +6,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.colorFromHex
+import com.loadingbyte.cinecred.common.setWindowCanFullScreenMacOS
 import java.awt.*
 import java.awt.RenderingHints.*
 import java.awt.event.*
@@ -448,6 +449,13 @@ fun Window.setup() {
         is JFrame -> defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
         is JDialog -> defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
     }
+}
+
+fun Dialog.setup() {
+    (this as Window).setup()
+    // On macOS, enable the system-native full-screen buttons also for dialogs.
+    if (SystemInfo.isMacOS)
+        setWindowCanFullScreenMacOS(this, true)
 }
 
 fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Double, heightFrac: Double) {

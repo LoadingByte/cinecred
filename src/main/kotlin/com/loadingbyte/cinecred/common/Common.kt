@@ -27,6 +27,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.text.MessageFormat
 import java.text.NumberFormat
 import java.util.*
+import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.swing.JComponent
@@ -144,6 +145,15 @@ inline fun throwableAwareTask(crossinline task: () -> Unit) = Runnable {
         task()
     } catch (t: Throwable) {
         Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), t)
+    }
+}
+
+inline fun <V> throwableAwareValuedTask(crossinline task: () -> V) = Callable<V?> {
+    try {
+        task()
+    } catch (t: Throwable) {
+        Thread.getDefaultUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), t)
+        null
     }
 }
 

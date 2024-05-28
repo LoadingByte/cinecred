@@ -18,6 +18,7 @@ import com.loadingbyte.cinecred.natives.zimg.zimg_image_buffer
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_buffer_const
 import com.loadingbyte.cinecred.natives.zimg.zimg_image_format
 import jdk.incubator.vector.FloatVector
+import jdk.incubator.vector.IntVector
 import jdk.incubator.vector.Vector
 import jdk.incubator.vector.VectorOperators.*
 import jdk.incubator.vector.VectorShape
@@ -42,6 +43,7 @@ import jdk.incubator.vector.ByteVector.SPECIES_PREFERRED as B
 import jdk.incubator.vector.ByteVector.fromMemorySegment as vec
 import jdk.incubator.vector.FloatVector.SPECIES_PREFERRED as F
 import jdk.incubator.vector.FloatVector.fromMemorySegment as vec
+import jdk.incubator.vector.IntVector.SPECIES_PREFERRED as I
 import jdk.incubator.vector.ShortVector.SPECIES_PREFERRED as S
 import jdk.incubator.vector.ShortVector.fromMemorySegment as vec
 
@@ -117,6 +119,7 @@ class BitmapConverter(
                 PLANAR_FLOAT -> PlanarFloatStage
                 ADD_ALPHA_CHANNEL -> AddAlphaChannelStage
                 UN_PREMUL_OR_DROP_ALPHA_CHANNEL -> UnPremulOrDropAlphaChannelStage(promiseOpaque)
+                LIMITED_X2RGB10BE -> LimitedX2RGB10BEStage
                 SWS -> SwsStage(effSpecs[i], effSpecs[i + 1])
                 SKCMS -> SkcmsStage(effSpecs[i], effSpecs[i + 1], promiseOpaque)
                 ZIMG -> ZimgStage(effSpecs[i], effSpecs[i + 1], promiseOpaque, approxTransfer, nearestNeighbor)
@@ -232,12 +235,13 @@ class BitmapConverter(
         private val HALF_VLEN = VLEN / 2
         private val QUART_VLEN = VLEN / 4
         private val EIGHTH_VLEN = VLEN / 8
+        private val SIXTEENTH_VLEN = VLEN / 16
 
     }
 
 
     private enum class StageType {
-        BLIT, PLANAR_FLOAT, ADD_ALPHA_CHANNEL, UN_PREMUL_OR_DROP_ALPHA_CHANNEL, SWS, SKCMS, ZIMG
+        BLIT, PLANAR_FLOAT, ADD_ALPHA_CHANNEL, UN_PREMUL_OR_DROP_ALPHA_CHANNEL, LIMITED_X2RGB10BE, SWS, SKCMS, ZIMG
     }
 
 
@@ -405,7 +409,7 @@ class BitmapConverter(
                     // Blit stage
                     link(BLIT, !ali, fmt, pri, trc, pmu, con, res)
 
-                    // Planar float stage & SWS stage
+                    // Planar float stage & limited X2RGB10BE stage & SWS stage
                     // Note: We first give our planar float stage a chance, because converting to PF is preferred over
                     // letting SWS convert to the zimg-equivalent non-float pixel format and then passing that to zimg.
                     // In addition, SWS is useful to directly convert between interleaved pixel formats.
@@ -420,6 +424,14 @@ class BitmapConverter(
                             link(PLANAR_FLOAT, false, toFmt, pri, trc, pmu, con, res)
                         }
                     }
+                    if (ali && fmtObj.isFullRGBAF)
+                        for (toFmt in firstToFmt..fmtObjs.lastIndex) {
+                            val toFmtObj = fmtObjs[toFmt]
+                            if (toFmtObj.px.code == AV_PIX_FMT_X2RGB10BE && toFmtObj.range == LIMITED) {
+                                link(LIMITED_X2RGB10BE, true, toFmt, pri, trc, pmu, con, res)
+                                link(LIMITED_X2RGB10BE, false, toFmt, pri, trc, pmu, con, res)
+                            }
+                        }
                     for (toFmt in firstToFmt..fmtObjs.lastIndex) {
                         val toFmtObj = fmtObjs[toFmt]
                         if (fmtObj.hasSameCompositionAs(toFmtObj) && (
@@ -586,6 +598,7 @@ class BitmapConverter(
                 it == AV_PIX_FMT_GRAYF32 || it == AV_PIX_FMT_RGBF32 || it == AV_PIX_FMT_RGBAF32 ||
                         it == AV_PIX_FMT_GBRPF32 || it == AV_PIX_FMT_GBRAPF32
             }
+            val isFullRGBAF = px.code == AV_PIX_FMT_RGBAF32 && range == FULL
             val isFullGBRPF = px.code == AV_PIX_FMT_GBRPF32 && range == FULL
             val isFullGBRAPF = px.code == AV_PIX_FMT_GBRAPF32 && range == FULL
             val isSupportedByPFAsDirty: Boolean
@@ -744,6 +757,44 @@ class BitmapConverter(
             fun isNoOp(promiseOpaque: Boolean, srcSpec: Bitmap.Spec, dstSpec: Bitmap.Spec) =
                 promiseOpaque || srcSpec.representation.alpha == STRAIGHT && dstSpec.representation.alpha == OPAQUE
         }
+
+    }
+
+
+    /**
+     * This stage converts aligned full-range interleaved float32 RGBA to potentially unaligned limited-range X2RGB10BE.
+     * It is mainly useful for 10-bit DeckLink output, as swscale doesn't support any of the 10-bit RGB pixel formats
+     * that are also understood by the DeckLink API.
+     */
+    private object LimitedX2RGB10BEStage : Stage {
+
+        override fun process(src: Bitmap, dst: Bitmap) {
+            val srcSeg = src.memorySegment(0)
+            val dstSeg = dst.memorySegment(0)
+            val srcLs = src.linesize(0)
+            val dstLs = dst.linesize(0)
+            val (w, h) = src.spec.resolution
+            val stepsPerLine = ceilDiv(w, SIXTEENTH_VLEN)
+            val addVec = FloatVector.broadcast(F, 64.5f)
+            val facVec = FloatVector.broadcast(F, 876f)
+            val shlVec = IntVector.fromArray(I, IntArray(QUART_VLEN) { i -> 30 - 10 * ((i + 1) % 4) }, 0)
+            for (y in 0L..<h.toLong()) {
+                var s = y * srcLs
+                var d = y * dstLs
+                repeat(stepsPerLine) {
+                    val vecI = vec(F, srcSeg, s, NBO).mul(facVec).min(facVec).add(addVec).max(addVec).convert(F2I, 0)
+                        .lanewise(LSHL, shlVec)
+                    for (p in 0..<SIXTEENTH_VLEN)
+                        dstSeg.putIntBE(d + (p shl 2), (vecI.reinterpretShape(I128, p) as IntVector).reduceLanes(OR))
+                    s += VLEN
+                    d += QUART_VLEN
+                }
+            }
+        }
+
+        override fun close() {}
+
+        private val I128 = I.withShape(VectorShape.forBitSize(128))
 
     }
 

@@ -1,8 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
-import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.setWindowCanFullScreenMacOS
 import com.loadingbyte.cinecred.ui.helper.center
 import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.helper.snapToSide
@@ -24,10 +22,6 @@ private fun JDialog.setupProjectDialog(ctrl: ProjectController, type: ProjectDia
             ctrl.setDialogVisible(type, false)
         }
     })
-
-    // On macOS, enable the system-native full-screen buttons also for dialogs.
-    if (SystemInfo.isMacOS)
-        setWindowCanFullScreenMacOS(this, true)
 }
 
 
@@ -39,19 +33,6 @@ class StylingDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
         setupProjectDialog(ctrl, ProjectDialogType.STYLING)
         // Make the window fill the right half of the screen.
         snapToSide(ctrl.openOnScreen, rightSide = true)
-        contentPane.add(panel)
-    }
-
-}
-
-
-class VideoDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
-
-    val panel = VideoPanel(ctrl)
-
-    init {
-        setupProjectDialog(ctrl, ProjectDialogType.VIDEO)
-        center(ctrl.openOnScreen, 0.5, 0.5)
         contentPane.add(panel)
     }
 

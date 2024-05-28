@@ -1,5 +1,6 @@
 * text eol=lf
 *.bat text eol=crlf
+*.idl text eol=crlf
 
 *.dll binary
 *.dylib binary

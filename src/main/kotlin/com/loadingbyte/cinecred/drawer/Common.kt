@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
@@ -8,15 +9,14 @@ import com.loadingbyte.cinecred.project.ContentStyle
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PartitionId
 import com.loadingbyte.cinecred.project.VJustify
-import java.awt.Color
 import java.util.*
 
 
-val STAGE_GUIDE_COLOR = Color(182, 70, 250)
-val SPINE_GUIDE_COLOR = Color(0, 200, 200)
-val BODY_CELL_GUIDE_COLOR = Color(130, 50, 0)
-val BODY_WIDTH_GUIDE_COLOR = Color(130, 0, 0)
-val HEAD_TAIL_GUIDE_COLOR = Color(0, 100, 0)
+val STAGE_GUIDE_COLOR = Color4f.fromSRGBHexString("#B646FA")
+val SPINE_GUIDE_COLOR = Color4f.fromSRGBHexString("#00C8C8")
+val BODY_CELL_GUIDE_COLOR = Color4f.fromSRGBHexString("#823200")
+val BODY_WIDTH_GUIDE_COLOR = Color4f.fromSRGBHexString("#820000")
+val HEAD_TAIL_GUIDE_COLOR = Color4f.fromSRGBHexString("#006400")
 
 
 fun DeferredImage.drawString(

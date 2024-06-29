@@ -4,8 +4,6 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.toHex24
-import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
@@ -122,16 +120,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val guidesToggleButton = newToolbarToggleButtonWithKeyListener(
         GUIDES_ICON, tooltip = "<html>" + l10n("ui.edit.guidesTooltip.title") + "<br>" +
-                "<font color=\"${STAGE_GUIDE_COLOR.brighter().toHex24()}\">\u2014</font> " +
-                l10n("ui.edit.guidesTooltip.page") + "<br>" +
-                "<font color=\"${SPINE_GUIDE_COLOR.brighter().toHex24()}\">\u2014</font> " +
-                l10n("ui.edit.guidesTooltip.spine") + "<br>" +
-                "<font color=\"${BODY_CELL_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
-                l10n("ui.edit.guidesTooltip.bodyCell") + "<br>" +
-                "<font color=\"${BODY_WIDTH_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
-                l10n("ui.edit.guidesTooltip.bodyWidth") + "<br>" +
-                "<font color=\"${HEAD_TAIL_GUIDE_COLOR.brighter().brighter().toHex24()}\">\u2014</font> " +
-                l10n("ui.edit.guidesTooltip.headTail") + "</html>",
+                "<font color=\"#FF64FF\">\u2014</font> " + l10n("ui.edit.guidesTooltip.page") + "<br>" +
+                "<font color=\"#00FFFF\">\u2014</font> " + l10n("ui.edit.guidesTooltip.spine") + "<br>" +
+                "<font color=\"FF6500\">\u2014</font> " + l10n("ui.edit.guidesTooltip.bodyCell") + "<br>" +
+                "<font color=\"#FF0000\">\u2014</font> " + l10n("ui.edit.guidesTooltip.bodyWidth") + "<br>" +
+                "<font color=\"#00CA00\">\u2014</font> " + l10n("ui.edit.guidesTooltip.headTail") + "</html>",
         VK_G, CTRL_DOWN_MASK, isSelected = true
     ) {
         refreshVisibleLayers()

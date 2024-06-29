@@ -14,6 +14,7 @@ Cinecred Changelog
 - The runtime of a single scroll page can now also be set via the page style.
 - The temporal gap between pages and whether to melt pages together can now be
   controlled via a new page gap column in the spreadsheet.
+- The color picker is no longer restricted to sRGB and even supports HDR.
 - Embedded videos can now be aligned in the middle or at the end of the time
   range in which they appear.
 - DeckLink cards are now supported by the video preview.
@@ -22,6 +23,7 @@ Cinecred Changelog
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
 - Added matte (alpha channel only) delivery.
 - Added 10-bit, 12-bit, and 16-bit delivery.
+- Added DCI-P3, Display P3, BT.2020, and HDR (linear/PQ/HLG) delivery.
 - Added OpenEXR page still and image sequence delivery.
 - Image sequence export now exploits all CPU cores.
 - Exported page stills and image sequences now carry color space information.

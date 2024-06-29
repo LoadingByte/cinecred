@@ -6,18 +6,23 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
+import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.DrawnCredits
 import com.loadingbyte.cinecred.project.DrawnPage
 import com.loadingbyte.cinecred.project.DrawnProject
@@ -46,7 +51,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         private val VIDEO_FORMATS = VideoContainerRenderJob.FORMATS + ImageSequenceRenderJob.FORMATS
         private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VIDEO_FORMATS + TapeTimelineRenderJob.FORMATS
 
-        private val VOLATILE_PROPERTIES: Set<Property<*>> = hashSetOf(DEPTH)
+        private val VOLATILE_PROPERTIES: Set<Property<*>> = hashSetOf(DEPTH, YUV)
 
     }
 
@@ -218,23 +223,24 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         )
     )
 
-    private val colorPresetWidget = addWidget(
-        l10n("ui.deliverConfig.colorSpace"),
-        ComboBoxWidget(
-            ColorPreset::class.java, ColorPreset.entries,
-            widthSpec = WidthSpec.WIDER,
-            toString = { cs ->
-                when (cs) {
-                    ColorPreset.LINEAR_REC_709 ->
-                        "Linear Rec. 709  \u2013  BT.709 Gamut, Linear Gamma, Limited YCbCr Range, BT.709 YCbCr Coefficients"
-                    ColorPreset.REC_709 ->
-                        "Rec. 709  \u2013  BT.709 Gamut, BT.1886 Gamma, Limited YUV Range, BT.709 YUV Coefficients"
-                    ColorPreset.SRGB ->
-                        "sRGB / sYCC  \u2013  BT.709 Gamut, sRGB Gamma, Full YUV Range, BT.601 YUV Coefficients"
-                }
-            }
+    private val primariesWidget =
+        ComboBoxWidget(ColorSpace.Primaries::class.java, emptyList(), widthSpec = WidthSpec.NARROW)
+    private val transferWidget =
+        ComboBoxWidget(ColorSpace.Transfer::class.java, emptyList(), widthSpec = WidthSpec.NARROW)
+    private val yuvWidget =
+        ComboBoxWidget(Bitmap.YUVCoefficients::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE)
+    private val hdrWidget =
+        CheckBoxWidget()
+
+    init {
+        addWidget(
+            l10n("gamut"),
+            UnionWidget(
+                listOf(primariesWidget, transferWidget, yuvWidget, hdrWidget),
+                labels = listOf(null, "EOTF", "YUV", "HDR")
+            )
         )
-    )
+    }
 
     private var disableOnChange = false
 
@@ -289,7 +295,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         val resMult = 2.0.pow(config.getOrDefault(RESOLUTION_SCALING_LOG2))
         val fpsMult = config.getOrDefault(FPS_SCALING)
         val scan = config.getOrDefault(SCAN)
-        val colorPreset = config.getOrDefault(COLOR_PRESET)
+        val primaries = config.getOrDefault(PRIMARIES)
+        val transfer = config.getOrDefault(TRANSFER)
 
         // Determine the scaled specs.
         val resolution = project.styling.global.resolution
@@ -311,11 +318,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             if (FPS_SCALING !in config) "\u2014" else
                 decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
         panel.specsLabels[2].text =
-            if (COLOR_PRESET !in config) "\u2014" else when (colorPreset) {
-                ColorPreset.LINEAR_REC_709 -> "Linear Rec. 709"
-                ColorPreset.REC_709 -> "Rec. 709"
-                ColorPreset.SRGB -> if (format in VideoContainerRenderJob.FORMATS) "sYCC" else "sRGB"
-            }
+            if (PRIMARIES !in config) "\u2014" else "$primaries / $transfer"
         panel.specsLabels[3].text =
             if (FPS_SCALING !in config || scrollSpeeds.isEmpty()) "\u2014" else {
                 val speedsDesc = when (scan) {
@@ -380,7 +383,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         fpsMultWidget.isEnabled = FPS_SCALING in config
         pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
         pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)
-        pushFormatPropertyOptions(COLOR_PRESET, colorPresetWidget, config, formatChanged)
+        pushFormatPropertyOptions(PRIMARIES, primariesWidget, config, formatChanged)
+        pushFormatPropertyOptions(TRANSFER, transferWidget, config, formatChanged)
+        pushFormatPropertyOptions(YUV, yuvWidget, config, formatChanged)
+        hdrWidget.isVisible = HDR in config
     }
 
     private fun <T : Any, W> pushFormatPropertyOptions(
@@ -497,8 +503,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             lookup[DEPTH] = depthWidget.value
         if (scanWidget.items.isNotEmpty())
             lookup[SCAN] = scanWidget.value
-        if (colorPresetWidget.items.isNotEmpty())
-            lookup[COLOR_PRESET] = colorPresetWidget.value
+        if (primariesWidget.items.isNotEmpty())
+            lookup[PRIMARIES] = primariesWidget.value
+        if (transferWidget.items.isNotEmpty())
+            lookup[TRANSFER] = transferWidget.value
+        if (yuvWidget.items.isNotEmpty())
+            lookup[YUV] = yuvWidget.value
+        lookup[HDR] = hdrWidget.value
         if (ignoreVolatile)
             lookup -= VOLATILE_PROPERTIES
         return lookup.findConfig(format)

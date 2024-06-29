@@ -1,8 +1,12 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
+import com.loadingbyte.cinecred.common.createDirectoriesSafely
+import com.loadingbyte.cinecred.common.writeToml
+import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.*
-import java.awt.Color
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -57,7 +61,7 @@ private fun convert(ctx: StylingContext, styling: Styling, value: Any): Any = wh
     is Int, is Double, is Boolean, is String -> value
     is Enum<*> -> value.name
     is Locale -> value.toLanguageTag()
-    is Color -> value.toHex32()
+    is Color4f -> value.convert(ColorSpace.XYZD50).rgba().asList()
     is Resolution -> value.toString()
     is FPS -> value.toString()
     is FontFeature -> "${value.tag}=${value.value}"

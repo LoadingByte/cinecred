@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.Form
-import java.awt.Color
 import java.util.*
 import javax.swing.Icon
 
@@ -29,7 +29,7 @@ class StyleFormAdjuster(
 
     // Cache the current Styling's constraint violations and all colors used in the current Styling.
     private var constraintViolations: List<ConstraintViolation> = emptyList()
-    private var swatchColors: List<Color> = emptyList()
+    private var swatchColors: List<Color4f> = emptyList()
 
     var activeForm: StyleForm<*>? = null
         set(activeForm) {
@@ -68,7 +68,7 @@ class StyleFormAdjuster(
     private fun refreshSwatchColors() {
         val styling = getCurrentStyling() ?: return
 
-        val colorSet = HashSet<Color>()
+        val colorSet = HashSet<Color4f>()
         colorSet.add(styling.global.grounding)
         for (letterStyle in styling.letterStyles)
             for (layer in letterStyle.layers) {
@@ -78,11 +78,7 @@ class StyleFormAdjuster(
                     colorSet.add(layer.color2)
             }
 
-        swatchColors = colorSet.sortedWith { c1, c2 ->
-            val hsb1 = Color.RGBtoHSB(c1.red, c1.green, c1.blue, null)
-            val hsb2 = Color.RGBtoHSB(c2.red, c2.green, c2.blue, null)
-            Arrays.compare(hsb1, hsb2)
-        }
+        swatchColors = colorSet.toList().sortedWith { c1, c2 -> Arrays.compare(c1.toHSB(), c2.toHSB()) }
     }
 
     private fun adjustActiveForm() {

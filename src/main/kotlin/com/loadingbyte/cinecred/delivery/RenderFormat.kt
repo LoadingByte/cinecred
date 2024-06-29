@@ -1,6 +1,11 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_CL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_NCL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT709_NCL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.ICTCP
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.SRGB_NCL
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeferredImage
@@ -8,8 +13,6 @@ import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.project.Project
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentHashMapOf
-import org.bytedeco.ffmpeg.global.avutil.AVCOL_SPC_BT470BG
-import org.bytedeco.ffmpeg.global.avutil.AVCOL_SPC_BT709
 import java.nio.file.Path
 import java.util.*
 
@@ -36,7 +39,8 @@ abstract class RenderFormat(
     fun <T> options(property: Property<T>, baseConfig: Config, baseDiscard: Collection<Property<*>>): SequencedSet<T> {
         val allowDiffer = HashSet(baseDiscard)
         allowDiffer += property
-        val opts = TreeSet<T>()
+        val opts = if (property.standardDefault is Comparable<*>) TreeSet() else
+            TreeSet(Comparator.comparingInt(property.standardOptions::indexOf))
         for (config in configs)
             if (property in config) {
                 val value = config[property]
@@ -68,7 +72,10 @@ abstract class RenderFormat(
             val CHANNELS = Property(*Channels.values(), default = Channels.COLOR)
             val RESOLUTION_SCALING_LOG2 = Property(-2, -1, 0, 1, 2, default = 0)
             val FPS_SCALING = Property(1, 2, 3, 4, default = 1)
-            val COLOR_PRESET = Property(*ColorPreset.values(), default = ColorPreset.REC_709)
+            val PRIMARIES = Property(*ColorSpace.Primaries.COMMON.toTypedArray(), default = ColorSpace.Primaries.BT709)
+            val TRANSFER = Property(*ColorSpace.Transfer.COMMON.toTypedArray(), default = ColorSpace.Transfer.BT1886)
+            val YUV = Property(BT709_NCL, SRGB_NCL, BT2020_NCL, BT2020_CL, ICTCP, default = BT709_NCL)
+            val HDR = Property(false, true, default = false)
             val DEPTH = Property(8, default = 8)
             val SCAN = Property(*Bitmap.Scan.values(), default = Bitmap.Scan.PROGRESSIVE)
             val TIFF_COMPRESSION = Property(*TIFF.Compression.values(), default = TIFF.Compression.DEFLATE)
@@ -159,31 +166,6 @@ abstract class RenderFormat(
 
 
     enum class Channels { COLOR, COLOR_AND_ALPHA, ALPHA }
-
-
-    enum class ColorPreset(
-        val colorSpace: ColorSpace,
-        val yuvCoefficients: Bitmap.YUVCoefficients,
-        val yuvRange: Bitmap.Range
-    ) {
-        LINEAR_REC_709(
-            ColorSpace.of(ColorSpace.Primaries.BT709, ColorSpace.Transfer.LINEAR),
-            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709),
-            Bitmap.Range.LIMITED
-        ),
-        REC_709(
-            ColorSpace.BT709,
-            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709),
-            Bitmap.Range.LIMITED
-        ),
-        SRGB(
-            ColorSpace.SRGB,
-            Bitmap.YUVCoefficients.of(AVCOL_SPC_BT470BG),
-            Bitmap.Range.FULL
-        )
-    }
-
-
     enum class ProResProfile { PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ, PRORES_4444, PRORES_4444_XQ }
     enum class DNxHRProfile { DNXHR_LB, DNXHR_SQ, DNXHR_HQ, DNXHR_HQX, DNXHR_444 }
 

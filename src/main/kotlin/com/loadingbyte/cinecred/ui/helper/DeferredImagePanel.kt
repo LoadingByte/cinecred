@@ -51,7 +51,7 @@ class DeferredImagePanel(
             setImageAndGroundingAndLayers(image, grounding, layers)
         }
 
-    var grounding: Color
+    var grounding: Color4f
         get() = _grounding
         set(grounding) {
             setImageAndGroundingAndLayers(image, grounding, layers)
@@ -63,7 +63,7 @@ class DeferredImagePanel(
             setImageAndGroundingAndLayers(image, grounding, layers)
         }
 
-    fun setImageAndGroundingAndLayers(image: DeferredImage?, grounding: Color, layers: List<Layer>) {
+    fun setImageAndGroundingAndLayers(image: DeferredImage?, grounding: Color4f, layers: List<Layer>) {
         val imageChanged = image !== _image
         if (!imageChanged && _grounding == grounding && _layers == layers) return
         if (imageChanged) require(image == null || image.width != 0.0 && image.height.resolve() != 0.0)
@@ -96,7 +96,7 @@ class DeferredImagePanel(
     val zoomListeners = mutableListOf<(Double) -> Unit>()
 
     private var _image: DeferredImage? = null
-    private var _grounding: Color = Color.BLACK
+    private var _grounding: Color4f = Color4f.BLACK
     private var _layers: List<Layer> = emptyList()
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
@@ -352,7 +352,7 @@ class DeferredImagePanel(
             jobSlot: JobSlot, nativeCM: ColorModel,
             image: DeferredImage,
             physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
-            layers: List<Layer>, grounding: Color, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
+            layers: List<Layer>, grounding: Color4f, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
         ) {
             jobSlot.submit {
                 val imgHeight = image.height.resolve()
@@ -400,10 +400,11 @@ class DeferredImagePanel(
         }
 
         private inline fun drawToBufferedImage(
-            w: Int, h: Int, grounding: Color, bitmapJ2DBridge: BitmapJ2DBridge, draw: (Canvas) -> Unit
+            w: Int, h: Int, grounding: Color4f, bitmapJ2DBridge: BitmapJ2DBridge, draw: (Canvas) -> Unit
         ): BufferedImage {
             val res = Resolution(w, h)
-            val canvasRep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
+            val canvasCS = ColorSpace.of(ColorSpace.Primaries.BT709, ColorSpace.Transfer.BLENDING)
+            val canvasRep = Canvas.compatibleRepresentation(canvasCS)
             Bitmap.allocate(Bitmap.Spec(res, canvasRep)).use { canvasBmp ->
                 Bitmap.allocate(Bitmap.Spec(res, bitmapJ2DBridge.nativeRepresentation)).use { nativeBmp ->
                     Canvas.forBitmap(canvasBmp).use { canvas ->

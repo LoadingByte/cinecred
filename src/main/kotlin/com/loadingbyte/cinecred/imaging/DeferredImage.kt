@@ -17,6 +17,7 @@ import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
+import org.apache.pdfbox.pdmodel.graphics.color.PDColor
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray
 import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased
@@ -33,7 +34,6 @@ import org.apache.pdfbox.util.Matrix
 import org.w3c.dom.*
 import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import java.awt.BasicStroke
-import java.awt.Color
 import java.awt.Shape
 import java.awt.geom.*
 import java.io.DataInputStream
@@ -74,7 +74,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun drawShape(
-        color: Color, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = STATIC
+        color: Color4f, shape: Shape, x: Double, y: Y, fill: Boolean, blurRadius: Double = 0.0, layer: Layer = STATIC
     ) {
         drawShape(Coat.Plain(color), shape, x, y, fill, blurRadius, layer)
     }
@@ -86,15 +86,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawShape(x, y, shape, coat, fill, blurRadius))
     }
 
-    fun drawLine(color: Color, x1: Double, y1: Y, x2: Double, y2: Y, dash: Boolean = false, layer: Layer = STATIC) {
-        if (color.alpha == 0) return
+    fun drawLine(color: Color4f, x1: Double, y1: Y, x2: Double, y2: Y, dash: Boolean = false, layer: Layer = STATIC) {
+        if (color.a == 0f) return
         addInstruction(layer, Instruction.DrawLine(x1, y1, x2, y2, color, dash))
     }
 
     fun drawRect(
-        color: Color, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = STATIC
+        color: Color4f, x: Double, y: Y, width: Double, height: Y, fill: Boolean = false, layer: Layer = STATIC
     ) {
-        if (color.alpha == 0) return
+        if (color.a == 0f) return
         addInstruction(layer, Instruction.DrawRect(x, y, width, height, color, fill))
     }
 
@@ -280,8 +280,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             allBetween(0, end, Float::isFinite)
 
         private fun Coat.isVisible(): Boolean = when (this) {
-            is Coat.Plain -> color.alpha != 0
-            is Coat.Gradient -> color1.alpha != 0 || color2.alpha != 0
+            is Coat.Plain -> color.a != 0f
+            is Coat.Gradient -> color1.a != 0f || color2.a != 0f
         }
 
         private fun Coat.transform(tx: AffineTransform): Coat = when (this) {
@@ -332,8 +332,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
 
     sealed interface Coat {
-        class Plain(val color: Color) : Coat
-        class Gradient(val color1: Color, val color2: Color, val point1: Point2D, val point2: Point2D) : Coat
+        class Plain(val color: Color4f) : Coat
+        class Gradient(val color1: Color4f, val color2: Color4f, val point1: Point2D, val point2: Point2D) : Coat
     }
 
 
@@ -391,11 +391,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawLine(
-            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color, val dash: Boolean
+            val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color4f, val dash: Boolean
         ) : Instruction
 
         class DrawRect(
-            val x: Double, val y: Y, val width: Double, val height: Y, val color: Color, val fill: Boolean
+            val x: Double, val y: Y, val width: Double, val height: Y, val color: Color4f, val fill: Boolean
         ) : Instruction
 
         class DrawText(
@@ -560,7 +560,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val glyphPathIds = HashMap<Pair<String /* font name */, Int /* glyph code */>, String?>()
         private val picElementIds = HashMap<Picture, String>()
         private var gradientCtr = 0
-        private val gradientIds = HashMap<Pair<Color, Color>, String>()
+        private val gradientIds = HashMap<Pair<Color4f, Color4f>, String>()
         private val blurFilterIds = HashMap<Double, String>()
 
         override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
@@ -641,9 +641,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         coatedElement.setAttribute("fill", "none")
                         "stroke"
                     }
-                    coatedElement.setAttribute(prefix, coat.color.toHex24())
-                    if (coat.color.alpha != 255)
-                        coatedElement.setAttribute("$prefix-opacity", F.format(coat.color.alpha / 255.0))
+                    coatedElement.setAttribute(prefix, coat.color.toSRGBHexString())
+                    if (coat.color.a != 1f)
+                        coatedElement.setAttribute("$prefix-opacity", F.format(coat.color.a.toDouble()))
                 }
                 is Coat.Gradient -> {
                     val gradientId = "gradient${++gradientCtr}"
@@ -723,12 +723,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             return linearGradient
         }
 
-        private fun makeGradientStop(offset: String, color: Color): Element {
+        private fun makeGradientStop(offset: String, color: Color4f): Element {
             return doc.createElementNS(SVG_NS_URI, "stop").apply {
                 setAttribute("offset", offset)
-                setAttribute("stop-color", color.toHex24())
-                if (color.alpha != 255)
-                    setAttribute("stop-opacity", F.format(color.alpha / 255.0))
+                setAttribute("stop-color", color.toSRGBHexString())
+                if (color.a != 1f)
+                    setAttribute("stop-opacity", F.format(color.a.toDouble()))
             }
         }
 
@@ -984,12 +984,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private fun setCoat(coat: Coat, fill: Boolean, bbox: Rectangle2D) {
             when (coat) {
                 is Coat.Plain -> {
-                    val color = coat.color
-                    if (fill) cs.setNonStrokingColor(color) else cs.setStrokingColor(color)
-                    val extGState = docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.alpha)) {
+                    val color = coat.color.convert(masterColorSpace, clamp = true)
+                    val pdColor = PDColor(color.rgb(), obtainICCBasedCS(masterColorSpace))
+                    if (fill) cs.setNonStrokingColor(pdColor) else cs.setStrokingColor(pdColor)
+                    val extGState = docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.a)) {
                         PDExtendedGraphicsState().apply {
-                            val alpha = color.alpha / 255f
-                            if (fill) nonStrokingAlphaConstant = alpha else strokingAlphaConstant = alpha
+                            if (fill) nonStrokingAlphaConstant = color.a else strokingAlphaConstant = color.a
                         }
                     }
                     cs.setGraphicsStateParameters(extGState)
@@ -998,7 +998,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     // Notice that we do not cache the COS objects we create for gradients. That is because pattern
                     // coordinates are always global to the page irrespective of any user matrix, so we'd need a new
                     // pattern for every place where we want to use it anyway.
-                    if (coat.color1.alpha != 255 || coat.color2.alpha != 255) {
+                    if (coat.color1.a != 1f || coat.color2.a != 1f) {
                         // First construct a form XObject.
                         val bboxW = bbox.width.toFloat()
                         val bboxH = bbox.height.toFloat()
@@ -1046,15 +1046,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         private fun makeShadingPattern(coat: Coat.Gradient, forAlpha: Boolean): PDShadingPattern {
-            fun makeColorArray(color: Color) = COSArray().apply {
+            fun makeColorArray(color: Color4f) = COSArray().apply {
                 if (forAlpha)
-                    add(COSFloat(color.alpha / 255f))
+                    add(COSFloat(color.a))
                 else {
-                    val c = color.getRGBColorComponents(null)
-                    ColorSpace.SRGB.convert(masterColorSpace, c, alpha = false, clamp = true)
-                    add(COSFloat(c[0]))
-                    add(COSFloat(c[1]))
-                    add(COSFloat(c[2]))
+                    val c = color.convert(masterColorSpace, clamp = true)
+                    add(COSFloat(c.r))
+                    add(COSFloat(c.g))
+                    add(COSFloat(c.b))
                 }
             }
 
@@ -1196,7 +1195,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val layerUtil by lazy { LayerUtility(doc) }
         }
 
-        private data class ExtGStateKey(private val fill: Boolean, private val alpha: Int)
+        private data class ExtGStateKey(private val fill: Boolean, private val alpha: Float)
 
     }
 

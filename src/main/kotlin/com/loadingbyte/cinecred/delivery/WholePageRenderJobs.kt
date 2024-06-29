@@ -2,22 +2,25 @@ package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset
-import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.LINEAR_REC_709
-import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.SRGB
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.BT709
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BLENDING
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
@@ -67,7 +70,8 @@ class WholePageSequenceRenderJob private constructor(
         val matte = config[CHANNELS] == ALPHA
         val family = if (matte) GRAY else RGB
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
-        val colorSpace = if (matte) null else config[COLOR_PRESET].colorSpace
+        val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
+        val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val global = project.styling.global
 
         val bitmapWriter = when (format) {
@@ -89,9 +93,9 @@ class WholePageSequenceRenderJob private constructor(
             when (format) {
                 PNG, TIFF, DPX, EXR -> {
                     val res = Resolution(pageWidth, pageHeight)
-                    val rep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
+                    val rep = Canvas.compatibleRepresentation(ColorSpace.of(colorSpace?.primaries ?: BT709, BLENDING))
                     Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
-                        Canvas.forBitmap(bitmap).use { canvas ->
+                        Canvas.forBitmap(bitmap, ceiling).use { canvas ->
                             if (ground) canvas.fill(Canvas.Shader.Solid(global.grounding)) else bitmap.zero()
                             pageDefImage.materialize(canvas, cache = null, layers = listOf(STATIC, TAPES))
                         }
@@ -120,7 +124,7 @@ class WholePageSequenceRenderJob private constructor(
                         svg.appendChild(doc.createElementNS(SVG_NS_URI, "rect").apply {
                             setAttribute("width", pageWidth.toString())
                             setAttribute("height", pageHeight.toString())
-                            setAttribute("fill", global.grounding.toHex24())
+                            setAttribute("fill", global.grounding.toSRGBHexString())
                         })
                     pageDefImage.materialize(svg, listOf(STATIC, TAPES))
 
@@ -164,20 +168,21 @@ class WholePageSequenceRenderJob private constructor(
         )
         private val EXR = Format(
             "exr",
-            channelsTimesLinearColorPreset() * choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION)
+            choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION) * (
+                    choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR) * choice(HDR)
+                            + fixed(CHANNELS, ALPHA)
+                    )
         )
         private val SVG = Format(
             "svg",
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, SRGB)
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
         )
 
         val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR, SVG)
 
-        private fun channelsTimesColorPreset(default: ColorPreset = COLOR_PRESET.standardDefault) =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET, default = default) + fixed(CHANNELS, ALPHA)
-
-        private fun channelsTimesLinearColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, LINEAR_REC_709) + fixed(CHANNELS, ALPHA)
+        private fun channelsTimesColorPreset(default: ColorSpace.Transfer = TRANSFER.standardDefault) =
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * choice(TRANSFER, default = default) +
+                    fixed(CHANNELS, ALPHA)
 
     }
 
@@ -216,6 +221,10 @@ class WholePagePDFRenderJob private constructor(
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
         val global = project.styling.global
 
+        // We blend in sRGB because (a) this mirrors SVG, (b) it's most widely supported, and (c) sRGB is very close to
+        // out actual blending transfer characteristics of pure gamma 2.2.
+        val colorSpace = ColorSpace.SRGB
+
         val pdfDoc = PDDocument()
 
         // We're embedding OpenType fonts, which requires PDF 1.6.
@@ -227,9 +236,9 @@ class WholePagePDFRenderJob private constructor(
         pdfDoc.documentCatalog.language = global.locale.toLanguageTag()
 
         // Add an output intent with the blending color space.
-        val iccBytes = ICCProfile.of(ColorSpace.BLENDING).bytes
+        val iccBytes = ICCProfile.of(colorSpace).bytes
         pdfDoc.documentCatalog.addOutputIntent(PDOutputIntent(pdfDoc, ByteArrayInputStream(iccBytes)).apply {
-            val id = if (ColorSpace.BLENDING == ColorSpace.SRGB) "sRGB IEC61966-2.1" else "Custom"
+            val id = "sRGB IEC61966-2.1"
             outputConditionIdentifier = id
             info = id
         })
@@ -248,7 +257,7 @@ class WholePagePDFRenderJob private constructor(
                     if (ground)
                         drawRect(global.grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
                     drawDeferredImage(page, 0.0, 0.0.toY())
-                }.materialize(pdfDoc, pdfPage, cs, ColorSpace.BLENDING, listOf(STATIC, TAPES))
+                }.materialize(pdfDoc, pdfPage, cs, colorSpace, listOf(STATIC, TAPES))
             }
 
             progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)
@@ -261,7 +270,8 @@ class WholePagePDFRenderJob private constructor(
 
     private class Format : RenderFormat(
         "PDF", fileSeq = false, setOf("pdf"), "pdf",
-        choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(RESOLUTION_SCALING_LOG2) * fixed(COLOR_PRESET, SRGB)
+        choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(RESOLUTION_SCALING_LOG2) *
+                fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
     ) {
         override fun createRenderJob(
             config: Config,

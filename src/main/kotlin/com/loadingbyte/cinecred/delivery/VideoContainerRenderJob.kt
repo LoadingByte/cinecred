@@ -10,14 +10,31 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companio
 import com.loadingbyte.cinecred.delivery.RenderFormat.DNxHRProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.ProResProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
 import com.loadingbyte.cinecred.imaging.*
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_CL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_NCL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT709_NCL
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.ICTCP
+import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.SRGB_NCL
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.BT2020
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.BT709
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.DCI_P3
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.DISPLAY_P3
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BLENDING
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BT1886
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.HLG
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.PQ
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Project
@@ -44,7 +61,9 @@ class VideoContainerRenderJob private constructor(
         file.parent.createDirectoriesSafely()
 
         val matte = config[CHANNELS] == ALPHA
-        val colorPreset = if (matte) null else config[COLOR_PRESET]
+        val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
+        val yuv = if (matte) null else config[YUV]
+        val ceiling = if (colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
         val settings = format.videoWriterSettings(config)
         val grounding = if (config[CHANNELS] == COLOR) project.styling.global.grounding else null
@@ -54,9 +73,9 @@ class VideoContainerRenderJob private constructor(
             scaledVideo.resolution,
             Bitmap.Representation(
                 settings.pixelFormat,
-                colorPreset?.yuvRange ?: Bitmap.Range.FULL,
-                colorPreset?.colorSpace ?: ColorSpace.of(ColorSpace.Primaries.BT709, ColorSpace.Transfer.LINEAR),
-                colorPreset?.yuvCoefficients ?: Bitmap.YUVCoefficients.of(AVCOL_SPC_BT709),
+                if (matte) Bitmap.Range.FULL else Bitmap.Range.LIMITED,
+                colorSpace ?: ColorSpace.of(BT709, LINEAR),
+                yuv ?: BT709_NCL,
                 if (settings.pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,
                 if (config[CHANNELS] == COLOR_AND_ALPHA) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
@@ -75,7 +94,7 @@ class VideoContainerRenderJob private constructor(
                 else -> throw IllegalArgumentException("No color format for depth $depth.")
             }
             val backendRep = Bitmap.Representation(
-                Bitmap.PixelFormat.of(backendPxFmtCode), ColorSpace.BLENDING, Bitmap.Alpha.PREMULTIPLIED
+                Bitmap.PixelFormat.of(backendPxFmtCode), ColorSpace.of(BT709, BLENDING), Bitmap.Alpha.PREMULTIPLIED
             )
             val rgbRep = Bitmap.Representation(
                 Bitmap.PixelFormat.of(AV_PIX_FMT_GBRPF32), ColorSpace.XYZD50, Bitmap.Alpha.OPAQUE
@@ -86,7 +105,9 @@ class VideoContainerRenderJob private constructor(
                 .use { BitmapConverter.convert(it, blackWriterBitmap) }
         }
 
-        DeferredVideo.BitmapBackend(scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec).use { backend ->
+        DeferredVideo.BitmapBackend(
+            scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec, ceiling
+        ).use { backend ->
             for ((i, codecName) in settings.codecNames.withIndex())
                 try {
                     VideoWriter(
@@ -134,10 +155,17 @@ class VideoContainerRenderJob private constructor(
         val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat())
 
         private fun allChannelsAndColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET) + fixed(CHANNELS, ALPHA)
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * (
+                    fixed(PRIMARIES, BT709) * (choice(TRANSFER) - fixed(TRANSFER, SRGB)) * fixed(YUV, BT709_NCL) +
+                            fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * fixed(YUV, SRGB_NCL) +
+                            choice(PRIMARIES, DCI_P3, DISPLAY_P3) * choice(TRANSFER) * fixed(YUV, BT709_NCL) +
+                            fixed(PRIMARIES, BT2020) * fixed(TRANSFER, BT1886) * choice(YUV, BT2020_NCL, BT2020_CL) +
+                            fixed(PRIMARIES, BT2020) * choice(TRANSFER, LINEAR, SRGB) * fixed(YUV, BT2020_NCL) +
+                            fixed(PRIMARIES, BT2020) * choice(TRANSFER, PQ, HLG) * choice(YUV, BT2020_NCL, ICTCP)
+                    ) + fixed(CHANNELS, ALPHA)
 
         private fun opaqueChannelsAndColorPreset() =
-            choice(CHANNELS, COLOR) * choice(COLOR_PRESET) + fixed(CHANNELS, ALPHA)
+            allChannelsAndColorPreset() - fixed(CHANNELS, COLOR_AND_ALPHA)
 
     }
 

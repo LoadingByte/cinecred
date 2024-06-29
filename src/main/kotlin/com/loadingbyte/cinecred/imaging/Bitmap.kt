@@ -248,20 +248,21 @@ class Bitmap private constructor(
         return this
     }
 
-    /** Clamps the color values of float bitmaps to [0, 1]. Assumes that alpha values are already in [0, 1]. */
-    fun clampFloatColors(promiseOpaque: Boolean = false) {
+    /** Clamps the color values of float bitmaps to [0, ceiling]. Assumes that alpha values are already in [0, 1]. */
+    fun clampFloatColors(ceiling: Float? = 1f, promiseOpaque: Boolean = false) {
         val pixelFormat = spec.representation.pixelFormat
         check(pixelFormat.isFloat && pixelFormat.components[0].depth == 32) { "Can only clamp float32 bitmaps." }
         check(isAligned) { "Can only clamp aligned bitmaps." }
+        require(ceiling == null || ceiling >= 1f) { "Cannot clamp to a ceiling < 1." }
         val (w, h) = spec.resolution
         val bo = pixelFormat.byteOrder
         val ls = linesize(0)
         val vecFloats = FloatVector.SPECIES_PREFERRED.length()
         val vec0 = FloatVector.zero(FloatVector.SPECIES_PREFERRED)
-        val vecC = FloatVector.broadcast(FloatVector.SPECIES_PREFERRED, 1f)
+        val vecC = ceiling?.let { FloatVector.broadcast(FloatVector.SPECIES_PREFERRED, it) }
         // Notice: We have verified through benchmarks that the JIT successfully lifts the switching over this variable
         // out of the hot loop. Performance matches that of manual lifting.
-        val action = if (!pixelFormat.hasAlpha || promiseOpaque) 1 else 2
+        val action = if (ceiling == null) 0 else if (!pixelFormat.hasAlpha || promiseOpaque) 1 else 2
         if (!pixelFormat.isPlanar) {
             val seg = memorySegment(0)
             val stepsPerLine = ceilDiv(w * pixelFormat.components.size, vecFloats)
@@ -780,6 +781,9 @@ class Bitmap private constructor(
 
             val BT709_NCL: YUVCoefficients = of(AVCOL_SPC_BT709)
             val SRGB_NCL: YUVCoefficients = of(AVCOL_SPC_BT470BG)
+            val BT2020_NCL: YUVCoefficients = of(AVCOL_SPC_BT2020_NCL)
+            val BT2020_CL: YUVCoefficients = of(AVCOL_SPC_BT2020_CL)
+            val ICTCP: YUVCoefficients = of(AVCOL_SPC_ICTCP)
 
             private fun populateCodeBased() {
                 addCB(AVCOL_SPC_BT709, "BT.709")

@@ -4,10 +4,10 @@ import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import kotlinx.collections.immutable.PersistentList
-import java.awt.Color
 import java.util.*
 
 
@@ -74,7 +74,7 @@ data class Global(
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
     val runtimeFrames: Opt<Int>,
-    val grounding: Color,
+    val grounding: Color4f,
     val unitVGapPx: Double,
     val locale: Locale,
     val uppercaseExceptions: PersistentList<String>
@@ -231,8 +231,8 @@ data class Layer(
     override val name: String,
     override val collapsed: Boolean,
     val coloring: LayerColoring,
-    val color1: Color,
-    val color2: Color,
+    val color1: Color4f,
+    val color2: Color4f,
     val gradientAngleDeg: Double,
     val gradientExtentRfh: Double,
     val gradientShiftRfh: Double,

@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.ui.ConfigurableOverlay
@@ -9,7 +10,6 @@ import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.makeWelcomeHintTrack
 import com.loadingbyte.cinecred.ui.play
-import java.awt.Color
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -117,8 +117,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     override fun preferences_authorizeAccount_setError(error: String?) =
         panel.preferencesPanel.preferences_authorizeAccount_setError(error)
     override fun preferences_configureOverlay_setForm(
-        type: Class<out ConfigurableOverlay>, name: String, aspectRatioH: Double, aspectRatioV: Double, linesColor: Color?,
-        linesH: List<Int>, linesV: List<Int>, imageFile: Path, imageUnderlay: Boolean
+        type: Class<out ConfigurableOverlay>, name: String, aspectRatioH: Double, aspectRatioV: Double,
+        linesColor: Color4f?, linesH: List<Int>, linesV: List<Int>, imageFile: Path, imageUnderlay: Boolean
     ) = panel.preferencesPanel.preferences_configureOverlay_setForm(
         type, name, aspectRatioH, aspectRatioV, linesColor, linesH, linesV, imageFile, imageUnderlay
     )

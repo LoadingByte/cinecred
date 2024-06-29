@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.comms
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
@@ -10,7 +11,6 @@ import com.loadingbyte.cinecred.ui.ConfigurableOverlay
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.Preference
 import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
-import java.awt.Color
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
 import java.nio.file.Path
@@ -73,7 +73,7 @@ interface WelcomeCtrlComms {
         name: String,
         aspectRatioH: Double,
         aspectRatioV: Double,
-        linesColor: Color?,
+        linesColor: Color4f?,
         linesH: List<Int>,
         linesV: List<Int>,
         imageFile: Path,
@@ -127,7 +127,7 @@ interface WelcomeViewComms {
         name: String,
         aspectRatioH: Double,
         aspectRatioV: Double,
-        linesColor: Color?,
+        linesColor: Color4f?,
         linesH: List<Int>,
         linesV: List<Int>,
         imageFile: Path,

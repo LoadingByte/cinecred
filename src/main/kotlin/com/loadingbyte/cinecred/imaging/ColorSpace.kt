@@ -24,7 +24,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
 
     private val bmpConvCache = ConcurrentHashMap<ColorSpace, SoftReference<Triple<Bitmap, Bitmap, BitmapConverter>>>()
 
-    fun convert(dst: ColorSpace, colors: FloatArray, alpha: Boolean, clamp: Boolean = false) {
+    fun convert(dst: ColorSpace, colors: FloatArray, alpha: Boolean, clamp: Boolean = false, ceiling: Float? = 1f) {
         if (this != dst)
             if (transfer.hasCurve && dst.transfer.hasCurve) {
                 transfer.toLinear(colors, alpha)
@@ -64,7 +64,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
         if (clamp)
             for (i in colors.indices)
                 if (!alpha || i and 3 != 3)
-                    colors[i] = colors[i].coerceIn(0f, 1f)
+                    colors[i] = colors[i].coerceIn(0f, ceiling)
     }
 
     override fun toString() = "$primaries/$transfer"
@@ -80,8 +80,6 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
         val XYZD50: ColorSpace = of(Primaries.XYZD50, Transfer.LINEAR)
         val BT709: ColorSpace = of(Primaries.BT709, Transfer.BT1886)
         val SRGB: ColorSpace = of(Primaries.BT709, Transfer.SRGB)
-
-        val BLENDING: ColorSpace = SRGB
 
     }
 
@@ -184,12 +182,17 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
             val XYZD50: Primaries
             val XYZD65: Primaries = invertAndMake(-3, "XYZ-D65", null, toXYZD50(0.3127f, 0.329f))
             val BT709: Primaries = of(AVCOL_PRI_BT709)
+            val DCI_P3: Primaries = of(AVCOL_PRI_SMPTE431)
+            val DISPLAY_P3: Primaries = of(AVCOL_PRI_SMPTE432)
+            val BT2020: Primaries = of(AVCOL_PRI_BT2020)
 
             init {
                 // Our code expects that for XYZD50, toXYZD50 and fromXYZD50 are the same object.
                 val idMatrix = Matrix(floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f))
                 XYZD50 = Primaries(-2, "XYZ-D50", null, idMatrix, idMatrix)
             }
+
+            val COMMON = listOf(BT709, DCI_P3, DISPLAY_P3, BT2020)
 
             private fun obtainCustom(chroma: Chromaticities?, toXYZD50: Matrix) = when {
                 areClose(toXYZD50.values, BT709.toXYZD50.values) -> BT709
@@ -384,8 +387,32 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
             val LINEAR: Transfer = of(AVCOL_TRC_LINEAR)
             val BT1886: Transfer = of(AVCOL_TRC_BT709)
             val SRGB: Transfer = of(AVCOL_TRC_IEC61966_2_1)
+            val PQ: Transfer = of(AVCOL_TRC_SMPTE2084)
+            val HLG: Transfer = of(AVCOL_TRC_ARIB_STD_B67)
 
-            val BLENDING: Transfer = SRGB
+            /**
+             * All color blending (i.e., alpha compositing) is not performed in a linear space, but in a nonlinear space
+             * with pure gamma 2.2 transfer characteristics. This has the following advantages:
+             *   - From decades of computer graphics, users became used to blending happening in sRGB. In the range
+             *     [0, 1], gamma 2.2 is practically indistinguishable from sRGB, so we meet user expectation.
+             *   - Linear color is not perceptually uniform, i.e., doubling the color value (which for linear color
+             *     directly corresponds to the number of photons) doesn't lead to double the perceived brightness. In
+             *     contrast, sRGB and its close cousin gamma 2.2 do a better job of modelling this, so they provide a
+             *     pretty good scale of perceived brightness. Due to this, linearly increasing the alpha is actually
+             *     perceived as a linear fade-in. Additionally, in a linear space, the antialiasing of text and other
+             *     vector graphics makes white-on-black text appear thicker than black-on-white text. The perceptual
+             *     brightness modelling of gamma 2.2 fixes this imbalance.
+             *   - So why choose pure gamma 2.2 instead of sRGB then? sRGB actually has a small linear section near 0,
+             *     followed by an offset gamma 2.4 curve. While this closely matches a pure gamma in the range [0, 1],
+             *     we also encounter color values larger than 1 when rendering HDR content, and the higher the values,
+             *     the more the two transfer characteristics deviate. We however want the same brightness modelling to
+             *     apply throughout the entire brightness range, and we want our blending to be conceptually equivalent
+             *     to first scaling down all color values to fit into [0, 1], then compositing, and then scaling them
+             *     back up. This uniformity and self-similarity is only achieved by a pure gamma curve.
+             */
+            val BLENDING: Transfer = of(AVCOL_TRC_GAMMA22)
+
+            val COMMON = listOf(LINEAR, BT1886, SRGB, PQ, HLG)
 
             private fun invert(toLinear: Curve): Curve =
                 Arena.ofConfined().use { arena ->

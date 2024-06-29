@@ -1,10 +1,11 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
-import java.awt.Color
 import java.awt.Font
 import java.util.*
 import kotlin.math.abs
@@ -254,7 +255,7 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
         val coloring = when (layer.coloring) {
             LayerColoring.OFF ->
                 FormattedString.Layer.Coloring.Plain(
-                    color = Color(0, 0, 0, 0)
+                    color = Color4f(0f, 0f, 0f, 0f, ColorSpace.XYZD50)
                 )
             LayerColoring.PLAIN ->
                 FormattedString.Layer.Coloring.Plain(

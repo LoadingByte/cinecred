@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.common.lineMetrics
 import com.loadingbyte.cinecred.project.StylingContext
 import java.awt.Font
 import kotlin.math.abs
+import kotlin.math.pow
 
 
 /**
@@ -264,6 +265,18 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
             (pageStyle["cardFadeOutFrames"] as? Number)?.let { cardRuntimeFrames += it.toInt() }
         pageStyle["cardRuntimeFrames"] = cardRuntimeFrames
     }
+
+    // 1.5.1 -> 1.6.0: Colors are now stored as four floats in the XYZD50 color space.
+    rawStyling.global.let { g -> sRGBHex32ToXYZD50FloatList(g["grounding"] as? String)?.let { g["grounding"] = it } }
+    for (letterStyle in rawStyling.letterStyles)
+        (letterStyle["layers"] as? List<*>)?.forEach { layer ->
+            if (layer is MutableMap<*, *>) {
+                @Suppress("UNCHECKED_CAST")
+                layer as MutableMap<String, Any>
+                sRGBHex32ToXYZD50FloatList(layer["color1"] as? String)?.let { layer["color1"] = it }
+                sRGBHex32ToXYZD50FloatList(layer["color2"] as? String)?.let { layer["color2"] = it }
+            }
+        }
 }
 
 
@@ -344,3 +357,30 @@ private fun legacy131FindSuperscriptOffsetAndScaling(awtFont: Font, superscript:
 }
 
 private data class Legacy131SSOffsetAndScaling(val ssScaling: Double, val ssHOffset: Double, val ssVOffset: Double)
+
+
+private fun sRGBHex32ToXYZD50FloatList(hex: String?): List<Float>? {
+    if (hex == null || hex.length.let { it != 7 && it != 9 } || hex[0] != '#')
+        return null
+    // Note: We first have to convert to long and then to int because String.toInt() throws an exception when an
+    // overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is
+    // then 1, which is interpreted as a negative sign, so this is an overflow).
+    val argb = (hex.substring(1).toLongOrNull(16) ?: return null).toInt()
+    val a = if (hex.length == 7) 1f else ((argb shr 24) and 0xFF) / 255f
+    val r = sRGB_EOTF(((argb shr 16) and 0xFF) / 255f)
+    val g = sRGB_EOTF(((argb shr 8) and 0xFF) / 255f)
+    val b = sRGB_EOTF((argb and 0xFF) / 255f)
+    return listOf(
+        0.43606567f * r + 0.3851471f * g + 0.1430664f * b,
+        0.2224884f * r + 0.71687317f * g + 0.06060791f * b,
+        0.013916016f * r + 0.097076416f * g + 0.71409607f * b,
+        a
+    )
+}
+
+// Pretty much copied from zimg.
+private fun sRGB_EOTF(x: Float) =
+    if (x < 12.92f * 0.0030412825f)
+        x / 12.92f
+    else
+        ((x + (1.0550107f - 1.0f)) / 1.0550107f).pow(2.4f)

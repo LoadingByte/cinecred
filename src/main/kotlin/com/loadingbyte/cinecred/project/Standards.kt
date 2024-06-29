@@ -4,8 +4,8 @@ import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Color4f
 import kotlinx.collections.immutable.persistentListOf
-import java.awt.Color
 import java.util.*
 
 
@@ -25,7 +25,7 @@ val PRESET_GLOBAL = Global(
     fps = FPS(24, 1),
     timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
     runtimeFrames = Opt(false, 0),
-    grounding = Color.BLACK,
+    grounding = Color4f.BLACK,
     unitVGapPx = 32.0,
     locale = Locale.ENGLISH,
     uppercaseExceptions = persistentListOf(
@@ -139,8 +139,8 @@ val PRESET_LAYER = Layer(
     name = "",
     collapsed = true,
     coloring = LayerColoring.PLAIN,
-    color1 = Color.WHITE,
-    color2 = Color.GRAY,
+    color1 = Color4f.WHITE,
+    color2 = Color4f.GRAY,
     gradientAngleDeg = 0.0,
     gradientExtentRfh = 1.0,
     gradientShiftRfh = 0.0,
@@ -201,12 +201,12 @@ val PLACEHOLDER_LETTER_STYLE
         name = l10n("project.placeholder"),
         layers = persistentListOf(
             PRESET_LAYER.copy(
-                color1 = Color.ORANGE,
+                color1 = Color4f.ORANGE,
                 shape = LayerShape.STRIPE,
                 stripePreset = StripePreset.BACKGROUND
             ),
             PRESET_LAYER.copy(
-                color1 = Color.BLACK,
+                color1 = Color4f.BLACK,
                 shape = LayerShape.TEXT
             )
         )

@@ -28,8 +28,6 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.roundToInt
-import java.awt.Color as AWTColor
-import java.awt.color.ColorSpace as AWTColorSpace
 
 
 /**
@@ -83,6 +81,7 @@ class Canvas private constructor(
     val width: Double,
     val height: Double,
     val colorSpace: ColorSpace,
+    val ceiling: Float?,
     val bitmap: Bitmap?,
     canvasHandle: MemorySegment,
     docHandle: MemorySegment?,
@@ -184,8 +183,12 @@ class Canvas private constructor(
                 // and finally composite the result back onto this canvas.
                 // Then allocate the sub-bitmap and sub-canvas and let the client draw to it.
                 val subRep = compatibleRepresentation(colorSpace)
+                // Notice that this sub-ceiling is only a very rough approximation of the actual shape of the main
+                // canvas's color space embedded inside the sub color space. But it's good enough to avoid noticeable
+                // hue-shift artifacts etc. when later drawing the sub-bitmap onto the main canvas.
+                val subCeiling = ceiling?.let { colorSpace.transfer.fromLinear(this.colorSpace.transfer.toLinear(it)) }
                 Bitmap.allocate(Bitmap.Spec(Resolution(pxBox.width, pxBox.height), subRep)).use { subBitmap ->
-                    forBitmap(subBitmap.zero()).use { subCanvas ->
+                    forBitmap(subBitmap.zero(), subCeiling).use { subCanvas ->
                         val adjustedTransform = AffineTransform.getTranslateInstance(-pxBox.minX, -pxBox.minY)
                         transform?.let(adjustedTransform::concatenate)
                         block(subCanvas, adjustedTransform)
@@ -202,8 +205,7 @@ class Canvas private constructor(
         if (bitmap == null)
             fillShape(Rectangle2D.Double(0.0, 0.0, width, height), shader)
         else {
-            val color = shader.color.clone()
-            shader.colorSpace.convert(colorSpace, color, alpha = true, clamp = true)
+            val color = shader.color.convert(colorSpace, clamp = true, ceiling).rgba()
             val (w, h) = bitmap.spec.resolution
             val bmpSeg = bitmap.memorySegment(0)
             val ls = bitmap.linesize(0)
@@ -282,8 +284,8 @@ class Canvas private constructor(
     }
 
     /**
-     * Draws an RGBAF32 bitmap with full range, the same color space as the canvas, and no values outside the [0, 1]
-     * range (this is a condition known as `promiseClamped`) at some integer offset without scaling. This method skips
+     * Draws an RGBAF32 bitmap with full range, the same color space as the canvas, and no values outside the range
+     * [0, ceiling] (a condition known as `promiseClamped`) at some integer offset without scaling. This method skips
      * a lot of the machinery of the other bitmap-drawing methods and is thus mainly useful when making a large amount
      * of draw calls.
      */
@@ -350,7 +352,7 @@ class Canvas private constructor(
         transform: AffineTransform? = null,
         cached: PreparedBitmap? = null
     ): PreparedBitmap =
-        prepareBitmap(bitmap, promiseOpaque, promiseClamped, transform ?: IDENTITY, colorSpace, cached)
+        prepareBitmap(bitmap, promiseOpaque, promiseClamped, transform ?: IDENTITY, colorSpace, ceiling, cached)
 
     fun prepareSVGAsBitmap(
         svg: SourceSVG,
@@ -358,7 +360,7 @@ class Canvas private constructor(
         cached: PreparedBitmap? = null
     ): PreparedBitmap =
         prepareVectorGraphicAsBitmap(
-            svg.width, svg.height, { c, t -> c.drawSVG(svg, t) }, transform ?: IDENTITY, colorSpace, cached
+            svg.width, svg.height, { c, t -> c.drawSVG(svg, t) }, transform ?: IDENTITY, colorSpace, ceiling, cached
         )
 
     fun preparePDFAsBitmap(
@@ -368,7 +370,7 @@ class Canvas private constructor(
     ): PreparedBitmap {
         val size = PDFDrawer.sizeOfRotatedCropBox(pdf.getPage(0))
         return prepareVectorGraphicAsBitmap(
-            size.width, size.height, { c, t -> c.drawPDF(pdf, t) }, transform ?: IDENTITY, colorSpace, cached
+            size.width, size.height, { c, t -> c.drawPDF(pdf, t) }, transform ?: IDENTITY, colorSpace, ceiling, cached
         )
     }
 
@@ -408,7 +410,7 @@ class Canvas private constructor(
                     SkPaint_setDashPathEffect(paint, intervals, dashPattern.size, stroke.dashPhase)
                 }
             }
-            applyToPaint(paint, shader, alpha, transform, transform, colorSpace, needsClosing)
+            applyToPaint(paint, shader, alpha, transform, transform, colorSpace, ceiling, needsClosing)
             applyToPaint(paint, matte, blurSigma, blendMode, transform, transform, needsClosing)
             SkCanvas_drawPath(canvasHandle, shapeToPath(shape, arena), paint)
             SkPaint_delete(paint)
@@ -434,9 +436,11 @@ class Canvas private constructor(
         var canvasTransform = transform
         var filterMode = SkFilterMode_Nearest()
         if (nearestNeighbor)
-            prepared = prepareBitmap(bitmap, promiseOpaque, promiseClamped, IDENTITY, colorSpace, null)
+            prepared = prepareBitmap(bitmap, promiseOpaque, promiseClamped, IDENTITY, colorSpace, ceiling, null)
         else {
-            prepared = prepareBitmap(bitmap, promiseOpaque, promiseClamped, transform ?: IDENTITY, colorSpace, null)
+            prepared = prepareBitmap(
+                bitmap, promiseOpaque, promiseClamped, transform ?: IDENTITY, colorSpace, ceiling, null
+            )
             canvasTransform = prepared.transform
             // If the preparation failed to apply the transform, fall back to Skia's linear interpolation.
             if (canvasTransform == transform)
@@ -450,7 +454,7 @@ class Canvas private constructor(
         val paint = SkPaint_New()
         val needsClosing = mutableListOf<Bitmap>()
         if (shader != null)
-            applyToPaint(paint, shader, alpha, transform, canvasTransform, colorSpace, needsClosing)
+            applyToPaint(paint, shader, alpha, transform, canvasTransform, colorSpace, ceiling, needsClosing)
         else if (alpha < 1.0)
             SkPaint_setAlpha(paint, alpha.toFloat())
         applyToPaint(paint, matte, blurSigma, blendMode, transform, canvasTransform, needsClosing)
@@ -506,7 +510,7 @@ class Canvas private constructor(
         fun compatibleRepresentation(colorSpace: ColorSpace): Bitmap.Representation =
             Bitmap.Representation(Bitmap.PixelFormat.of(AV_PIX_FMT_RGBAF32), colorSpace, Bitmap.Alpha.PREMULTIPLIED)
 
-        fun forBitmap(bitmap: Bitmap): Canvas {
+        fun forBitmap(bitmap: Bitmap, ceiling: Float? = 1f): Canvas {
             val rep = bitmap.spec.representation
             require(rep.pixelFormat.code == AV_PIX_FMT_RGBAF32)
             require(rep.range == Bitmap.Range.FULL)
@@ -519,7 +523,7 @@ class Canvas private constructor(
                 bitmap.memorySegment(0),
                 bitmap.linesize(0).toLong()
             )
-            return Canvas(w.toDouble(), h.toDouble(), rep.colorSpace, bitmap, canvasHandle, null, null)
+            return Canvas(w.toDouble(), h.toDouble(), rep.colorSpace, ceiling, bitmap, canvasHandle, null, null)
         }
 
         fun forSVG(width: Double, height: Double): Canvas {
@@ -528,7 +532,7 @@ class Canvas private constructor(
             val canvasHandle = SkSVGCanvas_Make(streamHandle, 0f, 0f, width.toFloat(), height.toFloat())
             // The SVG specification mandates that when an SVG is later rendered, it must be composited in sRGB.
             // So to anyone who now asks about the canvas's compositing color space, we answer sRGB.
-            return Canvas(width, height, ColorSpace.SRGB, null, canvasHandle, null, streamHandle)
+            return Canvas(width, height, ColorSpace.SRGB, 1f, null, canvasHandle, null, streamHandle)
         }
 
         fun forPDF(width: Double, height: Double, colorSpace: ColorSpace): Canvas {
@@ -536,7 +540,7 @@ class Canvas private constructor(
             val streamHandle = SkDynamicMemoryWStream_New()
             val docHandle = SkPDF_MakeDocument(streamHandle)
             val canvasHandle = SkDocument_beginPage(docHandle, width.toFloat(), height.toFloat())
-            return Canvas(width, height, colorSpace, null, canvasHandle, docHandle, streamHandle)
+            return Canvas(width, height, colorSpace, 1f, null, canvasHandle, docHandle, streamHandle)
         }
 
         private val IDENTITY = AffineTransform()
@@ -633,22 +637,21 @@ class Canvas private constructor(
 
         private fun applyToPaint(
             paint: MemorySegment, shader: Shader, alpha: Double,
-            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace,
+            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace, ceiling: Float?,
             needsClosing: MutableList<Bitmap>
         ) {
             val shaderHandle = when (shader) {
                 is Shader.Solid -> {
-                    val c = shader.color.clone()
-                    shader.colorSpace.convert(canvasCS, c, alpha = true, clamp = true)
-                    SkPaint_setColor(paint, c[0], c[1], c[2], c[3] * alpha.toFloat(), canvasCS.skiaHandle)
+                    val c = shader.color.convert(canvasCS, clamp = true, ceiling)
+                    SkPaint_setColor(paint, c.r, c.g, c.b, c.a * alpha.toFloat(), canvasCS.skiaHandle)
                     return
                 }
                 is Shader.LinearGradient ->
-                    allocateLinearGradientShader(shader, userTransform, canvasTransform, canvasCS)
+                    allocateLinearGradientShader(shader, userTransform, canvasTransform, canvasCS, ceiling)
                 is Shader.Image ->
                     allocateBitmapShader(
                         shader.bitmap, shader.promiseOpaque, shader.promiseClamped, shader.transform, shader.tileMode,
-                        shader.disregardUserTransform, userTransform, canvasTransform, canvasCS, needsClosing
+                        shader.disregardUserTransform, userTransform, canvasTransform, canvasCS, ceiling, needsClosing
                     )
             }
             SkPaint_setShader(paint, shaderHandle)
@@ -665,7 +668,7 @@ class Canvas private constructor(
             if (matte != null) {
                 val shaderHandle = allocateBitmapShader(
                     matte.bitmap, false, false, matte.transform, matte.tileMode, matte.disregardUserTransform,
-                    userTransform, canvasTransform, null, needsClosing
+                    userTransform, canvasTransform, null, null, needsClosing
                 )
                 SkPaint_setShaderMaskFilter(paint, shaderHandle)
                 SkRefCnt_unref(shaderHandle)
@@ -677,7 +680,7 @@ class Canvas private constructor(
 
         private fun allocateLinearGradientShader(
             shader: Shader.LinearGradient,
-            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace
+            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace, ceiling: Float?
         ): MemorySegment {
             val p = doubleArrayOf(shader.point1.x, shader.point1.y, shader.point2.x, shader.point2.y)
             if ((userTransform != null || canvasTransform != null) && userTransform != canvasTransform) {
@@ -686,8 +689,15 @@ class Canvas private constructor(
                 pTransform.transform(p, 0, p, 0, 2)
             }
             Arena.ofConfined().use { arena ->
-                val colors = shader.colors.clone()
-                shader.colorSpace.convert(canvasCS, colors, alpha = true, clamp = true)
+                val colors = FloatArray(shader.colors.size * 4)
+                var i = 0
+                for (color in shader.colors) {
+                    val c = color.convert(canvasCS, clamp = true, ceiling)
+                    colors[i++] = c.r
+                    colors[i++] = c.g
+                    colors[i++] = c.b
+                    colors[i++] = c.a
+                }
                 val colorsSeg = arena.allocateArray(colors)
                 val posSeg = if (shader.pos == null) NULL else arena.allocateArray(shader.pos)
                 return SkGradientShader_MakeLinear(
@@ -701,7 +711,7 @@ class Canvas private constructor(
         private fun allocateBitmapShader(
             bitmap: Bitmap, promiseOpaque: Boolean, promiseClamped: Boolean,
             shaderTransform: AffineTransform?, tileMode: TileMode, disregardUserTransform: Boolean,
-            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace?,
+            userTransform: AffineTransform?, canvasTransform: AffineTransform?, canvasCS: ColorSpace?, ceiling: Float?,
             needsClosing: MutableList<Bitmap>
         ): MemorySegment {
             val physicalTransform = AffineTransform().apply {
@@ -709,7 +719,8 @@ class Canvas private constructor(
                     userTransform?.let(::concatenate)
                 shaderTransform?.let(::concatenate)
             }
-            val prepared = prepareBitmap(bitmap, promiseOpaque, promiseClamped, physicalTransform, canvasCS, null)
+            val prepared =
+                prepareBitmap(bitmap, promiseOpaque, promiseClamped, physicalTransform, canvasCS, ceiling, null)
             val shaderBitmap = prepared.bitmap ?: run {
                 // It's difficult to predict the effect of a vanishingly small shader image,
                 // so if that happens, just pass in a transparent 1x1 bitmap.
@@ -736,7 +747,7 @@ class Canvas private constructor(
 
         private fun prepareBitmap(
             bitmap: Bitmap, promiseOpaque: Boolean, promiseClamped: Boolean,
-            transform: AffineTransform, canvasCS: ColorSpace?, cached: PreparedBitmap?
+            transform: AffineTransform, canvasCS: ColorSpace?, canvasCeiling: Float?, cached: PreparedBitmap?
         ): PreparedBitmap {
             // Find whether the representation of the passed bitmap is directly supported by Skia.
             val (res, inRep) = bitmap.spec
@@ -830,7 +841,7 @@ class Canvas private constructor(
                         val bitmap2 = Bitmap.allocate(Bitmap.Spec(res2, outRep))
                         transformedBitmap = Bitmap.allocate(Bitmap.Spec(res3, outRep))
                         BitmapConverter.convert(bitmap, bitmap1, promiseOpaque = promiseOpaque)
-                        forBitmap(bitmap2.zero()).use { canvas ->
+                        forBitmap(bitmap2.zero(), canvasCeiling).use { canvas ->
                             canvas.applyTransformAndClip(AffineTransform().apply {
                                 scale(res2.widthPx / res3.widthPx.toDouble(), res2.heightPx / res3.heightPx.toDouble())
                                 translate(-drawAtX.toDouble(), -drawAtY.toDouble())
@@ -851,7 +862,7 @@ class Canvas private constructor(
 
             // If a new float bitmap has been created, clamp it. See the class's comment for details on why.
             if (!isMask && transformedBitmap != null && !transformedBitmap.sharesStorageWith(bitmap))
-                transformedBitmap.clampFloatColors(transformedPromiseOpaque)
+                transformedBitmap.clampFloatColors(canvasCeiling, transformedPromiseOpaque)
 
             val intTransl = AffineTransform.getTranslateInstance(drawAtX.toDouble(), drawAtY.toDouble())
             return PreparedBitmap(transformedBitmap, transformedPromiseOpaque, intTransl, copiedTransform)
@@ -859,7 +870,7 @@ class Canvas private constructor(
 
         private fun prepareVectorGraphicAsBitmap(
             width: Double, height: Double, drawTo: (Canvas, AffineTransform) -> Unit,
-            transform: AffineTransform, canvasCS: ColorSpace, cached: PreparedBitmap?
+            transform: AffineTransform, canvasCS: ColorSpace, canvasCeiling: Float?, cached: PreparedBitmap?
         ): PreparedBitmap {
             val bitmap: Bitmap
             val b = Rectangle2D.Double(0.0, 0.0, width, height).transformedBy(transform).bounds
@@ -871,7 +882,7 @@ class Canvas private constructor(
                 bitmap = Bitmap.allocate(Bitmap.Spec(Resolution(b.width, b.height), compatibleRepresentation(canvasCS)))
                 val shiftedTransform = AffineTransform.getTranslateInstance(-b.x.toDouble(), -b.y.toDouble())
                     .apply { concatenate(transform) }
-                forBitmap(bitmap.zero()).use { canvas -> drawTo(canvas, shiftedTransform) }
+                forBitmap(bitmap.zero(), canvasCeiling).use { canvas -> drawTo(canvas, shiftedTransform) }
             }
             val intTransl = AffineTransform.getTranslateInstance(b.x.toDouble(), b.y.toDouble())
             return PreparedBitmap(bitmap, false, intTransl, AffineTransform(transform))
@@ -929,49 +940,18 @@ class Canvas private constructor(
 
     sealed interface Shader {
 
-        class Solid(val color: FloatArray, val colorSpace: ColorSpace) : Shader {
-
-            init {
-                require(color.size == 4)
-            }
-
-            constructor(color: AWTColor) : this(
-                color.getComponents(AWTColorSpace.getInstance(AWTColorSpace.CS_CIEXYZ), null),
-                ColorSpace.XYZD50
-            )
-
-        }
+        class Solid(val color: Color4f) : Shader
 
         class LinearGradient(
             val point1: Point2D,
             val point2: Point2D,
-            val colors: FloatArray,
-            val colorSpace: ColorSpace,
+            val colors: List<Color4f>,
             val pos: FloatArray? = null
         ) : Shader {
-
             init {
-                require(colors.size == if (pos == null) 8 else pos.size * 4)
+                require(colors.size == if (pos == null) 2 else pos.size)
                 require(pos == null || pos.size >= 2)
             }
-
-            constructor(
-                point1: Point2D, point2: Point2D,
-                colors: List<AWTColor>, pos: FloatArray? = null
-            ) : this(point1, point2, convColors(colors), ColorSpace.XYZD50, pos)
-
-            companion object {
-                private fun convColors(colors: List<AWTColor>): FloatArray {
-                    val xyza = FloatArray(4)
-                    val xyzas = FloatArray(colors.size * 4)
-                    for (i in colors.indices) {
-                        colors[i].getComponents(AWTColorSpace.getInstance(AWTColorSpace.CS_CIEXYZ), xyza)
-                        System.arraycopy(xyza, 0, xyzas, i * 4, 4)
-                    }
-                    return xyzas
-                }
-            }
-
         }
 
         class Image(
@@ -1109,7 +1089,7 @@ class Canvas private constructor(
                     // Note: We intentionally ignore the MIME type and instead let BitmapReader figure out the format.
                     val bytes = DataUri.parse(uri, Charsets.UTF_8).data
                     val prepared = BitmapReader.read(bytes, planar = false).use { bitmap ->
-                        prepareBitmap(bitmap, false, false, IDENTITY, ColorSpace.SRGB, null)
+                        prepareBitmap(bitmap, false, false, IDENTITY, ColorSpace.SRGB, 1f, null)
                     }
                     cache[uri] = Optional.of(SoftReference(prepared))
                     return prepared

@@ -14,7 +14,6 @@ import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.JobSlot
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.Transparency
@@ -495,7 +494,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     private class FrameSource<F : Any>(
         materializationCache: DeferredImage.CanvasMaterializationCache,
         video: DeferredVideo,
-        grounding: Color,
+        grounding: Color4f,
         private val resolution: Resolution,
         representation: Bitmap.Representation,
         scan: Bitmap.Scan,

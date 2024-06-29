@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
-import java.awt.Color
 import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.io.IOException
@@ -170,7 +169,7 @@ class Tape private constructor(
                 canvasPreviewBitmap = Bitmap.allocate(canvasSpec)
                 canvasOverlayBitmap = Bitmap.allocate(canvasSpec)
                 Canvas.forBitmap(canvasOverlayBitmap!!.zero()).use { canvas ->
-                    canvas.fillShape(textShape, Canvas.Shader.Solid(Color.WHITE), transform = textTransform)
+                    canvas.fillShape(textShape, Canvas.Shader.Solid(Color4f.WHITE), transform = textTransform)
                 }
             }, ::close)
         }
@@ -239,8 +238,8 @@ class Tape private constructor(
 
     companion object {
 
-        val MISSING_MEDIA_TOP_COLOR = colorFromHex("#E44244")
-        val MISSING_MEDIA_BOT_COLOR = colorFromHex("#5B171F")
+        val MISSING_MEDIA_TOP_COLOR = Color4f.fromSRGBHexString("#E44244")
+        val MISSING_MEDIA_BOT_COLOR = Color4f.fromSRGBHexString("#5B171F")
 
         private val CONTAINER_EXTS =
             VideoContainerFormat.READER.flatMapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { it.extensions }

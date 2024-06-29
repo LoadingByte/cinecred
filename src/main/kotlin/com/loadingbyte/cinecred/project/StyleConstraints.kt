@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
@@ -11,7 +12,6 @@ import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.MatchExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
-import java.awt.Color
 import java.util.*
 import kotlin.math.floor
 
@@ -228,8 +228,8 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     ) { _, styling, style ->
         val visible = when (style.coloring) {
             LayerColoring.OFF -> false
-            LayerColoring.PLAIN -> style.color1.alpha != 0
-            LayerColoring.GRADIENT -> style.color1.alpha != 0 || style.color2.alpha != 0
+            LayerColoring.PLAIN -> style.color1.a != 0f
+            LayerColoring.GRADIENT -> style.color1.a != 0f || style.color2.a != 0f
         }
         if (visible)
             return@JudgeConstr true
@@ -364,9 +364,9 @@ class StyleNameConstr<S : Style, R : ListedStyle>(
 
 class ColorConstr<S : Style>(
     val severity: Severity,
-    setting: StyleSetting<S, Color>,
+    setting: StyleSetting<S, Color4f>,
     val allowAlpha: Boolean
-) : StyleConstraint<S, StyleSetting<S, Color>>(setting)
+) : StyleConstraint<S, StyleSetting<S, Color4f>>(setting)
 
 
 class ResolutionConstr<S : Style>(
@@ -516,7 +516,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                 }
                 is ColorConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, color ->
-                        if (!cst.allowAlpha && color.alpha != 255)
+                        if (!cst.allowAlpha && color.a != 1f)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.colorAlpha"))
                     }
                 is ResolutionConstr ->

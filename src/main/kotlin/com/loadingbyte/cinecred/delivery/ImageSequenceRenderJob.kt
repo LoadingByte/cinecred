@@ -3,22 +3,26 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.throwableAwareTask
 import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.ColorPreset.LINEAR_REC_709
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.COLOR_PRESET
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
+import com.loadingbyte.cinecred.imaging.ColorSpace.Primaries.Companion.BT709
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BLENDING
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Project
@@ -53,7 +57,8 @@ class ImageSequenceRenderJob private constructor(
         val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
         val matte = config[CHANNELS] == ALPHA
         val family = if (matte) GRAY else RGB
-        val colorSpace = if (matte) null else config[COLOR_PRESET].colorSpace
+        val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
+        val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
         val grounding = if (config[CHANNELS] == COLOR) project.styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
@@ -81,14 +86,18 @@ class ImageSequenceRenderJob private constructor(
                 AV_PIX_FMT_GRAYF32LE -> AV_PIX_FMT_GBRAPF32LE
                 else -> throw IllegalArgumentException("No color format of ${bitmapWriter.representation.pixelFormat}.")
             }
-            Bitmap.Representation(Bitmap.PixelFormat.of(pxFmtCode), ColorSpace.BLENDING, Bitmap.Alpha.PREMULTIPLIED)
+            Bitmap.Representation(
+                Bitmap.PixelFormat.of(pxFmtCode), ColorSpace.of(BT709, BLENDING), Bitmap.Alpha.PREMULTIPLIED
+            )
         }
         val backendSpec = Bitmap.Spec(
             scaledVideo.resolution, backendRep, scan,
             if (scan == Bitmap.Scan.PROGRESSIVE) Bitmap.Content.PROGRESSIVE_FRAME else Bitmap.Content.INTERLEAVED_FIELDS
         )
 
-        DeferredVideo.BitmapBackend(scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec).use { backend ->
+        DeferredVideo.BitmapBackend(
+            scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec, ceiling
+        ).use { backend ->
             val numFrames = scaledVideo.numFrames
             val numWorkers = Runtime.getRuntime().availableProcessors() - 1
             val executor = Executors.newFixedThreadPool(numWorkers) { Thread(it, "ImageSequenceWriter") }
@@ -141,16 +150,16 @@ class ImageSequenceRenderJob private constructor(
         )
         private val EXR = Format(
             "exr",
-            channelsTimesLinearColorPreset() * choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION)
+            choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION) * (
+                    choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR) * choice(HDR)
+                            + fixed(CHANNELS, ALPHA)
+                    )
         )
 
         val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR)
 
         private fun channelsTimesColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(COLOR_PRESET) + fixed(CHANNELS, ALPHA)
-
-        private fun channelsTimesLinearColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(COLOR_PRESET, LINEAR_REC_709) + fixed(CHANNELS, ALPHA)
+            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * choice(TRANSFER) + fixed(CHANNELS, ALPHA)
 
     }
 

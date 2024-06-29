@@ -9,7 +9,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Node
 import org.w3c.dom.traversal.DocumentTraversal
-import java.awt.Color
 import java.awt.Font
 import java.awt.Shape
 import java.awt.font.FontRenderContext
@@ -113,17 +112,6 @@ fun String.toFiniteDouble(nonNeg: Boolean = false, non0: Boolean = false): Doubl
 
 fun <T> enumFromName(name: String, enumClass: Class<T>): T =
     enumClass.enumConstants.first { (it as Enum<*>).name.equals(name, ignoreCase = true) }
-
-fun Color.toHex24() = "#%06x".format(rgb and 0x00FFFFFF)
-fun Color.toHex32() = "#%08x".format(rgb)
-
-// Note: We first have to convert to long and then to int because String.toInt() throws an exception when an
-// overflowing number is decoded (which happens whenever alpha > 128, since the first bit of the color number is then 1,
-// which is interpreted as a negative sign, so this is an overflow).
-fun colorFromHex(hex: String): Color {
-    require((hex.length == 7 || hex.length == 9) && hex[0] == '#')
-    return Color(hex.drop(1).toLong(16).toInt(), hex.length == 9)
-}
 
 
 // Note: We don't use Java's inbuilt floorDiv() and ceilDiv() because they contain branches, which make them slower.

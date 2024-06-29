@@ -1,11 +1,11 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.common.Resolution
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.DrawnStageInfo
-import java.awt.Color
 import kotlin.math.min
 
 
@@ -14,7 +14,7 @@ fun drawSafeAreasOverlay(
     stageInfo: List<DrawnStageInfo>,
     image: DeferredImage,
     layer: DeferredImage.Layer,
-    color: Color,
+    color: Color4f,
     actionSafe: Double,
     titleSafe: Double
 ) {
@@ -38,7 +38,7 @@ fun drawAspectRatioOverlay(
     stageInfo: List<DrawnStageInfo>,
     image: DeferredImage,
     layer: DeferredImage.Layer,
-    color: Color,
+    color: Color4f,
     aspectRatio: Double
 ) {
     drawCropMarkers(
@@ -55,7 +55,7 @@ private fun drawCropMarkers(
     stageInfo: List<DrawnStageInfo>,
     image: DeferredImage,
     layer: DeferredImage.Layer,
-    color: Color,
+    color: Color4f,
     cropWidth: Double,
     cropHeight: Double,
     ticks: Boolean
@@ -106,7 +106,7 @@ fun drawLinesOverlay(
     stageInfo: List<DrawnStageInfo>,
     image: DeferredImage,
     layer: DeferredImage.Layer,
-    color: Color,
+    color: Color4f,
     hLines: List<Int>,
     vLines: List<Int>
 ) {

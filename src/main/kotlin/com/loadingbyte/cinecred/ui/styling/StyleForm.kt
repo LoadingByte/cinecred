@@ -1,10 +1,10 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Color
 import java.util.*
 import javax.swing.Icon
 import javax.swing.SpinnerNumberModel
@@ -265,7 +265,7 @@ class StyleForm<S : Style>(
                 Locale.getAvailableLocales().filter { it != Locale.ROOT }.sortedBy(Locale::getDisplayName),
                 toString = Locale::getDisplayName, widthSpec
             )
-            Color::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec)
+            Color4f::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec = widthSpec)
             Resolution::class.java -> ResolutionWidget()
             FPS::class.java -> FPSWidget(widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
@@ -481,7 +481,7 @@ class StyleForm<S : Style>(
             widget.setSeverity(subjectIndex, issue.severity)
     }
 
-    fun setSwatchColors(swatchColors: List<Color>) {
+    fun setSwatchColors(swatchColors: List<Color4f>) {
         val configurator = { w: Widget<*> -> if (w is ColorWellWidget) w.swatchColors = swatchColors }
         for (widget in valueWidgets.values)
             widget.applyConfigurator(configurator)

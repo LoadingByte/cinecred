@@ -5,6 +5,7 @@ import com.formdev.flatlaf.ui.FlatBorder
 import com.formdev.flatlaf.ui.FlatButtonUI
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.FontFeature
 import com.loadingbyte.cinecred.project.Opt
 import net.miginfocom.swing.MigLayout
@@ -909,9 +910,10 @@ class ToggleButtonGroupWidget<V : Any>(
 
 
 class ColorWellWidget(
+    allowNonSRGB: Boolean = true,
     allowAlpha: Boolean = true,
     widthSpec: WidthSpec? = null
-) : Form.AbstractWidget<Color>() {
+) : Form.AbstractWidget<Color4f>() {
 
     private val btn = object : JButton(" ") {
         init {
@@ -931,7 +933,7 @@ class ColorWellWidget(
         }
     }
 
-    private val picker = ColorPicker(allowAlpha)
+    private val picker = ColorPicker(allowNonSRGB, allowAlpha)
     private val popup = DropdownPopupMenu(
         btn,
         preShow = { picker.resetUI(); picker.swatchColors = swatchColors },
@@ -958,12 +960,12 @@ class ColorWellWidget(
     override val components = listOf<JComponent>(btn)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
-    var swatchColors: List<Color> = emptyList()
+    var swatchColors: List<Color4f> = emptyList()
 
-    override var value: Color = Color.BLACK
+    override var value: Color4f = Color4f.BLACK
         set(value) {
             field = value
-            btn.background = value
+            btn.background = value.toSRGBAWT()
             withoutChangeListeners { picker.value = value }
             notifyChangeListeners()
         }

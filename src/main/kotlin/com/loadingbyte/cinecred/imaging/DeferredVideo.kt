@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.bytedeco.ffmpeg.global.avcodec.*
-import java.awt.Color
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.geom.AffineTransform
@@ -242,8 +241,9 @@ class DeferredVideo private constructor(
         video: DeferredVideo,
         private val staticLayers: List<DeferredImage.Layer>,
         tapeLayers: List<DeferredImage.Layer>,
-        private val grounding: Color?,
+        private val grounding: Color4f?,
         private val userSpec: Bitmap.Spec,
+        private val canvasCeiling: Float? = 1f,
         private val cache: DeferredImage.CanvasMaterializationCache? = null,
         private val randomAccessDraftMode: Boolean = false
     ) : AutoCloseable {
@@ -330,7 +330,7 @@ class DeferredVideo private constructor(
             blankCanvasBitmap = Bitmap.allocate(canvasWorkSpec)
             blankUserBitmap = Bitmap.allocate(userWorkSpec)
             if (grounding != null) {
-                Canvas.forBitmap(blankCanvasBitmap).use { canvas -> canvas.fill(Canvas.Shader.Solid(grounding)) }
+                Canvas.forBitmap(blankCanvasBitmap, canvasCeiling).use { it.fill(Canvas.Shader.Solid(grounding)) }
                 canvas2user.convert(blankCanvasBitmap, blankUserBitmap)
             } else {
                 blankCanvasBitmap.zero()
@@ -354,7 +354,7 @@ class DeferredVideo private constructor(
                     val renderUserSpec = Bitmap.Spec(resolution, userSpec.representation)
                     val transparentCanvasBitmaps = microShifts.map { ms ->
                         val bmp = Bitmap.allocate(renderCanvasSpec)
-                        Canvas.forBitmap(bmp.zero()).use { canvas -> materialize(canvas, image, -(baseShift + ms)) }
+                        Canvas.forBitmap(bmp.zero(), canvasCeiling).use { materialize(it, image, -(baseShift + ms)) }
                         bmp
                     }
                     BitmapConverter(
@@ -367,7 +367,7 @@ class DeferredVideo private constructor(
                                 converter.convert(transparentCanvasBitmap, userBitmap)
                             else
                                 Bitmap.allocate(renderCanvasSpec).use { groundedCanvasBitmap ->
-                                    Canvas.forBitmap(groundedCanvasBitmap).use { canvas ->
+                                    Canvas.forBitmap(groundedCanvasBitmap, canvasCeiling).use { canvas ->
                                         canvas.fill(Canvas.Shader.Solid(grounding))
                                         canvas.drawImageFast(transparentCanvasBitmap)
                                     }
@@ -393,7 +393,7 @@ class DeferredVideo private constructor(
                     grounding == null -> Frame(r.render.transparentCanvasBitmap, writable = false, shift = r.shift)
                     else -> {
                         val bitmap = Bitmap.allocate(canvasWorkSpec)
-                        Canvas.forBitmap(bitmap).use { canvas ->
+                        Canvas.forBitmap(bitmap, canvasCeiling).use { canvas ->
                             canvas.fill(Canvas.Shader.Solid(grounding))
                             canvas.drawImageFast(r.render.transparentCanvasBitmap, y = -r.shift)
                         }
@@ -402,7 +402,7 @@ class DeferredVideo private constructor(
                 }
                 else -> {
                     val canvasBitmap = Bitmap.allocate(canvasWorkSpec)
-                    Canvas.forBitmap(canvasBitmap).use { canvas ->
+                    Canvas.forBitmap(canvasBitmap, canvasCeiling).use { canvas ->
                         if (grounding == null) canvasBitmap.zero() else canvas.fill(Canvas.Shader.Solid(grounding))
                         for (resp in pageCache.query(progressiveFrameIdx))
                             when (resp) {
@@ -561,7 +561,8 @@ class DeferredVideo private constructor(
 
         private fun takeTapeUserData(resp: TapeTracker.Response<TapeUserData>): TapeUserData {
             resp.userData?.let { return it }
-            return TapeUserData(canvasRepresentation, userSpec, resp, randomAccessDraftMode).also { resp.userData = it }
+            return TapeUserData(canvasRepresentation, canvasCeiling, userSpec, resp, randomAccessDraftMode)
+                .also { resp.userData = it }
         }
 
         private fun dropTapeUserData(resp: TapeTracker.Response<TapeUserData>, frameIdx: Int) {
@@ -575,6 +576,7 @@ class DeferredVideo private constructor(
 
         private class TapeUserData(
             canvasRep: Bitmap.Representation,
+            canvasCeiling: Float?,
             userSpec: Bitmap.Spec,
             resp: TapeTracker.Response<*>,
             usePreview: Boolean
@@ -620,9 +622,9 @@ class DeferredVideo private constructor(
             // so it'll be a drop-in replacement for the actual tape frames.
             private val missingMediaBitmap by lazy {
                 val mmBitmap = Bitmap.allocate(readSpec)
-                val rep = Canvas.compatibleRepresentation(ColorSpace.BLENDING)
+                val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
                 Bitmap.allocate(Bitmap.Spec(readSpec.resolution, rep)).use { canvasBitmap ->
-                    Canvas.forBitmap(canvasBitmap.zero()).use { canvas ->
+                    Canvas.forBitmap(canvasBitmap.zero(), canvasCeiling).use { canvas ->
                         val (w, h) = readSpec.resolution
                         val colors = listOf(Tape.MISSING_MEDIA_TOP_COLOR, Tape.MISSING_MEDIA_BOT_COLOR)
                         canvas.fillShape(Rectangle(w, h), Canvas.Shader.LinearGradient(Point(), Point(0, h), colors))
@@ -646,7 +648,7 @@ class DeferredVideo private constructor(
                     val compositedOverlayRes = if (readFramesAreProgressive) embeddedTapeFrameRes else
                     // If the tape is interlaced, make it have even height in the final output.
                         Resolution(embeddedTapeFrameRes.widthPx, embeddedTapeFrameRes.heightPx / 2 * 2)
-                    frameOverlayer = Overlayer(canvasRep, compositedOverlayRes, usePreview)
+                    frameOverlayer = Overlayer(canvasRep, canvasCeiling, compositedOverlayRes, usePreview)
                     topFieldOverlayer = null
                     botFieldOverlayer = null
                 } else {
@@ -654,8 +656,8 @@ class DeferredVideo private constructor(
                         "The interlaced tape '${resp.embeddedTape.tape.fileOrDir.name}' must have even height."
                     }
                     frameOverlayer = null
-                    topFieldOverlayer = Overlayer(canvasRep, embeddedTapeFieldRes, usePreview)
-                    botFieldOverlayer = Overlayer(canvasRep, embeddedTapeFieldRes, usePreview)
+                    topFieldOverlayer = Overlayer(canvasRep, canvasCeiling, embeddedTapeFieldRes, usePreview)
+                    botFieldOverlayer = Overlayer(canvasRep, canvasCeiling, embeddedTapeFieldRes, usePreview)
                 }
             }
 
@@ -690,6 +692,7 @@ class DeferredVideo private constructor(
 
         private class Overlayer(
             private val canvasRep: Bitmap.Representation,
+            private val canvasCeiling: Float?,
             private val compositedOverlayRes: Resolution,
             private val usingPreview: Boolean
         ) {
@@ -703,7 +706,7 @@ class DeferredVideo private constructor(
                     val (ow, oh) = overlay.spec.resolution
                     val transform = AffineTransform.getTranslateInstance(x.toDouble(), y.toDouble())
                         .apply { scale(cw / ow.toDouble(), ch / oh.toDouble()) }
-                    Canvas.forBitmap(base).use { canvas ->
+                    Canvas.forBitmap(base, canvasCeiling).use { canvas ->
                         canvas.drawImage(overlay, nearestNeighbor = usingPreview, alpha = alpha, transform = transform)
                     }
                 } else {
@@ -712,10 +715,15 @@ class DeferredVideo private constructor(
                         initForBlit(base.spec, overlay.spec)
                     val userOverlayBitmap = userOverlayBitmap!!
                     raw2user!!.convert(overlay, userOverlayBitmap)
-                    if (userOverlayBitmap.spec.representation.pixelFormat.isFloat)
+                    if (userOverlayBitmap.spec.representation.pixelFormat.isFloat) {
+                        val cCS = canvasRep.colorSpace
+                        val uCS = userOverlayBitmap.spec.representation.colorSpace
+                        val userCeiling = if (canvasCeiling == null || cCS == null || uCS == null) canvasCeiling else
+                            Color4f(canvasCeiling, canvasCeiling, canvasCeiling, cCS).convert(uCS).rgb().min()
                         userOverlayBitmap.clampFloatColors(
-                            promiseOpaque = !overlay.spec.representation.pixelFormat.hasAlpha
+                            userCeiling, promiseOpaque = !overlay.spec.representation.pixelFormat.hasAlpha
                         )
+                    }
                     base.blitLeniently(userOverlayBitmap, 0, 0, cw, ch, x, y)
                 }
             }

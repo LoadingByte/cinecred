@@ -5,8 +5,8 @@ import com.formdev.flatlaf.icons.FlatCheckBoxIcon
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.colorFromHex
 import com.loadingbyte.cinecred.common.setWindowCanFullScreenMacOS
+import com.loadingbyte.cinecred.imaging.Color4f
 import java.awt.*
 import java.awt.RenderingHints.*
 import java.awt.event.*
@@ -33,12 +33,12 @@ const val PALETTE_RED: String = "#C75450"
 const val PALETTE_GREEN: String = "#499C54"
 const val PALETTE_BLUE: String = "#3592C4"
 const val PALETTE_GRAY: String = "#AFB1B3"
-val PALETTE_RED_COLOR: Color = colorFromHex(PALETTE_RED)
-val PALETTE_GREEN_COLOR: Color = colorFromHex(PALETTE_GREEN)
-val PALETTE_BLUE_COLOR: Color = colorFromHex(PALETTE_BLUE)
-val PALETTE_GRAY_COLOR: Color = colorFromHex(PALETTE_GRAY)
+val PALETTE_RED_COLOR = Color(Integer.decode(PALETTE_RED))
+val PALETTE_GREEN_COLOR = Color(Integer.decode(PALETTE_GREEN))
+val PALETTE_BLUE_COLOR = Color(Integer.decode(PALETTE_BLUE))
+val PALETTE_GRAY_COLOR = Color(Integer.decode(PALETTE_GRAY))
 
-val OVERLAY_COLOR: Color = Color.GRAY
+val OVERLAY_COLOR = Color4f.GRAY
 
 
 inline fun Graphics.withNewG2(block: (Graphics2D) -> Unit) {

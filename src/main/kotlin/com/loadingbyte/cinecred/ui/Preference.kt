@@ -1,11 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
-import com.loadingbyte.cinecred.imaging.BitmapWriter
-import com.loadingbyte.cinecred.imaging.ColorSpace
-import com.loadingbyte.cinecred.imaging.Picture
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -132,7 +129,8 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
             }
             "lines" -> {
                 val name = it["name"] as? String ?: return@mapNotNull null
-                val color = (it["color"] as? String)?.let(::colorFromHex)
+                val colorList = (it["color"] as? List<*>)?.filterIsInstance<Number>() ?: emptyList()
+                val color = if (colorList.size == 4) Color4f(colorList, ColorSpace.XYZD50) else null
                 val hLines = (it["hLines"] as? List<*>)?.filterIsInstance<Int>() ?: emptyList()
                 val vLines = (it["vLines"] as? List<*>)?.filterIsInstance<Int>() ?: emptyList()
                 LinesOverlay(UUID.randomUUID(), name, color, hLines, vLines)
@@ -198,7 +196,7 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
                         "type" to "lines",
                         "name" to overlay.name
                     )
-                    if (overlay.color != null) toml["color"] = overlay.color.toHex24()
+                    if (overlay.color != null) toml["color"] = overlay.color.convert(ColorSpace.XYZD50).rgba().asList()
                     if (overlay.hLines.isNotEmpty()) toml["hLines"] = overlay.hLines
                     if (overlay.vLines.isNotEmpty()) toml["vLines"] = overlay.vLines
                     toml

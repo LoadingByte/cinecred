@@ -431,7 +431,7 @@ class PDFDrawer(
         val pdCS = pdColor.colorSpace
         if (pdCS !is PDPattern) {
             val color = convertPDFColorToXYZAD50(pdColor, group.devCS) ?: return null
-            return Canvas.Shader.Solid(color, ColorSpace.XYZD50)
+            return Canvas.Shader.Solid(Color4f(color, ColorSpace.XYZD50))
         } else {
             val pattern = pdCS.getPattern(pdColor)
             val fullMatrix = Matrix.concatenate(initialMatrix, pattern.matrix)
@@ -757,7 +757,7 @@ class PDFDrawer(
         }
 
         if (backdropColor != null)
-            newCanvas.fill(Canvas.Shader.Solid(backdropColor, ColorSpace.XYZD50))
+            newCanvas.fill(Canvas.Shader.Solid(Color4f(backdropColor, ColorSpace.XYZD50)))
 
         // Note: It is important for the backdrop stuff that "canvas" is first in the array, not "alphaCanvas".
         val newCanvases = if (newAlphaCanvas == null) arrayOf(newCanvas) else arrayOf(newCanvas, newAlphaCanvas)

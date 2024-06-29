@@ -6,6 +6,7 @@ import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.formdev.flatlaf.ui.FlatRoundBorder
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.SERVICES
@@ -272,7 +273,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         name: String,
         aspectRatioH: Double,
         aspectRatioV: Double,
-        linesColor: Color?,
+        linesColor: Color4f?,
         linesH: List<Int>,
         linesV: List<Int>,
         imageFile: Path,
@@ -381,7 +382,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         val linesColorWidget = addWidget(
             l10n("color"),
-            OptWidget(ColorWellWidget(allowAlpha = false)),
+            OptWidget(ColorWellWidget(allowNonSRGB = false, allowAlpha = false)),
             isVisible = { typeWidget.value == LinesOverlay::class.java }
         )
 

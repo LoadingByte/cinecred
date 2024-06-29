@@ -2,10 +2,7 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.json.Json
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.Bitmap
-import com.loadingbyte.cinecred.imaging.Canvas
-import com.loadingbyte.cinecred.imaging.ColorSpace
-import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.projectio.*
 import com.loadingbyte.cinecred.projectio.service.*
 import com.loadingbyte.cinecred.ui.*
@@ -14,7 +11,6 @@ import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
-import java.awt.Color
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.VK_ESCAPE
 import java.io.IOException
@@ -506,7 +502,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         name: String,
         aspectRatioH: Double,
         aspectRatioV: Double,
-        linesColor: Color?,
+        linesColor: Color4f?,
         linesH: List<Int>,
         linesV: List<Int>,
         imageFile: Path,

@@ -287,8 +287,8 @@ class FormattedString private constructor(
         for ((layerIdx, layer) in design.layers.withIndex()) {
             // Skip invisible (likely helper) layers early for improved performance.
             val invisible = when (val c = layer.coloring) {
-                is Layer.Coloring.Plain -> c.color.alpha == 0
-                is Layer.Coloring.Gradient -> c.color1.alpha == 0 && c.color2.alpha == 0
+                is Layer.Coloring.Plain -> c.color.a == 0f
+                is Layer.Coloring.Gradient -> c.color1.a == 0f && c.color2.a == 0f
             }
             if (invisible)
                 continue
@@ -821,12 +821,12 @@ class FormattedString private constructor(
         sealed interface Coloring {
 
             class Plain(
-                val color: Color
+                val color: Color4f
             ) : Coloring
 
             class Gradient(
-                val color1: Color,
-                val color2: Color,
+                val color1: Color4f,
+                val color2: Color4f,
                 val angleDeg: Double,
                 val extentPx: Double,
                 val shiftPx: Double = 0.0

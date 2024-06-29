@@ -46,6 +46,7 @@ Cinecred Changelog
 - Exported PDFs now contain only one instance of each picture, even when it has
   multiple occurrences.
 - Exported PDFs no longer squish gradients when the export resolution is scaled.
+- The program no longer crashes when it is launched twice in quick succession.
 - The crash window now also opens when the error occurred in a background task.
 - The file that stores Google access tokens is now only created when needed, and
   any errors related to that file are gracefully handled.

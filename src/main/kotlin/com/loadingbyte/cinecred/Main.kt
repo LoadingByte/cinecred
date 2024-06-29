@@ -189,6 +189,10 @@ private fun mainSwing(args: Array<String>) {
 
 
 private fun openUI(args: Array<String>) {
+    // If the program is launched for a second time while the firstly-launched process is still initializing itself,
+    // ignore the second launch, as the program would otherwise crash.
+    if (!::masterCtrl.isInitialized)
+        return
     // If the program has crashed and the crash dialog is still open, launching another instance (which results in a
     // call to this method) should no longer open the welcome window.
     if (hasCrashed.get())

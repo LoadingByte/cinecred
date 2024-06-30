@@ -16,7 +16,6 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent.*
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
-import java.awt.image.ColorModel
 import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.SwingUtilities
@@ -63,6 +62,8 @@ class DeferredImagePanel(
             setImageAndGroundingAndLayers(image, grounding, layers)
         }
 
+    var isPresented: Boolean = true
+
     fun setImageAndGroundingAndLayers(image: DeferredImage?, grounding: Color4f, layers: List<Layer>) {
         val imageChanged = image !== _image
         if (!imageChanged && _grounding == grounding && _layers == layers) return
@@ -70,6 +71,7 @@ class DeferredImagePanel(
         _image = image
         _grounding = grounding
         _layers = layers
+        contentVersion++
         if (imageChanged) coerceViewportAndCalibrateScrollbars()
         // Rematerialize will call canvas.repaint() once it's done.
         rematerialize(contentChanged = true)
@@ -98,6 +100,7 @@ class DeferredImagePanel(
     private var _image: DeferredImage? = null
     private var _grounding: Color4f = Color4f.BLACK
     private var _layers: List<Layer> = emptyList()
+    private var contentVersion = 0L
 
     // Use and cache an intermediate materialized image of the current sizing. We first paint
     // a properly scaled version of the deferred image onto the raster image. Then, we directly paint that
@@ -107,11 +110,15 @@ class DeferredImagePanel(
     // memory, we only rasterize the portion around the currently visible viewport, but keep a low-res version
     // of the entire image that we momentarily show when the user scrolls out of the rasterized portion too fast.
     private var materialized: BufferedImage? = null
+    private var materializedContentVersion = 0L
     // In image coordinates:
     private var materializedStartY = Double.NaN
     private var materializedStopY = Double.NaN
     private var lowResMaterialized: BufferedImage? = null
-    private val materializingJobSlot = JobSlot()
+    private var lowResMaterializedContentVersion = 0L
+    private val immediateMaterializingJobSlot = JobSlot()
+    private val delayedHighResMaterializingJobSlot = JobSlot(delay = 200L)
+    private val delayedLowResMaterializingJobSlot = JobSlot(delay = 200L)
 
     private val canvas = CanvasPanel()
     private val xScrollbar = Scrollbar(JScrollBar.HORIZONTAL)
@@ -282,57 +289,133 @@ class DeferredImagePanel(
     }
 
     private fun rematerialize(contentChanged: Boolean) {
-        // Capture these variables.
         val image = this.image
-        val viewportCenterX = this.viewportCenterX
-        val viewportCenterY = this.viewportCenterY
 
         if (image == null || canvas.width == 0 || canvas.height == 0) {
             materialized = null
             lowResMaterialized = null
             canvas.repaint()
         } else {
-            // Update the low-res version if either the content changed or there is not a low-res version yet. Note that
-            // submitMaterializeJob() only actually materializes the low-res version when the regular "mat" is just a
-            // portion of the whole deferred image. Otherwise, the function returns null, and as a consequence, the
-            // previous low-res version is discarded.
-            val lowRes = contentChanged || lowResMaterialized == null
-            submitMaterializeJob(
-                highResCache, lowResCache, materializingJobSlot,
-                // Abort if the canvas was disposed already.
-                canvas.graphicsConfiguration.colorModel ?: return,
-                image, physicalImageScaling, viewportHeight, viewportCenterY, lowRes, layers, grounding
-            ) { mat, matStartY, matStopY, lowResMat ->
-                SwingUtilities.invokeLater {
-                    materialized = mat
-                    materializedStartY = matStartY
-                    materializedStopY = matStopY
-                    if (lowRes) lowResMaterialized = lowResMat
-                    // This is a bit hacky. When materialization has finished, we want to repaint the canvas.
-                    // However, the user might have supplied a new image in the meantime (e.g., because he's pushing
-                    // down on some style config spinner). To avoid that the repainting of the canvas is done with
-                    // a wrong image in the this.image variable (which would lead to a wrongly calculated viewport
-                    // position and hence to awful jitter), we briefly set this.image to the image used as a source
-                    // for the just generated materialized image. After the canvas has been repainted (we use
-                    // paintImmediately() so that the painting will be done once the method returns), we set this.image
-                    // back to its original value. We do the same thing for this.viewportCenterX/Y.
-                    // Note that this quick change will not interfere with other code setting those variables because
-                    // they may only be set from the AWT event thread (which we are in right now as well).
-                    if (this.image == image)
-                        canvas.repaint()
-                    else {
-                        val curImage = this._image
-                        val curViewportCenterX = this.viewportCenterX
-                        val curViewportCenterY = this.viewportCenterY
-                        this._image = image
-                        this.viewportCenterX = viewportCenterX
-                        this.viewportCenterY = viewportCenterY
-                        canvas.paintImmediately(0, 0, canvas.width, canvas.height)
-                        this._image = curImage
-                        this.viewportCenterX = curViewportCenterX
-                        this.viewportCenterY = curViewportCenterY
-                    }
+            val imageHeight = image.height.resolve()
+            val viewportHeight = this.viewportHeight
+            // If this panel is currently being presented to the user, immediately materialize its image. To improve
+            // performance, if the deferred image exceeds the viewport, we only immediately materialize the portion
+            // covered by the current viewport.
+            if (isPresented) {
+                // The portion's top y in image coordinates.
+                val immediateStartY = if (imageHeight == viewportHeight) Double.NaN else viewportStartY
+                submitHighResMaterializingJob(immediateMaterializingJobSlot, immediateStartY, viewportHeight)
+                if (immediateStartY.isNaN())
+                    return
+            }
+            // If the first step didn't start the materialization of the entire deferred image yet, schedule the
+            // materialization of a larger area around the viewport (this allows the user to move around a bit) after
+            // some delay has passed. If the image changes again before the waiting time is up, the scheduled job is
+            // canceled. This way, when the user is pushing down a spinner and quickly cycles through images, we only
+            // spend compute on materializing the current viewport of the currently presented image panel. Only after he
+            // has let go of the spinner will the other images catch up and will a larger area be materialized.
+            val delayedHeight = min(
+                imageHeight,
+                // If a raster image of the entire deferred image with the current physical scaling would exceed
+                // MAX_PIXELS, we only materialize a portion of the deferred image around the current viewport.
+                max(viewportHeight + MIN_IMG_BUFFER, MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2)))
+            )
+            val delayedStartY = if (delayedHeight == imageHeight) Double.NaN else
+                (viewportCenterY - delayedHeight / 2.0).coerceIn(0.0, imageHeight - delayedHeight)
+            submitHighResMaterializingJob(delayedHighResMaterializingJobSlot, delayedStartY, delayedHeight)
+            // Materialize a low-res version if (a) the high-res version doesn't yet cover the entire deferred image and
+            // (b) either the content changed or there is not a low-res version yet. We will momentarily paint this
+            // low-res placeholder when the user scrolls out of the materialized portion too quickly.
+            if (!delayedStartY.isNaN() && (contentChanged || lowResMaterialized == null))
+                submitLowResMaterializingJob(delayedLowResMaterializingJobSlot)
+        }
+    }
+
+    private fun submitHighResMaterializingJob(jobSlot: JobSlot, startY: Double, height: Double) {
+        // Abort if the canvas was disposed already.
+        val bitmapJ2DBridge = BitmapJ2DBridge(canvas.graphicsConfiguration.colorModel ?: return)
+        // Capture these variables.
+        val image = this.image!!
+        val grounding = this.grounding
+        val layers = this.layers
+        val contentVersion = this.contentVersion
+        val physicalImageScaling = this.physicalImageScaling
+        jobSlot.submit {
+            // Materialize the image or a portion thereof.
+            // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
+            val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
+            val matHeight = max(1, (physicalImageScaling * height).roundToInt())
+            val materialized = drawToBufferedImage(matWidth, matHeight, grounding, bitmapJ2DBridge) { canvas ->
+                // Paint a scaled version of the deferred image onto the raster image.
+                DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
+                    // If only a portion is materialized, scroll the deferred image to that portion.
+                    val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
+                    drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
+                }.materialize(canvas, highResCache, layers)
+            }
+            SwingUtilities.invokeLater {
+                if (this.materializedContentVersion > contentVersion)
+                    return@invokeLater
+                this.materialized = materialized
+                this.materializedContentVersion = contentVersion
+                this.materializedStartY = startY
+                this.materializedStopY = startY + height
+                // If the materialized high-res image covers the whole deferred image, also use it as the fallback.
+                if (startY.isNaN() && this.lowResMaterializedContentVersion < contentVersion) {
+                    this.lowResMaterialized = materialized
+                    this.lowResMaterializedContentVersion = contentVersion
                 }
+                // This is a bit hacky. When materialization has finished, we want to repaint the canvas.
+                // However, the user might have supplied a new image in the meantime (e.g., because he's pushing
+                // down on some style config spinner). To avoid that the repainting of the canvas is done with
+                // a wrong image in the this.image variable (which would lead to a wrongly calculated viewport
+                // position and hence to awful jitter), we briefly set this.image to the image used as a source
+                // for the just generated materialized image. After the canvas has been repainted (we use
+                // paintImmediately() so that the painting will be done once the method returns), we set this.image
+                // back to its original value. We do the same thing for this.viewportCenterX/Y.
+                // Note that this quick change will not interfere with other code setting those variables because
+                // they may only be set from the AWT event thread (which we are in right now as well).
+                if (this.contentVersion == contentVersion)
+                    canvas.repaint()
+                else {
+                    val curImage = this._image
+                    val curViewportCenterX = this.viewportCenterX
+                    val curViewportCenterY = this.viewportCenterY
+                    this._image = image
+                    this.viewportCenterX = viewportCenterX
+                    this.viewportCenterY = viewportCenterY
+                    canvas.paintImmediately(0, 0, canvas.width, canvas.height)
+                    this._image = curImage
+                    this.viewportCenterX = curViewportCenterX
+                    this.viewportCenterY = curViewportCenterY
+                }
+            }
+        }
+    }
+
+    private fun submitLowResMaterializingJob(jobSlot: JobSlot) {
+        // Abort if the canvas was disposed already.
+        val bitmapJ2DBridge = BitmapJ2DBridge(canvas.graphicsConfiguration.colorModel ?: return)
+        // Capture these variables.
+        val image = this.image!!
+        val grounding = this.grounding
+        val layers = this.layers
+        val contentVersion = this.contentVersion
+        jobSlot.submit {
+            val imageHeight = image.height.resolve()
+            val theoreticalScaling = sqrt(MAX_MAT_PIXELS / (image.width * imageHeight))
+            // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.
+            val matWidth = max(1, (theoreticalScaling * image.width).toInt())
+            val scaling = matWidth / image.width
+            val matHeight = max(1, ceil(scaling * imageHeight).toInt())
+            val materialized = drawToBufferedImage(matWidth, matHeight, grounding, bitmapJ2DBridge) { canvas ->
+                image.copy(universeScaling = scaling).materialize(canvas, lowResCache, layers)
+            }
+            SwingUtilities.invokeLater {
+                if (this.lowResMaterializedContentVersion > contentVersion)
+                    return@invokeLater
+                this.lowResMaterialized = materialized
+                this.lowResMaterializedContentVersion = contentVersion
             }
         }
     }
@@ -343,61 +426,6 @@ class DeferredImagePanel(
         private const val SCROLLBAR_MULT = 1024.0
         private const val MIN_IMG_BUFFER = 400
         private const val MAX_MAT_PIXELS = 5_000_000
-
-        // We use this external static method to absolutely ensure all variables have been captured.
-        // We can now use these variables from another thread without fearing they might change suddenly.
-        private fun submitMaterializeJob(
-            highResCache: DeferredImage.CanvasMaterializationCache,
-            lowResCache: DeferredImage.CanvasMaterializationCache,
-            jobSlot: JobSlot, nativeCM: ColorModel,
-            image: DeferredImage,
-            physicalImageScaling: Double, viewportHeight: Double, viewportCenterY: Double, lowRes: Boolean,
-            layers: List<Layer>, grounding: Color4f, onFinish: (BufferedImage, Double, Double, BufferedImage?) -> Unit
-        ) {
-            jobSlot.submit {
-                val imgHeight = image.height.resolve()
-                val bitmapJ2DBridge = BitmapJ2DBridge(nativeCM)
-
-                // If a raster image with the given physical scaling would exceed MAX_PIXELS, we only materialize the
-                // portion of the deferred image around the current viewport. For that, we find the height of the
-                // portion and its top y, both in image coordinates.
-                val clippedImgHeight = min(
-                    imgHeight,
-                    max(viewportHeight + MIN_IMG_BUFFER, MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2)))
-                )
-                val startY = if (clippedImgHeight == imgHeight) Double.NaN else
-                    (viewportCenterY - clippedImgHeight / 2.0).coerceIn(0.0, imgHeight - clippedImgHeight)
-
-                // Materialize the image or a portion thereof.
-                // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
-                val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
-                val matHeight = max(1, (physicalImageScaling * clippedImgHeight).roundToInt())
-                val materialized = drawToBufferedImage(matWidth, matHeight, grounding, bitmapJ2DBridge) { canvas ->
-                    // Paint a scaled version of the deferred image onto the raster image.
-                    DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
-                        // If only a portion is materialized, scroll the deferred image to that portion.
-                        val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
-                        drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
-                    }.materialize(canvas, highResCache, layers)
-                }
-
-                // If only a portion is materialized, we generate another more low-res image that covers the whole
-                // deferred image. We momentarily paint this placeholder image when the user scrolls out of the
-                // materialized portion too quickly.
-                val lowResMaterialized = if (!lowRes || startY.isNaN()) null else {
-                    val theoreticalLowResScaling = sqrt(MAX_MAT_PIXELS / (image.width * imgHeight))
-                    // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.
-                    val lowResMatWidth = max(1, (theoreticalLowResScaling * image.width).toInt())
-                    val lowResScaling = lowResMatWidth / image.width
-                    val lowResMatHeight = max(1, ceil(lowResScaling * imgHeight).toInt())
-                    drawToBufferedImage(lowResMatWidth, lowResMatHeight, grounding, bitmapJ2DBridge) { canvas ->
-                        image.copy(universeScaling = lowResScaling).materialize(canvas, lowResCache, layers)
-                    }
-                }
-
-                onFinish(materialized, startY, startY + clippedImgHeight, lowResMaterialized)
-            }
-        }
 
         private inline fun drawToBufferedImage(
             w: Int, h: Int, grounding: Color4f, bitmapJ2DBridge: BitmapJ2DBridge, draw: (Canvas) -> Unit

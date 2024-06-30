@@ -176,7 +176,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private val creditsTabs = newPreviewTabbedPane().apply {
-        addChangeListener { displayRuntimeOfSelectedCredits() }
+        addChangeListener {
+            displayRuntimeOfSelectedCredits()
+            updateDeferredImagePanelPresentationStatuses()
+        }
     }
 
     private val previewPanelCards = CardLayout()
@@ -425,6 +428,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         refreshCreditsTabs()
         // Adjust the total runtime label.
         displayRuntimeOfSelectedCredits()
+        updateDeferredImagePanelPresentationStatuses()
     }
 
     private fun displayRuntimeOfSelectedCredits() {
@@ -438,6 +442,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         runtimeLabel.toolTipText = tooltip
     }
 
+    private fun updateDeferredImagePanelPresentationStatuses() {
+        for (creditsIdx in 0..<creditsTabs.tabCount) {
+            val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
+            for (pageIdx in 0..<pageTabs.tabCount)
+                (pageTabs.getComponentAt(pageIdx) as DeferredImagePanel).isPresented =
+                    creditsTabs.selectedIndex == creditsIdx && pageTabs.selectedIndex == pageIdx
+        }
+    }
+
     private fun refreshCreditsTabs() {
         val drawnProject = this.drawnProject ?: return
         // First adjust the number of tabs to the number of credits spreadsheets.
@@ -445,7 +458,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         while (creditsTabs.tabCount > numCredits)
             creditsTabs.removeTabAt(creditsTabs.tabCount - 1)
         while (creditsTabs.tabCount < numCredits) {
-            val pageTabs = newPreviewTabbedPane().apply { putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false) }
+            val pageTabs = newPreviewTabbedPane().apply {
+                putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
+                addChangeListener { updateDeferredImagePanelPresentationStatuses() }
+            }
             creditsTabs.addTab("", TABLE_ICON, pageTabs)
         }
         // Then fill each tab with its corresponding credits.

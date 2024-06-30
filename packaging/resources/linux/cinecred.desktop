@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Cinecred
 @LINUX_SHORTCUT_COMMENTS@
-Exec=/opt/cinecred/bin/cinecred
+Exec={{EXEC_PATH}} %f
 Icon=cinecred
 Terminal=false
 Type=Application

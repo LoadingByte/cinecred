@@ -37,7 +37,7 @@ to the various distribution channels.
 3. Collect the resulting packaged files from the respective `out/` folders into
    the `publishing/` folder in this repository.
    There are 2 files for Windows, 2 files for macOS x86, 2 files for macOS ARM,
-   and 4 files for Linux.
+   and 5 files for Linux.
 4. Run the `publish-nexus.sh` script to upload all binaries
    to `repo.loadingbyte.com`.
 5. Run the `publish-aur.sh` script to prepare an update of the PKGBUILD script

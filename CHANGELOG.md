@@ -31,6 +31,7 @@ Cinecred Changelog
 - Exported DPXs now support run-length encoding.
 - Exported SVGs are now more compact and less often fall back to rasterization.
 - Added an about tab listing all contributors to the welcome window.
+- Added an AppImage distribution package for Linux.
 
 ### Fixes
 

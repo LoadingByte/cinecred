@@ -28,6 +28,12 @@ mkdir work/ out/
 echo "Downloading and extracting Temurin..."
 curl -L "https://github.com/adoptium/temurin$JDK_MAJOR-binaries/releases/download/jdk-$JDK_MAJOR$JDK_MINOR+$JDK_PATCH/OpenJDK${JDK_MAJOR}U-jdk_@ARCH_TEMURIN@_@OS@_hotspot_$JDK_MAJOR${JDK_MINOR}_$JDK_PATCH.tar.gz" | tar -xzf - -C work/
 
+if [[ "@OS@" == linux ]]; then
+  echo "Downloading appimagetool..."
+  curl -LO --output-dir work/ "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+  chmod +x work/appimagetool-x86_64.AppImage
+fi
+
 echo "Collecting minimized JRE..."
 "$jdk_bin/jlink" @settings/jlink $jlink_args --output work/runtime/
 
@@ -49,8 +55,25 @@ elif [[ "@OS@" == linux ]]; then
 
   echo "Assembling TAR.GZ archive..."
   mkdir -p work/targz/cinecred/
-  cp -r work/image/cinecred/* resources/linux/cinecred.desktop images/* "$_"
+  cp -r work/image/cinecred/* images/* "$_"
+  sed "s/{{EXEC_PATH}}/\/opt\/cinecred\/bin\/cinecred/g" resources/linux/cinecred.desktop > work/targz/cinecred/cinecred.desktop
   tar -czf out/cinecred-@VERSION@-@OS@-@ARCH@.tar.gz -C work/targz/ cinecred/
+
+  echo "Assembling AppImage package..."
+  mkdir -p work/AppDir/usr/
+  cp -r work/image/cinecred/* "$_"
+  mkdir -p work/AppDir/usr/share/applications/
+  sed "s/{{EXEC_PATH}}/cinecred/g" resources/linux/cinecred.desktop > "$_/cinecred.desktop"
+  mkdir -p work/AppDir/usr/share/icons/hicolor/scalable/apps/
+  cp images/cinecred.svg "$_"
+  mkdir -p work/AppDir/usr/share/icons/hicolor/48x48/apps/
+  cp images/cinecred.png "$_"
+  ln -s usr/bin/cinecred work/AppDir/AppRun
+  ln -s usr/share/applications/cinecred.desktop work/AppDir/
+  ln -s usr/share/icons/hicolor/scalable/apps/cinecred.svg work/AppDir/
+  ln -s usr/share/icons/hicolor/48x48/apps/cinecred.png work/AppDir/
+  ln -s cinecred.svg work/AppDir/.DirIcon
+  work/appimagetool-x86_64.AppImage work/AppDir out/cinecred-@VERSION@-@ARCH@.appimage
 
   echo "Assembling AUR PKGBUILD script..."
   sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/aur/PKGBUILD > out/PKGBUILD
@@ -59,7 +82,7 @@ elif [[ "@OS@" == linux ]]; then
   mkdir -p work/tree/opt/cinecred/
   cp -r work/image/cinecred/* "$_"
   mkdir -p work/tree/usr/share/applications/
-  cp resources/linux/cinecred.desktop "$_"
+  sed "s/{{EXEC_PATH}}/\/opt\/cinecred\/bin\/cinecred/g" resources/linux/cinecred.desktop > "$_/cinecred.desktop"
   mkdir -p work/tree/usr/share/icons/hicolor/scalable/apps/
   cp images/cinecred.svg "$_"
   mkdir -p work/tree/usr/share/icons/hicolor/48x48/apps/

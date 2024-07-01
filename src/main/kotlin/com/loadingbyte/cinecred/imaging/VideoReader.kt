@@ -148,7 +148,8 @@ class VideoReader(
             Bitmap.Representation(
                 pixelFormat,
                 if (dec.color_range() != AVCOL_RANGE_UNSPECIFIED) Bitmap.Range.of(dec.color_range()) else
-                    Bitmap.Range.LIMITED,
+                    if (pixelFormat.family == Bitmap.PixelFormat.Family.YUV) Bitmap.Range.LIMITED
+                    else Bitmap.Range.FULL,
                 ColorSpace.of(
                     if (pri != AVCOL_PRI_UNSPECIFIED) ColorSpace.Primaries.of(pri) else ColorSpace.Primaries.BT709,
                     if (trc != AVCOL_TRC_UNSPECIFIED) ColorSpace.Transfer.of(trc) else ColorSpace.Transfer.BT1886

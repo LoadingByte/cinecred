@@ -710,6 +710,11 @@ private class CreditsReader(
             }
         }
 
+        // To avoid OOM crashes due to absurdly large pictures or tapes, limit their width to a reasonable range.
+        val maxW = styling.global.resolution.widthPx * 2
+        embeddedPic?.let { if (it.width > maxW) embeddedPic = it.withWidthPreservingAspectRatio(maxW.toDouble()) }
+        embeddedTape?.let { if (it.resolution.widthPx > maxW) embeddedTape = it.withWidthPreservingAspectRatio(maxW) }
+
         val isStyledStringBlank = styledStr.all { (run, _) -> run.isBlank() }
         return when {
             blankTagKey != null -> {

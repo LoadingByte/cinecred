@@ -83,6 +83,7 @@ abstract class RenderFormat(
             val EXR_COMPRESSION = Property(*EXR.Compression.values(), default = EXR.Compression.ZIP)
             val PRORES_PROFILE = Property(*ProResProfile.values(), default = ProResProfile.PRORES_422)
             val DNXHR_PROFILE = Property(*DNxHRProfile.values(), default = DNxHRProfile.DNXHR_HQ)
+            val PDF_PROFILE = Property(*PDFProfile.values(), default = PDFProfile.LOSSY_VECTORSVG)
         }
 
     }
@@ -166,6 +167,7 @@ abstract class RenderFormat(
 
 
     enum class Channels { COLOR, COLOR_AND_ALPHA, ALPHA }
+    enum class PDFProfile { LOSSY_VECTORSVG, LOSSY_RASTERSVG, LOSSLESS_VECTORSVG, LOSSLESS_RASTERSVG }
     enum class ProResProfile { PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ, PRORES_4444, PRORES_4444_XQ }
     enum class DNxHRProfile { DNXHR_LB, DNXHR_SQ, DNXHR_HQ, DNXHR_HQX, DNXHR_444 }
 

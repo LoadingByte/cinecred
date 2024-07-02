@@ -31,12 +31,18 @@ import org.apache.pdfbox.pdmodel.graphics.shading.PDShadingType2
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.util.Matrix
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY8
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGB24
 import org.w3c.dom.*
 import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import java.awt.BasicStroke
 import java.awt.Shape
 import java.awt.geom.*
 import java.io.DataInputStream
+import java.io.OutputStream
+import java.lang.Byte.toUnsignedInt
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.text.DecimalFormat
@@ -136,8 +142,17 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     /** Draws the content of this deferred onto a PDF page. */
-    fun materialize(doc: PDDocument, page: PDPage, cs: PDPageContentStream, cSpace: ColorSpace, layers: List<Layer>) {
-        val backend = PDFBackend(doc, page, cs, cSpace)
+    fun materialize(
+        doc: PDDocument,
+        page: PDPage,
+        cs: PDPageContentStream,
+        masterColorSpace: ColorSpace,
+        shrinkRasters: Boolean,
+        jpegRasters: Boolean,
+        rasterizeSVGs: Boolean,
+        layers: List<Layer>
+    ) {
+        val backend = PDFBackend(doc, page, cs, masterColorSpace, shrinkRasters, jpegRasters, rasterizeSVGs)
         materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
         backend.end()
     }
@@ -808,7 +823,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val doc: PDDocument,
         private val page: PDPage,
         private val cs: PDPageContentStream,
-        private val masterColorSpace: ColorSpace
+        private val masterColorSpace: ColorSpace,
+        private val shrinkRasters: Boolean,
+        private val jpegRasters: Boolean,
+        private val rasterizeSVGs: Boolean
     ) : TapeThumbnailBackend {
 
         private val csHeight = page.mediaBox.height
@@ -941,6 +959,17 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val mat = Matrix()
             mat.translate(x, csHeight - y - embeddedPic.height)
             mat.scale(scaling)
+            if (rasterizeSVGs && embeddedPic.picture is Picture.SVG) {
+                val pic = (embeddedPic as Picture.Embedded.Vector).picture
+                mat.scale(embeddedPic.width, embeddedPic.height)
+                if (embeddedPic.isCropped)
+                    mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
+                cs.drawImage(docRes.pdImages.computeIfAbsent(pic) { PDImageXObject(doc) }, mat)
+                val w = ceil(embeddedPic.scaling * pic.width * scaling).toInt()
+                val h = ceil(embeddedPic.scaling * pic.height * scaling).toInt()
+                docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
+                return
+            }
             when (embeddedPic) {
                 is Picture.Embedded.Raster -> {
                     val pic = embeddedPic.picture
@@ -1136,45 +1165,160 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         fun end() {
             for ((pic, pdImage) in docRes.pdImages)
-                endRasterPicture(pic, pdImage, docRes.pdImageResolutions.getValue(pic))
+                endImage(pic, pdImage, docRes.pdImageResolutions.getValue(pic))
         }
 
-        private fun endRasterPicture(pic: Picture.Raster, pdImage: PDImageXObject, resolutions: List<Resolution>) {
-            val (pRes, rep) = pic.bitmap.spec
-            // Since PDFs are not used for mastering but instead for previews, we lossily compress raster
-            // images to produce smaller files. This means encoding them as JPEG and reducing their resolution
-            // if they are drawn scaled down.
-            // First determine the desired resolution of the image, which is 2x the largest embedded resolution (so that
+        private fun endImage(pic: Picture, pdImage: PDImageXObject, resolutions: List<Resolution>) {
+            // If the picture shall shrink or is an SVG, find the max res, which is 2x the largest embedded res (so that
             // there's still enough detail when zooming in). However, if the original picture is actually smaller than
             // that, don't blow it up. Notice that reducing the resolution asymmetrically is fine because PDF squeezes
             // all images into a 1x1 square anyway.
             val maxEmbRes = resolutions.reduce { (w1, h1), (w2, h2) -> Resolution(max(w1, w2), max(h1, h2)) }
-            val res = Resolution(min(maxEmbRes.widthPx * 2, pRes.widthPx), min(maxEmbRes.heightPx * 2, pRes.heightPx))
-            // Next, reduce the bitmap's resolution.
-            Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
-                BitmapConverter.convert(pic.bitmap, bitmap)
-                // Now split the color and alpha components into a color image...
-                populateImageXObject(pdImage, bitmap, masterColorSpace, obtainICCBasedCS(masterColorSpace))
-                // ... and a grayscale alpha image. We can use alphaPlaneView() because picture bitmaps are planar.
-                if (rep.alpha != Bitmap.Alpha.OPAQUE) {
-                    val pdAlphaImage = PDImageXObject(doc)
-                    bitmap.alphaPlaneView().use { populateImageXObject(pdAlphaImage, it, null, PDDeviceGray.INSTANCE) }
-                    pdImage.cosObject.setItem(COSName.SMASK, pdAlphaImage)
+            val maxRes = Resolution(maxEmbRes.widthPx * 2, maxEmbRes.heightPx * 2)
+            // Obtain the storage color space and planar float bitmap.
+            val colorSpace: ColorSpace
+            var bitmap: Bitmap
+            when (pic) {
+                // If the picture is a raster, directly use the raster or shrink it if necessary.
+                is Picture.Raster -> {
+                    colorSpace = masterColorSpace
+                    bitmap = pic.bitmap
+                    if (shrinkRasters) {
+                        val (picRes, rep) = pic.bitmap.spec
+                        val res = Resolution(min(maxRes.widthPx, picRes.widthPx), min(maxRes.heightPx, picRes.heightPx))
+                        // If the maximum resolution is actually lower than the original one, shrink the bitmap.
+                        if (res != picRes) {
+                            bitmap = Bitmap.allocate(Bitmap.Spec(res, rep))
+                            BitmapConverter.convert(pic.bitmap, bitmap)
+                        }
+                    }
                 }
+                // If the picture is an SVG, rasterize it.
+                is Picture.SVG -> {
+                    colorSpace = ColorSpace.SRGB
+                    val tr = AffineTransform.getScaleInstance(maxRes.widthPx / pic.width, maxRes.heightPx / pic.height)
+                    Bitmap.allocate(Bitmap.Spec(maxRes, Canvas.compatibleRepresentation(colorSpace))).use { canvasBmp ->
+                        Canvas.forBitmap(canvasBmp).use { canvas -> pic.drawTo(canvas, tr) }
+                        bitmap = Picture.Raster(canvasBmp).bitmap
+                    }
+                }
+                is Picture.PDF -> throw IllegalStateException()
             }
+            // Now split the color and alpha components into a color image...
+            populateImageXObject(pdImage, bitmap, colorSpace, obtainICCBasedCS(colorSpace))
+            // ... and a grayscale alpha image. We can use alphaPlaneView() because the bitmap is planar.
+            if (bitmap.spec.representation.alpha != Bitmap.Alpha.OPAQUE) {
+                val pdAlphaImage = PDImageXObject(doc)
+                bitmap.alphaPlaneView().use { populateImageXObject(pdAlphaImage, it, null, PDDeviceGray.INSTANCE) }
+                pdImage.cosObject.setItem(COSName.SMASK, pdAlphaImage)
+            }
+            // If we have allocated an intermediate bitmap, free it again.
+            if (pic !is Picture.Raster || bitmap != pic.bitmap)
+                bitmap.close()
         }
 
         private fun populateImageXObject(pdImage: PDImageXObject, bitmap: Bitmap, cs: ColorSpace?, pdCS: PDColorSpace) {
             val (res, rep) = bitmap.spec
-            val jpeg = BitmapWriter.JPEG(rep.pixelFormat.family, cs).convertAndWrite(bitmap)
             pdImage.apply {
-                cosObject.createRawOutputStream().use { it.write(jpeg) }
-                cosObject.setItem(COSName.FILTER, COSName.DCT_DECODE)
                 bitsPerComponent = 8
                 width = res.widthPx
                 height = res.heightPx
                 colorSpace = pdCS
             }
+            val stream = pdImage.cosObject
+            if (jpegRasters) {
+                val jpeg = BitmapWriter.JPEG(rep.pixelFormat.family, cs).convertAndWrite(bitmap)
+                stream.setItem(COSName.FILTER, COSName.DCT_DECODE)
+                stream.createRawOutputStream().use { it.write(jpeg) }
+            } else {
+                val pxFmt = Bitmap.PixelFormat.of(if (cs == null) AV_PIX_FMT_GRAY8 else AV_PIX_FMT_RGB24)
+                val byteBmp = Bitmap.allocate(Bitmap.Spec(res, Bitmap.Representation(pxFmt, cs, Bitmap.Alpha.OPAQUE)))
+                BitmapConverter.convert(bitmap, byteBmp)
+                stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
+                if (cs != null) {
+                    stream.setItem(COSName.DECODE_PARMS, COSDictionary().apply {
+                        setItem(COSName.PREDICTOR, COSInteger.get(15L))
+                        setItem(COSName.COLORS, COSInteger.get(3L))
+                        setItem(COSName.BITS_PER_COMPONENT, COSInteger.get(8L))
+                        setItem(COSName.COLUMNS, COSInteger.get(res.widthPx.toLong()))
+                    })
+                    stream.createOutputStream().use { encodeRGB24Losslessly(byteBmp, it) }
+                } else
+                    stream.createOutputStream().use { it.write(byteBmp.getB(res.widthPx)) }
+            }
+        }
+
+        // Adapted from PDFBox's LosslessFactory.PredictorEncoder.
+        // Note that we've measure that encoder to be superior to the PDFBox's package-private PNGConverter.
+        private fun encodeRGB24Losslessly(bitmap: Bitmap, os: OutputStream) {
+            val (w, h) = bitmap.spec.resolution
+            val seg = bitmap.memorySegment(0)
+            val ls = bitmap.linesize(0).toLong()
+
+            // c b
+            // a x
+            // x is the current pixel.
+            val xRGB = ByteArray(3)
+            val aRGB = ByteArray(3)
+            val bRGB = ByteArray(3)
+            val cRGB = ByteArray(3)
+
+            val rawLen = 1 + w * 3
+            val rawNone = ByteArray(rawLen).also { it[0] = 0 }
+            val rawSub = ByteArray(rawLen).also { it[0] = 1 }
+            val rawUp = ByteArray(rawLen).also { it[0] = 2 }
+            val rawAvg = ByteArray(rawLen).also { it[0] = 3 }
+            val rawPaeth = ByteArray(rawLen).also { it[0] = 4 }
+
+            for (y in 0..<h) {
+                aRGB.fill(0)
+                cRGB.fill(0)
+                var ib = (y - 1) * ls
+                var ix = y * ls
+                var r = 1
+                repeat(w) {
+                    if (y != 0)
+                        MemorySegment.copy(seg, JAVA_BYTE, ib, bRGB, 0, 3); ib += 3L
+                    MemorySegment.copy(seg, JAVA_BYTE, ix, xRGB, 0, 3); ix += 3L
+                    for (channel in 0..2) {
+                        val x = toUnsignedInt(xRGB[channel])
+                        val a = toUnsignedInt(aRGB[channel])
+                        val b = toUnsignedInt(bRGB[channel])
+                        val c = toUnsignedInt(cRGB[channel])
+                        rawNone[r] = x.toByte()
+                        rawSub[r] = ((x and 0xFF) - (a and 0xFF)).toByte()
+                        rawUp[r] = ((x and 0xFF) - (b and 0xFF)).toByte()
+                        rawAvg[r] = (x - ((b + a) / 2)).toByte()
+                        val p = a + b - c
+                        rawPaeth[r] = (x - minBy(abs(p - a), a, abs(p - b), b, abs(p - c), c)).toByte()
+                        r++
+                    }
+                    System.arraycopy(xRGB, 0, aRGB, 0, 3)
+                    System.arraycopy(bRGB, 0, cRGB, 0, 3)
+                }
+                val raw = minBy(
+                    est(rawNone), rawNone, est(rawSub), rawSub, est(rawUp), rawUp, est(rawAvg), rawAvg,
+                    est(rawPaeth), rawPaeth
+                )
+                os.write(raw)
+            }
+        }
+
+        private fun est(raw: ByteArray): Long = raw.sumOf { abs(it.toLong()) }
+
+        private fun minBy(k1: Int, v1: Int, k2: Int, v2: Int, k3: Int, v3: Int): Int =
+            if (k1 <= k2 && k1 <= k3) v1 else if (k2 <= k3) v2 else v3
+
+        private fun <T> minBy(k1: Long, v1: T, k2: Long, v2: T, k3: Long, v3: T, k4: Long, v4: T, k5: Long, v5: T): T {
+            var k = k1
+            var v = v1
+            // @formatter:off
+            if (k2 < k) { k = k2; v = v2 }
+            if (k3 < k) { k = k3; v = v3 }
+            if (k4 < k) { k = k4; v = v4 }
+            // @formatter:on
+            if (k5 < k) v = v5
+            return v
         }
 
         private fun obtainICCBasedCS(colorSpace: ColorSpace) = docRes.pdColorSpaces.computeIfAbsent(colorSpace) {
@@ -1189,8 +1333,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
             val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
             val pdFonts = HashMap<String /* font name */, PDFont>()
-            val pdImages = HashMap<Picture.Raster, PDImageXObject>()
-            val pdImageResolutions = HashMap<Picture.Raster, MutableList<Resolution>>()
+            val pdImages = HashMap<Picture, PDImageXObject>()
+            val pdImageResolutions = HashMap<Picture, MutableList<Resolution>>()
             val pdForms = HashMap<Picture.Vector, PDFormXObject>()
             val layerUtil by lazy { LayerUtility(doc) }
         }

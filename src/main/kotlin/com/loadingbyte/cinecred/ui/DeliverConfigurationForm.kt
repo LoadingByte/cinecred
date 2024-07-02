@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COM
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PDF_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
@@ -84,7 +85,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     else -> format.label
                 }
                 val suffix = when (format) {
-                    in WholePagePDFRenderJob.FORMATS, VideoContainerRenderJob.H264, VideoContainerRenderJob.H265 ->
+                    VideoContainerRenderJob.H264, VideoContainerRenderJob.H265 ->
                         "  \u2013  " + l10n("ui.deliverConfig.reducedQualityFormat")
                     else -> ""
                 }
@@ -112,6 +113,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             toString = { prof ->
                 fun bigger() = "  \u2013  " + l10n("ui.deliverConfig.profile.biggerCommoner")
                 fun smaller() = "  \u2013  " + l10n("ui.deliverConfig.profile.smallerRarer")
+                fun pdfLossy() = l10n("ui.deliverConfig.profile.pdfLossy")
+                fun pdfLossless() = l10n("ui.deliverConfig.profile.pdfLossless")
+                fun pdfAndRasterizeSVGs(msg: String) = l10n("ui.deliverConfig.profile.pdfAndRasterizeSVGs", msg)
                 when (prof) {
                     is TIFF.Compression -> when (prof) {
                         TIFF.Compression.NONE -> l10n("ui.deliverConfig.profile.uncompressed") + bigger()
@@ -143,6 +147,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         DNxHRProfile.DNXHR_HQ -> "DNxHR HQ"
                         DNxHRProfile.DNXHR_HQX -> "DNxHR HQX"
                         DNxHRProfile.DNXHR_444 -> "DNxHR 444"
+                    }
+                    is PDFProfile -> when (prof) {
+                        PDFProfile.LOSSY_VECTORSVG -> pdfLossy()
+                        PDFProfile.LOSSY_RASTERSVG -> pdfAndRasterizeSVGs(pdfLossy())
+                        PDFProfile.LOSSLESS_VECTORSVG -> pdfLossless()
+                        PDFProfile.LOSSLESS_RASTERSVG -> pdfAndRasterizeSVGs(pdfLossless())
                     }
                     else -> throw IllegalArgumentException()
                 }
@@ -406,6 +416,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         EXR_COMPRESSION in config -> EXR_COMPRESSION
         PRORES_PROFILE in config -> PRORES_PROFILE
         DNXHR_PROFILE in config -> DNXHR_PROFILE
+        PDF_PROFILE in config -> PDF_PROFILE
         else -> null
     }
 
@@ -492,6 +503,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is EXR.Compression -> lookup[EXR_COMPRESSION] = value
                 is ProResProfile -> lookup[PRORES_PROFILE] = value
                 is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
+                is PDFProfile -> lookup[PDF_PROFILE] = value
             }
         if (channelsWidget.items.isNotEmpty())
             lookup[CHANNELS] = channelsWidget.value

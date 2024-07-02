@@ -5,11 +5,13 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
+import com.loadingbyte.cinecred.delivery.RenderFormat.PDFProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PDF_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
@@ -219,6 +221,9 @@ class WholePagePDFRenderJob private constructor(
 
         val ground = config[CHANNELS] == COLOR
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
+        val profile = config[PDF_PROFILE]
+        val lossy = profile == LOSSY_VECTORSVG || profile == LOSSY_RASTERSVG
+        val rasterizeSVGs = profile == LOSSY_RASTERSVG || profile == LOSSLESS_RASTERSVG
         val global = project.styling.global
 
         // We blend in sRGB because (a) this mirrors SVG, (b) it's most widely supported, and (c) sRGB is very close to
@@ -257,7 +262,7 @@ class WholePagePDFRenderJob private constructor(
                     if (ground)
                         drawRect(global.grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
                     drawDeferredImage(page, 0.0, 0.0.toY())
-                }.materialize(pdfDoc, pdfPage, cs, colorSpace, listOf(STATIC, TAPES))
+                }.materialize(pdfDoc, pdfPage, cs, colorSpace, lossy, lossy, rasterizeSVGs, listOf(STATIC, TAPES))
             }
 
             progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)
@@ -271,7 +276,7 @@ class WholePagePDFRenderJob private constructor(
     private class Format : RenderFormat(
         "PDF", fileSeq = false, setOf("pdf"), "pdf",
         choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(RESOLUTION_SCALING_LOG2) *
-                fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
+                fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * choice(PDF_PROFILE)
     ) {
         override fun createRenderJob(
             config: Config,

@@ -30,6 +30,9 @@ Cinecred Changelog
 - Exported TIFFs now support raw & LZW compression and use the standard Deflate.
 - Exported DPXs now support run-length encoding.
 - Exported SVGs are now more compact and less often fall back to rasterization.
+- When exporting a PDF, one can now choose between lossless preservation and
+  lossy compression (including resolution reduction) of raster pictures. Also,
+  embedded SVGs can now be rasterized instead of converted to the PDF format.
 - Added an about tab listing all contributors to the welcome window.
 - Added an AppImage distribution package for Linux.
 
@@ -43,7 +46,6 @@ Cinecred Changelog
 - Certain fonts with bad naming metadata no longer cause a crash.
 - Empty columns of an unbalanced vertically-filled grid no longer cause a crash.
 - Any fractional FPS now admit the (drifting) SMPTE Non-Drop Frame timecode.
-- Exported PDFs now reduce the resolution of very large raster pictures.
 - Exported PDFs now contain only one instance of each picture, even when it has
   multiple occurrences.
 - Exported PDFs no longer squish gradients when the export resolution is scaled.

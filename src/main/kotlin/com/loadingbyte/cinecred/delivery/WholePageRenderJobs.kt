@@ -45,6 +45,7 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.bufferedWriter
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -217,6 +218,7 @@ class WholePagePDFRenderJob private constructor(
         get() = file
 
     override fun render(progressCallback: (Int) -> Unit) {
+        file.deleteIfExists()
         file.parent.createDirectoriesSafely()
 
         val ground = config[CHANNELS] == COLOR

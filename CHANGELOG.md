@@ -65,6 +65,7 @@ Cinecred Changelog
 - New entries added to a list (like page style grid cols) now appear reliably.
 - Embedded videos now bear the text "preview" to explain their low resolution.
 - The page preview now updates more responsively and consumes less compute.
+- The page preview's scrollbars no longer desync when zooming too quickly.
 - The video preview now plays more fluently.
 - The video preview now continues playing when the credits or styling change,
   but stops when scrubbing.

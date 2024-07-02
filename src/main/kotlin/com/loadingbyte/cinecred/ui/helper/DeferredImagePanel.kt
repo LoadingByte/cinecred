@@ -268,7 +268,7 @@ class DeferredImagePanel(
             xScrollbar.isEnabled = false
             yScrollbar.isEnabled = false
         } else {
-            // Setters do the coercion:
+            // These setters do the coercion and update the scrollbar positions:
             viewportCenterX = viewportCenterX
             viewportCenterY = viewportCenterY
 
@@ -285,6 +285,11 @@ class DeferredImagePanel(
             xScrollbar.isEnabled = xScrollbar.model.run { maximum != extent }
             yScrollbar.isEnabled = yScrollbar.model.run { maximum != extent }
             disableScrollbarListeners = false
+
+            // Coerce and update the scrollbar positions again.
+            // Calling the setters once before and once after is vital to prevent various desyncs we've observed.
+            viewportCenterX = viewportCenterX
+            viewportCenterY = viewportCenterY
         }
     }
 

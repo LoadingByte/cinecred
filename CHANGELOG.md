@@ -33,6 +33,8 @@ Cinecred Changelog
 - When exporting a PDF, one can now choose between lossless preservation and
   lossy compression (including resolution reduction) of raster pictures. Also,
   embedded SVGs can now be rasterized instead of converted to the PDF format.
+- Added support for reading PSD, JBIG2, and JPEG2000 image files, with the
+  latter two mostly occurring in PDFs.
 - Added an about tab listing all contributors to the welcome window.
 - Added an AppImage distribution package for Linux.
 

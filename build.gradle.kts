@@ -16,6 +16,7 @@ version = "1.6.0-SNAPSHOT"
 val jdkVersion = 21
 val slf4jVersion = "2.0.7"
 val poiVersion = "5.2.3"
+val twelveMonkeysVersion = "3.9.4"
 val javacppVersion = "1.5.9"
 val ffmpegVersion = "6.0-$javacppVersion"
 val flatlafVersion = "3.4.1"
@@ -81,7 +82,11 @@ dependencies {
     implementation("com.google.apis", "google-api-services-sheets", "v4-rev20230227-2.0.0")
 
     // Raster Image IO
-    implementation("com.twelvemonkeys.imageio", "imageio-tga", "3.9.4")
+    implementation("com.twelvemonkeys.imageio", "imageio-psd", twelveMonkeysVersion)
+    implementation("com.twelvemonkeys.imageio", "imageio-tga", twelveMonkeysVersion)
+    // JBIG2 and JPEG2000 are commonly found in PDF files.
+    implementation("org.apache.pdfbox", "jbig2-imageio", "3.0.4")
+    implementation("com.github.jai-imageio", "jai-imageio-jpeg2000", "1.4.0")
 
     // PDF IO
     implementation("org.apache.pdfbox", "pdfbox", "3.0.2")
@@ -115,6 +120,9 @@ configurations.configureEach {
 
     // Google Client: This dependency is totally empty and only serves to avoid some conflict not relevant to us.
     exclude("com.google.guava", "listenablefuture")
+
+    // JAI ImageIO JPEG2000: Core reimplements already supported formats. We copied the few actually required sources.
+    exclude("com.github.jai-imageio", "jai-imageio-core")
 
     // PDFBox: We replace this commons-logging dependency by the slf4j bridge.
     exclude("commons-logging", "commons-logging")

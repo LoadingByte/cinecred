@@ -252,6 +252,10 @@ class LargeCheckBox(size: Int) : JCheckBox() {
 }
 
 
+// borderInsets: Based on Component.borderWidth, which is 1 by default.
+// background: Should be ComboBox.popupBackground, but that's not set by default, and the fallback is List.
+private const val STYLE_LIKE_COMBO_BOX_POPUP = "borderInsets: 1,1,1,1; background: \$List.background"
+
 class DropdownPopupMenu(
     private val owner: Component,
     private val preShow: (() -> Unit)? = null,
@@ -263,10 +267,7 @@ class DropdownPopupMenu(
     private var lastCloseTime = 0L
 
     init {
-        // borderInsets: Based on Component.borderWidth, which is 1 by default.
-        // background: Should be ComboBox.popupBackground, but that's not set by default, and the fallback is List.
-        putClientProperty(STYLE, "borderInsets: 1,1,1,1; background: \$List.background")
-
+        putClientProperty(STYLE, STYLE_LIKE_COMBO_BOX_POPUP)
         addPopupMenuListener(this)
     }
 
@@ -310,6 +311,14 @@ class DropdownPopupMenu(
             toggle()
     }
 
+}
+
+open class DropdownPopupMenuSubmenu(label: String) : JMenu(label) {
+    init {
+        iconTextGap = 0
+        putClientProperty(STYLE, "minimumIconSize: 0, 0")
+        popupMenu.putClientProperty(STYLE, STYLE_LIKE_COMBO_BOX_POPUP)
+    }
 }
 
 open class DropdownPopupMenuCheckBoxItem<E>(

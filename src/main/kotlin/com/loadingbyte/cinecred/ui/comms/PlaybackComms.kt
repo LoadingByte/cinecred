@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.comms
 
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.project.DrawnProject
 import java.awt.Dimension
@@ -16,6 +17,8 @@ interface PlaybackCtrlComms {
     fun setSelectedDeckLink(deckLink: DeckLink)
     fun setSelectedDeckLinkMode(mode: DeckLink.Mode)
     fun setSelectedDeckLinkDepth(depth: DeckLink.Depth)
+    fun setSelectedDeckLinkPrimaries(primaries: ColorSpace.Primaries)
+    fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer)
     fun setDeckLinkConnected(connected: Boolean)
     fun toggleDeckLinkConnected()
     fun setSelectedSpreadsheetName(spreadsheetName: String)
@@ -40,9 +43,13 @@ interface PlaybackViewComms {
     fun setDeckLinks(deckLinks: List<DeckLink>) {}
     fun setDeckLinkModes(modes: List<DeckLink.Mode>) {}
     fun setDeckLinkDepths(depths: List<DeckLink.Depth>) {}
+    fun setDeckLinkPrimaries(primaries: List<ColorSpace.Primaries>) {}
+    fun setDeckLinkTransfers(transfers: List<ColorSpace.Transfer>) {}
     fun setSelectedDeckLink(deckLink: DeckLink) {}
     fun setSelectedDeckLinkMode(mode: DeckLink.Mode) {}
     fun setSelectedDeckLinkDepth(depth: DeckLink.Depth) {}
+    fun setSelectedDeckLinkPrimaries(primaries: ColorSpace.Primaries) {}
+    fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer) {}
     fun setDeckLinkConnected(connected: Boolean) {}
     fun setSpreadsheetNames(spreadsheetNames: List<String>) {}
     fun setSelectedSpreadsheetName(spreadsheetName: String) {}

@@ -2,14 +2,14 @@ package com.loadingbyte.cinecred.ui.view.playback
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.event.ItemEvent
+import java.awt.event.*
 import java.awt.event.KeyEvent.*
-import java.util.*
 import javax.swing.*
 
 
@@ -20,9 +20,16 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     @Deprecated("ENCAPSULATION LEAK") val leakedFrameSlider get() = frameSlider
     // =========================================
 
-    private val deckLinkComboBox: JComboBox<DeckLinkWrapper>
-    private val deckLinkModeComboBox: JComboBox<DeckLinkModeWrapper>
-    private val deckLinkDepthComboBox: JComboBox<DeckLinkDepthWrapper>
+    private val deckLinkLabel = JLabel("DeckLink")
+
+    private val deckLinkConfigButton: JButton
+    private val deckLinkConfigMenu: DropdownPopupMenu
+    private val deckLinkSubmenu: DeckLinkSubmenu<DeckLink>
+    private val deckLinkModeSubmenu: DeckLinkSubmenu<DeckLink.Mode>
+    private val deckLinkDepthSubmenu: DeckLinkSubmenu<DeckLink.Depth>
+    private val deckLinkPrimariesSubmenu: DeckLinkSubmenu<ColorSpace.Primaries>
+    private val deckLinkTransferSubmenu: DeckLinkSubmenu<ColorSpace.Transfer>
+
     private val deckLinkConnectedButton: JToggleButton
     private val deckLinkSeparator = JSeparator(JSeparator.VERTICAL)
     private val spreadsheetNameComboBox: JComboBox<String>
@@ -39,27 +46,39 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     init {
         playbackCtrl.registerView(this)
 
-        deckLinkComboBox = JComboBox<DeckLinkWrapper>().apply {
-            isFocusable = false
-            addItemListener { e ->
-                if (e.stateChange == ItemEvent.SELECTED)
-                    playbackCtrl.setSelectedDeckLink((e.item as DeckLinkWrapper).deckLink)
+        deckLinkConfigButton = newToolbarButton(GEAR_ICON, l10n("ui.video.configureDeckLink"), 0, 0)
+        deckLinkConfigMenu = DropdownPopupMenu(deckLinkConfigButton)
+        deckLinkConfigButton.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e)) deckLinkConfigMenu.toggle()
             }
-        }
-        deckLinkModeComboBox = JComboBox<DeckLinkModeWrapper>().apply {
-            isFocusable = false
-            addItemListener { e ->
-                if (e.stateChange == ItemEvent.SELECTED)
-                    playbackCtrl.setSelectedDeckLinkMode((e.item as DeckLinkModeWrapper).mode)
-            }
-        }
-        deckLinkDepthComboBox = JComboBox<DeckLinkDepthWrapper>().apply {
-            isFocusable = false
-            addItemListener { e ->
-                if (e.stateChange == ItemEvent.SELECTED)
-                    playbackCtrl.setSelectedDeckLinkDepth((e.item as DeckLinkDepthWrapper).depth)
-            }
-        }
+        })
+        deckLinkConfigButton.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) = deckLinkConfigMenu.reactToOwnerKeyPressed(e)
+        })
+        deckLinkSubmenu = DeckLinkSubmenu(
+            deckLinkConfigMenu, null, DeckLink::name, playbackCtrl::setSelectedDeckLink
+        )
+        deckLinkModeSubmenu = DeckLinkSubmenu(
+            deckLinkConfigMenu, l10n("ui.video.configureDeckLink.mode"), DeckLink.Mode::name,
+            playbackCtrl::setSelectedDeckLinkMode
+        )
+        deckLinkDepthSubmenu = DeckLinkSubmenu(
+            deckLinkConfigMenu, l10n("bitDepth"), { it.bits.toString() }, playbackCtrl::setSelectedDeckLinkDepth
+        )
+        deckLinkPrimariesSubmenu = DeckLinkSubmenu(
+            deckLinkConfigMenu, l10n("gamut"), ColorSpace.Primaries::name,
+            playbackCtrl::setSelectedDeckLinkPrimaries
+        )
+        deckLinkTransferSubmenu = DeckLinkSubmenu(
+            deckLinkConfigMenu, "EOTF", ColorSpace.Transfer::name, playbackCtrl::setSelectedDeckLinkTransfer
+        )
+        deckLinkConfigMenu.add(deckLinkSubmenu)
+        deckLinkConfigMenu.add(deckLinkModeSubmenu)
+        deckLinkConfigMenu.add(deckLinkDepthSubmenu)
+        deckLinkConfigMenu.add(deckLinkPrimariesSubmenu)
+        deckLinkConfigMenu.add(deckLinkTransferSubmenu)
+
         deckLinkConnectedButton =
             newToolbarToggleButton(PLUG_ICON, l10n("ui.video.connectToDeckLink"), VK_L, CTRL_DOWN_MASK) { isSelected ->
                 playbackCtrl.setDeckLinkConnected(isSelected)
@@ -85,9 +104,8 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         }
 
         layout = MigLayout("insets 0, hidemode 3", "[][]2[]2[][][]")
-        add(deckLinkComboBox, "split 6, wmax 80")
-        add(deckLinkModeComboBox, "wmax 80")
-        add(deckLinkDepthComboBox, "wmax 50")
+        add(deckLinkLabel, "split 5")
+        add(deckLinkConfigButton, "gapright 2")
         add(deckLinkConnectedButton)
         add(deckLinkSeparator, "growy, shrink 0 0, gapright unrel")
         add(spreadsheetNameComboBox)
@@ -110,34 +128,26 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
        *************************** */
 
     override fun setDeckLinks(deckLinks: List<DeckLink>) {
-        deckLinkComboBox.model = DefaultComboBoxModel(deckLinks.mapTo(Vector(), ::DeckLinkWrapper))
+        deckLinkSubmenu.items = deckLinks
         val visible = deckLinks.isNotEmpty()
-        deckLinkComboBox.isVisible = visible
-        deckLinkModeComboBox.isVisible = visible
-        deckLinkDepthComboBox.isVisible = visible
+        deckLinkLabel.isVisible = visible
+        deckLinkConfigButton.isVisible = visible
+        if (!visible) deckLinkConfigMenu.isVisible = false
         deckLinkConnectedButton.isVisible = visible
         deckLinkSeparator.isVisible = visible
     }
 
-    override fun setDeckLinkModes(modes: List<DeckLink.Mode>) {
-        deckLinkModeComboBox.model = DefaultComboBoxModel(modes.mapTo(Vector(), ::DeckLinkModeWrapper))
-    }
-
-    override fun setDeckLinkDepths(depths: List<DeckLink.Depth>) {
-        deckLinkDepthComboBox.model = DefaultComboBoxModel(depths.mapTo(Vector(), ::DeckLinkDepthWrapper))
-    }
-
-    override fun setSelectedDeckLink(deckLink: DeckLink) {
-        deckLinkComboBox.selectedItem = DeckLinkWrapper(deckLink)
-    }
-
-    override fun setSelectedDeckLinkMode(mode: DeckLink.Mode) {
-        deckLinkModeComboBox.selectedItem = DeckLinkModeWrapper(mode)
-    }
-
-    override fun setSelectedDeckLinkDepth(depth: DeckLink.Depth) {
-        deckLinkDepthComboBox.selectedItem = DeckLinkDepthWrapper(depth)
-    }
+    // @formatter:off
+    override fun setDeckLinkModes(modes: List<DeckLink.Mode>) { deckLinkModeSubmenu.items = modes }
+    override fun setDeckLinkDepths(depths: List<DeckLink.Depth>) { deckLinkDepthSubmenu.items = depths }
+    override fun setDeckLinkPrimaries(primaries: List<ColorSpace.Primaries>) { deckLinkPrimariesSubmenu.items = primaries }
+    override fun setDeckLinkTransfers(transfers: List<ColorSpace.Transfer>) { deckLinkTransferSubmenu.items = transfers }
+    override fun setSelectedDeckLink(deckLink: DeckLink) { deckLinkSubmenu.value = deckLink }
+    override fun setSelectedDeckLinkMode(mode: DeckLink.Mode) { deckLinkModeSubmenu.value = mode }
+    override fun setSelectedDeckLinkDepth(depth: DeckLink.Depth) { deckLinkDepthSubmenu.value = depth }
+    override fun setSelectedDeckLinkPrimaries(primaries: ColorSpace.Primaries) { deckLinkPrimariesSubmenu.value = primaries }
+    override fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer) { deckLinkTransferSubmenu.value = transfer }
+    // @formatter:on
 
     override fun setDeckLinkConnected(connected: Boolean) {
         deckLinkConnectedButton.isSelected = connected
@@ -180,16 +190,48 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     }
 
 
-    private data class DeckLinkWrapper(val deckLink: DeckLink) {
-        override fun toString() = noEllipsisLabel(deckLink.name)
-    }
+    private class DeckLinkSubmenu<E : Any>(
+        private val dropdownPopupMenu: DropdownPopupMenu,
+        private val label: String?,
+        private val toString: (E) -> String,
+        private val onSelect: (E) -> Unit
+    ) : DropdownPopupMenuSubmenu("") {
 
-    private data class DeckLinkModeWrapper(val mode: DeckLink.Mode) {
-        override fun toString() = noEllipsisLabel(mode.name)
-    }
+        private val btnGroup = ButtonGroup()
 
-    private data class DeckLinkDepthWrapper(val depth: DeckLink.Depth) {
-        override fun toString() = noEllipsisLabel("${depth.bits} bit")
+        var items: List<E> = emptyList()
+            set(items) {
+                if (field == items) return
+                val sel = value
+                field = items
+                removeAll()
+                btnGroup.elements.toList() /* copy for concurrent modification */.forEach(btnGroup::remove)
+                for (item in items) {
+                    val menuItem = DropdownPopupMenuCheckBoxItem(
+                        dropdownPopupMenu, null, toString(item), isSelected = item == sel
+                    )
+                    val itemStr = toString(item)
+                    menuItem.addItemListener { e ->
+                        if (e.stateChange == ItemEvent.SELECTED) {
+                            text = if (label == null) itemStr else "$label: $itemStr"
+                            onSelect(item)
+                        }
+                    }
+                    popupMenu.add(menuItem)
+                    btnGroup.add(menuItem)
+                }
+            }
+
+        var value: E?
+            get() = items.getOrNull(btnGroup.elements.asSequence().indexOfFirst { it.isSelected })
+            set(value) {
+                val idx = items.indexOf(value)
+                if (idx == -1)
+                    btnGroup.clearSelection()
+                else
+                    btnGroup.setSelected(btnGroup.elements.asSequence().drop(idx).first().model, true)
+            }
+
     }
 
 }

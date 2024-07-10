@@ -53,9 +53,21 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
                 val savedDeckLink = deckLinks.find { it.id == savedId }
                 val savedMode = savedDeckLink?.modes?.find { it.name == savedModeName }
                 val savedDepth = DeckLink.Depth.entries.find { it.bits == savedDepthBits }
+                val savedPrimaries = try {
+                    ColorSpace.Primaries.of(DECK_LINK_PRI_PREFERENCE.get())
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+                val savedTransfer = try {
+                    ColorSpace.Transfer.of(DECK_LINK_TRC_PREFERENCE.get())
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
                 selectedDeckLink = savedDeckLink ?: deckLinks.firstOrNull()
                 selectedDeckLinkMode = savedMode ?: selectedDeckLink?.modes?.first()
                 selectedDeckLinkDepth = savedDepth ?: selectedDeckLinkMode?.depths?.first() ?: DeckLink.Depth.D8
+                selectedDeckLinkPrimaries = savedPrimaries ?: ColorSpace.Primaries.BT709
+                selectedDeckLinkTransfer = savedTransfer ?: ColorSpace.Transfer.BT1886
                 deckLinkConnected = savedDeckLink != null && savedMode != null && savedDepth != null &&
                         DECK_LINK_CONNECTED_PREFERENCE.get()
                 setupDeckLink(false)
@@ -64,9 +76,13 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
                     view.setDeckLinks(deckLinks)
                     selectedDeckLink?.modes?.let(view::setDeckLinkModes)
                     selectedDeckLinkMode?.depths?.let(view::setDeckLinkDepths)
+                    view.setDeckLinkPrimaries(ColorSpace.Primaries.COMMON)
+                    view.setDeckLinkTransfers(ColorSpace.Transfer.COMMON)
                     selectedDeckLink?.let(view::setSelectedDeckLink)
                     selectedDeckLinkMode?.let(view::setSelectedDeckLinkMode)
                     view.setSelectedDeckLinkDepth(selectedDeckLinkDepth)
+                    view.setSelectedDeckLinkPrimaries(selectedDeckLinkPrimaries)
+                    view.setSelectedDeckLinkTransfer(selectedDeckLinkTransfer)
                     view.setDeckLinkConnected(deckLinkConnected)
                 }
             } else
@@ -83,6 +99,8 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     private var selectedDeckLink: DeckLink? = null
     private var selectedDeckLinkMode: DeckLink.Mode? = null
     private var selectedDeckLinkDepth = DeckLink.Depth.D8
+    private var selectedDeckLinkPrimaries = ColorSpace.Primaries.BT709
+    private var selectedDeckLinkTransfer = ColorSpace.Transfer.BT1886
     private var deckLinkConnected = false
     private var spreadsheetName: String? = null
     private var videoCanvasSize: Dimension? = null
@@ -96,6 +114,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     private var activeDeckLink: DeckLink? = null
     private var activeDeckLinkMode: DeckLink.Mode? = null
     private var activeDeckLinkDepth: DeckLink.Depth? = null
+    private var activeDeckLinkColorSpace: ColorSpace? = null
 
     // Set during refreshPlayback().
     private var playTask: Future<*>? = null
@@ -184,14 +203,16 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         val deckLink = selectedDeckLink
         val mode = selectedDeckLinkMode
         val depth = selectedDeckLinkDepth
+        val colorSpace = ColorSpace.of(selectedDeckLinkPrimaries, selectedDeckLinkTransfer)
         var doRestartSchedulers = restartSchedulers
         if (activeDeckLink != deckLink || activeDeckLinkMode != mode || activeDeckLinkDepth != depth ||
-            !deckLinkConnected
+            activeDeckLinkColorSpace != colorSpace || !deckLinkConnected
         ) {
             activeDeckLink?.release()
             activeDeckLink = null
             activeDeckLinkMode = null
             activeDeckLinkDepth = null
+            activeDeckLinkColorSpace = null
             if (deckLink != null && deckLinkConnected)
                 if (mode == null || !deckLink.supports(mode) || depth !in mode.depths || !deckLink.acquire(mode))
                     setDeckLinkConnected(false)
@@ -199,6 +220,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
                     activeDeckLink = deckLink
                     activeDeckLinkMode = mode
                     activeDeckLinkDepth = depth
+                    activeDeckLinkColorSpace = colorSpace
                     doRestartSchedulers = true
                 }
         }
@@ -212,7 +234,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
                 val scaledVideo = video.copy(resolutionScaling = min(mw / vw.toDouble(), mh / vh.toDouble()))
                 FrameSource(
                     materializationCacheDeckLink, scaledVideo, global.grounding, activeMode.resolution,
-                    DeckLink.compatibleRepresentation(depth, ColorSpace.BT709), activeMode.scan, frameIdx
+                    DeckLink.compatibleRepresentation(depth, colorSpace), activeMode.scan, frameIdx
                 ) { it }
             }
             SwingUtilities.invokeLater {
@@ -369,6 +391,8 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         DECK_LINK_ID_PREFERENCE.set(selectedDeckLink?.id.toString())
         DECK_LINK_MODE_PREFERENCE.set(selectedDeckLinkMode?.name.toString())
         DECK_LINK_DEPTH_PREFERENCE.set(selectedDeckLinkDepth.bits)
+        DECK_LINK_PRI_PREFERENCE.set(selectedDeckLinkPrimaries.code)
+        DECK_LINK_TRC_PREFERENCE.set(selectedDeckLinkTransfer.code)
         DECK_LINK_CONNECTED_PREFERENCE.set(deckLinkConnected)
     }
 
@@ -408,6 +432,22 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
             return
         selectedDeckLinkDepth = depth
         for (view in views) view.setSelectedDeckLinkDepth(depth)
+        setupDeckLink(false)
+    }
+
+    override fun setSelectedDeckLinkPrimaries(primaries: ColorSpace.Primaries) {
+        if (selectedDeckLinkPrimaries == primaries)
+            return
+        selectedDeckLinkPrimaries = primaries
+        for (view in views) view.setSelectedDeckLinkPrimaries(primaries)
+        setupDeckLink(false)
+    }
+
+    override fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer) {
+        if (selectedDeckLinkTransfer == transfer)
+            return
+        selectedDeckLinkTransfer = transfer
+        for (view in views) view.setSelectedDeckLinkTransfer(transfer)
         setupDeckLink(false)
     }
 

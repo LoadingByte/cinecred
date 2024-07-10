@@ -4,8 +4,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.natives.decklinkcapi.decklinkcapi_h.*
 import com.loadingbyte.cinecred.natives.decklinkcapi.deviceNotificationCallback_t
 import com.loadingbyte.cinecred.natives.decklinkcapi.scheduledFrameCompletionCallback_t
-import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGRA
-import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_X2RGB10BE
+import org.bytedeco.ffmpeg.global.avutil.*
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySegment.NULL
@@ -146,9 +145,17 @@ class DeckLink(
             return null
         val depth = Depth.entries.find { rep == compatibleRepresentation(it, rep.colorSpace) } ?: return null
         val (w, h) = res
-        val eotf = 0
-        val cs = Colorspace_Rec709()
-        val chr = ColorSpace.Primaries.BT709.chromaticities!!
+        val eotf = when (rep.colorSpace.transfer.code) {
+            AVCOL_TRC_SMPTE2084 -> 2
+            AVCOL_TRC_ARIB_STD_B67 -> 3
+            else -> 0
+        }
+        val cs = when (rep.colorSpace.primaries.code) {
+            AVCOL_PRI_BT470M, AVCOL_PRI_BT470BG, AVCOL_PRI_SMPTE170M, AVCOL_PRI_SMPTE240M -> Colorspace_Rec601()
+            AVCOL_PRI_BT2020 -> Colorspace_Rec2020()
+            else -> Colorspace_Rec709()
+        }
+        val chr = rep.colorSpace.primaries.chromaticities ?: ColorSpace.Primaries.BT709.chromaticities!!
         return IDeckLinkVideoFrame_Create(
             w, h, bitmap.linesize(0), depth.code, eotf,
             chr.rx.toDouble(), chr.ry.toDouble(), chr.gx.toDouble(), chr.gy.toDouble(),
@@ -158,8 +165,10 @@ class DeckLink(
         )
     }
 
-    private fun createBlackBitmap() = mode?.let { mode ->
-        Bitmap.allocate(Bitmap.Spec(mode.resolution, compatibleRepresentation(mode.depths[0], ColorSpace.BT709))).zero()
+    private fun createBlackBitmap(): Bitmap? {
+        val mode = mode ?: return null
+        val cs = lastBitmap?.run { spec.representation.colorSpace } ?: ColorSpace.BT709
+        return Bitmap.allocate(Bitmap.Spec(mode.resolution, compatibleRepresentation(mode.depths[0], cs))).zero()
     }
 
     private fun error(msg: String) = LOGGER.error("DeckLink '$name': $msg")

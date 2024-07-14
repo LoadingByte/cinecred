@@ -21,18 +21,21 @@ Cinecred Changelog
 - The clunky file chooser was replaced with the more familiar OS-native one.
 - When creating a new project, the resolution, frame rate, and timecode format
   can now be chosen, and the timings and scroll speed are adjusted accordingly.
-- Added matte (alpha channel only) delivery.
-- Added 10-bit, 12-bit, and 16-bit delivery.
-- Added DCI-P3, Display P3, BT.2020, and HDR (linear/PQ/HLG) delivery.
-- Added OpenEXR page still and image sequence delivery.
-- Image sequence export now exploits all CPU cores.
-- Exported page stills and image sequences now carry color space information.
-- Exported TIFFs now support raw & LZW compression and use the standard Deflate.
-- Exported DPXs now support run-length encoding.
-- Exported SVGs are now more compact and less often fall back to rasterization.
-- When exporting a PDF, one can now choose between lossless preservation and
-  lossy compression (including resolution reduction) of raster pictures. Also,
-  embedded SVGs can now be rasterized instead of converted to the PDF format.
+- Majorly enhanced delivery:
+    - Rendering is now done in 32-bit floating point RGB(A).
+    - Added matte (alpha channel only) delivery.
+    - Added 10, 12, 16, and 32-bit formats.
+    - Added DCI-P3, Display P3, BT.2020, and HDR (linear/PQ/HLG) delivery.
+    - Added H.265 delivery.
+    - Added OpenEXR page still and image sequence delivery.
+    - Image sequence export now exploits all CPU cores.
+    - Exported page stills and image sequences now carry color space info.
+    - Exported TIFFs now support raw & LZW compression and use standard Deflate.
+    - Exported DPXs now support run-length encoding.
+    - Exported SVGs are now smaller and less often fall back to rasterization.
+    - When exporting a PDF, one can now choose between lossless preservation and
+      lossy compression (also reducing resolution) of raster pictures. Embedded
+      SVGs can now be rasterized instead of converted to the PDF format.
 - Added support for reading PSD, JBIG2, and JPEG2000 image files, with the
   latter two mostly occurring in PDFs.
 - Added an about tab listing all contributors to the welcome window.

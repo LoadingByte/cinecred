@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.ProjectDialogType
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
+import java.nio.file.Path
 import javax.swing.JTree
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
@@ -30,17 +31,21 @@ val HOME_DEMOS
 
 
 object HomeScreenshotLiveVisDemo : ProjectDemo("$DIR/screenshot-live-vis", Format.PNG) {
-    override fun generate() {
+    override fun prepare(projectDir: Path) {
         // Inject an error into the credits file.
         val creditsFile = projectDir.resolve("Credits.csv")
-        creditsFile.writeLines(creditsFile.readLines().toMutableList().apply { set(6, ",,,-1,,,,,") })
+        val lines = creditsFile.readLines().toMutableList()
+        lines[lines.indexOfFirst { "Dirc Director" in it } + 1] = ",,,-1,,,,,,"
+        creditsFile.writeLines(lines)
+    }
 
-        reposition(prjFrame, 920, 570)
+    override fun generate() {
+        reposition(prjFrame, 920, 610)
         sleep(500)
         edt {
-            prjPanel.leakedSplitPane.setDividerLocation(0.88)
+            prjPanel.leakedSplitPane.setDividerLocation(0.87)
             prjPanel.leakedPageTabs.selectedIndex = 2
-            prjImagePanel(2).leakedViewportCenterSetter(y = 975.0)
+            prjImagePanel(2).leakedViewportCenterSetter(y = 980.0)
         }
         sleep(500)
         write(printWithPopups(prjPanel), "-guides-on")
@@ -77,14 +82,14 @@ object HomeScreenshotVideoPreviewDemo : ProjectDemo("$DIR/screenshot-video-previ
     override fun generate() {
         edt { projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, true) }
         sleep(500)
-        reposition(vidDialog, 900, 430)
+        reposition(plyDialog, 900, 430)
         sleep(500)
         edt {
-            vidPanel.leakedPlayButton.isSelected = true
-            vidPanel.leakedFrameSlider.value = 520
+            plyControls.leakedPlayButton.isSelected = true
+            plyControls.leakedFrameSlider.value = 520
         }
         sleep(500)
-        write(printWithPopups(vidPanel))
+        write(printWithPopups(plyPanel))
     }
 }
 
@@ -93,14 +98,14 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     override fun generate() {
         edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
         sleep(500)
-        reposition(dlvDialog, 820, 615)
+        reposition(dlvDialog, 820, 550)
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
-            addDummyRenderJob(WholePagePDFRenderJob.FORMAT)
-            addDummyRenderJob(VideoRenderJob.Format.ALL.first { it.label == "H.264" })
-            addDummyRenderJob(VideoRenderJob.Format.ALL.first { it.label == "ProRes 422" })
-            addDummyRenderJob(VideoRenderJob.Format.ALL.first { it.defaultFileExt == "png" })
+            addDummyRenderJob(WholePagePDFRenderJob.FORMATS[0])
+            addDummyRenderJob(VideoContainerRenderJob.H264)
+            addDummyRenderJob(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
+            addDummyRenderJob(ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" })
             dlvPanel.renderQueuePanel.apply {
                 leakedProgressSetter(0, isFinished = true)
                 leakedProgressSetter(1, isFinished = true)
@@ -135,7 +140,7 @@ object HomeCreditsRuntimeDemo : StyleSettingsDemo<Global>(
     listOf(Global::runtimeFrames.st()), pageScaling = 0.45, pageWidth = 900, pageHeight = 400
 ) {
     override fun styles() = buildList<Global> {
-        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1092))
+        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1056))
         this += last().copy(runtimeFrames = last().runtimeFrames.copy(isActive = true))
     }
 

@@ -2,10 +2,10 @@ package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.*
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Color
 import java.lang.Thread.sleep
 
 
@@ -40,7 +40,9 @@ object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Forma
 
         val oldStyling = projectCtrl.stylingHistory.current
         val oldStyle = oldStyling.letterStyles.first { it.name == l10n("project.template.letterStyleCardName") }
-        val newStyle = oldStyle.copy(layers = persistentListOf(oldStyle.layers[0].copy(color1 = Color(200, 80, 80))))
+        val newStyle = oldStyle.copy(
+            layers = persistentListOf(oldStyle.layers[0].copy(color1 = Color4f.fromSRGBHexString("#C85050")))
+        )
         val newStyling = oldStyling.copy(
             letterStyles = oldStyling.letterStyles.map { if (it === oldStyle) newStyle else it }.toPersistentList(),
         )
@@ -97,11 +99,12 @@ object GuideLetterStyleLayerInheritDemo : StyleSettingsDemo<LetterStyle>(
             PRESET_LETTER_STYLE.copy(
                 name = oneStyleName, layers = persistentListOf(
                     PRESET_LAYER.copy(
-                        color1 = Color(100, 0, 0), shape = LayerShape.STRIPE, stripePreset = StripePreset.BACKGROUND,
+                        color1 = Color4f.fromSRGBHexString("#640000"), shape = LayerShape.STRIPE,
+                        stripePreset = StripePreset.BACKGROUND,
                         stripeWidenLeftRfh = 0.1, stripeWidenRightRfh = 0.1, stripeWidenTopRfh = -0.3,
                         stripeWidenBottomRfh = -0.3, stripeCornerJoin = LineJoin.ROUND, vShearing = -0.3
                     ),
-                    PRESET_LAYER.copy(color1 = Color(250, 120, 90), shape = LayerShape.TEXT)
+                    PRESET_LAYER.copy(color1 = Color4f.fromSRGBHexString("#FA785A"), shape = LayerShape.TEXT)
                 )
             )
         )
@@ -123,8 +126,8 @@ object GuideLetterStyleLayerColoringDemo : StyleSettingsDemo<Layer>(
     override fun styles() = buildList<Layer> {
         this += PRESET_LAYER.copy(coloring = LayerColoring.OFF, shape = LayerShape.TEXT)
         this += last().copy(coloring = LayerColoring.PLAIN)
-        this += last().copy(color1 = Color(220, 195, 130))
-        this += last().copy(coloring = LayerColoring.GRADIENT, color2 = Color(80, 45, 13))
+        this += last().copy(color1 = Color4f.fromSRGBHexString("#DCC382"))
+        this += last().copy(coloring = LayerColoring.GRADIENT, color2 = Color4f.fromSRGBHexString("#502D0D"))
         this += last().copy(gradientAngleDeg = 90.0)
         this += last().copy(gradientExtentRfh = 2.0)
         this += last().copy(gradientExtentRfh = 4.0)
@@ -383,7 +386,7 @@ object GuideLetterStyleLayerBlurDemo : StyleSettingsDemo<Layer>(
 }
 
 
-private val inactiveColor = Color(100, 100, 100)
+private val inactiveColor = Color4f.fromSRGBHexString("#646464")
 
 private val customStripeLayer = PRESET_LAYER.copy(
     shape = LayerShape.STRIPE, stripePreset = StripePreset.CUSTOM,

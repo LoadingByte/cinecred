@@ -16,6 +16,8 @@ import javax.swing.*
 class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPanel(), PlaybackViewComms {
 
     // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedDeckLinkConfigButton get() = deckLinkConfigButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedDeckLinkConnectedButton get() = deckLinkConnectedButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPlayButton get() = playButton
     @Deprecated("ENCAPSULATION LEAK") val leakedFrameSlider get() = frameSlider
     // =========================================

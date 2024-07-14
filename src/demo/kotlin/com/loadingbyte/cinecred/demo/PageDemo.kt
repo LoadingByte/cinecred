@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.drawer.drawPages
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
@@ -11,9 +12,7 @@ import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
 import kotlinx.collections.immutable.persistentListOf
-import java.awt.Color
 import java.awt.Dimension
-import java.awt.image.BufferedImage
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -61,17 +60,12 @@ abstract class PageDemo(
             val (pageDefImg, grounding) = pageDefImgsAndGrounding
             val imgW = if (pageWidth > 0) pageWidth else pageBounds.width
             val imgH = 2 * pageExtend + if (pageHeight > 0) pageHeight else pageBounds.height
-            val img = buildImage(imgW, imgH, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
-                g2.color = grounding
-                g2.fillRect(0, 0, imgW, imgH)
-            }
-            DeferredImage(imgW.toDouble(), imgH.toDouble().toY()).apply {
+            write(defImageToImage(grounding, pageLayers, DeferredImage(imgW.toDouble(), imgH.toDouble().toY()).apply {
                 drawDeferredImage(pageDefImg, (imgW - pageBounds.width) / 2.0, ((imgH - pageBounds.height) / 2.0).toY())
-            }.materialize(img, pageLayers)
-            write(img, suffix)
+            }), suffix)
         }
     }
 
-    private val pageDefImgsAndGroundings = mutableListOf<Pair<DeferredImage, Color>>()
+    private val pageDefImgsAndGroundings = mutableListOf<Pair<DeferredImage, Color4f>>()
 
 }

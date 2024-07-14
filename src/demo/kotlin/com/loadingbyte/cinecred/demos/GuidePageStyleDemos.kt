@@ -1,12 +1,11 @@
 package com.loadingbyte.cinecred.demos
 
-import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
-import com.loadingbyte.cinecred.demo.TEMPLATE_PROJECT
-import com.loadingbyte.cinecred.demo.TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO
-import com.loadingbyte.cinecred.project.*
-import kotlinx.collections.immutable.persistentListOf
+import com.loadingbyte.cinecred.project.PRESET_PAGE_STYLE
+import com.loadingbyte.cinecred.project.PageBehavior
+import com.loadingbyte.cinecred.project.PageStyle
+import com.loadingbyte.cinecred.project.st
 
 
 private const val DIR = "guide/page-style"
@@ -14,10 +13,10 @@ private const val DIR = "guide/page-style"
 val GUIDE_PAGE_STYLE_DEMOS
     get() = listOf(
         GuidePageStyleNameDemo,
-        GuidePageStyleAfterwardSlugDemo,
+        GuidePageStyleSubsequentGapDemo,
         GuidePageStyleBehaviorDemo,
-        GuidePageStyleCardAndFadeDurationsDemo,
-        GuidePageStyleScrollMeltDemo,
+        GuidePageStyleCardRuntimeDemo,
+        GuidePageStyleCardFadeDemo,
         GuidePageStyleScrollPerFrameDemo
     )
 
@@ -32,9 +31,9 @@ object GuidePageStyleNameDemo : StyleSettingsDemo<PageStyle>(
 }
 
 
-object GuidePageStyleAfterwardSlugDemo : StyleSettingsDemo<PageStyle>(
-    PageStyle::class.java, "$DIR/afterward-slug", Format.PNG,
-    listOf(PageStyle::afterwardSlugFrames.st())
+object GuidePageStyleSubsequentGapDemo : StyleSettingsDemo<PageStyle>(
+    PageStyle::class.java, "$DIR/subsequent-gap", Format.PNG,
+    listOf(PageStyle::subsequentGapFrames.st())
 ) {
     override fun styles() = buildList<PageStyle> {
         this += PRESET_PAGE_STYLE
@@ -55,9 +54,9 @@ object GuidePageStyleBehaviorDemo : StyleSettingsDemo<PageStyle>(
 }
 
 
-object GuidePageStyleCardAndFadeDurationsDemo : StyleSettingsDemo<PageStyle>(
-    PageStyle::class.java, "$DIR/card-and-fade-durations", Format.PNG,
-    listOf(PageStyle::cardDurationFrames.st(), PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st())
+object GuidePageStyleCardRuntimeDemo : StyleSettingsDemo<PageStyle>(
+    PageStyle::class.java, "$DIR/card-runtime", Format.PNG,
+    listOf(PageStyle::cardRuntimeFrames.st())
 ) {
     override fun styles() = buildList<PageStyle> {
         this += PRESET_PAGE_STYLE.copy(behavior = PageBehavior.CARD)
@@ -65,21 +64,12 @@ object GuidePageStyleCardAndFadeDurationsDemo : StyleSettingsDemo<PageStyle>(
 }
 
 
-object GuidePageStyleScrollMeltDemo : StyleSettingsDemo<PageStyle>(
-    PageStyle::class.java, "$DIR/scroll-melt", Format.STEP_GIF,
-    listOf(PageStyle::scrollMeltWithPrev.st(), PageStyle::scrollMeltWithNext.st()),
-    pageScaling = 0.45, pageWidth = 465, pageGuides = true
+object GuidePageStyleCardFadeDemo : StyleSettingsDemo<PageStyle>(
+    PageStyle::class.java, "$DIR/card-fade", Format.PNG,
+    listOf(PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st())
 ) {
     override fun styles() = buildList<PageStyle> {
-        this += PRESET_PAGE_STYLE.copy(behavior = PageBehavior.SCROLL)
-        this += last().copy(scrollMeltWithNext = true)
-    }
-
-    override fun credits(style: PageStyle) = run {
-        val global = TEMPLATE_PROJECT.styling.global.copy(resolution = Resolution(1024, 429))
-        val origStages = TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO.stages
-        val newStages = if (style.scrollMeltWithNext) origStages else persistentListOf(origStages[0])
-        Pair(global, Page(newStages))
+        this += PRESET_PAGE_STYLE.copy(behavior = PageBehavior.CARD)
     }
 }
 

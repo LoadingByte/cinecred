@@ -12,15 +12,11 @@ import java.awt.Dimension
 import kotlin.system.exitProcess
 
 
-private val enabledDemos: List<Demo> = emptyList()
+private val enabledDemos: List<Demo>
+    get() = emptyList()
 
 
 fun main() {
-    // We want to shrink windows to smaller sizes than what would usually be sensible.
-    minimumWindowSize = Dimension(300, 200)
-    // If we were to leave this enabled, we would sometimes not be able to shrink the project and styling windows.
-    disableSnapToSide = true
-
     // Call the regular entry point, which will in turn call our generateDemos() function and abort the regular startup.
     demoCallback = ::generateDemos
     main(emptyArray())
@@ -28,6 +24,11 @@ fun main() {
 
 
 private fun generateDemos() {
+    // We want to shrink windows to smaller sizes than what would usually be sensible.
+    minimumWindowSize = Dimension(300, 200)
+    // If we were to leave this enabled, we would sometimes not be able to shrink the project and styling windows.
+    disableSnapToSide = true
+
     Thread({
         for (locale in TRANSLATED_LOCALES) {
             comprehensivelyApplyLocale(locale)

@@ -6,10 +6,10 @@ import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.TEMPLATE_PROJECT
 import com.loadingbyte.cinecred.demo.TEMPLATE_SCROLL_PAGE_FROM_DOP
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Color
 import java.util.*
 
 
@@ -71,7 +71,7 @@ object GuideProjectSettingsGroundingDemo : StyleSettingsDemo<Global>(
 ) {
     override fun styles() = buildList<Global> {
         this += TEMPLATE_PROJECT.styling.global
-        this += last().copy(grounding = Color(0, 100, 0))
+        this += last().copy(grounding = Color4f.fromSRGBHexString("#006400"))
     }
 
     override fun credits(style: Global) = Pair(style, TEMPLATE_SCROLL_PAGE_FROM_DOP)
@@ -132,5 +132,5 @@ private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, u
     }.toPersistentList()
     val spine = Spine(null, VAnchor.TOP, VAnchor.TOP, 0.0, 0.0, blocks)
     val compound = Compound.Scroll(0.0, persistentListOf(spine), 0.0)
-    return Page(persistentListOf(Stage(PRESET_PAGE_STYLE, persistentListOf(compound), 0.0)))
+    return Page(persistentListOf(Stage(PRESET_PAGE_STYLE, 0, persistentListOf(compound), 0.0)), 0)
 }

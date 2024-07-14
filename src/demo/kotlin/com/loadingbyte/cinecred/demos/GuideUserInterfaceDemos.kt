@@ -2,13 +2,18 @@
 
 package com.loadingbyte.cinecred.demos
 
+import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.RenderQueue
-import com.loadingbyte.cinecred.delivery.VideoRenderJob
+import com.loadingbyte.cinecred.delivery.VideoContainerRenderJob
 import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
 import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.ColorSpace
+import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.st
@@ -18,6 +23,7 @@ import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
 import java.awt.Point
 import java.lang.Thread.sleep
+import java.lang.foreign.MemorySegment.NULL
 import javax.swing.JScrollPane
 import javax.swing.JSpinner
 import javax.swing.JSpinner.NumberEditor
@@ -37,6 +43,7 @@ val GUIDE_USER_INTERFACE_DEMOS
         GuideUserInterfaceResetDemo,
         GuideUserInterfaceSnapSpreadsheetEditorDemo,
         GuideUserInterfaceVideoPreviewDemo,
+        GuideUserInterfaceDeckLinkDemo,
         GuideUserInterfaceDeliveryDemo,
         GuideUserInterfaceWarningsDemo
     )
@@ -66,7 +73,7 @@ object GuideUserInterfaceToggleDialogsDemo : ScreencastDemo("$DIR/toggle-dialogs
 }
 
 
-object GuideUserInterfacePagesDemo : ScreencastDemo("$DIR/pages", Format.VIDEO_GIF, 600, 450) {
+object GuideUserInterfacePagesDemo : ScreencastDemo("$DIR/pages", Format.VIDEO_GIF, 600, 480) {
     override fun generate() {
         addProjectWindows(fullscreenPrjWin = true)
 
@@ -84,7 +91,7 @@ object GuideUserInterfacePagesDemo : ScreencastDemo("$DIR/pages", Format.VIDEO_G
 }
 
 
-object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides", Format.VIDEO_GIF, 600, 450) {
+object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides", Format.VIDEO_GIF, 600, 480) {
     override fun generate() {
         addProjectWindows(fullscreenPrjWin = true)
 
@@ -105,7 +112,7 @@ object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides",
 }
 
 
-object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 600, 450) {
+object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 700, 520) {
     override fun generate() {
         val backedUpOverlays = OVERLAYS_PREFERENCE.get()
         OVERLAYS_PREFERENCE.set(emptyList())
@@ -140,7 +147,7 @@ object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-st
 }
 
 
-object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-custom", Format.VIDEO_GIF, 900, 600) {
+object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-custom", Format.VIDEO_GIF, 900, 620) {
     override fun generate() {
         val backedUpOverlays = OVERLAYS_PREFERENCE.get()
         OVERLAYS_PREFERENCE.set(emptyList())
@@ -296,11 +303,56 @@ object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview",
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click(2 * hold)
-        sc.mouseTo(vidWin.desktopPosOf(vidPnl.leakedPlayButton))
-        sc.click { edt { vidPnl.leakedFrameSlider.value += 1 } }
-        while (vidPnl.leakedFrameSlider.run { value < maximum / 3 })
-            sc.frame { edt { vidPnl.leakedFrameSlider.value += 4 } }
+        sc.mouseTo(plyWin.desktopPosOf(plyCtl.leakedPlayButton))
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 1 } }
+        while (plyCtl.leakedFrameSlider.run { value < maximum / 3 })
+            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4 } }
     }
+}
+
+
+object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.VIDEO_GIF, 700, 600) {
+    override fun generate() {
+        addProjectWindows(fullscreenPrjWin = true)
+
+        edt {
+            prjCtl.setDeckLinks(DECK_LINKS)
+            prjCtl.setDeckLinkModes(MODES)
+            prjCtl.setDeckLinkDepths(DeckLink.Depth.entries)
+            prjCtl.setSelectedDeckLink(DECK_LINKS[0])
+            prjCtl.setSelectedDeckLinkMode(MODES.first { it.name == "1080p24" })
+            prjCtl.setSelectedDeckLinkDepth(DeckLink.Depth.D8)
+            prjCtl.isVisible = true
+        }
+        sleep(500)
+
+        sc.hold()
+        sc.mouseTo(prjWin.desktopPosOf(prjCtl.leakedDeckLinkConfigButton))
+        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 1), 0)
+        sleep(500)
+        sc.hold(4 * hold)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 3), 0)
+        sleep(500)
+        sc.hold(4 * hold)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 4), 0)
+        sleep(500)
+        sc.hold(4 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(prjCtl.leakedDeckLinkConfigButton), 0)
+        sc.click(0)
+        sc.mouseTo(prjWin.desktopPosOf(prjCtl.leakedDeckLinkConnectedButton))
+        sc.hold(4 * hold)
+    }
+
+    private val MODES = listOf(
+        "720p50", "720p59.94", "720p60",
+        "1080p23.98", "1080p24", "1080p25", "1080p29.97", "1080p30", "1080p50", "1080p59.94", "1080p60",
+        "1080i50", "1080i59.94", "1080i60",
+        "2Kp23.98 DCI", "2Kp24 DCI", "2Kp25 DCI",
+        "2160p23.98", "2160p24", "2160p25", "2160p29.97", "2160p30",
+        "4Kp23.98 DCI", "4Kp24 DCI", "4Kp25 DCI", "4Kp29.97 DCI", "4Kp30 DCI"
+    ).map { DeckLink.Mode(it, 0, Resolution(1, 1), FPS(1, 1), Bitmap.Scan.PROGRESSIVE, DeckLink.Depth.entries) }
+    private val DECK_LINKS = listOf(DeckLink(NULL, NULL, null, "DeckLink Mini Monitor 4K", MODES))
 }
 
 
@@ -313,9 +365,15 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click(12 * hold)
         sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
         sc.click(8 * hold)
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoRenderJob.Format.ALL.first { it.label == "ProRes 4444" }))
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvTransparent))
+        sc.mouseTo(dlvWin.desktopPosOf(dlvProfiles))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(RenderFormat.ProResProfile.PRORES_4444))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOf(dlvChannels))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(RenderFormat.Channels.COLOR_AND_ALPHA))
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOf(dlvResMult))
         sc.click()
@@ -324,6 +382,14 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.mouseTo(dlvWin.desktopPosOf(dlvScan))
         sc.click(2 * hold)
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOf(dlvPrimaries))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ColorSpace.Primaries.BT2020))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOf(dlvTransfer))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ColorSpace.Transfer.PQ))
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOf(dlvPnl.addButton))
         sc.click(8 * hold)

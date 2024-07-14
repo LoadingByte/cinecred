@@ -1,10 +1,6 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.setHighQuality
-import com.loadingbyte.cinecred.common.withG2
-import com.loadingbyte.cinecred.ui.helper.PALETTE_BLUE_COLOR
-import com.loadingbyte.cinecred.ui.helper.PALETTE_GRAY_COLOR
-import com.loadingbyte.cinecred.ui.helper.PALETTE_RED_COLOR
+import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.Color
 import java.awt.Point
 import java.awt.geom.Path2D

@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.REF_FRC
 import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
-import com.loadingbyte.cinecred.projectio.Template
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.ProjectDialogType
@@ -82,18 +81,18 @@ abstract class ScreencastDemo(
         dlvWinSize: Dimension? = null
     ) {
         projectCtrl = masterCtrl!!.leakedProjectCtrls.lastOrNull() ?: run {
-            tryCopyTemplate(projectDir, Template(locale, 1, true), CsvFormat)
+            tryCopyTemplate(projectDir, template(locale), CsvFormat)
             edt { masterCtrl!!.openProject(projectDir, openOnScreen = gCfg) }
             sleep(1500)
             masterCtrl!!.leakedProjectCtrls.last()
         }
         prjWin = BackedVirtualWindow(projectCtrl.projectFrame)
         styWin = BackedVirtualWindow(projectCtrl.stylingDialog)
-        vidWin = BackedVirtualWindow(projectCtrl.videoDialog)
+        plyWin = BackedVirtualWindow(projectCtrl.playbackDialog)
         dlvWin = BackedVirtualWindow(projectCtrl.deliveryDialog)
         dt.add(prjWin)
         dt.add(styWin)
-        dt.add(vidWin)
+        dt.add(plyWin)
         dt.add(dlvWin)
 
         sleep(500)
@@ -106,12 +105,12 @@ abstract class ScreencastDemo(
         if (setupVidWin) {
             edt {
                 projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, true)
-                vidPnl.leakedPlayButton.actionListeners.forEach(vidPnl.leakedPlayButton::removeActionListener)
+                plyCtl.leakedPlayButton.actionListeners.forEach(plyCtl.leakedPlayButton::removeActionListener)
             }
             sleep(500)
             if (vidWinSize != null || desktopWidth < 1500)
-                vidWin.size = vidWinSize ?: Dimension(desktopWidth * 2 / 3, desktopHeight * 2 / 3)
-            dt.center(vidWin)
+                plyWin.size = vidWinSize ?: Dimension(desktopWidth * 2 / 3, desktopHeight * 2 / 3)
+            dt.center(plyWin)
         }
         if (setupDlvWin) {
             edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
@@ -163,14 +162,16 @@ abstract class ScreencastDemo(
     protected lateinit var projectCtrl: ProjectController; private set
     protected lateinit var prjWin: BackedVirtualWindow; private set
     protected lateinit var styWin: BackedVirtualWindow; private set
-    protected lateinit var vidWin: BackedVirtualWindow; private set
+    protected lateinit var plyWin: BackedVirtualWindow; private set
     protected lateinit var dlvWin: BackedVirtualWindow; private set
 
     protected val prjPnl get() = projectCtrl.projectFrame.panel
     protected val styPnl get() = projectCtrl.stylingDialog.panel
-    protected val vidPnl get() = projectCtrl.videoDialog.panel
+    protected val plyPnl get() = projectCtrl.playbackDialog.panel
     protected val dlvPnl get() = projectCtrl.deliveryDialog.panel
     protected fun prjImagePnl(pageIdx: Int) = prjPnl.leakedImagePanels[pageIdx]
+    protected val prjCtl get() = prjPnl.leakedPlaybackControls
+    protected val plyCtl get() = plyPnl.leakedControlsPanel
     protected val styTree get() = styPnl.leakedStylingTree
     protected val styGlobForm get() = styPnl.leakedGlobalForm
     protected val styPageForm get() = styPnl.leakedPageStyleForm
@@ -199,10 +200,12 @@ abstract class ScreencastDemo(
     protected fun styLayrDelBtn(i: Int) = styLayrPnl(i).getComponent(4) as JButton
 
     protected val dlvFormats get() = dlvPnl.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
-    protected val dlvTransparent
-        get() = dlvPnl.configurationForm.leakedTransparentGroundingWidget.components[0] as JCheckBox
+    protected val dlvProfiles get() = dlvPnl.configurationForm.leakedProfileWidget.components[0] as JComboBox<*>
+    protected val dlvChannels get() = dlvPnl.configurationForm.leakedChannelsWidget.components[0] as JComboBox<*>
     protected val dlvResMult get() = dlvPnl.configurationForm.leakedResolutionMultWidget.components[0] as JComboBox<*>
     protected val dlvScan get() = dlvPnl.configurationForm.leakedScanWidget.components[0] as JComboBox<*>
+    protected val dlvPrimaries get() = dlvPnl.configurationForm.leakedPrimariesWidget.components[0] as JComboBox<*>
+    protected val dlvTransfer get() = dlvPnl.configurationForm.leakedTransferWidget.components[0] as JComboBox<*>
 
     protected lateinit var optionPaneWin: BackedVirtualWindow; private set
     protected lateinit var optionPaneDialog: JDialog; private set

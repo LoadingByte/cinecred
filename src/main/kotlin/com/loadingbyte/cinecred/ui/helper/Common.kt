@@ -196,6 +196,12 @@ fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
 }
 
 
+/** Should be implemented by wrapper objects that are put into combo boxes. It's expected by the demo code. */
+interface ComboBoxWrapper {
+    val item: Any
+}
+
+
 class LargeCheckBox(size: Int) : JCheckBox() {
 
     init {

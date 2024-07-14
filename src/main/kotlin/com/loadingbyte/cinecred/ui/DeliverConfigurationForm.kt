@@ -58,8 +58,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedFormatWidget get() = formatWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedProfileWidget get() = profileWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedChannelsWidget get() = channelsWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedResolutionMultWidget get() = resolutionMultWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedScanWidget get() = scanWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedPrimariesWidget get() = primariesWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedTransferWidget get() = transferWidget
     // =========================================
 
     private var drawnProject: DrawnProject? = null

@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.common.requireIsInstance
 import com.loadingbyte.cinecred.drawer.drawPages
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
@@ -176,19 +177,18 @@ abstract class StyleSettingsDemo<S : Style>(
                         2 * pageExtend + if (pageHeight != 0) pageHeight else pageBounds.height
                 val settX = (imgW - settBounds.width) / 2
                 val settH = settBounds.height + 2 * settExtendY
+                val pageImg = defImageToImage(
+                    grounding, pageLayers,
+                    DeferredImage(imgW.toDouble(), (imgH - settH).toDouble().toY()).apply {
+                        drawDeferredImage(pageDefImg, (imgW - pageBounds.width) / 2.0, pageExtend.toDouble().toY())
+                    }
+                )
                 buildImage(imgW, imgH, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
-                    g2.color = grounding
-                    g2.fillRect(0, 0, imgW, imgH)
+                    g2.drawImage(pageImg, 0, settH, null)
                     g2.color = settBgColor
                     g2.fillRect(0, 0, imgW, settH)
                     g2.clipRect(settX, 0, imgW, settH)
                     g2.drawImage(settImg, settX, settExtendY, null)
-                }.also { img ->
-                    DeferredImage(imgW.toDouble(), (imgH - settH).toDouble().toY()).apply {
-                        val x = (imgW - pageBounds.width) / 2.0
-                        val y = (settH + pageExtend).toDouble().toY()
-                        drawDeferredImage(pageDefImg, x, y)
-                    }.materialize(img, pageLayers)
                 }
             }
             write(img, suffix)
@@ -196,6 +196,6 @@ abstract class StyleSettingsDemo<S : Style>(
     }
 
     private val settImgs = mutableListOf<BufferedImage>()
-    private val pageDefImgsAndGroundings = mutableListOf<Pair<DeferredImage, Color>>()
+    private val pageDefImgsAndGroundings = mutableListOf<Pair<DeferredImage, Color4f>>()
 
 }

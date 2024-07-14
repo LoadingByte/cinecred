@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.preserveTransform
 import com.loadingbyte.cinecred.common.sumBetween
 import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
@@ -412,7 +411,10 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
             return desktopPosOf(menu.getComponent(idx), center)
         val list = scrollPane.viewport.view as JList<*>
         val listDesktopPos = desktopPosOf(list, center = false)
-        val i = if (idx >= 0) idx else (0..<list.model.size).first { list.model.getElementAt(it) == elem }
+        val i = if (idx >= 0) idx else (0..<list.model.size).first {
+            val e = list.model.getElementAt(it)
+            elem == if (e is ComboBoxWrapper) e.item else e
+        }
         val cellBounds = list.getCellBounds(i, i)
         return Point(
             listDesktopPos.x + cellBounds.x + if (center) cellBounds.width / 2 else 0,

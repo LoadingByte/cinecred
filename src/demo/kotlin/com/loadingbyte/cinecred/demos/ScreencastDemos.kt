@@ -1,12 +1,15 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.delivery.VideoRenderJob
+import com.loadingbyte.cinecred.delivery.ImageSequenceRenderJob
 import com.loadingbyte.cinecred.demo.FileBrowserVirtualWindow
 import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
-import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.project.ContentStyle
+import com.loadingbyte.cinecred.project.Global
+import com.loadingbyte.cinecred.project.LetterStyle
+import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
@@ -62,13 +65,13 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.video.look")
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click()
-        sc.mouseTo(vidWin.desktopPosOf(vidPnl.leakedPlayButton))
-        sc.click { edt { vidPnl.leakedFrameSlider.value += 1 } }
-        sc.caption("screencast.caption.video.play") { vidPnl.leakedFrameSlider.value += 1 }
-        sc.click { edt { vidPnl.leakedFrameSlider.value += 2 } }
-        while (vidPnl.leakedFrameSlider.run { value != maximum })
-            sc.frame { edt { vidPnl.leakedFrameSlider.value += 4 } }
-        vidPnl.leakedPlayButton.isSelected = false
+        sc.mouseTo(plyWin.desktopPosOf(plyCtl.leakedPlayButton))
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 1 } }
+        sc.caption("screencast.caption.video.play") { plyCtl.leakedFrameSlider.value += 1 }
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 2 } }
+        while (plyCtl.leakedFrameSlider.run { value != maximum })
+            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4 } }
+        plyCtl.leakedPlayButton.isSelected = false
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click()
@@ -79,10 +82,12 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
         sc.click()
         sc.caption("screencast.caption.delivery.formats")
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoRenderJob.Format.ALL.first { it.defaultFileExt == "png" }))
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" }))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvTransparent))
+        sc.mouseTo(dlvWin.desktopPosOf(dlvChannels))
+        sc.click()
         sc.caption("screencast.caption.delivery.transparent")
+        sc.click()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedDeliveryDialogButton))
         sc.click()
 
@@ -219,16 +224,14 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.hold()
 
         sc.caption("screencast.caption.styling.styles")
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.PageBehavior.SCROLL")))
-        sc.click()
         sc.caption("screencast.caption.styling.addRemove")
-        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedAddContentStyleButton))
+        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedAddPageStyleButton))
         sc.click(4 * hold)
         sc.mouseTo(styWin.desktopPosOf(styPnl.leakedRemoveStyleButton))
         sc.click(2 * hold)
+        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.PageBehavior.SCROLL")))
+        sc.click()
         sc.caption("screencast.caption.styling.page")
-        sc.mouseTo(styWin.desktopPosOfSetting(styPageForm, PageStyle::scrollMeltWithNext.st()))
-        sc.caption("screencast.caption.styling.melt")
 
         sc.caption("screencast.caption.gutter.open")
         sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.contentStyleGutter")))

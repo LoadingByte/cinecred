@@ -5,11 +5,13 @@ import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
+import com.loadingbyte.cinecred.ui.helper.withG2
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.file.Path
+import java.util.*
 import javax.imageio.ImageIO
 import kotlin.io.path.Path
 import kotlin.io.path.isRegularFile
@@ -61,9 +63,12 @@ object BundledFontsStylingContext : StylingContext {
 }
 
 
+fun template(locale: Locale) =
+    Template(locale, PRESET_GLOBAL.resolution, PRESET_GLOBAL.fps, PRESET_GLOBAL.timecodeFormat, sample = true)
+
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
+        tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
         CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first.single()
     }
 }
@@ -98,7 +103,7 @@ val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
 
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     withDemoProjectDir { projectDir ->
-        tryCopyTemplate(projectDir, Template(FALLBACK_TRANSLATED_LOCALE, 1, true), CsvFormat)
+        tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile).first.single()

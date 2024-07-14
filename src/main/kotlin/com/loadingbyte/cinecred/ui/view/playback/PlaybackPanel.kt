@@ -24,6 +24,11 @@ import kotlin.math.roundToInt
 
 class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : JPanel(), PlaybackViewComms {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedControlsPanel get() = controlsPanel
+    @Deprecated("ENCAPSULATION LEAK") val leakedVideoCanvas: Canvas get() = videoCanvas
+    // =========================================
+
     private val controlsPanel = PlaybackControlsPanel(playbackCtrl)
     private val videoCanvas = VideoCanvas()
 

@@ -5,13 +5,16 @@ import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.imaging.Bitmap
-import com.loadingbyte.cinecred.imaging.Image2BitmapConverter
+import com.loadingbyte.cinecred.imaging.BitmapConverter
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.VideoWriter
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_MAIN
-import org.bytedeco.ffmpeg.global.avutil.*
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_HIGH
+import org.bytedeco.ffmpeg.global.avutil.AVCHROMA_LOC_LEFT
+import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_YUV420P
 import org.w3c.dom.Node
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import java.awt.image.ComponentSampleModel
 import java.awt.image.DataBufferByte
 import java.nio.file.Path
 import java.util.*
@@ -48,8 +51,9 @@ abstract class Demo(private val filename: String, protected val format: Format) 
 
     private val gifFrames = mutableListOf<GIFFrame>()
     private var mp4Writer: VideoWriter? = null
-    private var mp4Converter: Image2BitmapConverter? = null
-    private var mp4Bitmap: Bitmap? = null
+    private var mp4Converter: BitmapConverter? = null
+    private var mp4BGRBitmap: Bitmap? = null
+    private var mp4YUVBitmap: Bitmap? = null
 
     protected fun write(image: BufferedImage, suffix: String = "") {
         require(suffix.isBlank() || format == Format.PNG)
@@ -172,28 +176,30 @@ abstract class Demo(private val filename: String, protected val format: Format) 
     private fun writeMP4(image: BufferedImage) {
         // Set up the VideoWriter if this is the first image.
         if (mp4Writer == null) {
-            val spec = Bitmap.Spec(
-                Resolution(image.width, image.height),
-                Bitmap.Representation(
-                    Bitmap.PixelFormat.of(AV_PIX_FMT_YUV420P),
-                    // Use sRGB because that can be rendered way quicker.
-                    AVCOL_RANGE_MPEG, AVCOL_PRI_BT709, AVCOL_TRC_IEC61966_2_1, AVCOL_SPC_BT470BG, AVCHROMA_LOC_LEFT,
-                    isAlphaPremultiplied = false
-                ),
-                Bitmap.Scan.PROGRESSIVE,
-                Bitmap.Content.PROGRESSIVE_FRAME
+            val res = Resolution(image.width, image.height)
+            val bgrSpec = Bitmap.Spec(res, BGR24_REPRESENTATION)
+            val yuvRep = Bitmap.Representation(
+                Bitmap.PixelFormat.of(AV_PIX_FMT_YUV420P), Bitmap.Range.LIMITED, ColorSpace.SRGB,
+                Bitmap.YUVCoefficients.SRGB_NCL, AVCHROMA_LOC_LEFT, Bitmap.Alpha.OPAQUE
             )
+            val yuvSpec = Bitmap.Spec(res, yuvRep)
             mp4Writer = VideoWriter(
-                file(""), spec, format.fps,
-                "libx264", FF_PROFILE_H264_MAIN, codecOptions = mapOf("crf" to "17"), muxerOptions = emptyMap()
+                file(""), yuvSpec, format.fps,
+                "libx264", FF_PROFILE_H264_HIGH, codecOptions = mapOf("crf" to "17"), muxerOptions = emptyMap()
             )
-            mp4Converter = Image2BitmapConverter(spec)
-            mp4Bitmap = Bitmap.allocate(spec)
+            mp4Converter = BitmapConverter(bgrSpec, yuvSpec)
+            mp4BGRBitmap = Bitmap.allocate(bgrSpec)
+            mp4YUVBitmap = Bitmap.allocate(yuvSpec)
         }
 
         // Write the image.
-        mp4Converter!!.convert(image, mp4Bitmap!!)
-        mp4Writer!!.write(mp4Bitmap!!)
+        require(image.type == BufferedImage.TYPE_3BYTE_BGR)
+        mp4BGRBitmap!!.put(
+            (image.raster.dataBuffer as DataBufferByte).data,
+            (image.raster.sampleModel as ComponentSampleModel).scanlineStride
+        )
+        mp4Converter!!.convert(mp4BGRBitmap!!, mp4YUVBitmap!!)
+        mp4Writer!!.write(mp4YUVBitmap!!)
     }
 
     private fun file(suffix: String): Path {
@@ -208,7 +214,9 @@ abstract class Demo(private val filename: String, protected val format: Format) 
         if (gifFrames.isNotEmpty())
             flushGIFFrames()
         mp4Writer?.close()
-        mp4Writer = null
+        mp4Converter?.close()
+        mp4BGRBitmap?.close()
+        mp4YUVBitmap?.close()
     }
 
 

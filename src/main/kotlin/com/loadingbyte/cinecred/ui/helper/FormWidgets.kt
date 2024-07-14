@@ -455,7 +455,7 @@ abstract class AbstractComboBoxWidget<V : Any, E : Any>(
     }
 
 
-    protected inner class Wrapper(val item: E) {
+    protected inner class Wrapper(override val item: E) : ComboBoxWrapper {
         override fun toString() = toString(item).ifEmpty { " " }
         override fun hashCode() = item.hashCode()
         override fun equals(other: Any?) =
@@ -1206,22 +1206,25 @@ class FontChooserWidget(
 
 
     // We also use this wrapper so that a user can type a family name while the combo box is in focus to select it.
-    private data class FamilyWrapper(val family: FontFamily) : FontProvider {
+    private data class FamilyWrapper(val family: FontFamily) : FontProvider, ComboBoxWrapper {
         override fun toString() = family.getFamily(Locale.getDefault())
         override val font get() = family.canonicalFont
+        override val item get() = family
     }
 
 
-    private sealed interface FontWrapper : FontProvider {
+    private sealed interface FontWrapper : FontProvider, ComboBoxWrapper {
 
         data class ForFont(override val font: Font, private val family: FontFamily?) : FontWrapper {
             // Retrieve the subfamily name from the font's family object. The fallback should never be needed.
             override fun toString(): String = family?.getSubfamilyOf(font, Locale.getDefault()) ?: font.fontName
+            override val item get() = font
         }
 
         data class ForName(val name: String) : FontWrapper {
             override fun toString() = name
             override val font get() = null
+            override val item get() = name
         }
 
     }

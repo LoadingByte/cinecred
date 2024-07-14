@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
+import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
@@ -29,14 +30,12 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
         val video = drawVideo(project, drawPages(project, credits))
 
         // Write out the video.
-        val backend = object : DeferredVideo.BufferedImageBackend(video, listOf(STATIC), listOf(TAPES), draft = true) {
-            override fun createIntermediateImage(width: Int, height: Int) =
-                BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
-        }
-        for (frameIdx in 0..<video.numFrames) {
-            val img = BufferedImage(video.resolution.widthPx, video.resolution.heightPx, BufferedImage.TYPE_3BYTE_BGR)
-            backend.materializeFrame(img, frameIdx)
-            receiveFrame(img)
+        DeferredVideo.BitmapBackend(
+            video, listOf(STATIC), listOf(TAPES), styling.global.grounding,
+            Bitmap.Spec(video.resolution, BGR24_REPRESENTATION)
+        ).use { back ->
+            for (frameIdx in 0..<video.numFrames)
+                back.materializeFrame(frameIdx)!!.use { bitmap -> receiveFrame(bgr24BitmapToImage(bitmap)) }
         }
         flushFrames()
     }

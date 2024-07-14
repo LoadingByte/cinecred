@@ -23,14 +23,16 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
         GuideCreditsSpreadsheetVideoBehaviorStandardDemo,
         GuideCreditsSpreadsheetVideoBehaviorMarginDemo,
         GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo,
-        GuideCreditsSpreadsheetVideoBehaviorFadeDemo,
         GuideCreditsSpreadsheetVideoTrimDemo,
+        GuideCreditsSpreadsheetVideoAlignDemo,
+        GuideCreditsSpreadsheetVideoFadeDemo,
         GuideCreditsSpreadsheetVGapDemo,
         GuideCreditsSpreadsheetContentStylesDemo,
         GuideCreditsSpreadsheetSpinePositionScrollDemo,
         GuideCreditsSpreadsheetSpinePositionCardDemo,
         GuideCreditsSpreadsheetSpinePositionParallelDemo,
         GuideCreditsSpreadsheetSpinePositionHookDemo,
+        GuideCreditsSpreadsheetPageGapMeltDemo,
         GuideCreditsSpreadsheetBreakMatchDemo
     )
 
@@ -107,7 +109,7 @@ object GuideCreditsSpreadsheetVideoTagDemo : PageDemo("$DIR/video-tag", Format.P
 
 
 object GuideCreditsSpreadsheetVideoBehaviorStandardDemo : TimelineDemo(
-    "$DIR/video-behavior-standard", Format.VIDEO_GIF
+    "$DIR/video-standard-behavior", Format.VIDEO_GIF
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() =
@@ -119,7 +121,7 @@ object GuideCreditsSpreadsheetVideoBehaviorStandardDemo : TimelineDemo(
 
 
 object GuideCreditsSpreadsheetVideoBehaviorMarginDemo : TimelineDemo(
-    "$DIR/video-behavior-margin", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48
+    "$DIR/video-margin", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() =
@@ -131,7 +133,7 @@ object GuideCreditsSpreadsheetVideoBehaviorMarginDemo : TimelineDemo(
 
 
 object GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo : TimelineDemo(
-    "$DIR/video-behavior-two-margins", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 0
+    "$DIR/video-two-margins", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 0
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() =
@@ -142,8 +144,32 @@ object GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo : TimelineDemo(
 }
 
 
-object GuideCreditsSpreadsheetVideoBehaviorFadeDemo : TimelineDemo(
-    "$DIR/video-behavior-fade", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48, leftFade = 24, rightFade = 24
+object GuideCreditsSpreadsheetVideoTrimDemo : TimelineDemo(
+    "$DIR/video-trim", Format.VIDEO_GIF, rightMargin = 78
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x In 90 Out 165}}
+        """.parseCreditsCS(resolution = Resolution(700, 350))
+}
+
+
+object GuideCreditsSpreadsheetVideoAlignDemo : TimelineDemo(
+    "$DIR/video-align", Format.VIDEO_GIF, leftMargin = 39, rightMargin = 39
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() =
+        """
+@Body
+{{Video rainbow 200x In 90 Out 165 Middle}}
+        """.parseCreditsCS(resolution = Resolution(700, 350))
+}
+
+
+object GuideCreditsSpreadsheetVideoFadeDemo : TimelineDemo(
+    "$DIR/video-fade", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48, leftFade = 24, rightFade = 24
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() =
@@ -151,16 +177,6 @@ object GuideCreditsSpreadsheetVideoBehaviorFadeDemo : TimelineDemo(
 @Body
 {{Video rainbow 200x Margin 00:00:02:00 Fade 00:00:01:00}}
         """.parseCreditsCS(resolution = Resolution(700, 400))
-}
-
-
-object GuideCreditsSpreadsheetVideoTrimDemo : VideoDemo("$DIR/video-trim", Format.VIDEO_GIF) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x In 90 Out 165}}
-        """.parseCreditsCS(resolution = Resolution(700, 350))
 }
 
 
@@ -261,6 +277,24 @@ I’m a bit offset!,,Hook 2 Middle-Top 250,
 I’m with my friend!,,Hook 1 Bottom-Top 0 200,
         """.parseCreditsCS(demoCS.copy(gridCellHJustifyPerCol = persistentListOf(HJustify.LEFT)))
     )
+}
+
+
+object GuideCreditsSpreadsheetPageGapMeltDemo : PageDemo(
+    "$DIR/page-gap-melt", Format.STEP_GIF, pageWidth = 700, pageGuides = true
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = listOf(TOP.parseCreditsCS(resolution = RES), (TOP + BOT).parseCreditsCS(resolution = RES))
+    private val RES = Resolution(690, 300)
+    private const val TOP = """
+@Head,@Body,@Tail,@Vertical Gap,@Content Style,@Page Style,@Page Gap
+1st AC,Paul Puller,,,Gutter,Scroll,
+2nd AC,Charly Clapper,,,,,
+    """
+    private const val BOT = """
+,,,5,,,Melt
+,Copyright © 2023,,,Blurb,Card,
+    """
 }
 
 

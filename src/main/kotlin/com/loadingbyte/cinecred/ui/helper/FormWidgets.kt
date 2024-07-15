@@ -1268,21 +1268,34 @@ class FontChooserWidget(
                 label1.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
                 value?.font?.let { sampleFont ->
                     val effSampleFont = sampleFont.deriveFont(list.font.size2D * 1.25f)
-                    // Try to get the sample text from the font, and if none is specified, use a standard one.
-                    val effSampleText = getFamilyOf(sampleFont)?.getSampleTextOf(sampleFont, Locale.getDefault())
-                        ?: l10n("ui.form.fontSample")
-                    // Only display the sample when there is at least one glyph is not the missing glyph placeholder.
-                    val gv = effSampleFont.createGlyphVector(REF_FRC, effSampleText)
-                    val missGlyph = effSampleFont.missingGlyphCode
-                    if (gv.getGlyphCodes(0, gv.numGlyphs, null).any { it != missGlyph }) {
-                        label2.isVisible = true
-                        label2.font = effSampleFont
-                        label2.text = effSampleText
+                    val family = getFamilyOf(sampleFont)
+                    when {
+                        // Try to get the sample text from the font.
+                        trySample(effSampleFont, family?.getSampleTextOf(sampleFont, Locale.getDefault())) -> {}
+                        // If none is specified, or it has only unknown glyphs, use a standard one in the UI language.
+                        trySample(effSampleFont, l10n("ui.form.fontSample")) -> {}
+                        // If the standard sample text only has unknown glyphs, use a Latin one.
+                        trySample(effSampleFont, l10n("ui.form.fontSample", FALLBACK_TRANSLATED_LOCALE)) -> {}
+                        // If the Latin one also doesn't work, try all other sample texts we have available.
+                        else -> for (locale in TRANSLATED_LOCALES)
+                            if (trySample(effSampleFont, l10n("ui.form.fontSample", locale))) break
                     }
                 }
             }
 
             return panel
+        }
+
+        private fun trySample(sampleFont: Font, sampleText: String?): Boolean {
+            val missingGlyph = sampleFont.missingGlyphCode
+            val gv = sampleFont.createGlyphVector(REF_FRC, sampleText ?: return false)
+            // Only display the sample when at least one glyph is not the missing glyph placeholder.
+            return if (gv.getGlyphCodes(0, gv.numGlyphs, null).all { it == missingGlyph }) false else {
+                label2.isVisible = true
+                label2.font = sampleFont
+                label2.text = sampleText
+                true
+            }
         }
 
     }

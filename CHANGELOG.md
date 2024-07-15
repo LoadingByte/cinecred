@@ -69,6 +69,8 @@ Cinecred Changelog
   entered invalid values.
 - The font chooser no longer stays disabled when selecting another font family
   because the configured one is missing.
+- The font chooser now tries to show a text sample even when the UI language
+  differs from the font language.
 - New entries added to a list (like page style grid cols) now appear reliably.
 - Embedded videos now bear the text "preview" to explain their low resolution.
 - The page preview now updates more responsively and consumes less compute.

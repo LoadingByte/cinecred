@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.roundingDiv
 import com.loadingbyte.cinecred.delivery.MAX_RENDER_PROGRESS
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
@@ -92,7 +93,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                 row.progress = progress
                 jobTableModel.fireTableCellUpdated(rowIdx, 2)
                 if (progress is Int)
-                    trySetTaskbarProgress(ctrl.projectFrame, progress)
+                    trySetTaskbarProgress(ctrl.projectFrame, roundingDiv(progress * 100, MAX_RENDER_PROGRESS))
             }
         }
 

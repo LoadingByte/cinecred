@@ -29,6 +29,7 @@ Cinecred Changelog
     - Added H.265 delivery.
     - Added OpenEXR page still and image sequence delivery.
     - Image sequence export now exploits all CPU cores.
+    - ProRes export now exploits hardware acceleration on macOS.
     - Exported page stills and image sequences now carry color space info.
     - Exported TIFFs now support raw & LZW compression and use standard Deflate.
     - Exported DPXs now support run-length encoding.

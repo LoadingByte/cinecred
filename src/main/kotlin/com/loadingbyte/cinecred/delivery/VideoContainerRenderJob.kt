@@ -42,6 +42,7 @@ import org.bytedeco.ffmpeg.avcodec.AVCodecContext.*
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
+import java.util.concurrent.LinkedBlockingQueue
 import kotlin.math.pow
 
 
@@ -59,13 +60,26 @@ class VideoContainerRenderJob private constructor(
     override fun render(progressCallback: (Int) -> Unit) {
         // Make sure that the parent directory exists.
         file.parent.createDirectoriesSafely()
+        val allSettings = format.videoWriterSettings(config)
+        for ((i, settings) in allSettings.withIndex())
+            try {
+                render(progressCallback, settings)
+                break
+            } catch (e: FFmpegException) {
+                // If some VideoWriterSettings (e.g., VideoToolbox on macOS) fail, fall back to the next ones.
+                if (i != allSettings.lastIndex)
+                    LOGGER.warn("Falling back to next encoder since '${settings.codecName}' did not work: ${e.message}")
+                else
+                    throw e
+            }
+    }
 
+    private fun render(progressCallback: (Int) -> Unit, settings: VideoWriterSettings) {
         val matte = config[CHANNELS] == ALPHA
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val yuv = if (matte) null else config[YUV]
         val ceiling = if (colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
-        val settings = format.videoWriterSettings(config)
         val grounding = if (config[CHANNELS] == COLOR) project.styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
 
@@ -105,38 +119,54 @@ class VideoContainerRenderJob private constructor(
                 .use { BitmapConverter.convert(it, blackWriterBitmap) }
         }
 
-        DeferredVideo.BitmapBackend(
-            scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec, ceiling
-        ).use { backend ->
-            for ((i, codecName) in settings.codecNames.withIndex())
-                try {
-                    VideoWriter(
-                        file, writerSpec, scaledVideo.fps, codecName, settings.codecProfile, settings.codecOptions,
-                        emptyMap()
-                    ).use { videoWriter ->
-                        for (frameIdx in 0..<scaledVideo.numFrames) {
-                            backend.materializeFrame(frameIdx)!!.use { colorBitmap ->
-                                if (!matte)
-                                    videoWriter.write(colorBitmap)
-                                else
-                                    Bitmap.allocate(writerSpec).zero().use { matteBitmap ->
-                                        matteBitmap.blit(blackWriterBitmap!!)
-                                        matteBitmap.blitComponent(colorBitmap, 3, 0)
-                                        videoWriter.write(matteBitmap)
-                                    }
-                            }
-                            progressCallback(MAX_RENDER_PROGRESS * (frameIdx + 1) / scaledVideo.numFrames)
-                            if (Thread.interrupted())
-                                throw InterruptedException()
+        // We have a second thread materialize frames into a queue, and the current thread take frames from the queue
+        // and submitting them to the VideoWriter. While this doesn't give us a huge performance boost over doing
+        // everything sequentially in the same thread, we gain a bit when a slow encoder (like ProRes) meets an
+        // expensive-to-materialize portion of the credits (like a blend).
+        val queue = LinkedBlockingQueue<Bitmap>(32)
+        val materializer = Thread({
+            try {
+                DeferredVideo.BitmapBackend(
+                    scaledVideo, listOf(STATIC), listOf(TAPES), grounding, backendSpec, ceiling
+                ).use { backend ->
+                    for (frameIdx in 0..<scaledVideo.numFrames) {
+                        val colorBitmap = backend.materializeFrame(frameIdx)!!
+                        if (!matte)
+                            queue.put(colorBitmap)
+                        else {
+                            val matteBitmap = Bitmap.allocate(writerSpec).zero()
+                            matteBitmap.blit(blackWriterBitmap!!)
+                            matteBitmap.blitComponent(colorBitmap, 3, 0)
+                            colorBitmap.close()
+                            queue.put(matteBitmap)
                         }
+                        if (Thread.interrupted())
+                            break
                     }
-                } catch (e: FFmpegException) {
-                    // The VideoToolbox codecs might fail on macOS. If that happens, fall back to CPU-based encoding.
-                    if (i != settings.codecNames.lastIndex)
-                        LOGGER.warn("Falling back to next encoder because '$codecName' did not work: ${e.message}")
-                    else
-                        throw e
                 }
+            } catch (_: InterruptedException) {
+                // Return
+            }
+        }, "VideoFrameMaterializer")
+        VideoWriter(
+            file, writerSpec, scaledVideo.fps, settings.codecName, settings.codecProfile, settings.codecOptions,
+            emptyMap()
+        ).use { videoWriter ->
+            try {
+                // Start the materializer only after the VideoWriter has been successfully created, to not waste compute
+                // when the VideoWriter creation fails and we have to fall back to other VideoWriterSettings.
+                materializer.start()
+                for (frameIdx in 0..<scaledVideo.numFrames) {
+                    queue.take().use(videoWriter::write)
+                    progressCallback(MAX_RENDER_PROGRESS * (frameIdx + 1) / scaledVideo.numFrames)
+                    if (Thread.interrupted())
+                        throw InterruptedException()
+                }
+            } finally {
+                materializer.interrupt()
+                materializer.join(1000L)
+                while (queue.poll()?.also(Bitmap::close) != null) continue
+            }
         }
 
         blackWriterBitmap?.close()
@@ -146,10 +176,10 @@ class VideoContainerRenderJob private constructor(
     companion object {
 
         val H264: RenderFormat = H26XFormat(
-            "H.264", AV_CODEC_ID_H264, "libx264", "h264_videotoolbox", FF_PROFILE_H264_HIGH, FF_PROFILE_H264_HIGH_10
+            "H.264", AV_CODEC_ID_H264, "libx264", FF_PROFILE_H264_HIGH, FF_PROFILE_H264_HIGH_10
         )
         val H265: RenderFormat = H26XFormat(
-            "H.265", AV_CODEC_ID_H265, "libx265", "hevc_videotoolbox", FF_PROFILE_HEVC_MAIN, FF_PROFILE_HEVC_MAIN_10
+            "H.265", AV_CODEC_ID_H265, "libx265", FF_PROFILE_HEVC_MAIN, FF_PROFILE_HEVC_MAIN_10
         )
 
         val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat())
@@ -190,7 +220,7 @@ class VideoContainerRenderJob private constructor(
         widthMod2, heightMod2, minWidth, minHeight
     ) {
 
-        abstract fun videoWriterSettings(config: Config): VideoWriterSettings
+        abstract fun videoWriterSettings(config: Config): List<VideoWriterSettings>
 
         override fun createRenderJob(
             config: Config,
@@ -205,7 +235,7 @@ class VideoContainerRenderJob private constructor(
 
 
     private class VideoWriterSettings(
-        val codecNames: List<String>,
+        val codecName: String,
         val codecProfile: Int,
         val codecOptions: Map<String, String>,
         val pixelFormat: Bitmap.PixelFormat
@@ -216,7 +246,6 @@ class VideoContainerRenderJob private constructor(
         label: String,
         codecId: Int,
         private val codecName: String,
-        private val macCodecName: String,
         private val codecProfile8: Int,
         private val codecProfile10: Int
     ) : Format(
@@ -225,12 +254,11 @@ class VideoContainerRenderJob private constructor(
         widthMod2 = true,
         heightMod2 = true
     ) {
-        override fun videoWriterSettings(config: Config): VideoWriterSettings {
+        override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val depth = config[DEPTH]
-            val codecNames = if (SystemInfo.isMacOS) listOf(macCodecName, codecName) else listOf(codecName)
             val codecProfile = if (depth == 8) codecProfile8 else codecProfile10
-            val pixelFormatCode = if (depth == 8) AV_PIX_FMT_YUV420P else AV_PIX_FMT_YUV420P10
-            return VideoWriterSettings(codecNames, codecProfile, emptyMap(), Bitmap.PixelFormat.of(pixelFormatCode))
+            val pixelFormat = Bitmap.PixelFormat.of(if (depth == 8) AV_PIX_FMT_YUV420P else AV_PIX_FMT_YUV420P10)
+            return listOf(VideoWriterSettings(codecName, codecProfile, emptyMap(), pixelFormat))
         }
     }
 
@@ -242,13 +270,12 @@ class VideoContainerRenderJob private constructor(
                 choice(PRORES_PROFILE, PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ),
         widthMod2 = true
     ) {
-        override fun videoWriterSettings(config: Config): VideoWriterSettings {
+        override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val profile = config[PRORES_PROFILE]
             val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
             val is4444 = profile == PRORES_4444 || profile == PRORES_4444_XQ
             // prores_aw is faster, but only prores_ks supports 4444 alpha content that is universally compatible.
             val codecName = if (is4444 && embedAlpha) "prores_ks" else "prores_aw"
-            val codecNames = if (SystemInfo.isMacOS) listOf("prores_videotoolbox", codecName) else listOf(codecName)
             val codecProfile = when (profile) {
                 PRORES_422_PROXY -> FF_PROFILE_PRORES_PROXY
                 PRORES_422_LT -> FF_PROFILE_PRORES_LT
@@ -257,9 +284,17 @@ class VideoContainerRenderJob private constructor(
                 PRORES_4444 -> FF_PROFILE_PRORES_4444
                 PRORES_4444_XQ -> FF_PROFILE_PRORES_XQ
             }
-            val pixelFormatCode =
+            val pixelFormat = Bitmap.PixelFormat.of(
                 if (!is4444) AV_PIX_FMT_YUV422P10 else if (!embedAlpha) AV_PIX_FMT_YUV444P10 else AV_PIX_FMT_YUVA444P10
-            return VideoWriterSettings(codecNames, codecProfile, emptyMap(), Bitmap.PixelFormat.of(pixelFormatCode))
+            )
+            val s = mutableListOf(VideoWriterSettings(codecName, codecProfile, emptyMap(), pixelFormat))
+            if (SystemInfo.isMacOS) {
+                val vtPx = Bitmap.PixelFormat.of(
+                    if (!is4444) AV_PIX_FMT_P210 else if (!embedAlpha) AV_PIX_FMT_P410 else AV_PIX_FMT_AYUV64
+                )
+                s.add(0, VideoWriterSettings("prores_videotoolbox", codecProfile, mapOf("allow_sw" to "1"), vtPx))
+            }
+            return s
         }
     }
 
@@ -272,7 +307,7 @@ class VideoContainerRenderJob private constructor(
         minWidth = 256,
         minHeight = 120
     ) {
-        override fun videoWriterSettings(config: Config): VideoWriterSettings {
+        override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val profile = config[DNXHR_PROFILE]
             val codecProfileOption = when (profile) {
                 DNXHR_LB -> "dnxhr_lb"
@@ -287,7 +322,7 @@ class VideoContainerRenderJob private constructor(
                 else -> AV_PIX_FMT_YUV422P
             }
             val px = Bitmap.PixelFormat.of(pixelFormatCode)
-            return VideoWriterSettings(listOf("dnxhd"), FF_PROFILE_UNKNOWN, mapOf("profile" to codecProfileOption), px)
+            return listOf(VideoWriterSettings("dnxhd", FF_PROFILE_UNKNOWN, mapOf("profile" to codecProfileOption), px))
         }
     }
 

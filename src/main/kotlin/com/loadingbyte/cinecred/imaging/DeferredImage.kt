@@ -4,9 +4,9 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.apache.fontbox.ttf.OTFParser
 import org.apache.fontbox.ttf.TTFParser
-import org.apache.fontbox.ttf.TrueTypeCollection
 import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.cos.*
+import org.apache.pdfbox.io.RandomAccessReadBuffer
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.*
@@ -38,12 +38,14 @@ import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import java.awt.BasicStroke
 import java.awt.Shape
 import java.awt.geom.*
-import java.io.DataInputStream
 import java.io.OutputStream
 import java.lang.Byte.toUnsignedInt
+import java.lang.Short.toUnsignedInt
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_BYTE
+import java.lang.invoke.MethodHandles
 import java.lang.ref.SoftReference
+import java.nio.ByteOrder
 import java.nio.file.Path
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -370,6 +372,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         interface FundamentalFontInfo {
             val fontName: String
             val fontFile: Path
+            val indexInCollection: Int
             /** Retrieves the outline of a particular glyph, assuming a non-transformed font of the given size. */
             fun getGlyphOutline(glyphCode: Int, fontSize: Double): Shape
         }
@@ -1126,24 +1129,41 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             if (psName !in docRes.pdFonts)
                 try {
                     val fontFile = fundamentalFontInfo.fontFile.toFile()
-                    when (DataInputStream(fontFile.inputStream()).use { it.readInt() }) {
+                    val ttf = when (String(fontFile.inputStream().use { it.readNBytes(4) })) {
                         // TrueType Collection
-                        0x74746366 -> {
-                            TrueTypeCollection(fontFile).processAllFonts { ttf ->
-                                docRes.pdFonts[ttf.name] = PDType0Font.load(doc, ttf, false)
+                        "ttcf" -> {
+                            // Read the entire file into a byte array.
+                            val bI = fontFile.readBytes()
+                            val numFonts = INT.get(bI, 8) as Int
+                            require(numFonts in 1..1024) { "Illegal number of fonts: $numFonts" }
+                            val fontIdx = fundamentalFontInfo.indexInCollection
+                            require(fontIdx in 0..<numFonts) { "Font index $fontIdx exceeds font count $numFonts." }
+                            // Create a byte array bO that is an extracted version of the font. For that, we copy the
+                            // font's directory and all of its tables, and then adjust the table offsets in the
+                            // directory. We don't need to worry about offsets inside tables because those are relative
+                            // to the table's address.
+                            val fontOff = INT.get(bI, 12 + fontIdx * 4) as Int
+                            val numTabs = toUnsignedInt(SHORT.get(bI, fontOff + 4) as Short)
+                            val dirLen = 12 + numTabs * 16
+                            val tabLens = IntArray(numTabs) { t ->
+                                ceilDiv(INT.get(bI, fontOff + 12 + t * 16 + 12) as Int, 4) * 4
                             }
-                            if (psName !in docRes.pdFonts) {
-                                val msg = "Successfully loaded the font file '{}' for PDF embedding, but the font " +
-                                        "'{}' which lead to that file can for some reason not be found in there."
-                                LOGGER.error(msg, fontFile, psName)
-                                // Memoize the fallback font to avoid trying to load the font file again.
-                                docRes.pdFonts[psName] = PDType1Font(Standard14Fonts.FontName.HELVETICA)
+                            val bO = ByteArray(dirLen + tabLens.sum())
+                            System.arraycopy(bI, fontOff, bO, 0, dirLen)
+                            var tabPtr = dirLen
+                            for (t in 0..<numTabs) {
+                                val p = 12 + t * 16 + 8
+                                INT.set(bO, p, tabPtr)
+                                System.arraycopy(bI, INT.get(bI, fontOff + p) as Int, bO, tabPtr, tabLens[t])
+                                tabPtr += tabLens[t]
                             }
+                            // Parse the newly created font.
+                            val parser = if (String(bO, 0, 4) == "OTTO") OTFParser() else TTFParser()
+                            parser.parse(RandomAccessReadBuffer(bO))
                         }
                         // OpenType Font
-                        0x4F54544F ->
-                            docRes.pdFonts[psName] =
-                                PDType0Font.load(doc, OTFParser().parse(RandomAccessReadBufferedFile(fontFile)), false)
+                        "OTTO" ->
+                            OTFParser().parse(RandomAccessReadBufferedFile(fontFile))
                         // TrueType Font
                         else ->
                             // Here, one could theoretically enable embedSubset. However, our string writing logic
@@ -1151,9 +1171,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             // the only way we can leverage the power of TextLayout and also the only way we can write
                             // some special ligatures that have no unicode codepoint. Now, since PDFBox's font
                             // subsetting mechanism only works on codepoints and not on glyphs, we cannot use it.
-                            docRes.pdFonts[psName] =
-                                PDType0Font.load(doc, TTFParser().parse(RandomAccessReadBufferedFile(fontFile)), false)
+                            TTFParser().parse(RandomAccessReadBufferedFile(fontFile))
                     }
+                    docRes.pdFonts[psName] = PDType0Font.load(doc, ttf, false)
                 } catch (e: Exception) {
                     LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
                     // Memoize the fallback font to avoid trying to load the font file again.
@@ -1326,6 +1346,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         companion object {
+            private val SHORT = MethodHandles.byteArrayViewVarHandle(ShortArray::class.java, ByteOrder.BIG_ENDIAN)
+                .withInvokeExactBehavior()
+            private val INT = MethodHandles.byteArrayViewVarHandle(IntArray::class.java, ByteOrder.BIG_ENDIAN)
+                .withInvokeExactBehavior()
             private val docResMap = WeakHashMap<PDDocument, DocRes>()
         }
 

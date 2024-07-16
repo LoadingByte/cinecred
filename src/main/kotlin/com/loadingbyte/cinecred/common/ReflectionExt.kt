@@ -49,6 +49,13 @@ fun Font.getFontFile(): Path {
     return Path(get_platName.invokeExact(font2D as PhysicalFont) as String)
 }
 
+fun Font.getIndexInCollection(): Int {
+    val font2D = FontUtilities.getFont2D(this)
+    if (font2D !is TrueTypeFont)
+        throw IllegalArgumentException("A non-TTF font has no index in collection.")
+    return get_fontIndex.invokeExact(font2D as TrueTypeFont) as Int
+}
+
 
 class FontStrings(
     val family: Map<Locale, String>,
@@ -384,6 +391,7 @@ private val calcColor_line = Line
     .findVirtual("calcColor", methodType(FloatArray::class.java, Point::class.java))
 
 private val get_platName = PhysicalFont::class.java.findGetter("platName", String::class.java)
+private val get_fontIndex = TrueTypeFont::class.java.findGetter("fontIndex", Int::class.java)
 private val get_textLine = TextLayout::class.java.findGetter("textLine", TextLine)
 private val get_fComponents = TextLine.findGetter("fComponents", TextLineComponent::class.java.arrayType())
 private val get_locs = TextLine.findGetter("locs", FloatArray::class.java)

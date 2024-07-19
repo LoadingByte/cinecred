@@ -39,6 +39,7 @@ import java.util.logging.Formatter
 import javax.swing.*
 import kotlin.concurrent.schedule
 import kotlin.io.path.absolute
+import kotlin.io.path.absolutePathString
 
 
 private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
@@ -90,6 +91,9 @@ fun main(args: Array<String>) {
     avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
     // Redirect FFmpeg's logging output to slf4j.
     avutil.setLogCallback(FFmpegLogCallback)
+
+    // Make PDFBox store its font cache in our config directory.
+    System.setProperty("pdfbox.fontcache", CONFIG_DIR.absolutePathString())
 
     // Already load the currently connected DeckLink devices so that they can be later passed to clients all in one go.
     // This is important because one client preselects the last selected device from the first device list it gets.

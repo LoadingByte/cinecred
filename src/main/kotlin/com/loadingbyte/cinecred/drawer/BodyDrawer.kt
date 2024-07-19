@@ -502,29 +502,30 @@ private fun drawBodyImageWithParagraphsBodyLayout(
     for (bodyElem in block.body) {
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
-            val fmtStr = bodyElem.str.formatted(textCtx)
-            val lineBreaks = fmtStr.breakLines(bodyImageWidth)
-            for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
-                // Note: If the line contains only whitespace, this skips to the next line.
-                val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos).trim() ?: continue
+            for (fmtStr in bodyElem.str.formatted(textCtx).split(LINE_DELIMITERS)) {
+                val lineBreaks = fmtStr.breakLines(bodyImageWidth)
+                for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
+                    // Note: If the line contains only whitespace, this skips to the next line.
+                    val lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos)?.trim() ?: continue
 
-                val isLastLine = lineEndPos == fmtStr.string.length
-                val curLineHJustify = style.paragraphsLineHJustify.toSingleLineHJustify(isLastLine)
+                    val isLastLine = lineEndPos == fmtStr.string.length
+                    val curLineHJustify = style.paragraphsLineHJustify.toSingleLineHJustify(isLastLine)
 
-                // Case 1a: Full justification.
-                if (curLineHJustify == SingleLineHJustify.FULL)
-                    bodyImage.drawString(lineFmtStr.justify(bodyImageWidth), 0.0, y)
-                // Case 1b: Left, center, or right justification.
-                else {
-                    val hJustify = curLineHJustify.toHJustify()
-                    bodyImage.drawJustifiedString(lineFmtStr, hJustify, 0.0, y, bodyImageWidth)
+                    // Case 1a: Full justification.
+                    if (curLineHJustify == SingleLineHJustify.FULL)
+                        bodyImage.drawString(lineFmtStr.justify(bodyImageWidth), 0.0, y)
+                    // Case 1b: Left, center, or right justification.
+                    else {
+                        val hJustify = curLineHJustify.toHJustify()
+                        bodyImage.drawJustifiedString(lineFmtStr, hJustify, 0.0, y, bodyImageWidth)
+                    }
+
+                    // Advance to the next line.
+                    val lineHeight = lineFmtStr.height
+                    y += lineHeight + style.paragraphsLineGapPx.toElasticY()
+
+                    recordRowHeight(lineHeight)
                 }
-
-                // Advance to the next line.
-                val lineHeight = lineFmtStr.height
-                y += lineHeight + style.paragraphsLineGapPx.toElasticY()
-
-                recordRowHeight(lineHeight)
             }
             y -= style.paragraphsLineGapPx.toElasticY()
         }

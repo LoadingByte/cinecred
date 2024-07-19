@@ -18,6 +18,8 @@ val BODY_CELL_GUIDE_COLOR = Color4f.fromSRGBHexString("#823200")
 val BODY_WIDTH_GUIDE_COLOR = Color4f.fromSRGBHexString("#820000")
 val HEAD_TAIL_GUIDE_COLOR = Color4f.fromSRGBHexString("#006400")
 
+val LINE_DELIMITERS = listOf("\n", "\r\n")
+
 
 fun DeferredImage.drawString(
     fmtStr: FormattedString,

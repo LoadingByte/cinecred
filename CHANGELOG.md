@@ -9,6 +9,7 @@ Cinecred Changelog
 
 - The credits spreadsheet file may now have multiple sheets, each of which is
   treated as an isolated credits sequence.
+- Manual newlines in a paragraph body or a vertical head/tail are now rendered.
 - Card runtime can now also be set via the spreadsheet's page runtime column.
   Both that and the style setting now specify the total runtime including fades.
 - The runtime of a single scroll page can now also be set via the page style.

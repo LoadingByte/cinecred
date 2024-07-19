@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.drawer
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.Y
-import com.loadingbyte.cinecred.imaging.Y.Companion.plus
 import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
@@ -203,19 +202,27 @@ private fun drawVerticalBlock(
 
     val bodyImage = drawnBody.defImage
 
-    // Draw the body image.
+    // Draw the block image.
     val blockImageWidth = bodyImage.width
     val blockImage = DeferredImage(blockImageWidth)
     var y = 0.0.toY()
+
+    fun drawHeadTailLines(str: StyledString) {
+        val lineH = str.height
+        for (fmtStr in str.formatted(textCtx).split(LINE_DELIMITERS)) {
+            blockImage.drawJustifiedString(fmtStr, block.style.headHJustify, 0.0, y, blockImageWidth)
+            // Draw guides that show the edges of the head/tail space.
+            blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + lineH, layer = GUIDES)
+            blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + lineH, layer = GUIDES)
+            // Advance to the next line.
+            y += lineH
+        }
+    }
+
     // Draw the block's head.
     if (block.head != null) {
-        blockImage.drawJustifiedString(block.head.formatted(textCtx), block.style.headHJustify, 0.0, y, blockImageWidth)
-        // Draw guides that show the edges of the head space.
-        val headHeight = block.head.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + headHeight, layer = GUIDES)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + headHeight, layer = GUIDES)
-        // Advance to the body.
-        y += headHeight + block.style.headGapPx.toElasticY()
+        drawHeadTailLines(block.head)
+        y += block.style.headGapPx.toElasticY()
     }
     // Draw the block's body.
     blockImage.drawDeferredImage(bodyImage, 0.0, y)
@@ -223,13 +230,7 @@ private fun drawVerticalBlock(
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx.toElasticY()
-        blockImage.drawJustifiedString(block.tail.formatted(textCtx), block.style.tailHJustify, 0.0, y, blockImageWidth)
-        // Draw guides that show the edges of the tail space.
-        val tailHeight = block.tail.height
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + tailHeight, layer = GUIDES)
-        blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + tailHeight, layer = GUIDES)
-        // Advance to below the tail.
-        y += tailHeight
+        drawHeadTailLines(block.tail)
     }
     blockImage.height = y
 

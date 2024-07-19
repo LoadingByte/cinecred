@@ -25,12 +25,19 @@ class JobSlot(private val delay: Long = 0L) {
         }
     }
 
+    fun cancel() {
+        lock.withLock { job = null }
+    }
+
     private fun run() {
         while (true) {
             val job: Runnable
             val jobStartTime: Long
             lock.withLock {
-                job = this.job!!
+                job = this.job ?: run {
+                    isRunning = false
+                    return
+                }
                 jobStartTime = this.jobStartTime
             }
             val sleepTime = jobStartTime - System.currentTimeMillis()

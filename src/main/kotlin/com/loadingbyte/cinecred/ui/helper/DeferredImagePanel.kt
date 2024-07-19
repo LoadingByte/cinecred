@@ -310,8 +310,14 @@ class DeferredImagePanel(
                 // The portion's top y in image coordinates.
                 val immediateStartY = if (imageHeight == viewportHeight) Double.NaN else viewportStartY
                 submitHighResMaterializingJob(immediateMaterializingJobSlot, immediateStartY, viewportHeight)
-                if (immediateStartY.isNaN())
+                if (immediateStartY.isNaN()) {
+                    // In rare cases, it could happen that the delayed job (scheduled some time ago with another zoom)
+                    // is already running, but finishes after the just scheduled immediate job, in which case an image
+                    // with the wrong zoom would be displayed. However, this is so unlikely and at the same time the
+                    // outcome is so un-severe that we don't need to pollute the code with a countermeasure.
+                    delayedHighResMaterializingJobSlot.cancel()
                     return
+                }
             }
             // If the first step didn't start the materialization of the entire deferred image yet, schedule the
             // materialization of a larger area around the viewport (this allows the user to move around a bit) after

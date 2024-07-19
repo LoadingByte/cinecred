@@ -139,6 +139,46 @@ private fun fillIn(string: String, template: Template): String = string
             "cardRuntimeFrames" -> template.fps.run { 5 * numerator / denominator }.toString()
             "cardFadeFrames" -> template.fps.run { numerator / (2 * denominator) }.toString()
             "scrollPxPerFrame" -> max(1, template.fps.run { 78 * denominator / numerator } * template.scale).toString()
+            "projectIO.credits.table.headDesc", "projectIO.credits.table.tailDesc",
+            "projectIO.credits.table.bodyDesc" ->
+                l10n(
+                    key,
+                    l10n("projectIO.credits.table.style", template.locale),
+                    l10n("projectIO.credits.table.head", template.locale),
+                    l10n("blank", template.locale),
+                    l10n("projectIO.credits.table.pic", template.locale),
+                    l10n("projectIO.credits.table.crop", template.locale),
+                    l10n("projectIO.credits.table.video", template.locale),
+                    l10n("projectIO.credits.table.margin", template.locale),
+                    l10n("projectIO.credits.table.fade", template.locale),
+                    l10n("projectIO.credits.table.in", template.locale),
+                    l10n("projectIO.credits.table.out", template.locale),
+                    l10n("projectIO.credits.table.middle", template.locale),
+                    l10n("projectIO.credits.table.end", template.locale),
+                    locale = template.locale
+                )
+            "projectIO.credits.table.breakMatchDesc" ->
+                l10n(
+                    key,
+                    l10n("projectIO.credits.table.head", template.locale),
+                    l10n("projectIO.credits.table.body", template.locale),
+                    l10n("projectIO.credits.table.tail", template.locale),
+                    locale = template.locale
+                )
+            "projectIO.credits.table.spinePosDesc" ->
+                l10n(
+                    key,
+                    l10n("projectIO.credits.table.below", template.locale),
+                    l10n("projectIO.credits.table.above", template.locale),
+                    l10n("projectIO.credits.table.parallel", template.locale),
+                    l10n("projectIO.credits.table.hook", template.locale),
+                    l10n("projectIO.credits.table.top", template.locale),
+                    l10n("projectIO.credits.table.middle", template.locale),
+                    l10n("projectIO.credits.table.bottom", template.locale),
+                    locale = template.locale
+                )
+            "projectIO.credits.table.pageGapDesc" ->
+                l10n(key, l10n("projectIO.credits.table.melt", template.locale), locale = template.locale)
             else -> l10n(key, template.locale)
         }
     }

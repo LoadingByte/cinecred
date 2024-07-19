@@ -15,8 +15,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2
 import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
-import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray
@@ -917,10 +915,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
+            val pdFont = getPDFont(text.fundamentalFontInfo) ?: return
+
             cs.saveGraphicsState()
             cs.beginText()
 
-            val pdFont = getPDFont(text.fundamentalFontInfo)
             val glyphs = text.glyphCodes
             val xShifts = FloatArray(glyphs.size - 1) { glyphIdx ->
                 val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
@@ -1123,7 +1122,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             appendRawCommands(this, " $opSCN\n")
         }
 
-        private fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont {
+        private fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont? {
             val psName = fundamentalFontInfo.fontName
 
             if (psName !in docRes.pdFonts)
@@ -1176,8 +1175,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     docRes.pdFonts[psName] = PDType0Font.load(doc, ttf, false)
                 } catch (e: Exception) {
                     LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
-                    // Memoize the fallback font to avoid trying to load the font file again.
-                    docRes.pdFonts[psName] = PDType1Font(Standard14Fonts.FontName.HELVETICA)
+                    // Memoize null to avoid trying to load the font file again.
+                    docRes.pdFonts[psName] = null
                 }
 
             return docRes.pdFonts.getValue(psName)
@@ -1356,7 +1355,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private class DocRes(doc: PDDocument) {
             val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
             val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
-            val pdFonts = HashMap<String /* font name */, PDFont>()
+            val pdFonts = HashMap<String /* font name */, PDFont?>()
             val pdImages = HashMap<Picture, PDImageXObject>()
             val pdImageResolutions = HashMap<Picture, MutableList<Resolution>>()
             val pdForms = HashMap<Picture.Vector, PDFormXObject>()

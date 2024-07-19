@@ -25,13 +25,17 @@ class FormattedString private constructor(
        ********** MODIFIED COPIES **********
        ************************************* */
 
-    fun sub(startIdx: Int, endIdx: Int): FormattedString =
-        FormattedString(string.substring(startIdx, endIdx), attrs.sub(startIdx, endIdx), locale, justificationWidth)
+    fun sub(startIdx: Int, endIdx: Int): FormattedString? = when {
+        startIdx == 0 && endIdx == string.length -> this
+        startIdx >= endIdx -> null
+        else ->
+            FormattedString(string.substring(startIdx, endIdx), attrs.sub(startIdx, endIdx), locale, justificationWidth)
+    }
 
     fun trim(): FormattedString? {
         val startIdx = string.indexOfFirst { !it.isWhitespace() }
         val endIdx = string.indexOfLast { !it.isWhitespace() } + 1
-        return if (startIdx == -1 || startIdx >= endIdx) null else sub(startIdx, endIdx)
+        return if (startIdx == -1) null else sub(startIdx, endIdx)
     }
 
     /**
@@ -895,11 +899,13 @@ class FormattedString private constructor(
             numRuns++
         }
 
-        fun build(): FormattedString =
-            FormattedString(
+        fun build(): FormattedString {
+            check(stringBuilder.isNotEmpty()) { "A FormattedString must not be empty." }
+            return FormattedString(
                 stringBuilder.toString(), Attributes(numRuns, runAttrs, runEnds, 0, stringBuilder.length),
                 locale, justificationWidth = Double.NaN
             )
+        }
 
     }
 

@@ -14,6 +14,8 @@ import kotlin.math.sin
 
 
 fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
+    if (startIdx >= endIdx)
+        return emptyList()
     val result = mutableListOf<Pair<String, LetterStyle>>()
     forEachRun { _, run, style, runStartIdx, runEndIdx ->
         // Only look at the current run if the target region has already started.
@@ -40,7 +42,7 @@ fun StyledString.trim(): StyledString {
     val joined = joinToString("") { it.first }
     val startIdx = joined.indexOfFirst { !it.isWhitespace() }
     val endIdx = joined.indexOfLast { !it.isWhitespace() } + 1
-    return if (startIdx > endIdx) emptyList() else substring(startIdx, endIdx)
+    return if (startIdx == 0 && endIdx == joined.length) this else substring(startIdx, endIdx)
 }
 
 

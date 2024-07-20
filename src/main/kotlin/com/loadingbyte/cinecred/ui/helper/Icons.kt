@@ -5,7 +5,7 @@ import com.formdev.flatlaf.icons.FlatAbstractIcon
 import com.formdev.flatlaf.util.Graphics2DProxy
 import com.github.weisj.jsvg.SVGDocument
 import com.github.weisj.jsvg.parser.SVGLoader
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import com.loadingbyte.cinecred.projectio.service.GoogleService
@@ -28,7 +28,7 @@ const val ICON_ICON_GAP = 4
 
 
 val WINDOW_ICON_IMAGES = run {
-    val logo = requireNotNull(useResourceStream("/logo.svg", SVGLoader()::load)) { "Failed to load SVG logo." }
+    val logo = requireNotNull(SVGLoader().load(SVGIcon::class.java.getResource("/logo.svg")!!)) { "Can't load logo." }
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
             g2.setHighQuality()
@@ -555,7 +555,7 @@ class SVGIcon private constructor(
 
     companion object {
         fun load(name: String) = SVGIcon(
-            requireNotNull(useResourceStream(name, SVGLoader()::load)) { "Failed to load SVG icon: $name" },
+            requireNotNull(SVGLoader().load(SVGIcon::class.java.getResource(name)!!)) { "Can't load SVG icon: $name" },
             1.0, 1.0, null, false
         )
     }

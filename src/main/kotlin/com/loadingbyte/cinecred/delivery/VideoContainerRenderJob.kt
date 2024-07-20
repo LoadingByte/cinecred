@@ -38,7 +38,6 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Project
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext.*
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
@@ -176,10 +175,10 @@ class VideoContainerRenderJob private constructor(
     companion object {
 
         val H264: RenderFormat = H26XFormat(
-            "H.264", AV_CODEC_ID_H264, "libx264", FF_PROFILE_H264_HIGH, FF_PROFILE_H264_HIGH_10
+            "H.264", AV_CODEC_ID_H264, "libx264", AV_PROFILE_H264_HIGH, AV_PROFILE_H264_HIGH_10
         )
         val H265: RenderFormat = H26XFormat(
-            "H.265", AV_CODEC_ID_H265, "libx265", FF_PROFILE_HEVC_MAIN, FF_PROFILE_HEVC_MAIN_10
+            "H.265", AV_CODEC_ID_H265, "libx265", AV_PROFILE_HEVC_MAIN, AV_PROFILE_HEVC_MAIN_10
         )
 
         val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat())
@@ -277,12 +276,12 @@ class VideoContainerRenderJob private constructor(
             // prores_aw is faster, but only prores_ks supports 4444 alpha content that is universally compatible.
             val codecName = if (is4444 && embedAlpha) "prores_ks" else "prores_aw"
             val codecProfile = when (profile) {
-                PRORES_422_PROXY -> FF_PROFILE_PRORES_PROXY
-                PRORES_422_LT -> FF_PROFILE_PRORES_LT
-                PRORES_422 -> FF_PROFILE_PRORES_STANDARD
-                PRORES_422_HQ -> FF_PROFILE_PRORES_HQ
-                PRORES_4444 -> FF_PROFILE_PRORES_4444
-                PRORES_4444_XQ -> FF_PROFILE_PRORES_XQ
+                PRORES_422_PROXY -> AV_PROFILE_PRORES_PROXY
+                PRORES_422_LT -> AV_PROFILE_PRORES_LT
+                PRORES_422 -> AV_PROFILE_PRORES_STANDARD
+                PRORES_422_HQ -> AV_PROFILE_PRORES_HQ
+                PRORES_4444 -> AV_PROFILE_PRORES_4444
+                PRORES_4444_XQ -> AV_PROFILE_PRORES_XQ
             }
             val pixelFormat = Bitmap.PixelFormat.of(
                 if (!is4444) AV_PIX_FMT_YUV422P10 else if (!embedAlpha) AV_PIX_FMT_YUV444P10 else AV_PIX_FMT_YUVA444P10
@@ -322,7 +321,7 @@ class VideoContainerRenderJob private constructor(
                 else -> AV_PIX_FMT_YUV422P
             }
             val px = Bitmap.PixelFormat.of(pixelFormatCode)
-            return listOf(VideoWriterSettings("dnxhd", FF_PROFILE_UNKNOWN, mapOf("profile" to codecProfileOption), px))
+            return listOf(VideoWriterSettings("dnxhd", AV_PROFILE_UNKNOWN, mapOf("profile" to codecProfileOption), px))
         }
     }
 

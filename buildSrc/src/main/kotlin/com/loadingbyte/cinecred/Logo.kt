@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred
 
+import com.github.weisj.jsvg.parser.LoaderContext
 import com.github.weisj.jsvg.parser.SVGLoader
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -11,7 +12,9 @@ import javax.imageio.stream.FileImageOutputStream
 
 class Logo(file: File) {
 
-    private val svg = requireNotNull(file.inputStream().use(SVGLoader()::load)) { "Failed to load SVG: $file" }
+    private val svg = requireNotNull(
+        file.inputStream().use { SVGLoader().load(it, null, LoaderContext.createDefault()) }
+    ) { "Failed to load SVG: $file" }
 
     fun rasterize(size: Int, margin: Double = 0.0, imageType: Int = BufferedImage.TYPE_INT_ARGB): BufferedImage {
         val img = BufferedImage(size, size, imageType)

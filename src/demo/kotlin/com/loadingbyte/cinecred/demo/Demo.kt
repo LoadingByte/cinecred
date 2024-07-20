@@ -8,7 +8,7 @@ import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.BitmapConverter
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.VideoWriter
-import org.bytedeco.ffmpeg.avcodec.AVCodecContext.FF_PROFILE_H264_HIGH
+import org.bytedeco.ffmpeg.global.avcodec.AV_PROFILE_H264_HIGH
 import org.bytedeco.ffmpeg.global.avutil.AVCHROMA_LOC_LEFT
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_YUV420P
 import org.w3c.dom.Node
@@ -185,7 +185,7 @@ abstract class Demo(private val filename: String, protected val format: Format) 
             val yuvSpec = Bitmap.Spec(res, yuvRep)
             mp4Writer = VideoWriter(
                 file(""), yuvSpec, format.fps,
-                "libx264", FF_PROFILE_H264_HIGH, codecOptions = mapOf("crf" to "17"), muxerOptions = emptyMap()
+                "libx264", AV_PROFILE_H264_HIGH, codecOptions = mapOf("crf" to "17"), muxerOptions = emptyMap()
             )
             mp4Converter = BitmapConverter(bgrSpec, yuvSpec)
             mp4BGRBitmap = Bitmap.allocate(bgrSpec)

@@ -74,7 +74,7 @@ dependencies {
     implementation("org.apache.poi", "poi", poiVersion)
     implementation("org.apache.poi", "poi-ooxml", poiVersion)
     implementation("com.github.miachm.sods", "SODS", "1.6.1")
-    implementation("org.apache.commons", "commons-csv", "1.10.0")
+    implementation("de.siegmar", "fastcsv", "3.2.0")
 
     // Spreadsheet Services
     implementation("com.googlecode.plist", "dd-plist", "1.27")

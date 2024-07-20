@@ -3,13 +3,14 @@ package com.loadingbyte.cinecred.projectio
 import com.github.miachm.sods.Borders
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.l10n
-import org.apache.commons.csv.CSVFormat
+import de.siegmar.fastcsv.reader.CsvReader
+import de.siegmar.fastcsv.reader.StringArrayHandler
+import de.siegmar.fastcsv.writer.CsvWriter
 import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.FormulaError
 import org.apache.poi.ss.usermodel.IndexedColors
 import java.io.IOException
-import java.io.StringReader
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
@@ -272,20 +273,18 @@ object CsvFormat : SpreadsheetFormat {
         // Trim the character which results from the byte order mark (BOM) added by Excel.
         val trimmed = text.trimStart(0xFEFF.toChar())
 
-        // Parse the CSV file into a list of CSV records.
-        val csvRecords = CSVFormat.DEFAULT.parse(StringReader(trimmed)).records
-
-        // Convert the CSV records to a string matrix.
-        val matrix = csvRecords.map { rec -> ArrayList<String>(rec.size()).apply { addAll(rec) } }
+        // Parse the CSV file into a string matrix.
+        val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler(), trimmed)
+            .map(Array<String>::asList)
 
         // Create a spreadsheet.
         return Spreadsheet(name, matrix)
     }
 
     override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
-        CSVFormat.DEFAULT.print(file, Charsets.UTF_8).use { printer ->
+        CsvWriter.builder().build(file).use { writer ->
             for (record in spreadsheet)
-                printer.printRecord(record.cells.map { it.ifEmpty { null } })
+                writer.writeRecord(record.cells)
         }
     }
 

@@ -45,7 +45,7 @@ class DeliveryDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
 
     init {
         setupProjectDialog(ctrl, ProjectDialogType.DELIVERY)
-        center(ctrl.openOnScreen, 0.45, 0.6)
+        center(ctrl.openOnScreen, 0.45, 0.7)
         contentPane.add(panel)
     }
 

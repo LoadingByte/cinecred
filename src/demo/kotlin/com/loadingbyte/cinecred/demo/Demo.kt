@@ -50,6 +50,7 @@ abstract class Demo(private val filename: String, protected val format: Format) 
         private set
 
     private val gifFrames = mutableListOf<GIFFrame>()
+
     private var mp4Writer: VideoWriter? = null
     private var mp4Converter: BitmapConverter? = null
     private var mp4BGRBitmap: Bitmap? = null
@@ -217,6 +218,10 @@ abstract class Demo(private val filename: String, protected val format: Format) 
         mp4Converter?.close()
         mp4BGRBitmap?.close()
         mp4YUVBitmap?.close()
+        mp4Writer = null
+        mp4Converter = null
+        mp4BGRBitmap = null
+        mp4YUVBitmap = null
     }
 
 

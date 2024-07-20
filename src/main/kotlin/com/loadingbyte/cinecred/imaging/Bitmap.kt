@@ -9,6 +9,8 @@ import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.BytePointer
+import java.lang.Byte.toUnsignedInt
+import java.lang.Short.toUnsignedInt
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout
@@ -372,13 +374,12 @@ class Bitmap private constructor(
         val srcPixelFormat = src.spec.representation.pixelFormat
         val dstPixelFormat = spec.representation.pixelFormat
         val componentSize = ceilDiv(srcComponent.depth, 8)
+        val shift = dstComponent.shift - srcComponent.shift
         require(spec.resolution == src.spec.resolution) { "Source and dest resolutions differ." }
         require(srcComponent in srcPixelFormat.components) { "Source component does not belong to source." }
         require(dstComponent in dstPixelFormat.components) { "Dest component does not belong to dest." }
         require(srcComponent.depth == dstComponent.depth) { "Source and dest components have different depths." }
         require(componentSize in 1..2 || componentSize == 4) { "Component has not 1, 2, or 4 bytes." }
-        require(srcComponent.shift == 0) { "Source component has bitshift." }
-        require(dstComponent.shift == 0) { "Dest component has bitshift." }
         val (width, height) = spec.resolution
         val srcSeg = src.memorySegment(srcComponent.plane)
         val dstSeg = memorySegment(dstComponent.plane)
@@ -393,9 +394,9 @@ class Bitmap private constructor(
             var d = y * dstLs + dstComponent.offset
             for (x in 0..<width) {
                 when (componentSize) {
-                    1 -> dstSeg.putByte(d, srcSeg.getByte(s))
-                    2 -> dstSeg.putShort(d, dstBO, srcSeg.getShort(s, srcBO))
-                    4 -> dstSeg.putInt(d, dstBO, srcSeg.getInt(s, srcBO))
+                    1 -> dstSeg.putByte(d, (toUnsignedInt(srcSeg.getByte(s)) shl shift).toByte())
+                    2 -> dstSeg.putShort(d, dstBO, (toUnsignedInt(srcSeg.getShort(s, srcBO)) shl shift).toShort())
+                    4 -> dstSeg.putInt(d, dstBO, srcSeg.getInt(s, srcBO) shl shift)
                 }
                 s += srcStep
                 d += dstStep

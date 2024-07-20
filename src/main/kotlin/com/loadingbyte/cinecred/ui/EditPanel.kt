@@ -50,6 +50,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPlaybackControls get() = playbackControls
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
+    @Deprecated("ENCAPSULATION LEAK") val leakedCreditsTabs get() = creditsTabs
     @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = creditsTabs.getComponentAt(0) as JTabbedPane
     @Deprecated("ENCAPSULATION LEAK") val leakedImagePanels get() = imagePanels
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable

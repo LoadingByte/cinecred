@@ -98,7 +98,7 @@ object GuideProjectSettingsLocaleDemo : StyleSettingsDemo<Global>(
 ) {
     override fun styles() = buildList<Global> {
         this += PRESET_GLOBAL.copy(locale = locale)
-        this += last().copy(locale = Locale("tr"))
+        this += last().copy(locale = Locale.of("tr"))
     }
 
     override fun credits(style: Global) = Pair(style, buildPage(style, listOf("Tina Times"), uppercase = true))

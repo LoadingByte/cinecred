@@ -45,7 +45,7 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val styleTag = l10n("projectIO.credits.table.style")
     @Suppress("DEPRECATION")
     return listOf(
-        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedPageTabs, Side.NONE),
+        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedCreditsTabs, Side.NONE),
         Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.leakedCreditsLog, Side.TOP),
         Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.leakedStylingDialogButton, Side.BOTTOM),
         Hint(l10n("ui.hints.projectTrack.stylingTree", styleTag), stylingPanel.leakedStylingTree, Side.RIGHT) {

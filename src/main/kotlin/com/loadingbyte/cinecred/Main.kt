@@ -79,7 +79,7 @@ fun main(args: Array<String>) {
 
     // Make JavaCPP and FlatLaf load their native libraries from java.library.path.
     System.setProperty("org.bytedeco.javacpp.cacheLibraries", "false")
-    System.setProperty(FlatSystemProperties.NATIVE_LIBRARY_PATH, "system")
+    System.setProperty(FlatSystemProperties.NATIVE_LIBRARY_PATH, System.getProperty("java.library.path"))
 
     // Redirect JavaCPP's logging output to slf4j.
     System.setProperty("org.bytedeco.javacpp.logger", "slf4j")

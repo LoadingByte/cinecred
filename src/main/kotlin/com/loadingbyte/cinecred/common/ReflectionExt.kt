@@ -2,6 +2,9 @@
 
 package com.loadingbyte.cinecred.common
 
+import de.siegmar.fastcsv.reader.CommentStrategy
+import de.siegmar.fastcsv.reader.CsvReader
+import de.siegmar.fastcsv.reader.StringArrayHandler
 import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.pdfwriter.COSWriter
@@ -10,7 +13,6 @@ import org.apache.pdfbox.pdmodel.common.function.PDFunction
 import org.apache.pdfbox.pdmodel.graphics.color.*
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading
 import org.apache.pdfbox.util.Matrix
-import org.apache.poi.util.LocaleID
 import sun.font.*
 import java.awt.Font
 import java.awt.Point
@@ -113,8 +115,10 @@ private const val MAC_ROMAN_ENCODING = TrueTypeFont.MACROMAN_SPECIFIC_ID.toShort
 private const val MAC_ENGLISH_LANG = TrueTypeFont.MACROMAN_ENGLISH_LANG.toShort()
 
 private val LCID_TO_LOCALE: Map<Short, Locale> = HashMap<Short, Locale>().apply {
-    for (id in LocaleID.entries)
-        put(id.lcid.toShort(), Locale.forLanguageTag(id.languageTag))
+    useResourceStream("/lcid.csv") { s ->
+        CsvReader.builder().commentStrategy(CommentStrategy.SKIP).build(StringArrayHandler(), s.bufferedReader())
+            .forEach { (lcid, tag) -> put(Integer.decode(lcid).toShort(), Locale.forLanguageTag(tag)) }
+    }
 }
 
 

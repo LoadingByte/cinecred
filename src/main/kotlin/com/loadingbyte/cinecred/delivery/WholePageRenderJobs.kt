@@ -27,7 +27,6 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.Project
-import org.apache.commons.io.FileUtils
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
@@ -65,7 +64,7 @@ class WholePageSequenceRenderJob private constructor(
 
     override fun render(progressCallback: (Int) -> Unit) {
         if (dir.exists())
-            FileUtils.cleanDirectory(dir.toFile())
+            dir.cleanDirectory()
         dir.createDirectoriesSafely()
 
         val ground = config[CHANNELS] == COLOR

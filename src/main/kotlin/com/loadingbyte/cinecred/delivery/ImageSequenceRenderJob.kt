@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.cleanDirectory
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.throwableAwareTask
 import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
@@ -26,7 +27,6 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Project
-import org.apache.commons.io.FileUtils
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -51,7 +51,7 @@ class ImageSequenceRenderJob private constructor(
 
     override fun render(progressCallback: (Int) -> Unit) {
         if (dir.exists())
-            FileUtils.cleanDirectory(dir.toFile())
+            dir.cleanDirectory()
         dir.createDirectoriesSafely()
 
         val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA

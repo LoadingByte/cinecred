@@ -1,19 +1,24 @@
 package com.loadingbyte.cinecred.projectio
 
+import ch.rabanti.nanoxlsx4j.Address
+import ch.rabanti.nanoxlsx4j.styles.CellXf
+import ch.rabanti.nanoxlsx4j.styles.NumberFormat
+import ch.rabanti.nanoxlsx4j.styles.NumberFormat.FormatNumber
 import com.github.miachm.sods.Borders
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.l10n
 import de.siegmar.fastcsv.reader.CsvReader
 import de.siegmar.fastcsv.reader.StringArrayHandler
 import de.siegmar.fastcsv.writer.CsvWriter
-import org.apache.poi.ss.usermodel.BorderStyle
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.FormulaError
-import org.apache.poi.ss.usermodel.IndexedColors
+import jxl.CellView
+import jxl.format.BorderLineStyle
+import jxl.write.Label
+import jxl.write.NumberFormats
+import jxl.write.WritableCellFormat
+import jxl.write.WritableFont
 import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 
 
@@ -39,7 +44,7 @@ class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Sprea
 
 
 // The formats are ordered according to decreasing preference.
-val SPREADSHEET_FORMATS = listOf(ExcelFormat("xlsx"), ExcelFormat("xls"), OdsFormat, CsvFormat)
+val SPREADSHEET_FORMATS = listOf(XlsxFormat, XlsFormat, OdsFormat, CsvFormat)
 
 
 interface SpreadsheetFormat {
@@ -74,124 +79,138 @@ class SpreadsheetLook(
 }
 
 
-class ExcelFormat(override val fileExt: String) : SpreadsheetFormat {
+object XlsxFormat : SpreadsheetFormat {
 
-    override val label
-        get() = when (fileExt) {
-            "xlsx" -> "Microsoft Excel 2007+"
-            "xls" -> "Microsoft Excel 97-2003"
-            else -> throw IllegalArgumentException("Only xlsx and xls allowed, not $fileExt.")
-        }
+    override val fileExt get() = "xlsx"
+    override val label get() = "Microsoft Excel 2007+"
 
     override fun read(file: Path) = readOfficeDocument(
         file,
-        open = { org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile(), null, true) },
+        open = { ch.rabanti.nanoxlsx4j.Workbook.load(file.toString()) },
+        getNumSheets = { workbook -> workbook.worksheets.size },
+        read = { workbook, sheetIdx ->
+            val sheet = workbook.worksheets[sheetIdx]
+            val numRows = sheet.lastRowNumber + 1
+            val numCols = sheet.lastColumnNumber + 1
+            val matrix = List(numRows) { MutableList(numCols) { "" } }
+            for (cell in sheet.cells.values)
+                cell.value?.let { matrix[cell.rowNumber][cell.columnNumber] = it.toString() }
+            Spreadsheet(sheet.sheetName, matrix)
+        },
+        close = {}
+    )
+
+    override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
+        val numCols = spreadsheet.numColumns
+
+        val workbook = ch.rabanti.nanoxlsx4j.Workbook(false)
+        workbook.addWorksheet(file.nameWithoutExtension)
+        val sheet = workbook.worksheets[0]
+
+        // Add the sheet content.
+        for (record in spreadsheet)
+            for ((col, cell) in record.cells.withIndex())
+                if (cell.isNotEmpty())
+                    sheet.addCell(cell, col, record.recordNo)
+
+        // Set the row heights & styles.
+        for ((row, rowLook) in look.rowLooks) {
+            if (rowLook.height != -1)
+                sheet.setRowHeight(row, rowLook.height * 2.85f)
+            sheet.setStyle(Address(0, row), Address(numCols - 1, row), createStyle(rowLook))
+        }
+
+        // Set the column widths & make them use the raw text data format.
+        val defaultStyle = createStyle()
+        for (col in 0..<numCols) {
+            sheet.setColumnDefaultStyle(col, defaultStyle)
+            look.colWidths.getOrNull(col)?.let { sheet.setColumnWidth(col, it * 0.5f) }
+        }
+
+        workbook.saveAs(file.toString())
+    }
+
+    private fun createStyle() =
+        ch.rabanti.nanoxlsx4j.styles.Style().apply {
+            numberFormat = NumberFormat().apply { number = FormatNumber.format_49 }
+        }
+
+    private fun createStyle(rowLook: SpreadsheetLook.RowLook) =
+        createStyle().apply {
+            if (rowLook.fontSize != -1)
+                font.size = rowLook.fontSize.toFloat()
+            font.isBold = rowLook.bold
+            font.isItalic = rowLook.italic
+            if (rowLook.wrap)
+                cellXf.alignment = CellXf.TextBreakValue.wrapText
+            if (rowLook.borderBottom)
+                border.bottomStyle = ch.rabanti.nanoxlsx4j.styles.Border.StyleValue.thin
+        }
+
+}
+
+
+object XlsFormat : SpreadsheetFormat {
+
+    override val fileExt get() = "xls"
+    override val label get() = "Microsoft Excel 97-2003"
+
+    override fun read(file: Path) = readOfficeDocument(
+        file,
+        open = { jxl.Workbook.getWorkbook(file.toFile()) },
         getNumSheets = { workbook -> workbook.numberOfSheets },
         read = { workbook, sheetIdx ->
-            val sheet = workbook.getSheetAt(sheetIdx)
-            val numRows = sheet.lastRowNum + 1
-            val numCols = sheet.maxOf { row -> row.lastCellNum } + 1
-
-            val matrix = MutableList(numRows) { MutableList(numCols) { "" } }
-            for (row in sheet)
-                for (cell in row) {
-                    var cellType = cell.cellType!!
-                    if (cellType == CellType.FORMULA)
-                        cellType = cell.cachedFormulaResultType
-                    matrix[row.rowNum][cell.columnIndex] = when (cellType) {
-                        CellType.NUMERIC -> cell.numericCellValue.toString()
-                        CellType.STRING -> cell.stringCellValue
-                        CellType.BOOLEAN -> cell.booleanCellValue.toString()
-                        CellType.BLANK -> ""
-                        CellType.ERROR -> FormulaError.forInt(cell.errorCellValue).string
-                        CellType.FORMULA, CellType._NONE -> throw IllegalStateException()
-                    }
-                }
-            Spreadsheet(sheet.sheetName, matrix)
+            val sheet = workbook.getSheet(sheetIdx)
+            val matrix = List(sheet.rows) { row -> List(sheet.columns) { col -> sheet.getCell(col, row).contents } }
+            Spreadsheet(sheet.name, matrix)
         },
         close = { workbook -> workbook.close() }
     )
 
     override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
-        val xlsx = fileExt == "xlsx"
-        val workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(xlsx)
-        val sheet = workbook.createSheet(spreadsheet.name)
+        val workbook = jxl.Workbook.createWorkbook(file.toFile())
+        val sheet = workbook.createSheet(file.nameWithoutExtension, 0)
+        val defaultStyle = createStyle()
 
-        // Make all columns use the raw text data format.
-        val defaultStyle = createCellStyle(workbook)
-        for (col in 0..<spreadsheet.numColumns)
-            sheet.setDefaultColumnStyle(col, defaultStyle)
-
-        val rowStyles = createDeduplicatedRowStyles(workbook, look.rowLooks)
-
+        // Add the sheet content, and set the row heights & styles.
         for (record in spreadsheet) {
-            val rowIdx = record.recordNo
-            val row = sheet.createRow(rowIdx)
-            val rowStyle = rowStyles[rowIdx]
-
-            for ((colIdx, cellValue) in record.cells.withIndex()) {
-                if (cellValue.isEmpty())
-                    continue
-                val cell = row.createCell(colIdx)
-                cell.setCellValue(cellValue)
-                rowStyle?.let(cell::setCellStyle)
-            }
-
-            look.rowLooks[rowIdx]?.let { rowLook ->
-                if (rowLook.height != -1)
-                    row.height = (rowLook.height * 56).toShort()
-            }
+            val row = record.recordNo
+            val rowLook = look.rowLooks[row]
+            val style = rowLook?.let(::createStyle) ?: defaultStyle
+            for ((col, cell) in record.cells.withIndex())
+                if (cell.isNotEmpty())
+                    sheet.addCell(Label(col, row, cell, style))
+            if (rowLook != null && rowLook.height != -1)
+                sheet.setRowView(row, rowLook.height * 56)
         }
 
-        for ((col, width) in look.colWidths.withIndex())
-            sheet.setColumnWidth(col, width * 138)
+        // Set the column widths & make them use the raw text data format.
+        for (col in 0..<spreadsheet.numColumns)
+            sheet.setColumnView(col, CellView().apply {
+                look.colWidths.getOrNull(col)?.let { size = it * 130 }
+                format = defaultStyle
+            })
 
-        file.outputStream().buffered().use(workbook::write)
+        workbook.write()
+        workbook.close()
     }
 
-    private fun createDeduplicatedRowStyles(
-        workbook: org.apache.poi.ss.usermodel.Workbook,
-        rowLooks: Map<Int, SpreadsheetLook.RowLook>
-    ): Map<Int, org.apache.poi.ss.usermodel.CellStyle> {
-        data class FontKey(val size: Int, val bold: Boolean, val italic: Boolean)
-        data class StyleKey(val font: FontKey, val wrap: Boolean, val borderBottom: Boolean)
+    private fun createStyle() =
+        WritableCellFormat(NumberFormats.TEXT)
 
-        val fontsByKey = HashMap<FontKey, org.apache.poi.ss.usermodel.Font>()
-        val stylesByKey = HashMap<StyleKey, org.apache.poi.ss.usermodel.CellStyle>()
-        val stylesByRowIdx = HashMap<Int, org.apache.poi.ss.usermodel.CellStyle>()
-        for ((rowIdx, look) in rowLooks) {
-            val fontKey = FontKey(look.fontSize, look.bold, look.italic)
-            val styleKey = StyleKey(fontKey, look.wrap, look.borderBottom)
-            val font = fontsByKey.computeIfAbsent(fontKey) {
-                workbook.createFont().apply {
-                    if (fontKey.size != -1)
-                        fontHeightInPoints = fontKey.size.toShort()
-                    if (fontKey.bold)
-                        bold = true
-                    if (fontKey.italic)
-                        italic = true
-                }
-            }
-            val style = stylesByKey.computeIfAbsent(styleKey) {
-                createCellStyle(workbook).apply {
-                    setFont(font)
-                    if (styleKey.wrap)
-                        wrapText = true
-                    if (styleKey.borderBottom) {
-                        borderBottom = BorderStyle.THIN
-                        bottomBorderColor = IndexedColors.BLACK.index
-                    }
-                }
-            }
-            stylesByRowIdx[rowIdx] = style
-        }
-
-        return stylesByRowIdx
-    }
-
-    private fun createCellStyle(workbook: org.apache.poi.ss.usermodel.Workbook) =
-        workbook.createCellStyle().apply {
-            dataFormat = org.apache.poi.ss.usermodel.BuiltinFormats.getBuiltinFormat("@").toShort()
+    private fun createStyle(rowLook: SpreadsheetLook.RowLook) =
+        createStyle().apply {
+            val font = WritableFont(
+                WritableFont.ARIAL,
+                if (rowLook.fontSize != -1) rowLook.fontSize else WritableFont.DEFAULT_POINT_SIZE,
+                @Suppress("INACCESSIBLE_TYPE")
+                if (rowLook.bold) WritableFont.BOLD else WritableFont.NO_BOLD,
+                rowLook.italic
+            )
+            setFont(font)
+            wrap = rowLook.wrap
+            if (rowLook.borderBottom)
+                setBorder(jxl.format.Border.BOTTOM, BorderLineStyle.THIN)
         }
 
 }
@@ -211,7 +230,7 @@ object OdsFormat : SpreadsheetFormat {
             val matrix = sheet.dataRange.values.map { cells -> cells.map { it?.toString() ?: "" } }
             Spreadsheet(sheet.name, matrix)
         },
-        close = { }
+        close = {}
     )
 
     override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
@@ -219,35 +238,24 @@ object OdsFormat : SpreadsheetFormat {
         val numCols = spreadsheet.numColumns
 
         val sheet = com.github.miachm.sods.Sheet(spreadsheet.name, numRows, numCols)
+
+        // Add the sheet content.
         val cellMatrix = Array(numRows) { row -> Array(numCols) { col -> spreadsheet[row, col].ifEmpty { null } } }
         sheet.dataRange.values = cellMatrix
 
-        // Make all columns use the raw text data format.
-        val defaultStyle = createStyle()
-        for (col in 0..<spreadsheet.numColumns)
-            sheet.setDefaultColumnCellStyle(col, defaultStyle)
-
-        for (record in spreadsheet) {
-            val row = record.recordNo
-            val style = createStyle()
-            look.rowLooks[row]?.let { rowLook ->
-                if (rowLook.fontSize != -1)
-                    style.fontSize = rowLook.fontSize
-                style.isBold = rowLook.bold
-                style.isItalic = rowLook.italic
-                style.isWrap = rowLook.wrap
-                if (rowLook.borderBottom)
-                    style.borders = Borders(false, null, true, "0.75pt solid #000000", false, null, false, null)
-            }
-            for (col in record.cells.indices)
-                sheet.getRange(row, col).style = style
-        }
-
-        for ((row, rowLook) in look.rowLooks)
+        // Set the row heights & styles.
+        for ((row, rowLook) in look.rowLooks) {
             if (rowLook.height != -1)
                 sheet.setRowHeight(row, rowLook.height.toDouble())
-        for ((col, width) in look.colWidths.withIndex())
-            sheet.setColumnWidth(col, width.toDouble())
+            sheet.getRange(row, 0, 1, numCols).style = createStyle(rowLook)
+        }
+
+        // Set the column widths & make them use the raw text data format.
+        val defaultStyle = createStyle()
+        for (col in 0..<numCols) {
+            sheet.setDefaultColumnCellStyle(col, defaultStyle)
+            look.colWidths.getOrNull(col)?.let { sheet.setColumnWidth(col, it.toDouble()) }
+        }
 
         val workbook = com.github.miachm.sods.SpreadSheet()
         workbook.appendSheet(sheet)
@@ -256,6 +264,17 @@ object OdsFormat : SpreadsheetFormat {
 
     private fun createStyle() =
         com.github.miachm.sods.Style().apply { dataStyle = "@" }
+
+    private fun createStyle(rowLook: SpreadsheetLook.RowLook) =
+        createStyle().apply {
+            if (rowLook.fontSize != -1)
+                fontSize = rowLook.fontSize
+            isBold = rowLook.bold
+            isItalic = rowLook.italic
+            isWrap = rowLook.wrap
+            if (rowLook.borderBottom)
+                borders = Borders(false, null, true, "0.75pt solid #000000", false, null, false, null)
+        }
 
 }
 

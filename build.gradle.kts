@@ -15,7 +15,6 @@ version = "1.6.0-SNAPSHOT"
 
 val jdkVersion = 21
 val slf4jVersion = "2.0.13"
-val poiVersion = "5.3.0"
 val twelveMonkeysVersion = "3.11.0"
 val javacppVersion = "1.5.10"
 val ffmpegVersion = "6.1.1-$javacppVersion"
@@ -66,13 +65,13 @@ dependencies {
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
     // Redirect other logging frameworks to slf4j.
-    // PDFBox uses Jakarta Commons Logging. POI uses log4j2.
+    // JExcelAPI uses log4j. PDFBox uses Jakarta Commons Logging.
+    implementation("org.slf4j", "log4j-over-slf4j", slf4jVersion)
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
-    implementation("org.apache.logging.log4j", "log4j-to-slf4j", "2.20.0")
 
     // Spreadsheet IO
-    implementation("org.apache.poi", "poi", poiVersion)
-    implementation("org.apache.poi", "poi-ooxml", poiVersion)
+    implementation("ch.rabanti", "nanoxlsx4j", "2.4.0")
+    implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
     implementation("com.github.miachm.sods", "SODS", "1.6.7")
     implementation("de.siegmar", "fastcsv", "3.2.0")
 
@@ -112,20 +111,15 @@ dependencies {
 }
 
 configurations.configureEach {
-    // POI:
-    // We don't re-evaluate formulas, and as only that code calls Commons Math, we can omit the dependency.
-    exclude("org.apache.commons", "commons-math3")
-    // This is only required for adding pictures to workbooks via code, which we don't do.
-    exclude("commons-codec", "commons-codec")
+    // JExcelAPI/PDFBox: We replace their log4j and commons-logging dependencies with slf4j bridges.
+    exclude("log4j", "log4j")
+    exclude("commons-logging", "commons-logging")
 
     // Google Client: This dependency is totally empty and only serves to avoid some conflict not relevant to us.
     exclude("com.google.guava", "listenablefuture")
 
     // JAI ImageIO JPEG2000: Core reimplements already supported formats. We copied the few actually required sources.
     exclude("com.github.jai-imageio", "jai-imageio-core")
-
-    // PDFBox: We replace this commons-logging dependency by the slf4j bridge.
-    exclude("commons-logging", "commons-logging")
 }
 
 

@@ -236,6 +236,25 @@ fun Path.walkSafely(): List<Path> {
 }
 
 
+/** @throws IOException */
+fun Path.cleanDirectory() {
+    Files.walkFileTree(this, object : SimpleFileVisitor<Path>() {
+        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+            file.deleteIfExists()
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
+            if (exc != null)
+                throw exc
+            if (dir != this@cleanDirectory)
+                dir.deleteIfExists()
+            return FileVisitResult.CONTINUE
+        }
+    })
+}
+
+
 fun readToml(file: Path): MutableMap<String, Any> =
     Toml.read(file.toFile())
 

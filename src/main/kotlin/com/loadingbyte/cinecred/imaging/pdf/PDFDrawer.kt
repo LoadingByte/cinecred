@@ -30,7 +30,6 @@ import org.apache.pdfbox.pdmodel.graphics.state.RenderingMode
 import org.apache.pdfbox.rendering.*
 import org.apache.pdfbox.util.Matrix
 import org.apache.pdfbox.util.Vector
-import org.apache.poi.util.Dimension2DDouble
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY16LE
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBAF32
 import java.awt.BasicStroke
@@ -1052,6 +1051,16 @@ class PDFDrawer(
             }
         }
 
+    }
+
+
+    private class Dimension2DDouble(private var width: Double, private var height: Double) : Dimension2D() {
+        override fun getWidth() = width
+        override fun getHeight() = height
+        override fun setSize(width: Double, height: Double) {
+            this.width = width
+            this.height = height
+        }
     }
 
 }

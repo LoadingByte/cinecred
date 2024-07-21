@@ -2,8 +2,8 @@ Cinecred Changelog
 ==================
 
 
-1.6.0-SNAPSHOT
---------------
+1.6.0
+-----
 
 ### Additions
 

@@ -10,6 +10,7 @@ import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySegment.NULL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -21,6 +22,8 @@ class DeckLink(
     val name: String,
     val modes: List<Mode>
 ) {
+
+    private var displayNowTask: Future<*>? = null
 
     private var mode: Mode? = null
     private var lastBitmap: Bitmap? = null
@@ -59,14 +62,16 @@ class DeckLink(
      * If playback is currently running, this method has no effect.
      */
     fun displayNow(bitmap: Bitmap) {
-        EXECUTOR.submit(throwableAwareTask {
+        displayNowTask?.cancel(false)
+        displayNowTask = EXECUTOR.submit(throwableAwareTask {
             displayNowInThisThread(bitmap)
         })
     }
 
     /** If playback is currently running, this method has no effect. */
     fun displayBlack() {
-        EXECUTOR.submit(throwableAwareTask {
+        displayNowTask?.cancel(false)
+        displayNowTask = EXECUTOR.submit(throwableAwareTask {
             createBlackBitmap()?.let(::displayNowInThisThread)
         })
     }

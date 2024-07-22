@@ -11,6 +11,7 @@ import de.siegmar.fastcsv.reader.CsvReader
 import de.siegmar.fastcsv.reader.StringArrayHandler
 import de.siegmar.fastcsv.writer.CsvWriter
 import jxl.CellView
+import jxl.WorkbookSettings
 import jxl.format.BorderLineStyle
 import jxl.write.Label
 import jxl.write.NumberFormats
@@ -156,7 +157,7 @@ object XlsFormat : SpreadsheetFormat {
 
     override fun read(file: Path, defaultName: String) = readOfficeDocument(
         file,
-        open = { jxl.Workbook.getWorkbook(file.toFile()) },
+        open = { jxl.Workbook.getWorkbook(file.toFile(), WorkbookSettings().apply { encoding = "ISO-8859-1" }) },
         getNumSheets = { workbook -> workbook.numberOfSheets },
         read = { workbook, sheetIdx ->
             val sheet = workbook.getSheet(sheetIdx)

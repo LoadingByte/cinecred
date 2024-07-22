@@ -8,6 +8,7 @@ Cinecred Changelog
 ### Fixes
 
 - New credits files now always use a localized sheet name.
+- XLS spreadsheets are now read without character encoding errors.
 
 
 1.6.0

@@ -171,7 +171,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     }
                 } else {
                     val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-                    val (spreadsheets, loadingLog) = fmt.read(activeFile)
+                    val (spreadsheets, loadingLog) = fmt.read(activeFile, l10n("project.template.spreadsheetName"))
                     callbacks.pushCreditsSpreadsheets(spreadsheets, locatingLog + loadingLog)
                 }
             } catch (e: Exception) {

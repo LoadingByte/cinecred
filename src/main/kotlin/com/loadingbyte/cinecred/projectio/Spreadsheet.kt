@@ -18,7 +18,6 @@ import jxl.write.WritableCellFormat
 import jxl.write.WritableFont
 import java.io.IOException
 import java.nio.file.Path
-import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 
 
@@ -53,7 +52,7 @@ interface SpreadsheetFormat {
     val label: String
 
     /** @throws Exception */
-    fun read(file: Path): Pair<List<Spreadsheet>, List<ParserMsg>>
+    fun read(file: Path, defaultName: String): Pair<List<Spreadsheet>, List<ParserMsg>>
 
     /** @throws IOException */
     fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook)
@@ -84,7 +83,7 @@ object XlsxFormat : SpreadsheetFormat {
     override val fileExt get() = "xlsx"
     override val label get() = "Microsoft Excel 2007+"
 
-    override fun read(file: Path) = readOfficeDocument(
+    override fun read(file: Path, defaultName: String) = readOfficeDocument(
         file,
         open = { ch.rabanti.nanoxlsx4j.Workbook.load(file.toString()) },
         getNumSheets = { workbook -> workbook.worksheets.size },
@@ -104,7 +103,7 @@ object XlsxFormat : SpreadsheetFormat {
         val numCols = spreadsheet.numColumns
 
         val workbook = ch.rabanti.nanoxlsx4j.Workbook(false)
-        workbook.addWorksheet(file.nameWithoutExtension)
+        workbook.addWorksheet(spreadsheet.name)
         val sheet = workbook.worksheets[0]
 
         // Add the sheet content.
@@ -155,7 +154,7 @@ object XlsFormat : SpreadsheetFormat {
     override val fileExt get() = "xls"
     override val label get() = "Microsoft Excel 97-2003"
 
-    override fun read(file: Path) = readOfficeDocument(
+    override fun read(file: Path, defaultName: String) = readOfficeDocument(
         file,
         open = { jxl.Workbook.getWorkbook(file.toFile()) },
         getNumSheets = { workbook -> workbook.numberOfSheets },
@@ -169,7 +168,7 @@ object XlsFormat : SpreadsheetFormat {
 
     override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
         val workbook = jxl.Workbook.createWorkbook(file.toFile())
-        val sheet = workbook.createSheet(file.nameWithoutExtension, 0)
+        val sheet = workbook.createSheet(spreadsheet.name, 0)
         val defaultStyle = createStyle()
 
         // Add the sheet content, and set the row heights & styles.
@@ -221,7 +220,7 @@ object OdsFormat : SpreadsheetFormat {
     override val fileExt get() = "ods"
     override val label get() = "OpenOffice/LibreOffice Calc"
 
-    override fun read(file: Path) = readOfficeDocument(
+    override fun read(file: Path, defaultName: String) = readOfficeDocument(
         file,
         open = { com.github.miachm.sods.SpreadSheet(file.toFile()) },
         getNumSheets = { workbook -> workbook.numSheets },
@@ -284,11 +283,11 @@ object CsvFormat : SpreadsheetFormat {
     override val fileExt get() = "csv"
     override val label get() = l10n("projectIO.spreadsheet.csv")
 
-    override fun read(file: Path): Pair<List<Spreadsheet>, List<ParserMsg>> {
-        return Pair(listOf(read(file.nameWithoutExtension, file.readText())), emptyList())
+    override fun read(file: Path, defaultName: String): Pair<List<Spreadsheet>, List<ParserMsg>> {
+        return Pair(listOf(read(file.readText(), defaultName)), emptyList())
     }
 
-    fun read(name: String, text: String): Spreadsheet {
+    fun read(text: String, name: String): Spreadsheet {
         // Trim the character which results from the byte order mark (BOM) added by Excel.
         val trimmed = text.trimStart(0xFEFF.toChar())
 

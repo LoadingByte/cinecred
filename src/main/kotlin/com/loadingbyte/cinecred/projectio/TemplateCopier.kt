@@ -72,8 +72,8 @@ private fun tryCopyCreditsTemplate(
     // If desired, cut off the sample credits and only keep the table header.
     if (!template.sample)
         csv = csv.subList(0, 2)
-    val spreadsheetName = l10n("project.template.spreadsheetName")
-    val spreadsheet = CsvFormat.read(spreadsheetName, csv.joinToString("\n")).map { fillIn(it, template) }
+    val spreadsheetName = l10n("project.template.spreadsheetName", template.locale)
+    val spreadsheet = CsvFormat.read(csv.joinToString("\n"), spreadsheetName).map { fillIn(it, template) }
     val look = SpreadsheetLook(
         rowLooks = mapOf(
             0 to SpreadsheetLook.RowLook(height = 140, fontSize = 8, italic = true, wrap = true),

@@ -69,7 +69,7 @@ fun template(locale: Locale) =
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
         tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
-        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!).first.single()
+        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!, "").first.single()
     }
 }
 
@@ -106,7 +106,7 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
-        val spreadsheet = CsvFormat.read(creditsFile).first.single()
+        val spreadsheet = CsvFormat.read(creditsFile, "").first.single()
         val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), BundledFontsStylingContext)
         val pictureLoaders = buildList {
             for (file in projectDir.walkSafely())
@@ -142,7 +142,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
         styling = styling.copy(global = styling.global.copy(resolution = resolution))
     styling = styling.copy(contentStyles = styling.contentStyles.toPersistentList().addAll(contentStyles.asList()))
 
-    val spreadsheet = CsvFormat.read("", this)
+    val spreadsheet = CsvFormat.read(this, "")
     val tapes = if ("{{Video rainbow" in this) listOf(RAINBOW_TAPE) else emptyList()
     val pages = readCredits(spreadsheet, styling, listOf(LOGO_PIC, C_PIC), tapes).first.pages
     return Pair(styling.global, pages.single())
@@ -151,7 +151,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
 fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> {
     val styling =
         Styling(PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList())
-    val spreadsheet = CsvFormat.read("", this)
+    val spreadsheet = CsvFormat.read(this, "")
     val pages = readCredits(spreadsheet, styling, emptyList(), emptyList()).first.pages
     return Pair(styling.global, pages.single())
 }

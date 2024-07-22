@@ -5,6 +5,10 @@ Cinecred Changelog
 1.6.1-SNAPSHOT
 --------------
 
+### Fixes
+
+- New credits files now always use a localized sheet name.
+
 
 1.6.0
 -----

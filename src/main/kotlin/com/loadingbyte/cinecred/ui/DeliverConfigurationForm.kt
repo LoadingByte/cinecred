@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
@@ -19,6 +18,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUT
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
@@ -59,7 +59,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedFormatWidget get() = formatWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedProfileWidget get() = profileWidget
-    @Deprecated("ENCAPSULATION LEAK") val leakedChannelsWidget get() = channelsWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedTransparencyWidget get() = transparencyWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedResolutionMultWidget get() = resolutionMultWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedScanWidget get() = scanWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedPrimariesWidget get() = primariesWidget
@@ -193,11 +193,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         }
     )
 
-    private val channelsWidget = addWidget(
-        l10n("ui.deliverConfig.channels"),
+    private val transparencyWidget = addWidget(
+        l10n("ui.deliverConfig.transparency"),
         ComboBoxWidget(
-            Channels::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
-            toString = { l10n("ui.deliverConfig.channels.$it") }
+            Transparency::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
+            toString = { l10n("ui.deliverConfig.transparency.$it") }
         )
     )
 
@@ -392,7 +392,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
         pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
-        pushFormatPropertyOptions(CHANNELS, channelsWidget, config, formatChanged)
+        pushFormatPropertyOptions(TRANSPARENCY, transparencyWidget, config, formatChanged)
         resolutionMultWidget.isEnabled = RESOLUTION_SCALING_LOG2 in config
         fpsMultWidget.isEnabled = FPS_SCALING in config
         pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
@@ -509,8 +509,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
                 is PDFProfile -> lookup[PDF_PROFILE] = value
             }
-        if (channelsWidget.items.isNotEmpty())
-            lookup[CHANNELS] = channelsWidget.value
+        if (transparencyWidget.items.isNotEmpty())
+            lookup[TRANSPARENCY] = transparencyWidget.value
         if (resolutionMultWidget.items.isNotEmpty())
             lookup[RESOLUTION_SCALING_LOG2] = resolutionMultWidget.value
         if (fpsMultWidget.items.isNotEmpty())

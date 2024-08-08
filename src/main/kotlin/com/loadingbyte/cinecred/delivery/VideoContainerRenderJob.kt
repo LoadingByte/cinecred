@@ -3,13 +3,11 @@ package com.loadingbyte.cinecred.delivery
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
-import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
 import com.loadingbyte.cinecred.delivery.RenderFormat.DNxHRProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.ProResProfile.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
@@ -18,7 +16,9 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
+import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_CL
 import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_NCL
@@ -74,12 +74,12 @@ class VideoContainerRenderJob private constructor(
     }
 
     private fun render(progressCallback: (Int) -> Unit, settings: VideoWriterSettings) {
-        val matte = config[CHANNELS] == ALPHA
+        val matte = config[TRANSPARENCY] == MATTE
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val yuv = if (matte) null else config[YUV]
         val ceiling = if (colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
-        val grounding = if (config[CHANNELS] == COLOR) project.styling.global.grounding else null
+        val grounding = if (config[TRANSPARENCY] == GROUNDED) project.styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
 
         val writerSpec = Bitmap.Spec(
@@ -90,7 +90,7 @@ class VideoContainerRenderJob private constructor(
                 colorSpace ?: ColorSpace.of(BT709, LINEAR),
                 yuv ?: BT709_NCL,
                 if (settings.pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,
-                if (config[CHANNELS] == COLOR_AND_ALPHA) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
+                if (config[TRANSPARENCY] == TRANSPARENT) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
             scan,
             if (scan == Bitmap.Scan.PROGRESSIVE) Bitmap.Content.PROGRESSIVE_FRAME else Bitmap.Content.INTERLEAVED_FIELDS
@@ -183,18 +183,18 @@ class VideoContainerRenderJob private constructor(
 
         val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat())
 
-        private fun allChannelsAndColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * (
+        private fun allTransparenciesTimesColorProps() =
+            choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * (
                     fixed(PRIMARIES, BT709) * (choice(TRANSFER) - fixed(TRANSFER, SRGB)) * fixed(YUV, BT709_NCL) +
                             fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * fixed(YUV, SRGB_NCL) +
                             choice(PRIMARIES, DCI_P3, DISPLAY_P3) * choice(TRANSFER) * fixed(YUV, BT709_NCL) +
                             fixed(PRIMARIES, BT2020) * fixed(TRANSFER, BT1886) * choice(YUV, BT2020_NCL, BT2020_CL) +
                             fixed(PRIMARIES, BT2020) * choice(TRANSFER, LINEAR, SRGB) * fixed(YUV, BT2020_NCL) +
                             fixed(PRIMARIES, BT2020) * choice(TRANSFER, PQ, HLG) * choice(YUV, BT2020_NCL, ICTCP)
-                    ) + fixed(CHANNELS, ALPHA)
+                    ) + fixed(TRANSPARENCY, MATTE)
 
-        private fun opaqueChannelsAndColorPreset() =
-            allChannelsAndColorPreset() - fixed(CHANNELS, COLOR_AND_ALPHA)
+        private fun opaqueTransparenciesTimesColorProps() =
+            allTransparenciesTimesColorProps() - fixed(TRANSPARENCY, TRANSPARENT)
 
     }
 
@@ -249,7 +249,7 @@ class VideoContainerRenderJob private constructor(
         private val codecProfile10: Int
     ) : Format(
         label, codecId, "mp4",
-        opaqueChannelsAndColorPreset() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE),
+        opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE),
         widthMod2 = true,
         heightMod2 = true
     ) {
@@ -264,14 +264,14 @@ class VideoContainerRenderJob private constructor(
 
     private class ProResFormat : Format(
         "ProRes", AV_CODEC_ID_PRORES, "mov",
-        allChannelsAndColorPreset() * fixed(DEPTH, 10) * choice(SCAN) * choice(PRORES_PROFILE) -
-                fixed(CHANNELS, COLOR_AND_ALPHA) *
+        allTransparenciesTimesColorProps() * fixed(DEPTH, 10) * choice(SCAN) * choice(PRORES_PROFILE) -
+                fixed(TRANSPARENCY, TRANSPARENT) *
                 choice(PRORES_PROFILE, PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ),
         widthMod2 = true
     ) {
         override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val profile = config[PRORES_PROFILE]
-            val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
+            val embedAlpha = config[TRANSPARENCY] == TRANSPARENT
             val is4444 = profile == PRORES_4444 || profile == PRORES_4444_XQ
             // prores_aw is faster, but only prores_ks supports 4444 alpha content that is universally compatible.
             val codecName = if (is4444 && embedAlpha) "prores_ks" else "prores_aw"
@@ -300,7 +300,7 @@ class VideoContainerRenderJob private constructor(
 
     private class DNxHRFormat : Format(
         "DNxHR", AV_CODEC_ID_DNXHD, "mxf",
-        opaqueChannelsAndColorPreset() * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+        opaqueTransparenciesTimesColorProps() * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
                 (choice(DNXHR_PROFILE, DNXHR_LB, DNXHR_SQ, DNXHR_HQ) * fixed(DEPTH, 8) +
                         choice(DNXHR_PROFILE, DNXHR_HQX, DNXHR_444) * fixed(DEPTH, 10)),
         minWidth = 256,

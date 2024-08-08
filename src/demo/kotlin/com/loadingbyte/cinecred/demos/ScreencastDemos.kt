@@ -84,7 +84,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.delivery.formats")
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" }))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvChannels))
+        sc.mouseTo(dlvWin.desktopPosOf(dlvTranspar))
         sc.click()
         sc.caption("screencast.caption.delivery.transparent")
         sc.click()

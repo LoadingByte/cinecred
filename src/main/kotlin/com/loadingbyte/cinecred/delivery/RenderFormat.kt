@@ -69,7 +69,7 @@ abstract class RenderFormat(
         val standardDefault = default
 
         companion object {
-            val CHANNELS = Property(*Channels.values(), default = Channels.COLOR)
+            val TRANSPARENCY = Property(*Transparency.values(), default = Transparency.GROUNDED)
             val RESOLUTION_SCALING_LOG2 = Property(-2, -1, 0, 1, 2, default = 0)
             val FPS_SCALING = Property(1, 2, 3, 4, default = 1)
             val PRIMARIES = Property(*ColorSpace.Primaries.COMMON.toTypedArray(), default = ColorSpace.Primaries.BT709)
@@ -166,7 +166,7 @@ abstract class RenderFormat(
     }
 
 
-    enum class Channels { COLOR, COLOR_AND_ALPHA, ALPHA }
+    enum class Transparency { GROUNDED, TRANSPARENT, MATTE }
     enum class PDFProfile { LOSSY_VECTORSVG, LOSSY_RASTERSVG, LOSSLESS_VECTORSVG, LOSSLESS_RASTERSVG }
     enum class ProResProfile { PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ, PRORES_4444, PRORES_4444_XQ }
     enum class DNxHRProfile { DNXHR_LB, DNXHR_SQ, DNXHR_HQ, DNXHR_HQX, DNXHR_444 }

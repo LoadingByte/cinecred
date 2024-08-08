@@ -10,6 +10,10 @@ Cinecred Changelog
 - New credits files now always use a localized sheet name.
 - XLS spreadsheets are now read without character encoding errors.
 
+### UI Fixes
+
+- Configuring transparent or matte deliveries is now more intuitive.
+
 
 1.6.0
 -----

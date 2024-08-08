@@ -3,11 +3,9 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.cleanDirectory
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.throwableAwareTask
-import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
@@ -18,6 +16,8 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUT
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
+import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
@@ -54,13 +54,13 @@ class ImageSequenceRenderJob private constructor(
             dir.cleanDirectory()
         dir.createDirectoriesSafely()
 
-        val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
-        val matte = config[CHANNELS] == ALPHA
+        val embedAlpha = config[TRANSPARENCY] == TRANSPARENT
+        val matte = config[TRANSPARENCY] == MATTE
         val family = if (matte) GRAY else RGB
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
-        val grounding = if (config[CHANNELS] == COLOR) project.styling.global.grounding else null
+        val grounding = if (config[TRANSPARENCY] == GROUNDED) project.styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
 
         val bitmapWriter = when (format) {
@@ -137,29 +137,31 @@ class ImageSequenceRenderJob private constructor(
 
         private val PNG = Format(
             "png",
-            channelsTimesColorPreset() * choice(DEPTH, 8, 16)
+            transparencyTimesColorSpace() * choice(DEPTH, 8, 16)
         )
         private val TIFF = Format(
             "tiff",
-            channelsTimesColorPreset() * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
+            transparencyTimesColorSpace() * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
         )
         private val DPX = Format(
             "dpx",
-            channelsTimesColorPreset() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
-                    fixed(DEPTH, 10) * fixed(CHANNELS, COLOR_AND_ALPHA)
+            transparencyTimesColorSpace() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
+                    fixed(DEPTH, 10) * fixed(TRANSPARENCY, TRANSPARENT)
         )
         private val EXR = Format(
             "exr",
             choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION) * (
-                    choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR) * choice(HDR)
-                            + fixed(CHANNELS, ALPHA)
+                    choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR)
+                            * choice(HDR)
+                            + fixed(TRANSPARENCY, MATTE)
                     )
         )
 
         val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR)
 
-        private fun channelsTimesColorPreset() =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * choice(TRANSFER) + fixed(CHANNELS, ALPHA)
+        private fun transparencyTimesColorSpace() =
+            choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * choice(TRANSFER) +
+                    fixed(TRANSPARENCY, MATTE)
 
     }
 

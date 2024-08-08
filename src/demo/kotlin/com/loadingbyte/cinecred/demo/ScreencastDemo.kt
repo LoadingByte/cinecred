@@ -201,7 +201,7 @@ abstract class ScreencastDemo(
 
     protected val dlvFormats get() = dlvPnl.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
     protected val dlvProfiles get() = dlvPnl.configurationForm.leakedProfileWidget.components[0] as JComboBox<*>
-    protected val dlvChannels get() = dlvPnl.configurationForm.leakedChannelsWidget.components[0] as JComboBox<*>
+    protected val dlvTranspar get() = dlvPnl.configurationForm.leakedTransparencyWidget.components[0] as JComboBox<*>
     protected val dlvResMult get() = dlvPnl.configurationForm.leakedResolutionMultWidget.components[0] as JComboBox<*>
     protected val dlvScan get() = dlvPnl.configurationForm.leakedScanWidget.components[0] as JComboBox<*>
     protected val dlvPrimaries get() = dlvPnl.configurationForm.leakedPrimariesWidget.components[0] as JComboBox<*>

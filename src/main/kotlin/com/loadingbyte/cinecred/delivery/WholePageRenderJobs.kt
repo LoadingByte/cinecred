@@ -1,12 +1,10 @@
 package com.loadingbyte.cinecred.delivery
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.Channels.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
 import com.loadingbyte.cinecred.delivery.RenderFormat.PDFProfile.*
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CHANNELS
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
@@ -16,6 +14,8 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARI
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
+import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
@@ -67,9 +67,9 @@ class WholePageSequenceRenderJob private constructor(
             dir.cleanDirectory()
         dir.createDirectoriesSafely()
 
-        val ground = config[CHANNELS] == COLOR
-        val embedAlpha = config[CHANNELS] == COLOR_AND_ALPHA
-        val matte = config[CHANNELS] == ALPHA
+        val ground = config[TRANSPARENCY] == GROUNDED
+        val embedAlpha = config[TRANSPARENCY] == TRANSPARENT
+        val matte = config[TRANSPARENCY] == MATTE
         val family = if (matte) GRAY else RGB
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
@@ -157,34 +157,35 @@ class WholePageSequenceRenderJob private constructor(
 
         private val PNG = Format(
             "png",
-            channelsTimesColorPreset(default = SRGB) * choice(DEPTH, 8, 16)
+            transparencyTimesColorSpace(default = SRGB) * choice(DEPTH, 8, 16)
         )
         private val TIFF = Format(
             "tiff",
-            channelsTimesColorPreset(default = SRGB) * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
+            transparencyTimesColorSpace(default = SRGB) * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
         )
         private val DPX = Format(
             "dpx",
-            channelsTimesColorPreset() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
-                    fixed(DEPTH, 10) * fixed(CHANNELS, COLOR_AND_ALPHA)
+            transparencyTimesColorSpace() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
+                    fixed(DEPTH, 10) * fixed(TRANSPARENCY, TRANSPARENT)
         )
         private val EXR = Format(
             "exr",
             choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION) * (
-                    choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR) * choice(HDR)
-                            + fixed(CHANNELS, ALPHA)
+                    choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR)
+                            * choice(HDR)
+                            + fixed(TRANSPARENCY, MATTE)
                     )
         )
         private val SVG = Format(
             "svg",
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
+            choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
         )
 
         val FORMATS = listOf<RenderFormat>(PNG, TIFF, DPX, EXR, SVG)
 
-        private fun channelsTimesColorPreset(default: ColorSpace.Transfer = TRANSFER.standardDefault) =
-            choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(PRIMARIES) * choice(TRANSFER, default = default) +
-                    fixed(CHANNELS, ALPHA)
+        private fun transparencyTimesColorSpace(default: ColorSpace.Transfer = TRANSFER.standardDefault) =
+            choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * choice(TRANSFER, default = default) +
+                    fixed(TRANSPARENCY, MATTE)
 
     }
 
@@ -220,7 +221,7 @@ class WholePagePDFRenderJob private constructor(
         file.deleteIfExists()
         file.parent.createDirectoriesSafely()
 
-        val ground = config[CHANNELS] == COLOR
+        val ground = config[TRANSPARENCY] == GROUNDED
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
         val profile = config[PDF_PROFILE]
         val lossy = profile == LOSSY_VECTORSVG || profile == LOSSY_RASTERSVG
@@ -276,7 +277,7 @@ class WholePagePDFRenderJob private constructor(
 
     private class Format : RenderFormat(
         "PDF", fileSeq = false, setOf("pdf"), "pdf",
-        choice(CHANNELS, COLOR, COLOR_AND_ALPHA) * choice(RESOLUTION_SCALING_LOG2) *
+        choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(RESOLUTION_SCALING_LOG2) *
                 fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * choice(PDF_PROFILE)
     ) {
         override fun createRenderJob(

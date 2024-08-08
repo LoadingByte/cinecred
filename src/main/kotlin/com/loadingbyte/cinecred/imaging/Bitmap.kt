@@ -562,7 +562,10 @@ class Bitmap private constructor(
                     color_trc(AVCOL_TRC_LINEAR)
                 } else {
                     color_primaries(if (cs.primaries.hasCode) cs.primaries.code else AVCOL_PRI_UNSPECIFIED)
-                    color_trc(if (cs.transfer.hasCode) cs.transfer.code else AVCOL_TRC_UNSPECIFIED)
+                    color_trc(
+                        if (cs.transfer.hasCode) cs.transfer.code(cs.primaries, spec.representation.pixelFormat.depth)
+                        else AVCOL_TRC_UNSPECIFIED
+                    )
                 }
                 when (spec.representation.pixelFormat.family) {
                     PixelFormat.Family.GRAY -> colorspace(AVCOL_SPC_UNSPECIFIED)

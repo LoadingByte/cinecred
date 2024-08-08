@@ -129,7 +129,7 @@ class VideoWriter(
         // Specify color space metadata.
         spec.representation.colorSpace?.let { colorSpace ->
             enc.color_primaries(colorSpace.primaries.code)
-            enc.color_trc(colorSpace.transfer.code)
+            enc.color_trc(colorSpace.transfer.code(colorSpace.primaries, spec.representation.pixelFormat.depth))
         }
         enc.color_range(spec.representation.range.code)
         enc.chroma_sample_location(spec.representation.chromaLocation)

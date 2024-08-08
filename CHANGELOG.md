@@ -9,6 +9,8 @@ Cinecred Changelog
 
 - New credits files now always use a localized sheet name.
 - XLS spreadsheets are now read without character encoding errors.
+- Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
+  codes for BT.1886.
 
 ### UI Fixes
 

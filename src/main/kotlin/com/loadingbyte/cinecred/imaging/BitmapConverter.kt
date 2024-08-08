@@ -1918,7 +1918,7 @@ class BitmapConverter(
                     }
 
                 private fun zimgTransfer(transfer: ColorSpace.Transfer): Int =
-                    if (!transfer.hasCode) ZIMG_TRANSFER_UNSPECIFIED() else when (transfer.code) {
+                    if (!transfer.hasCode) ZIMG_TRANSFER_UNSPECIFIED() else when (transfer.canonCode) {
                         AVCOL_TRC_BT709 -> ZIMG_TRANSFER_BT709()
                         AVCOL_TRC_GAMMA22 -> ZIMG_TRANSFER_BT470_M()
                         AVCOL_TRC_GAMMA28 -> ZIMG_TRANSFER_BT470_BG()

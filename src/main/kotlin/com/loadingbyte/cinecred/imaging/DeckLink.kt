@@ -150,9 +150,9 @@ class DeckLink(
             return null
         val depth = Depth.entries.find { rep == compatibleRepresentation(it, rep.colorSpace) } ?: return null
         val (w, h) = res
-        val eotf = when (rep.colorSpace.transfer.code) {
-            AVCOL_TRC_SMPTE2084 -> 2
-            AVCOL_TRC_ARIB_STD_B67 -> 3
+        val eotf = when (rep.colorSpace.transfer) {
+            ColorSpace.Transfer.PQ -> 2
+            ColorSpace.Transfer.HLG -> 3
             else -> 0
         }
         val cs = when (rep.colorSpace.primaries.code) {

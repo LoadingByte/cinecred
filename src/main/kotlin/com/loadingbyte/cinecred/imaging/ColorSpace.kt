@@ -301,7 +301,20 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
         val hasCurve: Boolean get() = _toLinear != null
 
         /** One of the `AVCOL_TRC_*` constants. */
-        val code: Int
+        fun code(primaries: Primaries, depth: Int): Int {
+            if (!hasCode)
+                throw IllegalStateException("Transfer function $name does not have a code.")
+            if (_code == AVCOL_TRC_BT709 && primaries.hasCode)
+                when (primaries.code) {
+                    AVCOL_PRI_SMPTE170M -> return AVCOL_TRC_SMPTE170M
+                    AVCOL_PRI_SMPTE240M -> return AVCOL_TRC_SMPTE240M
+                    AVCOL_PRI_BT2020 -> return if (depth >= 12) AVCOL_TRC_BT2020_12 else AVCOL_TRC_BT2020_10
+                }
+            return _code
+        }
+
+        /** One of the `AVCOL_TRC_*` constants. */
+        val canonCode: Int
             get() = if (hasCode) _code else throw IllegalStateException("Transfer function $name does not have a code.")
 
         val toLinear: Curve
@@ -423,15 +436,17 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 }
 
             private fun populateCodeBased() {
+                // First add the display-referred BT.1886 (mirroring zimg), which has lots of codes.
+                val bt1886 = Transfer(AVCOL_TRC_BT709, "BT.1886", false, Curve(2.4f), invert(Curve(2.4f)))
+                CODE_BASED[AVCOL_TRC_BT709] = bt1886
+                CODE_BASED[AVCOL_TRC_SMPTE170M] = bt1886
+                CODE_BASED[AVCOL_TRC_SMPTE240M] = bt1886
+                CODE_BASED[AVCOL_TRC_BT2020_10] = bt1886
+                CODE_BASED[AVCOL_TRC_BT2020_12] = bt1886
+                // Then add all the unique transfer characteristics.
                 val linear = Curve(1f)
-                // We use BT1886 in various cases to mirror what zimg does (i.e., work display-referred).
-                val bt1886 = Curve(2.4f)
-                val bt1886Inv = invert(bt1886)
-                addCB(AVCOL_TRC_BT709, "BT.1886", false, bt1886, bt1886Inv)
                 addCB(AVCOL_TRC_GAMMA22, "Gamma 2.2", false, Curve(2.2f))
                 addCB(AVCOL_TRC_GAMMA28, "Gamma 2.8", false, Curve(2.8f))
-                addCB(AVCOL_TRC_SMPTE170M, "BT.1886 (ST 170 M)", false, bt1886, bt1886Inv)
-                addCB(AVCOL_TRC_SMPTE240M, "BT.1886 (ST 240 M)", false, bt1886, bt1886Inv)
                 // Our code expects that for linear, toLinear and fromLinear are the same object.
                 addCB(AVCOL_TRC_LINEAR, "Linear", false, linear, linear)
                 // We don't need the curves of these TRCs, so we might as well leave them empty for now.
@@ -442,8 +457,6 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 // Where possible, use the exact numbers from Skia because that (a) apparently improves performance and
                 // (b) allows the ICC profile generator to detect them and thereby generate meaningful profile names.
                 addCB(AVCOL_TRC_IEC61966_2_1, "sRGB", false, toLinear(SkNamedTransferFn_SRGB()))
-                addCB(AVCOL_TRC_BT2020_10, "BT.1886 (BT.2020 10-bit)", false, bt1886, bt1886Inv)
-                addCB(AVCOL_TRC_BT2020_12, "BT.1886 (BT.2020 12-bit)", false, bt1886, bt1886Inv)
                 // Our Curve class doesn't support the PQ and HLG formulations, so we'll leave them empty.
                 addCB(AVCOL_TRC_SMPTE2084, "PQ", true, null)
                 addCB(AVCOL_TRC_SMPTE428, "ST 428", false, Curve(2.6f, (52.37 / 48.0).pow(1.0 / 2.6).toFloat()))

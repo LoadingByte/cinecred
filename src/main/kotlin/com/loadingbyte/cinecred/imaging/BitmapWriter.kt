@@ -254,7 +254,7 @@ interface BitmapWriter {
                     setAttribute("type", "cICP")
                     userObject = byteArrayOf(
                         colorSpace.primaries.code.toByte(),
-                        colorSpace.transfer.code.toByte(),
+                        colorSpace.transfer.code(colorSpace.primaries, depth).toByte(),
                         AVCOL_SPC_RGB.toByte(),
                         1
                     )
@@ -546,10 +546,10 @@ interface BitmapWriter {
 
         private fun writeHeader(w: Int, h: Int, dataBytes: Int, os: OutputStream) {
             val trc: Byte =
-                if (isGray) 2 else if (!colorSpace!!.transfer.hasCode) 0 else when (colorSpace.transfer.code) {
-                    AVCOL_TRC_LINEAR -> 2
-                    AVCOL_TRC_BT709 -> 6
-                    AVCOL_TRC_SMPTE170M -> 7
+                if (isGray) 2 else when (colorSpace!!.transfer) {
+                    ColorSpace.Transfer.LINEAR -> 2
+                    ColorSpace.Transfer.BT1886 -> 6
+                    ColorSpace.Transfer.of(AVCOL_TRC_SMPTE170M) -> 7
                     else -> 0
                 }
             val pri: Byte = if (isGray || !colorSpace!!.primaries.hasCode) 0 else when (colorSpace.primaries.code) {

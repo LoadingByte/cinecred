@@ -394,7 +394,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         DECK_LINK_MODE_PREFERENCE.set(selectedDeckLinkMode?.name.toString())
         DECK_LINK_DEPTH_PREFERENCE.set(selectedDeckLinkDepth.bits)
         DECK_LINK_PRI_PREFERENCE.set(selectedDeckLinkPrimaries.code)
-        DECK_LINK_TRC_PREFERENCE.set(selectedDeckLinkTransfer.code)
+        DECK_LINK_TRC_PREFERENCE.set(selectedDeckLinkTransfer.canonCode)
         DECK_LINK_CONNECTED_PREFERENCE.set(deckLinkConnected)
     }
 

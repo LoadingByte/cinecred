@@ -14,6 +14,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- Re-added a stutter warning to the in-window video preview.
 - Configuring transparent or matte deliveries is now more intuitive.
 
 

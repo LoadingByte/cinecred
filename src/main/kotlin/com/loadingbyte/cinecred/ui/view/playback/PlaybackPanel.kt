@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.SCREEN_ICON
+import com.loadingbyte.cinecred.ui.helper.WARN_ICON
 import com.loadingbyte.cinecred.ui.helper.X_1_TO_1_ICON
 import com.loadingbyte.cinecred.ui.helper.newToolbarToggleButton
 import net.miginfocom.swing.MigLayout
@@ -17,6 +18,7 @@ import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
 import javax.swing.JDialog
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSeparator
 import kotlin.math.roundToInt
@@ -49,7 +51,7 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
 
         layout = MigLayout(
             "insets 0",
-            "[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]",
+            "[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]11[]10[]",
             "[]0[]8[]8"
         )
         add(videoCanvas, "span, grow, pushy")
@@ -57,7 +59,9 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
         add(actualSizeButton, "newline, gapleft 8")
         fullScreenButton?.let(::add)
         add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
-        add(controlsPanel, "growx, pushx, gapright 14")
+        add(controlsPanel, "growx, pushx")
+        add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
+        add(JLabel(l10n("ui.video.stutter"), WARN_ICON, JLabel.LEADING), "gapright 14")
 
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {

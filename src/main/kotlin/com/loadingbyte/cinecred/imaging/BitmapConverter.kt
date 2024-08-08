@@ -963,10 +963,10 @@ class BitmapConverter(
         override fun process(src: Bitmap, dst: Bitmap) {
             val srcPixFmt = src.spec.representation.pixelFormat
             val dstPixFmt = dst.spec.representation.pixelFormat
-            val dstIsPF = dstPixFmt.isPlanar && dstPixFmt.isFloat && dstPixFmt.components[0].depth == 32
+            val dstIsPF = dstPixFmt.isPlanar && dstPixFmt.isFloat && dstPixFmt.depth == 32
 
             val dirtyPixFmt = if (dstIsPF) srcPixFmt else dstPixFmt
-            val dirtyDepth = dirtyPixFmt.components[0].depth
+            val dirtyDepth = dirtyPixFmt.depth
             val dirtyComps = dirtyPixFmt.components.size
             val dirtyElemCat = when (dirtyPixFmt.isFloat) {
                 false -> if (dirtyDepth <= 8) ElemCat.BYTE else ElemCat.SHORT
@@ -1592,6 +1592,7 @@ class BitmapConverter(
                 resolution = spec.resolution,
                 family = pixFmt.family,
                 isFloat = pixFmt.isFloat,
+                depth = pixFmt.depth,
                 hChromaSub = pixFmt.hChromaSub,
                 vChromaSub = pixFmt.vChromaSub,
                 components = if (pixFmt.hasAlpha) pixFmt.components.dropLast(1) else pixFmt.components,
@@ -1610,6 +1611,7 @@ class BitmapConverter(
                 resolution = spec.resolution,
                 family = GRAY,
                 isFloat = pixFmt.isFloat,
+                depth = pixFmt.depth,
                 hChromaSub = 0,
                 vChromaSub = 0,
                 components = pixFmt.components.takeLast(1),
@@ -1682,6 +1684,7 @@ class BitmapConverter(
                 val resolution: Resolution,
                 val family: Bitmap.PixelFormat.Family,
                 val isFloat: Boolean,
+                val depth: Int,
                 val hChromaSub: Int,
                 val vChromaSub: Int,
                 val components: List<Bitmap.PixelFormat.Component>,
@@ -1771,7 +1774,7 @@ class BitmapConverter(
             private fun populateImageFormat(desc: Desc, fieldParity: Int, offset: Int, step: Int): MemorySegment {
                 var (width, height) = desc.resolution
                 height = ceilDiv(height - offset, step)
-                val depth = desc.components[0].depth
+                val depth = desc.depth
                 val pixelType = when {
                     desc.isFloat -> when (depth) {
                         16 -> ZIMG_PIXEL_HALF()

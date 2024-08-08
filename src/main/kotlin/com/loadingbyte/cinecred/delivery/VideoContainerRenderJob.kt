@@ -99,7 +99,7 @@ class VideoContainerRenderJob private constructor(
         var backendSpec = writerSpec
         var blackWriterBitmap: Bitmap? = null
         if (matte) {
-            val backendPxFmtCode = when (val depth = writerSpec.representation.pixelFormat.components[0].depth) {
+            val backendPxFmtCode = when (val depth = writerSpec.representation.pixelFormat.depth) {
                 8 -> AV_PIX_FMT_GBRAP
                 10 -> AV_PIX_FMT_GBRAP10
                 12 -> AV_PIX_FMT_GBRAP12

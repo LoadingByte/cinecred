@@ -253,7 +253,7 @@ class Bitmap private constructor(
     /** Clamps the color values of float bitmaps to [0, ceiling]. Assumes that alpha values are already in [0, 1]. */
     fun clampFloatColors(ceiling: Float? = 1f, promiseOpaque: Boolean = false) {
         val pixelFormat = spec.representation.pixelFormat
-        check(pixelFormat.isFloat && pixelFormat.components[0].depth == 32) { "Can only clamp float32 bitmaps." }
+        check(pixelFormat.isFloat && pixelFormat.depth == 32) { "Can only clamp float32 bitmaps." }
         check(isAligned) { "Can only clamp aligned bitmaps." }
         require(ceiling == null || ceiling >= 1f) { "Cannot clamp to a ceiling < 1." }
         val (w, h) = spec.resolution
@@ -655,6 +655,7 @@ class Bitmap private constructor(
         val hasAlpha: Boolean
         val isFloat: Boolean
         val byteOrder: ByteOrder
+        private val _depth: Int
         val hChromaSub: Int
         val vChromaSub: Int
         val components: List<Component>
@@ -691,9 +692,15 @@ class Bitmap private constructor(
                 else -> Family.YUV
             }
 
+            val depth = components[0].depth
+            _depth = if (components.all { it.depth == depth }) depth else -1
+
             planes = components.maxOf(Component::plane) + 1
             isPlanar = desc.nb_components().toInt() == planes
         }
+
+        val depth: Int
+            get() = if (_depth != -1) _depth else throw IllegalStateException("Two components have different depths.")
 
         val hasChromaSub: Boolean
             get() = hChromaSub != 0 || vChromaSub != 0

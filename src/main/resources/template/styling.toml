@@ -2,6 +2,7 @@
 resolution = "{resolution}"
 fps = "{fps}"
 timecodeFormat = "{timecodeFormat}"
+blankLastFrame = true
 unitVGapPx = <32>
 locale = "{locale}"
 

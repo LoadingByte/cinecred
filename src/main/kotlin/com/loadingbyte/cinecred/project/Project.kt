@@ -74,6 +74,8 @@ data class Global(
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
     val runtimeFrames: Opt<Int>,
+    val blankFirstFrame: Boolean,
+    val blankLastFrame: Boolean,
     val grounding: Color4f,
     val unitVGapPx: Double,
     val locale: Locale,

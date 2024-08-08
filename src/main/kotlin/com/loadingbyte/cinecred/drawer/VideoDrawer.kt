@@ -9,6 +9,9 @@ import com.loadingbyte.cinecred.project.Project
 fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
     val video = DeferredVideo(project.styling.global.resolution, project.styling.global.fps)
 
+    if (project.styling.global.blankFirstFrame && drawnPages.isNotEmpty())
+        video.playBlank(1)
+
     // Write frames for each page as has been configured.
     for ((pageIdx, drawnPage) in drawnPages.withIndex()) {
         val page = drawnPage.page
@@ -50,6 +53,9 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
         if (pageIdx != drawnPages.lastIndex)
             video.playBlank(page.gapAfterFrames)
     }
+
+    if (project.styling.global.blankLastFrame && drawnPages.isNotEmpty())
+        video.playBlank(1)
 
     return video
 }

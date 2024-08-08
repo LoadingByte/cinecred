@@ -20,6 +20,7 @@ val GUIDE_PROJECT_SETTINGS_DEMOS
         GuideProjectSettingsResolutionAndFrameRateDemo,
         GuideProjectSettingsTimecodeFormatDemo,
         GuideProjectSettingsRuntimeFineAdjustmentDemo,
+        GuideProjectSettingsLeaveFramesBlankDemo,
         GuideProjectSettingsGroundingDemo,
         GuideProjectSettingsUnitVGapDemo,
         GuideProjectSettingsLocaleDemo,
@@ -62,6 +63,18 @@ object GuideProjectSettingsRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>
     }
 
     override fun credits(style: Global) = Pair(style, TEMPLATE_SCROLL_PAGE_FROM_DOP)
+}
+
+
+object GuideProjectSettingsLeaveFramesBlankDemo : StyleSettingsDemo<Global>(
+    Global::class.java, "$DIR/leave-frames-blank", Format.STEP_GIF,
+    listOf(Global::blankFirstFrame.st(), Global::blankLastFrame.st())
+) {
+    override fun styles() = buildList<Global> {
+        this += PRESET_GLOBAL
+        this += last().copy(blankFirstFrame = true)
+        this += last().copy(blankLastFrame = true)
+    }
 }
 
 

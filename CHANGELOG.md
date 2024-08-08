@@ -5,6 +5,10 @@ Cinecred Changelog
 1.6.1-SNAPSHOT
 --------------
 
+### Additions
+
+- The first and last frame of the sequence can now be left blank.
+
 ### Fixes
 
 - New credits files now always use a localized sheet name.

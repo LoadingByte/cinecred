@@ -1,11 +1,12 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.CLEANER
+import com.loadingbyte.cinecred.common.VERSION
+import com.loadingbyte.cinecred.common.ceilDiv
 import com.loadingbyte.cinecred.natives.skcms.skcms_CICP
 import com.loadingbyte.cinecred.natives.skcms.skcms_Curve
 import com.loadingbyte.cinecred.natives.skcms.skcms_ICCProfile
 import com.loadingbyte.cinecred.natives.skcms.skcms_h.*
-import com.loadingbyte.cinecred.natives.skiacapi.skiacapi_h.*
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBAF32
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGBF32
 import java.awt.color.ICC_ColorSpace
@@ -15,9 +16,13 @@ import java.lang.Byte.toUnsignedInt
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.*
+import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 
 /*
@@ -407,16 +412,7 @@ class ICCProfile private constructor(
             awtCache.computeIfAbsent(awtProfile) { ICCProfile(awtProfile.data, awtProfile, null) }
 
         fun of(colorSpace: ColorSpace): ICCProfile =
-            csCache.computeIfAbsent(colorSpace) {
-                val c = colorSpace.transfer.toLinear
-                val m = colorSpace.primaries.toXYZD50.values
-                val dataHandle = SkICC_SkWriteICCProfile(
-                    c.g, c.a, c.b, c.c, c.d, c.e, c.f, m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8]
-                )
-                val bytes = SkData_data(dataHandle).reinterpret(SkData_size(dataHandle)).toArray(JAVA_BYTE)
-                SkData_unref(dataHandle)
-                ICCProfile(bytes, null, colorSpace)
-            }
+            csCache.computeIfAbsent(colorSpace) { ICCProfile(constructProfile(colorSpace), null, colorSpace) }
 
         private val awtCache = Collections.synchronizedMap(WeakHashMap<ICC_Profile, ICCProfile>())
         // Note: We don't need to use weak keys here because color spaces are never garbage-collected.
@@ -429,6 +425,125 @@ class ICCProfile private constructor(
                 skcms_Signature_CMYK() -> 4
                 else -> -1
             }
+
+        private fun constructProfile(colorSpace: ColorSpace): ByteArray {
+            val tags = mutableListOf<Pair<List<String>, ByteArray>>()
+
+            // Prepare the description and copyright tags.
+            tags += listOf("desc") to constructTextTag(colorSpace.toString())
+            tags += listOf("cprt") to constructTextTag("Cinecred $VERSION")
+
+            // Prepare the primaries tags.
+            val m = colorSpace.primaries.toXYZD50.values
+            tags += listOf("rXYZ") to constructXYZTag(m[0], m[3], m[6])
+            tags += listOf("gXYZ") to constructXYZTag(m[1], m[4], m[7])
+            tags += listOf("bXYZ") to constructXYZTag(m[2], m[5], m[8])
+
+            // Prepare the white point tag (must be D50).
+            tags += listOf("wtpt") to constructXYZTag(0.9642f, 1f, 0.8249f)
+
+            // Prepare the transfer tags.
+            if (colorSpace.transfer.hasCurve) {
+                val c = colorSpace.transfer.toLinear
+                val pureGamma = c.a == 1f && c.b == 0f && c.c == 0f && c.d == 0f && c.e == 0f && c.f == 0f
+                val trcTag = ByteBuffer.allocate(12 + if (pureGamma) 4 else 28)
+                trcTag.put("para".toByteArray())
+                trcTag.putInt(0)  // reserved
+                if (pureGamma) {
+                    trcTag.putShort(0)  // exponential curve type
+                    trcTag.putShort(0)  // reserved
+                    trcTag.putInt(floatToFixed(c.g))
+                } else {
+                    trcTag.putShort(4)  // full curve type
+                    trcTag.putShort(0)  // reserved
+                    for (x in c.asArray())
+                        trcTag.putInt(floatToFixed(x))
+                }
+                tags += listOf("rTRC", "gTRC", "bTRC") to trcTag.array()
+            }
+
+            // Prepare the CICP tag.
+            if (colorSpace.primaries.hasCode && colorSpace.transfer.hasCode) {
+                val cicpTag = ByteBuffer.allocate(12)
+                cicpTag.put("cicp".toByteArray())
+                cicpTag.putInt(0)  // reserved
+                cicpTag.put(colorSpace.primaries.code.toByte())
+                cicpTag.put(colorSpace.transfer.code(colorSpace.primaries, 8).toByte())
+                cicpTag.put(0)  // RGB matrix coefficients
+                cicpTag.put(1)  // full range
+                tags += listOf("cicp") to cicpTag.array()
+            }
+
+            val tagCount = tags.sumOf { it.first.size }
+            val tagTableBytes = tagCount * 12
+            val profile = ByteBuffer.allocate(132 + tagTableBytes + tags.sumOf { it.second.size })
+
+            // Write the header.
+            profile.putInt(0, profile.capacity())
+            profile.putInt(8, 0x04400000)  // version 4.4, which added CICP support
+            profile.put(12, "mntr".toByteArray())  // profile class
+            profile.put(16, "RGB ".toByteArray())  // color space
+            profile.put(20, "XYZ ".toByteArray())  // PCS
+            // Creation timestamp
+            val dt = LocalDateTime.now(ZoneId.of("UTC"))
+            profile.putShort(24, dt.year.toShort())
+            profile.putShort(26, dt.monthValue.toShort())
+            profile.putShort(28, dt.dayOfMonth.toShort())
+            profile.putShort(30, dt.hour.toShort())
+            profile.putShort(32, dt.minute.toShort())
+            profile.putShort(34, dt.second.toShort())
+            profile.put(36, "acsp".toByteArray())  // file signature
+            profile.putInt(64, 1)  // relative colorimetric rendering intent
+            // D50 illuminant
+            profile.putInt(68, floatToFixed(0.9642f))
+            profile.putInt(72, floatToFixed(1f))
+            profile.putInt(76, floatToFixed(0.8249f))
+            profile.putInt(128, tagCount)  // tag count
+            profile.position(132)
+
+            // Write the tag table.
+            var offset = 132 + tagTableBytes
+            for ((sigs, tag) in tags) {
+                for (sig in sigs) {
+                    profile.put(sig.toByteArray())
+                    profile.putInt(offset)
+                    profile.putInt(tag.size)
+                }
+                offset += tag.size
+            }
+
+            // Write the tags.
+            for ((_, tag) in tags)
+                profile.put(tag)
+
+            return profile.array()
+        }
+
+        private fun constructTextTag(text: String): ByteArray {
+            val enc = text.toByteArray(Charsets.UTF_16BE)
+            val tag = ByteBuffer.allocate(ceilDiv(28 + enc.size, 4) * 4)
+            tag.put("mluc".toByteArray())
+            tag.putInt(0)  // reserved
+            tag.putInt(1)  // number of records
+            tag.putInt(12)  // record size
+            tag.put("enUS".toByteArray())
+            tag.putInt(enc.size)
+            tag.putInt(28)
+            tag.put(enc)
+            return tag.array()
+        }
+
+        private fun constructXYZTag(x: Float, y: Float, z: Float): ByteArray {
+            val tag = ByteBuffer.allocate(20)
+            tag.put("XYZ ".toByteArray())
+            tag.putInt(0)  // reserved
+            tag.putInt(floatToFixed(x))
+            tag.putInt(floatToFixed(y))
+            tag.putInt(floatToFixed(z))
+            return tag.array()
+        }
+
+        private fun floatToFixed(x: Float) = (x * 65536.0).roundToInt()
 
     }
 

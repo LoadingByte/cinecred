@@ -67,7 +67,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                     colors[i] = colors[i].coerceIn(0f, ceiling)
     }
 
-    override fun toString() = "$primaries/$transfer"
+    override fun toString() = "$primaries / $transfer"
 
 
     companion object {
@@ -218,8 +218,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
 
             private fun populateCodeBased() {
                 val bt601 = Chromaticities(0.63f, 0.34f, 0.31f, 0.595f, 0.155f, 0.07f, 0.3127f, 0.329f)
-                // Where possible, use the exact matrices from Skia because that (a) apparently improves performance and
-                // (b) allows the ICC profile generator to detect them and thereby generate meaningful profile names.
+                // Where possible, use the exact matrices from Skia because that apparently improves performance.
                 addCB(
                     AVCOL_PRI_BT709, "BT.709",
                     Chromaticities(0.64f, 0.33f, 0.3f, 0.6f, 0.15f, 0.06f, 0.3127f, 0.329f),
@@ -454,8 +453,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 addCB(AVCOL_TRC_LOG_SQRT, "Log 316", false, null)
                 addCB(AVCOL_TRC_IEC61966_2_4, "IEC 61966-2.4", false, null)
                 addCB(AVCOL_TRC_BT1361_ECG, "BT.1361 ECG", false, null)
-                // Where possible, use the exact numbers from Skia because that (a) apparently improves performance and
-                // (b) allows the ICC profile generator to detect them and thereby generate meaningful profile names.
+                // Where possible, use the exact numbers from Skia because that apparently improves performance.
                 addCB(AVCOL_TRC_IEC61966_2_1, "sRGB", false, toLinear(SkNamedTransferFn_SRGB()))
                 // Our Curve class doesn't support the PQ and HLG formulations, so we'll leave them empty.
                 addCB(AVCOL_TRC_SMPTE2084, "PQ", true, null)

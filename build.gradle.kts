@@ -1,13 +1,14 @@
 import com.loadingbyte.cinecred.*
 import com.loadingbyte.cinecred.Platform
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.time.Year
 import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "1.9.25"
+    kotlin("jvm") version "2.0.10"
 }
 
 group = "com.loadingbyte"
@@ -129,7 +130,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = jdkVersion.toString()
+    compilerOptions.jvmTarget = JvmTarget.fromTarget(jdkVersion.toString())
 }
 
 tasks.test {

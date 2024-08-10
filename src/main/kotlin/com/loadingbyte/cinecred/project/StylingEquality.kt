@@ -76,7 +76,7 @@ private fun Style.equalsIgnoreIneffectiveSettings(ctx: StylingContext, styling: 
     val excludedSettings = findIneffectiveSettings(ctx, styling, this)
     if (excludedSettings.keys != findIneffectiveSettings(ctx, styling, other).keys)
         return false
-    for (setting in getStyleSettings(javaClass))
+    for (setting in getStyleSettings(javaClass as Class<Style>))
         if (setting !in excludedSettings)
             when (setting) {
                 is DirectStyleSetting ->

@@ -136,7 +136,7 @@ fun Font.getSuperscriptMetrics(): SuperscriptMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D) as Long).toDouble()
+    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D as Font2D) as Long).toDouble()
     val os2Table = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 26)
         return null
@@ -159,7 +159,7 @@ fun Font.getExtraLineMetrics(): ExtraLineMetrics? {
     val font2D = FontUtilities.getFont2D(this)
     if (font2D !is TrueTypeFont)
         return null
-    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D) as Long).toDouble()
+    val unitsPerEm = (getUnitsPerEm.invokeExact(font2D as Font2D) as Long).toDouble()
     val os2Table = getTableBuffer.invokeExact(font2D as TrueTypeFont, TrueTypeFont.os_2Tag) as ByteBuffer?
     if (os2Table == null || os2Table.capacity() < 90 || os2Table.getShort(0) /* version */ < 2)
         return null

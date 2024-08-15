@@ -741,13 +741,11 @@ class ToggleButtonGroupWidget<V : Any>(
                 btnGroup.setSelected(btnGroup.elements.asSequence().drop(items.indexOf(value)).first().model, true)
         }
 
-    override var isEnabled: Boolean
-        get() = super.isEnabled
-        set(isEnabled) {
-            super.isEnabled = isEnabled
-            for (btn in btnGroup.elements)
-                btn.isEnabled = isEnabled
-        }
+    override fun applyEnabled(isEnabled: Boolean) {
+        super.applyEnabled(isEnabled)
+        for (btn in btnGroup.elements)
+            btn.isEnabled = isEnabled
+    }
 
     init {
         this.items = items
@@ -1065,16 +1063,13 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
             }
         }
 
-    override var isVisible: Boolean
-        get() = super.isVisible
-        set(isVisible) {
-            super.isVisible = isVisible
-            if (isVisible && presetWidget.value != Preset.Custom) {
-                widthWidget.isVisible = false
-                heightWidget.isVisible = false
-                timesLabel.isVisible = false
-            }
-        }
+    override fun applyVisible(isVisible: Boolean) {
+        presetWidget.isVisible = isVisible
+        val isCustomVisible = isVisible && presetWidget.value == Preset.Custom
+        widthWidget.isVisible = isCustomVisible
+        heightWidget.isVisible = isCustomVisible
+        timesLabel.isVisible = isCustomVisible
+    }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
@@ -1134,13 +1129,11 @@ class FontChooserWidget(
             }
         }
 
-    override var isEnabled: Boolean
-        get() = super.isEnabled
-        set(isEnabled) {
-            super.isEnabled = isEnabled
-            if (isEnabled && fontComboBox.selectedItem is FontWrapper.ForName)
-                fontComboBox.isEnabled = false
-        }
+    override fun applyEnabled(isEnabled: Boolean) {
+        super.applyEnabled(isEnabled)
+        if (isEnabled && fontComboBox.selectedItem is FontWrapper.ForName)
+            fontComboBox.isEnabled = false
+    }
 
     init {
         // Equip the family combo box with a custom renderer that shows category headers.
@@ -1368,19 +1361,15 @@ class OptWidget<E : Any>(
             wrapped.value = value.value
         }
 
-    override var isEnabled: Boolean
-        get() = super.isEnabled
-        set(isEnabled) {
-            super.isEnabled = isEnabled
-            wrapped.isEnabled = isEnabled && cb.isSelected
-        }
+    override fun applyVisible(isVisible: Boolean) {
+        cb.isVisible = isVisible
+        wrapped.isVisible = isVisible
+    }
 
-    override var isVisible: Boolean
-        get() = super.isVisible
-        set(isVisible) {
-            super.isVisible = isVisible
-            wrapped.isVisible = isVisible
-        }
+    override fun applyEnabled(isEnabled: Boolean) {
+        cb.isEnabled = isEnabled
+        wrapped.isEnabled = isEnabled && cb.isSelected
+    }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
@@ -2023,21 +2012,17 @@ class UnionWidget(
                 (wrapped[idx] as Form.Widget<Any>).value = value[idx]
         }
 
-    override var isEnabled: Boolean
-        get() = super.isEnabled
-        set(isEnabled) {
-            super.isEnabled = isEnabled
-            for (widget in wrapped)
-                widget.isEnabled = isEnabled
-        }
+    override fun applyVisible(isVisible: Boolean) {
+        super.applyVisible(isVisible)
+        for (widget in wrapped)
+            widget.isVisible = isVisible
+    }
 
-    override var isVisible: Boolean
-        get() = super.isVisible
-        set(isVisible) {
-            super.isVisible = isVisible
-            for (widget in wrapped)
-                widget.isVisible = isVisible
-        }
+    override fun applyEnabled(isEnabled: Boolean) {
+        super.applyEnabled(isEnabled)
+        for (widget in wrapped)
+            widget.isEnabled = isEnabled
+    }
 
     override fun getSeverity(index: Int): Severity? =
         if (index == -1) throw UnsupportedOperationException() else wrapped[index].getSeverity(-1)

@@ -54,22 +54,30 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
                 if (field == isVisible)
                     return
                 field = isVisible
-                for (comp in components)
-                    comp.isVisible = isVisible
+                applyVisible(isVisible)
                 for (listener in visibleListeners)
                     listener(isVisible)
             }
+
+        protected open fun applyVisible(isVisible: Boolean) {
+            for (comp in components)
+                comp.isVisible = isVisible
+        }
 
         override var isEnabled = true
             set(isEnabled) {
                 if (field == isEnabled)
                     return
                 field = isEnabled
-                for (comp in components)
-                    comp.isEnabled = isEnabled
+                applyEnabled(isEnabled)
                 for (listener in enabledListeners)
                     listener(isEnabled)
             }
+
+        protected open fun applyEnabled(isEnabled: Boolean) {
+            for (comp in components)
+                comp.isEnabled = isEnabled
+        }
 
         override fun getSeverity(index: Int): Severity? = severity
 

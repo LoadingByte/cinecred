@@ -13,6 +13,7 @@ Cinecred Changelog
 
 - New credits files now always use a localized sheet name.
 - XLS spreadsheets are now read without character encoding errors.
+- Horizontal tail justification now uses the tail setting, not the head one.
 - Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
   codes for BT.1886.
 - Whole page stills and image sequence delivery in PQ/HLG no longer fails.

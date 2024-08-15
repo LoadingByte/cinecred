@@ -207,10 +207,10 @@ private fun drawVerticalBlock(
     val blockImage = DeferredImage(blockImageWidth)
     var y = 0.0.toY()
 
-    fun drawHeadTailLines(str: StyledString) {
+    fun drawHeadTailLines(str: StyledString, hJustify: HJustify) {
         val lineH = str.height
         for (fmtStr in str.formatted(textCtx).split(LINE_DELIMITERS)) {
-            blockImage.drawJustifiedString(fmtStr, block.style.headHJustify, 0.0, y, blockImageWidth)
+            blockImage.drawJustifiedString(fmtStr, hJustify, 0.0, y, blockImageWidth)
             // Draw guides that show the edges of the head/tail space.
             blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + lineH, layer = GUIDES)
             blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + lineH, layer = GUIDES)
@@ -221,7 +221,7 @@ private fun drawVerticalBlock(
 
     // Draw the block's head.
     if (block.head != null) {
-        drawHeadTailLines(block.head)
+        drawHeadTailLines(block.head, block.style.headHJustify)
         y += block.style.headGapPx.toElasticY()
     }
     // Draw the block's body.
@@ -230,7 +230,7 @@ private fun drawVerticalBlock(
     // Draw the block's tail.
     if (block.tail != null) {
         y += block.style.tailGapPx.toElasticY()
-        drawHeadTailLines(block.tail)
+        drawHeadTailLines(block.tail, block.style.tailHJustify)
     }
     blockImage.height = y
 

@@ -2,13 +2,13 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
 import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
-import com.loadingbyte.cinecred.project.HeadTailVJustify.*
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 
@@ -69,70 +69,69 @@ private fun drawHorizontalBlocks(
 
     // Draw a deferred image for each block.
     blocks.associateWithTo(out) { block ->
+        val style = block.style
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = resolveWidth(textCtx, block, block.style.headForceWidthPx, sharedHeadWidths, block.head)
-        val tailWidth = resolveWidth(textCtx, block, block.style.tailForceWidthPx, sharedTailWidths, block.tail)
+        val headWidth = resolveWidth(textCtx, block, style.headForceWidthPx, sharedHeadWidths, block.head)
+        val tailWidth = resolveWidth(textCtx, block, style.tailForceWidthPx, sharedTailWidths, block.tail)
 
         val headStartX = 0.0
         val headEndX = headStartX + headWidth
-        val bodyStartX = headEndX + (if (!block.style.hasHead) 0.0 else block.style.headGapPx)
+        val bodyStartX = headEndX + (if (!style.hasHead) 0.0 else style.headGapPx)
         val bodyEndX = bodyStartX + bodyImage.width
-        val tailStartX = bodyEndX + (if (!block.style.hasHead) 0.0 else block.style.tailGapPx)
+        val tailStartX = bodyEndX + (if (!style.hasHead) 0.0 else style.tailGapPx)
         val tailEndX = tailStartX + tailWidth
 
         // Draw the block image.
         val blockImageHeight = bodyImage.height
         val blockImage = DeferredImage(width = tailEndX - headStartX, height = blockImageHeight)
 
-        fun drawHeadTail(str: StyledString, hJustify: HJustify, vJustify: HeadTailVJustify, x: Double, width: Double) {
-            val areaY: Y
-            val areaHeight: Y
-            val extraGuideY: Y?
-            when (vJustify) {
-                FIRST_TOP, FIRST_MIDDLE, FIRST_BOTTOM -> {
-                    areaY = 0.0.toY()
-                    areaHeight = drawnBody.firstRowHeight.toY()
-                    extraGuideY = areaHeight
-                }
-                OVERALL_MIDDLE -> {
-                    areaY = 0.0.toY()
-                    areaHeight = blockImageHeight
-                    extraGuideY = null
-                }
-                LAST_TOP, LAST_MIDDLE, LAST_BOTTOM -> {
-                    areaY = blockImageHeight - drawnBody.lastRowHeight.toY()
-                    areaHeight = drawnBody.lastRowHeight.toY()
-                    extraGuideY = areaY
-                }
+        fun yBaselineForAppendage(fmtStr: FormattedString, vShelve: AppendageVShelve, vJustify: AppendageVJustify): Y =
+            when (vShelve) {
+                AppendageVShelve.FIRST ->
+                    drawnBody.lines.first().yBaselineForAppendage(vJustify, fmtStr).toY()
+                AppendageVShelve.LAST ->
+                    drawnBody.lines.last().yBaselineForAppendage(vJustify, fmtStr).toY() +
+                            blockImageHeight - drawnBody.lines.last().height
+                AppendageVShelve.OVERALL_MIDDLE ->
+                    (blockImageHeight - fmtStr.height) / 2.0 + fmtStr.heightAboveBaseline
             }
-            val reducedVJustify = when (vJustify) {
-                FIRST_TOP, LAST_TOP -> VJustify.TOP
-                FIRST_MIDDLE, OVERALL_MIDDLE, LAST_MIDDLE -> VJustify.MIDDLE
-                FIRST_BOTTOM, LAST_BOTTOM -> VJustify.BOTTOM
-            }
+
+        fun drawHeadTail(
+            str: StyledString, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
+            areaX: Double, areaWidth: Double
+        ) {
             val fmtStr = str.formatted(textCtx)
-            blockImage.drawJustifiedString(fmtStr, hJustify, reducedVJustify, x, areaY, width, areaHeight)
+            val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
+            val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
+            blockImage.drawString(fmtStr, x, yBaseline)
             // Draw a guide that shows the edges of the head/tail space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, x, 0.0.toY(), width, blockImageHeight, layer = GUIDES)
+            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, areaX, 0.0.toY(), areaWidth, blockImageHeight, layer = GUIDES)
             // Draw an additional guide that shows the edge of the vertical head alignment space.
-            if (extraGuideY != null && drawnBody.numRows != 1)
+            val extraGuideY = when (vShelve) {
+                AppendageVShelve.FIRST -> drawnBody.lines.first().height.toY()
+                AppendageVShelve.LAST -> blockImageHeight - drawnBody.lines.last().height
+                AppendageVShelve.OVERALL_MIDDLE -> null
+            }
+            if (extraGuideY != null && drawnBody.lines.size != 1)
                 blockImage.drawLine(
-                    HEAD_TAIL_GUIDE_COLOR, x, extraGuideY, x + headWidth, extraGuideY, dash = true, layer = GUIDES
+                    HEAD_TAIL_GUIDE_COLOR, areaX, extraGuideY, areaX + areaWidth, extraGuideY,
+                    dash = true, layer = GUIDES
                 )
         }
 
         // Draw the block's head.
         if (block.head != null)
-            drawHeadTail(block.head, block.style.headHJustify, block.style.headVJustify, headStartX, headWidth)
+            drawHeadTail(block.head, style.headHJustify, style.headVShelve, style.headVJustify, headStartX, headWidth)
         // Draw the block's body.
         blockImage.drawDeferredImage(bodyImage, bodyStartX, 0.0.toY())
+        // Draw the block's tail.
         if (block.tail != null)
-            drawHeadTail(block.tail, block.style.tailHJustify, block.style.tailVJustify, tailStartX, tailWidth)
+            drawHeadTail(block.tail, style.tailHJustify, style.tailVShelve, style.tailVJustify, tailStartX, tailWidth)
 
         // Find the x coordinate of the spine in the generated image for the current block.
-        val spineXInImage = when (block.style.spineAttachment) {
+        val spineXInImage = when (style.spineAttachment) {
             OVERALL_CENTER -> (headStartX + tailEndX) / 2.0
             HEAD_LEFT -> headStartX
             HEAD_CENTER -> (headStartX + headEndX) / 2.0
@@ -208,9 +207,10 @@ private fun drawVerticalBlock(
     var y = 0.0.toY()
 
     fun drawHeadTailLines(str: StyledString, hJustify: HJustify) {
-        val lineH = str.height
         for (fmtStr in str.formatted(textCtx).split(LINE_DELIMITERS)) {
-            blockImage.drawJustifiedString(fmtStr, hJustify, 0.0, y, blockImageWidth)
+            val lineH = fmtStr.height
+            val yBaseline = y + fmtStr.heightAboveBaseline
+            blockImage.drawString(fmtStr, justify(hJustify, blockImageWidth, fmtStr.width), yBaseline)
             // Draw guides that show the edges of the head/tail space.
             blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, 0.0, y, 0.0, y + lineH, layer = GUIDES)
             blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, blockImageWidth, y, blockImageWidth, y + lineH, layer = GUIDES)

@@ -99,7 +99,8 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     headMatchWidth = MatchExtent.OFF,
     headMatchWidthAcrossStyles = persistentListOf(),
     headHJustify = HJustify.CENTER,
-    headVJustify = HeadTailVJustify.FIRST_MIDDLE,
+    headVShelve = AppendageVShelve.FIRST,
+    headVJustify = AppendageVJustify.MIDDLE,
     headGapPx = 4.0,
     hasTail = false,
     tailLetterStyleName = "",
@@ -107,7 +108,8 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     tailMatchWidth = MatchExtent.OFF,
     tailMatchWidthAcrossStyles = persistentListOf(),
     tailHJustify = HJustify.CENTER,
-    tailVJustify = HeadTailVJustify.FIRST_MIDDLE,
+    tailVShelve = AppendageVShelve.FIRST,
+    tailVJustify = AppendageVJustify.MIDDLE,
     tailGapPx = 4.0
 )
 

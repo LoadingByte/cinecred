@@ -8,11 +8,14 @@ Cinecred Changelog
 ### Additions
 
 - The first and last frame of the sequence can now be left blank.
+- Heads and tails can now be vertically aligned with the body's baseline.
 
 ### Fixes
 
 - New credits files now always use a localized sheet name.
 - XLS spreadsheets are now read without character encoding errors.
+- Cells with multiple letter styles are now sized to exactly encircle all fonts,
+  and their baselines are aligned per body row.
 - Horizontal tail justification now uses the tail setting, not the head one.
 - Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
   codes for BT.1886.

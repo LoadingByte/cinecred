@@ -46,10 +46,6 @@ fun StyledString.trim(): StyledString {
 }
 
 
-val StyledString.height: Double
-    get() = maxOf { it.second.heightPx }
-
-
 /**
  * Converts styled strings to formatted strings. As the conversion can be quite expensive and to leverage the
  * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this

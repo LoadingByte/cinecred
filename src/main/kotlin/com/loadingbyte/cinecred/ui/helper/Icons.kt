@@ -45,6 +45,7 @@ val X_1_TO_1_ICON = SVGIcon.load("/icons/1to1.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val ADVANCED_ICON = SVGIcon.load("/icons/advanced.svg")
 val ANGLE_ICON = SVGIcon.load("/icons/angle.svg")
+val BASELINE_ICON = SVGIcon.load("/icons/baseline.svg")
 val CANCEL_ICON = SVGIcon.load("/icons/cancel.svg")
 val CHECK_ICON = SVGIcon.load("/icons/check.svg")
 val CROSS_ICON = SVGIcon.load("/icons/cross.svg")
@@ -182,23 +183,24 @@ val LineHJustify.icon
     }
 
 
-private val HEAD_TAIL_V_JUSTIFY_FIRST_TOP_ICON = SVGIcon.load("/icons/headTailVJustify/firstTop.svg")
-private val HEAD_TAIL_V_JUSTIFY_FIRST_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/firstMiddle.svg")
-private val HEAD_TAIL_V_JUSTIFY_FIRST_BOTTOM_ICON = SVGIcon.load("/icons/headTailVJustify/firstBottom.svg")
-private val HEAD_TAIL_V_JUSTIFY_OVERALL_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/overallMiddle.svg")
-private val HEAD_TAIL_V_JUSTIFY_LAST_TOP_ICON = SVGIcon.load("/icons/headTailVJustify/lastTop.svg")
-private val HEAD_TAIL_V_JUSTIFY_LAST_MIDDLE_ICON = SVGIcon.load("/icons/headTailVJustify/lastMiddle.svg")
-private val HEAD_TAIL_V_JUSTIFY_LAST_BOTTOM_ICON = SVGIcon.load("/icons/headTailVJustify/lastBottom.svg")
+private val APPENDAGE_V_SHELVE_FIRST_ICON = SVGIcon.load("/icons/appendageVShelve/first.svg")
+private val APPENDAGE_V_SHELVE_OVERALL_MIDDLE_ICON = SVGIcon.load("/icons/appendageVShelve/overallMiddle.svg")
+private val APPENDAGE_V_SHELVE_LAST_ICON = SVGIcon.load("/icons/appendageVShelve/last.svg")
 
-val HeadTailVJustify.icon
+val AppendageVShelve.icon
     get() = when (this) {
-        HeadTailVJustify.FIRST_TOP -> HEAD_TAIL_V_JUSTIFY_FIRST_TOP_ICON
-        HeadTailVJustify.FIRST_MIDDLE -> HEAD_TAIL_V_JUSTIFY_FIRST_MIDDLE_ICON
-        HeadTailVJustify.FIRST_BOTTOM -> HEAD_TAIL_V_JUSTIFY_FIRST_BOTTOM_ICON
-        HeadTailVJustify.OVERALL_MIDDLE -> HEAD_TAIL_V_JUSTIFY_OVERALL_MIDDLE_ICON
-        HeadTailVJustify.LAST_TOP -> HEAD_TAIL_V_JUSTIFY_LAST_TOP_ICON
-        HeadTailVJustify.LAST_MIDDLE -> HEAD_TAIL_V_JUSTIFY_LAST_MIDDLE_ICON
-        HeadTailVJustify.LAST_BOTTOM -> HEAD_TAIL_V_JUSTIFY_LAST_BOTTOM_ICON
+        AppendageVShelve.FIRST -> APPENDAGE_V_SHELVE_FIRST_ICON
+        AppendageVShelve.OVERALL_MIDDLE -> APPENDAGE_V_SHELVE_OVERALL_MIDDLE_ICON
+        AppendageVShelve.LAST -> APPENDAGE_V_SHELVE_LAST_ICON
+    }
+
+
+val AppendageVJustify.icon
+    get() = when (this) {
+        AppendageVJustify.TOP -> BEARING_TOP_ICON
+        AppendageVJustify.MIDDLE -> BEARING_MIDDLE_ICON
+        AppendageVJustify.BOTTOM -> BEARING_BOTTOM_ICON
+        AppendageVJustify.BASELINE -> BASELINE_ICON
     }
 
 
@@ -377,7 +379,8 @@ val Enum<*>.icon
         is HJustify -> icon
         is VJustify -> icon
         is LineHJustify -> icon
-        is HeadTailVJustify -> icon
+        is AppendageVShelve -> icon
+        is AppendageVJustify -> icon
         is MatchExtent -> icon
         is GridFillingOrder -> icon
         is GridStructure -> icon

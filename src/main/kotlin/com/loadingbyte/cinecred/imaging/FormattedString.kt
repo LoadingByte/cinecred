@@ -63,36 +63,31 @@ class FormattedString private constructor(
 
     private var _height: Double = Double.NaN
     private var _heightAboveBaseline: Double = Double.NaN
+    private var _heightBelowBaseline: Double = Double.NaN
 
     val height: Double
         get() = run { ensureInitializedVertical(); _height }
-    private val heightAboveBaseline: Double
+    val heightAboveBaseline: Double
         get() = run { ensureInitializedVertical(); _heightAboveBaseline }
+    val heightBelowBaseline: Double
+        get() = run { ensureInitializedVertical(); _heightBelowBaseline }
 
     private fun ensureInitializedVertical() {
         if (!_height.isNaN())
             return
 
-        // Find the tallest font, as well as the distance between the top of the string and the baseline of the
-        // tallest font. In case there are multiple tallest fonts, take the largest distance.
-        var maxFontHeight = 0.0
+        // Find the greatest distance between the top of any font and the baseline, as well as for the bottom.
+        // The string's height is then the sum of those two greatest distances.
         var aboveBaseline = 0.0
-
-        var idx = 0
+        var belowBaseline = 0.0
         attrs.forEachRun { attr, _, _ ->
             val font = attr.font
-            // These comparisons must be resilient against floating point inaccuracy.
-            if (font.totalHeightPx >= maxFontHeight - 0.001) {
-                aboveBaseline = when {
-                    font.totalHeightPx > maxFontHeight + 0.001 -> font.totalHeightAboveBaselinePx
-                    else -> max(aboveBaseline, font.totalHeightAboveBaselinePx)
-                }
-                maxFontHeight = font.totalHeightPx
-            }
-            idx++
+            aboveBaseline = max(aboveBaseline, font.totalHeightAboveBaselinePx)
+            belowBaseline = max(belowBaseline, font.totalHeightBelowBaselinePx)
         }
-        _height = maxFontHeight
+        _height = aboveBaseline + belowBaseline
         _heightAboveBaseline = aboveBaseline
+        _heightBelowBaseline = belowBaseline
     }
 
 
@@ -132,11 +127,7 @@ class FormattedString private constructor(
        ********** DRAWING **********
        ***************************** */
 
-    /**
-     * The [y] coordinate used by this method differs from the one used by Graphics2D.
-     * Here, the coordinate doesn't point to the baseline, but to the topmost part of the largest font.
-     */
-    fun drawTo(image: DeferredImage, x: Double, y: Y, layer: DeferredImage.Layer) {
+    fun drawTo(image: DeferredImage, x: Double, yBaseline: Y, layer: DeferredImage.Layer) {
         // Get all GlyphVectors which layout the string. They are ordered such that the first GlyphVector realizes
         // the first chars of the string, the next one realizes the chars immediately after that and so on. In case
         // there is BIDI (bidirectional) text, they are not necessarily ordered visually from left to right.
@@ -172,7 +163,6 @@ class FormattedString private constructor(
         // is called whenever a stretch of the same design has come to an end.
         // Note: We consider each GlyphVector in one whole piece. We can do this because we have provoked splits in the
         // TextLayout's TextLineComponents (and as such also in the GVs) at each point where the design changes.
-        val yBaseline = y + heightAboveBaseline
         forEachStretch(
             numItems = gss.size,
             getItem = { gsIdx ->
@@ -701,8 +691,9 @@ class FormattedString private constructor(
         val awtFont: java.awt.Font
         val unscaledAWTFont: java.awt.Font
         val fontHeightAboveBaselinePx: Double
-        val totalHeightPx: Double
+        val fontHeightBelowBaselinePx: Double
         val totalHeightAboveBaselinePx: Double
+        val totalHeightBelowBaselinePx: Double
         val hOffsetPx: Double
         val vOffsetPx: Double
         val trackingPx: Double
@@ -730,8 +721,9 @@ class FormattedString private constructor(
             unscaledAWTFont = awtFont.deriveFont(mapOf(TextAttribute.SIZE to unscaledPointSize))
 
             fontHeightAboveBaselinePx = unscaledAWTFont.lineMetrics.run { ascent + leading / 2.0 }
-            totalHeightPx = fontHeightPx + leadingTopPx + leadingBottomPx
+            fontHeightBelowBaselinePx = unscaledAWTFont.lineMetrics.run { descent + leading / 2.0 }
             totalHeightAboveBaselinePx = fontHeightAboveBaselinePx + leadingTopPx
+            totalHeightBelowBaselinePx = fontHeightBelowBaselinePx + leadingBottomPx
             trackingPx = trackingEm * pointSize * hScaling
         }
 

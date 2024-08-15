@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
-import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.ContentStyle
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PartitionId
@@ -23,67 +22,26 @@ val LINE_DELIMITERS = listOf("\n", "\r\n")
 
 fun DeferredImage.drawString(
     fmtStr: FormattedString,
-    x: Double, y: Y,
+    x: Double, yBaseline: Y,
     layer: DeferredImage.Layer = DeferredImage.STATIC
 ) {
-    fmtStr.drawTo(this, x, y, layer)
+    fmtStr.drawTo(this, x, yBaseline, layer)
 }
 
 
-inline fun DeferredImage.drawJustified(
-    hJustify: HJustify,
-    areaX: Double,
-    areaWidth: Double,
-    objWidth: Double,
-    draw: DeferredImage.(Double) -> Unit
-) {
-    val objX = when (hJustify) {
-        HJustify.LEFT -> areaX
-        HJustify.CENTER -> areaX + (areaWidth - objWidth) / 2.0
-        HJustify.RIGHT -> areaX + (areaWidth - objWidth)
+fun justify(hJustify: HJustify, areaWidth: Double, objWidth: Double): Double =
+    when (hJustify) {
+        HJustify.LEFT -> 0.0
+        HJustify.CENTER -> (areaWidth - objWidth) / 2.0
+        HJustify.RIGHT -> (areaWidth - objWidth)
     }
-    draw(objX)
-}
 
-
-inline fun DeferredImage.drawJustified(
-    hJustify: HJustify, vJustify: VJustify,
-    areaX: Double, areaY: Y,
-    areaWidth: Double, areaHeight: Y,
-    objWidth: Double, objHeight: Y,
-    draw: DeferredImage.(Double, Y) -> Unit
-) {
-    val objY = when (vJustify) {
-        VJustify.TOP -> areaY
-        VJustify.MIDDLE -> areaY + (areaHeight - objHeight) / 2.0
-        VJustify.BOTTOM -> areaY + (areaHeight - objHeight)
+fun justify(vJustify: VJustify, areaHeight: Double, objHeight: Double): Double =
+    when (vJustify) {
+        VJustify.TOP -> 0.0
+        VJustify.MIDDLE -> (areaHeight - objHeight) / 2.0
+        VJustify.BOTTOM -> (areaHeight - objHeight)
     }
-    drawJustified(hJustify, areaX, areaWidth, objWidth) { objX -> draw(objX, objY) }
-}
-
-
-fun DeferredImage.drawJustifiedString(
-    fmtStr: FormattedString, hJustify: HJustify,
-    areaX: Double, strY: Y, areaWidth: Double
-) {
-    drawJustified(hJustify, areaX, areaWidth, fmtStr.width) { strX ->
-        drawString(fmtStr, strX, strY)
-    }
-}
-
-
-fun DeferredImage.drawJustifiedString(
-    fmtStr: FormattedString, hJustify: HJustify, vJustify: VJustify,
-    areaX: Double, areaY: Y, areaWidth: Double, areaHeight: Y
-) {
-    val strHeight = fmtStr.height.toY()
-    drawJustified(
-        hJustify, vJustify, areaX, areaY, areaWidth, areaHeight,
-        fmtStr.width, strHeight
-    ) { strX, strY ->
-        drawString(fmtStr, strX, strY)
-    }
-}
 
 
 fun partitionToTransitiveClosures(

@@ -277,6 +277,19 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
                 sRGBHex32ToXYZD50FloatList(layer["color2"] as? String)?.let { layer["color2"] = it }
             }
         }
+
+    // 1.6.0 -> 1.6.1: Head/tail vertical justification is now stored as two settings.
+    for (contentStyle in rawStyling.contentStyles)
+        for (prefix in arrayOf("head", "tail")) {
+            val vJustify = contentStyle[prefix + "VJustify"]
+            contentStyle[prefix + "VShelve"] = when (vJustify) {
+                "FIRST_TOP", "FIRST_MIDDLE", "FIRST_BOTTOM" -> "FIRST"
+                "OVERALL_MIDDLE" -> "OVERALL_MIDDLE"
+                "LAST_TOP", "LAST_MIDDLE", "LAST_BOTTOM" -> "LAST"
+                else -> continue
+            }
+            contentStyle[prefix + "VJustify"] = (vJustify as String).substringAfter('_')
+        }
 }
 
 

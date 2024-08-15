@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.CAPITAL_SPACING_FONT_FEAT
 import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
 import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
 import com.loadingbyte.cinecred.common.getSupportedFeatures
+import com.loadingbyte.cinecred.project.AppendageVShelve.OVERALL_MIDDLE
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.*
@@ -84,13 +85,13 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::headLetterStyleName.st(), ContentStyle::headForceWidthPx.st(), ContentStyle::headMatchWidth.st(),
         ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::headHJustify.st(),
-        ContentStyle::headVJustify.st(), ContentStyle::headGapPx.st(),
+        ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(), ContentStyle::headGapPx.st(),
         isTotallyIneffective = { _, _, style -> !style.hasHead }
     ),
     StyleEffectivitySpec(
         ContentStyle::tailLetterStyleName.st(), ContentStyle::tailForceWidthPx.st(), ContentStyle::tailMatchWidth.st(),
         ContentStyle::tailMatchWidthAcrossStyles.st(), ContentStyle::tailHJustify.st(),
-        ContentStyle::tailVJustify.st(), ContentStyle::tailGapPx.st(),
+        ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(), ContentStyle::tailGapPx.st(),
         isTotallyIneffective = { _, _, style -> !style.hasTail }
     ),
     StyleEffectivitySpec(
@@ -175,7 +176,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headForceWidthPx.st(), ContentStyle::headVJustify.st(),
+        ContentStyle::headForceWidthPx.st(), ContentStyle::headVShelve.st(),
         isAlmostEffective = { _, _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
@@ -190,7 +191,11 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailVJustify.st(),
+        ContentStyle::headVJustify.st(),
+        isAlmostEffective = { _, _, sty -> sty.blockOrientation != HORIZONTAL || sty.headVShelve == OVERALL_MIDDLE }
+    ),
+    StyleEffectivitySpec(
+        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailVShelve.st(),
         isAlmostEffective = { _, _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
@@ -203,6 +208,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
             style.blockOrientation != VERTICAL && !style.tailForceWidthPx.isActive &&
                     style.tailMatchWidth != ACROSS_BLOCKS
         }
+    ),
+    StyleEffectivitySpec(
+        ContentStyle::tailVJustify.st(),
+        isAlmostEffective = { _, _, sty -> sty.blockOrientation != HORIZONTAL || sty.tailVShelve == OVERALL_MIDDLE }
     )
 )
 

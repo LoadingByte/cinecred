@@ -440,7 +440,9 @@ private fun drawPage(
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {
             append(str, FormattedString.Attribute(font, FormattedString.Design(font, listOf(layer))))
         }.build()
-        pageImage.drawString(fmtStr, x = resolution.widthPx - fmtStr.width - framesMargin, y, layer = GUIDES)
+        val x = resolution.widthPx - fmtStr.width - framesMargin
+        val yBaseline = y + fmtStr.heightAboveBaseline
+        pageImage.drawString(fmtStr, x, yBaseline, layer = GUIDES)
     }
 
     for ((stageIdx, stage) in page.stages.withIndex()) {

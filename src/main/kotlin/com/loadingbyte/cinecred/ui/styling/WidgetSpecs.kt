@@ -108,6 +108,8 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     WidthWidgetSpec(ContentStyle::headMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     UnionWidgetSpec(ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
+    UnionWidgetSpec(ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(), unionName = "headVJustify"),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headVShelve.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
     NewSectionWidgetSpec(ContentStyle::hasTail.st()),
     WidthWidgetSpec(ContentStyle::tailForceWidthPx.st(), WidthSpec.LITTLE),
@@ -115,6 +117,8 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     WidthWidgetSpec(ContentStyle::tailMatchWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     UnionWidgetSpec(ContentStyle::tailMatchWidth.st(), ContentStyle::tailMatchWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
+    UnionWidgetSpec(ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(), unionName = "tailVJustify"),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailVShelve.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
 )
 

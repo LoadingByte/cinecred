@@ -234,11 +234,11 @@ object GuideContentStyleHeadVJustifyDemo : StyleSettingsDemo<ContentStyle>(
     listOf(ContentStyle::headVJustify.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        this += gutterCS.copy(name = "Demo", headVJustify = HeadTailVJustify.FIRST_TOP)
-        this += last().copy(headVJustify = HeadTailVJustify.FIRST_MIDDLE)
-        this += last().copy(headVJustify = HeadTailVJustify.FIRST_BOTTOM)
-        this += last().copy(headVJustify = HeadTailVJustify.OVERALL_MIDDLE)
-        this += last().copy(headVJustify = HeadTailVJustify.LAST_MIDDLE)
+        this += gutterCS.copy(name = "Demo")
+        this += last().copy(headVShelve = AppendageVShelve.OVERALL_MIDDLE)
+        this += last().copy(headVShelve = AppendageVShelve.LAST)
+        this += last().copy(headVJustify = AppendageVJustify.BASELINE)
+        this += last().copy(headVJustify = AppendageVJustify.BOTTOM)
     }
 
     override fun credits(style: ContentStyle) = """

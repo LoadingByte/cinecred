@@ -100,6 +100,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellVJustify.st(), ICON),
     NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10.0),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowSeparatorVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
     NumberWidgetSpec(ContentStyle::paragraphsLineWidthPx.st(), step = 10.0),
     NewSectionWidgetSpec(ContentStyle::hasHead.st()),

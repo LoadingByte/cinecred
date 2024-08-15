@@ -3,7 +3,9 @@ package com.loadingbyte.cinecred.demos
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.PageDemo
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
+import com.loadingbyte.cinecred.demo.l10nDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 
@@ -21,7 +23,8 @@ val GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS
         GuideContentStyleFlowLayoutCellHJustifyAndVJustifyDemo,
         GuideContentStyleFlowLayoutLineWidthDemo,
         GuideContentStyleFlowLayoutLineGapAndHGapDemo,
-        GuideContentStyleFlowLayoutSeparatorDemo
+        GuideContentStyleFlowLayoutSeparatorDemo,
+        GuideContentStyleFlowLayoutSeparatorVJustifyDemo
     )
 
 
@@ -200,21 +203,54 @@ object GuideContentStyleFlowLayoutLineGapAndHGapDemo : StyleSettingsDemo<Content
 
 object GuideContentStyleFlowLayoutSeparatorDemo : StyleSettingsDemo<ContentStyle>(
     ContentStyle::class.java, "$DIR/separator", Format.STEP_GIF,
-    listOf(ContentStyle::flowSeparator.st()), pageGuides = true
+    listOf(ContentStyle::flowSeparator.st(), ContentStyle::flowSeparatorLetterStyleName.st()), pageGuides = true
 ) {
+    private val coloredStyleName get() = l10nDemo("styleColored")
+
     override fun styles() = buildList<ContentStyle> {
         this += bulletsCS.copy(name = "Demo", flowSeparator = "")
         this += last().copy(flowSeparator = bulletsCS.flowSeparator)
         this += last().copy(flowSeparator = "\u2013")
+        this += last().copy(flowSeparatorLetterStyleName = Opt(true, coloredStyleName))
     }
 
     override fun credits(style: ContentStyle) = FLOW_SPREADSHEET.parseCreditsCS(style)
+
+    override fun augmentStyling(styling: Styling): Styling {
+        var ls = styling.letterStyles.single()
+        ls = ls.copy(name = coloredStyleName, layers = persistentListOf(ls.layers.single().copy(color1 = sepClr)))
+        return styling.copy(letterStyles = styling.letterStyles.add(ls))
+    }
+}
+
+
+object GuideContentStyleFlowLayoutSeparatorVJustifyDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/separator-vjustify", Format.STEP_GIF,
+    listOf(ContentStyle::flowSeparatorVJustify.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += bulletsCS.copy(
+            name = "Demo", flowSeparator = "X", flowSeparatorLetterStyleName = Opt(true, "Sep")
+        )
+        this += last().copy(flowSeparatorVJustify = AppendageVJustify.BASELINE)
+        this += last().copy(flowSeparatorVJustify = AppendageVJustify.BOTTOM)
+        this += last().copy(flowSeparatorVJustify = AppendageVJustify.TOP)
+    }
+
+    override fun credits(style: ContentStyle) = FLOW_SPREADSHEET.parseCreditsCS(style)
+
+    override fun augmentStyling(styling: Styling): Styling {
+        var ls = styling.letterStyles.single()
+        ls = ls.copy(name = "Sep", heightPx = 16.0, layers = persistentListOf(ls.layers.single().copy(color1 = sepClr)))
+        return styling.copy(letterStyles = styling.letterStyles.add(ls))
+    }
 }
 
 
 private val bulletsCS = PRESET_CONTENT_STYLE.copy(
     bodyLetterStyleName = "Name", bodyLayout = BodyLayout.FLOW, flowLineWidthPx = 600.0, flowHGapPx = 32.0
 )
+private val sepClr = Color4f.fromSRGBHexString("#42BEEF")
 
 private const val FLOW_SPREADSHEET = """
 @Body,@Content Style

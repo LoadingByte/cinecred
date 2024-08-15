@@ -87,8 +87,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         choices = EnumSet.of(OFF, ACROSS_BLOCKS)
     ),
     StyleNameConstr(
-        WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::headLetterStyleName.st(),
-        ContentStyle::tailLetterStyleName.st(),
+        WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::flowSeparatorLetterStyleName.st(),
+        ContentStyle::headLetterStyleName.st(), ContentStyle::tailLetterStyleName.st(),
         styleClass = LetterStyle::class.java,
         choices = { _, styling, _ -> styling.letterStyles }
     ),

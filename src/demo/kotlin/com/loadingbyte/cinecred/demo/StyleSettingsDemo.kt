@@ -39,6 +39,7 @@ abstract class StyleSettingsDemo<S : Style>(
     protected abstract fun styles(): List<S>
     protected open val suffixes: List<String> get() = emptyList()
     protected open fun credits(style: S): Pair<Global, Page>? = null
+    protected open fun augmentStyling(styling: Styling): Styling = styling
 
     final override fun doGenerate() {
         // These variables are continuously updated while iterating through the list of styles().
@@ -85,6 +86,7 @@ abstract class StyleSettingsDemo<S : Style>(
                 is LetterStyle -> Styling(PRESET_GLOBAL, persListOf(), persListOf(), persListOf(style))
                 else -> throw IllegalStateException()
             }
+            curStyling = augmentStyling(curStyling)
             curStyle = style
             if (style is Layer) {
                 siblingStyles = curStyling.letterStyles.first { style in it.layers }.layers

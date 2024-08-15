@@ -290,6 +290,11 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
             }
             contentStyle[prefix + "VJustify"] = (vJustify as String).substringAfter('_')
         }
+
+    // 1.6.0 -> 1.6.1: Vertical flow separator justification now has its own setting.
+    for (contentStyle in rawStyling.contentStyles)
+        if ("flowSeparatorVJustify" !in contentStyle)
+            contentStyle["flowCellVJustify"]?.let { contentStyle["flowSeparatorVJustify"] = it }
 }
 
 

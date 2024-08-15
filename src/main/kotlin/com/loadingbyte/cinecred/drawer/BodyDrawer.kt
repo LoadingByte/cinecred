@@ -401,9 +401,10 @@ private fun drawBodyImageWithFlowBodyLayout(
     val style = block.style
     val horGap = style.flowHGapPx
 
-    val bodyLetterStyle = letterStyles.find { it.name == style.bodyLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+    val sepLetterStyleName = style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
+    val sepLetterStyle = letterStyles.find { it.name == sepLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = style.flowSeparator
-    val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, bodyLetterStyle)).formatted(textCtx)
+    val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, sepLetterStyle)).formatted(textCtx)
 
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
@@ -464,8 +465,7 @@ private fun drawBodyImageWithFlowBodyLayout(
                     bodyImage.drawString(
                         sepFmtStr,
                         x + (horGap + horGlue - sepFmtStr.width) / 2.0,
-                        y + justify(style.flowCellVJustify, lineGauge.height, sepFmtStr.height) +
-                                sepFmtStr.heightAboveBaseline
+                        y + lineGauge.yBaselineForAppendage(style.flowSeparatorVJustify, sepFmtStr)
                     )
                 // Advance to the next element on the line.
                 x += horGap + horGlue
@@ -773,4 +773,4 @@ private fun SingleLineHJustify.toHJustify() = when (this) {
 }
 
 
-private inline fun Opt<Double>.orElse(block: () -> Double) = if (isActive) value else block()
+private inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()

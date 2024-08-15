@@ -75,6 +75,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
         ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(), ContentStyle::flowLineWidthPx.st(),
         ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),
+        ContentStyle::flowSeparatorLetterStyleName.st(), ContentStyle::flowSeparatorVJustify.st(),
         isTotallyIneffective = { _, _, style -> style.bodyLayout != FLOW }
     ),
     StyleEffectivitySpec(
@@ -174,6 +175,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, _, style ->
             !style.flowSquareCells && !style.flowForceCellWidthPx.isActive && style.flowMatchCellWidth == OFF
         }
+    ),
+    StyleEffectivitySpec(
+        ContentStyle::flowSeparatorLetterStyleName.st(), ContentStyle::flowSeparatorVJustify.st(),
+        isAlmostEffective = { _, _, style -> style.flowSeparator.isBlank() }
     ),
     StyleEffectivitySpec(
         ContentStyle::headForceWidthPx.st(), ContentStyle::headVShelve.st(),

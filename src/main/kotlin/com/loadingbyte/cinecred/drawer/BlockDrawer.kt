@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.SpineAttachment.*
+import kotlin.math.floor
 
 
 class DrawnBlock(val defImage: DeferredImage, val spineXInImage: Double)
@@ -18,6 +19,7 @@ class DrawnBlock(val defImage: DeferredImage, val spineXInImage: Double)
 
 fun drawBlocks(
     contentStyles: List<ContentStyle>,
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     drawnBodies: Map<Block, DrawnBody>,
     blocks: List<Block>
@@ -26,7 +28,7 @@ fun drawBlocks(
 
     // Draw blocks which have horizontal orientation.
     drawHorizontalBlocks(
-        drawnBlocks, contentStyles, textCtx, drawnBodies,
+        drawnBlocks, contentStyles, letterStyles, textCtx, drawnBodies,
         blocks.filter { block -> block.style.blockOrientation == HORIZONTAL }
     )
 
@@ -42,6 +44,7 @@ fun drawBlocks(
 private fun drawHorizontalBlocks(
     out: MutableMap<Block, DrawnBlock>,
     cs: List<ContentStyle>,
+    letterStyles: List<LetterStyle>,
     textCtx: TextContext,
     drawnBodies: Map<Block, DrawnBody>,
     blocks: List<Block>
@@ -101,7 +104,7 @@ private fun drawHorizontalBlocks(
         fun drawHeadTail(
             str: StyledString, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
             areaX: Double, areaWidth: Double
-        ) {
+        ): DoubleArray {
             val fmtStr = str.formatted(textCtx)
             val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
             val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
@@ -119,16 +122,80 @@ private fun drawHorizontalBlocks(
                     HEAD_TAIL_GUIDE_COLOR, areaX, extraGuideY, areaX + areaWidth, extraGuideY,
                     dash = true, layer = GUIDES
                 )
+            return doubleArrayOf(x, x + fmtStr.width)
+        }
+
+        fun drawLeader(
+            str: String, letterStyleName: String,
+            hJustify: SingleLineHJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
+            leftMargin: Double, rightMargin: Double, spacing: Double,
+            leftX: Double, rightX: Double
+        ) {
+            val letterStyle = letterStyles.find { it.name == letterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+            val fmtStr = listOf(Pair(str, letterStyle)).formatted(textCtx)
+            val areaWidth = (rightX - leftX) - (leftMargin + rightMargin)
+            val count = floor((areaWidth + spacing) / (fmtStr.width + spacing)).toInt()
+            if (count <= 0)
+                return
+            var x = leftX + leftMargin
+            val advance: Double
+            if (hJustify == SingleLineHJustify.FULL)
+                advance = (areaWidth - fmtStr.width) / (count - 1)
+            else {
+                x += justify(hJustify.toHJustify(), areaWidth, count * fmtStr.width + (count - 1) * spacing)
+                advance = fmtStr.width + spacing
+            }
+            val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
+            repeat(count) {
+                blockImage.drawString(fmtStr, x, yBaseline)
+                x += advance
+            }
         }
 
         // Draw the block's head.
-        if (block.head != null)
-            drawHeadTail(block.head, style.headHJustify, style.headVShelve, style.headVJustify, headStartX, headWidth)
+        if (block.head != null) {
+            val (_, headContentEndX) = drawHeadTail(
+                block.head, style.headHJustify, style.headVShelve, style.headVJustify, headStartX, headWidth
+            )
+            // Draw the block's head leader.
+            if (style.headLeader.isNotBlank()) {
+                val bodyContentStartX = bodyStartX + when (style.headVShelve) {
+                    AppendageVShelve.FIRST -> drawnBody.lines.first().x
+                    AppendageVShelve.LAST -> drawnBody.lines.last().x
+                    AppendageVShelve.OVERALL_MIDDLE -> drawnBody.lines.minOf { line -> line.x }
+                }
+                drawLeader(
+                    style.headLeader, style.headLeaderLetterStyleName.orElse { style.headLetterStyleName },
+                    style.headLeaderHJustify, style.headVShelve, style.headLeaderVJustify,
+                    style.headLeaderMarginLeftPx, style.headLeaderMarginRightPx, style.headLeaderSpacingPx,
+                    headContentEndX, bodyContentStartX
+                )
+            }
+        }
+
         // Draw the block's body.
         blockImage.drawDeferredImage(bodyImage, bodyStartX, 0.0.toY())
+
         // Draw the block's tail.
-        if (block.tail != null)
-            drawHeadTail(block.tail, style.tailHJustify, style.tailVShelve, style.tailVJustify, tailStartX, tailWidth)
+        if (block.tail != null) {
+            val (tailContentStartX, _) = drawHeadTail(
+                block.tail, style.tailHJustify, style.tailVShelve, style.tailVJustify, tailStartX, tailWidth
+            )
+            // Draw the block's tail leader.
+            if (style.tailLeader.isNotBlank()) {
+                val bodyContentEndX = bodyStartX + when (style.tailVShelve) {
+                    AppendageVShelve.FIRST -> drawnBody.lines.first().let { line -> line.x + line.width }
+                    AppendageVShelve.LAST -> drawnBody.lines.last().let { line -> line.x + line.width }
+                    AppendageVShelve.OVERALL_MIDDLE -> drawnBody.lines.maxOf { line -> line.x + line.width }
+                }
+                drawLeader(
+                    style.tailLeader, style.tailLeaderLetterStyleName.orElse { style.tailLetterStyleName },
+                    style.tailLeaderHJustify, style.tailVShelve, style.tailLeaderVJustify,
+                    style.tailLeaderMarginLeftPx, style.tailLeaderMarginRightPx, style.tailLeaderSpacingPx,
+                    bodyContentEndX, tailContentStartX
+                )
+            }
+        }
 
         // Find the x coordinate of the spine in the generated image for the current block.
         val spineXInImage = when (style.spineAttachment) {

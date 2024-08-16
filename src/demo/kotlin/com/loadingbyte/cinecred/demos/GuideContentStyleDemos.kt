@@ -3,7 +3,9 @@ package com.loadingbyte.cinecred.demos
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.TEMPLATE_PROJECT
+import com.loadingbyte.cinecred.demo.l10nDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BodyLayout.*
 import kotlinx.collections.immutable.persistentListOf
@@ -25,7 +27,12 @@ val GUIDE_CONTENT_STYLE_DEMOS
         GuideContentStyleHeadMatchWidthDemo,
         GuideContentStyleHeadHJustifyDemo,
         GuideContentStyleHeadVJustifyDemo,
-        GuideContentStyleHeadGapDemo
+        GuideContentStyleHeadGapDemo,
+        GuideContentStyleHeadLeaderDemo,
+        GuideContentStyleHeadLeaderLetterStyleDemo,
+        GuideContentStyleHeadLeaderHJustifyDemo,
+        GuideContentStyleHeadLeaderVJustifyDemo,
+        GuideContentStyleHeadLeaderMarginAndSpacingDemo
     )
 
 
@@ -266,6 +273,114 @@ object GuideContentStyleHeadGapDemo : StyleSettingsDemo<ContentStyle>(
 }
 
 
+object GuideContentStyleHeadLeaderDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-leader", Format.STEP_GIF,
+    listOf(ContentStyle::headLeader.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += leaderCS.copy(
+            name = "Demo", gridCellHJustifyPerCol = persistentListOf(HJustify.RIGHT),
+            headHJustify = HJustify.LEFT, headGapPx = 100.0, headLeader = ""
+        )
+        this += last().copy(headLeader = ".")
+        this += last().copy(headLeader = "-")
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+Director of Photography,Peter Panner,Demo
+1st AC,Paul Puller,
+Gaffer,Gustav Gluehbirne,
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleHeadLeaderLetterStyleDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-leader-letter-style", Format.STEP_GIF,
+    listOf(ContentStyle::headLeaderLetterStyleName.st())
+) {
+    private val coloredStyleName get() = l10nDemo("styleColored")
+
+    override fun styles() = buildList<ContentStyle> {
+        this += leaderCS.copy(name = "Demo")
+        this += last().copy(headLeaderLetterStyleName = Opt(true, coloredStyleName))
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+1st AC,Paul Puller,Demo
+        """.parseCreditsCS(style)
+
+    override fun augmentStyling(styling: Styling): Styling {
+        val color = Color4f.fromSRGBHexString("#42BEEF")
+        var ls = styling.letterStyles.first { it.name == "Small" }
+        ls = ls.copy(name = coloredStyleName, layers = persistentListOf(ls.layers.single().copy(color1 = color)))
+        return styling.copy(letterStyles = styling.letterStyles.add(ls))
+    }
+}
+
+
+object GuideContentStyleHeadLeaderHJustifyDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-leader-hjustify", Format.STEP_GIF,
+    listOf(ContentStyle::headLeaderHJustify.st(), ContentStyle::headLeaderVJustify.st())
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += leaderCS.copy(
+            name = "Demo", headHJustify = HJustify.LEFT,
+            headLeader = "_", headLeaderHJustify = SingleLineHJustify.LEFT, headLeaderSpacingPx = 12.5
+        )
+        this += last().copy(headLeaderHJustify = SingleLineHJustify.CENTER)
+        this += last().copy(headLeaderHJustify = SingleLineHJustify.RIGHT)
+        this += last().copy(headLeaderHJustify = SingleLineHJustify.FULL)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+Director of Photography,Peter Panner,Demo
+1st AC,Paul Puller,
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleHeadLeaderVJustifyDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-leader-vjustify", Format.STEP_GIF,
+    listOf(ContentStyle::headLeaderHJustify.st(), ContentStyle::headLeaderVJustify.st())
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += leaderCS.copy(name = "Demo", headLeaderVJustify = AppendageVJustify.TOP)
+        this += last().copy(headLeaderVJustify = AppendageVJustify.MIDDLE)
+        this += last().copy(headLeaderVJustify = AppendageVJustify.BASELINE)
+        this += last().copy(headLeaderVJustify = AppendageVJustify.BOTTOM)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+1st AC,Paul Puller,Demo
+        """.parseCreditsCS(style)
+}
+
+
+object GuideContentStyleHeadLeaderMarginAndSpacingDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-leader-margin-and-spacing", Format.STEP_GIF,
+    listOf(
+        ContentStyle::headLeaderMarginLeftPx.st(), ContentStyle::headLeaderMarginRightPx.st(),
+        ContentStyle::headLeaderSpacingPx.st()
+    )
+) {
+    override fun styles() = buildList<ContentStyle> {
+        this += leaderCS.copy(name = "Demo")
+        this += last().copy(headLeaderMarginLeftPx = 15.0)
+        this += last().copy(headLeaderMarginRightPx = 15.0)
+        this += last().copy(headLeaderSpacingPx = 8.0)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Head,@Body,@Content Style
+1st AC,Paul Puller,Demo
+        """.parseCreditsCS(style)
+}
+
+
 private val headBoyTailCS = PRESET_CONTENT_STYLE.copy(
     blockOrientation = BlockOrientation.HORIZONTAL, bodyLetterStyleName = "Name",
     hasHead = true, headLetterStyleName = "Small",
@@ -273,3 +388,4 @@ private val headBoyTailCS = PRESET_CONTENT_STYLE.copy(
 )
 
 private val gutterCS = TEMPLATE_PROJECT.styling.contentStyles.first { it.name == "Gutter" }
+private val leaderCS = gutterCS.copy(headVJustify = AppendageVJustify.BASELINE, headGapPx = 150.0, headLeader = ".")

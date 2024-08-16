@@ -42,8 +42,8 @@ fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
                     for (spine in compound.spines)
                         addAll(spine.blocks)
     }
-    val drawnBodies = drawBodies(project.styling.contentStyles, project.styling.letterStyles, textCtx, blocks)
-    val drawnBlocks = drawBlocks(project.styling.contentStyles, textCtx, drawnBodies, blocks)
+    val drawnBodies = drawBodies(styling.contentStyles, styling.letterStyles, textCtx, blocks)
+    val drawnBlocks = drawBlocks(styling.contentStyles, styling.letterStyles, textCtx, drawnBodies, blocks)
 
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     var drawnStages: MutableMap<Stage, DrawnStage> = HashMap()

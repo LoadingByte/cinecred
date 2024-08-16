@@ -104,6 +104,13 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     headVShelve = AppendageVShelve.FIRST,
     headVJustify = AppendageVJustify.MIDDLE,
     headGapPx = 4.0,
+    headLeader = "",
+    headLeaderLetterStyleName = Opt(false, ""),
+    headLeaderHJustify = SingleLineHJustify.FULL,
+    headLeaderVJustify = AppendageVJustify.BASELINE,
+    headLeaderMarginLeftPx = 0.0,
+    headLeaderMarginRightPx = 0.0,
+    headLeaderSpacingPx = 2.0,
     hasTail = false,
     tailLetterStyleName = "",
     tailForceWidthPx = Opt(false, 0.0),
@@ -112,7 +119,14 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     tailHJustify = HJustify.CENTER,
     tailVShelve = AppendageVShelve.FIRST,
     tailVJustify = AppendageVJustify.MIDDLE,
-    tailGapPx = 4.0
+    tailGapPx = 4.0,
+    tailLeader = "",
+    tailLeaderLetterStyleName = Opt(false, ""),
+    tailLeaderHJustify = SingleLineHJustify.FULL,
+    tailLeaderVJustify = AppendageVJustify.BASELINE,
+    tailLeaderMarginLeftPx = 0.0,
+    tailLeaderMarginRightPx = 0.0,
+    tailLeaderSpacingPx = 2.0
 )
 
 

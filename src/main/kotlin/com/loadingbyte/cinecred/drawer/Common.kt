@@ -4,10 +4,7 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
-import com.loadingbyte.cinecred.project.ContentStyle
-import com.loadingbyte.cinecred.project.HJustify
-import com.loadingbyte.cinecred.project.PartitionId
-import com.loadingbyte.cinecred.project.VJustify
+import com.loadingbyte.cinecred.project.*
 import java.util.*
 
 
@@ -18,6 +15,16 @@ val BODY_WIDTH_GUIDE_COLOR = Color4f.fromSRGBHexString("#820000")
 val HEAD_TAIL_GUIDE_COLOR = Color4f.fromSRGBHexString("#006400")
 
 val LINE_DELIMITERS = listOf("\n", "\r\n")
+
+
+inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()
+
+
+fun SingleLineHJustify.toHJustify() = when (this) {
+    SingleLineHJustify.LEFT -> HJustify.LEFT
+    SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
+    SingleLineHJustify.RIGHT -> HJustify.RIGHT
+}
 
 
 fun DeferredImage.drawString(

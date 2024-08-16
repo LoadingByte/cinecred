@@ -27,7 +27,9 @@ class DrawnBody(val defImage: DeferredImage, val lines: List<DrawnBodyLine>)
 
 sealed class DrawnBodyLine {
 
+    abstract val x: Double
     protected abstract val yBaseline: Double?
+    abstract val width: Double
     abstract val height: Double
 
     fun yBaselineForAppendage(vJustify: AppendageVJustify, appendage: FormattedString): Double =
@@ -229,6 +231,10 @@ private fun drawBodyImageWithGridBodyLayout(
                 val bodyElemWidth = bodyElem.getWidth(textCtx)
                 val bodyElemX = x + justify(style.gridCellHJustifyPerCol[colIdx], colWidth, bodyElemWidth)
                 rowGauge.drawVJustifiedBodyElem(bodyImage, bodyElem, bodyElemX, y)
+                // Record the area in this row that is actually drawn to.
+                if (rowGauge.x.isNaN())
+                    rowGauge.x = bodyElemX
+                rowGauge.width = bodyElemX + bodyElemWidth - rowGauge.x
             }
             // Draw a guide that shows the edges of the body cell.
             bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, colWidth, rowGauge.height.toY(), layer = GUIDES)
@@ -454,6 +460,12 @@ private fun drawBodyImageWithFlowBodyLayout(
             val bodyElemX = x + justify(style.flowCellHJustify, areaWidth, bodyElemWidth)
             lineGauge.drawVJustifiedBodyElem(bodyImage, bodyElem, bodyElemX, y)
 
+            // Record the area in this line that is actually drawn to.
+            if (bodyElemIdx == 0)
+                lineGauge.x = bodyElemX
+            if (bodyElemIdx == line.lastIndex)
+                lineGauge.width = bodyElemX + bodyElemWidth - lineGauge.x
+
             // Draw a guide that shows the edges of the current body cell.
             bodyImage.drawRect(BODY_CELL_GUIDE_COLOR, x, y, areaWidth, lineGauge.height.toY(), layer = GUIDES)
 
@@ -571,7 +583,9 @@ private fun drawBodyImageWithParagraphsBodyLayout(
                     // Advance to the next line.
                     y += lineFmtStr.height + style.paragraphsLineGapPx.toElasticY()
 
-                    drawnBodyLines += DrawnBodyLineRecord(lineFmtStr.heightAboveBaseline, lineFmtStr.height)
+                    drawnBodyLines += DrawnBodyLineRecord(
+                        x, lineFmtStr.heightAboveBaseline, lineFmtStr.width, lineFmtStr.height
+                    )
                 }
             }
             y -= style.paragraphsLineGapPx.toElasticY()
@@ -588,7 +602,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
                 is BodyElement.Tap -> bodyImage.drawEmbeddedTape(bodyElem.emb, x, y)
             }
             y += bodyElemHeight
-            drawnBodyLines += DrawnBodyLineRecord(null, bodyElemHeight)
+            drawnBodyLines += DrawnBodyLineRecord(x, null, bodyElemWidth, bodyElemHeight)
         }
 
         // Advance to the next paragraph.
@@ -705,14 +719,18 @@ private fun BodyElement.getHeight(textCtx: TextContext): Double = when (this) {
 }
 
 
-private class DrawnBodyLineRecord(override val yBaseline: Double?, override val height: Double) : DrawnBodyLine()
+private class DrawnBodyLineRecord(
+    override val x: Double, override val yBaseline: Double?, override val width: Double, override val height: Double
+) : DrawnBodyLine()
 
 
 private class LineGauge(
     private val vJustify: VJustify, line: List<BodyElement>, forcedHeight: Double?, private val textCtx: TextContext
 ) : DrawnBodyLine() {
 
+    override var x = Double.NaN
     override val yBaseline: Double?
+    override var width = Double.NaN
     override val height: Double
 
     init {
@@ -757,20 +775,9 @@ private class LineGauge(
 }
 
 
-private enum class SingleLineHJustify { LEFT, CENTER, RIGHT, FULL }
-
 private fun LineHJustify.toSingleLineHJustify(lastLine: Boolean) = when {
     this == LineHJustify.LEFT || lastLine && this == LineHJustify.FULL_LAST_LEFT -> SingleLineHJustify.LEFT
     this == LineHJustify.CENTER || lastLine && this == LineHJustify.FULL_LAST_CENTER -> SingleLineHJustify.CENTER
     this == LineHJustify.RIGHT || lastLine && this == LineHJustify.FULL_LAST_RIGHT -> SingleLineHJustify.RIGHT
     else -> SingleLineHJustify.FULL
 }
-
-private fun SingleLineHJustify.toHJustify() = when (this) {
-    SingleLineHJustify.LEFT -> HJustify.LEFT
-    SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
-    SingleLineHJustify.RIGHT -> HJustify.RIGHT
-}
-
-
-private inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()

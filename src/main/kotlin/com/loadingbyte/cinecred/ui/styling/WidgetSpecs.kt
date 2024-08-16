@@ -50,8 +50,9 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
         ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(), ContentStyle::flowForceCellWidthPx.st(),
         ContentStyle::flowForceCellHeightPx.st(), ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(),
         ContentStyle::flowHGapPx.st(), ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
-        ContentStyle::paragraphsLineGapPx.st(), ContentStyle::headForceWidthPx.st(), ContentStyle::headGapPx.st(),
-        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailGapPx.st(),
+        ContentStyle::paragraphsLineGapPx.st(),
+        ContentStyle::headForceWidthPx.st(), ContentStyle::headGapPx.st(), ContentStyle::headLeaderSpacingPx.st(),
+        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailGapPx.st(), ContentStyle::tailLeaderSpacingPx.st(),
         unit = "px"
     ),
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),
@@ -112,6 +113,22 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     UnionWidgetSpec(ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(), unionName = "headVJustify"),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVShelve.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
+    WidthWidgetSpec(ContentStyle::headLeader.st(), WidthSpec.NARROW),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headLeaderHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headLeaderVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::headLeaderHJustify.st(), ContentStyle::headLeaderVJustify.st(),
+        unionName = "headLeaderJustify"
+    ),
+    WidthWidgetSpec(ContentStyle::headLeaderMarginLeftPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(ContentStyle::headLeaderMarginRightPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(ContentStyle::headLeaderSpacingPx.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        ContentStyle::headLeaderMarginLeftPx.st(), ContentStyle::headLeaderMarginRightPx.st(),
+        ContentStyle::headLeaderSpacingPx.st(),
+        unionName = "headLeaderGapsPx", unionUnit = "px",
+        settingIcons = listOf(LEADER_GAP_MARGIN_LEFT_ICON, LEADER_GAP_MARGIN_RIGHT_ICON, LEADER_GAP_SPACING_ICON)
+    ),
     NewSectionWidgetSpec(ContentStyle::hasTail.st()),
     WidthWidgetSpec(ContentStyle::tailForceWidthPx.st(), WidthSpec.LITTLE),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailMatchWidth.st(), ICON),
@@ -120,7 +137,23 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
     UnionWidgetSpec(ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(), unionName = "tailVJustify"),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVShelve.st(), ICON),
-    ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON)
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON),
+    WidthWidgetSpec(ContentStyle::tailLeader.st(), WidthSpec.NARROW),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailLeaderHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailLeaderVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::tailLeaderHJustify.st(), ContentStyle::tailLeaderVJustify.st(),
+        unionName = "tailLeaderJustify"
+    ),
+    WidthWidgetSpec(ContentStyle::tailLeaderMarginLeftPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(ContentStyle::tailLeaderMarginRightPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(ContentStyle::tailLeaderSpacingPx.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        ContentStyle::tailLeaderMarginLeftPx.st(), ContentStyle::tailLeaderMarginRightPx.st(),
+        ContentStyle::tailLeaderSpacingPx.st(),
+        unionName = "tailLeaderGapsPx", unionUnit = "px",
+        settingIcons = listOf(LEADER_GAP_MARGIN_LEFT_ICON, LEADER_GAP_MARGIN_RIGHT_ICON, LEADER_GAP_SPACING_ICON)
+    )
 )
 
 

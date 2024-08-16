@@ -10,6 +10,7 @@ Cinecred Changelog
 - The first and last frame of the sequence can now be left blank.
 - Flow separators may now have their own letter style and vertical alignment.
 - Heads and tails can now be vertically aligned with the body's baseline.
+- A dot leader or similar can now be inserted between heads/tails and the body.
 
 ### Fixes
 

@@ -88,7 +88,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     ),
     StyleNameConstr(
         WARN, ContentStyle::bodyLetterStyleName.st(), ContentStyle::flowSeparatorLetterStyleName.st(),
-        ContentStyle::headLetterStyleName.st(), ContentStyle::tailLetterStyleName.st(),
+        ContentStyle::headLetterStyleName.st(), ContentStyle::headLeaderLetterStyleName.st(),
+        ContentStyle::tailLetterStyleName.st(), ContentStyle::tailLeaderLetterStyleName.st(),
         styleClass = LetterStyle::class.java,
         choices = { _, styling, _ -> styling.letterStyles }
     ),
@@ -168,6 +169,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     DoubleConstr(ERROR, ContentStyle::headGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::headLeaderMarginLeftPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::headLeaderMarginRightPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::headLeaderSpacingPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::tailForceWidthPx.st(), min = 0.0),
     StyleNameConstr(
         ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
@@ -178,7 +182,10 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
-    DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0)
+    DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::tailLeaderMarginLeftPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::tailLeaderMarginRightPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::tailLeaderSpacingPx.st(), min = 0.0)
 )
 
 

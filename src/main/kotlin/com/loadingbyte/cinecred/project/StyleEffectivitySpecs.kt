@@ -85,15 +85,31 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     ),
     StyleEffectivitySpec(
         ContentStyle::headLetterStyleName.st(), ContentStyle::headForceWidthPx.st(), ContentStyle::headMatchWidth.st(),
-        ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::headHJustify.st(),
-        ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(), ContentStyle::headGapPx.st(),
+        ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::headHJustify.st(), ContentStyle::headVShelve.st(),
+        ContentStyle::headVJustify.st(), ContentStyle::headGapPx.st(), ContentStyle::headLeader.st(),
         isTotallyIneffective = { _, _, style -> !style.hasHead }
     ),
     StyleEffectivitySpec(
+        ContentStyle::headLeaderLetterStyleName.st(), ContentStyle::headLeaderHJustify.st(),
+        ContentStyle::headLeaderVJustify.st(), ContentStyle::headLeaderMarginLeftPx.st(),
+        ContentStyle::headLeaderMarginRightPx.st(), ContentStyle::headLeaderSpacingPx.st(),
+        isTotallyIneffective = { _, _, style ->
+            style.blockOrientation != HORIZONTAL || !style.hasHead || style.headLeader.isBlank()
+        }
+    ),
+    StyleEffectivitySpec(
         ContentStyle::tailLetterStyleName.st(), ContentStyle::tailForceWidthPx.st(), ContentStyle::tailMatchWidth.st(),
-        ContentStyle::tailMatchWidthAcrossStyles.st(), ContentStyle::tailHJustify.st(),
-        ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(), ContentStyle::tailGapPx.st(),
+        ContentStyle::tailMatchWidthAcrossStyles.st(), ContentStyle::tailHJustify.st(), ContentStyle::tailVShelve.st(),
+        ContentStyle::tailVJustify.st(), ContentStyle::tailGapPx.st(), ContentStyle::tailLeader.st(),
         isTotallyIneffective = { _, _, style -> !style.hasTail }
+    ),
+    StyleEffectivitySpec(
+        ContentStyle::tailLeaderLetterStyleName.st(), ContentStyle::tailLeaderHJustify.st(),
+        ContentStyle::tailLeaderVJustify.st(), ContentStyle::tailLeaderMarginLeftPx.st(),
+        ContentStyle::tailLeaderMarginRightPx.st(), ContentStyle::tailLeaderSpacingPx.st(),
+        isTotallyIneffective = { _, _, style ->
+            style.blockOrientation != HORIZONTAL || !style.hasTail || style.tailLeader.isBlank()
+        }
     ),
     StyleEffectivitySpec(
         ContentStyle::gridMatchColWidthsAcrossStyles.st(),
@@ -181,7 +197,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, _, style -> style.flowSeparator.isBlank() }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headForceWidthPx.st(), ContentStyle::headVShelve.st(),
+        ContentStyle::headForceWidthPx.st(), ContentStyle::headVShelve.st(), ContentStyle::headLeader.st(),
         isAlmostEffective = { _, _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
@@ -196,11 +212,11 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headVJustify.st(),
+        ContentStyle::headVJustify.st(), ContentStyle::headLeaderVJustify.st(),
         isAlmostEffective = { _, _, sty -> sty.blockOrientation != HORIZONTAL || sty.headVShelve == OVERALL_MIDDLE }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailVShelve.st(),
+        ContentStyle::tailForceWidthPx.st(), ContentStyle::tailVShelve.st(), ContentStyle::tailLeader.st(),
         isAlmostEffective = { _, _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
@@ -215,7 +231,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailVJustify.st(),
+        ContentStyle::tailVJustify.st(), ContentStyle::tailLeaderVJustify.st(),
         isAlmostEffective = { _, _, sty -> sty.blockOrientation != HORIZONTAL || sty.tailVShelve == OVERALL_MIDDLE }
     )
 )

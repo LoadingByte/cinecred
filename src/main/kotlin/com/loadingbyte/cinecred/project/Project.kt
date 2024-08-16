@@ -153,6 +153,13 @@ data class ContentStyle(
     val headVShelve: AppendageVShelve,
     val headVJustify: AppendageVJustify,
     val headGapPx: Double,
+    val headLeader: String,
+    val headLeaderLetterStyleName: Opt<String>,
+    val headLeaderHJustify: SingleLineHJustify,
+    val headLeaderVJustify: AppendageVJustify,
+    val headLeaderMarginLeftPx: Double,
+    val headLeaderMarginRightPx: Double,
+    val headLeaderSpacingPx: Double,
     val hasTail: Boolean,
     val tailLetterStyleName: String,
     val tailForceWidthPx: Opt<Double>,
@@ -161,7 +168,14 @@ data class ContentStyle(
     val tailHJustify: HJustify,
     val tailVShelve: AppendageVShelve,
     val tailVJustify: AppendageVJustify,
-    val tailGapPx: Double
+    val tailGapPx: Double,
+    val tailLeader: String,
+    val tailLeaderLetterStyleName: Opt<String>,
+    val tailLeaderHJustify: SingleLineHJustify,
+    val tailLeaderVJustify: AppendageVJustify,
+    val tailLeaderMarginLeftPx: Double,
+    val tailLeaderMarginRightPx: Double,
+    val tailLeaderSpacingPx: Double
 ) : ListedStyle
 
 
@@ -179,6 +193,7 @@ enum class SpineAttachment {
 enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
+enum class SingleLineHJustify { LEFT, CENTER, RIGHT, FULL }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
 enum class AppendageVShelve { FIRST, OVERALL_MIDDLE, LAST }
 enum class AppendageVJustify { TOP, MIDDLE, BOTTOM, BASELINE }

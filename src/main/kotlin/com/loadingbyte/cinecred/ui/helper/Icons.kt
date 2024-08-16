@@ -104,6 +104,10 @@ val FONT_HEIGHT_TOTAL_ICON = SVGIcon.load("/icons/fontHeight/total.svg")
 val FONT_HEIGHT_LEADING_TOP_ICON = SVGIcon.load("/icons/fontHeight/leadingTop.svg")
 val FONT_HEIGHT_LEADING_BOTTOM_ICON = SVGIcon.load("/icons/fontHeight/leadingBottom.svg")
 
+val LEADER_GAP_MARGIN_LEFT_ICON = SVGIcon.load("/icons/leaderGap/marginLeft.svg")
+val LEADER_GAP_MARGIN_RIGHT_ICON = SVGIcon.load("/icons/leaderGap/marginRight.svg")
+val LEADER_GAP_SPACING_ICON = SVGIcon.load("/icons/leaderGap/spacing.svg")
+
 val OVERLAY_SAFE_AREAS_ICON = SVGIcon.load("/icons/overlay/safeAreas.svg")
 val OVERLAY_ASPECT_RATIO_ICON = SVGIcon.load("/icons/overlay/aspectRatio.svg")
 val OVERLAY_LINES_ICON = SVGIcon.load("/icons/overlay/lines.svg")
@@ -160,6 +164,15 @@ val VJustify.icon
         VJustify.TOP -> BEARING_TOP_ICON
         VJustify.MIDDLE -> BEARING_MIDDLE_ICON
         VJustify.BOTTOM -> BEARING_BOTTOM_ICON
+    }
+
+
+val SingleLineHJustify.icon
+    get() = when (this) {
+        SingleLineHJustify.LEFT -> BEARING_LEFT_ICON
+        SingleLineHJustify.CENTER -> BEARING_CENTER_ICON
+        SingleLineHJustify.RIGHT -> BEARING_RIGHT_ICON
+        SingleLineHJustify.FULL -> BEARING_LEFT_RIGHT_ICON
     }
 
 
@@ -379,6 +392,7 @@ val Enum<*>.icon
         is HJustify -> icon
         is VJustify -> icon
         is LineHJustify -> icon
+        is SingleLineHJustify -> icon
         is AppendageVShelve -> icon
         is AppendageVJustify -> icon
         is MatchExtent -> icon

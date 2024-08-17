@@ -452,10 +452,9 @@ private fun drawPage(
             val cardTopY = stageLayout.info.middleY - resolution.heightPx / 2.0
             val cardBotY = stageLayout.info.middleY + resolution.heightPx / 2.0
             // Draw guides that show the boundaries of the screen as they will be when this card will be shown.
-            // Note: We subtract 1 from the width and height; if we don't, the right and lower lines of the
-            // rectangle are often rendered only partially or not at all.
+            // Note: We move each side in by 0.5; if we didn't, the rectangle would only render partially or not at all.
             pageImage.drawRect(
-                STAGE_GUIDE_COLOR, 0.0, cardTopY, resolution.widthPx - 1.0, (resolution.heightPx - 1.0).toY(),
+                STAGE_GUIDE_COLOR, 0.5, cardTopY + 0.5, resolution.widthPx - 1.0, (resolution.heightPx - 1.0).toY(),
                 layer = GUIDES
             )
             // If the card is an intermediate stage, also draw arrows that indicate that the card is intermediate.

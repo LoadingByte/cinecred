@@ -19,6 +19,7 @@ Cinecred Changelog
 - Cells with multiple letter styles are now sized to exactly encircle all fonts,
   and their baselines are aligned per body row.
 - Horizontal tail justification now uses the tail setting, not the head one.
+- Fixed that text was sometimes culled erroneously due to wrong bounding boxes.
 - Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
   codes for BT.1886.
 - Whole page stills and image sequence delivery in PQ/HLG no longer fails.

@@ -542,12 +542,12 @@ class FormattedString private constructor(
             var yMax = Double.NEGATIVE_INFINITY
             var yMin = Double.POSITIVE_INFINITY
             for (i in 0..<4) {
-                val y = points[i * 2]
+                val y = points[i * 2 + 1]
                 yMax = max(yMax, y)
                 yMin = min(yMin, y)
             }
-            heightAboveBaseline = yMax
-            heightBelowBaseline = -yMin
+            heightAboveBaseline = -yMin
+            heightBelowBaseline = yMax
         }
 
         override val width get() = gs.width

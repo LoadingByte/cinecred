@@ -352,16 +352,20 @@ class DeferredImagePanel(
         val contentVersion = this.contentVersion
         val physicalImageScaling = this.physicalImageScaling
         jobSlot.submit {
+            // Align the drawn portion with the pixel grid. If we didn't do this, users would notice changes in the
+            // antialiasing pattern when we swap the materialized image, for example when going from the narrow
+            // immediate image to the taller delayed image.
+            val physicalStartY = if (startY.isNaN()) 0.0 else floor(physicalImageScaling * startY)
+            val physicalStopY = ceil(physicalImageScaling * ((if (startY.isNaN()) 0.0 else startY) + height))
             // Materialize the image or a portion thereof.
             // Use max(1, ...) to ensure that the raster image dimensions don't drop to 0.
             val matWidth = max(1, (physicalImageScaling * image.width).roundToInt())
-            val matHeight = max(1, (physicalImageScaling * height).roundToInt())
+            val matHeight = max(1, (physicalStopY - physicalStartY).roundToInt())
             val materialized = drawToBufferedImage(matWidth, matHeight, grounding, bitmapJ2DBridge) { canvas ->
                 // Paint a scaled version of the deferred image onto the raster image.
                 DeferredImage(matWidth.toDouble(), matHeight.toDouble().toY()).apply {
                     // If only a portion is materialized, scroll the deferred image to that portion.
-                    val y = if (startY.isNaN()) 0.0 else physicalImageScaling * -startY
-                    drawDeferredImage(image, y = y.toY(), universeScaling = physicalImageScaling)
+                    drawDeferredImage(image, y = (-physicalStartY).toY(), universeScaling = physicalImageScaling)
                 }.materialize(canvas, highResCache, layers)
             }
             SwingUtilities.invokeLater {
@@ -369,8 +373,8 @@ class DeferredImagePanel(
                     return@invokeLater
                 this.materialized = materialized
                 this.materializedContentVersion = contentVersion
-                this.materializedStartY = startY
-                this.materializedStopY = startY + height
+                this.materializedStartY = if (startY.isNaN()) Double.NaN else physicalStartY / physicalImageScaling
+                this.materializedStopY = if (startY.isNaN()) Double.NaN else physicalStopY / physicalImageScaling
                 // If the materialized high-res image covers the whole deferred image, also use it as the fallback.
                 if (startY.isNaN() && this.lowResMaterializedContentVersion < contentVersion) {
                     this.lowResMaterialized = materialized

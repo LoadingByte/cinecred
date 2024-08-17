@@ -99,6 +99,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     UnionWidgetSpec(ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowCellVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(),
+        unionName = "flowCellJustify"
+    ),
     NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10.0),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowSeparatorVJustify.st(), ICON),

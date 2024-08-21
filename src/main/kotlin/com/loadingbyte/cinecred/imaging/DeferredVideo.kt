@@ -107,8 +107,11 @@ class DeferredVideo private constructor(
 
     fun collectTapeSpans(layers: List<DeferredImage.Layer>): List<TapeSpan> {
         val tapeTracker = TapeTracker<Unit>(this, layers)
-        return tapeTracker.collectSpanFirstFrameIndices().flatMap(tapeTracker::query).map { resp ->
-            TapeSpan(resp.embeddedTape, resp.firstFrameIdx, resp.lastFrameIdx, resp.timecode)
+        return buildList {
+            for (frameIdx in tapeTracker.collectSpanFirstFrameIndices())
+                for (resp in tapeTracker.query(frameIdx))
+                    if (resp.firstFrameIdx == frameIdx)
+                        add(TapeSpan(resp.embeddedTape, resp.firstFrameIdx, resp.lastFrameIdx, resp.timecode))
         }
     }
 

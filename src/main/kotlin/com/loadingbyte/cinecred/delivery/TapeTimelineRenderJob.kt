@@ -94,10 +94,9 @@ class TapeTimelineRenderJob private constructor(
         for ((idx, tapeSpan) in tapeSpans.withIndex()) {
             if (id == 1000)
                 break
-            var lastFrameIdx = tapeSpan.lastFrameIdx
-            tapeSpans.getOrNull(idx + 1)?.let { lastFrameIdx = min(lastFrameIdx, it.lastFrameIdx) }
             val startFrame = tapeSpan.firstFrameIdx / extraFPSMul
-            val stopFrame = ceilDiv(lastFrameIdx + 1, extraFPSMul)
+            var stopFrame = ceilDiv(tapeSpan.lastFrameIdx + 1, extraFPSMul)
+            tapeSpans.getOrNull(idx + 1)?.let { stopFrame = min(stopFrame, it.firstFrameIdx / extraFPSMul) }
             val clipStart = Timecode.Frames(startFrame)
             val clipLength = Timecode.Frames(stopFrame - startFrame)
             if (clipLength.frames > 0) {

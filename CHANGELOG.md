@@ -23,6 +23,7 @@ Cinecred Changelog
 - Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
   codes for BT.1886.
 - Whole page stills and image sequence delivery in PQ/HLG no longer fails.
+- Embedded video timeline delivery now properly handles overlapping videos.
 
 ### UI Fixes
 

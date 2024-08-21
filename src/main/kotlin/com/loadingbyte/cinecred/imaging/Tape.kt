@@ -23,7 +23,6 @@ class Tape private constructor(
     val fileSeq: Boolean,
     val fileOrDir: Path,
     private val fileOrPattern: Path,
-    val edlFilename: String,
     firstNumber: Int,
     lastNumber: Int
 ) : AutoCloseable {
@@ -39,6 +38,7 @@ class Tape private constructor(
     private var metadataInitialized = false
     private var metadataInitException: Exception? = null
     private var _spec: Bitmap.Spec? = null
+    private var _audio = false
     private var _fps: FPS? = null
     private var _availableRange: OpenEndRange<Timecode>? = if (!fileSeq) null else
         Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
@@ -46,6 +46,9 @@ class Tape private constructor(
     /** @throws Exception */
     val spec: Bitmap.Spec
         get() = run { ensureMetadataIsInitialized(); _spec!! }
+    /** @throws Exception */
+    val audio: Boolean
+        get() = run { ensureMetadataIsInitialized(); _audio }
     /** @throws Exception */
     val fps: FPS?
         get() = run { ensureMetadataIsInitialized(); _fps }
@@ -64,6 +67,7 @@ class Tape private constructor(
             val dur: Timecode.Clock?
             VideoReader(fileOrPattern, zeroTimecode).use { videoReader ->
                 _spec = videoReader.spec
+                _audio = videoReader.audio
                 _fps = videoReader.fps
                 start = if (fileSeq) null else videoReader.read()!!.timecode as Timecode.Clock
                 dur = videoReader.estimatedDuration
@@ -263,7 +267,7 @@ class Tape private constructor(
         fun recognize(fileOrDir: Path): Tape? = when {
             fileOrDir.isRegularFile() ->
                 if (fileOrDir.extension !in CONTAINER_EXTS) null else
-                    Tape(fileSeq = false, fileOrDir, fileOrDir, fileOrDir.name, -1, -1)
+                    Tape(fileSeq = false, fileOrDir, fileOrDir, -1, -1)
             fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true) ->
                 fileOrDir.useDirectoryEntries { seq -> recognizeFileSeq(fileOrDir, seq) }
             else ->
@@ -363,10 +367,8 @@ class Tape private constructor(
                 prevNumber = number
             }
 
-            val d = if (zeroPad) "%0${sameLen}d" else "%d"
-            val pattern = dir.resolve("$prefix$d$suffix")
-            val edlFilename = "$prefix[${d.format(numbers.first())}-${d.format(numbers.last())}]$suffix"
-            return Tape(fileSeq = true, dir, pattern, edlFilename, numbers.first(), numbers.last())
+            val pattern = dir.resolve(prefix + (if (zeroPad) "%0${sameLen}d" else "%d") + suffix)
+            return Tape(fileSeq = true, dir, pattern, numbers.first(), numbers.last())
         }
 
     }

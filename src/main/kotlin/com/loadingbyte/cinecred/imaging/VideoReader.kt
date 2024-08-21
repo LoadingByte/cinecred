@@ -53,6 +53,7 @@ class VideoReader(
     var fps: FPS? = null; private set
     var estimatedDuration: Timecode.Clock? = null; private set
     lateinit var spec: Bitmap.Spec; private set
+    var audio: Boolean = false
 
     init {
         setupSafely({ setup(fileOrPattern, startTimecode) }, ::close)
@@ -82,6 +83,9 @@ class VideoReader(
         // Retrieve the stream information.
         avformat_find_stream_info(ic, null as AVDictionary?)
             .ffmpegThrowIfErrnum("Could not find stream information in '$filename'")
+
+        // Determine whether there is at least one accompanying audio stream.
+        audio = (0..<ic.nb_streams()).any { stIdx -> ic.streams(stIdx).codecpar().codec_type() == AVMEDIA_TYPE_AUDIO }
 
         // Find the video stream that is going to be read, and the matching codec.
         val codec = AVCodec(null)

@@ -147,6 +147,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
                 refreshPlayback(playRateChanged = true, forceStop = false)
             }
         }
+    private var suspendedPlayRate = Int.MAX_VALUE
 
     init {
         DeckLink.addListener(deckLinkListener)
@@ -478,13 +479,25 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         setupDeckLinkFrameSource()
     }
 
+    override fun startScrubbing() {
+        suspendedPlayRate = playRate
+        playRate = 0
+    }
+
+    override fun stopScrubbing() {
+        playRate = suspendedPlayRate
+        suspendedPlayRate = Int.MAX_VALUE
+    }
+
     override fun scrub(frameIdx: Int) {
         if (!dialogVisible && selectedDeckLink == null)
             return
-        playRate = 0
         this.frameIdx = frameIdx
-        displayFrameNowAWT(false)
-        displayFrameNowDeckLink()
+        if (playRate == 0) {
+            displayFrameNowAWT(false)
+            displayFrameNowDeckLink()
+        } else
+            refreshPlayback(playRateChanged = false, forceStop = true)
     }
 
     override fun scrubRelativeFrames(frames: Int) {
@@ -496,19 +509,23 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     }
 
     override fun rewind() {
-        if (playRate > 0) playRate = -1 else playRate--
+        if (suspendedPlayRate == Int.MAX_VALUE)
+            if (playRate > 0) playRate = -1 else playRate--
     }
 
     override fun pause() {
-        playRate = 0
+        if (suspendedPlayRate == Int.MAX_VALUE)
+            playRate = 0
     }
 
     override fun play() {
-        if (playRate < 0) playRate = 1 else playRate++
+        if (suspendedPlayRate == Int.MAX_VALUE)
+            if (playRate < 0) playRate = 1 else playRate++
     }
 
     override fun togglePlay() {
-        playRate = if (playRate == 0) 1 else 0
+        if (suspendedPlayRate == Int.MAX_VALUE)
+            playRate = if (playRate == 0) 1 else 0
     }
 
     override fun setVideoCanvasSize(size: Dimension, gCfg: GraphicsConfiguration) {

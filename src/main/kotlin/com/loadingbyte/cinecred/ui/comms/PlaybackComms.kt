@@ -22,6 +22,8 @@ interface PlaybackCtrlComms {
     fun setDeckLinkConnected(connected: Boolean)
     fun toggleDeckLinkConnected()
     fun setSelectedSpreadsheetName(spreadsheetName: String)
+    fun startScrubbing()
+    fun stopScrubbing()
     fun scrub(frameIdx: Int)
     fun scrubRelativeFrames(frames: Int)
     fun scrubRelativeSeconds(seconds: Int)

@@ -41,9 +41,9 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     private val frameSlider: JSlider
     private val timecodeLabel = JLabel().apply { putClientProperty(STYLE_CLASS, "monospaced") }
 
+    private var adjustingSlider = false
     private var curTimecode: String? = null
     private var maxTimecode: String? = null
-    private var suppressSliderChangeEvents = false
 
     init {
         playbackCtrl.registerView(this)
@@ -102,7 +102,19 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         frameSlider = JSlider().also { frameSlider ->
             frameSlider.value = 0
             frameSlider.isFocusable = false
-            frameSlider.addChangeListener { if (!suppressSliderChangeEvents) playbackCtrl.scrub(frameSlider.value) }
+            frameSlider.addChangeListener {
+                // Note: This listener also listens for changes to the "valueIsAdjusting" property.
+                if (frameSlider.valueIsAdjusting) {
+                    if (!adjustingSlider) {
+                        adjustingSlider = true
+                        playbackCtrl.startScrubbing()
+                    }
+                    playbackCtrl.scrub(frameSlider.value)
+                } else if (adjustingSlider) {
+                    adjustingSlider = false
+                    playbackCtrl.stopScrubbing()
+                }
+            }
         }
 
         layout = MigLayout("insets 0, hidemode 3", "[][]2[]2[][][]")
@@ -164,23 +176,13 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     }
 
     override fun setNumFrames(numFrames: Int, timecodeString: String) {
-        suppressSliderChangeEvents = true
-        try {
-            frameSlider.maximum = numFrames - 1
-        } finally {
-            suppressSliderChangeEvents = false
-        }
+        frameSlider.maximum = numFrames - 1
         maxTimecode = timecodeString
         timecodeLabel.text = "$curTimecode / $maxTimecode"
     }
 
     override fun setPlayheadPosition(frameIdx: Int, timecodeString: String) {
-        suppressSliderChangeEvents = true
-        try {
-            frameSlider.value = frameIdx
-        } finally {
-            suppressSliderChangeEvents = false
-        }
+        frameSlider.value = frameIdx
         curTimecode = timecodeString
         timecodeLabel.text = "$curTimecode / $maxTimecode"
     }

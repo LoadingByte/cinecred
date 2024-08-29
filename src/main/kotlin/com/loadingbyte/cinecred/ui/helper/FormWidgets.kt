@@ -1283,12 +1283,13 @@ class FontChooserWidget(
             val missingGlyph = sampleFont.missingGlyphCode
             val gv = sampleFont.createGlyphVector(REF_FRC, sampleText ?: return false)
             // Only display the sample when at least one glyph is not the missing glyph placeholder.
-            return if (gv.getGlyphCodes(0, gv.numGlyphs, null).all { it == missingGlyph }) false else {
+            for (glyphIdx in 0..<gv.numGlyphs) if (gv.getGlyphCode(glyphIdx) != missingGlyph) {
                 label2.isVisible = true
                 label2.font = sampleFont
                 label2.text = sampleText
-                true
+                return true
             }
+            return false
         }
 
     }

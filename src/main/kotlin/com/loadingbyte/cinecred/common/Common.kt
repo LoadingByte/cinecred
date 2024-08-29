@@ -103,17 +103,6 @@ class FPS(numerator: Int, denominator: Int) {
 }
 
 
-fun String.toFiniteDouble(nonNeg: Boolean = false, non0: Boolean = false): Double {
-    val f = replace(',', '.').toDouble()
-    if (!f.isFinite() || nonNeg && f < 0.0 || non0 && f == 0.0)
-        throw NumberFormatException()
-    return f
-}
-
-fun <T> enumFromName(name: String, enumClass: Class<T>): T =
-    enumClass.enumConstants.first { (it as Enum<*>).name.equals(name, ignoreCase = true) }
-
-
 // Note: We don't use Java's inbuilt floorDiv() and ceilDiv() because they contain branches, which make them slower.
 
 /** Implements `floor(a / b)`, but works only for non-negative denominators! */

@@ -65,7 +65,7 @@ sealed interface Timecode : Comparable<Timecode> {
     fun toSMPTENonDropFrame(fps: FPS): SMPTENonDropFrame = toFrames(fps).toSMPTENonDropFrame(fps)
     fun toSMPTEDropFrame(fps: FPS): SMPTEDropFrame = toFrames(fps).toSMPTEDropFrame(fps)
 
-    fun toString(fps: FPS? = null): String
+    fun toString(fps: FPS?): String
 
 
     data class Frames(val frames: Int) : Timecode {
@@ -122,7 +122,7 @@ sealed interface Timecode : Comparable<Timecode> {
             require(denominator > 0L) { "Clock timecode must have positive denominator." }
         }
 
-        val seconds: Int = (numerator / denominator).toInt()
+        val seconds: Int get() = (numerator / denominator).toInt()
 
         override fun plus(other: Timecode) = op(other, 1L)
         override fun minus(other: Timecode) = op(other, -1L)
@@ -162,6 +162,7 @@ sealed interface Timecode : Comparable<Timecode> {
 
         override fun toString() = toString(null)
         override fun toString(fps: FPS?): String {
+            val seconds = this.seconds
             val s = seconds % 60
             val m = seconds / 60 % 60
             val h = seconds / 60 / 60 % 24

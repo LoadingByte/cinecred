@@ -86,21 +86,6 @@ val TEMPLATE_SCROLL_PAGE_FROM_DOP: Page by lazy {
     }.credits.single().pages.single()
 }
 
-val TEMPLATE_SCROLL_PAGE_FOR_MELT_DEMO: Page by lazy {
-    loadTemplateProject { creditsFile ->
-        val lines = creditsFile.readLines().toMutableList()
-        val headerLineNo = lines.indexOfFirst { "@Body" in it }
-        val gafferLineNo = lines.indexOfFirst { "Gaffer" in it }
-        val lawyerLineNo = lines.indexOfFirst { "lawyer" in it }
-        lines[headerLineNo + 1] = ",,,,Gutter,,,Scroll,\n"
-        lines[lawyerLineNo - 1] = ",,,3,,,,,\n"
-        lines[lawyerLineNo + 2] = ",,,8,,,,,\n"
-        (lawyerLineNo - 2 downTo gafferLineNo + 3).forEach(lines::removeAt)
-        (gafferLineNo - 1 downTo headerLineNo + 2).forEach(lines::removeAt)
-        creditsFile.writeLines(lines)
-    }.credits.single().pages.single()
-}
-
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     withDemoProjectDir { projectDir ->
         tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)

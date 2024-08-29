@@ -39,8 +39,6 @@ val WINDOW_ICON_IMAGES = run {
 }
 
 
-val CINECRED_ICON = SVGIcon.load("/logo.svg").getScaledIcon(0.0625)
-
 val X_1_TO_1_ICON = SVGIcon.load("/icons/1to1.svg")
 val ADD_ICON = SVGIcon.load("/icons/add.svg")
 val ADVANCED_ICON = SVGIcon.load("/icons/advanced.svg")

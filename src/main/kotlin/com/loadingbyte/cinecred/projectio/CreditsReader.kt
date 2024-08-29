@@ -538,7 +538,7 @@ private class CreditsReader(
             }
         }
 
-        // Get the body element, which may either be a styled string or a (optionally scaled) picture.
+        // Get the body element, which may either be a styled string or a picture or tape.
         val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName)
 
         // Get the head and tail, which may only be styled strings.
@@ -1007,6 +1007,13 @@ private class CreditsReader(
                 if (this[precedingIdx] != char)
                     return actualIdx - precedingIdx - 1
             return actualIdx
+        }
+
+        fun String.toFiniteDouble(nonNeg: Boolean = false): Double {
+            val f = replace(',', '.').toDouble()
+            if (!f.isFinite() || nonNeg && f < 0.0)
+                throw NumberFormatException()
+            return f
         }
 
         private fun FPS?.prettyPrint(): String =

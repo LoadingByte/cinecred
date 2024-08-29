@@ -101,8 +101,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     when (index) {
                         0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
                         WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
-                        WHOLE_PAGE_FORMATS.size + VIDEO_FORMATS.size ->
-                            listOf(l10n("ui.deliverConfig.timelineFormat"))
+                        WHOLE_PAGE_FORMATS.size + VIDEO_FORMATS.size -> listOf(l10n("ui.deliverConfig.timelineFormat"))
                         else -> emptyList()
                     }
                 }
@@ -365,7 +364,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 error(l10n("ui.delivery.issues.heightMod2", forLabel))
             if (format.minWidth != null && scaledWidth < format.minWidth)
                 error(l10n("ui.delivery.issues.minWidth", forLabel, format.minWidth))
-            if (format.minHeight != null && scaledWidth < format.minHeight)
+            if (format.minHeight != null && scaledHeight < format.minHeight)
                 error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
         }
         // Check for fractional scroll speeds.

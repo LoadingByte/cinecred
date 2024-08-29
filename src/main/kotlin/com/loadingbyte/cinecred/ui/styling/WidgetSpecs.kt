@@ -162,10 +162,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 
 
 private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
-    UnitWidgetSpec(LetterStyle::heightPx.st(), unit = "px"),
     WidthWidgetSpec(LetterStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         LetterStyle::heightPx.st(),
+        unionUnit = "px",
         settingIcons = listOf(FONT_HEIGHT_TOTAL_ICON)
     ),
     WidthWidgetSpec(LetterStyle::leadingTopRh.st(), WidthSpec.LITTLE),

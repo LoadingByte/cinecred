@@ -388,6 +388,12 @@ val Enum<*>.label: String
     get() = when (this) {
         TimecodeFormat.SMPTE_NON_DROP_FRAME -> "SMPTE Non-Drop Frame"
         TimecodeFormat.SMPTE_DROP_FRAME -> "SMPTE Drop Frame"
+        SingleLineHJustify.LEFT, LineHJustify.LEFT -> HJustify.LEFT.label
+        SingleLineHJustify.CENTER, LineHJustify.CENTER -> HJustify.CENTER.label
+        SingleLineHJustify.RIGHT, LineHJustify.RIGHT -> HJustify.RIGHT.label
+        AppendageVJustify.TOP -> VJustify.TOP.label
+        AppendageVJustify.MIDDLE -> VJustify.MIDDLE.label
+        AppendageVJustify.BOTTOM -> VJustify.BOTTOM.label
         GridStructure.SQUARE_CELLS -> l10n("ui.styling.content.flowSquareCells")
         SmallCaps.OFF, Superscript.OFF -> l10n("off")
         Superscript.CUSTOM, StripePreset.CUSTOM -> l10n("custom")

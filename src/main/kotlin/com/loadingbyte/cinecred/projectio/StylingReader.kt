@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.enumFromName
 import com.loadingbyte.cinecred.common.readToml
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
@@ -116,3 +115,6 @@ private fun fontFeatureFromKV(kv: String): FontFeature {
     require(parts.size == 2)
     return FontFeature(parts[0], parts[1].toInt())
 }
+
+private fun enumFromName(name: String, enumClass: Class<*>): Any =
+    enumClass.enumConstants.first { (it as Enum<*>).name.equals(name, ignoreCase = true) }

@@ -51,7 +51,7 @@ object GuideContentStyleBlockOrientationDemo : StyleSettingsDemo<ContentStyle>(
     listOf(ContentStyle::blockOrientation.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        this += headBoyTailCS.copy(name = "Demo", headGapPx = 8.0, tailGapPx = 8.0)
+        this += headBodyTailCS.copy(name = "Demo", headGapPx = 8.0, tailGapPx = 8.0)
         this += last().copy(blockOrientation = BlockOrientation.VERTICAL)
     }
 
@@ -67,7 +67,7 @@ object GuideContentStyleSpineAttachmentDemo : StyleSettingsDemo<ContentStyle>(
     listOf(ContentStyle::spineAttachment.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        val baseStyle = headBoyTailCS.copy(name = "Demo", headGapPx = 24.0, tailGapPx = 24.0)
+        val baseStyle = headBodyTailCS.copy(name = "Demo", headGapPx = 24.0, tailGapPx = 24.0)
         for (att in SpineAttachment.entries)
             this += baseStyle.copy(spineAttachment = att)
     }
@@ -381,7 +381,7 @@ object GuideContentStyleHeadLeaderMarginAndSpacingDemo : StyleSettingsDemo<Conte
 }
 
 
-private val headBoyTailCS = PRESET_CONTENT_STYLE.copy(
+private val headBodyTailCS = PRESET_CONTENT_STYLE.copy(
     blockOrientation = BlockOrientation.HORIZONTAL, bodyLetterStyleName = "Name",
     hasHead = true, headLetterStyleName = "Small",
     hasTail = true, tailLetterStyleName = "Small",

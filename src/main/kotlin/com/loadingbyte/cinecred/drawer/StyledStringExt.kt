@@ -13,39 +13,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-fun StyledString.substring(startIdx: Int, endIdx: Int): StyledString {
-    if (startIdx >= endIdx)
-        return emptyList()
-    val result = mutableListOf<Pair<String, LetterStyle>>()
-    forEachRun { _, run, style, runStartIdx, runEndIdx ->
-        // Only look at the current run if the target region has already started.
-        if (startIdx < runEndIdx) {
-            var subrunStartIdx = 0
-            var subrunEndIdx = run.length
-            // If the target region's start index is inside the current run, cut off the unwanted start of the run.
-            if (startIdx in runStartIdx..runEndIdx)
-                subrunStartIdx = startIdx - runStartIdx
-            // If the target region's end index is inside the current run, cut off the unwanted end of the run.
-            if (endIdx in runStartIdx..runEndIdx)
-                subrunEndIdx = endIdx - runStartIdx
-            result.add(Pair(run.substring(subrunStartIdx, subrunEndIdx), style))
-            // If this is the last run inside the target region, we are finished.
-            if (endIdx <= runEndIdx)
-                return result
-        }
-    }
-    return result
-}
-
-
-fun StyledString.trim(): StyledString {
-    val joined = joinToString("") { it.first }
-    val startIdx = joined.indexOfFirst { !it.isWhitespace() }
-    val endIdx = joined.indexOfLast { !it.isWhitespace() } + 1
-    return if (startIdx == 0 && endIdx == joined.length) this else substring(startIdx, endIdx)
-}
-
-
 /**
  * Converts styled strings to formatted strings. As the conversion can be quite expensive and to leverage the
  * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this

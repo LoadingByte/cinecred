@@ -111,7 +111,7 @@ private fun drawHorizontalBlocks(
             blockImage.drawString(fmtStr, x, yBaseline)
             // Draw a guide that shows the edges of the head/tail space.
             blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, areaX, 0.0.toY(), areaWidth, blockImageHeight, layer = GUIDES)
-            // Draw an additional guide that shows the edge of the vertical head alignment space.
+            // Draw an additional guide that shows the edge of the vertical head/tail alignment space.
             val extraGuideY = when (vShelve) {
                 AppendageVShelve.FIRST -> drawnBody.lines.first().height.toY()
                 AppendageVShelve.LAST -> blockImageHeight - drawnBody.lines.last().height

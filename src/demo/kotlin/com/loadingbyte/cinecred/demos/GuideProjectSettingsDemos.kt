@@ -142,7 +142,7 @@ private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, u
     val fontRef = FontRef(getBundledFont("Archivo Narrow Bold")!!)
     val letterStyle = PRESET_LETTER_STYLE.copy(font = fontRef, uppercase = uppercase)
     val blocks = texts.map { text ->
-        val styledString = persistentListOf(BodyElement.Str(listOf(Pair(text, letterStyle))))
+        val styledString = persistentListOf(BodyElement.Str(persistentListOf(listOf(Pair(text, letterStyle)))))
         Block(PRESET_CONTENT_STYLE, null, styledString, null, vGap * global.unitVGapPx, Any(), Any(), Any())
     }.toPersistentList()
     val spine = Spine(null, VAnchor.TOP, VAnchor.TOP, 0.0, 0.0, blocks)

@@ -566,7 +566,8 @@ private fun drawBodyImageWithParagraphsBodyLayout(
     for (bodyElem in block.body) {
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
-            for (fmtStr in bodyElem.str.formatted(textCtx).split(LINE_DELIMITERS)) {
+            for (str in bodyElem.lines) {
+                val fmtStr = str.formatted(textCtx)
                 val lineBreaks = fmtStr.breakLines(bodyImageWidth)
                 for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
                     // Note: If the line contains only whitespace, this skips to the next line.
@@ -711,7 +712,7 @@ private inline fun <T> matchExtent(
 
 private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
     is BodyElement.Nil -> 0.0
-    is BodyElement.Str -> str.formatted(textCtx).width
+    is BodyElement.Str -> lines.first().formatted(textCtx).width
     is BodyElement.Pic -> pic.width
     is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.width
@@ -719,7 +720,7 @@ private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
 
 private fun BodyElement.getHeight(textCtx: TextContext): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
-    is BodyElement.Str -> str.formatted(textCtx).height
+    is BodyElement.Str -> lines.first().formatted(textCtx).height
     is BodyElement.Pic -> pic.height
     is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.height
@@ -748,7 +749,7 @@ private class LineGauge(
         for (bodyElem in line)
             if (bodyElem is BodyElement.Str) {
                 hasStr = true
-                val fmtStr = bodyElem.str.formatted(textCtx)
+                val fmtStr = bodyElem.lines.first().formatted(textCtx)
                 aboveBaseline = max(aboveBaseline, fmtStr.heightAboveBaseline)
                 belowBaseline = max(belowBaseline, fmtStr.heightBelowBaseline)
             } else
@@ -762,7 +763,7 @@ private class LineGauge(
         when (bodyElem) {
             is BodyElement.Nil -> {}
             is BodyElement.Str ->
-                defImage.drawString(bodyElem.str.formatted(textCtx), x, lineY + yBaseline!!)
+                defImage.drawString(bodyElem.lines.first().formatted(textCtx), x, lineY + yBaseline!!)
             is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {
                 val y = lineY + justify(vJustify, height, bodyElem.getHeight(textCtx))
                 when (bodyElem) {

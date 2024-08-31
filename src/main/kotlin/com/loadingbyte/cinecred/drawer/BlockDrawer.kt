@@ -64,10 +64,10 @@ private fun drawHorizontalBlocks(
 
     // Determine the groups of blocks which should share the same head/tail width, and of course also find those widths.
     val sharedHeadWidths = matchWidth(blocks, matchHeadWidthPartitionIds, Block::matchHeadPartitionId) { group ->
-        group.maxOf { block -> if (block.head == null) 0.0 else block.head.formatted(textCtx).width }
+        group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(textCtx).width }
     }
     val sharedTailWidths = matchWidth(blocks, matchTailWidthPartitionIds, Block::matchTailPartitionId) { group ->
-        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.formatted(textCtx).width }
+        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(textCtx).width }
     }
 
     // Draw a deferred image for each block.
@@ -102,10 +102,10 @@ private fun drawHorizontalBlocks(
             }
 
         fun drawHeadTail(
-            str: StyledString, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
+            strLines: List<StyledString>, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
             areaX: Double, areaWidth: Double
         ): DoubleArray {
-            val fmtStr = str.formatted(textCtx)
+            val fmtStr = strLines.first().formatted(textCtx)
             val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
             val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
             blockImage.drawString(fmtStr, x, yBaseline)
@@ -247,13 +247,13 @@ private fun resolveWidth(
     block: Block,
     force: Opt<Double>,
     shared: Map<Block, Double>,
-    str: StyledString?
+    strLines: List<StyledString>?
 ): Double {
     if (force.isActive)
         return force.value
     shared[block]?.let { return it }
-    if (str != null)
-        return str.formatted(textCtx).width
+    if (strLines != null)
+        return strLines.first().formatted(textCtx).width
     return 0.0
 }
 
@@ -273,8 +273,9 @@ private fun drawVerticalBlock(
     val blockImage = DeferredImage(blockImageWidth)
     var y = 0.0.toY()
 
-    fun drawHeadTailLines(str: StyledString, hJustify: HJustify) {
-        for (fmtStr in str.formatted(textCtx).split(LINE_DELIMITERS)) {
+    fun drawHeadTailLines(strLines: List<StyledString>, hJustify: HJustify) {
+        for (str in strLines) {
+            val fmtStr = str.formatted(textCtx)
             val lineH = fmtStr.height
             val yBaseline = y + fmtStr.heightAboveBaseline
             blockImage.drawString(fmtStr, justify(hJustify, blockImageWidth, fmtStr.width), yBaseline)

@@ -66,9 +66,9 @@ enum class VAnchor { TOP, MIDDLE, BOTTOM }
 
 class Block(
     val style: ContentStyle,
-    val head: StyledString?,
+    val head: PersistentList<StyledString>?,
     val body: PersistentList<BodyElement>,
-    val tail: StyledString?,
+    val tail: PersistentList<StyledString>?,
     val vGapAfterPx: Double,
     val matchHeadPartitionId: PartitionId,
     val matchBodyPartitionId: PartitionId,
@@ -82,7 +82,7 @@ typealias PartitionId = Any
 
 sealed interface BodyElement {
     class Nil(val sty: LetterStyle) : BodyElement
-    class Str(val str: StyledString) : BodyElement
+    class Str(val lines: PersistentList<StyledString>) : BodyElement
     class Pic(val pic: Picture.Embedded) : BodyElement
     class Tap(val emb: Tape.Embedded) : BodyElement
     object Mis : BodyElement

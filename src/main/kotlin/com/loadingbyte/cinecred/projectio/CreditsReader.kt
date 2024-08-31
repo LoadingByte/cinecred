@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.text.DecimalFormat
@@ -150,9 +151,9 @@ private class CreditsReader(
 
     // Current block
     var blockStyle: ContentStyle? = null
-    var blockHead: StyledString? = null
+    var blockHead: PersistentList<StyledString>? = null
     val blockBody = mutableListOf<BodyElement>()
-    var blockTail: StyledString? = null
+    var blockTail: PersistentList<StyledString>? = null
     var blockMatchHeadPartitionId = 0
     var blockMatchBodyPartitionId = 0
     var blockMatchTailPartitionId = 0
@@ -539,11 +540,13 @@ private class CreditsReader(
         }
 
         // Get the body element, which may either be a styled string or a picture or tape.
-        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName)
+        val bodyOnly1Line = contentStyle?.bodyLayout != BodyLayout.PARAGRAPHS
+        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName, bodyOnly1Line)
 
         // Get the head and tail, which may only be styled strings.
-        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, onlyS = true) as BodyElement.Str?)?.str
-        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, onlyS = true) as BodyElement.Str?)?.str
+        val ht1L = contentStyle?.blockOrientation != BlockOrientation.VERTICAL
+        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, ht1L, true) as BodyElement.Str?)?.lines
+        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, ht1L, true) as BodyElement.Str?)?.lines
 
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
@@ -645,7 +648,9 @@ private class CreditsReader(
             isBlockConclusionMarked = true
     }
 
-    fun getBodyElement(l10nColName: String, initLetterStyleName: String?, onlyS: Boolean = false): BodyElement? {
+    fun getBodyElement(
+        l10nColName: String, initLetterStyleName: String?, only1Line: Boolean, onlyStr: Boolean = false
+    ): BodyElement? {
         fun unavailableLetterStyleMsg(name: String) =
             l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString())
 
@@ -658,7 +663,7 @@ private class CreditsReader(
         val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: PLACEHOLDER_LETTER_STYLE
 
         var curLetterStyle: LetterStyle? = null
-        val styledStr = mutableListOf<Pair<String, LetterStyle>>()
+        val styledLines = mutableListOf(mutableListOf<Pair<String, LetterStyle>>())
         var blankTagKey: String? = null
         var multipleBlanks = false
         var pictureOrVideoTagKey: String? = null
@@ -668,12 +673,18 @@ private class CreditsReader(
         parseTaggedString(str) { plain, tagKey, tagVal ->
             when {
                 // When we encounter plaintext, add it to the styled string list using the current letter style.
-                plain != null -> styledStr.add(Pair(plain, curLetterStyle ?: initLetterStyle))
+                // If it contains line delimiters, terminate the current line and commence new ones.
+                plain != null ->
+                    for ((l, plainLine) in plain.split("\n", "\r\n").filterNot(String::isBlank).withIndex()) {
+                        if (l != 0)
+                            styledLines.add(mutableListOf())
+                        styledLines.last().add(Pair(plainLine, curLetterStyle ?: initLetterStyle))
+                    }
                 tagKey != null -> when (tagKey) {
                     // When we encounter a blank tag, remember it.
                     // We can't immediately return because we want to issue a warning if the blank tag is not lone.
                     in BLANK_KW -> when {
-                        onlyS -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        onlyStr -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
                         else -> when (blankTagKey) {
                             null -> blankTagKey = tagKey
                             else -> multipleBlanks = true
@@ -693,7 +704,7 @@ private class CreditsReader(
                     // When we encounter a picture or video tag, read it and remember the loaded picture/tape for now.
                     // We can't immediately return because we want to issue a warning if the tag is not lone.
                     in PIC_KW, in VIDEO_KW -> when {
-                        onlyS -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        onlyStr -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
                         else -> when (pictureOrVideoTagKey) {
                             null -> {
                                 pictureOrVideoTagKey = tagKey
@@ -715,24 +726,28 @@ private class CreditsReader(
         embeddedPic?.let { if (it.width > maxW) embeddedPic = it.withWidthPreservingAspectRatio(maxW.toDouble()) }
         embeddedTape?.let { if (it.resolution.widthPx > maxW) embeddedTape = it.withWidthPreservingAspectRatio(maxW) }
 
-        val isStyledStringBlank = styledStr.all { (run, _) -> run.isBlank() }
+        val hasPlaintext = styledLines[0].isNotEmpty()
         return when {
             blankTagKey != null -> {
-                if (!isStyledStringBlank || curLetterStyle != null || multipleBlanks || pictureOrVideoTagKey != null)
+                if (hasPlaintext || curLetterStyle != null || multipleBlanks || pictureOrVideoTagKey != null)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", blankTagKey))
                 BodyElement.Nil(initLetterStyle)
             }
             pictureOrVideoTagKey != null -> {
-                if (!isStyledStringBlank || curLetterStyle != null || multiplePicturesOrVideos)
+                if (hasPlaintext || curLetterStyle != null || multiplePicturesOrVideos)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureOrVideoTagKey))
                 embeddedPic?.let(BodyElement::Pic)
                     ?: embeddedTape?.let(BodyElement::Tap)
                     ?: BodyElement.Mis
             }
-            !isStyledStringBlank -> BodyElement.Str(styledStr)
+            hasPlaintext -> {
+                if (only1Line && styledLines.size != 1)
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.linebreakUnsupported"))
+                BodyElement.Str(styledLines.toPersistentList())
+            }
             else -> {
                 table.log(row, l10nColName, WARN, l10n("projectIO.credits.effectivelyEmpty"))
-                BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
+                BodyElement.Str(persistentListOf(listOf(Pair("???", PLACEHOLDER_LETTER_STYLE))))
             }
         }
     }

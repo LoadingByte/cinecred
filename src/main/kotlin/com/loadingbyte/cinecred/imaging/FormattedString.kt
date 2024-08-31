@@ -38,18 +38,6 @@ class FormattedString private constructor(
         return if (startIdx == -1) null else sub(startIdx, endIdx)
     }
 
-    fun split(delimiters: List<String>): List<FormattedString> {
-        val result = mutableListOf<FormattedString>()
-        var idx1 = 0
-        while (true) {
-            val (idx2, del) = string.findAnyOf(delimiters, idx1) ?: break
-            sub(idx1, idx2)?.let(result::add)
-            idx1 = idx2 + del.length
-        }
-        sub(idx1, string.length)?.let(result::add)
-        return result
-    }
-
     /**
      * Fully justifies the formatted string to exactly fit the provided [width].
      */

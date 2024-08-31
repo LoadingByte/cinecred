@@ -31,11 +31,11 @@ fun extractStyling(global: Global, page: Page): Styling {
                     for (elem in block.body)
                         when (elem) {
                             is BodyElement.Nil -> letterStyles.add(elem.sty)
-                            is BodyElement.Str -> elem.str.forEach { (_, style) -> letterStyles.add(style) }
+                            is BodyElement.Str -> for (str in elem.lines) for ((_, sty) in str) letterStyles.add(sty)
                             is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
                         }
-                    block.head?.forEach { (_, style) -> letterStyles.add(style) }
-                    block.tail?.forEach { (_, style) -> letterStyles.add(style) }
+                    for (str in block.head.orEmpty()) for ((_, style) in str) letterStyles.add(style)
+                    for (str in block.tail.orEmpty()) for ((_, style) in str) letterStyles.add(style)
                 }
     }
     return Styling(

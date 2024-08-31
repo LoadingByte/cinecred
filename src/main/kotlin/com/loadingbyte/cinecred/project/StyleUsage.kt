@@ -35,16 +35,14 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
                         // Add the block's content style.
                         usedStyles.add(block.style)
                         // Add the head's letter styles.
-                        for ((_, letterStyle) in block.head.orEmpty())
-                            usedStyles.add(letterStyle)
+                        for (str in block.head.orEmpty()) for ((_, letterStyle) in str) usedStyles.add(letterStyle)
                         // Add the tail's letter styles.
-                        for ((_, letterStyle) in block.tail.orEmpty())
-                            usedStyles.add(letterStyle)
+                        for (str in block.tail.orEmpty()) for ((_, letterStyle) in str) usedStyles.add(letterStyle)
                         // Add the body's letter styles.
                         for (bodyElem in block.body)
                             when (bodyElem) {
                                 is BodyElement.Nil -> usedStyles.add(bodyElem.sty)
-                                is BodyElement.Str -> for ((_, letSty) in bodyElem.str) usedStyles.add(letSty)
+                                is BodyElement.Str -> for (str in bodyElem.lines) for ((_, l) in str) usedStyles.add(l)
                                 is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
                             }
                     }

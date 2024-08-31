@@ -30,7 +30,7 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
 private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
     ResolutionConstr(ERROR, Global::resolution.st()),
     FPSConstr(ERROR, Global::fps.st()),
-    DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, _, global ->
+    DynChoiceConstr(ERROR, Global::timecodeFormat.st()) { _, global ->
         global.fps.canonicalTimecodeFormats
     },
     IntConstr(ERROR, Global::runtimeFrames.st(), min = 1),
@@ -40,16 +40,16 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
 
 
 private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
         styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
     IntConstr(ERROR, PageStyle::cardRuntimeFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
     DoubleConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0.0, minInclusive = false),
-    JudgeConstr(INFO, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, _, sty ->
-        val value = sty.scrollPxPerFrame
+    JudgeConstr(INFO, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
+        val value = style.scrollPxPerFrame
         floor(value) == value
     },
     IntConstr(ERROR, PageStyle::scrollRuntimeFrames.st(), min = 1)
@@ -57,11 +57,11 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
 
 
 private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
         styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, _, style ->
+    DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, style ->
         when (style.blockOrientation) {
             VERTICAL -> EnumSet.of(BODY_LEFT, BODY_CENTER, BODY_RIGHT)
             HORIZONTAL -> when {
@@ -91,9 +91,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         ContentStyle::headLetterStyleName.st(), ContentStyle::headLeaderLetterStyleName.st(),
         ContentStyle::tailLetterStyleName.st(), ContentStyle::tailLeaderLetterStyleName.st(),
         styleClass = LetterStyle::class.java,
-        choices = { _, styling, _ -> styling.letterStyles }
+        choices = { styling, _ -> styling.letterStyles }
     ),
-    DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, _, style ->
+    DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, style ->
         val forceColWidth = style.gridForceColWidthPx.isActive
         when {
             forceColWidth && style.gridForceRowHeightPx.isActive -> EnumSet.of(FREE)
@@ -106,20 +106,20 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchColWidthsAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchColWidths == ACROSS_BLOCKS
             }
         }
     ),
-    DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, _, style ->
+    DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, style ->
         if (style.gridStructure == SQUARE_CELLS) EnumSet.of(OFF, ACROSS_BLOCKS)
         else EnumSet.allOf(MatchExtent::class.java)
     },
     StyleNameConstr(
         ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchRowHeight == ACROSS_BLOCKS
             }
@@ -130,14 +130,14 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellHeightPx.st(), min = 0.0),
-    DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, _, sty ->
-        if (sty.flowSquareCells) EnumSet.of(OFF, ACROSS_BLOCKS)
+    DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, style ->
+        if (style.flowSquareCells) EnumSet.of(OFF, ACROSS_BLOCKS)
         else EnumSet.allOf(MatchExtent::class.java)
     },
     StyleNameConstr(
         ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.bodyLayout == FLOW && !o.flowForceCellWidthPx.isActive && o.flowMatchCellWidth == ACROSS_BLOCKS
             }
@@ -146,7 +146,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     StyleNameConstr(
         ERROR, ContentStyle::flowMatchCellHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.bodyLayout == FLOW && !o.flowForceCellHeightPx.isActive && o.flowMatchCellHeight == ACROSS_BLOCKS
             }
@@ -162,7 +162,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     StyleNameConstr(
         ERROR, ContentStyle::headMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.blockOrientation == HORIZONTAL && !o.headForceWidthPx.isActive && o.headMatchWidth == ACROSS_BLOCKS
             }
@@ -176,7 +176,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     StyleNameConstr(
         ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
-        choices = { _, styling, _ ->
+        choices = { styling, _ ->
             styling.contentStyles.filter { o ->
                 o.blockOrientation == HORIZONTAL && !o.tailForceWidthPx.isActive && o.tailMatchWidth == ACROSS_BLOCKS
             }
@@ -190,21 +190,21 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
 
 
 private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
-    JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, _, style -> style.name.isNotBlank() },
-    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
         styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
     },
-    FontNameConstr(WARN, LetterStyle::fontName.st()),
+    FontConstr(WARN, LetterStyle::font.st()),
     DoubleConstr(ERROR, LetterStyle::heightPx.st(), min = 1.0),
     JudgeConstr(
         WARN, msg("project.styling.constr.excessiveLeading"),
         LetterStyle::heightPx.st(), LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st()
-    ) { _, _, style ->
+    ) { _, style ->
         // The formula is written this way to exactly match the computation in StyledStringExt.
         style.heightPx - style.leadingTopRh * style.heightPx - style.leadingBottomRh * style.heightPx >= 1.0
     },
-    JudgeConstr(INFO, msg("project.styling.constr.fakeSmallCaps"), LetterStyle::smallCaps.st()) { ctx, _, style ->
-        val font = ctx.resolveFont(style.fontName) ?: return@JudgeConstr true
+    JudgeConstr(INFO, msg("project.styling.constr.fakeSmallCaps"), LetterStyle::smallCaps.st()) { _, style ->
+        val font = style.font.font ?: return@JudgeConstr true
         when (style.smallCaps) {
             SmallCaps.OFF -> true
             SmallCaps.SMALL_CAPS -> SMALL_CAPS_FONT_FEAT in font.getSupportedFeatures()
@@ -212,14 +212,14 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         }
     },
     DoubleConstr(ERROR, LetterStyle::superscriptScaling.st(), min = 0.0, minInclusive = false),
-    FontFeatureConstr(WARN, LetterStyle::features.st()) { ctx, _, style ->
-        val font = ctx.resolveFont(style.fontName) ?: return@FontFeatureConstr Collections.emptySortedSet()
+    FontFeatureConstr(WARN, LetterStyle::features.st()) { _, style ->
+        val font = style.font.font ?: return@FontFeatureConstr Collections.emptySortedSet()
         TreeSet(font.getSupportedFeatures()).apply { removeAll(MANAGED_FONT_FEATS) }
     },
     StyleNameConstr(
         WARN, LetterStyle::inheritLayersFromStyle.st(),
         styleClass = LetterStyle::class.java,
-        choices = { _, styling, _ -> styling.letterStyles.filter { o -> !o.inheritLayersFromStyle.isActive } }
+        choices = { styling, _ -> styling.letterStyles.filter { o -> !o.inheritLayersFromStyle.isActive } }
     ),
     // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
     DoubleConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5, max = 10.0, maxInclusive = false)
@@ -232,7 +232,7 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     JudgeConstr(
         WARN, msg("project.styling.constr.unusedHiddenLayer"),
         Layer::coloring.st(), Layer::color1.st(), Layer::color2.st()
-    ) { _, styling, style ->
+    ) { styling, style ->
         val visible = when (style.coloring) {
             LayerColoring.OFF -> false
             LayerColoring.PLAIN -> style.color1.a != 0f
@@ -251,32 +251,32 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     DoubleConstr(ERROR, Layer::stripeHeightRfh.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, Layer::stripeCornerRadiusRfh.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, Layer::stripeDashPatternRfh.st(), min = 0.0, minInclusive = false),
-    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::cloneLayers.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::cloneLayers.st()) { styling, style ->
         if (style.shape != LayerShape.CLONE || style.cloneLayers.isEmpty())
             return@JudgeConstr true
         val layers = (styling.getParentStyle(style) as LetterStyle).layers
         !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
     },
-    SiblingOrdinalConstr(ERROR, Layer::cloneLayers.st()) { _, _, _, styleOrdinal, _, siblingOrdinal ->
+    SiblingOrdinalConstr(ERROR, Layer::cloneLayers.st()) { _, _, styleOrdinal, _, siblingOrdinal ->
         siblingOrdinal != styleOrdinal
     },
     MinSizeConstr(WARN, Layer::cloneLayers.st(), minSize = 1),
     DoubleConstr(ERROR, Layer::dilationRfh.st(), min = 0.0),
     DoubleConstr(ERROR, Layer::contourThicknessRfh.st(), min = 0.0, minInclusive = false),
-    DynChoiceConstr(WARN, Layer::anchor.st()) { _, _, style ->
+    DynChoiceConstr(WARN, Layer::anchor.st()) { _, style ->
         if (style.shape == LayerShape.CLONE && style.cloneLayers.size >= 2) EnumSet.allOf(LayerAnchor::class.java)
         else EnumSet.of(LayerAnchor.INDIVIDUAL, LayerAnchor.GLOBAL)
     },
-    SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, _, style, _, sibling, siblingOrdinal ->
+    SiblingOrdinalConstr(WARN, Layer::anchorSiblingLayer.st()) { _, style, _, sibling, siblingOrdinal ->
         siblingOrdinal in style.cloneLayers && sibling.shape != LayerShape.CLONE
     },
-    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::clearingLayers.st()) { _, styling, style ->
+    JudgeConstr(WARN, msg("project.styling.constr.cycleBackToSelf"), Layer::clearingLayers.st()) { styling, style ->
         if (style.clearingLayers.isEmpty())
             return@JudgeConstr true
         val layers = (styling.getParentStyle(style) as LetterStyle).layers
         !canWalkBackToSelf(layers, layers.indexOfFirst { it === style })
     },
-    SiblingOrdinalConstr(ERROR, Layer::clearingLayers.st()) { _, _, _, styleOrdinal, _, siblingOrdinal ->
+    SiblingOrdinalConstr(ERROR, Layer::clearingLayers.st()) { _, _, styleOrdinal, _, siblingOrdinal ->
         siblingOrdinal != styleOrdinal
     },
     DoubleConstr(ERROR, Layer::clearingRfh.st(), min = 0.0),
@@ -284,7 +284,7 @@ private val LAYER_CONSTRAINTS: List<StyleConstraint<Layer, *>> = listOf(
     JudgeConstr(
         ERROR, msg("project.styling.constr.excessiveBlurRadius", BLUR_RADIUS_LIMIT),
         Layer::blurRadiusRfh.st()
-    ) { _, styling, style ->
+    ) { styling, style ->
         val letterStyle = styling.getParentStyle(style) as LetterStyle
         val fontHeightPx = letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
         style.blurRadiusRfh * fontHeightPx <= BLUR_RADIUS_LIMIT
@@ -351,7 +351,7 @@ class FixedChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
 class DynChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
-    val choices: (StylingContext, Styling, S) -> EnumSet<SUBJ>
+    val choices: (Styling, S) -> EnumSet<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 
@@ -360,7 +360,7 @@ class StyleNameConstr<S : Style, R : ListedStyle>(
     vararg settings: StyleSetting<S, String>,
     val styleClass: Class<R>,
     val clustering: Boolean = false,
-    val choices: (StylingContext, Styling, S) -> List<R>
+    val choices: (Styling, S) -> List<R>
 ) : StyleConstraint<S, StyleSetting<S, String>>(*settings) {
     init {
         // This is due to limitations in our current implementation of StylingConsistency and StyleUsage.
@@ -388,16 +388,16 @@ class FPSConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, FPS>>(setting)
 
 
-class FontNameConstr<S : Style>(
+class FontConstr<S : Style>(
     val severity: Severity,
-    setting: StyleSetting<S, String>
-) : StyleConstraint<S, StyleSetting<S, String>>(setting)
+    setting: StyleSetting<S, FontRef>
+) : StyleConstraint<S, StyleSetting<S, FontRef>>(setting)
 
 
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
-    val getAvailableTags: (StylingContext, Styling, S) -> SequencedSet<String>
+    val getAvailableTags: (Styling, S) -> SequencedSet<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 
@@ -405,7 +405,7 @@ class JudgeConstr<S : Style>(
     val severity: Severity,
     val getMsg: () -> String,
     vararg settings: StyleSetting<S, Any>,
-    val judge: (StylingContext, Styling, S) -> Boolean
+    val judge: (Styling, S) -> Boolean
 ) : StyleConstraint<S, StyleSetting<S, Any>>(*settings)
 
 
@@ -419,7 +419,7 @@ class MinSizeConstr<S : Style>(
 class SiblingOrdinalConstr<S : NestedStyle>(
     val severity: Severity,
     setting: StyleSetting<S, Int>,
-    val permitSibling: (StylingContext, Styling, S, Int, S, Int) -> Boolean
+    val permitSibling: (Styling, S, Int, S, Int) -> Boolean
 ) : StyleConstraint<S, StyleSetting<S, Int>>(setting)
 
 
@@ -433,7 +433,7 @@ class ConstraintViolation(
     val msg: String?
 )
 
-fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintViolation> {
+fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
     val violations = mutableListOf<ConstraintViolation>()
 
     fun log(
@@ -444,7 +444,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
     }
 
     fun <S : Style> verifyStyle(rootStyle: Style, style: S, styleIdx: Int = 0, siblings: List<S> = emptyList()) {
-        val ignoreSettings = findIneffectiveSettings(ctx, styling, style).keys
+        val ignoreSettings = findIneffectiveSettings(styling, style).keys
 
         for (cst in getStyleConstraints(style.javaClass))
             when (cst) {
@@ -478,14 +478,14 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
                     }
                 is DynChoiceConstr<S, *> -> {
-                    val choices = cst.choices(ctx, styling, style)
+                    val choices = cst.choices(styling, style)
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         if (value !in choices)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.choice"))
                     }
                 }
                 is StyleNameConstr<S, *> -> {
-                    val choices = cst.choices(ctx, styling, style)
+                    val choices = cst.choices(styling, style)
                     forEachRelevantSetting(cst, ignoreSettings) { st ->
                         val refs = st.extractSubjects(style)
                         refs.forEachIndexed { idx, ref ->
@@ -545,13 +545,13 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         if (fps.run { numerator <= 0 || denominator <= 0 })
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.fps"))
                     }
-                is FontNameConstr ->
-                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, fontName ->
-                        if (ctx.resolveFont(fontName) == null)
+                is FontConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, fontRef ->
+                        if (fontRef.font == null)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.font"))
                     }
                 is FontFeatureConstr -> {
-                    val availableTags = cst.getAvailableTags(ctx, styling, style)
+                    val availableTags = cst.getAvailableTags(styling, style)
                     forEachRelevantSetting(cst, ignoreSettings) { st ->
                         val remainingTags = HashSet(availableTags)
                         st.extractSubjects(style).forEachIndexed { idx, feat ->
@@ -570,7 +570,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                     }
                 }
                 is JudgeConstr ->
-                    if (!cst.judge(ctx, styling, style))
+                    if (!cst.judge(styling, style))
                         for ((idx, setting) in cst.settings.filter { it !in ignoreSettings }.withIndex())
                             log(rootStyle, style, setting, -1, cst.severity, if (idx == 0) cst.getMsg() else null)
                 is MinSizeConstr ->
@@ -586,7 +586,7 @@ fun verifyConstraints(ctx: StylingContext, styling: Styling): List<ConstraintVio
                         if (ord !in 1..largestOrdinal) {
                             val msg = l10n("project.styling.constr.siblingOrdinalOutOfBounds", largestOrdinal)
                             log(rootStyle, style, st, idx, cst.severity, msg)
-                        } else if (!cst.permitSibling(ctx, styling, style, styleIdx + 1, siblings[ord - 1], ord)) {
+                        } else if (!cst.permitSibling(styling, style, styleIdx + 1, siblings[ord - 1], ord)) {
                             val msg = l10n("project.styling.constr.siblingOrdinalIllegal")
                             log(rootStyle, style, st, idx, cst.severity, msg)
                         }

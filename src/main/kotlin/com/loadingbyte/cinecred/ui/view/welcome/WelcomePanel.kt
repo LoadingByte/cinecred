@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.formdev.flatlaf.FlatClientProperties.*
+import com.loadingbyte.cinecred.common.BUNDLED_FONTS
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.ui.comms.License
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab

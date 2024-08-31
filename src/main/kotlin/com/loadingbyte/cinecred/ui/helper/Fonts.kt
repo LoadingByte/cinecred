@@ -1,8 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
-import com.loadingbyte.cinecred.drawer.SYSTEM_FONTS
 import java.awt.Font
 import java.util.*
 import kotlin.math.abs

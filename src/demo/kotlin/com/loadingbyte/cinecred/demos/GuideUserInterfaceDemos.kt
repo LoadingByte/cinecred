@@ -226,7 +226,7 @@ object GuideUserInterfaceEditDemo : ScreencastDemo(
         sc.click()
         sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::fontName.st(), 0))
+        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::font.st(), 0))
         sc.click()
         sc.mouseTo(styWin.desktopPosOfDropdownItem(BUNDLED_FAMILIES.getFamily("Raleway Regular")))
         sc.click()

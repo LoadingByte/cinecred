@@ -31,7 +31,7 @@ fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
     val pages = credits.pages
     val runtimeGroups = credits.runtimeGroups
 
-    val textCtx = makeTextCtx(styling, project.stylingCtx)
+    val textCtx = makeTextCtx(styling)
 
     // First generate a body and then a block image for each block. This has to be done for all blocks at the same time
     // because heads, bodies, and tails can harmonize various widths and heights between them.

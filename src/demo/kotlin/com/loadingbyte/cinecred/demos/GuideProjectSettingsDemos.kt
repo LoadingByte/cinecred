@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.demos
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
+import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.TEMPLATE_PROJECT
 import com.loadingbyte.cinecred.demo.TEMPLATE_SCROLL_PAGE_FROM_DOP
@@ -138,7 +139,8 @@ object GuideProjectSettingsUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
 
 
 private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, uppercase: Boolean = false): Page {
-    val letterStyle = PRESET_LETTER_STYLE.copy(fontName = "Archivo Narrow Bold", uppercase = uppercase)
+    val fontRef = FontRef(getBundledFont("Archivo Narrow Bold")!!)
+    val letterStyle = PRESET_LETTER_STYLE.copy(font = fontRef, uppercase = uppercase)
     val blocks = texts.map { text ->
         val styledString = persistentListOf(BodyElement.Str(listOf(Pair(text, letterStyle))))
         Block(PRESET_CONTENT_STYLE, null, styledString, null, vGap * global.unitVGapPx, Any(), Any(), Any())

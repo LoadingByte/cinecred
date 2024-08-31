@@ -65,7 +65,7 @@ abstract class StyleSettingsDemo<S : Style>(
             }
         }
         val formAdjuster = StyleFormAdjuster(
-            listOf(form), { BundledFontsStylingContext }, { curStyling }, { curStyle }, {},
+            listOf(form), { curStyling }, { curStyle }, {},
             @Suppress("DEPRECATION")
             object : StyleFormAdjuster.StyleIdxAndSiblingsOverride {
                 override fun <S : Style> getStyleIdxAndSiblings(style: S): Pair<Int, List<S>> =
@@ -141,7 +141,7 @@ abstract class StyleSettingsDemo<S : Style>(
         if (credits != null) {
             val (_, page) = credits
             val creditsObj = Credits("", persListOf(page), persListOf())
-            val project = Project(curStyling, BundledFontsStylingContext, persListOf(creditsObj))
+            val project = Project(curStyling, persListOf(creditsObj))
             val pageDefImage = drawPages(project, creditsObj).single().defImage.copy(universeScaling = pageScaling)
             pageDefImgsAndGroundings.add(Pair(pageDefImage, curStyling.global.grounding))
         }

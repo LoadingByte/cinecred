@@ -15,7 +15,7 @@ import java.util.*
  */
 
 
-fun <S : ListedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): Map<S, S> {
+fun <S : ListedStyle> ensureConsistency(styles: List<S>): Map<S, S> {
     if (styles.isEmpty())
         return emptyMap()
     val updates = IdentityHashMap<S, MutableList<NotarizedStyleSettingValue<S>>>()
@@ -36,7 +36,7 @@ fun <S : ListedStyle> ensureConsistency(ctx: StylingContext, styles: List<S>): M
                 // Note: We use isEffectiveUnsafe() without a Styling object here because such an object is currently
                 // unnecessary for determining the effectivity of any style cluster setting, and not forcing the caller
                 // to provide a Styling object turns out to improve the caller code.
-                styles.none { oStyle -> oStyle.name == styleName && isEffectiveUnsafe(ctx, oStyle, setting) }
+                styles.none { oStyle -> oStyle.name == styleName && isEffectiveUnsafe(oStyle, setting) }
             }
         val persistentClusters = clusters.map { cluster -> cluster.toPersistentList() }
         for (style in styles) {
@@ -65,11 +65,7 @@ fun <S : ListedStyle> ensureConsistencyAfterRemoval(remainingStyles: List<S>, re
 }
 
 
-class StylingConsistencyRetainer<S : ListedStyle>(
-    ctx: StylingContext,
-    styling: Styling,
-    editedStyle: S
-) {
+class StylingConsistencyRetainer<S : ListedStyle>(styling: Styling, editedStyle: S) {
 
     private class TrackedUsage<S2 : ListedStyle>(var style: S2, val settings: List<Setting<S2>>) {
         class Setting<S2 : ListedStyle>(val setting: StyleSetting<S2, String>, val baseItems: TreeSet<String>?)
@@ -90,7 +86,7 @@ class StylingConsistencyRetainer<S : ListedStyle>(
         // For this, record the cluster lists of editedStyle now.
         trackedClusters = buildList {
             forEachStyleClusterSetting(editedStyle.javaClass) { setting, constr ->
-                val isEff = isEffective(ctx, styling, editedStyle, setting)
+                val isEff = isEffective(styling, editedStyle, setting)
                 add(TrackedCluster(setting, constr, isEff, if (isEff) setting.get(editedStyle) else emptyList()))
             }
         }
@@ -98,12 +94,11 @@ class StylingConsistencyRetainer<S : ListedStyle>(
         // We want to keep all other styles which "use" editedStyle in sync with changes to editedStyle's name.
         // For this, record all these usages now.
         trackedUsages = ListedStyle.CLASSES.flatMap { style2Class ->
-            determineTrackedUsages(ctx, styling, editedStyle, style2Class)
+            determineTrackedUsages(styling, editedStyle, style2Class)
         }
     }
 
     private fun <S2 : ListedStyle> determineTrackedUsages(
-        ctx: StylingContext,
         styling: Styling,
         editedStyle: S,
         style2Class: Class<S2>,
@@ -127,7 +122,7 @@ class StylingConsistencyRetainer<S : ListedStyle>(
                     if (editedStyle.name in subjects &&
                         // In case that the edited style's name is not unique, the user expects that the reference
                         // stays in sync with only the used (i.e., the first permissible) of the duplicate styles.
-                        constr.choices(ctx, styling, style2).find { it.name == editedStyle.name } === editedStyle
+                        constr.choices(styling, style2).find { it.name == editedStyle.name } === editedStyle
                     ) {
                         val baseItems = if (setting !is ListStyleSetting) null else
                             TreeSet(subjects).apply { remove(editedStyle.name) }
@@ -141,7 +136,6 @@ class StylingConsistencyRetainer<S : ListedStyle>(
     }
 
     fun ensureConsistencyAfterEdit(
-        ctx: StylingContext,
         styling: Styling,
         editedStyle: S
     ): Map<ListedStyle, ListedStyle> {
@@ -150,7 +144,7 @@ class StylingConsistencyRetainer<S : ListedStyle>(
 
         // Keep style clusters intact.
         for (trackedCluster in trackedClusters)
-            updateTrackedCluster(updates, trackedCluster, ctx, styling, editedStyle)
+            updateTrackedCluster(updates, trackedCluster, styling, editedStyle)
 
         // Keep "usages" of renamed styles intact.
         // It is vital that we run these updates last, as the tracked usages need to memorize the final updated styles.
@@ -165,13 +159,12 @@ class StylingConsistencyRetainer<S : ListedStyle>(
     private fun updateTrackedCluster(
         updates: MutableMap<ListedStyle, ListedStyle>,
         trackedCluster: TrackedCluster,
-        ctx: StylingContext,
         styling: Styling,
         editedStyle: S
     ) {
         val setting = trackedCluster.setting
-        val isEffective = isEffective(ctx, styling, editedStyle, setting)
-        val choices = trackedCluster.constraint.choices(ctx, styling, editedStyle)
+        val isEffective = isEffective(styling, editedStyle, setting)
+        val choices = trackedCluster.constraint.choices(styling, editedStyle)
             .requireIsInstance(editedStyle.javaClass)
 
         if (!isEffective) {

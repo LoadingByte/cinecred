@@ -6,17 +6,16 @@ import java.util.*
 /** Returns a [Set] that compares elements based on identity for better performance. */
 fun findUsedStyles(project: Project): Set<ListedStyle> {
     val usedStyles = Collections.newSetFromMap(IdentityHashMap<ListedStyle, Boolean>())
-    val ctx = project.stylingCtx
     val styling = project.styling
 
     fun <S : Style> processStyle(style: S) {
-        val ignoreSettings = findIneffectiveSettings(ctx, styling, style)
+        val ignoreSettings = findIneffectiveSettings(styling, style)
         for (cst in getStyleConstraints(style.javaClass))
             if (cst is StyleNameConstr<S, *> && !cst.clustering)
                 for (setting in cst.settings)
                     if (setting !in ignoreSettings)
                         for (ref in setting.extractSubjects(style))
-                            cst.choices(ctx, styling, style).find { choice -> choice.name == ref }?.let(usedStyles::add)
+                            cst.choices(styling, style).find { choice -> choice.name == ref }?.let(usedStyles::add)
     }
 
     // Add styles referenced from other styles.

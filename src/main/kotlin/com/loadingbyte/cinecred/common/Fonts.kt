@@ -1,10 +1,6 @@
-package com.loadingbyte.cinecred.drawer
+package com.loadingbyte.cinecred.common
 
 import com.formdev.flatlaf.util.SystemInfo
-import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.isTTFOrOTF
-import com.loadingbyte.cinecred.common.useResourcePath
-import com.loadingbyte.cinecred.common.walkSafely
 import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.nio.file.Path

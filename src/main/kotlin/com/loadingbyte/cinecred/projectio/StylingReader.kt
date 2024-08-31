@@ -1,20 +1,19 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.readToml
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
+import java.awt.Font
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 
 
 /** @throws IOException */
-fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
+fun readStyling(stylingFile: Path, projectFonts: Collection<Font>): Styling {
     val toml = readToml(stylingFile)
 
     val rawStyling = RawStyling(
@@ -24,10 +23,12 @@ fun readStyling(stylingFile: Path, ctx: StylingContext): Styling {
         asMaps(toml["letterStyle"])
     )
 
+    val ctx = StylingReaderContext(projectFonts.associateBy { font -> font.getFontName(Locale.ROOT) })
+
     migrateStyling(ctx, rawStyling)
 
     return Styling(
-        readStyle(rawStyling.global, Global::class.java),
+        readStyle(ctx, rawStyling.global, Global::class.java),
         readStyles(ctx, rawStyling.pageStyles, PageStyle::class.java),
         readStyles(ctx, rawStyling.contentStyles, ContentStyle::class.java),
         readStyles(ctx, rawStyling.letterStyles, LetterStyle::class.java),
@@ -43,6 +44,12 @@ class RawStyling(
 )
 
 
+class StylingReaderContext(private val fontsByName: Map<String, Font>) {
+    fun resolveFont(name: String): Font? =
+        fontsByName[name] ?: getBundledFont(name) ?: getSystemFont(name)
+}
+
+
 @Suppress("UNCHECKED_CAST")
 private fun asMap(map: Any?): MutableMap<String, Any> =
     if (map !is MutableMap<*, *>) mutableMapOf()
@@ -54,20 +61,20 @@ private fun asMaps(mapList: Any?): MutableList<MutableMap<String, Any>> =
 
 
 private fun <S : ListedStyle> readStyles(
-    ctx: StylingContext,
+    ctx: StylingReaderContext,
     maps: List<Map<*, *>>,
     styleClass: Class<S>
 ): PersistentList<S> {
-    val styles = maps.map { readStyle(it, styleClass) }
-    val updates = ensureConsistency(ctx, styles)
+    val styles = maps.map { readStyle(ctx, it, styleClass) }
+    val updates = ensureConsistency(styles)
     return styles.map { style -> updates.getOrDefault(style, style) }.toPersistentList()
 }
 
-private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
+private fun <S : Style> readStyle(ctx: StylingReaderContext, map: Map<*, *>, styleClass: Class<S>): S {
     val notarizedSettingValues = buildList {
         for (setting in getStyleSettings(styleClass))
             try {
-                add(readSetting(setting, map[setting.name]!!))
+                add(readSetting(ctx, setting, map[setting.name]!!))
             } catch (_: RuntimeException) {
                 // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
             }
@@ -76,23 +83,24 @@ private fun <S : Style> readStyle(map: Map<*, *>, styleClass: Class<S>): S {
 }
 
 private fun <S : Style, SUBJ : Any> readSetting(
+    ctx: StylingReaderContext,
     setting: StyleSetting<S, SUBJ>,
     raw: Any
 ): NotarizedStyleSettingValue<S> =
     when (setting) {
         is DirectStyleSetting ->
-            setting.notarize(convert(setting.type, raw))
+            setting.notarize(convert(ctx, setting.type, raw))
         is OptStyleSetting ->
-            setting.notarize(Opt(true, convert(setting.type, raw)))
+            setting.notarize(Opt(true, convert(ctx, setting.type, raw)))
         is ListStyleSetting ->
-            setting.notarize((raw as List<*>).filterNotNull().map { convert(setting.type, it) }.toPersistentList())
+            setting.notarize((raw as List<*>).filterNotNull().map { convert(ctx, setting.type, it) }.toPersistentList())
     }
 
 
 @Suppress("UNCHECKED_CAST")
-private fun <T> convert(type: Class<T>, raw: Any): T = convertUntyped(type, raw) as T
+private fun <T> convert(ctx: StylingReaderContext, type: Class<T>, raw: Any): T = convertUntyped(ctx, type, raw) as T
 
-private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
+private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any): Any = when (type) {
     Int::class.javaPrimitiveType, Int::class.javaObjectType -> (raw as Number).toInt()
     Double::class.javaPrimitiveType, Double::class.javaObjectType -> (raw as Number).toDouble()
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
@@ -101,11 +109,12 @@ private fun convertUntyped(type: Class<*>, raw: Any): Any = when (type) {
     Color4f::class.java -> Color4f((raw as List<*>).filterIsInstance<Number>(), ColorSpace.XYZD50)
     Resolution::class.java -> Resolution.fromString(raw as String)
     FPS::class.java -> FPS.fromString(raw as String)
+    FontRef::class.java -> ctx.resolveFont(raw as String)?.let(::FontRef) ?: FontRef(raw)
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)
         NestedStyle::class.java.isAssignableFrom(type) ->
-            readStyle(raw as Map<*, *>, type.asSubclass(NestedStyle::class.java))
+            readStyle(ctx, raw as Map<*, *>, type.asSubclass(NestedStyle::class.java))
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }

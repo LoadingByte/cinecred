@@ -55,7 +55,6 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // Wire up an adjuster that we can call when various events happen, upon which it will update the StyleForms.
     private val formAdjuster = StyleFormAdjuster(
         listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm),
-        getStylingCtx = ctrl::stylingCtx,
         getCurrentStyling = ::styling,
         getCurrentStyleInActiveForm = { stylingTree.selected as Style? },
         notifyConstraintViolations = ::updateConstraintViolations
@@ -203,7 +202,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             return
         val newName = "${style.name} (${l10n("ui.styling.copiedStyleNameSuffix")})"
         var copiedStyle = style.copy(ListedStyle::name.st().notarize(newName))
-        val updates = ensureConsistency(ctrl.stylingCtx, stylingTree.getList(style.javaClass) + copiedStyle)
+        val updates = ensureConsistency(stylingTree.getList(style.javaClass) + copiedStyle)
         for ((oldStyle, newStyle) in updates)
             if (oldStyle === copiedStyle) copiedStyle = newStyle else stylingTree.updateListElement(oldStyle, newStyle)
         addAndSelectStyle(copiedStyle)
@@ -260,7 +259,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
     private fun <S : ListedStyle> openListedStyle(style: S, form: StyleForm<S>, cardName: String) {
-        val consistencyRetainer = StylingConsistencyRetainer(ctrl.stylingCtx, styling!!, style)
+        val consistencyRetainer = StylingConsistencyRetainer(styling!!, style)
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             var newStyle = form.save()
@@ -273,7 +272,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             }
             stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
             val newStyling = buildStyling()
-            val updates = consistencyRetainer.ensureConsistencyAfterEdit(ctrl.stylingCtx, newStyling, newStyle)
+            val updates = consistencyRetainer.ensureConsistencyAfterEdit(newStyling, newStyle)
             if (updates.isEmpty()) {
                 // Take a shortcut to avoid generating the Styling object a second time.
                 onChange(widget, newStyling)

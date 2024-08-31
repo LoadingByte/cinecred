@@ -206,7 +206,6 @@ class StyleForm<S : Style>(
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
-        val fontNameConstr = settingConstraints.oneOf<FontNameConstr<S>>()
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
@@ -257,7 +256,6 @@ class StyleForm<S : Style>(
                         items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
                         widthSpec = widthSpec
                     )
-                fontNameConstr != null -> FontChooserWidget(widthSpec)
                 else -> TextWidget(widthSpec)
             }
             Locale::class.java -> InconsistentComboBoxWidget(
@@ -268,6 +266,7 @@ class StyleForm<S : Style>(
             Color4f::class.java -> ColorWellWidget(allowAlpha = colorConstr?.allowAlpha ?: true, widthSpec = widthSpec)
             Resolution::class.java -> ResolutionWidget()
             FPS::class.java -> FPSWidget(widthSpec)
+            FontRef::class.java -> FontChooserWidget(widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {

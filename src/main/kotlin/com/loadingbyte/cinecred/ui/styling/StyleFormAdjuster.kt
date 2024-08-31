@@ -10,7 +10,6 @@ import javax.swing.Icon
 
 class StyleFormAdjuster(
     private val forms: List<StyleForm<*>>,
-    private val getStylingCtx: () -> StylingContext,
     private val getCurrentStyling: () -> Styling?,
     private val getCurrentStyleInActiveForm: () -> Style?,
     private val notifyConstraintViolations: (List<ConstraintViolation>) -> Unit,
@@ -61,7 +60,7 @@ class StyleFormAdjuster(
     }
 
     private fun refreshConstraintViolations() {
-        constraintViolations = verifyConstraints(getStylingCtx(), getCurrentStyling() ?: return)
+        constraintViolations = verifyConstraints(getCurrentStyling() ?: return)
         notifyConstraintViolations(constraintViolations)
     }
 
@@ -101,7 +100,7 @@ class StyleFormAdjuster(
             siblingStyles = pair.second
         }
 
-        curForm.ineffectiveSettings = findIneffectiveSettings(getStylingCtx(), styling, curStyle)
+        curForm.ineffectiveSettings = findIneffectiveSettings(styling, curStyle)
 
         curForm.clearIssues()
         for (violation in constraintViolations)
@@ -114,12 +113,12 @@ class StyleFormAdjuster(
 
         for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
             is DynChoiceConstr<S, *> -> {
-                val choices = constr.choices(getStylingCtx(), styling, curStyle).toList()
+                val choices = constr.choices(styling, curStyle).toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)
             }
             is StyleNameConstr<S, *> -> {
-                val choiceSet = constr.choices(getStylingCtx(), styling, curStyle).mapTo(TreeSet(), ListedStyle::name)
+                val choiceSet = constr.choices(styling, curStyle).mapTo(TreeSet(), ListedStyle::name)
                 if (constr.clustering)
                     choiceSet.remove((curStyle as ListedStyle).name)
                 val choices = choiceSet.toList()
@@ -127,14 +126,14 @@ class StyleFormAdjuster(
                     curForm.setChoices(setting, choices)
             }
             is FontFeatureConstr -> {
-                val availableTags = constr.getAvailableTags(getStylingCtx(), styling, curStyle).toList()
+                val availableTags = constr.getAvailableTags(styling, curStyle).toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
             }
             is SiblingOrdinalConstr -> {
                 val choices = LinkedHashMap<Int, String>()  // retains insertion order
                 for ((idx, sibling) in siblingStyles.withIndex())
-                    if (constr.permitSibling(getStylingCtx(), styling, curStyle, curStyleIdx + 1, sibling, idx + 1))
+                    if (constr.permitSibling(styling, curStyle, curStyleIdx + 1, sibling, idx + 1))
                         choices[idx + 1] = if (sibling is NamedStyle) sibling.name else ""
                 val toString = SiblingOrdinalToString(choices)
                 for (setting in constr.settings) {
@@ -148,7 +147,7 @@ class StyleFormAdjuster(
         for (spec in getStyleWidgetSpecs(curStyle.javaClass)) when (spec) {
             is ToggleButtonGroupWidgetSpec<S, *> -> {
                 fun <SUBJ : Any> makeToIcon(spec: ToggleButtonGroupWidgetSpec<S, SUBJ>): ((SUBJ) -> Icon)? =
-                    spec.getDynIcon?.let { return fun(item: SUBJ) = it(getStylingCtx(), styling, curStyle, item) }
+                    spec.getDynIcon?.let { return fun(item: SUBJ) = it(styling, curStyle, item) }
 
                 val toIcon = makeToIcon(spec)
                 if (toIcon != null)
@@ -156,13 +155,13 @@ class StyleFormAdjuster(
                         curForm.setToIconFun(setting, toIcon)
             }
             is MultiplierWidgetSpec -> {
-                val multiplier = spec.getMultiplier(getStylingCtx(), styling, curStyle)
+                val multiplier = spec.getMultiplier(styling, curStyle)
                 for (setting in spec.settings)
                     curForm.setMultiplier(setting, multiplier)
             }
             is TimecodeWidgetSpec -> {
-                val fps = spec.getFPS(getStylingCtx(), styling, curStyle)
-                val timecodeFormat = spec.getTimecodeFormat(getStylingCtx(), styling, curStyle)
+                val fps = spec.getFPS(styling, curStyle)
+                val timecodeFormat = spec.getTimecodeFormat(styling, curStyle)
                 for (setting in spec.settings)
                     curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }

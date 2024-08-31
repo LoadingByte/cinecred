@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.drawer.getBundledFont
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
@@ -58,11 +57,6 @@ inline fun <R> withDemoProjectDir(block: (Path) -> R): R {
 }
 
 
-object BundledFontsStylingContext : StylingContext {
-    override fun resolveFont(name: String) = getBundledFont(name)
-}
-
-
 fun template(locale: Locale) =
     Template(locale, PRESET_GLOBAL.resolution, PRESET_GLOBAL.fps, PRESET_GLOBAL.timecodeFormat, sample = true)
 
@@ -92,7 +86,7 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile, "").first.single()
-        val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), BundledFontsStylingContext)
+        val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), emptyList())
         val pictureLoaders = buildList {
             for (file in projectDir.walkSafely())
                 if (file.isRegularFile())
@@ -101,7 +95,7 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         val credits = readCredits(spreadsheet, styling, pictureLoaders, emptyList()).first
         for (pl in pictureLoaders)
             pl.dispose()
-        Project(styling, BundledFontsStylingContext, persistentListOf(credits))
+        Project(styling, persistentListOf(credits))
     }
 
 

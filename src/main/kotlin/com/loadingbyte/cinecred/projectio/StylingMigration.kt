@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.SuperscriptMetrics
 import com.loadingbyte.cinecred.common.getSuperscriptMetrics
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.lineMetrics
-import com.loadingbyte.cinecred.project.StylingContext
 import java.awt.Font
 import kotlin.math.abs
 import kotlin.math.pow
@@ -14,7 +13,7 @@ import kotlin.math.pow
  * When the styling file has been saved by an older version of the program and some aspects of the format have changed
  * since then, this function adjusts the TOML maps to reflect the new structure.
  */
-fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
+fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.0.0 -> 1.1.0: Enum lists are now stored as string lists instead of space-delimited strings.
     for (contentStyle in rawStyling.contentStyles) {
         val gridElemHJustifyPerCol = contentStyle["gridElemHJustifyPerCol"]
@@ -295,6 +294,10 @@ fun migrateStyling(ctx: StylingContext, rawStyling: RawStyling) {
     for (contentStyle in rawStyling.contentStyles)
         if ("flowSeparatorVJustify" !in contentStyle)
             contentStyle["flowCellVJustify"]?.let { contentStyle["flowSeparatorVJustify"] = it }
+
+    // 1.6.0 -> 1.6.1: "fontName" is renamed to "font".
+    for (letterStyle in rawStyling.letterStyles)
+        letterStyle["fontName"]?.let { letterStyle["font"] = it }
 }
 
 

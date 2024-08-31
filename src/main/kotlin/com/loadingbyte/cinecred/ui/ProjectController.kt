@@ -4,8 +4,6 @@ import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
-import com.loadingbyte.cinecred.drawer.getBundledFont
-import com.loadingbyte.cinecred.drawer.getSystemFont
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
@@ -23,7 +21,6 @@ import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
@@ -43,14 +40,12 @@ class ProjectController(
     // START OF INITIALIZATION PROCEDURE
 
     val projectName: String = projectDir.name
-
-    val stylingCtx: StylingContext get() = currentInput.get().stylingCtx!!
     val stylingHistory: StylingHistory
 
     private data class Input(
         val creditsSpreadsheets: List<Spreadsheet>,
         val ioLog: List<ParserMsg>,
-        val stylingCtx: StylingContext?,
+        val projectFonts: Collection<Font>?,
         val pictureLoaders: Collection<PictureLoader>?,
         val tapes: Collection<Tape>?,
         val styling: Styling?
@@ -79,8 +74,8 @@ class ProjectController(
 
     // STEP 2:
     // Set up the project intake, which will notify us about changes to the credits spreadsheet and auxiliary files.
-    // Upon construction, the intake will immediately push the project fonts and picture loaders from this thread.
-    // This in turn means that the styling context will be initialized before the constructor returns.
+    // Upon construction, the intake will immediately push the project fonts, pic loaders, and tapes from this thread.
+    // This in turn means that those three collections will be initialized before the constructor returns.
 
     private val projectIntake = ProjectIntake(projectDir, object : ProjectIntake.Callbacks {
 
@@ -93,9 +88,8 @@ class ProjectController(
         }
 
         override fun pushProjectFonts(projectFonts: Collection<Font>) {
-            val projectFontsByName = projectFonts.associateBy { font -> font.getFontName(Locale.ROOT) }
             val projectFamilies = FontFamilies(projectFonts)
-            process(currentInput.updateAndGet { it.copy(stylingCtx = StylingContextImpl(projectFontsByName)) })
+            process(currentInput.updateAndGet { it.copy(projectFonts = projectFonts) })
             SwingUtilities.invokeLater { stylingDialog.panel.updateProjectFontFamilies(projectFamilies) }
         }
 
@@ -117,7 +111,7 @@ class ProjectController(
 
     init {
         val styling = try {
-            readStyling(stylingFile, stylingCtx)
+            readStyling(stylingFile, currentInput.get().projectFonts!!)
         } catch (e: IOException) {
             JOptionPane.showMessageDialog(
                 projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.toString()),
@@ -146,11 +140,9 @@ class ProjectController(
     // END OF INITIALIZATION PROCEDURE
 
     private fun process(input: Input) {
-        val (creditsSpreadsheets, _, stylingCtx, pictureLoaders, tapes, styling) = input
+        val (creditsSpreadsheets, _, _, pictureLoaders, tapes, styling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
-        if (creditsSpreadsheets.isEmpty() || stylingCtx == null ||
-            pictureLoaders == null || tapes == null || styling == null
-        )
+        if (creditsSpreadsheets.isEmpty() || pictureLoaders == null || tapes == null || styling == null)
             return doneProcessing(input, null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
@@ -164,11 +156,11 @@ class ProjectController(
                 log += curLog
             }
 
-            val project = Project(styling, stylingCtx, credits.toPersistentList())
+            val project = Project(styling, credits.toPersistentList())
 
             // Verify the styling in the extra thread because that is not entirely cheap.
             // If the styling is erroneous, abort and notify the UI about the error.
-            if (verifyConstraints(stylingCtx, styling).any { it.severity == ERROR }) {
+            if (verifyConstraints(styling).any { it.severity == ERROR }) {
                 val error = ParserMsg(null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
                 return@submit doneProcessing(input, log + error, null)
             }
@@ -321,12 +313,6 @@ class ProjectController(
     }
 
 
-    private class StylingContextImpl(private val fontsByName: Map<String, Font>) : StylingContext {
-        override fun resolveFont(name: String): Font? =
-            fontsByName[name] ?: getBundledFont(name) ?: getSystemFont(name)
-    }
-
-
     inner class StylingHistory(private var saved: Styling) {
 
         private val history = mutableListOf(saved)
@@ -426,7 +412,7 @@ class ProjectController(
 
         fun save() {
             try {
-                writeStyling(stylingFile, stylingCtx, current)
+                writeStyling(stylingFile, current)
             } catch (e: IOException) {
                 JOptionPane.showMessageDialog(
                     projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.toString()),
@@ -447,7 +433,7 @@ class ProjectController(
         }
 
         private fun semanticallyEqual(a: Styling, b: Styling) =
-            a.equalsIgnoreStyleOrderAndIneffectiveSettings(stylingCtx, b)
+            a.equalsIgnoreStyleOrderAndIneffectiveSettings(b)
 
     }
 

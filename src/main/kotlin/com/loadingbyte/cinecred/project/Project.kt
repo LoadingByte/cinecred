@@ -8,12 +8,12 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import kotlinx.collections.immutable.PersistentList
+import java.awt.Font
 import java.util.*
 
 
 class Project(
     val styling: Styling,
-    val stylingCtx: StylingContext,
     val credits: PersistentList<Credits>
 )
 
@@ -211,7 +211,7 @@ enum class FlowDirection { L2R, R2L }
 
 data class LetterStyle(
     override val name: String,
-    val fontName: String,
+    val font: FontRef,
     val heightPx: Double,
     val leadingTopRh: Double,
     val leadingBottomRh: Double,
@@ -235,6 +235,18 @@ data class LetterStyle(
 
 enum class SmallCaps { OFF, SMALL_CAPS, PETITE_CAPS }
 enum class Superscript { OFF, SUP, SUB, SUP_SUP, SUP_SUB, SUB_SUP, SUB_SUB, CUSTOM }
+
+
+data class FontRef(val name: String) {
+
+    var font: Font? = null
+        private set
+
+    constructor(font: Font) : this(font.getFontName(Locale.ROOT)) {
+        this.font = font
+    }
+
+}
 
 
 data class FontFeature(

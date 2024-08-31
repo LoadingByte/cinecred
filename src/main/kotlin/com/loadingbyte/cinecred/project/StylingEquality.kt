@@ -3,15 +3,14 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.removeFirstOrNull
 
 
-fun Styling.equalsIgnoreStyleOrderAndIneffectiveSettings(ctx: StylingContext, other: Styling): Boolean =
-    global.equalsIgnoreIneffectiveSettings(ctx, this, other.global) &&
+fun Styling.equalsIgnoreStyleOrderAndIneffectiveSettings(other: Styling): Boolean =
+    global.equalsIgnoreIneffectiveSettings(this, other.global) &&
             ListedStyle.CLASSES.all { cls ->
-                getListedStyles(cls).equalsIgnoreStyleOrderAndIneffectiveSettings(ctx, this, other.getListedStyles(cls))
+                getListedStyles(cls).equalsIgnoreStyleOrderAndIneffectiveSettings(this, other.getListedStyles(cls))
             }
 
 
 private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettings(
-    ctx: StylingContext,
     styling: Styling,
     other: List<S>
 ): Boolean {
@@ -44,13 +43,13 @@ private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettin
             val dupStyles2 = styles2.subList(idx, endIdx).toMutableList()
             while (idx < endIdx) {
                 val s1 = styles1[idx]
-                if (dupStyles2.removeFirstOrNull { s2 -> s1.equalsIgnoreIneffectiveSettings(ctx, styling, s2) } == null)
+                if (dupStyles2.removeFirstOrNull { s2 -> s1.equalsIgnoreIneffectiveSettings(styling, s2) } == null)
                     return false
                 idx++
             }
         } else {
             // In the regular case of non-duplicate names, check each pair of styles individually.
-            if (!styles1[idx].equalsIgnoreIneffectiveSettings(ctx, styling, styles2[idx]))
+            if (!styles1[idx].equalsIgnoreIneffectiveSettings(styling, styles2[idx]))
                 return false
             idx++
         }
@@ -67,14 +66,14 @@ private inline fun <E> List<E>.endOfRange(startIdx: Int, predicate: (E) -> Boole
 }
 
 
-private fun Style.equalsIgnoreIneffectiveSettings(ctx: StylingContext, styling: Styling, other: Style): Boolean {
+private fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boolean {
     fun eq(v1: Any, v2: Any) =
-        if (v1 is Style && v2 is Style) v1.equalsIgnoreIneffectiveSettings(ctx, styling, v2) else v1 == v2
+        if (v1 is Style && v2 is Style) v1.equalsIgnoreIneffectiveSettings(styling, v2) else v1 == v2
 
     if (javaClass != other.javaClass)
         return false
-    val excludedSettings = findIneffectiveSettings(ctx, styling, this)
-    if (excludedSettings.keys != findIneffectiveSettings(ctx, styling, other).keys)
+    val excludedSettings = findIneffectiveSettings(styling, this)
+    if (excludedSettings.keys != findIneffectiveSettings(styling, other).keys)
         return false
     for (setting in getStyleSettings(javaClass as Class<Style>))
         if (setting !in excludedSettings)

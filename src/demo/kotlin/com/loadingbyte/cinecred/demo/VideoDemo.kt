@@ -26,7 +26,7 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
         val (global, page) = credits()
         val styling = extractStyling(global, page)
         val credits = Credits("", persistentListOf(page), persistentListOf())
-        val project = Project(styling, BundledFontsStylingContext, persistentListOf(credits))
+        val project = Project(styling, persistentListOf(credits))
         val video = drawVideo(project, drawPages(project, credits))
 
         // Write out the video.

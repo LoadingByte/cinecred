@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.demo
 
+import com.loadingbyte.cinecred.common.BUNDLED_FONTS
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.REF_FRC
-import com.loadingbyte.cinecred.drawer.BUNDLED_FONTS
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate

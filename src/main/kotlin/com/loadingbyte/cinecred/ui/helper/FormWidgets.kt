@@ -7,6 +7,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.FontFeature
+import com.loadingbyte.cinecred.project.FontRef
 import com.loadingbyte.cinecred.project.Opt
 import net.miginfocom.swing.MigLayout
 import java.awt.*
@@ -1083,7 +1084,7 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
 
 class FontChooserWidget(
     widthSpec: WidthSpec? = null
-) : Form.AbstractWidget<String>() {
+) : Form.AbstractWidget<FontRef>() {
 
     private val familyComboBox = JComboBox<FamilyWrapper>().apply {
         maximumRowCount = 20
@@ -1106,24 +1107,26 @@ class FontChooserWidget(
             populateFamilyComboBox()
         }
 
-    override var value: String
+    override var value: FontRef
         get() = when (val selectedFontWrapper = fontComboBox.selectedItem as FontWrapper?) {
-            is FontWrapper.ForFont -> selectedFontWrapper.font.getFontName(Locale.ROOT)
-            is FontWrapper.ForName -> selectedFontWrapper.name
-            null -> ""
+            is FontWrapper.ForFont -> FontRef(selectedFontWrapper.font)
+            is FontWrapper.ForName -> FontRef(selectedFontWrapper.name)
+            null -> FontRef("")
         }
         set(value) {
-            val family = projectFamilies.getFamily(value)
-                ?: BUNDLED_FAMILIES.getFamily(value)
-                ?: SYSTEM_FAMILIES.getFamily(value)
+            val family = value.font?.let { font ->
+                projectFamilies.getFamily(font) ?: BUNDLED_FAMILIES.getFamily(font) ?: SYSTEM_FAMILIES.getFamily(font)
+            } ?: value.name.let { name ->
+                projectFamilies.getFamily(name) ?: BUNDLED_FAMILIES.getFamily(name) ?: SYSTEM_FAMILIES.getFamily(name)
+            }
             if (family != null) {
                 familyComboBox.selectedItem = FamilyWrapper(family)
-                fontComboBox.selectedItem = FontWrapper.ForFont(family.getFont(value)!!, family)
+                fontComboBox.selectedItem = FontWrapper.ForFont(value.font ?: family.getFont(value.name)!!, family)
                 fontComboBox.isEnabled = true
             } else {
                 familyComboBox.selectedItem = null
                 fontComboBox.isEditable = true
-                fontComboBox.selectedItem = FontWrapper.ForName(value)
+                fontComboBox.selectedItem = FontWrapper.ForName(value.name)
                 fontComboBox.isEditable = false
                 fontComboBox.isEnabled = false
             }

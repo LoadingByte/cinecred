@@ -296,11 +296,11 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.letter.fonts")
         val fontName = "Raleway Medium"
         val fontFamily = BUNDLED_FAMILIES.getFamily(fontName)!!
-        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::fontName.st(), 0))
+        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::font.st(), 0))
         sc.click()
         sc.mouseTo(styWin.desktopPosOfDropdownItem(fontFamily))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::fontName.st(), 1))
+        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::font.st(), 1))
         sc.click()
         sc.mouseTo(styWin.desktopPosOfDropdownItem(fontFamily.getFont(fontName)!!))
         sc.click(4 * hold)

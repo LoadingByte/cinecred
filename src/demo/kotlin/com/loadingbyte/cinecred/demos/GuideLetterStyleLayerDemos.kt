@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.demos
 
+import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Color4f
@@ -407,7 +408,7 @@ private fun buildCredits(
     val spreadsheet = "@Body\n{{Style Demo}}" + if (neque) "Neque porro quisquam" else "Lorem ipsum dolor"
     val letterStyle = PRESET_LETTER_STYLE.copy(
         name = "Demo",
-        fontName = if (bold) "Archivo Narrow Bold" else "Archivo Narrow Regular",
+        font = FontRef(getBundledFont(if (bold) "Archivo Narrow Bold" else "Archivo Narrow Regular")!!),
         heightPx = height,
         trackingEm = tracking,
         layers = layers.asList().toPersistentList()

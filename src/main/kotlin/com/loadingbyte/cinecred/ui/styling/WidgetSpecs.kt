@@ -25,8 +25,8 @@ private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
     UnitWidgetSpec(Global::fps.st(), unit = "fps"),
     TimecodeWidgetSpec(
         Global::runtimeFrames.st(),
-        getFPS = { _, _, global -> global.fps },
-        getTimecodeFormat = { _, _, global -> global.timecodeFormat }
+        getFPS = { _, global -> global.fps },
+        getTimecodeFormat = { _, global -> global.timecodeFormat }
     ),
     WidthWidgetSpec(Global::uppercaseExceptions.st(), WidthSpec.NARROW)
 )
@@ -37,8 +37,8 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
     TimecodeWidgetSpec(
         PageStyle::subsequentGapFrames.st(), PageStyle::cardRuntimeFrames.st(),
         PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(), PageStyle::scrollRuntimeFrames.st(),
-        getFPS = { _, styling, _ -> styling.global.fps },
-        getTimecodeFormat = { _, styling, _ -> styling.global.timecodeFormat }
+        getFPS = { styling, _ -> styling.global.fps },
+        getTimecodeFormat = { styling, _ -> styling.global.timecodeFormat }
     ),
     UnitWidgetSpec(PageStyle::scrollPxPerFrame.st(), unit = "px")
 )
@@ -58,7 +58,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ToggleButtonGroupWidgetSpec(ContentStyle::blockOrientation.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(
         ContentStyle::spineAttachment.st(), ICON,
-        getDynIcon = { _, _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
+        getDynIcon = { _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
     ),
     NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),
@@ -172,7 +172,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     WidthWidgetSpec(LetterStyle::leadingBottomRh.st(), WidthSpec.LITTLE),
     MultiplierWidgetSpec(
         LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st(),
-        getMultiplier = { _, _, style -> style.heightPx }
+        getMultiplier = { _, style -> style.heightPx }
     ),
     UnionWidgetSpec(
         LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st(),
@@ -194,7 +194,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
     WidthWidgetSpec(LetterStyle::superscriptVOffsetRfh.st(), WidthSpec.TINY),
     MultiplierWidgetSpec(
         LetterStyle::superscriptHOffsetRfh.st(), LetterStyle::superscriptVOffsetRfh.st(),
-        getMultiplier = { _, _, style -> style.heightPx * (1.0 - style.leadingTopRh - style.leadingBottomRh) }
+        getMultiplier = { _, style -> style.heightPx * (1.0 - style.leadingTopRh - style.leadingBottomRh) }
     ),
     UnionWidgetSpec(
         LetterStyle::superscript.st(), LetterStyle::superscriptScaling.st(),
@@ -231,7 +231,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
         Layer::stripeCornerRadiusRfh.st(), Layer::stripeDashPatternRfh.st(), Layer::dilationRfh.st(),
         Layer::contourThicknessRfh.st(), Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::offsetDistanceRfh.st(),
         Layer::clearingRfh.st(), Layer::blurRadiusRfh.st(),
-        getMultiplier = { _, styling, style ->
+        getMultiplier = { styling, style ->
             val letterStyle = styling.getParentStyle(style) as LetterStyle
             letterStyle.heightPx * (1.0 - letterStyle.leadingTopRh - letterStyle.leadingBottomRh)
         }
@@ -364,7 +364,7 @@ class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
     setting: StyleSetting<S, SUBJ>,
     val show: Show,
     val getFixedIcon: ((SUBJ) -> Icon)? = null,
-    val getDynIcon: ((StylingContext, Styling, S, SUBJ) -> Icon)? = null
+    val getDynIcon: ((Styling, S, SUBJ) -> Icon)? = null
 ) : StyleWidgetSpec<S>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
 
@@ -378,14 +378,14 @@ class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
 
 class MultiplierWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Double>,
-    val getMultiplier: (StylingContext, Styling, S) -> Double
+    val getMultiplier: (Styling, S) -> Double
 ) : StyleWidgetSpec<S>(*settings)
 
 
 class TimecodeWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Number>,
-    val getFPS: (StylingContext, Styling, S) -> FPS,
-    val getTimecodeFormat: (StylingContext, Styling, S) -> TimecodeFormat
+    val getFPS: (Styling, S) -> FPS,
+    val getTimecodeFormat: (Styling, S) -> TimecodeFormat
 ) : StyleWidgetSpec<S>(*settings)
 
 

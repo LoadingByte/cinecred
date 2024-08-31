@@ -22,12 +22,12 @@ fun StyledString.formatted(textCtx: TextContext): FormattedString =
     (textCtx as TextContextImpl).getFmtStr(this)
 
 
-fun makeTextCtx(styling: Styling, stylingCtx: StylingContext): TextContext =
-    TextContextImpl(styling, stylingCtx)
+fun makeTextCtx(styling: Styling): TextContext =
+    TextContextImpl(styling)
 
 sealed interface TextContext
 
-private class TextContextImpl(private val styling: Styling, val stylingCtx: StylingContext) : TextContext {
+private class TextContextImpl(private val styling: Styling) : TextContext {
 
     val locale: Locale
         get() = styling.global.locale
@@ -42,7 +42,7 @@ private class TextContextImpl(private val styling: Styling, val stylingCtx: Styl
 
     fun getFmtStrFonts(letterStyle: LetterStyle): Fonts =
         fmtStrFontsCache.getOrPut(letterStyle) {
-            generateFmtStrFonts(letterStyle, this) ?: getFmtStrFonts(PLACEHOLDER_LETTER_STYLE)
+            generateFmtStrFonts(letterStyle) ?: getFmtStrFonts(PLACEHOLDER_LETTER_STYLE)
         }
 
     fun getFmtStrDesign(letterStyle: LetterStyle): FormattedString.Design =
@@ -111,13 +111,9 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 }
 
 
-private fun generateFmtStrFonts(
-    style: LetterStyle,
-    textCtx: TextContextImpl
-): TextContextImpl.Fonts? {
-    // If the styling context doesn't contain a font with the specified name, we create a font object to find a
-    // fallback font that (hopefully) best matches the specified font.
-    val baseAWTFont = textCtx.stylingCtx.resolveFont(style.fontName) ?: Font(style.fontName, 0, 1)
+private fun generateFmtStrFonts(style: LetterStyle): TextContextImpl.Fonts? {
+    // If the font is not linked properly, fall back to a generic font.
+    val baseAWTFont = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
 
     // Leading
     val leadingTopPx = style.leadingTopRh * style.heightPx

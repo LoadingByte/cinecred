@@ -42,7 +42,7 @@ abstract class PageDemo(
     private fun capture(global: Global, page: Page) {
         val styling = extractStyling(global, page)
         val credits = Credits("", persistentListOf(page), persistentListOf())
-        val project = Project(styling, BundledFontsStylingContext, persistentListOf(credits))
+        val project = Project(styling, persistentListOf(credits))
         val pageDefImage = drawPages(project, credits).single().defImage
         pageDefImgsAndGroundings.add(Pair(pageDefImage, styling.global.grounding))
     }

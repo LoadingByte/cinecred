@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
+import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Color4f
 import kotlinx.collections.immutable.persistentListOf
@@ -133,7 +134,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 val PRESET_LETTER_STYLE
     get() = LetterStyle(
         name = "???",
-        fontName = "Archivo Narrow Regular",
+        font = FontRef(getBundledFont("Archivo Narrow Regular")!!),
         heightPx = 32.0,
         leadingTopRh = 0.0,
         leadingBottomRh = 0.0,

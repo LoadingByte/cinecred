@@ -32,8 +32,7 @@ fun extractStyling(global: Global, page: Page): Styling {
                         when (elem) {
                             is BodyElement.Nil -> letterStyles.add(elem.sty)
                             is BodyElement.Str -> elem.str.forEach { (_, style) -> letterStyles.add(style) }
-                            is BodyElement.Pic -> {}
-                            is BodyElement.Tap -> {}
+                            is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
                         }
                     block.head?.forEach { (_, style) -> letterStyles.add(style) }
                     block.tail?.forEach { (_, style) -> letterStyles.add(style) }

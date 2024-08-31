@@ -469,7 +469,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 val (w, h) = embeddedTape.resolution
                 val rect = Rectangle2D.Double(x, y, w * scaling, h * scaling)
                 val coat = Coat.Gradient(
-                    Tape.MISSING_MEDIA_TOP_COLOR, Tape.MISSING_MEDIA_BOT_COLOR,
+                    Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT,
                     Point2D.Double(0.0, rect.minY), Point2D.Double(0.0, rect.maxY)
                 )
                 materializeShape(rect, coat, fill = true, dash = false, blurRadius = 0.0)

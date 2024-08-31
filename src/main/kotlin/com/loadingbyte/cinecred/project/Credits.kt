@@ -85,6 +85,7 @@ sealed interface BodyElement {
     class Str(val str: StyledString) : BodyElement
     class Pic(val pic: Picture.Embedded) : BodyElement
     class Tap(val emb: Tape.Embedded) : BodyElement
+    object Mis : BodyElement
 }
 
 

@@ -30,6 +30,7 @@ Cinecred Changelog
 ### UI Fixes
 
 - The page preview no longer jitters at times while making edits.
+- Missing pictures and videos are now shown as a red square instead of a "???".
 - Re-added a stutter warning to the in-window video preview.
 - Configuring transparent or matte deliveries is now more intuitive.
 

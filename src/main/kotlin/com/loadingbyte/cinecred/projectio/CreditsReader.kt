@@ -727,7 +727,7 @@ private class CreditsReader(
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureOrVideoTagKey))
                 embeddedPic?.let(BodyElement::Pic)
                     ?: embeddedTape?.let(BodyElement::Tap)
-                    ?: BodyElement.Str(listOf("???" to PLACEHOLDER_LETTER_STYLE))
+                    ?: BodyElement.Mis
             }
             !isStyledStringBlank -> BodyElement.Str(styledStr)
             else -> {

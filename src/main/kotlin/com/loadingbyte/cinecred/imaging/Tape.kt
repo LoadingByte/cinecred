@@ -242,9 +242,6 @@ class Tape private constructor(
 
     companion object {
 
-        val MISSING_MEDIA_TOP_COLOR = Color4f.fromSRGBHexString("#E44244")
-        val MISSING_MEDIA_BOT_COLOR = Color4f.fromSRGBHexString("#5B171F")
-
         private val CONTAINER_EXTS =
             VideoContainerFormat.READER.flatMapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { it.extensions }
 

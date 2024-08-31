@@ -3,7 +3,9 @@ package com.loadingbyte.cinecred.drawer
 import com.loadingbyte.cinecred.common.ceilDiv
 import com.loadingbyte.cinecred.common.maxOfOr
 import com.loadingbyte.cinecred.common.sumOf
+import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.Coat
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
@@ -17,6 +19,8 @@ import com.loadingbyte.cinecred.project.GridStructure.EQUAL_WIDTH_COLS
 import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
 import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.MatchExtent.WITHIN_BLOCK
+import java.awt.geom.Point2D
+import java.awt.geom.Rectangle2D
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -600,6 +604,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
                 is BodyElement.Nil, is BodyElement.Str -> {}
                 is BodyElement.Pic -> bodyImage.drawEmbeddedPicture(bodyElem.pic, x, y)
                 is BodyElement.Tap -> bodyImage.drawEmbeddedTape(bodyElem.emb, x, y)
+                is BodyElement.Mis -> bodyImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
             }
             y += bodyElemHeight
             drawnBodyLines += DrawnBodyLineRecord(x, null, bodyElemWidth, bodyElemHeight)
@@ -709,6 +714,7 @@ private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
     is BodyElement.Str -> str.formatted(textCtx).width
     is BodyElement.Pic -> pic.width
     is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
+    is BodyElement.Mis -> MISSING_RECT.width
 }
 
 private fun BodyElement.getHeight(textCtx: TextContext): Double = when (this) {
@@ -716,6 +722,7 @@ private fun BodyElement.getHeight(textCtx: TextContext): Double = when (this) {
     is BodyElement.Str -> str.formatted(textCtx).height
     is BodyElement.Pic -> pic.height
     is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
+    is BodyElement.Mis -> MISSING_RECT.height
 }
 
 
@@ -756,11 +763,12 @@ private class LineGauge(
             is BodyElement.Nil -> {}
             is BodyElement.Str ->
                 defImage.drawString(bodyElem.str.formatted(textCtx), x, lineY + yBaseline!!)
-            is BodyElement.Pic, is BodyElement.Tap -> {
+            is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {
                 val y = lineY + justify(vJustify, height, bodyElem.getHeight(textCtx))
                 when (bodyElem) {
                     is BodyElement.Pic -> defImage.drawEmbeddedPicture(bodyElem.pic, x, y)
                     is BodyElement.Tap -> defImage.drawEmbeddedTape(bodyElem.emb, x, y)
+                    is BodyElement.Mis -> defImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
                     else -> {}
                 }
             }
@@ -781,3 +789,10 @@ private fun LineHJustify.toSingleLineHJustify(lastLine: Boolean) = when {
     this == LineHJustify.RIGHT || lastLine && this == LineHJustify.FULL_LAST_RIGHT -> SingleLineHJustify.RIGHT
     else -> SingleLineHJustify.FULL
 }
+
+
+private val MISSING_RECT = Rectangle2D.Double(0.0, 0.0, 200.0, 200.0)
+private val MISSING_COAT = Coat.Gradient(
+    Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT,
+    Point2D.Double(0.0, 0.0), Point2D.Double(0.0, MISSING_RECT.height)
+)

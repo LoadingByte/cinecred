@@ -629,7 +629,7 @@ class DeferredVideo private constructor(
                 Bitmap.allocate(Bitmap.Spec(readSpec.resolution, rep)).use { canvasBitmap ->
                     Canvas.forBitmap(canvasBitmap.zero(), canvasCeiling).use { canvas ->
                         val (w, h) = readSpec.resolution
-                        val colors = listOf(Tape.MISSING_MEDIA_TOP_COLOR, Tape.MISSING_MEDIA_BOT_COLOR)
+                        val colors = listOf(Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT)
                         canvas.fillShape(Rectangle(w, h), Canvas.Shader.LinearGradient(Point(), Point(0, h), colors))
                     }
                     BitmapConverter.convert(canvasBitmap, mmBitmap, promiseOpaque = true)

@@ -5,10 +5,10 @@ import com.loadingbyte.cinecred.common.GLOBAL_THREAD_POOL
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.throwableAwareTask
+import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
-import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms

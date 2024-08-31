@@ -2,6 +2,8 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.drawer.DrawnProject
+import com.loadingbyte.cinecred.drawer.DrawnStageInfo
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*

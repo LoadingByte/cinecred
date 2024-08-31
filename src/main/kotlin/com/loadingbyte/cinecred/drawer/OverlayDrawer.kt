@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
-import com.loadingbyte.cinecred.project.DrawnStageInfo
 import kotlin.math.min
 
 

@@ -2,14 +2,10 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.drawer.drawAspectRatioOverlay
-import com.loadingbyte.cinecred.drawer.drawLinesOverlay
-import com.loadingbyte.cinecred.drawer.drawPictureOverlay
-import com.loadingbyte.cinecred.drawer.drawSafeAreasOverlay
+import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.Picture
-import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.ui.helper.*
 import java.util.*
 import javax.swing.Icon

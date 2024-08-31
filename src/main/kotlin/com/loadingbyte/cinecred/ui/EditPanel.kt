@@ -4,13 +4,13 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.drawer.DrawnCredits
+import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
-import com.loadingbyte.cinecred.project.DrawnCredits
-import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab

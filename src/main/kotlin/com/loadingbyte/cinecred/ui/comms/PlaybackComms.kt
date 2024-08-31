@@ -1,8 +1,8 @@
 package com.loadingbyte.cinecred.ui.comms
 
+import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
-import com.loadingbyte.cinecred.project.DrawnProject
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.image.BufferedImage

@@ -20,13 +20,13 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_CO
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
+import com.loadingbyte.cinecred.drawer.DrawnCredits
+import com.loadingbyte.cinecred.drawer.DrawnPage
+import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
-import com.loadingbyte.cinecred.project.DrawnCredits
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.DrawnProject
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path

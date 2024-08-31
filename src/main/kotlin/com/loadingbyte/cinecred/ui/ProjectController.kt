@@ -2,6 +2,8 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.drawer.DrawnCredits
+import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
 import com.loadingbyte.cinecred.imaging.Tape

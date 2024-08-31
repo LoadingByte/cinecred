@@ -1,8 +1,6 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.imaging.DeferredVideo
-import com.loadingbyte.cinecred.project.DrawnPage
-import com.loadingbyte.cinecred.project.DrawnStageInfo
 import com.loadingbyte.cinecred.project.Project
 
 

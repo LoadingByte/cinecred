@@ -1,8 +1,11 @@
-package com.loadingbyte.cinecred.project
+package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.Y
+import com.loadingbyte.cinecred.project.Credits
+import com.loadingbyte.cinecred.project.Page
+import com.loadingbyte.cinecred.project.Project
 import kotlinx.collections.immutable.PersistentList
 
 

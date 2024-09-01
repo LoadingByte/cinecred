@@ -31,8 +31,6 @@ fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
     val pages = credits.pages
     val runtimeGroups = credits.runtimeGroups
 
-    val textCtx = makeTextCtx(styling)
-
     // First generate a body and then a block image for each block. This has to be done for all blocks at the same time
     // because heads, bodies, and tails can harmonize various widths and heights between them.
     val blocks = buildList {
@@ -42,8 +40,8 @@ fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
                     for (spine in compound.spines)
                         addAll(spine.blocks)
     }
-    val drawnBodies = drawBodies(styling.contentStyles, styling.letterStyles, textCtx, blocks)
-    val drawnBlocks = drawBlocks(styling.contentStyles, styling.letterStyles, textCtx, drawnBodies, blocks)
+    val drawnBodies = drawBodies(styling, blocks)
+    val drawnBlocks = drawBlocks(styling, drawnBodies, blocks)
 
     // Generate a stage image for each stage. These stage images already contain the vertical gaps between the stages.
     var drawnStages: MutableMap<Stage, DrawnStage> = HashMap()

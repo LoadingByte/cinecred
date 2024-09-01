@@ -743,6 +743,11 @@ private class CreditsReader(
             hasPlaintext -> {
                 if (only1Line && styledLines.size != 1)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.linebreakUnsupported"))
+                val missingGlyphLines = styledLines.filter { it.formatted(styling).missesGlyphs }
+                if (missingGlyphLines.isNotEmpty()) {
+                    val lStyleNames = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }.joinToString()
+                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.missingGlyphs", lStyleNames))
+                }
                 BodyElement.Str(styledLines.toPersistentList())
             }
             else -> {

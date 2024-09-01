@@ -48,27 +48,25 @@ sealed class DrawnBodyLine {
 
 
 fun drawBodies(
-    contentStyles: List<ContentStyle>,
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     blocks: List<Block>
 ): Map<Block, DrawnBody> {
     val drawnBodies = HashMap<Block, DrawnBody>(2 * blocks.size)
 
     // Draw body images for blocks with the "grid" or "flow" body layout.
     drawBodyImagesWithGridBodyLayout(
-        drawnBodies, contentStyles, textCtx,
+        drawnBodies, styling,
         blocks.filter { block -> block.style.bodyLayout == GRID }
     )
     drawBodyImagesWithFlowBodyLayout(
-        drawnBodies, contentStyles, letterStyles, textCtx,
+        drawnBodies, styling,
         blocks.filter { block -> block.style.bodyLayout == FLOW }
     )
 
     // Draw body images for blocks with the "paragraphs" body layout.
     for (block in blocks)
         if (block.style.bodyLayout == PARAGRAPHS)
-            drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(textCtx, block)
+            drawnBodies[block] = drawBodyImageWithParagraphsBodyLayout(styling, block)
 
     return drawnBodies
 }
@@ -76,8 +74,7 @@ fun drawBodies(
 
 private fun drawBodyImagesWithGridBodyLayout(
     out: MutableMap<Block, DrawnBody>,
-    cs: List<ContentStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     blocks: List<Block>
 ) {
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "grid" body layout.
@@ -94,6 +91,7 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
     // to create neatly aligned tabular layouts that span multiple blocks. For both "extents" that can be harmonized
     // (i.e., col widths and row height), find which styles should harmonize together.
+    val cs = styling.contentStyles
     val matchColWidthsPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchColWidthsAcrossStyles) {
         bodyLayout == GRID && !gridForceColWidthPx.isActive && gridMatchColWidths == ACROSS_BLOCKS
     }
@@ -104,7 +102,7 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
     // also includes ungrouped blocks whose grid structure mandates square cells, and ungrouped blocks with forced
     // column width), and then find those shared widths.
-    fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
+    fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(styling) }
     val sharedColWidthsPerBlock: Map<Block, Array<Extent>> = matchExtent(
         blocks, matchColWidthsPartitionIds,
         matchWithinBlock = {
@@ -147,7 +145,7 @@ private fun drawBodyImagesWithGridBodyLayout(
             rowIdx++
             if (row.isEmpty())
                 return max
-            max = max(max, LineGauge.getHeight(row, textCtx))
+            max = max(max, LineGauge.getHeight(row, styling))
         }
     }
 
@@ -189,14 +187,14 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Draw a deferred image for the body of each block.
     blocks.associateWithTo(out) { block ->
         drawBodyImageWithGridBodyLayout(
-            textCtx, block, colsPerBlock.getValue(block), sharedColWidthsPerBlock[block], sharedRowHeightPerBlock[block]
+            styling, block, colsPerBlock.getValue(block), sharedColWidthsPerBlock[block], sharedRowHeightPerBlock[block]
         )
     }
 }
 
 
 private fun drawBodyImageWithGridBodyLayout(
-    textCtx: TextContext,
+    styling: Styling,
     block: Block,
     cols: List<List<BodyElement>>,
     sharedColWidths: Array<Extent>?,
@@ -209,7 +207,7 @@ private fun drawBodyImageWithGridBodyLayout(
     val numRows = cols.maxOf { col -> col.size }
     val rowGauges = List(numRows) { rowIdx ->
         val row = cols.mapNotNull { col -> col.getOrNull(rowIdx) }
-        LineGauge(style.gridCellVJustify, row, sharedRowHeight?.value, textCtx)
+        LineGauge(style.gridCellVJustify, row, sharedRowHeight?.value, styling)
     }
 
     val bodyImage = DeferredImage(
@@ -225,14 +223,14 @@ private fun drawBodyImageWithGridBodyLayout(
     for (colIdx in startColIdx..<endColIdx) {
         // Either get the column's shared width, or compute it now if the block's column widths are not shared.
         val colWidth = when (sharedColWidths) {
-            null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(textCtx) }
+            null -> cols[colIdx].maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(styling) }
             else -> sharedColWidths[colIdx + if (unocc.alignRight) sharedColWidths.size - numCols else 0].value
         }
         // Draw each row cell in the column.
         var y = 0.0.toY()
         for ((rowIdx, rowGauge) in rowGauges.withIndex()) {
             cols.getOrNull(colIdx)?.getOrNull(rowIdx)?.let { bodyElem ->
-                val bodyElemWidth = bodyElem.getWidth(textCtx)
+                val bodyElemWidth = bodyElem.getWidth(styling)
                 val bodyElemX = x + justify(style.gridCellHJustifyPerCol[colIdx], colWidth, bodyElemWidth)
                 rowGauge.drawVJustifiedBodyElem(bodyImage, bodyElem, bodyElemX, y)
                 // Record the area in this row that is actually drawn to.
@@ -321,9 +319,7 @@ private fun <E> flowIntoGridCols(
 
 private fun drawBodyImagesWithFlowBodyLayout(
     out: MutableMap<Block, DrawnBody>,
-    cs: List<ContentStyle>,
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     blocks: List<Block>
 ) {
     // In this function, we only concern ourselves with blocks whose bodies are laid out using the "flow" body layout.
@@ -332,6 +328,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // Flow blocks are free to potentially harmonize their cell width and height. This allows the user to create neatly
     // aligned grid-like yet dynamic layouts that can even span multiple blocks. For both "extents" that can be
     // harmonized (i.e., cell width and height), find which styles should harmonize together.
+    val cs = styling.contentStyles
     val matchCellWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellWidthAcrossStyles) {
         bodyLayout == FLOW && !flowForceCellWidthPx.isActive && flowMatchCellWidth == ACROSS_BLOCKS
     }
@@ -341,7 +338,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
 
     // Determine the blocks which have uniform cell width, optionally shared across multiple blocks, and then find
     // those shared widths.
-    fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) }
+    fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(styling) }
     val sharedCellWidthPerBlock: Map<Block, Extent> = matchExtent(
         blocks, matchCellWidthPartitionIds,
         matchWithinBlock = { flowForceCellWidthPx.isActive || flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
@@ -355,7 +352,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
         val style = block.style
         val sharedCellWidth = sharedCellWidthPerBlock[block]
         return flowIntoLines(block.body, style.flowDirection, style.flowLineWidthPx, style.flowHGapPx) { bodyElem ->
-            sharedCellWidth?.value ?: bodyElem.getWidth(textCtx)
+            sharedCellWidth?.value ?: bodyElem.getWidth(styling)
         }
     }
 
@@ -370,8 +367,8 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // those shared heights.
     fun maxLineHeight(block: Block) =
         // For blocks with square cells, consider all blocks to be in the same line for simplicity.
-        if (block.style.flowSquareCells) LineGauge.getHeight(block.body, textCtx)
-        else linesPerBlock.getValue(block).maxOf { line -> LineGauge.getHeight(line, textCtx) }
+        if (block.style.flowSquareCells) LineGauge.getHeight(block.body, styling)
+        else linesPerBlock.getValue(block).maxOf { line -> LineGauge.getHeight(line, styling) }
 
     val sharedCellHeightPerBlock: Map<Block, Extent> = matchExtent(
         blocks, matchCellHeightPartitionIds,
@@ -393,7 +390,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // Draw a deferred image for the body of each block.
     blocks.associateWithTo(out) { block ->
         drawBodyImageWithFlowBodyLayout(
-            letterStyles, textCtx, block, linesPerBlock.getValue(block),
+            styling, block, linesPerBlock.getValue(block),
             sharedCellWidthPerBlock[block], sharedCellHeightPerBlock[block]
         )
     }
@@ -401,8 +398,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
 
 
 private fun drawBodyImageWithFlowBodyLayout(
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     block: Block,
     lines: List<List<BodyElement>>,
     sharedCellWidth: Extent?,
@@ -412,16 +408,16 @@ private fun drawBodyImageWithFlowBodyLayout(
     val horGap = style.flowHGapPx
 
     val sepLetterStyleName = style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
-    val sepLetterStyle = letterStyles.find { it.name == sepLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+    val sepLetterStyle = styling.letterStyles.find { it.name == sepLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE
     val sepStr = style.flowSeparator
-    val sepFmtStr = if (sepStr.isBlank()) null else listOf(Pair(sepStr, sepLetterStyle)).formatted(textCtx)
+    val sepFmtStr = if (sepStr.isBlank()) null else format(sepStr, sepLetterStyle, styling)
 
     // The width of the body image must be at least the width of the widest body element, because otherwise,
     // that element could not even fit into one line of the body.
     val bodyImageWidth = style.flowLineWidthPx
-        .coerceAtLeast(sharedCellWidth?.value ?: block.body.maxOf { bodyElem -> bodyElem.getWidth(textCtx) })
+        .coerceAtLeast(sharedCellWidth?.value ?: block.body.maxOf { bodyElem -> bodyElem.getWidth(styling) })
 
-    val lineGauges = lines.map { line -> LineGauge(style.flowCellVJustify, line, sharedCellHeight?.value, textCtx) }
+    val lineGauges = lines.map { line -> LineGauge(style.flowCellVJustify, line, sharedCellHeight?.value, styling) }
 
     // Start drawing the actual image.
     val bodyImage = DeferredImage(width = bodyImageWidth)
@@ -435,7 +431,7 @@ private fun drawBodyImageWithFlowBodyLayout(
         // and separator strings.
         val totalRigidWidth =
             if (sharedCellWidth != null) line.size * sharedCellWidth.value
-            else line.sumOf { bodyElem -> bodyElem.getWidth(textCtx) }
+            else line.sumOf { bodyElem -> bodyElem.getWidth(styling) }
 
         // If the body uses full justification, we use this "glue" to adjust the horizontal gap around the separator
         // such that the line fills the whole width of the body image.
@@ -457,7 +453,7 @@ private fun drawBodyImageWithFlowBodyLayout(
 
         // Actually draw the line using the measurements from above.
         for ((bodyElemIdx, bodyElem) in line.withIndex()) {
-            val bodyElemWidth = bodyElem.getWidth(textCtx)
+            val bodyElemWidth = bodyElem.getWidth(styling)
             val areaWidth = sharedCellWidth?.value ?: bodyElemWidth
 
             // Draw the current body element.
@@ -549,7 +545,7 @@ private inline fun <E> flowIntoLines(
 
 
 private fun drawBodyImageWithParagraphsBodyLayout(
-    textCtx: TextContext,
+    styling: Styling,
     block: Block
 ): DrawnBody {
     val style = block.style
@@ -567,7 +563,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
         // Case 1: The body element is a string. Determine line breaks and draw it as a paragraph.
         if (bodyElem is BodyElement.Str) {
             for (str in bodyElem.lines) {
-                val fmtStr = str.formatted(textCtx)
+                val fmtStr = str.formatted(styling)
                 val lineBreaks = fmtStr.breakLines(bodyImageWidth)
                 for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
                     // Note: If the line contains only whitespace, this skips to the next line.
@@ -598,8 +594,8 @@ private fun drawBodyImageWithParagraphsBodyLayout(
         // Case 2: The body element is not a string. Just draw it regularly.
         else {
             val hJustify = style.paragraphsLineHJustify.toSingleLineHJustify(lastLine = false).toHJustify()
-            val bodyElemWidth = bodyElem.getWidth(textCtx)
-            val bodyElemHeight = bodyElem.getHeight(textCtx)
+            val bodyElemWidth = bodyElem.getWidth(styling)
+            val bodyElemHeight = bodyElem.getHeight(styling)
             val x = justify(hJustify, bodyImageWidth, bodyElemWidth)
             when (bodyElem) {
                 is BodyElement.Nil, is BodyElement.Str -> {}
@@ -710,17 +706,17 @@ private inline fun <T> matchExtent(
 }
 
 
-private fun BodyElement.getWidth(textCtx: TextContext): Double = when (this) {
+private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> 0.0
-    is BodyElement.Str -> lines.first().formatted(textCtx).width
+    is BodyElement.Str -> lines.first().formatted(styling).width
     is BodyElement.Pic -> pic.width
     is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.width
 }
 
-private fun BodyElement.getHeight(textCtx: TextContext): Double = when (this) {
+private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
-    is BodyElement.Str -> lines.first().formatted(textCtx).height
+    is BodyElement.Str -> lines.first().formatted(styling).height
     is BodyElement.Pic -> pic.height
     is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.height
@@ -733,7 +729,7 @@ private class DrawnBodyLineRecord(
 
 
 private class LineGauge(
-    private val vJustify: VJustify, line: List<BodyElement>, forcedHeight: Double?, private val textCtx: TextContext
+    private val vJustify: VJustify, line: List<BodyElement>, forcedHeight: Double?, private val styling: Styling
 ) : DrawnBodyLine() {
 
     override var x = Double.NaN
@@ -749,11 +745,11 @@ private class LineGauge(
         for (bodyElem in line)
             if (bodyElem is BodyElement.Str) {
                 hasStr = true
-                val fmtStr = bodyElem.lines.first().formatted(textCtx)
+                val fmtStr = bodyElem.lines.first().formatted(styling)
                 aboveBaseline = max(aboveBaseline, fmtStr.heightAboveBaseline)
                 belowBaseline = max(belowBaseline, fmtStr.heightBelowBaseline)
             } else
-                eleHeight = max(eleHeight, bodyElem.getHeight(textCtx))
+                eleHeight = max(eleHeight, bodyElem.getHeight(styling))
         val strHeight = aboveBaseline + belowBaseline
         height = forcedHeight ?: max(eleHeight, strHeight)
         yBaseline = if (!hasStr) null else aboveBaseline + justify(vJustify, height, strHeight)
@@ -763,9 +759,9 @@ private class LineGauge(
         when (bodyElem) {
             is BodyElement.Nil -> {}
             is BodyElement.Str ->
-                defImage.drawString(bodyElem.lines.first().formatted(textCtx), x, lineY + yBaseline!!)
+                defImage.drawString(bodyElem.lines.first().formatted(styling), x, lineY + yBaseline!!)
             is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {
-                val y = lineY + justify(vJustify, height, bodyElem.getHeight(textCtx))
+                val y = lineY + justify(vJustify, height, bodyElem.getHeight(styling))
                 when (bodyElem) {
                     is BodyElement.Pic -> defImage.drawEmbeddedPicture(bodyElem.pic, x, y)
                     is BodyElement.Tap -> defImage.drawEmbeddedTape(bodyElem.emb, x, y)
@@ -777,8 +773,8 @@ private class LineGauge(
     }
 
     companion object {
-        fun getHeight(line: List<BodyElement>, textCtx: TextContext) =
-            LineGauge(VJustify.MIDDLE, line, null, textCtx).height
+        fun getHeight(line: List<BodyElement>, styling: Styling) =
+            LineGauge(VJustify.MIDDLE, line, null, styling).height
     }
 
 }

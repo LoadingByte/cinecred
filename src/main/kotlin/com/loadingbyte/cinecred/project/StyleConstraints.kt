@@ -155,6 +155,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0.0),
+    StyledStringConstr(WARN, ContentStyle::flowSeparator.st()) { _, style ->
+        style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
+    },
     DoubleConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0.0),
@@ -169,6 +172,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     DoubleConstr(ERROR, ContentStyle::headGapPx.st(), min = 0.0),
+    StyledStringConstr(WARN, ContentStyle::headLeader.st()) { _, style ->
+        style.headLeaderLetterStyleName.orElse { style.headLetterStyleName }
+    },
     DoubleConstr(ERROR, ContentStyle::headLeaderMarginLeftPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::headLeaderMarginRightPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::headLeaderSpacingPx.st(), min = 0.0),
@@ -183,6 +189,9 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0),
+    StyledStringConstr(WARN, ContentStyle::tailLeader.st()) { _, style ->
+        style.tailLeaderLetterStyleName.orElse { style.tailLetterStyleName }
+    },
     DoubleConstr(ERROR, ContentStyle::tailLeaderMarginLeftPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::tailLeaderMarginRightPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::tailLeaderSpacingPx.st(), min = 0.0)
@@ -200,7 +209,7 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         WARN, msg("project.styling.constr.excessiveLeading"),
         LetterStyle::heightPx.st(), LetterStyle::leadingTopRh.st(), LetterStyle::leadingBottomRh.st()
     ) { _, style ->
-        // The formula is written this way to exactly match the computation in StyledStringExt.
+        // The formula is written this way to exactly match the computation in StyledStringFormatter.
         style.heightPx - style.leadingTopRh * style.heightPx - style.leadingBottomRh * style.heightPx >= 1.0
     },
     JudgeConstr(INFO, msg("project.styling.constr.fakeSmallCaps"), LetterStyle::smallCaps.st()) { _, style ->
@@ -401,6 +410,13 @@ class FontFeatureConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 
+class StyledStringConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, String>,
+    val getLetterStyleName: (Styling, S) -> String
+) : StyleConstraint<S, StyleSetting<S, String>>(setting)
+
+
 class JudgeConstr<S : Style>(
     val severity: Severity,
     val getMsg: () -> String,
@@ -569,6 +585,17 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                         }
                     }
                 }
+                is StyledStringConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, string ->
+                        if (string.isNotBlank()) {
+                            val letterStyleName = cst.getLetterStyleName(styling, style)
+                            val letterStyle = styling.letterStyles.find { l -> l.name == letterStyleName }
+                            if (letterStyle != null && format(string, letterStyle, styling).missesGlyphs) {
+                                val msg = l10n("project.styling.constr.missingGlyphs", letterStyleName)
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                        }
+                    }
                 is JudgeConstr ->
                     if (!cst.judge(styling, style))
                         for ((idx, setting) in cst.settings.filter { it !in ignoreSettings }.withIndex())

@@ -301,6 +301,8 @@ enum class LayerAnchor { INDIVIDUAL, SIBLING, GLOBAL }
 
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
 
+inline fun <E : Any> Opt<E>.orElse(block: () -> E): E = if (isActive) value else block()
+
 
 val Enum<*>.label: String
     get() = when (this) {

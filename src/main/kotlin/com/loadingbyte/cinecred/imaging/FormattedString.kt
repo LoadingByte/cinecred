@@ -84,10 +84,13 @@ class FormattedString private constructor(
        ********************************************************* */
 
     private var _width: Double = Double.NaN
+    private var _missesGlyphs: Boolean = false
     private lateinit var _textLayout: TextLayout
 
     val width: Double
         get() = run { ensureInitializedHorizontal(); _width }
+    val missesGlyphs: Boolean
+        get() = run { ensureInitializedHorizontal(); _missesGlyphs }
     private val textLayout: TextLayout
         get() = run { ensureInitializedHorizontal(); _textLayout }
 
@@ -107,6 +110,13 @@ class FormattedString private constructor(
         check(textLayout.baseline.toInt() == java.awt.Font.ROMAN_BASELINE)
 
         _width = textLayout.advance.toDouble()
+        _missesGlyphs = textLayout.getGlyphVectors().any { gv ->
+            val missingGlyph = gv.font.missingGlyphCode
+            for (glyphIdx in 0..<gv.numGlyphs)
+                if (gv.getGlyphCode(glyphIdx) == missingGlyph)
+                    return@any true
+            false
+        }
         _textLayout = textLayout
     }
 

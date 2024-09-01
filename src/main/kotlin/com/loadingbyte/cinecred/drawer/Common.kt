@@ -15,9 +15,6 @@ val BODY_WIDTH_GUIDE_COLOR = Color4f.fromSRGBHexString("#820000")
 val HEAD_TAIL_GUIDE_COLOR = Color4f.fromSRGBHexString("#006400")
 
 
-inline fun <E : Any> Opt<E>.orElse(block: () -> E) = if (isActive) value else block()
-
-
 fun SingleLineHJustify.toHJustify() = when (this) {
     SingleLineHJustify.LEFT -> HJustify.LEFT
     SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER

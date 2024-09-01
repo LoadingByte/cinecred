@@ -342,7 +342,7 @@ private fun legacy131FindSize(awtFont: Font, extraLeadingEm: Double, targetHeigh
 }
 
 
-/** Legacy 1.3.1 implementation of the superscript routine in `StyledStringExt`. */
+/** Legacy 1.3.1 implementation of the superscript routine in `StyledStringFormatter`. */
 private fun legacy131FindSuperscriptOffsetAndScaling(awtFont: Font, superscript: String?): Legacy131SSOffsetAndScaling {
     var ssScaling = 1.0
     var ssHOffset = 0.0

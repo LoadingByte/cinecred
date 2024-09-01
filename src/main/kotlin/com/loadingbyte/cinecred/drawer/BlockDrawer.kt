@@ -18,9 +18,7 @@ class DrawnBlock(val defImage: DeferredImage, val spineXInImage: Double)
 
 
 fun drawBlocks(
-    contentStyles: List<ContentStyle>,
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     drawnBodies: Map<Block, DrawnBody>,
     blocks: List<Block>
 ): Map<Block, DrawnBlock> {
@@ -28,14 +26,14 @@ fun drawBlocks(
 
     // Draw blocks which have horizontal orientation.
     drawHorizontalBlocks(
-        drawnBlocks, contentStyles, letterStyles, textCtx, drawnBodies,
+        drawnBlocks, styling, drawnBodies,
         blocks.filter { block -> block.style.blockOrientation == HORIZONTAL }
     )
 
     // Draw blocks which have vertical orientation.
     for (block in blocks)
         if (block.style.blockOrientation == VERTICAL)
-            drawnBlocks[block] = drawVerticalBlock(textCtx, block, drawnBodies.getValue(block))
+            drawnBlocks[block] = drawVerticalBlock(styling, block, drawnBodies.getValue(block))
 
     return drawnBlocks
 }
@@ -43,9 +41,7 @@ fun drawBlocks(
 
 private fun drawHorizontalBlocks(
     out: MutableMap<Block, DrawnBlock>,
-    cs: List<ContentStyle>,
-    letterStyles: List<LetterStyle>,
-    textCtx: TextContext,
+    styling: Styling,
     drawnBodies: Map<Block, DrawnBody>,
     blocks: List<Block>
 ) {
@@ -55,6 +51,7 @@ private fun drawHorizontalBlocks(
     // Horizontal blocks are free to potentially harmonize their head and tail width. This, for example, could allow the
     // user to justify all heads "left" in a meaningful way. For both widths that can be harmonized (i.e., head and tail
     // width), find which styles should harmonize together.
+    val cs = styling.contentStyles
     val matchHeadWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::headMatchWidthAcrossStyles) {
         blockOrientation == HORIZONTAL && !headForceWidthPx.isActive && headMatchWidth == ACROSS_BLOCKS
     }
@@ -64,10 +61,10 @@ private fun drawHorizontalBlocks(
 
     // Determine the groups of blocks which should share the same head/tail width, and of course also find those widths.
     val sharedHeadWidths = matchWidth(blocks, matchHeadWidthPartitionIds, Block::matchHeadPartitionId) { group ->
-        group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(textCtx).width }
+        group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(styling).width }
     }
     val sharedTailWidths = matchWidth(blocks, matchTailWidthPartitionIds, Block::matchTailPartitionId) { group ->
-        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(textCtx).width }
+        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(styling).width }
     }
 
     // Draw a deferred image for each block.
@@ -76,8 +73,8 @@ private fun drawHorizontalBlocks(
         val drawnBody = drawnBodies.getValue(block)
         val bodyImage = drawnBody.defImage
 
-        val headWidth = resolveWidth(textCtx, block, style.headForceWidthPx, sharedHeadWidths, block.head)
-        val tailWidth = resolveWidth(textCtx, block, style.tailForceWidthPx, sharedTailWidths, block.tail)
+        val headWidth = resolveWidth(styling, block, style.headForceWidthPx, sharedHeadWidths, block.head)
+        val tailWidth = resolveWidth(styling, block, style.tailForceWidthPx, sharedTailWidths, block.tail)
 
         val headStartX = 0.0
         val headEndX = headStartX + headWidth
@@ -105,7 +102,7 @@ private fun drawHorizontalBlocks(
             strLines: List<StyledString>, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
             areaX: Double, areaWidth: Double
         ): DoubleArray {
-            val fmtStr = strLines.first().formatted(textCtx)
+            val fmtStr = strLines.first().formatted(styling)
             val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
             val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
             blockImage.drawString(fmtStr, x, yBaseline)
@@ -131,8 +128,8 @@ private fun drawHorizontalBlocks(
             leftMargin: Double, rightMargin: Double, spacing: Double,
             leftX: Double, rightX: Double
         ) {
-            val letterStyle = letterStyles.find { it.name == letterStyleName } ?: PLACEHOLDER_LETTER_STYLE
-            val fmtStr = listOf(Pair(str, letterStyle)).formatted(textCtx)
+            val letterStyle = styling.letterStyles.find { it.name == letterStyleName } ?: PLACEHOLDER_LETTER_STYLE
+            val fmtStr = format(str, letterStyle, styling)
             val areaWidth = (rightX - leftX) - (leftMargin + rightMargin)
             val count = floor((areaWidth + spacing) / (fmtStr.width + spacing)).toInt()
             if (count <= 0)
@@ -243,7 +240,7 @@ private inline fun matchWidth(
 
 
 private fun resolveWidth(
-    textCtx: TextContext,
+    styling: Styling,
     block: Block,
     force: Opt<Double>,
     shared: Map<Block, Double>,
@@ -253,13 +250,13 @@ private fun resolveWidth(
         return force.value
     shared[block]?.let { return it }
     if (strLines != null)
-        return strLines.first().formatted(textCtx).width
+        return strLines.first().formatted(styling).width
     return 0.0
 }
 
 
 private fun drawVerticalBlock(
-    textCtx: TextContext,
+    styling: Styling,
     block: Block,
     drawnBody: DrawnBody
 ): DrawnBlock {
@@ -275,7 +272,7 @@ private fun drawVerticalBlock(
 
     fun drawHeadTailLines(strLines: List<StyledString>, hJustify: HJustify) {
         for (str in strLines) {
-            val fmtStr = str.formatted(textCtx)
+            val fmtStr = str.formatted(styling)
             val lineH = fmtStr.height
             val yBaseline = y + fmtStr.heightAboveBaseline
             blockImage.drawString(fmtStr, justify(hJustify, blockImageWidth, fmtStr.width), yBaseline)

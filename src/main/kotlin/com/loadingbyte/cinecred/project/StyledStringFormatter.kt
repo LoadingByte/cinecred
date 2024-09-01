@@ -1,13 +1,13 @@
-package com.loadingbyte.cinecred.drawer
+package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.FormattedString
-import com.loadingbyte.cinecred.project.*
 import java.awt.BasicStroke
 import java.awt.Font
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -18,16 +18,27 @@ import kotlin.math.sin
  * caching features provided by FormattedString, we want to do the actual conversion only once. Therefore, this
  * method caches formatted strings.
  */
-fun StyledString.formatted(textCtx: TextContext): FormattedString =
-    (textCtx as TextContextImpl).getFmtStr(this)
+fun StyledString.formatted(styling: Styling): FormattedString =
+    getTextCtx(styling).getFmtStr(this)
+
+/**
+ * Like [formatted], but assembles a styled string from a single string and letter style, and caches the resulting
+ * formatted string based on the content, not the identity of the source string.
+ */
+fun format(string: String, letterStyle: LetterStyle, styling: Styling): FormattedString =
+    getTextCtx(styling).getFmtStr(string, letterStyle)
 
 
-fun makeTextCtx(styling: Styling): TextContext =
-    TextContextImpl(styling)
+// It's sufficient to cache only one TextContext, as usually only one Styling is in use at any given time.
+@Volatile private var textCtxCache: TextContext? = null
 
-sealed interface TextContext
+private fun getTextCtx(styling: Styling): TextContext {
+    textCtxCache?.let { if (it.styling === styling) return it }
+    return TextContext(styling).also { textCtxCache = it }
+}
 
-private class TextContextImpl(private val styling: Styling) : TextContext {
+
+private class TextContext(val styling: Styling) {
 
     val locale: Locale
         get() = styling.global.locale
@@ -36,9 +47,10 @@ private class TextContextImpl(private val styling: Styling) : TextContext {
         generateUppercaseExceptionsRegex(styling.global.uppercaseExceptions)
     }
 
-    private val fmtStrFontsCache = IdentityHashMap<LetterStyle, Fonts>()
-    private val fmtStrDesignCache = IdentityHashMap<LetterStyle, FormattedString.Design>()
-    private val fmtStrCache = IdentityHashMap<StyledString, FormattedString>()
+    private val fmtStrFontsCache = Collections.synchronizedMap(IdentityHashMap<LetterStyle, Fonts>())
+    private val fmtStrDesignCache = Collections.synchronizedMap(IdentityHashMap<LetterStyle, FormattedString.Design>())
+    private val fmtStrIdCache = Collections.synchronizedMap(IdentityHashMap<StyledString, FormattedString>())
+    private val fmtStrEqCache = ConcurrentHashMap<String, MutableMap<LetterStyle, FormattedString>>()
 
     fun getFmtStrFonts(letterStyle: LetterStyle): Fonts =
         fmtStrFontsCache.getOrPut(letterStyle) {
@@ -59,7 +71,12 @@ private class TextContextImpl(private val styling: Styling) : TextContext {
         }
 
     fun getFmtStr(styledString: StyledString): FormattedString =
-        fmtStrCache.computeIfAbsent(styledString) { generateFmtStr(styledString, this) }
+        fmtStrIdCache.computeIfAbsent(styledString) { generateFmtStr(styledString, this) }
+
+    fun getFmtStr(string: String, letterStyle: LetterStyle): FormattedString =
+        fmtStrEqCache
+            .computeIfAbsent(string) { Collections.synchronizedMap(IdentityHashMap()) }
+            .computeIfAbsent(letterStyle) { generateFmtStr(listOf(Pair(string, letterStyle)), this) }
 
     class Fonts(
         val std: FormattedString.Font,
@@ -111,7 +128,7 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 }
 
 
-private fun generateFmtStrFonts(style: LetterStyle): TextContextImpl.Fonts? {
+private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     // If the font is not linked properly, fall back to a generic font.
     val baseAWTFont = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
 
@@ -199,7 +216,7 @@ private fun generateFmtStrFonts(style: LetterStyle): TextContextImpl.Fonts? {
         style.trackingEm, style.kerning, style.ligatures, features
     )
 
-    return TextContextImpl.Fonts(stdFont, fakeSmallCapsFont)
+    return TextContext.Fonts(stdFont, fakeSmallCapsFont)
 }
 
 private fun getSmallCapsScaling(font: Font, multiplier: Double, fallback: Double): Double {
@@ -340,7 +357,7 @@ private fun getLineJoinNumber(lineJoin: LineJoin): Int = when (lineJoin) {
 }
 
 
-private fun generateFmtStr(str: StyledString, textCtx: TextContextImpl): FormattedString {
+private fun generateFmtStr(str: StyledString, textCtx: TextContext): FormattedString {
     // 1. Apply uppercasing to the styled string (not small caps yet!).
     var uppercased = str
 

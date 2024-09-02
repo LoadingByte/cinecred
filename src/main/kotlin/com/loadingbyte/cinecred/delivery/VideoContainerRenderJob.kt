@@ -3,11 +3,13 @@ package com.loadingbyte.cinecred.delivery
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
+import com.loadingbyte.cinecred.delivery.RenderFormat.CineFormProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
 import com.loadingbyte.cinecred.delivery.RenderFormat.DNxHRProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.ProResProfile.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFORM_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
@@ -74,10 +76,10 @@ class VideoContainerRenderJob private constructor(
     }
 
     private fun render(progressCallback: (Int) -> Unit, settings: VideoWriterSettings) {
+        val yuv = settings.pixelFormat.family == Bitmap.PixelFormat.Family.YUV
         val matte = config[TRANSPARENCY] == MATTE
-        val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
-        val yuv = if (matte) null else config[YUV]
-        val ceiling = if (colorSpace?.transfer?.isHDR == true) null else 1f
+        val colorSpace = if (matte) ColorSpace.of(BT709, LINEAR) else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
+        val ceiling = if (colorSpace.transfer.isHDR) null else 1f
         val scan = config[SCAN]
         val grounding = if (config[TRANSPARENCY] == GROUNDED) project.styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
@@ -86,9 +88,9 @@ class VideoContainerRenderJob private constructor(
             scaledVideo.resolution,
             Bitmap.Representation(
                 settings.pixelFormat,
-                if (matte) Bitmap.Range.FULL else Bitmap.Range.LIMITED,
-                colorSpace ?: ColorSpace.of(BT709, LINEAR),
-                yuv ?: BT709_NCL,
+                if (!yuv || matte) Bitmap.Range.FULL else Bitmap.Range.LIMITED,
+                colorSpace,
+                if (!yuv) null else if (matte) BT709_NCL else config[YUV],
                 if (settings.pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,
                 if (config[TRANSPARENCY] == TRANSPARENT) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
@@ -181,7 +183,11 @@ class VideoContainerRenderJob private constructor(
             "H.265", AV_CODEC_ID_H265, "libx265", AV_PROFILE_HEVC_MAIN, AV_PROFILE_HEVC_MAIN_10
         )
 
-        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat())
+        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat())
+
+        private fun allTransparenciesTimesColorSpace() =
+            choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * choice(TRANSFER) +
+                    fixed(TRANSPARENCY, MATTE)
 
         private fun allTransparenciesTimesColorProps() =
             choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * (
@@ -204,8 +210,8 @@ class VideoContainerRenderJob private constructor(
         codecId: Int,
         defaultFileExt: String,
         configAssortment: Config.Assortment,
-        widthMod2: Boolean = false,
-        heightMod2: Boolean = false,
+        widthMod: Int = 1,
+        heightMod: Int = 1,
         minWidth: Int? = null,
         minHeight: Int? = null
     ) : RenderFormat(
@@ -216,7 +222,7 @@ class VideoContainerRenderJob private constructor(
             .flatMapTo(HashSet()) { it.extensions },
         defaultFileExt,
         configAssortment * choice(RESOLUTION_SCALING_LOG2) * choice(FPS_SCALING),
-        widthMod2, heightMod2, minWidth, minHeight
+        widthMod, heightMod, minWidth, minHeight
     ) {
 
         abstract fun videoWriterSettings(config: Config): List<VideoWriterSettings>
@@ -250,8 +256,8 @@ class VideoContainerRenderJob private constructor(
     ) : Format(
         label, codecId, "mp4",
         opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE),
-        widthMod2 = true,
-        heightMod2 = true
+        widthMod = 2,
+        heightMod = 2
     ) {
         override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val depth = config[DEPTH]
@@ -267,7 +273,7 @@ class VideoContainerRenderJob private constructor(
         allTransparenciesTimesColorProps() * fixed(DEPTH, 10) * choice(SCAN) * choice(PRORES_PROFILE) -
                 fixed(TRANSPARENCY, TRANSPARENT) *
                 choice(PRORES_PROFILE, PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ),
-        widthMod2 = true
+        widthMod = 2
     ) {
         override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
             val profile = config[PRORES_PROFILE]
@@ -322,6 +328,38 @@ class VideoContainerRenderJob private constructor(
             }
             val px = Bitmap.PixelFormat.of(pixelFormatCode)
             return listOf(VideoWriterSettings("dnxhd", AV_PROFILE_UNKNOWN, mapOf("profile" to codecProfileOption), px))
+        }
+    }
+
+
+    private class CineFormFormat : Format(
+        "CineForm", AV_CODEC_ID_CFHD, "mov",
+        opaqueTransparenciesTimesColorProps() * fixed(DEPTH, 10) * choice(SCAN) *
+                choice(CINEFORM_PROFILE, CF_422_LOW, CF_422_MED, CF_422_HI, CF_422_FILM1, CF_422_FILM2, CF_422_FILM3) +
+                allTransparenciesTimesColorSpace() * fixed(DEPTH, 12) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+                choice(CINEFORM_PROFILE, CF_444_LOW, CF_444_MED, CF_444_HI, CF_444_FILM1, CF_444_FILM2, CF_444_FILM3),
+        widthMod = 16,
+        heightMod = 8,
+        minHeight = 32
+    ) {
+        override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
+            val profile = config[CINEFORM_PROFILE]
+            val embedAlpha = config[TRANSPARENCY] == TRANSPARENT
+            val codecQualityOption = when (profile) {
+                CF_422_LOW, CF_444_LOW -> "low"
+                CF_422_MED, CF_444_MED -> "medium"
+                CF_422_HI, CF_444_HI -> "high"
+                CF_422_FILM1, CF_444_FILM1 -> "film1"
+                CF_422_FILM2, CF_444_FILM2 -> "film2"
+                CF_422_FILM3, CF_444_FILM3 -> "film3"
+            }
+            val pixelFormatCode = when (profile) {
+                CF_422_LOW, CF_422_MED, CF_422_HI, CF_422_FILM1, CF_422_FILM2, CF_422_FILM3 -> AV_PIX_FMT_YUV422P10
+                CF_444_LOW, CF_444_MED, CF_444_HI, CF_444_FILM1, CF_444_FILM2, CF_444_FILM3 ->
+                    if (embedAlpha) AV_PIX_FMT_GBRAP12 else AV_PIX_FMT_GBRP12
+            }
+            val px = Bitmap.PixelFormat.of(pixelFormatCode)
+            return listOf(VideoWriterSettings("cfhd", AV_PROFILE_UNKNOWN, mapOf("quality" to codecQualityOption), px))
         }
     }
 

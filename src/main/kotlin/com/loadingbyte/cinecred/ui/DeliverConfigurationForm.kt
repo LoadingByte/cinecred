@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFORM_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
@@ -150,6 +151,20 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         DNxHRProfile.DNXHR_HQ -> "DNxHR HQ"
                         DNxHRProfile.DNXHR_HQX -> "DNxHR HQX"
                         DNxHRProfile.DNXHR_444 -> "DNxHR 444"
+                    }
+                    is CineFormProfile -> when (prof) {
+                        CineFormProfile.CF_422_LOW -> "CineForm 422 Low"
+                        CineFormProfile.CF_422_MED -> "CineForm 422 Medium"
+                        CineFormProfile.CF_422_HI -> "CineForm 422 High"
+                        CineFormProfile.CF_422_FILM1 -> "CineForm 422 Filmscan 1"
+                        CineFormProfile.CF_422_FILM2 -> "CineForm 422 Filmscan 2"
+                        CineFormProfile.CF_422_FILM3 -> "CineForm 422 Filmscan 3"
+                        CineFormProfile.CF_444_LOW -> "CineForm 444 Low"
+                        CineFormProfile.CF_444_MED -> "CineForm 444 Medium"
+                        CineFormProfile.CF_444_HI -> "CineForm 444 High"
+                        CineFormProfile.CF_444_FILM1 -> "CineForm 444 Filmscan 1"
+                        CineFormProfile.CF_444_FILM2 -> "CineForm 444 Filmscan 2"
+                        CineFormProfile.CF_444_FILM3 -> "CineForm 444 Filmscan 3"
                     }
                     is PDFProfile -> when (prof) {
                         PDFProfile.LOSSY_VECTORSVG -> pdfLossy()
@@ -358,10 +373,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         // Check for violated restrictions of the currently selected format.
         val forLabel = format.label
         if (RESOLUTION_SCALING_LOG2 in config) {
-            if (format.widthMod2 && scaledWidth % 2 != 0)
-                error(l10n("ui.delivery.issues.widthMod2", forLabel))
-            if (format.heightMod2 && scaledHeight % 2 != 0)
-                error(l10n("ui.delivery.issues.heightMod2", forLabel))
+            if (scaledWidth % format.widthMod != 0)
+                error(l10n("ui.delivery.issues.widthMod", forLabel, format.widthMod))
+            if (scaledHeight % format.heightMod != 0)
+                error(l10n("ui.delivery.issues.heightMod", forLabel, format.heightMod))
             if (format.minWidth != null && scaledWidth < format.minWidth)
                 error(l10n("ui.delivery.issues.minWidth", forLabel, format.minWidth))
             if (format.minHeight != null && scaledHeight < format.minHeight)
@@ -419,6 +434,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         EXR_COMPRESSION in config -> EXR_COMPRESSION
         PRORES_PROFILE in config -> PRORES_PROFILE
         DNXHR_PROFILE in config -> DNXHR_PROFILE
+        CINEFORM_PROFILE in config -> CINEFORM_PROFILE
         PDF_PROFILE in config -> PDF_PROFILE
         else -> null
     }
@@ -506,6 +522,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is EXR.Compression -> lookup[EXR_COMPRESSION] = value
                 is ProResProfile -> lookup[PRORES_PROFILE] = value
                 is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
+                is CineFormProfile -> lookup[CINEFORM_PROFILE] = value
                 is PDFProfile -> lookup[PDF_PROFILE] = value
             }
         if (transparencyWidget.items.isNotEmpty())

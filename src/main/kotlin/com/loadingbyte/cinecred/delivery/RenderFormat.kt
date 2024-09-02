@@ -23,8 +23,8 @@ abstract class RenderFormat(
     val fileExts: Set<String>,
     val defaultFileExt: String,
     configAssortment: Config.Assortment,
-    val widthMod2: Boolean = false,
-    val heightMod2: Boolean = false,
+    val widthMod: Int = 1,
+    val heightMod: Int = 1,
     val minWidth: Int? = null,
     val minHeight: Int? = null
 ) {
@@ -83,6 +83,7 @@ abstract class RenderFormat(
             val EXR_COMPRESSION = Property(*EXR.Compression.values(), default = EXR.Compression.ZIP)
             val PRORES_PROFILE = Property(*ProResProfile.values(), default = ProResProfile.PRORES_422)
             val DNXHR_PROFILE = Property(*DNxHRProfile.values(), default = DNxHRProfile.DNXHR_HQ)
+            val CINEFORM_PROFILE = Property(*CineFormProfile.values(), default = CineFormProfile.CF_422_FILM1)
             val PDF_PROFILE = Property(*PDFProfile.values(), default = PDFProfile.LOSSY_VECTORSVG)
         }
 
@@ -170,5 +171,9 @@ abstract class RenderFormat(
     enum class PDFProfile { LOSSY_VECTORSVG, LOSSY_RASTERSVG, LOSSLESS_VECTORSVG, LOSSLESS_RASTERSVG }
     enum class ProResProfile { PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ, PRORES_4444, PRORES_4444_XQ }
     enum class DNxHRProfile { DNXHR_LB, DNXHR_SQ, DNXHR_HQ, DNXHR_HQX, DNXHR_444 }
+    enum class CineFormProfile {
+        CF_422_LOW, CF_422_MED, CF_422_HI, CF_422_FILM1, CF_422_FILM2, CF_422_FILM3,
+        CF_444_LOW, CF_444_MED, CF_444_HI, CF_444_FILM1, CF_444_FILM2, CF_444_FILM3
+    }
 
 }

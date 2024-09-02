@@ -329,7 +329,7 @@ class DeferredImagePanel(
                 imageHeight,
                 // If a raster image of the entire deferred image with the current physical scaling would exceed
                 // MAX_PIXELS, we only materialize a portion of the deferred image around the current viewport.
-                max(viewportHeight + MIN_IMG_BUFFER, MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2)))
+                MAX_MAT_PIXELS / (image.width * physicalImageScaling.pow(2))
             )
             val delayedStartY = if (delayedHeight == imageHeight) Double.NaN else
                 (viewportCenterY - delayedHeight / 2.0).coerceIn(0.0, imageHeight - delayedHeight)
@@ -439,7 +439,6 @@ class DeferredImagePanel(
     companion object {
 
         private const val SCROLLBAR_MULT = 1024.0
-        private const val MIN_IMG_BUFFER = 400
         private const val MAX_MAT_PIXELS = 5_000_000
 
         private inline fun drawToBufferedImage(

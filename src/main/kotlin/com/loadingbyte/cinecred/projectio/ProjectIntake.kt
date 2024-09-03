@@ -57,7 +57,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private val auxFileEventBatchProcessor = AtomicReference<ScheduledFuture<*>?>()
 
     private val projectFonts = HashMap<Path, List<Font>>()
-    private val pictureLoaders = PathTreeMap<PictureLoader>()
+    private val pictureLoaders = HashMap<Path, PictureLoader>()
     private val tapes = HashMap<Path, Tape>()
 
     // These are set to true to force calls to the corresponding pushX() method upon initialization.
@@ -120,7 +120,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
         executor.submit(throwableAwareTask {
             // Dispose of all loaded pictures.
-            for (pictureLoader in pictureLoaders.values())
+            for (pictureLoader in pictureLoaders.values)
                 pictureLoader.dispose()
 
             // Close all recognized tapes.
@@ -226,7 +226,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             return
         }
 
-        pictureLoaders.removeLeaf(fileOrDir)?.let { pictureLoader ->
+        pictureLoaders.remove(fileOrDir)?.let { pictureLoader ->
             pictureLoader.dispose()
             pictureLoadersChanged = true
             return
@@ -247,12 +247,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         if (projectFontsChanged)
             callbacks.pushProjectFonts(projectFonts.values.flatten())
 
-        if (pictureLoadersChanged) {
-            // Exclude all pictures that belong to a file sequence tape.
-            val exclude = if (tapes.values.none(Tape::fileSeq)) null else
-                tapes.values.mapNotNullTo(HashSet()) { if (it.fileSeq) it.fileOrDir else null }
-            callbacks.pushPictureLoaders(pictureLoaders.values(exclude = exclude))
-        }
+        if (pictureLoadersChanged)
+            callbacks.pushPictureLoaders(pictureLoaders.values)
 
         if (tapesChanged)
             callbacks.pushTapes(tapes.values)
@@ -316,78 +312,6 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } catch (_: IOException) {
                 false
             }
-
-    }
-
-
-    private class PathTreeMap<V : Any> {
-
-        private val root = Node<V>(Path(""), null)
-
-        operator fun get(path: Path): V? {
-            var node = root
-            for (component in path)
-                node = node.children[component] ?: return null
-            return node.value
-        }
-
-        operator fun set(path: Path, value: V) = put(path, value)
-
-        fun put(path: Path, value: V): V? {
-            var node = root
-            for ((i, component) in path.withIndex())
-                node = node.children.computeIfAbsent(component) {
-                    // We can't use Path.subpath() to compute nodePath as it turns absolute paths into relative ones.
-                    var nodePath = path
-                    repeat(path.nameCount - i - 1) { nodePath = nodePath.parent }
-                    Node(nodePath, null)
-                }
-            return node.value.also { node.value = value }
-        }
-
-        fun removeLeaf(path: Path): V? {
-            var parentNode = root
-            for (component in path.parent)
-                parentNode = parentNode.children[component] ?: return null
-            val filename = path.fileName
-            if (parentNode.children[filename].let { it == null || it.children.isNotEmpty() })
-                return null
-            return parentNode.children.remove(filename)?.value
-        }
-
-        fun removeSubtree(path: Path): V? {
-            var remParent: Node<V>? = null
-            var remComponent: Path? = null
-            var node = root
-            for (component in path) {
-                val child = node.children[component] ?: return null
-                // Make a note to later remove "child" if either (a) "child" is a child of "root" or (b) "node" is more
-                // than just a dummy node on the way to "path". This way, unused dummy nodes are cleaned up.
-                if (remParent == null || node.value != null || node.children.size > 1) {
-                    remParent = node
-                    remComponent = component
-                }
-                node = child
-            }
-            remParent?.run { children.remove(remComponent) }
-            return node.value
-        }
-
-        fun values(exclude: Set<Path>? = null): Collection<V> {
-            val values = mutableListOf<V>()
-            fun recursion(node: Node<V>) {
-                node.value?.let(values::add)
-                for (child in node.children.values)
-                    if (exclude == null || child.path !in exclude)
-                        recursion(child)
-            }
-            recursion(root)
-            return values
-        }
-
-        private class Node<V>(val path: Path, var value: V?) {
-            val children = HashMap<Path, Node<V>>()
-        }
 
     }
 

@@ -133,10 +133,9 @@ abstract class AbstractFilenameWidget<V : Any>(
         set(ass) {
             if (field == ass)
                 return
-            // When the list of admissible file extensions is changed and the field text doesn't end with an
-            // admissible file extension anymore, remove the previous file extension (if there was any) and add
-            // the default new one.
-            if (ass?.default != null && ass.choices.none { text.endsWith(".$it", ignoreCase = true) }) {
+            // When the list of admissible file extensions is changed and the field text doesn't end with the new
+            // default file extension, remove the previous file extension (if there was any) and add the new default.
+            if (ass?.default != null && !text.endsWith(".${ass.default}", ignoreCase = true)) {
                 field?.let { old -> text = text.removeAnySuffix(old.choices.map { ".$it" }, ignoreCase = true) }
                 text += ".${ass.default}"
             }

@@ -408,7 +408,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
         pushFormatPropertyOptions(TRANSPARENCY, transparencyWidget, config, formatChanged)
         resolutionMultWidget.isEnabled = RESOLUTION_SCALING_LOG2 in config
+        pushFormatPropertyOptions(RESOLUTION_SCALING_LOG2, resolutionMultWidget, config, formatChanged)
         fpsMultWidget.isEnabled = FPS_SCALING in config
+        pushFormatPropertyOptions(FPS_SCALING, fpsMultWidget, config, formatChanged)
         pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
         pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)
         pushFormatPropertyOptions(PRIMARIES, primariesWidget, config, formatChanged)

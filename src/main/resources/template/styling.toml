@@ -76,8 +76,8 @@ name = "{project.template.contentStyleLogos}"
 bodyLetterStyleName = "{project.template.letterStyleNormal}"
 bodyLayout = "FLOW"
 flowLineWidthPx = <1200>
-flowLineGapPx = <32>
-flowHGapPx = <32>
+flowLineGapPx = <64>
+flowHGapPx = <96>
 flowSeparator = ""
 
 [[contentStyle]]

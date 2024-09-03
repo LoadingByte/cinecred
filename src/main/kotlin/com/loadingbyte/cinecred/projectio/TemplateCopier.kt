@@ -56,8 +56,10 @@ private fun tryCopyTemplate(
     if (creditsFormat != null || creditsAccount != null)
         tryCopyCreditsTemplate(destDir, template, creditsFormat, creditsAccount, creditsFilename)
     tryCopyStylingTemplate(destDir, template)
-    if (template.sample)
-        tryCopyAuxiliaryFiles(destDir)
+    if (template.sample) {
+        tryCopyLogoFile(destDir, "cinecredH.svg")
+        tryCopyLogoFile(destDir, "cinecredV.svg")
+    }
 }
 
 
@@ -119,11 +121,11 @@ private fun tryCopyStylingTemplate(destDir: Path, template: Template) {
 }
 
 
-private fun tryCopyAuxiliaryFiles(destDir: Path) {
-    val logoFile = destDir.resolve("Logos").resolve("Cinecred.svg")
+private fun tryCopyLogoFile(destDir: Path, name: String) {
+    val logoFile = destDir.resolve("Logos").resolve(name.replaceFirstChar(Char::uppercaseChar))
     if (logoFile.notExists()) {
         logoFile.parent.createDirectoriesSafely()
-        useResourceStream("/template/cinecred.svg") { Files.copy(it, logoFile) }
+        useResourceStream("/template/$name") { Files.copy(it, logoFile) }
     }
 }
 

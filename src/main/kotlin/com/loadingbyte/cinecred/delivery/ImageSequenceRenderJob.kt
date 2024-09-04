@@ -26,7 +26,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BLENDING
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.Styling
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -40,7 +40,7 @@ import kotlin.math.pow
 class ImageSequenceRenderJob private constructor(
     private val format: Format,
     private val config: Config,
-    private val project: Project,
+    private val styling: Styling,
     private val video: DeferredVideo,
     private val dir: Path,
     private val filenamePattern: String
@@ -60,7 +60,7 @@ class ImageSequenceRenderJob private constructor(
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
-        val grounding = if (config[TRANSPARENCY] == GROUNDED) project.styling.global.grounding else null
+        val grounding = if (config[TRANSPARENCY] == GROUNDED) styling.global.grounding else null
         val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
 
         val bitmapWriter = when (format) {
@@ -172,12 +172,12 @@ class ImageSequenceRenderJob private constructor(
     ) {
         override fun createRenderJob(
             config: Config,
-            project: Project,
+            styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = ImageSequenceRenderJob(this, config, project, video!!, fileOrDir, filenamePattern!!)
+        ) = ImageSequenceRenderJob(this, config, styling, video!!, fileOrDir, filenamePattern!!)
     }
 
 }

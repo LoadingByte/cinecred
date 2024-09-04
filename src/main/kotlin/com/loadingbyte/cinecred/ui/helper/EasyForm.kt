@@ -12,13 +12,7 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
         val isVisibleFunc: (() -> Boolean)?,
         val isEnabledFunc: (() -> Boolean)?,
         val verify: (() -> Notice?)? = null
-    ) {
-        // We keep track of the widgets which are visible, enabled, and have a verification error (not a warning).
-        // One can use this information to determine whether the form is error-free.
-        var isVisible = true
-        var isEnabled = true
-        var isErroneous = false
-    }
+    )
 
 
     private val extFormRows = mutableListOf<ExtFormRow>()
@@ -59,13 +53,12 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
     override fun onChange(widget: Widget<*>) {
         for (efr in extFormRows) {
             val fr = efr.formRow
-            efr.isVisibleFunc?.let { val v = it(); efr.isVisible = v; fr.widget.isVisible = v; fr.setAffixVisible(v) }
-            efr.isEnabledFunc?.let { val e = it(); efr.isEnabled = e; fr.widget.isEnabled = e; fr.setAffixEnabled(e) }
+            efr.isVisibleFunc?.let { val v = it(); fr.widget.isVisible = v; fr.setAffixVisible(v) }
+            efr.isEnabledFunc?.let { val e = it(); fr.widget.isEnabled = e; fr.setAffixEnabled(e) }
             efr.verify?.let {
                 val notice = it()
                 fr.noticeOverride = notice
                 fr.widget.setSeverity(-1, notice?.severity)
-                efr.isErroneous = notice?.severity == Severity.ERROR
             }
         }
         // Disable the submit button if there are errors in the form.
@@ -74,6 +67,8 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
     }
 
     val isErrorFree: Boolean
-        get() = extFormRows.all { efr -> !efr.isVisible || !efr.isEnabled || !efr.isErroneous }
+        get() = formRows.all { fr ->
+            !fr.widget.run { isVisible && isEnabled } || fr.run { noticeOverride ?: notice }?.severity != Severity.ERROR
+        }
 
 }

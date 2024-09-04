@@ -165,7 +165,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
 
     val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
 
-    private val formRows = mutableListOf<FormRow>()
+    protected val formRows = mutableListOf<FormRow>()
 
     protected fun addFormRow(formRow: FormRow, wholeWidth: Boolean = false, invisibleSpace: Boolean = false) {
         val widget = formRow.widget

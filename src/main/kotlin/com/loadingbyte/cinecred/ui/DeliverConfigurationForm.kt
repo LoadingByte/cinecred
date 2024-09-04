@@ -69,10 +69,25 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     private var drawnProject: DrawnProject? = null
 
-    private val spreadsheetNameWidget = addWidget(
+    private val spreadsheetNameWidget =
+        OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE)
+
+    private val pageIndicesWidget =
+        MultiComboBoxWidget<Int>(emptyList(), naturalOrder(), toString = { "${it + 1}" }, widthSpec = WidthSpec.SQUEEZE)
+
+    private val firstPageIdxWidget =
+        ComboBoxWidget(Int::class.javaObjectType, emptyList(), toString = { "${it + 1}" }, widthSpec = WidthSpec.TINIER)
+    private val lastPageIdxWidget =
+        ComboBoxWidget(Int::class.javaObjectType, emptyList(), toString = { "${it + 1}" }, widthSpec = WidthSpec.TINIER)
+
+    private val spreadsheetAndPagesFormRow = FormRow(
         l10n("ui.deliverConfig.spreadsheet"),
-        OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.WIDER)
-    )
+        UnionWidget(
+            listOf(spreadsheetNameWidget, pageIndicesWidget, firstPageIdxWidget, lastPageIdxWidget),
+            labels = listOf(null, l10n("ui.deliverConfig.pages"), l10n("ui.deliverConfig.pages"), "\u2013"),
+            gaps = listOf(null, null, "rel")
+        )
+    ).also(::addFormRow)
 
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
@@ -275,6 +290,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     init {
         // Get the form into a reasonable state even before the drawn project arrives.
         onChange(spreadsheetNameWidget)
+        onChange(formatWidget)
     }
 
     override fun onChange(widget: Widget<*>) {
@@ -282,23 +298,47 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             return
 
         disableOnChange = true
-        // If another spreadsheet name is selected, set the output location fields to a reasonable default.
         if (widget == spreadsheetNameWidget) {
+            // If another spreadsheet name is selected, set the output location fields to a reasonable default.
             // We've actually had a bug report where the project dir didn't have a parent, so in that case, just put the
             // default output location inside the project dir to at least avoid a crash.
             val dir = ctrl.projectDir.toAbsolutePath().let { it.parent ?: it }
-            val filename = "${ctrl.projectDir.fileName} ${spreadsheetNameWidget.value.getOrNull() ?: ""} Render"
-            singleFileWidget.value = (singleFileWidget.value.parent ?: dir).resolve(filename)
-            seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve(filename)
-            // This ensures that file extensions are sensible.
-            onFormatChange()
-        } else if (widget == formatWidget)
-            onFormatChange()
-        else if (widget != singleFileWidget && widget != seqDirWidget && widget != seqFilenameSuffixWidget)
+            val filename = ctrl.projectDir.fileName.pathString + spreadsheetNameWidget.value.map { " $it" }.orElse("")
+            singleFileWidget.value =
+                (singleFileWidget.value.parent ?: dir).resolve("$filename.${formatWidget.value.defaultFileExt}")
+            seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve("$filename Render")
+            // Also populate the page number options.
+            pushPageIdxOptions(reset = true)
+        } else if (widget == formatWidget) {
+            val format = formatWidget.value
+            val wholePage = format in WHOLE_PAGE_FORMATS
+            pageIndicesWidget.isVisible = wholePage
+            firstPageIdxWidget.isVisible = !wholePage
+            lastPageIdxWidget.isVisible = !wholePage
+            val singleExt = format.fileExts.singleOrNull()
+            val assName = if (singleExt != null) l10n("ui.deliverConfig.singleFileTypeExt", singleExt.uppercase()) else
+                l10n("ui.deliverConfig.singleFileTypeVideo")
+            val fileExtAssortment = FileExtAssortment(assName, format.fileExts.sorted(), format.defaultFileExt)
+            singleFileWidget.fileExtAssortment = fileExtAssortment
+            seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
+            pushFormatPropertyOptions(format.defaultConfig, formatChanged = true)
+        } else if (widget != pageIndicesWidget && widget != firstPageIdxWidget && widget != lastPageIdxWidget &&
+            widget != singleFileWidget && widget != seqDirWidget && widget != seqFilenameSuffixWidget
+        )
             currentConfig(ignoreVolatile = true)?.let { pushFormatPropertyOptions(it, formatChanged = false) }
         disableOnChange = false
 
         super.onChange(widget)
+
+        if (widget == firstPageIdxWidget || widget == lastPageIdxWidget || widget == formatWidget) {
+            // Show an error when the selected page range is empty.
+            val notice = if (firstPageIdxWidget.isVisible && firstPageIdxWidget.items.isNotEmpty() &&
+                firstPageIdxWidget.value > lastPageIdxWidget.value
+            ) Notice(Severity.ERROR, l10n("ui.deliverConfig.pagesEmpty")) else null
+            spreadsheetAndPagesFormRow.noticeOverride = notice
+            firstPageIdxWidget.setSeverity(-1, notice?.severity)
+            lastPageIdxWidget.setSeverity(-1, notice?.severity)
+        }
 
         // Update the specs labels and determine whether the specs are valid.
         // Then disable the add button if there are errors in the form or the specs are invalid.
@@ -393,15 +433,17 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         return !err
     }
 
-    private fun onFormatChange() {
-        val format = formatWidget.value
-        val singleExt = format.fileExts.singleOrNull()
-        val assName = if (singleExt != null) l10n("ui.deliverConfig.singleFileTypeExt", singleExt.uppercase()) else
-            l10n("ui.deliverConfig.singleFileTypeVideo")
-        val fileExtAssortment = FileExtAssortment(assName, format.fileExts.sorted(), format.defaultFileExt)
-        singleFileWidget.fileExtAssortment = fileExtAssortment
-        seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
-        pushFormatPropertyOptions(format.defaultConfig, formatChanged = true)
+    private fun pushPageIdxOptions(reset: Boolean) {
+        val pageIndices = selectedDrawnCredits?.drawnPages?.indices?.toList() ?: emptyList()
+        val pageCountChanged = pageIndices.size != lastPageIdxWidget.items.size
+        pageIndicesWidget.items = pageIndices
+        firstPageIdxWidget.items = pageIndices
+        lastPageIdxWidget.items = pageIndices
+        if (pageIndices.isNotEmpty() && (reset || pageCountChanged)) {
+            pageIndicesWidget.value = emptyList()
+            firstPageIdxWidget.value = pageIndices.first()
+            lastPageIdxWidget.value = pageIndices.last()
+        }
     }
 
     private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
@@ -450,12 +492,18 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
             )
         else {
-            val project = drawnProject.project
-            val drawnPages = drawnCredits.drawnPages
-            val video = drawnCredits.video
-
             val format = formatWidget.value
             val config = currentConfig() ?: return
+            val styling = drawnProject.project.styling
+
+            val wholePage = format in WHOLE_PAGE_FORMATS
+            val drawnPages = drawnCredits.drawnPages
+            val pageIndices =
+                if (wholePage) pageIndicesWidget.value.ifEmpty { drawnPages.indices.toList() }
+                else (firstPageIdxWidget.value..lastPageIdxWidget.value).toList()
+            val pageDefImages = drawnPages.filterIndexed { idx, _ -> idx in pageIndices }.map(DrawnPage::defImage)
+            val video = if (wholePage) null else drawnCredits.video.sub(pageDefImages.first(), pageDefImages.last())
+
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
@@ -497,10 +545,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         return
             }
 
-            val pageDefImages = drawnPages.map(DrawnPage::defImage)
             val filenameHashPattern = fileOrDir.name + seqFilenameSuffixWidget.value
             val filenamePattern = filenameHashPattern.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
-            val renderJob = format.createRenderJob(config, project, pageDefImages, video, fileOrDir, filenamePattern)
+
+            val renderJob = format.createRenderJob(config, styling, pageDefImages, video, fileOrDir, filenamePattern)
 
             val destination = if (!format.fileSeq) fileOrDir.pathString else
                 fileOrDir.resolve(filenameHashPattern).pathString
@@ -555,6 +603,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
         spreadsheetNameWidget.items =
             drawnProject.drawnCredits.filter { it.video.numFrames > 0 }.map { it.credits.spreadsheetName }
+
+        // Update the page number options.
+        pushPageIdxOptions(reset = false)
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
         onChange(resolutionMultWidget)

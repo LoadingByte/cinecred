@@ -64,6 +64,17 @@ class DeferredVideo private constructor(
         )
     }
 
+    fun sub(firstImage: DeferredImage, lastImage: DeferredImage): DeferredVideo {
+        frozen = true
+        return DeferredVideo(
+            origResolution, origFPS, resolutionScaling, fpsScaling, roundShifts, frozen = true,
+            flows.subList(
+                flows.indexOfFirst { it is Flow.DefImg && it.image == firstImage },
+                flows.indexOfFirst { it is Flow.DefImg && it.image == lastImage } + 1
+            )
+        )
+    }
+
     /** Note that [numFrames] can be negative. */
     fun playBlank(numFrames: Int) {
         if (numFrames == 0) return

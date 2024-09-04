@@ -26,7 +26,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.Styling
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
@@ -53,7 +53,7 @@ import kotlin.math.roundToInt
 class WholePageSequenceRenderJob private constructor(
     private val format: RenderFormat,
     private val config: Config,
-    private val project: Project,
+    private val styling: Styling,
     private val pageDefImages: List<DeferredImage>,
     private val dir: Path,
     private val filenamePattern: String
@@ -74,7 +74,7 @@ class WholePageSequenceRenderJob private constructor(
         val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
-        val global = project.styling.global
+        val global = styling.global
 
         val bitmapWriter = when (format) {
             PNG -> BitmapWriter.PNG(family, embedAlpha, colorSpace, config[DEPTH])
@@ -196,12 +196,12 @@ class WholePageSequenceRenderJob private constructor(
     ) {
         override fun createRenderJob(
             config: Config,
-            project: Project,
+            styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = WholePageSequenceRenderJob(this, config, project, pageDefImages!!, fileOrDir, filenamePattern!!)
+        ) = WholePageSequenceRenderJob(this, config, styling, pageDefImages!!, fileOrDir, filenamePattern!!)
     }
 
 }
@@ -209,7 +209,7 @@ class WholePageSequenceRenderJob private constructor(
 
 class WholePagePDFRenderJob private constructor(
     private val config: Config,
-    private val project: Project,
+    private val styling: Styling,
     private val pageDefImages: List<DeferredImage>,
     private val file: Path
 ) : RenderJob {
@@ -226,7 +226,7 @@ class WholePagePDFRenderJob private constructor(
         val profile = config[PDF_PROFILE]
         val lossy = profile == LOSSY_VECTORSVG || profile == LOSSY_RASTERSVG
         val rasterizeSVGs = profile == LOSSY_RASTERSVG || profile == LOSSLESS_RASTERSVG
-        val global = project.styling.global
+        val global = styling.global
 
         // We blend in sRGB because (a) this mirrors SVG, (b) it's most widely supported, and (c) sRGB is very close to
         // out actual blending transfer characteristics of pure gamma 2.2.
@@ -282,12 +282,12 @@ class WholePagePDFRenderJob private constructor(
     ) {
         override fun createRenderJob(
             config: Config,
-            project: Project,
+            styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = WholePagePDFRenderJob(config, project, pageDefImages!!, fileOrDir)
+        ) = WholePagePDFRenderJob(config, styling, pageDefImages!!, fileOrDir)
     }
 
 

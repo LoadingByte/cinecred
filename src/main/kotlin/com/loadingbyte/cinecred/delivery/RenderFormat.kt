@@ -10,7 +10,7 @@ import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredVideo
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.Styling
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentHashMapOf
 import java.nio.file.Path
@@ -55,7 +55,7 @@ abstract class RenderFormat(
 
     abstract fun createRenderJob(
         config: Config,
-        project: Project,
+        styling: Styling,
         pageDefImages: List<DeferredImage>?,
         video: DeferredVideo?,
         fileOrDir: Path,

@@ -12,7 +12,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.DeferredVideo.TapeSpan
 import com.loadingbyte.cinecred.imaging.Tape
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.Styling
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.nio.file.Path
@@ -31,7 +31,7 @@ import kotlin.math.min
 class TapeTimelineRenderJob private constructor(
     private val format: Format,
     private val config: Config,
-    private val project: Project,
+    private val styling: Styling,
     private val video: DeferredVideo,
     private val file: Path
 ) : RenderJob {
@@ -65,7 +65,7 @@ class TapeTimelineRenderJob private constructor(
         csv.appendLine("Record In,Record Out,Source In,Source In Clock,Source")
 
         val scan = config[SCAN]
-        val global = project.styling.global
+        val global = styling.global
 
         for (tapeSpan in tapeSpans) {
             val startField = tapeSpan.firstFrameIdx
@@ -93,7 +93,7 @@ class TapeTimelineRenderJob private constructor(
     }
 
     private fun writeEDL(tapeSpans: List<TapeSpan>) {
-        val projFPS = project.styling.global.fps
+        val projFPS = styling.global.fps
         val projDropFrame = projFPS.supportsDropFrameTimecode
 
         val edl = StringBuilder()
@@ -139,7 +139,7 @@ class TapeTimelineRenderJob private constructor(
     private fun StringBuilder.crlf() = append("\r\n")
 
     private fun writeOTIO(tapeSpans: List<TapeSpan>) {
-        val projFPS = project.styling.global.fps
+        val projFPS = styling.global.fps
 
         val trackObjs = mutableListOf<Any>()
         for (track in arrangeOnTracks(tapeSpans)) {
@@ -217,7 +217,7 @@ class TapeTimelineRenderJob private constructor(
         )
 
     private fun writeFCPXML(tapeSpans: List<TapeSpan>) {
-        val global = project.styling.global
+        val global = styling.global
 
         val tapes = tapeSpans.mapTo(LinkedHashSet()) { tapeSpan -> tapeSpan.embeddedTape.tape }
         val formats = linkedSetOf(Pair(global.resolution, global.fps))
@@ -303,7 +303,7 @@ class TapeTimelineRenderJob private constructor(
     private fun makeFCPXMLTime(timecode: Timecode.Clock) = "${timecode.numerator}/${timecode.denominator}s"
 
     private fun writeXML(tapeSpans: List<TapeSpan>) {
-        val global = project.styling.global
+        val global = styling.global
 
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().domImplementation
             .createDocument(null, "xmeml", null)
@@ -425,12 +425,12 @@ class TapeTimelineRenderJob private constructor(
     ) {
         override fun createRenderJob(
             config: Config,
-            project: Project,
+            styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = TapeTimelineRenderJob(this, config, project, video!!, fileOrDir)
+        ) = TapeTimelineRenderJob(this, config, styling, video!!, fileOrDir)
     }
 
 }

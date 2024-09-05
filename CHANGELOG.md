@@ -14,6 +14,7 @@ Cinecred Changelog
 - When text uses letters not supported by the font, a warning is now triggered.
 - After scrubbing in the video preview while it played, playback now continues.
 - Permit exporting a subset of whole page stills or a sub-range of video.
+- Added ST.428 EOTF delivery.
 - Added CineForm delivery.
 - Added OTIO, FCPXML, and XML export of an audio timeline for embedded videos.
 

@@ -399,6 +399,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
             val LINEAR: Transfer = of(AVCOL_TRC_LINEAR)
             val BT1886: Transfer = of(AVCOL_TRC_BT709)
             val SRGB: Transfer = of(AVCOL_TRC_IEC61966_2_1)
+            val ST428: Transfer = of(AVCOL_TRC_SMPTE428)
             val PQ: Transfer = of(AVCOL_TRC_SMPTE2084)
             val HLG: Transfer = of(AVCOL_TRC_ARIB_STD_B67)
 
@@ -424,7 +425,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
              */
             val BLENDING: Transfer = of(AVCOL_TRC_GAMMA22)
 
-            val COMMON = listOf(LINEAR, BT1886, SRGB, PQ, HLG)
+            val COMMON = listOf(LINEAR, BT1886, SRGB, ST428, PQ, HLG)
 
             private fun invert(toLinear: Curve): Curve =
                 Arena.ofConfined().use { arena ->

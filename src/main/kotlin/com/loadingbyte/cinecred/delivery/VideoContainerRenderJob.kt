@@ -37,6 +37,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.HLG
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.PQ
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
+import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.ST428
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Styling
@@ -195,7 +196,7 @@ class VideoContainerRenderJob private constructor(
                             fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * fixed(YUV, SRGB_NCL) +
                             choice(PRIMARIES, DCI_P3, DISPLAY_P3) * choice(TRANSFER) * fixed(YUV, BT709_NCL) +
                             fixed(PRIMARIES, BT2020) * fixed(TRANSFER, BT1886) * choice(YUV, BT2020_NCL, BT2020_CL) +
-                            fixed(PRIMARIES, BT2020) * choice(TRANSFER, LINEAR, SRGB) * fixed(YUV, BT2020_NCL) +
+                            fixed(PRIMARIES, BT2020) * choice(TRANSFER, LINEAR, SRGB, ST428) * fixed(YUV, BT2020_NCL) +
                             fixed(PRIMARIES, BT2020) * choice(TRANSFER, PQ, HLG) * choice(YUV, BT2020_NCL, ICTCP)
                     ) + fixed(TRANSPARENCY, MATTE)
 

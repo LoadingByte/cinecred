@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=Cinecred
 @LINUX_SHORTCUT_COMMENTS@
-Exec={{EXEC_PATH}} %f
+Exec=cinecred %f
 Icon=cinecred
 Terminal=false
 Type=Application
-Categories=AudioVideo;Video;
+Categories=@LINUX_SHORTCUT_CATEGORIES@

@@ -3,6 +3,7 @@ import com.loadingbyte.cinecred.Platform
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.net.URLClassLoader
 import java.time.Year
 import java.util.*
 
@@ -34,7 +35,12 @@ val addOpens = javaProperties.getProperty("addOpens").split(' ')
 val splashScreen = javaProperties.getProperty("splashScreen")!!
 val javaOptions = javaProperties.getProperty("javaOptions")!!
 
-val copyright = "Copyright \u00A9 ${Year.now().value} Felix Mujkanovic, licensed under the GPLv3 or any later version"
+val locales = listOf("cs", "de", "en", "fr", "zh-CN").map(Locale::forLanguageTag)
+val url = "https://cinecred.com"
+val vendor = "Felix Mujkanovic"
+val email = "felix@cinecred.com"
+val copyright = "Copyright \u00A9 ${Year.now().value} $vendor, licensed under the GPLv3 or any later version"
+val linuxCategories = listOf("AudioVideo", "Video")
 
 
 sourceSets {
@@ -143,6 +149,11 @@ val writeVersionFile by tasks.registering(WriteFile::class) {
     outputFile = layout.buildDirectory.file("generated/version/version")
 }
 
+val writeLocalesFile by tasks.registering(WriteFile::class) {
+    text = locales.joinToString("\n", transform = Locale::toLanguageTag)
+    outputFile = layout.buildDirectory.file("generated/locales/locales")
+}
+
 val writeCopyrightFile by tasks.registering(WriteFile::class) {
     text = copyright
     outputFile = layout.buildDirectory.file("generated/copyright/copyright")
@@ -164,6 +175,7 @@ val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
 
 tasks.processResources {
     from(writeVersionFile)
+    from(writeLocalesFile)
     from(writeCopyrightFile)
     from(drawSplash)
     from("CHANGELOG.md")
@@ -248,6 +260,16 @@ val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
     }
 }
 
+val writeAppStreamFile by tasks.registering(WriteAppStreamFile::class) {
+    version = project.version.toString()
+    slogans = mainBundles.mapValues { it.getString("slogan") }
+    teasers = mainBundles.mapValues { it.getString("teaser") }
+    url = this@Build_gradle.url
+    vendor = this@Build_gradle.vendor
+    email = this@Build_gradle.email
+    categories = linuxCategories
+    outputFile = layout.buildDirectory.file("generated/appStreamFile/cinecred.metainfo.xml")
+}
 
 val preparePlatformPackagingTasks = Platform.values().map { platform ->
     // Collect all files needed for packaging in a folder.
@@ -276,14 +298,18 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "ARCH_TEMURIN" to platform.arch.slugTemurin,
                 "ARCH_WIX" to platform.arch.slugWix,
                 "ARCH_DEBIAN" to platform.arch.slugDebian,
-                "DESCRIPTION" to mainTranslations.get().getValue("").getProperty("slogan")!!,
-                "URL" to "https://cinecred.com",
-                "VENDOR" to "Felix Mujkanovic",
-                "EMAIL" to "felix@cinecred.com",
+                *mainBundles.get().map { (l, b) -> "SLOGAN_$l".uppercase() to b.getString("slogan") }.toTypedArray(),
+                "TEASER_EN" to mainBundles.get().getValue(Locale.ENGLISH).getString("teaser").wrap(80),
+                "URL" to url,
+                "VENDOR" to vendor,
+                "EMAIL" to email,
                 "COPYRIGHT" to copyright,
-                "LINUX_SHORTCUT_COMMENTS" to mainTranslations.get().entries.mapNotNull { (locale, prop) ->
-                    prop.getProperty("slogan")?.let { "Comment" + (if (locale.isEmpty()) "" else "[$locale]") + "=$it" }
-                }.joinToString("\n"),
+                "LINUX_SHORTCUT_COMMENTS" to mainBundles.get().entries.joinToString("\n") { (locale, bundle) ->
+                    "Comment" + (if (locale == Locale.ENGLISH) "" else "[$locale]") + "=" + bundle.getString("slogan")
+                },
+                "LINUX_SHORTCUT_CATEGORIES" to linuxCategories.joinToString(";", postfix = ";"),
+                "DEB_CONTROL_TEASER" to mainBundles.get().getValue(Locale.ENGLISH).getString("teaser")
+                    .wrap(79).replace("\n\n", "\n.\n").prependIndent(" "),
                 "LEGAL_PATH_RUNTIME" to when (platform.os) {
                     Platform.OS.WINDOWS -> "runtime\\legal"
                     Platform.OS.MAC -> "runtime/Contents/Home/legal"
@@ -305,6 +331,9 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
         }
         into("images") {
             from(drawOSImagesTasks[platform.os])
+        }
+        into("resources/linux") {
+            from(writeAppStreamFile)
         }
     }
 }
@@ -481,14 +510,22 @@ fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
 val srcSkiacapiCpp get() = layout.projectDirectory.dir("src/skiacapi/cpp")
 val srcDecklinkcapiCpp get() = layout.projectDirectory.dir("src/decklinkcapi/cpp")
 
-val mainTranslations: Provider<Map<String, Properties>> = sourceSets.main.map {
-    val result = TreeMap<String, Properties>()
-    for (file in it.resources.matching { include("/l10n/strings*.properties") })
-        result[file.name.drop(8).dropLast(11)] = Properties().apply { file.bufferedReader().use(::load) }
-    if (result.isEmpty())
-        throw GradleException("No l10n files have been found; has the l10n system changed?")
-    result
+val mainBundles: Provider<Map<Locale, ResourceBundle>> = provider {
+    val loader = URLClassLoader(arrayOf(srcMainResources.dir("l10n").asFile.toURI().toURL()))
+    val control = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
+    locales
+        // Put English in front because in the files we create, it usually appears without a language marker.
+        .sortedBy { locale -> if (locale == Locale.ENGLISH) "" else "$locale" }
+        .associateWith { locale -> ResourceBundle.getBundle("strings", locale, loader, control) }
 }
 
 
+fun <K, V, R> Provider<Map<K, V>>.mapValues(t: (V) -> R): Provider<Map<K, R>> = map { it.mapValues { (_, v) -> t(v) } }
 fun String.capitalized(): String = replaceFirstChar(Char::uppercase)
+
+fun String.wrap(lineLen: Int): String = split("\n").joinToString("\n") { line ->
+    StringBuilder(line).also { sb ->
+        var i = 0
+        while (i + lineLen < sb.length && sb.lastIndexOf(" ", i + lineLen).also { i = it } != -1) sb.setCharAt(i, '\n')
+    }
+}

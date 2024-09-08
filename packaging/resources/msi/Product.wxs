@@ -3,7 +3,7 @@
   <?define UpgradeCode = "d3f4499f-c56c-4f7d-b051-1f8eade3fc9c" ?>
 
   <Product Id="*" Name="Cinecred" Version="@VERSION@" Language="!(loc.LanguageCode)" Manufacturer="@VENDOR@" UpgradeCode="$(var.UpgradeCode)">
-    <Package Platform="@ARCH_WIX@" Description="@DESCRIPTION@" Languages="!(loc.LanguageCode)" Manufacturer="@VENDOR@" InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
+    <Package Platform="@ARCH_WIX@" Description="!(loc.Slogan)" Languages="!(loc.LanguageCode)" Manufacturer="@VENDOR@" InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
     <MediaTemplate EmbedCab="yes"/>
 
     <!-- Installed files -->
@@ -33,7 +33,7 @@
     </InstallExecuteSequence>
 
     <!-- Add/Remove Programs screen -->
-    <Property Id="ARPCOMMENTS" Value="@DESCRIPTION@"/>
+    <Property Id="ARPCOMMENTS" Value="!(loc.Slogan)"/>
     <Property Id="ARPCONTACT" Value="@VENDOR@"/>
     <Property Id="ARPHELPLINK" Value="@URL@"/>
     <Property Id="ARPURLINFOABOUT" Value="@URL@"/>

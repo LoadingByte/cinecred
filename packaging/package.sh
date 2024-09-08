@@ -55,15 +55,16 @@ elif [[ "@OS@" == linux ]]; then
 
   echo "Assembling TAR.GZ archive..."
   mkdir -p work/targz/cinecred/
-  cp -r work/image/cinecred/* images/* "$_"
-  sed "s/{{EXEC_PATH}}/\/opt\/cinecred\/bin\/cinecred/g" resources/linux/cinecred.desktop > work/targz/cinecred/cinecred.desktop
+  cp -r work/image/cinecred/* resources/linux/* images/* "$_"
   tar -czf out/cinecred-@VERSION@-@OS@-@ARCH@.tar.gz -C work/targz/ cinecred/
 
   echo "Assembling AppImage package..."
   mkdir -p work/AppDir/usr/
   cp -r work/image/cinecred/* "$_"
   mkdir -p work/AppDir/usr/share/applications/
-  sed "s/{{EXEC_PATH}}/cinecred/g" resources/linux/cinecred.desktop > "$_/cinecred.desktop"
+  cp resources/linux/cinecred.desktop "$_"
+  mkdir -p work/AppDir/usr/share/metainfo/
+  cp resources/linux/cinecred.metainfo.xml "$_/cinecred.appdata.xml"
   mkdir -p work/AppDir/usr/share/icons/hicolor/scalable/apps/
   cp images/cinecred.svg "$_"
   mkdir -p work/AppDir/usr/share/icons/hicolor/48x48/apps/
@@ -73,7 +74,7 @@ elif [[ "@OS@" == linux ]]; then
   ln -s usr/share/icons/hicolor/scalable/apps/cinecred.svg work/AppDir/
   ln -s usr/share/icons/hicolor/48x48/apps/cinecred.png work/AppDir/
   ln -s cinecred.svg work/AppDir/.DirIcon
-  work/appimagetool-x86_64.AppImage work/AppDir out/cinecred-@VERSION@-@ARCH@.appimage
+  work/appimagetool-x86_64.AppImage --no-appstream work/AppDir out/cinecred-@VERSION@-@ARCH@.appimage
 
   echo "Assembling AUR PKGBUILD script..."
   sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/aur/PKGBUILD > out/PKGBUILD
@@ -82,7 +83,9 @@ elif [[ "@OS@" == linux ]]; then
   mkdir -p work/tree/opt/cinecred/
   cp -r work/image/cinecred/* "$_"
   mkdir -p work/tree/usr/share/applications/
-  sed "s/{{EXEC_PATH}}/\/opt\/cinecred\/bin\/cinecred/g" resources/linux/cinecred.desktop > "$_/cinecred.desktop"
+  cp resources/linux/cinecred.desktop "$_"
+  mkdir -p work/tree/usr/share/metainfo
+  cp resources/linux/cinecred.metainfo.xml "$_"
   mkdir -p work/tree/usr/share/icons/hicolor/scalable/apps/
   cp images/cinecred.svg "$_"
   mkdir -p work/tree/usr/share/icons/hicolor/48x48/apps/

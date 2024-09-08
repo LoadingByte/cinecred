@@ -3,7 +3,7 @@ Version: @VERSION@
 Release: 1
 License: GPLv3+
 Group: Applications/Multimedia
-Summary: @DESCRIPTION@
+Summary: @SLOGAN_EN@
 URL: @URL@
 Vendor: @VENDOR@
 
@@ -15,7 +15,7 @@ AutoReqProv: no
 %global __os_install_post %{nil}
 
 %description
-@DESCRIPTION@
+@TEASER_EN@
 
 %install
 cp -r %{_sourcedir}/* %{buildroot}/

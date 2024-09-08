@@ -3,6 +3,7 @@ Version: @VERSION@-1
 Architecture: amd64
 Priority: optional
 Section: video
-Description: @DESCRIPTION@
 Homepage: @URL@
 Maintainer: @VENDOR@ <@EMAIL@>
+Description: @SLOGAN_EN@
+@DEB_CONTROL_TEASER@

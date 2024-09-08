@@ -2,7 +2,7 @@
 pkgname=cinecred
 pkgver=@VERSION@
 pkgrel=1
-pkgdesc="@DESCRIPTION@"
+pkgdesc="@SLOGAN_EN@"
 arch=('@ARCH@')
 url="@URL@"
 license=('GPL3')
@@ -16,6 +16,8 @@ package() {
 
 	mkdir -p "$pkgdir/usr/share/applications/"
 	mv "$pkgdir/opt/cinecred/cinecred.desktop" "$_"
+	mkdir -p "$pkgdir/usr/share/metainfo/"
+	mv "$pkgdir/opt/cinecred/cinecred.metainfo.xml" "$_"
 	mkdir -p "$pkgdir/usr/share/icons/hicolor/scalable/apps/"
 	mv "$pkgdir/opt/cinecred/cinecred.svg" "$_"
 	mkdir -p "$pkgdir/usr/share/icons/hicolor/48x48/apps/"

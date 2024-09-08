@@ -7,7 +7,7 @@
         <Component Id="DesktopShortcutComponent" Guid="*">
           <Condition>DESKTOP_SHORTCUT</Condition>
           <RegistryValue Root="HKMU" Key="Software\Cinecred" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes"/>
-          <Shortcut Id="DesktopShortcut" Name="Cinecred" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
+          <Shortcut Id="DesktopShortcut" Name="Cinecred" Description="!(loc.Slogan)" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
         </Component>
       </Directory>
 
@@ -16,7 +16,7 @@
         <Component Id="StartMenuShortcutComponent" Guid="*">
           <Condition>STARTMENU_SHORTCUT</Condition>
           <RegistryValue Root="HKMU" Key="Software\Cinecred" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes"/>
-          <Shortcut Id="StartMenuShortcut" Name="Cinecred" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
+          <Shortcut Id="StartMenuShortcut" Name="Cinecred" Description="!(loc.Slogan)" WorkingDirectory="INSTALLDIR" Target="[INSTALLDIR]cinecred.exe"/>
         </Component>
       </Directory>
     </DirectoryRef>

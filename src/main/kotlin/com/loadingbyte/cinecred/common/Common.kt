@@ -271,13 +271,10 @@ val CONFIG_DIR: Path = when {
 }
 
 
-val TRANSLATED_LOCALES: List<Locale> = listOf(
-    Locale.of("cs"),
-    Locale.of("de"),
-    Locale.of("en"),
-    Locale.of("fr"),
-    Locale.of("zh", "CN")
-)
+val TRANSLATED_LOCALES: List<Locale> =
+    useResourceStream("/locales") { it.bufferedReader().readLines() }
+        .filter(String::isNotEmpty).sorted().map(Locale::forLanguageTag)
+
 val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
 
 /**

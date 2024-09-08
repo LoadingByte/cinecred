@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="de-DE" Codepage="1252">
   <String Id="LanguageCode">1031</String>
+  <String Id="Slogan">@SLOGAN_DE@</String>
   <String Id="ShortcutDlgTitle">{\WixUI_Font_Title}Verknüpfungen</String>
   <String Id="ShortcutDlgDescription">Wählen Sie die zu erstellenden Verknüpfungen aus.</String>
   <String Id="ShortcutDlgDesktop">Desktopverknüpfung erstellen</String>

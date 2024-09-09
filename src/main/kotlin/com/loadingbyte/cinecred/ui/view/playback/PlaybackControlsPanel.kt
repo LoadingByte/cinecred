@@ -126,7 +126,7 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         add(rewindButton)
         add(pauseButton)
         add(playButton)
-        add(frameSlider, "growx, pushx")
+        add(frameSlider, "wmin 120, growx, pushx")
         add(timecodeLabel)
     }
 

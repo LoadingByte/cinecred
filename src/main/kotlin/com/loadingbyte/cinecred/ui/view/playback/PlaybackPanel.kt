@@ -49,6 +49,8 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
     init {
         playbackCtrl.registerView(this)
 
+        val stutterLabel = JLabel(l10n("ui.video.stutter"), WARN_ICON, JLabel.LEADING).apply { toolTipText = text }
+
         layout = MigLayout(
             "insets 0",
             "[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]11[]10[]",
@@ -61,11 +63,14 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
         add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
         add(controlsPanel, "growx, pushx")
         add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
-        add(JLabel(l10n("ui.video.stutter"), WARN_ICON, JLabel.LEADING), "gapright 14")
+        add(stutterLabel, "wmin 0, gapright 14")
 
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
                 playbackCtrl.setVideoCanvasSize(videoCanvas.size, videoCanvas.graphicsConfiguration)
+                // Without this explicit revalidation, the stutter label's width oscillates when shrinking the window.
+                // The reason seems to be the heavyweight Canvas.
+                stutterLabel.revalidate()
             }
         })
     }

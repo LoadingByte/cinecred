@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
+import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
@@ -167,6 +168,13 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             this, l10n("ui.projects.alreadyOpen.msg", projectDir),
             l10n("ui.projects.alreadyOpen.title"), JOptionPane.ERROR_MESSAGE
         )
+    }
+
+    override fun showNewerVersionQuestion(projectDir: Path, projectVersion: String): Boolean {
+        return JOptionPane.showConfirmDialog(
+            this, l10n("ui.projects.newerVersion.msg", projectDir, projectVersion, VERSION),
+            l10n("ui.projects.newerVersion.title"), JOptionPane.YES_NO_OPTION
+        ) == JOptionPane.YES_OPTION
     }
 
     override fun showNotEmptyQuestion(projectDir: Path): Boolean {

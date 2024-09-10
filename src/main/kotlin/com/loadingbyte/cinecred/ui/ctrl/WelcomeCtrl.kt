@@ -153,6 +153,21 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             return false
         }
 
+        // If the project version is present, but either unrecognizable (meaning the version format has changed in the
+        // future) or recognizable but higher than our version, warn the user.
+        val projectVersion = readStylingVersion(projectDir.resolve(STYLING_FILE_NAME))
+        if (!projectVersion.isNullOrBlank() && !VERSION.endsWith("-SNAPSHOT") &&
+            (!projectVersion.matches(Regex("\\d+\\.\\d+\\.\\d+")) ||
+                    Arrays.compare(
+                        VERSION.split('.').map(String::toInt).toIntArray(),
+                        projectVersion.split('.').map(String::toInt).toIntArray()
+                    ) < 0)
+        ) {
+            welcomeView.display()
+            if (!welcomeView.showNewerVersionQuestion(projectDir, projectVersion))
+                return false
+        }
+
         blockOpening = true
 
         // Memorize the opened project directory at the first position in the list.

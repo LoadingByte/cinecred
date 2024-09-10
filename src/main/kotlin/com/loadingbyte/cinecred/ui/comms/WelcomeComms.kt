@@ -146,6 +146,7 @@ interface WelcomeViewComms {
     fun showIllegalPathMessage(path: Path)
     fun showNotAProjectMessage(dir: Path)
     fun showAlreadyOpenMessage(projectDir: Path)
+    fun showNewerVersionQuestion(projectDir: Path, projectVersion: String): Boolean
     fun showNotEmptyQuestion(projectDir: Path): Boolean
     fun showRestartUILocaleQuestion(newLocale: Locale): Boolean
     fun showCannotRemoveAccountMessage(account: Account, error: String)

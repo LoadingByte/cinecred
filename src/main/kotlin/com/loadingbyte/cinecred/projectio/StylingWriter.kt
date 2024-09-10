@@ -1,9 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.createDirectoriesSafely
-import com.loadingbyte.cinecred.common.writeToml
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.*
@@ -15,6 +12,7 @@ import java.util.*
 /** @throws IOException */
 fun writeStyling(stylingFile: Path, styling: Styling) {
     val toml = buildMap {
+        put("version", VERSION)
         put("global", writeStyle(styling, styling.global))
         if (styling.pageStyles.isNotEmpty())
             put("pageStyle", styling.pageStyles.map { writeStyle(styling, it) })

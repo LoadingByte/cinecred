@@ -13,6 +13,11 @@ import java.util.*
 
 
 /** @throws IOException */
+fun readStylingVersion(stylingFile: Path): String? =
+    readToml(stylingFile)["version"] as? String
+
+
+/** @throws IOException */
 fun readStyling(stylingFile: Path, projectFonts: Collection<Font>): Styling {
     val toml = readToml(stylingFile)
 

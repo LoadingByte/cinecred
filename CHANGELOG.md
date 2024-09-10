@@ -17,6 +17,7 @@ Cinecred Changelog
 - Added ST.428 EOTF delivery.
 - Added CineForm delivery.
 - Added OTIO, FCPXML, and XML export of an audio timeline for embedded videos.
+- From now on, users will be warned when opening projects from newer versions.
 
 ### Fixes
 

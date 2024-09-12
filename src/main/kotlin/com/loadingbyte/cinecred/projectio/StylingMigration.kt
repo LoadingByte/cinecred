@@ -277,7 +277,7 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
             }
         }
 
-    // 1.6.0 -> 1.6.1: Head/tail vertical justification is now stored as two settings.
+    // 1.6.0 -> 1.7.0: Head/tail vertical justification is now stored as two settings.
     for (contentStyle in rawStyling.contentStyles)
         for (prefix in arrayOf("head", "tail")) {
             val vJustify = contentStyle[prefix + "VJustify"]
@@ -290,12 +290,12 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
             contentStyle[prefix + "VJustify"] = (vJustify as String).substringAfter('_')
         }
 
-    // 1.6.0 -> 1.6.1: Vertical flow separator justification now has its own setting.
+    // 1.6.0 -> 1.7.0: Vertical flow separator justification now has its own setting.
     for (contentStyle in rawStyling.contentStyles)
         if ("flowSeparatorVJustify" !in contentStyle)
             contentStyle["flowCellVJustify"]?.let { contentStyle["flowSeparatorVJustify"] = it }
 
-    // 1.6.0 -> 1.6.1: "fontName" is renamed to "font".
+    // 1.6.0 -> 1.7.0: "fontName" is renamed to "font".
     for (letterStyle in rawStyling.letterStyles)
         letterStyle["fontName"]?.let { letterStyle["font"] = it }
 }

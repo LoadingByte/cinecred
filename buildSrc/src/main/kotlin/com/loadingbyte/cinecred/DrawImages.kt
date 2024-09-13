@@ -83,7 +83,7 @@ abstract class DrawImages : DefaultTask() {
             }
             Platform.OS.LINUX -> {
                 logoFile.copyTo(outputDir.resolve("cinecred.svg"), overwrite = true)
-                logo.transcode(48, file = outputDir.resolve("cinecred.png"))
+                logo.transcode(256, file = outputDir.resolve("cinecred.png"))
             }
         }
     }

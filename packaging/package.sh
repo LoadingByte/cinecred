@@ -67,12 +67,12 @@ elif [[ "@OS@" == linux ]]; then
   cp resources/linux/cinecred.metainfo.xml "$_/cinecred.appdata.xml"
   mkdir -p work/AppDir/usr/share/icons/hicolor/scalable/apps/
   cp images/cinecred.svg "$_"
-  mkdir -p work/AppDir/usr/share/icons/hicolor/48x48/apps/
+  mkdir -p work/AppDir/usr/share/icons/hicolor/256x256/apps/
   cp images/cinecred.png "$_"
   ln -s usr/bin/cinecred work/AppDir/AppRun
   ln -s usr/share/applications/cinecred.desktop work/AppDir/
   ln -s usr/share/icons/hicolor/scalable/apps/cinecred.svg work/AppDir/
-  ln -s usr/share/icons/hicolor/48x48/apps/cinecred.png work/AppDir/
+  ln -s usr/share/icons/hicolor/256x256/apps/cinecred.png work/AppDir/
   ln -s cinecred.svg work/AppDir/.DirIcon
   work/appimagetool-x86_64.AppImage --no-appstream work/AppDir out/cinecred-@VERSION@-@ARCH@.appimage
 
@@ -88,7 +88,7 @@ elif [[ "@OS@" == linux ]]; then
   cp resources/linux/cinecred.metainfo.xml "$_"
   mkdir -p work/tree/usr/share/icons/hicolor/scalable/apps/
   cp images/cinecred.svg "$_"
-  mkdir -p work/tree/usr/share/icons/hicolor/48x48/apps/
+  mkdir -p work/tree/usr/share/icons/hicolor/256x256/apps/
   cp images/cinecred.png "$_"
   mkdir -p work/tree/usr/bin/
   ln -s /opt/cinecred/bin/cinecred "$_"

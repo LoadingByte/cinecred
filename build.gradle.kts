@@ -9,18 +9,18 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "2.0.10"
+    kotlin("jvm") version "2.0.20"
 }
 
 group = "com.loadingbyte"
 version = "1.7.0-SNAPSHOT"
 
 val jdkVersion = 21
-val slf4jVersion = "2.0.13"
+val slf4jVersion = "2.0.16"
 val twelveMonkeysVersion = "3.11.0"
 val javacppVersion = "1.5.10"
 val ffmpegVersion = "6.1.1-$javacppVersion"
-val flatlafVersion = "3.5"
+val flatlafVersion = "3.5.1"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
@@ -67,7 +67,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.3.7")
+    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.3.8")
 
     // Log to java.util.logging
     implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
@@ -77,7 +77,7 @@ dependencies {
     implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
 
     // Spreadsheet IO
-    implementation("ch.rabanti", "nanoxlsx4j", "2.4.0")
+    implementation("ch.rabanti", "nanoxlsx4j", "2.4.1")
     implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
     implementation("com.github.miachm.sods", "SODS", "1.6.7")
     implementation("de.siegmar", "fastcsv", "3.2.0")
@@ -85,7 +85,7 @@ dependencies {
     // Spreadsheet Services
     implementation("com.googlecode.plist", "dd-plist", "1.28")
     implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.36.0")
-    implementation("com.google.apis", "google-api-services-sheets", "v4-rev20240708-2.0.0")
+    implementation("com.google.apis", "google-api-services-sheets", "v4-rev20240826-2.0.0")
 
     // Raster Image IO
     implementation("com.twelvemonkeys.imageio", "imageio-psd", twelveMonkeysVersion)
@@ -95,7 +95,7 @@ dependencies {
     implementation("com.github.jai-imageio", "jai-imageio-jpeg2000", "1.4.0")
 
     // PDF IO
-    implementation("org.apache.pdfbox", "pdfbox", "3.0.2")
+    implementation("org.apache.pdfbox", "pdfbox", "3.0.3")
 
     // Video IO
     implementation("org.bytedeco", "javacpp", javacppVersion)
@@ -106,15 +106,15 @@ dependencies {
     }
 
     // UI
-    implementation("com.miglayout", "miglayout-swing", "11.4")
+    implementation("com.miglayout", "miglayout-swing", "11.4.2")
     implementation("com.formdev", "flatlaf", flatlafVersion, classifier = "no-natives")
     for (p in Platform.values())
         natives.getValue(p)("com.formdev", "flatlaf", flatlafVersion, classifier = p.slugFlatLaf, ext = p.os.codeLibExt)
-    implementation("com.github.weisj", "jsvg", "1.6.0")
+    implementation("com.github.weisj", "jsvg", "1.6.1")
     implementation("org.commonmark", "commonmark", "0.22.0")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.10.3")
+    testImplementation("org.junit.jupiter", "junit-jupiter", "5.11.0")
 }
 
 configurations.configureEach {

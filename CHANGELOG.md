@@ -31,6 +31,7 @@ Cinecred Changelog
 - Fixed that text was sometimes culled erroneously due to wrong bounding boxes.
 - Deliveries in BT.2020 + BT.1886 are now tagged with the BT.2020-specific CICP
   codes for BT.1886.
+- YUV transparency mattes are now delivered in limited range.
 - Whole page stills and image sequence delivery in PQ/HLG no longer fails.
 - Embedded video timeline delivery now properly handles overlapping videos.
 

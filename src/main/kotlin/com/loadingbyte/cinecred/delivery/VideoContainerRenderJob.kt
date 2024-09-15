@@ -89,7 +89,7 @@ class VideoContainerRenderJob private constructor(
             scaledVideo.resolution,
             Bitmap.Representation(
                 settings.pixelFormat,
-                if (!yuv || matte) Bitmap.Range.FULL else Bitmap.Range.LIMITED,
+                if (!yuv) Bitmap.Range.FULL else Bitmap.Range.LIMITED,
                 colorSpace,
                 if (!yuv) null else if (matte) BT709_NCL else config[YUV],
                 if (settings.pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,

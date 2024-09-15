@@ -208,7 +208,9 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
         }
         for (file in natives.getValue(platform))
             if (file.extension == platform.os.codeLibExt)
-                from(file)
+                from(file) {
+                    eachFile { if ("flatlaf" in name) name = platform.os.codeLib("flatlaf-${platform.slugFlatLaf}") }
+                }
             else
                 from(zipTree(file)) {
                     include("**/*.${platform.os.codeLibExt}*")

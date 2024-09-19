@@ -14,6 +14,7 @@ import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
+import com.loadingbyte.cinecred.ui.helper.MacOSMenuLocalizer
 import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
 import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
 import com.loadingbyte.cinecred.ui.helper.tryMail
@@ -167,10 +168,6 @@ private fun mainSwing(args: Array<String>) {
     // Globally listen to all key events.
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(masterCtrl::onGlobalKeyEvent)
 
-    // Apply the locale configured by the user. If it changes in the future, re-apply it.
-    comprehensivelyApplyLocale(UI_LOCALE_PREFERENCE.get().locale)
-    UI_LOCALE_PREFERENCE.addListener { wish -> comprehensivelyApplyLocale(wish.locale) }
-
     // On macOS, allow the user to open the about and preferences tabs via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT))
         Desktop.getDesktop().setAboutHandler { masterCtrl.showWelcomeFrame(tab = WelcomeTab.ABOUT) }
@@ -186,6 +183,16 @@ private fun mainSwing(args: Array<String>) {
             else
                 response.cancelQuit()
         }
+
+    // Apply the locale configured by the user. If it changes in the future, re-apply it.
+    // Note that we need to call the macOS menu localizer after having set the preference handler, otherwise the
+    // "Preferences" menu item is not available yet and hence not localized.
+    comprehensivelyApplyLocale(UI_LOCALE_PREFERENCE.get().locale)
+    MacOSMenuLocalizer.localize()
+    UI_LOCALE_PREFERENCE.addListener { wish ->
+        comprehensivelyApplyLocale(wish.locale)
+        MacOSMenuLocalizer.localize()
+    }
 
     // Finally open the UI.
     openUI(args)

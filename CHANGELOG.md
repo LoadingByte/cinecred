@@ -41,6 +41,7 @@ Cinecred Changelog
 - Missing pictures and videos are now shown as a red square instead of a "???".
 - Re-added a stutter warning to the in-window video preview.
 - Configuring transparent or matte deliveries is now more intuitive.
+- The macOS application menu is now localized.
 
 
 1.6.0

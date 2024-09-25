@@ -6,8 +6,7 @@ pkgdesc="@SLOGAN_EN@"
 arch=('@ARCH@')
 url="@URL@"
 license=('GPL3')
-source=("https://repo.loadingbyte.com/repository/maven-releases/com/loadingbyte/cinecred\
-/$pkgver/cinecred-$pkgver-linux-@ARCH@.tar.gz")
+source=("https://cinecred.com/dl/$pkgver/cinecred-$pkgver-linux-x86_64.tar.gz")
 sha256sums=('{{SHA_256_HASH}}')
 
 package() {

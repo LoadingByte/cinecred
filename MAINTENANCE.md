@@ -31,18 +31,13 @@ to the various distribution channels.
    `package.sh` script for these.
     * On Linux, you need the following tools to build DEB and RPM
       packages: `dpkg-deb`, `rpmbuild`, `rpmsign`
-    * To sign the RPM, you need the `repo.loadingbyte.com` PGP key and the
+    * To sign the RPM, you need the private `cinecred.com` PGP key and the
       following two lines in your `~/.rpmmacros`
-      file: `%_signature gpg`, `%_gpg_name repo.loadingbyte.com`
-3. Collect the resulting packaged files from the respective `out/` folders into
-   the `publishing/` folder in this repository.
+      file: `%_signature gpg`, `%_gpg_name cinecred.com`
+3. Upload the resulting packaged files from the `out/` folders to the website.
    There are 2 files for Windows, 2 files for macOS x86, 2 files for macOS ARM,
-   and 5 files for Linux.
-4. Run the `publish-nexus.sh` script to upload all binaries
-   to `repo.loadingbyte.com`.
-5. Run the `publish-aur.sh` script to prepare an update of the PKGBUILD script
-   hosted on AUR.
-   This script does not push to AUR for safety reasons.
+   and 4 files for Linux.
+4. The Linux script prepares the AUR repo, but does not push for safety reasons.
    You will have to do that manually.
 
 

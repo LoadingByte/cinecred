@@ -30,9 +30,9 @@ enum class Platform(
     }
 
 
-    enum class Arch(val slug: String, val slugTemurin: String, val slugWix: String, val slugDebian: String) {
-        X86_64("x86_64", "x64", "x64", "amd64"),
-        ARM64("arm64", "aarch64", "arm64", "arm64")
+    enum class Arch(val slug: String, val slugTemurin: String, val slugWix: String) {
+        X86_64("x86_64", "x64", "x64"),
+        ARM64("arm64", "aarch64", "arm64")
     }
 
 }

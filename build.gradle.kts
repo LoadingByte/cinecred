@@ -299,7 +299,6 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "ARCH" to platform.arch.slug,
                 "ARCH_TEMURIN" to platform.arch.slugTemurin,
                 "ARCH_WIX" to platform.arch.slugWix,
-                "ARCH_DEBIAN" to platform.arch.slugDebian,
                 *mainBundles.get().map { (l, b) -> "SLOGAN_$l".uppercase() to b.getString("slogan") }.toTypedArray(),
                 "TEASER_EN" to mainBundles.get().getValue(Locale.ENGLISH).getString("teaser").wrap(80),
                 "URL" to url,

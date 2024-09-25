@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
@@ -204,7 +203,7 @@ abstract class Demo(private val filename: String, protected val format: Format) 
     }
 
     private fun file(suffix: String): Path {
-        val localeSuffix = if (locale == FALLBACK_TRANSLATED_LOCALE) "" else "_" + locale.toLanguageTag()
+        val localeSuffix = if (!isLocaleSensitive) "" else "." + locale.toLanguageTag()
         val file = Path("demoOutput").resolve(filename + suffix + localeSuffix + "." + format.ext)
         file.deleteIfExists()
         file.parent.createDirectoriesSafely()

@@ -114,7 +114,7 @@ abstract class WriteAppStreamFile : DefaultTask() {
     private fun makeLocalizedScreenshot(doc: Document, name: String): Element {
         val elem = doc.createElement("screenshot")
         for (locale in slogans.get().keys) {
-            val url = "https://cinecred.com/assets/$name.png.${locale.toLanguageTag()}.png"
+            val url = "https://cinecred.com/assets/$name.${locale.toLanguageTag()}.png"
             elem.appendChild(makeLocalized(doc, "image", locale, url))
         }
         return elem

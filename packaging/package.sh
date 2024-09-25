@@ -76,9 +76,6 @@ elif [[ "@OS@" == linux ]]; then
   ln -s cinecred.svg work/AppDir/.DirIcon
   work/appimagetool-x86_64.AppImage --no-appstream work/AppDir out/cinecred-@VERSION@-@ARCH@.appimage
 
-  echo "Assembling AUR PKGBUILD script..."
-  sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/aur/PKGBUILD > out/PKGBUILD
-
   echo "Collecting DEB/RPM package tree..."
   mkdir -p work/tree/opt/cinecred/
   cp -r work/image/cinecred/* "$_"
@@ -98,11 +95,20 @@ elif [[ "@OS@" == linux ]]; then
   mkdir -p work/deb/DEBIAN/
   cp resources/deb/control "$_"
   echo "Installed-Size: $(du -s work/deb/opt/ | cut -f1)" >> work/deb/DEBIAN/control
-  fakeroot dpkg-deb --build work/deb out/cinecred_@VERSION@-1_@ARCH_DEBIAN@.deb
+  fakeroot dpkg-deb --build work/deb out/cinecred-@VERSION@-@ARCH@.deb
 
   echo "Assembling and signing RPM package..."
-  rpmbuild --quiet -bb resources/rpm/cinecred.spec --define "%_sourcedir $(pwd)/work/tree" --define "%_topdir $(pwd)/work/rpm" --define "%_rpmdir $(pwd)/out" --define "%_rpmfilename cinecred-@VERSION@-1.@ARCH@.rpm"
+  rpmbuild --quiet -bb resources/rpm/cinecred.spec --define "%_sourcedir $(pwd)/work/tree" --define "%_topdir $(pwd)/work/rpm" --define "%_rpmdir $(pwd)/out" --define "%_rpmfilename cinecred-@VERSION@-@ARCH@.rpm"
   rpmsign --addsign out/*.rpm
+
+  echo "Assembling AUR commit..."
+  mkdir -p out/aur/
+  git -C out/aur/ clone ssh://aur@aur.archlinux.org/cinecred.git
+  sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/aur/PKGBUILD > out/aur/cinecred/PKGBUILD
+  makepkg -D out/aur/cinecred/ --printsrcinfo > out/aur/cinecred/.SRCINFO
+  git -C out/aur/cinecred/ add -A
+  git -C out/aur/cinecred/ commit -m "Publish Cinecred @VERSION@"
+  echo "[ACTION REQUIRED] Double-check out/aur/cinecred/, then run 'git push' there."
 fi
 
 echo "Cleaning up..."

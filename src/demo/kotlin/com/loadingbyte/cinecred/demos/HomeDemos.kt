@@ -85,8 +85,9 @@ object HomeScreenshotVideoPreviewDemo : ProjectDemo("$DIR/screenshot-video-previ
         reposition(plyDialog, 900, 430)
         sleep(500)
         edt {
-            plyControls.leakedPlayButton.isSelected = true
+            plyControls.leakedFrameSlider.valueIsAdjusting = true
             plyControls.leakedFrameSlider.value = 520
+            plyControls.setPlaybackDirection(1)
         }
         sleep(500)
         write(printWithPopups(plyPanel))
@@ -98,10 +99,11 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     override fun generate() {
         edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
         sleep(500)
-        reposition(dlvDialog, 820, 550)
+        reposition(dlvDialog, 820, 590)
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
+            dlvPanel.configurationForm.leakedSingleFileWidget.value = Path("/Render.mp4")
             addDummyRenderJob(WholePagePDFRenderJob.FORMATS[0])
             addDummyRenderJob(VideoContainerRenderJob.H264)
             addDummyRenderJob(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
@@ -140,7 +142,7 @@ object HomeCreditsRuntimeDemo : StyleSettingsDemo<Global>(
     listOf(Global::runtimeFrames.st()), pageScaling = 0.45, pageWidth = 900, pageHeight = 400
 ) {
     override fun styles() = buildList<Global> {
-        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1056))
+        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1080))
         this += last().copy(runtimeFrames = last().runtimeFrames.copy(isActive = true))
     }
 

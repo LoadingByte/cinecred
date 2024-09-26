@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.FALLBACK_TRANSLATED_LOCALE
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
 import com.loadingbyte.cinecred.demo.Demo
+import com.loadingbyte.cinecred.demos.*
 import com.loadingbyte.cinecred.ui.helper.disableSnapToSide
 import com.loadingbyte.cinecred.ui.helper.minimumWindowSize
 import java.awt.Dimension
@@ -13,7 +14,19 @@ import kotlin.system.exitProcess
 
 
 private val enabledDemos: List<Demo>
-    get() = emptyList()
+    get() = GUIDE_CONTENT_STYLE_DEMOS +
+            GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS +
+            GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS +
+            GUIDE_CONTENT_STYLE_PARAGRAPHS_LAYOUT_DEMOS +
+            GUIDE_CREDITS_SPREADSHEET_DEMOS +
+            GUIDE_LETTER_STYLE_DEMOS +
+            GUIDE_LETTER_STYLE_LAYER_DEMOS +
+            GUIDE_PAGE_STYLE_DEMOS +
+            GUIDE_PROJECT_FOLDER_DEMOS +
+            GUIDE_PROJECT_SETTINGS_DEMOS +
+            GUIDE_USER_INTERFACE_DEMOS +
+            HOME_DEMOS +
+            SCREENCAST_DEMOS
 
 
 fun main() {

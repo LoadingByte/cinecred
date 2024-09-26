@@ -296,22 +296,23 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
 }
 
 
-object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview", Format.VIDEO_GIF, 700, 440) {
+object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview", Format.VIDEO_GIF, 800, 500) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true, setupVidWin = true, vidWinSize = Dimension(600, 330))
+        addProjectWindows(fullscreenPrjWin = true, setupVidWin = true, vidWinSize = Dimension(700, 380))
 
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click(2 * hold)
         sc.mouseTo(plyWin.desktopPosOf(plyCtl.leakedPlayButton))
-        sc.click { edt { plyCtl.leakedFrameSlider.value += 1 } }
+        edt { plyCtl.leakedFrameSlider.valueIsAdjusting = true }
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 1; plyCtl.setPlaybackDirection(1) } }
         while (plyCtl.leakedFrameSlider.run { value < maximum / 3 })
-            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4 } }
+            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4; plyCtl.setPlaybackDirection(1) } }
     }
 }
 
 
-object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.VIDEO_GIF, 700, 600) {
+object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.VIDEO_GIF, 800, 600) {
     override fun generate() {
         addProjectWindows(fullscreenPrjWin = true)
 
@@ -331,7 +332,7 @@ object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.V
         sc.click(2 * hold)
         sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 1), 0)
         sleep(500)
-        sc.hold(4 * hold)
+        sc.hold(8 * hold)
         sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 3), 0)
         sleep(500)
         sc.hold(4 * hold)

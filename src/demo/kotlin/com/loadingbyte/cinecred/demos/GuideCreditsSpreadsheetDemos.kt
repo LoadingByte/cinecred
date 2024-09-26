@@ -66,7 +66,7 @@ object GuideCreditsSpreadsheetPicTagDemo : PageDemo("$DIR/pic-tag", Format.PNG, 
     override fun credits() = listOf(
         """
 @Body
-{{Pic cinecred.svg 100x}}
+{{Pic logo.svg 100x}}
         """.parseCreditsCS()
     )
 }

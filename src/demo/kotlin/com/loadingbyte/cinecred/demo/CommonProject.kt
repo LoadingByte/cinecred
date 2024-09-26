@@ -99,7 +99,6 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
 
 
 private val LOGO_PIC by lazy { useResourcePath("/logo.svg") { tryReadPictureLoader(it)!!.apply { picture } } }
-private val C_PIC by lazy { useResourcePath("/template/cinecred.svg") { tryReadPictureLoader(it)!!.apply { picture } } }
 
 private val RAINBOW_TAPE: Tape by lazy {
     val tmpDir = Path(System.getProperty("java.io.tmpdir")).resolve("cinecred-rainbow")
@@ -122,7 +121,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
 
     val spreadsheet = CsvFormat.read(this, "")
     val tapes = if ("{{Video rainbow" in this) listOf(RAINBOW_TAPE) else emptyList()
-    val pages = readCredits(spreadsheet, styling, listOf(LOGO_PIC, C_PIC), tapes).first.pages
+    val pages = readCredits(spreadsheet, styling, listOf(LOGO_PIC), tapes).first.pages
     return Pair(styling.global, pages.single())
 }
 

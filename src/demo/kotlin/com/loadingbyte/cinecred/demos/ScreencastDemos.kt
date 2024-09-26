@@ -58,6 +58,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.hold(4 * hold)
 
         addProjectWindows(setupVidWin = true, setupDlvWin = true)
+        edt { plyCtl.leakedFrameSlider.valueIsAdjusting = true }
 
         sc.hold(8 * hold)
         sc.caption("screencast.caption.create.done")
@@ -66,12 +67,14 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click()
         sc.mouseTo(plyWin.desktopPosOf(plyCtl.leakedPlayButton))
-        sc.click { edt { plyCtl.leakedFrameSlider.value += 1 } }
-        sc.caption("screencast.caption.video.play") { plyCtl.leakedFrameSlider.value += 1 }
-        sc.click { edt { plyCtl.leakedFrameSlider.value += 2 } }
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 1; plyCtl.setPlaybackDirection(1) } }
+        sc.caption("screencast.caption.video.play") {
+            edt { plyCtl.leakedFrameSlider.value += 1; plyCtl.setPlaybackDirection(1) }
+        }
+        sc.click { edt { plyCtl.leakedFrameSlider.value += 2; plyCtl.setPlaybackDirection(1) } }
         while (plyCtl.leakedFrameSlider.run { value != maximum })
-            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4 } }
-        plyCtl.leakedPlayButton.isSelected = false
+            sc.frame { edt { plyCtl.leakedFrameSlider.value += 4; plyCtl.setPlaybackDirection(1) } }
+        plyCtl.setPlaybackDirection(0)
         sc.hold()
         sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
         sc.click()

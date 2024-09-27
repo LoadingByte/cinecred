@@ -3,7 +3,6 @@ root = true
 [*]
 indent_style = space
 indent_size = 4
-tab_width = 4
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -23,7 +22,6 @@ end_of_line = crlf
 
 [{*.dist,*.html,*.plist,*.sh,*.svg,*.wxl,*.wxs,*.xml}]
 indent_size = 2
-tab_width = 2
 
 [*.svg]
 insert_final_newline = false

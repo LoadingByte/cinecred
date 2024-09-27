@@ -67,7 +67,7 @@ fun main(args: Array<String>) {
     for (handler in rootLogger.handlers)
         rootLogger.removeHandler(handler)
     // Add new logging handlers.
-    rootLogger.addHandler(ConsoleHandler().apply { level = Level.WARNING; formatter = JULFormatter })
+    rootLogger.addHandler(ConsoleHandler().apply { formatter = JULFormatter })
     rootLogger.addHandler(JULBuilderHandler)
 
     // Load our native libraries.

@@ -503,7 +503,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 if (wholePage) pageIndicesWidget.value.ifEmpty { drawnPages.indices.toList() }
                 else (firstPageIdxWidget.value..lastPageIdxWidget.value).toList()
             val pageDefImages = drawnPages.filterIndexed { idx, _ -> idx in pageIndices }.map(DrawnPage::defImage)
-            val video = if (wholePage) null else drawnCredits.video.sub(pageDefImages.first(), pageDefImages.last())
+            val video = if (wholePage) null else drawnCredits.video.sub(
+                // Special cases for the first and large image ensure that surrounding black frames are retained.
+                if (0 in pageIndices) null else pageDefImages.first(),
+                if (drawnPages.lastIndex in pageIndices) null else pageDefImages.last()
+            )
 
             val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
 

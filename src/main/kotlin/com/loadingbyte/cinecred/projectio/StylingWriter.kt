@@ -62,6 +62,7 @@ private fun convert(styling: Styling, value: Any): Any = when (value) {
     is Color4f -> value.convert(ColorSpace.XYZD50).rgba().asList()
     is Resolution -> value.toString()
     is FPS -> value.toString()
+    is FontRef -> value.name
     is FontFeature -> "${value.tag}=${value.value}"
     is Style -> writeStyle(styling, value)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")

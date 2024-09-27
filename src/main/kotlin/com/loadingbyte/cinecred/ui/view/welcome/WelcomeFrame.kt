@@ -187,7 +187,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     override fun showRestartUILocaleQuestion(newLocale: Locale): Boolean {
         return JOptionPane.showConfirmDialog(
             this, l10n("ui.preferences.restartUILocale.msg", newLocale),
-            l10n("ui.preferences.restartUILocale.title"), JOptionPane.OK_CANCEL_OPTION
+            l10n("ui.preferences.restartUILocale.title"), JOptionPane.YES_NO_OPTION
         ) == JOptionPane.OK_OPTION
     }
 

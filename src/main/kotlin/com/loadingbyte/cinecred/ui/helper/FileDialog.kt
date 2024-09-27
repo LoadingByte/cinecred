@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.loadingbyte.cinecred.common.GLOBAL_THREAD_POOL
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
@@ -14,6 +15,7 @@ import java.nio.file.Path
 import javax.swing.JFileChooser
 import javax.swing.JPanel
 import javax.swing.filechooser.FileNameExtensionFilter
+import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
@@ -39,7 +41,8 @@ fun showFileDialog(
 
     if (NFD_Init() == NFD_ERROR())
         logCurrentError()
-    else
+    // Don't block the AWT thread with native calls to avoid rare hangs.
+    else GLOBAL_THREAD_POOL.submit<Path?> {
         try {
             Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
@@ -54,14 +57,16 @@ fun showFileDialog(
                     NFD_SaveDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle, defaultNameHandle)
                 }
                 when (result) {
-                    NFD_OKAY() -> return consumeOutPath(outPathPtr)
-                    NFD_CANCEL() -> return null
+                    NFD_OKAY() -> return@submit consumeOutPath(outPathPtr)
+                    NFD_CANCEL() -> return@submit null
                     NFD_ERROR() -> logCurrentError()
                 }
             }
         } finally {
             NFD_Quit()
         }
+        null
+    }.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser()
     val desc = "$filterName (${filterExts.joinToString()})"
@@ -85,20 +90,23 @@ fun showFolderDialog(
 
     if (NFD_Init() == NFD_ERROR())
         logCurrentError()
-    else
+    // Don't block the AWT thread with native calls to avoid rare hangs.
+    else GLOBAL_THREAD_POOL.submit<Path?> {
         try {
             Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
                 val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateUtf8String) ?: NULL
                 when (NFD_PickFolderU8(outPathPtr, defaultPathHandle)) {
-                    NFD_OKAY() -> return consumeOutPath(outPathPtr)
-                    NFD_CANCEL() -> return null
+                    NFD_OKAY() -> return@submit consumeOutPath(outPathPtr)
+                    NFD_CANCEL() -> return@submit SENTINEL
                     NFD_ERROR() -> logCurrentError()
                 }
             }
         } finally {
             NFD_Quit()
         }
+        null
+    }.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser(folder?.toFile())
     fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
@@ -131,3 +139,6 @@ private fun consumeOutPath(outPathPtr: MemorySegment): Path? {
     NFD_FreePathU8(outPathHandle)
     return outPath.toPathSafely()
 }
+
+
+private val SENTINEL = Path("")

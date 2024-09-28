@@ -23,6 +23,7 @@ Cinecred Changelog
 
 - New credits files now always use a localized sheet name.
 - XLS spreadsheets are now read without character encoding errors.
+- Styling files with errors or very small numbers no longer cause a crash.
 - Image files resembling image sequences are now also available as pictures.
 - Cells with multiple letter styles are now sized to exactly encircle all fonts,
   and their baselines are aligned per body row.

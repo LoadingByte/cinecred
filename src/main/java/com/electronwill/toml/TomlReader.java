@@ -437,7 +437,7 @@ public final class TomlReader {
 					maybeInteger = false;
 					break;
 				case '-':
-					if (c == '-' && pos != 0 && data.charAt(pos - 1) != 'e' && data.charAt(pos - 1) != 'E')
+					if (pos != 0 && data.charAt(pos - 2) != 'e' && data.charAt(pos - 2) != 'E')
 						maybeInteger = maybeDouble = false;
 					break;
 				case ',':

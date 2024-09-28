@@ -243,7 +243,8 @@ class ProjectController(
             return false
 
         playbackCtrl.closeProject()
-        OVERLAYS_PREFERENCE.removeListener(overlaysListener)
+        // The listener might still be null if this method is called during initialization.
+        overlaysListener?.let(OVERLAYS_PREFERENCE::removeListener)
 
         onClose()
 

@@ -155,7 +155,13 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
         // If the project version is present, but either unrecognizable (meaning the version format has changed in the
         // future) or recognizable but higher than our version, warn the user.
-        val projectVersion = readStylingVersion(projectDir.resolve(STYLING_FILE_NAME))
+        val projectVersion = try {
+            readStylingVersion(projectDir.resolve(STYLING_FILE_NAME))
+        } catch (_: IOException) {
+            // If the styling file cannot be read, ignore the error for now. The full styling reader will later display
+            // a proper error message.
+            null
+        }
         if (!projectVersion.isNullOrBlank() && !VERSION.endsWith("-SNAPSHOT") &&
             (!projectVersion.matches(Regex("\\d+\\.\\d+\\.\\d+")) ||
                     Arrays.compare(

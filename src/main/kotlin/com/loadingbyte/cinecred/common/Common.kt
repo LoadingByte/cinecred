@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.common
 
 import com.electronwill.toml.Toml
+import com.electronwill.toml.TomlException
 import com.electronwill.toml.TomlWriter
 import com.formdev.flatlaf.util.SystemInfo
 import com.google.common.math.IntMath
@@ -245,7 +246,11 @@ fun Path.cleanDirectory() {
 
 
 fun readToml(file: Path): MutableMap<String, Any> =
-    Toml.read(file.toFile())
+    try {
+        Toml.read(file.toFile())
+    } catch (e: TomlException) {
+        throw IOException(e)
+    }
 
 fun writeToml(file: Path, toml: Map<String, Any?>) {
     // First write to a string and not directly to the file so that it's not corrupted if the TOML writer crashes.

@@ -5,6 +5,10 @@ Cinecred Changelog
 1.8.0-SNAPSHOT
 --------------
 
+### UI Fixes
+
+- The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
+
 
 1.7.0
 -----

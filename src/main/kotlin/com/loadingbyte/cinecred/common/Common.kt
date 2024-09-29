@@ -320,6 +320,11 @@ fun comprehensivelyApplyLocale(locale: Locale) {
     UIManager.getLookAndFeelDefaults().defaultLocale = locale
     JComponent.setDefaultLocale(locale)
     changeLocaleOfToolkitResources(locale)
+    // Override the default translations of JOptionPane buttons, as the JDK doesn't support all the locales we support.
+    UIManager.put("OptionPane.yesButtonText", l10n("yes"))
+    UIManager.put("OptionPane.noButtonText", l10n("no"))
+    UIManager.put("OptionPane.okButtonText", l10n("ok"))
+    UIManager.put("OptionPane.cancelButtonText", l10n("cancel"))
 }
 
 

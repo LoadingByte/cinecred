@@ -5,7 +5,7 @@ import com.formdev.flatlaf.icons.FlatCheckBoxIcon
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.setWindowCanFullScreenMacOS
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import java.awt.*
 import java.awt.RenderingHints.*
@@ -547,27 +547,39 @@ class KeyListener(
 }
 
 
-fun tryOpen(file: Path) = openCascade(file.toUri(), Desktop.Action.OPEN) { Desktop.getDesktop().open(file.toFile()) }
-fun tryBrowse(uri: URI) = openCascade(uri, Desktop.Action.BROWSE) { Desktop.getDesktop().browse(uri) }
-fun tryMail(uri: URI) = openCascade(uri, Desktop.Action.MAIL) { Desktop.getDesktop().mail(uri) }
+fun tryOpen(file: Path) = openCascade(Desktop.Action.OPEN, Desktop::open, file.toFile(), file.toUri())
+fun tryBrowse(uri: URI) = openCascade(Desktop.Action.BROWSE, Desktop::browse, uri, uri)
+fun tryMail(uri: URI) = openCascade(Desktop.Action.MAIL, Desktop::mail, uri, uri)
 
-private fun openCascade(uri: URI, desktopAction: Desktop.Action, desktopFunction: () -> Unit) {
-    fun tryExec(cmd: Array<String>) = try {
-        Runtime.getRuntime().exec(cmd)
+private fun <T> openCascade(desktopAction: Desktop.Action, desktopFun: Desktop.(T) -> Unit, desktopArg: T, uri: URI) {
+    fun tryDesktopAction() {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(desktopAction))
+            try {
+                Desktop.getDesktop().desktopFun(desktopArg)
+            } catch (e: Exception) {
+                LOGGER.error("Failed to perform $desktopAction for '$desktopArg'.", e)
+            }
+    }
+
+    fun tryExec(cmd: String, env: Map<String, String>? = null) = try {
+        execProcess(listOf(cmd, uri.toString()), env)
         true
-    } catch (_: IOException) {
+    } catch (e: IOException) {
+        LOGGER.error(e.message)
         false
     }
 
     // This cascade is required because:
     //   - Desktop.open() doesn't always open the actually configured file browser on KDE.
     //   - KDE is not supported by Desktop.browse()/mail().
-    if (SystemInfo.isKDE && tryExec(arrayOf("kde-open", uri.toString())))
-        return
-    if (SystemInfo.isLinux && tryExec(arrayOf("xdg-open", uri.toString())))
-        return
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(desktopAction))
-        desktopFunction()
+    if (SystemInfo.isLinux)
+        GLOBAL_THREAD_POOL.submit(throwableAwareTask {
+            if (!SystemInfo.isKDE || !tryExec("kde-open", env = mapOf("QT_XCB_GL_INTEGRATION" to "none")))
+                if (!tryExec("xdg-open"))
+                    tryDesktopAction()
+        })
+    else
+        tryDesktopAction()
 }
 
 

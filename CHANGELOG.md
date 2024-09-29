@@ -8,6 +8,7 @@ Cinecred Changelog
 ### UI Fixes
 
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
+- Fixed opening of folders, websites, and mail templates on newer KDE versions.
 
 
 1.7.0

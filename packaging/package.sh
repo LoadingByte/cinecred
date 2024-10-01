@@ -10,7 +10,7 @@ if [[ "@OS@" == mac ]]; then
 elif [[ "@OS@" == linux ]]; then
   jdk_bin="$jdk_dir/bin"
   jpackage_args="--name cinecred"
-  for cmd in tar fakeroot dpkg-deb rpmbuild rpmsign; do
+  for cmd in tar git fakeroot dpkg-deb rpmbuild rpmsign makepkg; do
     if ! command -v $cmd > /dev/null; then
       missing_cmds+=($cmd)
     fi
@@ -108,7 +108,13 @@ elif [[ "@OS@" == linux ]]; then
   makepkg -D out/aur/cinecred/ --printsrcinfo > out/aur/cinecred/.SRCINFO
   git -C out/aur/cinecred/ add -A
   git -C out/aur/cinecred/ commit -m "Publish Cinecred @VERSION@"
-  echo "[ACTION REQUIRED] Double-check out/aur/cinecred/, then run 'git push' there."
+
+  echo "Assembling Flathub commit..."
+  mkdir -p out/flathub/
+  git -C out/flathub/ clone git@github.com:flathub/com.cinecred.cinecred.git
+  sed "s/{{SHA_256_HASH}}/$(sha256sum out/*.tar.gz | cut -d " " -f 1)/g" resources/flathub/com.cinecred.cinecred.yml > out/flathub/com.cinecred.cinecred/com.cinecred.cinecred.yml
+  git -C out/flathub/com.cinecred.cinecred/ add -A
+  git -C out/flathub/com.cinecred.cinecred/ commit -m "Publish Cinecred @VERSION@"
 fi
 
 echo "Cleaning up..."

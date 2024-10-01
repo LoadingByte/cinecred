@@ -37,7 +37,7 @@ to the various distribution channels.
 3. Upload the resulting packaged files from the `out/` folders to the website.
    There are 2 files for Windows, 2 files for macOS x86, 2 files for macOS ARM,
    and 4 files for Linux.
-4. The Linux script prepares the AUR repo, but does not push for safety reasons.
+4. The Linux script prepares the AUR and Flathub repos, but does not push.
    You will have to do that manually.
 
 

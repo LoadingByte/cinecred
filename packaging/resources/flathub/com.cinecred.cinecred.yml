@@ -1,0 +1,41 @@
+id: com.cinecred.cinecred
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: cinecred
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --device=dri
+  - --filesystem=host
+rename-desktop-file: cinecred.desktop
+rename-appdata-file: cinecred.metainfo.xml
+rename-icon: cinecred
+modules:
+  - name: ghostscript
+    config-opts:
+      - --disable-cups
+      - --disable-dbus
+      - --disable-gtk
+    cleanup:
+      - /share/doc
+      - /share/man
+    sources:
+      - type: archive
+        url: https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10040/ghostscript-10.04.0.tar.gz
+        sha256: c764dfbb7b13fc71a7a05c634e014f9bb1fb83b899fe39efc0b6c3522a9998b1
+  - name: cinecred
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 cinecred.desktop /app/share/applications/cinecred.desktop
+      - install -Dm644 cinecred.metainfo.xml /app/share/metainfo/cinecred.metainfo.xml
+      - install -Dm644 cinecred.svg /app/share/icons/hicolor/scalable/apps/cinecred.svg
+      - install -Dm644 cinecred.png /app/share/icons/hicolor/256x256/apps/cinecred.png
+      - mv bin/* /app/bin/
+      - mv lib/* /app/lib/
+    sources:
+      - type: archive
+        url: https://cinecred.com/dl/@VERSION@/cinecred-@VERSION@-linux-x86_64.tar.gz
+        sha256: {{SHA_256_HASH}}
+        only-arches: [x86_64]

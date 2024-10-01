@@ -50,9 +50,6 @@ abstract class WriteAppStreamFile : DefaultTask() {
         comp.appendChild(doc.createElement("name", "Cinecred"))
         for ((locale, slogan) in slogans.get().entries)
             comp.appendChild(makeLocalized(doc, "summary", locale, slogan))
-        comp.appendChild(doc.createElement("icon", "cinecred").apply {
-            setAttribute("type", "stock")
-        })
         comp.appendChild(doc.createElement("description").also { desc ->
             val splitTeasers = teasers.get().mapValues { (_, teaser) -> teaser.split("\n\n") }
             for (p in splitTeasers.getValue(Locale.ENGLISH).indices)

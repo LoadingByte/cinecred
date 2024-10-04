@@ -27,64 +27,63 @@ class Tape private constructor(
     lastNumber: Int
 ) : AutoCloseable {
 
-    private val zeroTimecode: Timecode?
-        get() = if (fileSeq) availableRange.start else null
-
-
     /* ******************************
        ********** METADATA **********
        ****************************** */
 
-    private var metadataInitialized = false
-    private var metadataInitException: Exception? = null
-    private var _spec: Bitmap.Spec? = null
-    private var _audio = false
-    private var _fps: FPS? = null
-    private var _availableRange: OpenEndRange<Timecode>? = if (!fileSeq) null else
-        Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
+    private class Metadata(
+        val spec: Bitmap.Spec, val audio: Boolean, val fps: FPS?, val availableRange: OpenEndRange<Timecode>
+    )
 
     /** @throws Exception */
     val spec: Bitmap.Spec
-        get() = run { ensureMetadataIsInitialized(); _spec!! }
+        get() = metadata.spec
     /** @throws Exception */
     val audio: Boolean
-        get() = run { ensureMetadataIsInitialized(); _audio }
+        get() = metadata.audio
     /** @throws Exception */
     val fps: FPS?
-        get() = run { ensureMetadataIsInitialized(); _fps }
+        get() = metadata.fps
     /** @throws Exception */
     val availableRange: OpenEndRange<Timecode>
-        get() = if (fileSeq) _availableRange!! else run { ensureMetadataIsInitialized(); _availableRange!! }
+        get() = metadata.availableRange
 
-    private fun ensureMetadataIsInitialized() {
-        if (metadataInitialized)
-            return
-        metadataInitException?.let {
-            throw IllegalStateException("Metadata of tape '${fileOrDir.name}' cannot be read: $it", it)
+    private val metadata: Metadata
+        get() = when (val m = _metadata) {
+            is Throwable -> throw IllegalStateException("Metadata of tape '${fileOrDir.name}' cannot be read.", m)
+            else -> m as Metadata
         }
+
+    private val _metadata: Any by lazy {
         try {
+            val spec: Bitmap.Spec
+            val audio: Boolean
+            val fps: FPS?
             val start: Timecode.Clock?
             val dur: Timecode.Clock?
-            VideoReader(fileOrPattern, zeroTimecode).use { videoReader ->
-                _spec = videoReader.spec
-                _audio = videoReader.audio
-                _fps = videoReader.fps
+            VideoReader(fileOrPattern, if (fileSeq) Timecode.Frames(firstNumber) else null).use { videoReader ->
+                spec = videoReader.spec
+                audio = videoReader.audio
+                fps = videoReader.fps
                 start = if (fileSeq) null else videoReader.read()!!.timecode as Timecode.Clock
                 dur = videoReader.estimatedDuration
             }
+            val availableRange: OpenEndRange<Timecode>
             if (!fileSeq)
                 VideoReader(fileOrPattern, start!! + (dur ?: Timecode.Clock(24L * 60L * 60L, 1L))).use { videoReader ->
                     var end: Timecode? = null
                     while (true)
                         end = (videoReader.read() ?: break).apply { bitmap.close() /* close immediately */ }.timecode
-                    val pad = _fps?.let { Timecode.Clock(it.denominator.toLong(), it.numerator.toLong()) }
+                    val pad = fps?.let { Timecode.Clock(it.denominator.toLong(), it.numerator.toLong()) }
                         ?: Timecode.Clock(1, 24)
-                    _availableRange = start..<(end!! + pad)
+                    availableRange = start..<(end!! + pad)
                 }
-            metadataInitialized = true
+            else
+                availableRange = Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
+            Metadata(spec, audio, fps, availableRange)
         } catch (e: Exception) {
             LOGGER.error("Metadata of tape '{}' cannot be read.", fileOrDir.name, e)
-            metadataInitException = e
+            e
         }
     }
 

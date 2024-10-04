@@ -1,7 +1,9 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.Resolution
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.scale
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Canvas
@@ -19,6 +21,7 @@ import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import javax.swing.JScrollBar
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
 import kotlin.math.*
 
 
@@ -481,7 +484,14 @@ class DeferredImagePanel(
             val materialized = this@DeferredImagePanel.materialized
             val lowResMaterialized = this@DeferredImagePanel.lowResMaterialized
 
-            if (image != null && materialized != null) {
+            if (image == null || materialized == null) {
+                // If the materialized image is not ready yet, draw a loading indicator instead.
+                FlatUIUtils.setRenderingHints(g)
+                g.font = UIManager.getFont("h0.font").deriveFont(Font.BOLD)
+                val m = g.fontMetrics
+                val t = l10n("ui.edit.loading")
+                FlatUIUtils.drawString(this, g, t, (width - m.stringWidth(t)) / 2, (height - m.height) / 2 + m.ascent)
+            } else {
                 // Find the width of the viewport in materialized image coordinates.
                 val materializedViewportWidth = (viewportWidth / image.width) * materialized.width
                 // Find the amount the materialized image would need to be scaled

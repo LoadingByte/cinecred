@@ -4,6 +4,9 @@ import com.google.common.collect.Iterators
 import com.google.common.collect.PeekingIterator
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.WARN
+import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.END
+import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.MIDDLE
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
@@ -285,6 +288,14 @@ private class CreditsReader(
        ************************************ */
 
     fun read(): Credits {
+        // Each picture and tape that's referenced in the credits must be loaded during reading for various reasons
+        // (e.g., tag configuration checks, or the fact that the following drawer stage needs their width and height).
+        // However, if we lazily load aux files only once encountering them, we load them sequentially, as the credits
+        // reader only continues when the loading is complete. This can take very long if many aux files are used.
+        // Instead, we do a quick first pass over the bodies, detect all referenced pictures and tapes, and trigger
+        // their loading in parallel background threads.
+        preloadUsedAuxFiles()
+
         for (row in 0..<table.numRows) {
             this.row = row
             readRow()
@@ -305,6 +316,22 @@ private class CreditsReader(
         val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
 
         return Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())
+    }
+
+    private fun preloadUsedAuxFiles() {
+        for (row in 0..<table.numRows) {
+            val usedPicLoaders = HashSet<PictureLoader>()
+            val usedTapes = HashSet<Tape>()
+            parseTaggedString(table.getString(row, "body") ?: continue) { _, tagKey, tagVal ->
+                if (tagKey != null && tagVal != null)
+                    when (tagKey) {
+                        in PIC_KW -> picResolver.find(tagVal)?.let(usedPicLoaders::add)
+                        in VIDEO_KW -> tapeResolver.find(tagVal)?.let(usedTapes::add)
+                    }
+            }
+            for (picLoader in usedPicLoaders) GLOBAL_THREAD_POOL.submit { picLoader.picture }
+            for (tape in usedTapes) GLOBAL_THREAD_POOL.submit { tape.spec }
+        }
     }
 
     fun readRow() {
@@ -667,8 +694,8 @@ private class CreditsReader(
         var blankTagKey: String? = null
         var multipleBlanks = false
         var pictureOrVideoTagKey: String? = null
-        var embeddedPic: Picture.Embedded? = null
-        var embeddedTape: Tape.Embedded? = null
+        var embeddedPic: DeferredImage.EmbeddedPicture? = null
+        var embeddedTape: DeferredImage.EmbeddedTape? = null
         var multiplePicturesOrVideos = false
         parseTaggedString(str) { plain, tagKey, tagVal ->
             when {
@@ -757,9 +784,9 @@ private class CreditsReader(
         }
     }
 
-    fun getEmbeddedPic(l10nColName: String, tagKey: String, tagVal: String?): Picture.Embedded? = picResolver.resolve(
+    fun getEmbeddedPic(l10nColName: String, tagKey: String, tagVal: String?) = picResolver.resolve(
         l10nColName, tagVal,
-        prepare = { picLoader -> picLoader.picture?.let { pic -> Picture.Embedded(pic) } },
+        prepare = { picLoader -> picLoader.picture?.let { pic -> DeferredImage.EmbeddedPicture(pic) } },
         applyHints = { embPic0, hints ->
             var embPic = embPic0
             while (hints.hasNext()) {
@@ -767,10 +794,10 @@ private class CreditsReader(
                 embPic = try {
                     when {
                         // Crop the picture.
-                        hint in CROP_KW -> when (embPic) {
-                            is Picture.Embedded.Vector -> embPic.cropped()
+                        hint in CROP_KW -> when (embPic.picture) {
+                            is Picture.Vector -> embPic.cropped()
                             // Raster images cannot be cropped.
-                            is Picture.Embedded.Raster -> {
+                            is Picture.Raster -> {
                                 val msg = l10n("projectIO.credits.pictureRasterCrop", l10n(CROP_KW.key))
                                 table.log(row, l10nColName, WARN, msg)
                                 continue
@@ -791,11 +818,11 @@ private class CreditsReader(
         illFormattedMsg = { l10n("projectIO.credits.pictureIllFormatted", l10n(CROP_KW.key), tagKey) }
     )
 
-    fun getEmbeddedTape(l10nColName: String, tagKey: String, tagVal: String?): Tape.Embedded? = tapeResolver.resolve(
+    fun getEmbeddedTape(l10nColName: String, tagKey: String, tagVal: String?) = tapeResolver.resolve(
         l10nColName, tagVal,
         prepare = { tape ->
             try {
-                Tape.Embedded(tape)
+                DeferredImage.EmbeddedTape(tape)
             } catch (_: Exception) {
                 null
             }
@@ -847,7 +874,7 @@ private class CreditsReader(
                         }
                     }
                 } else if (isMid || isEnd) {
-                    embTape = embTape.copy(align = if (isMid) Tape.Embedded.Align.MIDDLE else Tape.Embedded.Align.END)
+                    embTape = embTape.copy(align = if (isMid) MIDDLE else END)
                     hints.remove()
                 } else {
                     embTape = try {
@@ -1069,6 +1096,19 @@ private class CreditsReader(
                         dupSet.add(filename)
                     }
             }
+        }
+
+        fun find(tagVal: String): A? {
+            // A simplified duplicate of the resolve() function that doesn't have any side effects.
+            var splitIdx = tagVal.length
+            do {
+                val filename = tagVal.take(splitIdx).trim()
+                if (filename in dupSet)
+                    break
+                auxMap[filename]?.let { return it }
+                splitIdx = filename.lastIndexOf(' ', splitIdx)
+            } while (splitIdx != -1)
+            return null
         }
 
         fun <R> resolve(

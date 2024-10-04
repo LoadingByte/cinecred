@@ -48,6 +48,7 @@ import java.nio.file.Path
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
+import java.util.concurrent.Future
 import javax.xml.XMLConstants.XML_NS_URI
 import kotlin.math.*
 
@@ -109,17 +110,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         addInstruction(layer, Instruction.DrawText(x, yBaseline, text, coat))
     }
 
-    fun drawEmbeddedPicture(embeddedPic: Picture.Embedded, x: Double, y: Y, layer: Layer = STATIC) {
+    fun drawEmbeddedPicture(embeddedPic: EmbeddedPicture, x: Double, y: Y, layer: Layer = STATIC) {
         addInstruction(layer, Instruction.DrawEmbeddedPicture(x, y, embeddedPic))
     }
 
-    fun drawEmbeddedTape(embeddedTape: Tape.Embedded, x: Double, y: Y, layer: Layer = TAPES) {
-        val thumbnail = try {
-            embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)
-        } catch (_: Exception) {
-            null
-        }
-        addInstruction(layer, Instruction.DrawEmbeddedTape(x, y, embeddedTape, thumbnail))
+    fun drawEmbeddedTape(embeddedTape: EmbeddedTape, x: Double, y: Y, layer: Layer = TAPES) {
+        // When the deferred image is materialized later, we'll need the tape's thumbnail, so already start loading it.
+        val asyncThumbnail = embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)
+        addInstruction(layer, Instruction.DrawEmbeddedTape(x, y, embeddedTape, asyncThumbnail))
     }
 
     /**
@@ -219,7 +217,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             )
             is Instruction.DrawEmbeddedTape -> materializeEmbeddedTape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.embeddedTape, insn.thumbnail
+                universeScaling, culling, insn.embeddedTape, insn.asyncThumbnail
             )
         }
     }
@@ -265,7 +263,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeEmbeddedPicture(
         backend: MaterializationBackend,
         x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        embeddedPic: Picture.Embedded
+        embeddedPic: EmbeddedPicture
     ) {
         if (culling != null && !culling.intersects(x, y, embeddedPic.width * scaling, embeddedPic.height * scaling))
             return
@@ -275,12 +273,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private fun materializeEmbeddedTape(
         backend: MaterializationBackend,
         x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        embeddedTape: Tape.Embedded, thumbnail: Picture.Raster?
+        embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
     ) {
         val resolution = embeddedTape.resolution
         if (culling != null && !culling.intersects(x, y, resolution.widthPx * scaling, resolution.heightPx * scaling))
             return
-        backend.materializeEmbeddedTape(x, y, scaling, embeddedTape, thumbnail)
+        backend.materializeEmbeddedTape(x, y, scaling, embeddedTape, asyncThumbnail)
     }
 
 
@@ -325,13 +323,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private fun gaussianStdDev(radius: Double) = radius / 2.0
 
         private fun embeddedPictureTransform(
-            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded
+            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture
         ): AffineTransform {
             val transform = AffineTransform.getTranslateInstance(x, y)
             transform.scale(scaling)
-            when (embeddedPic) {
-                is Picture.Embedded.Raster -> transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
-                is Picture.Embedded.Vector -> {
+            when (embeddedPic.picture) {
+                is Picture.Raster -> transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
+                is Picture.Vector -> {
                     transform.scale(embeddedPic.scaling)
                     if (embeddedPic.isCropped)
                         transform.translate(-embeddedPic.picture.cropX, -embeddedPic.picture.cropY)
@@ -378,6 +376,96 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
+    class EmbeddedPicture private constructor(
+        val picture: Picture,
+        private val userWidth: Double,
+        private val userHeight: Double,
+        val isCropped: Boolean
+    ) {
+
+        constructor(picture: Picture) : this(picture, Double.NaN, Double.NaN, false)
+
+        init {
+            require((userWidth.isNaN() || userWidth > 0.0) && (userHeight.isNaN() || userHeight > 0.0))
+        }
+
+        val scaling: Double
+            get() = when {
+                !userWidth.isNaN() && !userHeight.isNaN() -> throw UnsupportedOperationException("X/Y scaling differs.")
+                !userWidth.isNaN() -> scalingX
+                !userHeight.isNaN() -> scalingY
+                else -> 1.0
+            }
+
+        val scalingX: Double get() = if (!userWidth.isNaN()) userWidth / oriWidth else scaling
+        val scalingY: Double get() = if (!userHeight.isNaN()) userHeight / oriHeight else scaling
+
+        val width: Double get() = roundIfRaster(if (!userWidth.isNaN()) userWidth else scaling * oriWidth)
+        val height: Double get() = roundIfRaster(if (!userHeight.isNaN()) userHeight else scaling * oriHeight)
+
+        private val oriWidth get() = if (picture is Picture.Vector && isCropped) picture.cropWidth else picture.width
+        private val oriHeight get() = if (picture is Picture.Vector && isCropped) picture.cropHeight else picture.height
+        private fun roundIfRaster(size: Double) = if (picture is Picture.Raster) round(size) else size
+
+        fun withForcedResolution(r: Resolution) = withForcedResolution(r.widthPx.toDouble(), r.heightPx.toDouble())
+        fun withForcedResolution(width: Double, height: Double) = when (picture) {
+            is Picture.Raster -> EmbeddedPicture(picture, width, height, isCropped)
+            is Picture.Vector -> throw UnsupportedOperationException("Vector pictures must preserve aspect ratio.")
+        }
+
+        fun withWidthPreservingAspectRatio(width: Double) = EmbeddedPicture(picture, width, Double.NaN, isCropped)
+        fun withHeightPreservingAspectRatio(height: Double) = EmbeddedPicture(picture, Double.NaN, height, isCropped)
+
+        fun cropped() = when (picture) {
+            is Picture.Raster -> throw UnsupportedOperationException("Raster pictures cannot be cropped.")
+            is Picture.Vector -> EmbeddedPicture(picture, userWidth, userHeight, isCropped = true)
+        }
+
+    }
+
+
+    data class EmbeddedTape(
+        /** Note: Accessing the metadata of this tape is guaranteed to not throw exceptions. */
+        val tape: Tape,
+        val resolution: Resolution,
+        val leftMarginFrames: Int,
+        val rightMarginFrames: Int,
+        val leftFadeFrames: Int,
+        val rightFadeFrames: Int,
+        val range: OpenEndRange<Timecode>,
+        val align: Align
+    ) {
+
+        enum class Align { START, MIDDLE, END }
+
+        /** @throws Exception */
+        constructor(tape: Tape) : this(tape, tape.spec.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
+
+        init {
+            require(resolution.run { widthPx > 0 && heightPx > 0 })
+            require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
+            require(leftFadeFrames >= 0 && rightFadeFrames >= 0)
+            val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.
+            require(range.start.let { it >= avail.start && it < range.endExclusive })
+            require(range.endExclusive.let { it > range.start && it <= avail.endExclusive })
+        }
+
+        fun withWidthPreservingAspectRatio(width: Int): EmbeddedTape {
+            val base = tape.spec.resolution
+            return copy(resolution = Resolution(width, roundingDiv(base.heightPx * width, base.widthPx)))
+        }
+
+        fun withHeightPreservingAspectRatio(height: Int): EmbeddedTape {
+            val base = tape.spec.resolution
+            return copy(resolution = Resolution(roundingDiv(base.widthPx * height, base.heightPx), height))
+        }
+
+        fun withInPoint(timecode: Timecode): EmbeddedTape = copy(range = timecode..<range.endExclusive)
+        fun withOutPoint(timecode: Timecode): EmbeddedTape = copy(range = range.start..<timecode)
+
+    }
+
+
     sealed interface CanvasMaterializationCache {
         companion object {
             operator fun invoke(): CanvasMaterializationCache = CanvasMaterializationCacheImpl()
@@ -419,11 +507,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) : Instruction
 
         class DrawEmbeddedPicture(
-            val x: Double, val y: Y, val embeddedPic: Picture.Embedded
+            val x: Double, val y: Y, val embeddedPic: EmbeddedPicture
         ) : Instruction
 
         class DrawEmbeddedTape(
-            val x: Double, val y: Y, val embeddedTape: Tape.Embedded, val thumbnail: Picture.Raster?
+            val x: Double, val y: Y, val embeddedTape: EmbeddedTape, val asyncThumbnail: Future<Picture.Raster?>
         ) : Instruction
 
     }
@@ -435,16 +523,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {}
         fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {}
         fun materializeEmbeddedPicture(
-            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
+            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
         }
 
         fun materializeEmbeddedTape(
-            x: Double,
-            y: Double,
-            scaling: Double,
-            embeddedTape: Tape.Embedded,
-            thumbnail: Picture.Raster?
+            x: Double, y: Double, scaling: Double, embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
         )
 
     }
@@ -454,14 +538,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private interface TapeThumbnailBackend : MaterializationBackend {
 
         override fun materializeEmbeddedTape(
-            x: Double,
-            y: Double,
-            scaling: Double,
-            embeddedTape: Tape.Embedded,
-            thumbnail: Picture.Raster?
+            x: Double, y: Double, scaling: Double, embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
         ) {
+            val thumbnail = try {
+                asyncThumbnail.get()
+            } catch (_: Exception) {
+                null
+            }
             if (thumbnail != null) {
-                val embeddedThumbnail = Picture.Embedded.Raster(thumbnail).withForcedResolution(embeddedTape.resolution)
+                val embeddedThumbnail = EmbeddedPicture(thumbnail).withForcedResolution(embeddedTape.resolution)
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
@@ -538,12 +623,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeEmbeddedPicture(
-            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
+            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
             val transform = embeddedPictureTransform(x, y, scaling, embeddedPic)
             // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
             // them with the pixel grid, they will always be reusable unless the scaling changes.
-            if (cache != null && embeddedPic is Picture.Embedded.Vector) {
+            if (cache != null && embeddedPic.picture is Picture.Vector) {
                 val tx = transform.translateX.let { round(it) - it }
                 val ty = transform.translateY.let { round(it) - it }
                 transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
@@ -674,7 +759,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeEmbeddedPicture(
-            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
+            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
             val use = doc.createElementNS(SVG_NS_URI, "use")
 
@@ -902,7 +987,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         )
                     }
                     // Place the bitmap in the PDF.
-                    val embeddedPic = Picture.Embedded.Raster(Picture.Raster(bitmap))
+                    val embeddedPic = EmbeddedPicture(Picture.Raster(bitmap))
                     materializeEmbeddedPicture(xWhole - pad, yWhole - pad, 1.0, embeddedPic, draft = false)
                 }
                 return
@@ -956,13 +1041,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeEmbeddedPicture(
-            x: Double, y: Double, scaling: Double, embeddedPic: Picture.Embedded, draft: Boolean
+            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
+            val pic = embeddedPic.picture
             val mat = Matrix()
             mat.translate(x, csHeight - y - embeddedPic.height)
             mat.scale(scaling)
-            if (rasterizeSVGs && embeddedPic.picture is Picture.SVG) {
-                val pic = (embeddedPic as Picture.Embedded.Vector).picture
+            if (rasterizeSVGs && pic is Picture.SVG) {
                 mat.scale(embeddedPic.width, embeddedPic.height)
                 if (embeddedPic.isCropped)
                     mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
@@ -972,9 +1057,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 return
             }
-            when (embeddedPic) {
-                is Picture.Embedded.Raster -> {
-                    val pic = embeddedPic.picture
+            when (pic) {
+                is Picture.Raster -> {
                     mat.scale(embeddedPic.width, embeddedPic.height)
                     cs.drawImage(docRes.pdImages.computeIfAbsent(pic) {
                         // Note: The first occurrence decides whether a picture is in draft-mode or not, but that's fine
@@ -985,8 +1069,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     val h = ceil(embeddedPic.height * scaling).toInt()
                     docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
-                is Picture.Embedded.Vector -> {
-                    val pic = embeddedPic.picture
+                is Picture.Vector -> {
                     mat.scale(embeddedPic.scaling)
                     if (embeddedPic.isCropped)
                         mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
@@ -1367,14 +1450,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    class PlacedTape(val embeddedTape: Tape.Embedded, val x: Double, val y: Double)
+    class PlacedTape(val embeddedTape: EmbeddedTape, val x: Double, val y: Double)
 
     private class PlacedTapeCollectorBackend : MaterializationBackend {
 
         val collected = mutableListOf<PlacedTape>()
 
         override fun materializeEmbeddedTape(
-            x: Double, y: Double, scaling: Double, embeddedTape: Tape.Embedded, thumbnail: Picture.Raster?
+            x: Double, y: Double, scaling: Double, embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
         ) {
             var res = embeddedTape.resolution
             res = Resolution((res.widthPx * scaling).roundToInt(), (res.heightPx * scaling).roundToInt())

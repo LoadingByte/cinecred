@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.bytedeco.ffmpeg.global.avcodec.*
 import java.awt.Point
@@ -164,7 +165,7 @@ class DeferredVideo private constructor(
 
 
     class TapeSpan(
-        val embeddedTape: Tape.Embedded,
+        val embeddedTape: DeferredImage.EmbeddedTape,
         val firstFrameIdx: Int,
         val lastFrameIdx: Int,
         val firstReadTimecode: Timecode
@@ -618,7 +619,7 @@ class DeferredVideo private constructor(
                     if (usePreview)
                         try {
                             previewTape = embeddedTape.tape
-                            readSpec = embeddedTape.tape.getPreviewFrame(resp.timecode /* random tc */)!!.bitmap.spec
+                            readSpec = embeddedTape.tape.getPreviewFrame(resp.timecode /* random */).get()!!.bitmap.spec
                             source = Source.PREVIEW
                         } catch (_: Exception) {
                             readSpec = Bitmap.Spec(embeddedTape.resolution, canvasRep)
@@ -678,7 +679,7 @@ class DeferredVideo private constructor(
             fun read(timecode: Timecode): Bitmap = when (source) {
                 Source.READER -> reader.read(timecode).bitmap
                 Source.PREVIEW -> try {
-                    previewTape.getPreviewFrame(timecode)!!.bitmap
+                    previewTape.getPreviewFrame(timecode).get()!!.bitmap
                 } catch (_: Exception) {
                     missingMediaBitmap
                 }
@@ -1021,9 +1022,9 @@ class DeferredVideo private constructor(
                     val extraneousFrames = (lastFrameIdx - firstFrameIdx + 1) - rangeFrames
                     if (extraneousFrames > 0)
                         when (placed.embeddedTape.align) {
-                            Tape.Embedded.Align.START -> lastFrameIdx -= extraneousFrames
-                            Tape.Embedded.Align.END -> firstFrameIdx += extraneousFrames
-                            Tape.Embedded.Align.MIDDLE -> {
+                            START -> lastFrameIdx -= extraneousFrames
+                            END -> firstFrameIdx += extraneousFrames
+                            MIDDLE -> {
                                 val half = extraneousFrames / 2
                                 firstFrameIdx += half
                                 lastFrameIdx -= extraneousFrames - half  // account for odd numbers
@@ -1078,28 +1079,28 @@ class DeferredVideo private constructor(
                     var tmp = 0
                     val timecode = when {
                         span.embeddedTape.tape.fileSeq -> when (span.embeddedTape.align) {
-                            Tape.Embedded.Align.START -> start + Timecode.Frames(pastFrames / video.fpsScaling)
-                            Tape.Embedded.Align.END -> endExcl - Timecode.Frames(futureFrames / video.fpsScaling + 1)
-                            Tape.Embedded.Align.MIDDLE -> {
+                            START -> start + Timecode.Frames(pastFrames / video.fpsScaling)
+                            END -> endExcl - Timecode.Frames(futureFrames / video.fpsScaling + 1)
+                            MIDDLE -> {
                                 tmp = (((start + endExcl) as Timecode.Frames).frames - 1) * video.fpsScaling +
                                         frameIdx * 2 - (span.firstFrameIdx + span.lastFrameIdx)
                                 Timecode.Frames(tmp / (2 * video.fpsScaling))
                             }
                         }
                         else -> when (span.embeddedTape.align) {
-                            Tape.Embedded.Align.START -> start + Timecode.Frames(pastFrames).toClock(video.fps)
-                            Tape.Embedded.Align.END -> endExcl - Timecode.Frames(futureFrames).toClock(video.fps) -
+                            START -> start + Timecode.Frames(pastFrames).toClock(video.fps)
+                            END -> endExcl - Timecode.Frames(futureFrames).toClock(video.fps) -
                                     Timecode.Frames(1).toClock(video.origFPS)
-                            Tape.Embedded.Align.MIDDLE ->
+                            MIDDLE ->
                                 (start + endExcl - Timecode.Frames(1).toClock(video.origFPS)) / 2 +
                                         Timecode.Frames(frameIdx).toClock(video.fps) -
                                         Timecode.Frames(span.firstFrameIdx + span.lastFrameIdx).toClock(video.fps) / 2
                         }
                     }
                     val fileSeqFirstField = span.embeddedTape.tape.fileSeq && when (span.embeddedTape.align) {
-                        Tape.Embedded.Align.START -> (pastFrames * 2 / video.fpsScaling) % 2 == 0
-                        Tape.Embedded.Align.END -> (futureFrames * 2 / video.fpsScaling) % 2 == 1
-                        Tape.Embedded.Align.MIDDLE -> (tmp / video.fpsScaling) % 2 == 0
+                        START -> (pastFrames * 2 / video.fpsScaling) % 2 == 0
+                        END -> (futureFrames * 2 / video.fpsScaling) % 2 == 1
+                        MIDDLE -> (tmp / video.fpsScaling) % 2 == 0
                     }
 
                     val relFrameIdx = frameIdx - span.insn.firstFrameIdx

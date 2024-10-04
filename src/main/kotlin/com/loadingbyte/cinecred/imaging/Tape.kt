@@ -196,35 +196,33 @@ class Tape private constructor(
 
     }
 
-    /**
-     * @return null when the timecode is out of bounds.
-     * @throws Exception
-     */
-    fun getPreviewFrame(timecode: Timecode): Picture.Raster? {
+    /** The returned future resolves to null when the timecode is out of bounds, and may fail with any exception. */
+    fun getPreviewFrame(timecode: Timecode): CompletableFuture<Picture.Raster?> {
         if (timecode !in availableRange)
-            return null
+            return CompletableFuture.completedFuture(null)
 
         if (fileSeq) {
-            return fileSeqPreviewCache!!.getItem((timecode as Timecode.Frames).frames).get()
+            return fileSeqPreviewCache!!.getItem((timecode as Timecode.Frames).frames)
         } else {
-            val previewCache = containerPreviewCache!!
-            var previewFrame: RasterPictureAndClock? = null
-            var curSeconds = (timecode as Timecode.Clock).seconds
-            while (previewFrame == null) {
-                val item = previewCache.getItem(curSeconds).get()
-                val idx = item.binarySearchBy(timecode, selector = RasterPictureAndClock::clock)
-                when {
-                    idx >= 0 -> previewFrame = item[idx]
-                    idx < -1 -> previewFrame = item[-idx - 2]
-                    else -> curSeconds--
-                }
-            }
+            val previewFrame = getContainerPreviewFrame(timecode, (timecode as Timecode.Clock).seconds)
             // For video files, start loading in the next second if it's not already loaded to ensure fluid playback.
             // We do not preload file sequences as (a) they're quicker to load on the fly, and (b) it's harder.
-            previewCache.getItem(timecode.seconds + 1)
-            return previewFrame.picture
+            containerPreviewCache!!.getItem(timecode.seconds + 1)
+            return previewFrame
         }
     }
+
+    private fun getContainerPreviewFrame(timecode: Timecode, curSeconds: Int): CompletableFuture<Picture.Raster?> =
+        containerPreviewCache!!.getItem(curSeconds).thenCompose { item ->
+            val idx = item.binarySearchBy(timecode, selector = RasterPictureAndClock::clock)
+            when {
+                idx >= 0 -> CompletableFuture.completedFuture(item[idx].picture)
+                idx < -1 -> CompletableFuture.completedFuture(item[-idx - 2].picture)
+                // If the first frame in this second actually happens after the requested timecode (or if this second
+                // doesn't even contain any frame), we need to look in the previous second.
+                else -> getContainerPreviewFrame(timecode, curSeconds - 1)
+            }
+        }
 
     /**
      * @return null when the timecode does not exist.
@@ -410,48 +408,6 @@ class Tape private constructor(
             return readTc - behindTc <
                     (if (aheadTc != null) aheadTc - behindTc else availableRange.endExclusive - behindTc) / 2
         }
-
-    }
-
-
-    data class Embedded(
-        /** Note: Accessing the metadata of this tape is guaranteed to not throw exceptions. */
-        val tape: Tape,
-        val resolution: Resolution,
-        val leftMarginFrames: Int,
-        val rightMarginFrames: Int,
-        val leftFadeFrames: Int,
-        val rightFadeFrames: Int,
-        val range: OpenEndRange<Timecode>,
-        val align: Align
-    ) {
-
-        enum class Align { START, MIDDLE, END }
-
-        /** @throws Exception */
-        constructor(tape: Tape) : this(tape, tape.spec.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
-
-        init {
-            require(resolution.run { widthPx > 0 && heightPx > 0 })
-            require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
-            require(leftFadeFrames >= 0 && rightFadeFrames >= 0)
-            val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.
-            require(range.start.let { it >= avail.start && it < range.endExclusive })
-            require(range.endExclusive.let { it > range.start && it <= avail.endExclusive })
-        }
-
-        fun withWidthPreservingAspectRatio(width: Int): Embedded {
-            val base = tape.spec.resolution
-            return copy(resolution = Resolution(width, roundingDiv(base.heightPx * width, base.widthPx)))
-        }
-
-        fun withHeightPreservingAspectRatio(height: Int): Embedded {
-            val base = tape.spec.resolution
-            return copy(resolution = Resolution(roundingDiv(base.widthPx * height, base.heightPx), height))
-        }
-
-        fun withInPoint(timecode: Timecode): Embedded = copy(range = timecode..<range.endExclusive)
-        fun withOutPoint(timecode: Timecode): Embedded = copy(range = range.start..<timecode)
 
     }
 

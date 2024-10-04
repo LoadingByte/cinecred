@@ -39,7 +39,6 @@ import kotlin.concurrent.withLock
 import kotlin.io.path.*
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 
 /** An abstraction over all the kinds of input images that a [DeferredImage] can work with: Raster, SVG, and PDF. */
@@ -428,92 +427,6 @@ sealed interface Picture : Closeable {
                 }
                 return PDF(doc, size.width, size.height)
             }
-
-        }
-
-    }
-
-
-    sealed interface Embedded {
-
-        val picture: Picture
-        val width: Double
-        val height: Double
-        fun withWidthPreservingAspectRatio(width: Double): Embedded
-        fun withHeightPreservingAspectRatio(height: Double): Embedded
-
-        companion object {
-            operator fun invoke(picture: Picture): Embedded = when (picture) {
-                is Picture.Raster -> Raster(picture)
-                is Picture.Vector -> Vector(picture)
-            }
-        }
-
-        class Raster private constructor(
-            override val picture: Picture.Raster,
-            val resolution: Resolution
-        ) : Embedded {
-
-            constructor(picture: Picture.Raster) : this(picture, Resolution(picture.intWidth, picture.intHeight))
-
-            init {
-                require(resolution.run { widthPx > 0 && heightPx > 0 })
-            }
-
-            val scalingX: Double get() = width / picture.width
-            val scalingY: Double get() = height / picture.height
-
-            override val width = resolution.widthPx.toDouble()
-            override val height = resolution.heightPx.toDouble()
-
-            override fun withWidthPreservingAspectRatio(width: Double) =
-                withWidthPreservingAspectRatio(width.roundToInt())
-
-            override fun withHeightPreservingAspectRatio(height: Double) =
-                withHeightPreservingAspectRatio(height.roundToInt())
-
-            fun withWidthPreservingAspectRatio(width: Int) =
-                Raster(picture, Resolution(width, roundingDiv(picture.intHeight * width, picture.intWidth)))
-
-            fun withHeightPreservingAspectRatio(height: Int) =
-                Raster(picture, Resolution(roundingDiv(picture.intWidth * height, picture.intHeight), height))
-
-            /** In contrast to the other sizing methods, this one doesn't preserve the aspect ratio. */
-            fun withForcedResolution(resolution: Resolution) = Raster(picture, resolution)
-
-            companion object {
-                private val Picture.Raster.intWidth get() = bitmap.spec.resolution.widthPx
-                private val Picture.Raster.intHeight get() = bitmap.spec.resolution.heightPx
-            }
-
-        }
-
-        class Vector private constructor(
-            override val picture: Picture.Vector,
-            private val targetDim: Int,
-            private val targetSize: Double,
-            val isCropped: Boolean
-        ) : Embedded {
-
-            constructor(picture: Picture.Vector) : this(picture, 0, 0.0, false)
-
-            init {
-                require(targetDim == 0 || targetSize > 0.0)
-            }
-
-            val scaling: Double
-                get() = when (targetDim) {
-                    1 -> targetSize / if (isCropped) picture.cropWidth else picture.width
-                    2 -> targetSize / if (isCropped) picture.cropHeight else picture.height
-                    else -> 1.0
-                }
-
-            override val width get() = scaling * if (isCropped) picture.cropWidth else picture.width
-            override val height get() = scaling * if (isCropped) picture.cropHeight else picture.height
-
-            override fun withWidthPreservingAspectRatio(width: Double) = Vector(picture, 1, width, isCropped)
-            override fun withHeightPreservingAspectRatio(height: Double) = Vector(picture, 2, height, isCropped)
-            fun cropped() = Vector(picture, targetDim, targetSize, isCropped = true)
 
         }
 

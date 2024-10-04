@@ -599,7 +599,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
             val x = justify(hJustify, bodyImageWidth, bodyElemWidth)
             when (bodyElem) {
                 is BodyElement.Nil, is BodyElement.Str -> {}
-                is BodyElement.Pic -> bodyImage.drawEmbeddedPicture(bodyElem.pic, x, y)
+                is BodyElement.Pic -> bodyImage.drawEmbeddedPicture(bodyElem.emb, x, y)
                 is BodyElement.Tap -> bodyImage.drawEmbeddedTape(bodyElem.emb, x, y)
                 is BodyElement.Mis -> bodyImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
             }
@@ -709,7 +709,7 @@ private inline fun <T> matchExtent(
 private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> 0.0
     is BodyElement.Str -> lines.first().formatted(styling).width
-    is BodyElement.Pic -> pic.width
+    is BodyElement.Pic -> emb.width
     is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.width
 }
@@ -717,7 +717,7 @@ private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
 private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
     is BodyElement.Str -> lines.first().formatted(styling).height
-    is BodyElement.Pic -> pic.height
+    is BodyElement.Pic -> emb.height
     is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
     is BodyElement.Mis -> MISSING_RECT.height
 }
@@ -763,7 +763,7 @@ private class LineGauge(
             is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {
                 val y = lineY + justify(vJustify, height, bodyElem.getHeight(styling))
                 when (bodyElem) {
-                    is BodyElement.Pic -> defImage.drawEmbeddedPicture(bodyElem.pic, x, y)
+                    is BodyElement.Pic -> defImage.drawEmbeddedPicture(bodyElem.emb, x, y)
                     is BodyElement.Tap -> defImage.drawEmbeddedTape(bodyElem.emb, x, y)
                     is BodyElement.Mis -> defImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
                     else -> {}

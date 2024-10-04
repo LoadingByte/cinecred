@@ -7,6 +7,9 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- All pictures and embedded videos are now loaded in parallel.
+- The page preview now appears as soon as possible, and no longer waits for all
+  embedded videos in the entire project to load.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
 

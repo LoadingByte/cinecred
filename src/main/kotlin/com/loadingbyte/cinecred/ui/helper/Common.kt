@@ -87,7 +87,7 @@ fun Graphics2D.scale(s: Double) = scale(s, s)
  * By enabling HTML in the JLabel, a branch that doesn't add ellipsis but instead clips the string is taken in
  * SwingUtilities.layoutCompoundLabelImpl().
  */
-fun noEllipsisLabel(text: String) = "<html>$text</html>"
+fun noEllipsisLabel(text: String) = "<html><nobr>$text</nobr></html>"
 
 
 fun newLabelTextArea(text: String? = null, insets: Boolean = false) = object : JTextArea(text) {

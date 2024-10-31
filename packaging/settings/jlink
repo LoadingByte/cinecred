@@ -1,4 +1,4 @@
---add-modules java.desktop,java.logging,java.net.http,java.xml,jdk.crypto.ec,jdk.httpserver,jdk.incubator.vector,jdk.localedata,jdk.unsupported,jdk.zipfs
+--add-modules java.desktop,java.logging,java.net.http,java.xml,jdk.accessibility,jdk.crypto.ec,jdk.httpserver,jdk.incubator.vector,jdk.localedata,jdk.unsupported,jdk.zipfs
 --compress=zip-9
 --no-header-files
 --no-man-pages

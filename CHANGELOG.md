@@ -5,6 +5,10 @@ Cinecred Changelog
 1.8.0-SNAPSHOT
 --------------
 
+### Additions
+
+- Added support for the Windows Java Access Bridge.
+
 ### UI Fixes
 
 - All pictures and embedded videos are now loaded in parallel.

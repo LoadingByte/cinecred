@@ -9,6 +9,10 @@ Cinecred Changelog
 
 - Added support for the Windows Java Access Bridge.
 
+### Fixes
+
+- Fixed rare crashes during interlaced delivery.
+
 ### UI Fixes
 
 - All pictures and embedded videos are now loaded in parallel.

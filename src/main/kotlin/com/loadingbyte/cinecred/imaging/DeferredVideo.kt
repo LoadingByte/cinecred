@@ -454,12 +454,12 @@ class DeferredVideo private constructor(
             val sndSrcParity = 1 - fstSrcParity
             val fstDstParity = if (userSpec.content == Bitmap.Content.INTERLEAVED_FIELDS) fstSrcParity else sndSrcParity
             val sndDstParity = 1 - fstDstParity
-            // It is important to query the earlier frame first, because as sequentialAccess is true, the cache is
-            // free to discard it as soon as a later frame is queried.
-            val (fst, fstWritable, fstShift) = obtainStaticProgressiveFrame(frameIdx * 2, useCanvasRep)
-            val (snd, sndWritable, sndShift) = obtainStaticProgressiveFrame(frameIdx * 2 + 1, useCanvasRep)
             val interleaved = Bitmap.allocate(if (useCanvasRep) canvasWorkSpec else userWorkSpec)
+            // It is important to query the earlier frame first, and also to immediately blit it, because the cache is
+            // free to close it as soon as a later frame is queried (since sequentialAccess is true).
+            val (fst, fstWritable, fstShift) = obtainStaticProgressiveFrame(frameIdx * 2, useCanvasRep)
             interleaved.blit(fst, 0, fstShift + fstSrcParity, workWidth, workHeight - 1, 0, fstDstParity, 2)
+            val (snd, sndWritable, sndShift) = obtainStaticProgressiveFrame(frameIdx * 2 + 1, useCanvasRep)
             interleaved.blit(snd, 0, sndShift + sndSrcParity, workWidth, workHeight - 1, 0, sndDstParity, 2)
             if (fstWritable) fst.close()
             if (sndWritable) snd.close()

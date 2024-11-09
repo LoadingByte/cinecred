@@ -538,10 +538,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 if (edited is ImageOverlay && imageFile == Path(""))
                     ImageOverlay(uuid, name, edited.raster, edited.rasterPersisted, imageUnderlay)
                 else try {
-                    val raster = Picture.load(imageFile).use { pic ->
-                        when (pic) {
+                    val raster =
+                        when (val pic = Picture.load(imageFile)) {
                             is Picture.Raster -> pic
-                            is Picture.Vector -> {
+                            is Picture.Vector -> pic.use {
                                 val res = Resolution(ceil(pic.width).toInt(), ceil(pic.height).toInt())
                                 // For now, we materialize vector overlays in the sRGB color space. SVGs draw natively
                                 // in this color space, as do most PDFs, and those who use another color space are drawn
@@ -552,7 +552,6 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                                 Picture.Raster(bitmap)
                             }
                         }
-                    }
                     ImageOverlay(uuid, name, raster, rasterPersisted = false, imageUnderlay)
                 } catch (e: Exception) {
                     welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())

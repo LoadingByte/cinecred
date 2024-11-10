@@ -19,6 +19,7 @@ Cinecred Changelog
 - The page preview now appears as soon as possible, and no longer waits for all
   embedded videos in the entire project to load.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
+- Canceling a file dialog no longer opens a different second file dialog.
 - Fixed crash upon adding a raster image overlay.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
 

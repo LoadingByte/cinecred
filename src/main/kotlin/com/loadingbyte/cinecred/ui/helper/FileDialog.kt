@@ -58,7 +58,7 @@ fun showFileDialog(
                 }
                 when (result) {
                     NFD_OKAY() -> return@submit consumeOutPath(outPathPtr)
-                    NFD_CANCEL() -> return@submit null
+                    NFD_CANCEL() -> return@submit SENTINEL
                     NFD_ERROR() -> logCurrentError()
                 }
             }

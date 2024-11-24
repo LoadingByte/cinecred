@@ -74,7 +74,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE)
 
     private val pageIndicesWidget =
-        MultiComboBoxWidget<Int>(emptyList(), naturalOrder(), toString = { "${it + 1}" }, widthSpec = WidthSpec.SQUEEZE)
+        MultiComboBoxWidget<Int>(
+            emptyList(), naturalOrder(), widthSpec = WidthSpec.SQUEEZE,
+            toString = { "${it + 1}" }, placeholder = l10n("ui.deliverConfig.pagesAll")
+        )
 
     private val firstPageIdxWidget =
         ComboBoxWidget(Int::class.javaObjectType, emptyList(), toString = { "${it + 1}" }, widthSpec = WidthSpec.TINIER)

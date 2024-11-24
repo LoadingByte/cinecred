@@ -16,8 +16,11 @@ import javax.swing.*
 class MultiComboBox<E : Any>(
     toString: (E) -> String = { it.toString() },
     private val inconsistent: Boolean = false,
+    placeholder: String? = null,
     private val noItemsMessage: String? = null
 ) : JComponent(), ItemSelectable, FocusListener, MouseListener, KeyListener {
+
+    private val placeholder = if (placeholder.isNullOrEmpty()) " " else placeholder
 
     private val arc = (UIManager.get("Component.arc") as Number).toFloat()
     private val focusWidth = (UIManager.get("Component.focusWidth") as Number).toFloat()
@@ -31,7 +34,7 @@ class MultiComboBox<E : Any>(
     private val buttonHoverArrowColor = UIManager.getColor("ComboBox.buttonHoverArrowColor")
     private val buttonPressedArrowColor = UIManager.getColor("ComboBox.buttonPressedArrowColor")
 
-    private val selectionLabel = JLabel(" ")
+    private val selectionLabel = JLabel(this.placeholder)
     private val arrowButton = CustomArrowButton()
     private val popup = DropdownPopupMenu(this)
     private val overflowSeparator = JSeparator()
@@ -179,7 +182,7 @@ class MultiComboBox<E : Any>(
         if (noItemsMessage != null && items.isEmpty()) 1 else items.size
 
     private fun updateSelectionLabel() {
-        selectionLabel.text = selectedItems.joinToString(transform = toString).ifEmpty { " " }
+        selectionLabel.text = selectedItems.joinToString(transform = toString).ifEmpty { placeholder }
     }
 
     // @formatter:off

@@ -618,10 +618,11 @@ class MultiComboBoxWidget<E : Any>(
     toString: (E) -> String = { it.toString() },
     widthSpec: WidthSpec? = null,
     inconsistent: Boolean = false,
+    placeholder: String? = null,
     noItemsMessage: String? = null
 ) : Form.AbstractWidget<List<E>>(), Form.Choice<E> {
 
-    private val mcb = MultiComboBox(toString, inconsistent, noItemsMessage).apply {
+    private val mcb = MultiComboBox(toString, inconsistent, placeholder, noItemsMessage).apply {
         // Notice that this item listener is only triggered when the user manually (de)selects items. That's why we
         // manually notify the change listeners when the user operations implemented below lead to a changed selection.
         addItemListener { notifyChangeListeners() }

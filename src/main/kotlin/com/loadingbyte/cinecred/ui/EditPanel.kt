@@ -155,7 +155,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
     private val deliveryDialogToggleButton = newToolbarToggleButtonWithKeyListener(
         PROJECT_DIALOG_DELIVERY_ICON, tooltip = l10n("ui.edit.toggleDeliveryDialog"),
-        VK_Q, CTRL_DOWN_MASK, isSelected = false
+        VK_J, CTRL_DOWN_MASK, isSelected = false
     ) { selected ->
         ctrl.setDialogVisible(ProjectDialogType.DELIVERY, selected)
     }
@@ -168,7 +168,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     private val homeButton = newToolbarButtonWithKeyListener(
         HOME_ICON, l10n("ui.edit.home"),
-        VK_W, CTRL_DOWN_MASK
+        VK_H, CTRL_DOWN_MASK
     ) {
         ctrl.masterCtrl.showWelcomeFrame()
     }

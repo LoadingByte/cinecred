@@ -11,8 +11,9 @@ import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
+import java.awt.event.InputEvent.CTRL_DOWN_MASK
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.VK_ESCAPE
+import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI
@@ -245,7 +246,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
        *************************** */
 
     override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
-        if (welcomeView.isFromWelcomeWindow(event) && event.modifiersEx == 0 && event.keyCode == VK_ESCAPE) {
+        if (!welcomeView.isFromWelcomeWindow(event))
+            return false
+        if (event.modifiersEx == 0 && event.keyCode == VK_ESCAPE) {
             val tab = welcomeView.getTab()
             if (tab == WelcomeTab.PROJECTS) {
                 projects_createWait_onClickCancel()
@@ -255,6 +258,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 preferences_configureOverlay_onClickCancel()
                 return true
             }
+        }
+        if (event.modifiersEx == CTRL_DOWN_MASK && (event.keyCode.let { it == VK_Q || it == VK_W })) {
+            close()
+            return true
         }
         return false
     }

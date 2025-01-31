@@ -302,6 +302,9 @@ class ProjectController(
                 else -> return false
             }
             CTRL_DOWN_MASK -> when (event.keyCode) {
+                VK_Q -> tryCloseProject()
+                VK_W -> if (window == projectFrame) tryCloseProject() else
+                    setDialogVisible(ProjectDialogType.entries.first { getDialog(it) == window }, false)
                 VK_L -> playbackCtrl.toggleDeckLinkConnected()
                 VK_1 -> playbackCtrl.toggleActualSize()
                 else -> return false

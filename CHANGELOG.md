@@ -11,6 +11,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Fixed crashes when both forced row height and match row height are active.
 - Fixed rare crashes during interlaced delivery.
 
 ### UI Fixes

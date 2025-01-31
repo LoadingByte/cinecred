@@ -108,7 +108,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchColWidths == ACROSS_BLOCKS
+                o.bodyLayout == GRID && !o.gridForceColWidthPx.isActive && o.gridMatchColWidths == ACROSS_BLOCKS
             }
         }
     ),

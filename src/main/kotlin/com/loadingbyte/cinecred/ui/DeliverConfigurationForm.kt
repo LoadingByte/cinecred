@@ -32,6 +32,7 @@ import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.helper.*
 import java.nio.file.Path
 import java.text.DecimalFormat
+import java.util.Optional
 import javax.swing.JOptionPane.*
 import javax.swing.ListCellRenderer
 import kotlin.io.path.exists
@@ -617,6 +618,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
         onChange(resolutionMultWidget)
+    }
+
+    fun setSelectedSpreadsheetName(spreadsheetName: String) {
+        spreadsheetNameWidget.value = Optional.of(spreadsheetName)
     }
 
 }

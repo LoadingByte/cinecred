@@ -20,6 +20,8 @@ Cinecred Changelog
 - All pictures and embedded videos are now loaded in parallel.
 - The page preview now appears as soon as possible, and no longer waits for all
   embedded videos in the entire project to load.
+- The video preview and delivery dialogs now default to the currently selected
+  page tab each time they are opened.
 - Remapped Ctrl+W and Ctrl+Q to closing a window or quitting a session.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
 - Canceling a file dialog no longer opens a different second file dialog.

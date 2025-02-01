@@ -268,6 +268,9 @@ class ProjectController(
         projectFrame.panel.onSetDialogVisible(type, isVisible)
         if (type == ProjectDialogType.VIDEO)
             playbackCtrl.setDialogVisibility(isVisible)
+        if (type == ProjectDialogType.DELIVERY && isVisible)
+            projectFrame.panel.selectedSpreadsheetName
+                ?.let(deliveryDialog.panel.configurationForm::setSelectedSpreadsheetName)
     }
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean {

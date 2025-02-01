@@ -362,6 +362,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_O, CTRL_DOWN_MASK) { overlaysMenu.toggle() })
     }
 
+    val selectedSpreadsheetName: String?
+        get() = creditsTabs.selectedIndex.let { if (it < 0) null else creditsTabs.getTitleAt(it) }
+
     fun onSetDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
         when (type) {
             ProjectDialogType.STYLING -> stylingDialogToggleButton

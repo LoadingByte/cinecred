@@ -404,6 +404,8 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
             return
         dialogVisible = visible
         projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, visible)
+        if (visible)
+            projectCtrl.projectFrame.panel.selectedSpreadsheetName?.let(::setSelectedSpreadsheetName)
         setupAWTFrameSource()
         stopPlayingIfNecessary()
     }

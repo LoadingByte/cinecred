@@ -8,7 +8,6 @@ import com.loadingbyte.cinecred.common.throwableAwareTask
 import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.imaging.Tape
-import com.loadingbyte.cinecred.projectio.ProjectIntake.Callbacks
 import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.DELETE
 import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.MODIFY
 import com.loadingbyte.cinecred.projectio.service.SERVICES
@@ -17,6 +16,7 @@ import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
 import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.awt.Font
 import java.io.IOException
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -40,7 +40,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     interface Callbacks {
         fun creditsPolling(possible: Boolean)
-        fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, log: List<ParserMsg>)
+        fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, uri: URI?, log: List<ParserMsg>)
+        fun pushCreditsSpreadsheetsLog(log: List<ParserMsg>)
         fun pushProjectFonts(projectFonts: Collection<Font>)
         fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>)
         fun pushTapes(tapes: Collection<Tape>)
@@ -137,8 +138,10 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     private fun reloadCreditsFile(changedFile: Path) {
         val (activeFile, locatingLog) = locateCreditsFile(projectDir)
-        if (activeFile != null &&
-            (changedFile == activeFile || currentCreditsFile.let { it == null || !safeIsSameFile(it, activeFile) })
+        if (activeFile == null)
+            callbacks.pushCreditsSpreadsheets(emptyList(), null, locatingLog)
+        else if (
+            changedFile == activeFile || currentCreditsFile.let { it == null || !safeIsSameFile(it, activeFile) }
         ) {
             linkedCreditsWatcher?.cancel()
             linkedCreditsWatcher = null
@@ -151,11 +154,11 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     if (service == null) {
                         val msg = l10n("projectIO.credits.unsupportedServiceLink", link)
                         val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
-                        callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msgObj)
+                        callbacks.pushCreditsSpreadsheets(emptyList(), link, locatingLog + msgObj)
                     } else {
                         linkedCreditsWatcher = service.watch(link, object : ServiceWatcher.Callbacks {
                             override fun content(spreadsheets: List<Spreadsheet>) {
-                                callbacks.pushCreditsSpreadsheets(spreadsheets, locatingLog)
+                                callbacks.pushCreditsSpreadsheets(spreadsheets, link, locatingLog)
                             }
 
                             override fun problem(problem: ServiceWatcher.Problem) {
@@ -164,7 +167,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                                     ServiceWatcher.Problem.DOWN -> "projectIO.credits.serviceUnresponsive"
                                 }
                                 val msg = ParserMsg(null, null, null, null, ERROR, l10n(key))
-                                callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msg)
+                                callbacks.pushCreditsSpreadsheets(emptyList(), link, locatingLog + msg)
                             }
                         })
                         callbacks.creditsPolling(true)
@@ -172,7 +175,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 } else {
                     val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
                     val (spreadsheets, loadingLog) = fmt.read(activeFile, l10n("project.template.spreadsheetName"))
-                    callbacks.pushCreditsSpreadsheets(spreadsheets, locatingLog + loadingLog)
+                    callbacks.pushCreditsSpreadsheets(spreadsheets, activeFile.toUri(), locatingLog + loadingLog)
                 }
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
@@ -181,10 +184,10 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 // error message in case something else goes wrong too.
                 val msg = l10n("projectIO.credits.cannotReadCreditsFile", activeFile.fileName, e.toString())
                 val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
-                callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog + msgObj)
+                callbacks.pushCreditsSpreadsheets(emptyList(), activeFile.toUri(), locatingLog + msgObj)
             }
         } else
-            callbacks.pushCreditsSpreadsheets(emptyList(), locatingLog)
+            callbacks.pushCreditsSpreadsheetsLog(locatingLog)
         currentCreditsFile = activeFile
     }
 

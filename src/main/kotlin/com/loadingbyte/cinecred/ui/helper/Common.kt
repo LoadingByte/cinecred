@@ -548,6 +548,7 @@ class KeyListener(
 
 
 fun tryOpen(file: Path) = openCascade(Desktop.Action.OPEN, Desktop::open, file.toFile(), file.toUri())
+fun tryEdit(file: Path) = openCascade(Desktop.Action.EDIT, Desktop::edit, file.toFile(), file.toUri())
 fun tryBrowse(uri: URI) = openCascade(Desktop.Action.BROWSE, Desktop::browse, uri, uri)
 fun tryMail(uri: URI) = openCascade(Desktop.Action.MAIL, Desktop::mail, uri, uri)
 

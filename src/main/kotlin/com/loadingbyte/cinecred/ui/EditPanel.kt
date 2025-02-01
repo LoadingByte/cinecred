@@ -23,10 +23,13 @@ import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.net.URI
+import java.nio.file.FileSystemNotFoundException
 import javax.swing.*
 import javax.swing.JOptionPane.*
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
+import kotlin.io.path.toPath
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -165,6 +168,18 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     ) {
         tryOpen(ctrl.projectDir)
     }
+    private val openCreditsFileButton = newToolbarButtonWithKeyListener(
+        TABLE_ICON, l10n("ui.edit.openCreditsFile"),
+        VK_T, CTRL_DOWN_MASK
+    ) {
+        creditsURI?.let { uri ->
+            try {
+                tryEdit(uri.toPath())
+            } catch (_: FileSystemNotFoundException) {
+                tryBrowse(uri)
+            }
+        }
+    }
 
     private val homeButton = newToolbarButtonWithKeyListener(
         HOME_ICON, l10n("ui.edit.home"),
@@ -207,6 +222,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     private val highResCache = DeferredImage.CanvasMaterializationCache()
     private val lowResCache = DeferredImage.CanvasMaterializationCache()
 
+    private var creditsURI: URI? = null
     private var drawnProject: DrawnProject? = null
 
     private fun newToolbarButtonWithKeyListener(
@@ -274,11 +290,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 0:rel[]0:rel
                 []0[]0[]0[]rel[shrinkprio 200]
                 0:unrel:[]unrel
-                []rel[]rel[]0[]
+                []2:rel[]2:rel[]0[]
                 rel[]rel:unrel:
                 [shrinkprio 300]0:rel:[]
                 rel:unrel:[]rel
-                []0[]0[]0[]
+                []0[]0[]0[]0[]
                 0:rel:[shrinkprio 200]0:rel-1:
                 []
                 push[]
@@ -290,10 +306,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(redoStylingButton)
             add(saveStylingButton)
             add(resetStylingButton)
-            add(unsavedStylingLabel, "wmin 15")
+            add(unsavedStylingLabel, "wmin 10")
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
             add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
-            add(zoomSlider, "width 50!")
+            add(zoomSlider, "width 40:50:")
             add(guidesToggleButton)
             add(overlaysButton)
             add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
@@ -304,6 +320,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(videoDialogToggleButton)
             add(deliveryDialogToggleButton)
             add(browseProjectDirButton)
+            add(openCreditsFileButton)
             add(JSeparator(JSeparator.VERTICAL), "growy")
             add(homeButton)
             add(playbackControls, "newline, span, growx, gapx 8 8, hidemode 3")
@@ -415,6 +432,11 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateCreditsPolling(possible: Boolean) {
         pollCreditsButton.isEnabled = possible
+    }
+
+    fun updateCreditsURI(uri: URI?) {
+        creditsURI = uri
+        openCreditsFileButton.isEnabled = uri != null
     }
 
     fun updateLog(log: List<ParserMsg>) {

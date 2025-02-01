@@ -22,6 +22,7 @@ import java.awt.Window
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.io.IOException
+import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
@@ -85,8 +86,13 @@ class ProjectController(
             SwingUtilities.invokeLater { projectFrame.panel.updateCreditsPolling(possible) }
         }
 
-        override fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, log: List<ParserMsg>) {
+        override fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, uri: URI?, log: List<ParserMsg>) {
             process(currentInput.updateAndGet { it.copy(creditsSpreadsheets = creditsSpreadsheets, ioLog = log) })
+            SwingUtilities.invokeLater { projectFrame.panel.updateCreditsURI(uri) }
+        }
+
+        override fun pushCreditsSpreadsheetsLog(log: List<ParserMsg>) {
+            doneProcessing(currentInput.updateAndGet { it.copy(ioLog = log) }, null, null)
         }
 
         override fun pushProjectFonts(projectFonts: Collection<Font>) {

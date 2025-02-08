@@ -69,6 +69,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // of the same widget but in different styles.
     private var openCounter = 0
 
+    private var blockStylingHistoryUpdates = 0
+
     // Remember the runtime of the latest render of the project, as well as the runtime of the first occurrences of
     // individual scroll styles.
     private var mostRecentRuntime = 0
@@ -229,12 +231,18 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         ctrl.stylingHistory.editedAndRedraw(styling!!, Pair(null, openCounter))
     }
 
-    private fun onChange(widget: Form.Widget<*>? = null, styling: Styling = buildStyling()) {
-        // Rebuild the styling object and subsequently update the UI.
-        this.styling = styling
-        formAdjuster.onChangeInActiveForm()
-        // Add an undo state.
-        ctrl.stylingHistory.editedAndRedraw(styling, Pair(widget, openCounter))
+    private fun onChange(widget: Form.Widget<*>) {
+        blockStylingHistoryUpdates++
+        try {
+            // Update the UI.
+            formAdjuster.onChangeInActiveForm()
+        } finally {
+            blockStylingHistoryUpdates--
+        }
+        if (blockStylingHistoryUpdates == 0) {
+            // Add an undo state.
+            ctrl.stylingHistory.editedAndRedraw(styling!!, Pair(widget, openCounter))
+        }
     }
 
     private fun openBlank() {
@@ -255,6 +263,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 newStyle = form.save()
             }
             stylingTree.setSingleton(newStyle)
+            styling = buildStyling()
             onChange(widget)
         }
         openStyle(style, form, cardName)
@@ -273,15 +282,13 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
                 newStyle = form.save()
             }
             stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
-            val newStyling = buildStyling()
-            val updates = consistencyRetainer.ensureConsistencyAfterEdit(newStyling, newStyle)
-            if (updates.isEmpty()) {
-                // Take a shortcut to avoid generating the Styling object a second time.
-                onChange(widget, newStyling)
-                return@add
+            styling = buildStyling()
+            val updates = consistencyRetainer.ensureConsistencyAfterEdit(styling!!, newStyle)
+            if (updates.isNotEmpty()) {
+                updates.forEach(stylingTree::updateListElement)
+                updates[newStyle]?.let { updatedNewStyle -> form.open(newStyle.javaClass.cast(updatedNewStyle)) }
+                styling = buildStyling()
             }
-            updates.forEach(stylingTree::updateListElement)
-            updates[newStyle]?.let { updatedNewStyle -> form.open(newStyle.javaClass.cast(updatedNewStyle)) }
             onChange(widget)
         }
         openStyle(style, form, cardName)

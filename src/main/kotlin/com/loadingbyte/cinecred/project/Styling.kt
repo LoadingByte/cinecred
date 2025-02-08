@@ -101,6 +101,7 @@ data class ContentStyle(
     val vMarginPx: Double,
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
+    val gridCols: Int,
     val gridFillingOrder: GridFillingOrder,
     val gridFillingBalanced: Boolean,
     val gridStructure: GridStructure,

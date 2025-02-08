@@ -93,11 +93,12 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         styleClass = LetterStyle::class.java,
         choices = { styling, _ -> styling.letterStyles }
     ),
+    IntConstr(ERROR, ContentStyle::gridCols.st(), min = 1, max = 100),
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, style ->
         val forceColWidth = style.gridForceColWidthPx.isActive
         when {
             forceColWidth && style.gridForceRowHeightPx.isActive -> EnumSet.of(FREE)
-            forceColWidth || style.gridCellHJustifyPerCol.size < 2 -> EnumSet.of(FREE, SQUARE_CELLS)
+            forceColWidth || style.gridCols < 2 -> EnumSet.of(FREE, SQUARE_CELLS)
             else -> EnumSet.allOf(GridStructure::class.java)
         }
     },
@@ -125,7 +126,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
-    MinSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), 1),
+    DynSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), size = { _, style -> style.gridCols }),
     DoubleConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
@@ -432,6 +433,13 @@ class MinSizeConstr<S : Style>(
 ) : StyleConstraint<S, ListStyleSetting<S, Any>>(setting)
 
 
+class DynSizeConstr<S : Style>(
+    val severity: Severity,
+    setting: ListStyleSetting<S, Any>,
+    val size: (Styling, S) -> Int
+) : StyleConstraint<S, ListStyleSetting<S, Any>>(setting)
+
+
 class SiblingOrdinalConstr<S : NestedStyle>(
     val severity: Severity,
     setting: StyleSetting<S, Int>,
@@ -607,6 +615,13 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                             log(rootStyle, style, st, -1, cst.severity, msg)
                         }
                     }
+                is DynSizeConstr -> {
+                    val size = cst.size(styling, style)
+                    forEachRelevantSetting(cst, ignoreSettings) { st ->
+                        if (st.extractSubjects(style).size != size)
+                            log(rootStyle, style, st, -1, cst.severity, l10n("project.styling.constr.size", size))
+                    }
+                }
                 is SiblingOrdinalConstr -> {
                     val largestOrdinal = siblings.size
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, ord ->

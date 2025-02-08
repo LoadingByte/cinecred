@@ -83,8 +83,7 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Flow each block's body elements into the grid configured for that block.
     val colsPerBlock = blocks.associateWith { block ->
         flowIntoGridCols(
-            block.body, numCols = block.style.gridCellHJustifyPerCol.size,
-            block.style.gridFillingOrder, block.style.gridFillingBalanced
+            block.body, block.style.gridCols, block.style.gridFillingOrder, block.style.gridFillingBalanced
         )
     }
 

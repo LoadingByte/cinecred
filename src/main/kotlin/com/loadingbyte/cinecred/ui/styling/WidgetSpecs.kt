@@ -84,7 +84,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
     ),
     UnionWidgetSpec(ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), ICON),
-    SimpleListWidgetSpec(ContentStyle::gridCellHJustifyPerCol.st(), newElementIsLastElement = true, elementsPerRow = 3),
+    SimpleListWidgetSpec(
+        ContentStyle::gridCellHJustifyPerCol.st(),
+        newElement = HJustify.CENTER, newElementIsLastElement = true, elementsPerRow = 3
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),

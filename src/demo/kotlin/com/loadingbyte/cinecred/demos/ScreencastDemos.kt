@@ -258,9 +258,13 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.gutter.match")
         sc.demonstrateSetting(styWin, styContForm, ContentStyle::gridMatchColWidths.st(), 0, 1)
         sc.caption("screencast.caption.gutter.justify")
-        sc.demonstrateSetting(styWin, styContForm, ContentStyle::gridCellHJustifyPerCol.st(), 4, 2)
+        sc.demonstrateSetting(styWin, styContForm, ContentStyle::gridCellHJustifyPerCol.st(), 2, 0)
         sc.caption("screencast.caption.gutter.columns")
-        sc.demonstrateSetting(styWin, styContForm, ContentStyle::gridCellHJustifyPerCol.st(), 0, 5)
+        sc.mouseTo(styWin.desktopPosOf(styIncGridCols))
+        sc.click()
+        sc.mouseTo(styWin.desktopPosOf(styDecGridCols))
+        sc.click()
+        styGridCols.transferFocusBackward()  // Avoid that the moving mouse selects text in the spinner text field.
         sc.caption("screencast.caption.gutter.head")
         sc.demonstrateSetting(styWin, styContForm, ContentStyle::hasHead.st(), 0, 0)
 

@@ -298,6 +298,10 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.6.0 -> 1.7.0: "fontName" is renamed to "font".
     for (letterStyle in rawStyling.letterStyles)
         letterStyle["fontName"]?.let { letterStyle["font"] = it }
+
+    // 1.7.0 -> 1.8.0: The number of grid columns is now controlled by a dedicated setting.
+    for (contentStyle in rawStyling.contentStyles)
+        (contentStyle["gridCellHJustifyPerCol"] as? List<*>)?.let { contentStyle.putIfAbsent("gridCols", it.size) }
 }
 
 

@@ -1392,7 +1392,24 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
     private val partWidgets = mutableListOf<W>()
 
     var elementCount = 0
-        private set
+        set(elementCount) {
+            if (field == elementCount)
+                return
+            while (partWidgets.size < elementCount)
+                appendNewPart()
+            for (idx in elementCount..<field)
+                setPartVisible(idx, partWidgets[idx], false)
+            if (field < elementCount) {
+                val fillElement = getFillElement()
+                for (idx in field..<elementCount) {
+                    val widget = partWidgets[idx]
+                    setPartVisible(idx, widget, true)
+                    withoutChangeListeners { setPartElement(idx, widget, fillElement) }
+                }
+            }
+            field = elementCount
+            notifyChangeListeners()
+        }
 
     val elementWidgets: List<W>
         get() = partWidgets.subList(0, elementCount)
@@ -1400,9 +1417,7 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
     override var value: List<E>
         get() = elementWidgets.mapIndexed(::getPartElement)
         set(value) {
-            elementCount = value.size
-            while (partWidgets.size < value.size)
-                appendNewPart()
+            withoutChangeListeners { elementCount = value.size }
             for ((idx, widget) in partWidgets.withIndex()) {
                 val vis = idx < value.size
                 setPartVisible(idx, widget, vis)
@@ -1411,6 +1426,13 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
             }
             notifyChangeListeners()
         }
+
+    private fun getFillElement(): E = when {
+        newElementIsLastElement && elementCount >= 1 ->
+            getPartElement(elementCount - 1, partWidgets[elementCount - 1])
+        newElement != null -> newElement
+        else -> throw IllegalStateException("No way to choose value of new ListWidget element.")
+    }
 
     /** Already prepares some parts so that user interaction will appear quicker later on. */
     protected fun addInitialParts() {
@@ -1432,17 +1454,8 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
         mapping[elementCount /* exceeds current list size, hence filled with fillElement */] = idx
         for (i in idx..<elementCount)
             mapping[i] = i + 1
-        // The new widget should start out with the requested value.
-        val fillElement = when {
-            element != null -> element
-            newElementIsLastElement && elementCount >= 1 ->
-                getPartElement(elementCount - 1, partWidgets[elementCount - 1])
-            newElement != null -> newElement
-            else -> throw IllegalStateException("No way to choose value of new ListWidget element.")
-        }
-        withoutChangeListeners { reorder(mapping, fillElement) }
+        withoutChangeListeners { reorder(mapping, element ?: getFillElement()) }
         elementCount++
-        notifyChangeListeners()
     }
 
     protected fun userDel(idx: Int) {
@@ -1454,8 +1467,6 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
             mapping[i] = i - 1
         withoutChangeListeners { reorder(mapping) }
         elementCount--
-        setPartVisible(elementCount, partWidgets[elementCount], false)
-        notifyChangeListeners()
     }
 
     /**
@@ -1495,7 +1506,6 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
                     setPartElement(toIdx, partWidgets[toIdx], element)
             }
     }
-
 
     private fun appendNewPart() {
         val widget = makeElementWidget()
@@ -1537,10 +1547,9 @@ class SimpleListWidget<E : Any>(
     newElement: E? = null,
     newElementIsLastElement: Boolean = false,
     private val elementsPerRow: Int = 1,
+    private val fixedSize: Boolean = false,
     private val minSize: Int = 0
 ) : AbstractListWidget<E, Form.Widget<E>>(makeElementWidget, newElement, newElementIsLastElement) {
-
-    private val addBtn = JButton(ADD_ICON)
 
     private val panel = object : JPanel(MigLayout("hidemode 3, insets 0")) {
         init {
@@ -1570,31 +1579,41 @@ class SimpleListWidget<E : Any>(
         require(newElement != null || minSize > 0)
 
         addInitialParts()
-        addBtn.addActionListener { userAdd(elementCount) }
         if (minSize > 0)
             changeListeners.add { for (delBtn in delBtns) delBtn.isEnabled = elementCount > minSize }
     }
 
-    override val components = listOf<JComponent>(addBtn, panel)
-    override val constraints = listOf("aligny top, gapy 1 1", "")
+    override val components = buildList<JComponent> {
+        if (!fixedSize)
+            add(JButton(ADD_ICON).also { it.addActionListener { userAdd(elementCount) } })
+        add(panel)
+    }
+
+    override val constraints = buildList {
+        if (!fixedSize)
+            add("aligny top, gapy 1 1")
+        add("")
+    }
 
     override fun addPart(idx: Int, widget: Form.Widget<E>) {
-        val delBtn = JButton(TRASH_ICON)
-        delBtn.addActionListener { userDel(delBtns.indexOfFirst { it === delBtn }) }
-        var delBtnConstraint = "aligny top, gapleft 6, gaptop 1"
-        if (idx != 0 && idx % elementsPerRow == 0)
-            delBtnConstraint += ", newline"
-        panel.add(delBtn, delBtnConstraint)
-        delBtns.add(delBtn)
+        var firstConstr = if (idx != 0 && idx % elementsPerRow == 0) ", newline" else ""
+
+        if (!fixedSize) {
+            val delBtn = JButton(TRASH_ICON)
+            delBtn.addActionListener { userDel(delBtns.indexOfFirst { it === delBtn }) }
+            panel.add(delBtn, "aligny top, gapleft 6, gaptop 1" + firstConstr.also { firstConstr = "" })
+            delBtns.add(delBtn)
+        }
 
         for ((comp, constr) in widget.components.zip(widget.constraints))
-            panel.add(comp, constr)
+            panel.add(comp, constr + firstConstr.also { firstConstr = "" })
 
         panel.revalidate()
     }
 
     override fun setPartVisible(idx: Int, widget: Form.Widget<E>, isVisible: Boolean) {
-        delBtns[idx].isVisible = isVisible
+        if (!fixedSize)
+            delBtns[idx].isVisible = isVisible
         widget.isVisible = isVisible
     }
 

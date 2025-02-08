@@ -13,6 +13,7 @@ private const val DIR = "guide/content-style/grid-layout"
 val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
     get() = listOf(
         GuideContentStyleGridLayoutExampleDemo,
+        GuideContentStyleGridColsDemo,
         GuideContentStyleGridLayoutFillingOrderDemo,
         GuideContentStyleGridLayoutFillingBalancedDemo,
         GuideContentStyleGridLayoutStructureDemo,
@@ -27,6 +28,20 @@ val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
 
 object GuideContentStyleGridLayoutExampleDemo : PageDemo("$DIR/example", Format.PNG, pageGuides = true) {
     override fun credits() = listOf(GRID_SPREADSHEET.parseCreditsCS(tabularCS.copy(name = "Demo")))
+}
+
+
+object GuideContentStyleGridColsDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/cols", Format.STEP_GIF,
+    listOf(ContentStyle::gridCols.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        val c = HJustify.CENTER
+        this += tabularCS.copy(name = "Demo", gridCols = 2, gridCellHJustifyPerCol = persistentListOf(c, c))
+        this += last().copy(gridCols = 3, gridCellHJustifyPerCol = persistentListOf(c, c, c))
+    }
+
+    override fun credits(style: ContentStyle) = GRID_SPREADSHEET.parseCreditsCS(style)
 }
 
 
@@ -119,7 +134,8 @@ object GuideContentStyleGridLayoutMatchColWidthsDemo : StyleSettingsDemo<Content
 
     override fun styles() = buildList<ContentStyle> {
         this += tabularCS.copy(
-            name = "Demo", spineAttachment = SpineAttachment.BODY_LEFT, gridStructure = GridStructure.FREE,
+            name = "Demo", spineAttachment = SpineAttachment.BODY_LEFT, gridCols = 2,
+            gridStructure = GridStructure.FREE,
             gridCellHJustifyPerCol = persistentListOf(HJustify.CENTER, HJustify.CENTER)
         )
         this += last().copy(gridMatchColWidths = MatchExtent.ACROSS_BLOCKS)
@@ -198,8 +214,7 @@ object GuideContentStyleGridLayoutCellHJustifyPerColDemo : StyleSettingsDemo<Con
 ) {
     override fun styles() = buildList<ContentStyle> {
         val c = HJustify.CENTER
-        this += tabularCS.copy(name = "Demo", gridCellHJustifyPerCol = persistentListOf(c, c))
-        this += last().copy(gridCellHJustifyPerCol = persistentListOf(c, c, c))
+        this += tabularCS.copy(name = "Demo", gridCols = 3, gridCellHJustifyPerCol = persistentListOf(c, c, c))
         this += last().copy(gridCellHJustifyPerCol = persistentListOf(HJustify.LEFT, c, HJustify.RIGHT))
     }
 
@@ -242,7 +257,8 @@ object GuideContentStyleGridLayoutRowAndColGapsDemo : StyleSettingsDemo<ContentS
 
 
 private val tabularCS = PRESET_CONTENT_STYLE.copy(
-    bodyLetterStyleName = "Name", bodyLayout = BodyLayout.GRID, gridStructure = GridStructure.EQUAL_WIDTH_COLS,
+    bodyLetterStyleName = "Name", bodyLayout = BodyLayout.GRID, gridCols = 3,
+    gridStructure = GridStructure.EQUAL_WIDTH_COLS,
     gridCellHJustifyPerCol = persistentListOf(HJustify.CENTER, HJustify.CENTER, HJustify.CENTER), gridColGapPx = 32.0
 )
 

@@ -110,6 +110,7 @@ class StyleForm<S : Style>(
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val minSizeConstr = settingConstraints.oneOf<MinSizeConstr<S>>()
+        val dynSizeConstr = settingConstraints.oneOf<DynSizeConstr<S>>()
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val simpleListWidgetSpec = settingWidgetSpecs.oneOf<SimpleListWidgetSpec<S, E>>()
@@ -147,6 +148,7 @@ class StyleForm<S : Style>(
                 newElement = simpleListWidgetSpec?.newElement,
                 newElementIsLastElement = simpleListWidgetSpec?.newElementIsLastElement ?: false,
                 elementsPerRow = simpleListWidgetSpec?.elementsPerRow ?: 1,
+                fixedSize = dynSizeConstr != null,
                 minSize = minSizeConstr?.minSize ?: 0
             )
         }
@@ -543,6 +545,13 @@ class StyleForm<S : Style>(
                 widget.fps = fps
                 widget.timecodeFormat = timecodeFormat
             }
+        }
+    }
+
+    fun setListSize(setting: ListStyleSetting<S, *>, size: Int) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
+            if (widget is AbstractListWidget<*, *>)
+                widget.elementCount = size
         }
     }
 

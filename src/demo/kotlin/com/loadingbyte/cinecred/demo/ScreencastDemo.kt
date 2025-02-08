@@ -184,6 +184,9 @@ abstract class ScreencastDemo(
         get() = styGlobForm.getWidgetFor(Global::unitVGapPx.st()).components[0].getComponent(0)!!
     protected val styRuntime get() = styGlobForm.getWidgetFor(Global::runtimeFrames.st()).components[1] as JSpinner
     protected val styDecRuntime get() = styRuntime.getComponent(1)!!
+    protected val styGridCols get() = styContForm.getWidgetFor(ContentStyle::gridCols.st()).components[0] as JSpinner
+    protected val styIncGridCols get() = styGridCols.getComponent(0)!!
+    protected val styDecGridCols get() = styGridCols.getComponent(1)!!
     protected val styFlowSep
         get() = styContForm.getWidgetFor(ContentStyle::flowSeparator.st()).components[0] as JTextComponent
     protected val styLetrFormScrollBar get() = (styLetrForm.parent.parent as JScrollPane).verticalScrollBar

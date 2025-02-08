@@ -60,6 +60,7 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
 
 private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentStyle>> = listOf(
     StyleEffectivitySpec(
+        ContentStyle::gridCols.st(),
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(), ContentStyle::gridStructure.st(),
         ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridMatchColWidths.st(),
         ContentStyle::gridForceRowHeightPx.st(), ContentStyle::gridMatchRowHeight.st(),
@@ -147,7 +148,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     ),
     StyleEffectivitySpec(
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(),
-        isAlmostEffective = { _, style -> style.gridCellHJustifyPerCol.size < 2 }
+        isAlmostEffective = { _, style -> style.gridCols < 2 }
     ),
     StyleEffectivitySpec(
         ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
@@ -159,7 +160,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { styling, style ->
             styling!!.contentStyles.all { o ->
                 (o.name != style.name /* for duplicate names */ && o.name !in style.gridMatchColWidthsAcrossStyles) ||
-                        style.gridCellHJustifyPerCol.size >= o.gridCellHJustifyPerCol.size
+                        style.gridCols >= o.gridCols
             }
         }
     ),
@@ -170,13 +171,13 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::gridCellVJustify.st(),
         isAlmostEffective = { _, style ->
-            style.gridCellHJustifyPerCol.size < 2 && style.gridStructure != SQUARE_CELLS &&
+            style.gridCols < 2 && style.gridStructure != SQUARE_CELLS &&
                     !style.gridForceRowHeightPx.isActive && style.gridMatchRowHeight == OFF
         }
     ),
     StyleEffectivitySpec(
         ContentStyle::gridColGapPx.st(),
-        isAlmostEffective = { _, style -> style.gridCellHJustifyPerCol.size < 2 }
+        isAlmostEffective = { _, style -> style.gridCols < 2 }
     ),
     StyleEffectivitySpec(
         ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),

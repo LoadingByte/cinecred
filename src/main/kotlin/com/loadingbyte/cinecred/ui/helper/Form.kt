@@ -47,7 +47,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         override val changeListeners = mutableListOf<(Widget<*>) -> Unit>()
         override val visibleListeners = mutableListOf<(Boolean) -> Unit>()
         override val enabledListeners = mutableListOf<(Boolean) -> Unit>()
-        protected var disableChangeListeners = false
+        protected var disableChangeListeners = 0
 
         override var isVisible = true
             set(isVisible) {
@@ -100,11 +100,11 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         }
 
         protected inline fun withoutChangeListeners(block: () -> Unit) {
-            disableChangeListeners = true
+            disableChangeListeners++
             try {
                 block()
             } finally {
-                disableChangeListeners = false
+                disableChangeListeners--
             }
         }
 
@@ -113,7 +113,7 @@ open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidt
         }
 
         protected fun notifyChangeListenersAboutOtherWidgetChange(widget: Widget<*>) {
-            if (!disableChangeListeners)
+            if (disableChangeListeners == 0)
                 for (listener in changeListeners)
                     listener(widget)
         }

@@ -130,6 +130,11 @@ class StyleFormAdjuster(
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
             }
+            is DynSizeConstr -> {
+                val size = constr.size(styling, curStyle)
+                for (setting in constr.settings)
+                    curForm.setListSize(setting, size)
+            }
             is SiblingOrdinalConstr -> {
                 val choices = LinkedHashMap<Int, String>()  // retains insertion order
                 for ((idx, sibling) in siblingStyles.withIndex())

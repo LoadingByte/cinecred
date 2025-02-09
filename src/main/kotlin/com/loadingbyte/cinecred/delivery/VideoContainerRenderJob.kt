@@ -139,6 +139,10 @@ class VideoContainerRenderJob private constructor(
                             val matteBitmap = Bitmap.allocate(writerSpec).zero()
                             matteBitmap.blit(blackWriterBitmap!!)
                             matteBitmap.blitComponent(colorBitmap, 3, 0)
+                            if (!yuv) {
+                                matteBitmap.blitComponent(colorBitmap, 3, 1)
+                                matteBitmap.blitComponent(colorBitmap, 3, 2)
+                            }
                             colorBitmap.close()
                             queue.put(matteBitmap)
                         }

@@ -16,6 +16,7 @@ Cinecred Changelog
 - XLSX files exported from Google Sheets no longer fail to parse.
 - Fixed crashes when both forced row height and match row height are active.
 - Fixed rare crashes during interlaced delivery.
+- Fixed SVG rasterization for PDF delivery.
 - Delivered CineForm 444 transparency mattes no longer only use the red channel.
 
 ### UI Fixes

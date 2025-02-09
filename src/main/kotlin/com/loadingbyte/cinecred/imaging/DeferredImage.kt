@@ -1051,9 +1051,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             mat.translate(x, csHeight - y - embeddedPic.height)
             mat.scale(scaling)
             if (rasterizeSVGs && pic is Picture.SVG) {
+                if (embeddedPic.isCropped) {
+                    val es = embeddedPic.scaling
+                    mat.translate(es * -pic.cropX, es * (pic.cropY + pic.cropHeight - pic.height))
+                    mat.scale(pic.width / pic.cropWidth, pic.height / pic.cropHeight)
+                }
                 mat.scale(embeddedPic.width, embeddedPic.height)
-                if (embeddedPic.isCropped)
-                    mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
                 cs.drawImage(docRes.pdImages.computeIfAbsent(pic) { PDImageXObject(doc) }, mat)
                 val w = ceil(embeddedPic.scaling * pic.width * scaling).toInt()
                 val h = ceil(embeddedPic.scaling * pic.height * scaling).toInt()
@@ -1303,7 +1306,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     colorSpace = ColorSpace.SRGB
                     val tr = AffineTransform.getScaleInstance(maxRes.widthPx / pic.width, maxRes.heightPx / pic.height)
                     Bitmap.allocate(Bitmap.Spec(maxRes, Canvas.compatibleRepresentation(colorSpace))).use { canvasBmp ->
-                        Canvas.forBitmap(canvasBmp).use { canvas -> pic.drawTo(canvas, tr) }
+                        Canvas.forBitmap(canvasBmp.zero()).use { canvas -> pic.drawTo(canvas, tr) }
                         bitmap = Picture.Raster(canvasBmp).bitmap
                     }
                 }

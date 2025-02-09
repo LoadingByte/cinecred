@@ -230,14 +230,17 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         // It would be a bit complicated to exactly determine which pixels are affected after the blur, so instead, we
         // just add a safeguard buffer to better be sure that not a single blurred pixel is accidentally culled.
         val safeBlurRadius = if (blurRadius == 0.0) 0.0 else blurRadius + 4.0
-        if (culling != null &&
-            !shape.intersects(
-                (culling.x - x - safeBlurRadius) / scaling,
-                (culling.y - y - safeBlurRadius) / scaling,
-                (culling.width + 2 * safeBlurRadius) / scaling,
-                (culling.height + 2 * safeBlurRadius) / scaling
-            )
-        ) return
+        if (culling != null) {
+            val cx = (culling.x - x - safeBlurRadius) / scaling
+            val cy = (culling.y - y - safeBlurRadius) / scaling
+            val cw = (culling.width + 2 * safeBlurRadius) / scaling
+            val ch = (culling.height + 2 * safeBlurRadius) / scaling
+            // Empty rectangles can occur as guides when cells have 0 width, and we want to draw them anyway!
+            if (shape is Rectangle2D && shape.isEmpty) {
+                if (!(cx + cw > shape.x && cy + ch > shape.y && cx < shape.maxX && cy < shape.maxY)) return
+            } else
+                if (!shape.intersects(cx, cy, cw, ch)) return
+        }
         // We first transform the shape and then draw it without scaling the canvas.
         // This simplifies code in the SVG and PDF backends, and is also required for snapping hairlines to pixels.
         val tx = AffineTransform().apply { translate(x, y); scale(scaling) }

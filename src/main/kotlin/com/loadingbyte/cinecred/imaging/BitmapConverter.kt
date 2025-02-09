@@ -424,7 +424,7 @@ class BitmapConverter(
                             link(PLANAR_FLOAT, false, toFmt, pri, trc, pmu, con, res)
                         }
                     }
-                    if (ali && fmtObj.isFullRGBAF)
+                    if (fmtObj.isFullRGBF || fmtObj.isFullRGBAF)
                         for (toFmt in firstToFmt..fmtObjs.lastIndex) {
                             val toFmtObj = fmtObjs[toFmt]
                             if (toFmtObj.px.code == AV_PIX_FMT_X2RGB10BE && toFmtObj.range == LIMITED) {
@@ -598,6 +598,7 @@ class BitmapConverter(
                 it == AV_PIX_FMT_GRAYF32 || it == AV_PIX_FMT_RGBF32 || it == AV_PIX_FMT_RGBAF32 ||
                         it == AV_PIX_FMT_GBRPF32 || it == AV_PIX_FMT_GBRAPF32
             }
+            val isFullRGBF = px.code == AV_PIX_FMT_RGBF32 && range == FULL
             val isFullRGBAF = px.code == AV_PIX_FMT_RGBAF32 && range == FULL
             val isFullGBRPF = px.code == AV_PIX_FMT_GBRPF32 && range == FULL
             val isFullGBRAPF = px.code == AV_PIX_FMT_GBRAPF32 && range == FULL
@@ -762,19 +763,31 @@ class BitmapConverter(
 
 
     /**
-     * This stage converts aligned full-range interleaved float32 RGBA to potentially unaligned limited-range X2RGB10BE.
+     * This stage converts unaligned full-range interleaved float32 bitmaps to unaligned limited-range X2RGB10BE.
      * It is mainly useful for 10-bit DeckLink output, as swscale doesn't support any of the 10-bit RGB pixel formats
      * that are also understood by the DeckLink API.
      */
     private object LimitedX2RGB10BEStage : Stage {
 
         override fun process(src: Bitmap, dst: Bitmap) {
+            if (src.spec.representation.alpha == OPAQUE) processRGB(src, dst) else processRGBA(src, dst)
+        }
+
+        private fun processRGB(src: Bitmap, dst: Bitmap) = exec(src, dst, alpha = false)
+        private fun processRGBA(src: Bitmap, dst: Bitmap) = exec(src, dst, alpha = true)
+
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun exec(src: Bitmap, dst: Bitmap, alpha: Boolean) {
             val srcSeg = src.memorySegment(0)
             val dstSeg = dst.memorySegment(0)
             val srcLs = src.linesize(0)
             val dstLs = dst.linesize(0)
             val (w, h) = src.spec.resolution
-            val stepsPerLine = ceilDiv(w, SIXTEENTH_VLEN)
+            val bytesPerPx = if (alpha) 16 else 12
+            val pxPerVec = SIXTEENTH_VLEN
+            val stepsPerLine = ceilDiv(w, pxPerVec)
+                .coerceAtMost((srcLs - if (alpha) 0 else pxPerVec * 4) / (pxPerVec * bytesPerPx))
+            val extraPxPerLine = w - stepsPerLine * pxPerVec
             val addVec = FloatVector.broadcast(F, 64.5f)
             val facVec = FloatVector.broadcast(F, 876f)
             val shlVec = IntVector.fromArray(I, IntArray(QUART_VLEN) { i -> 30 - 10 * ((i + 1) % 4) }, 0)
@@ -783,11 +796,20 @@ class BitmapConverter(
                 var d = y * dstLs
                 repeat(stepsPerLine) {
                     val vecI = vec(F, srcSeg, s, NBO).mul(facVec).min(facVec).add(addVec).max(addVec).convert(F2I, 0)
+                        .let { if (alpha) it else it.rearrange(SHUFFLE) }
                         .lanewise(LSHL, shlVec)
-                    for (p in 0..<SIXTEENTH_VLEN)
+                    for (p in 0..<pxPerVec)
                         dstSeg.putIntBE(d + (p shl 2), (vecI.reinterpretShape(I128, p) as IntVector).reduceLanes(OR))
-                    s += VLEN
-                    d += QUART_VLEN
+                    s += pxPerVec * bytesPerPx
+                    d += pxPerVec * 4
+                }
+                repeat(extraPxPerLine) {
+                    val r = ((srcSeg.getFloat(s + 0L).coerceIn(0f, 1f) * 876f) + 64.5f).toInt()
+                    val g = ((srcSeg.getFloat(s + 4L).coerceIn(0f, 1f) * 876f) + 64.5f).toInt()
+                    val b = ((srcSeg.getFloat(s + 8L).coerceIn(0f, 1f) * 876f) + 64.5f).toInt()
+                    dstSeg.putIntBE(d, (r shl 20) or (g shl 10) or b)
+                    s += bytesPerPx
+                    d += 4
                 }
             }
         }
@@ -795,6 +817,7 @@ class BitmapConverter(
         override fun close() {}
 
         private val I128 = I.withShape(VectorShape.forBitSize(128))
+        private val SHUFFLE = I.shuffleFromOp { i -> i - i / 4 }
 
     }
 

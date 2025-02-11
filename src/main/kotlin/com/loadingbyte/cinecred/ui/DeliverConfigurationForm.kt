@@ -56,6 +56,14 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         private val VOLATILE_PROPERTIES: Set<Property<*>> = hashSetOf(DEPTH, YUV)
 
+        val RenderFormat.categoryLabel
+            get() = when (this) {
+                in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat")
+                in VIDEO_FORMATS -> l10n("ui.deliverConfig.videoFormat")
+                in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat")
+                else -> throw IllegalArgumentException()
+            }
+
     }
 
     // ========== ENCAPSULATION LEAKS ==========
@@ -99,12 +107,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         ComboBoxWidget(
             RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDER, scrollbar = false,
             toString = { format ->
-                val prefix = when (format) {
-                    in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat")
-                    in VIDEO_FORMATS -> l10n("ui.deliverConfig.videoFormat")
-                    in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat")
-                    else -> throw IllegalArgumentException()
-                }
                 val label = when (format) {
                     in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", format.label)
                     else -> format.label
@@ -114,7 +116,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         "  \u2013  " + l10n("ui.deliverConfig.reducedQualityFormat")
                     else -> ""
                 }
-                "$prefix  \u2013  ${label}$suffix"
+                "${format.categoryLabel}  \u2013  ${label}$suffix"
             },
             // Use a custom render that shows category headers.
             rendererDecorator = object : AbstractComboBoxWidget.RendererDecorator {
@@ -559,10 +561,21 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
             val renderJob = format.createRenderJob(config, styling, pageDefImages, video, fileOrDir, filenamePattern)
 
-            val destination = if (!format.fileSeq) fileOrDir.pathString else
-                fileOrDir.resolve(filenameHashPattern).pathString
+            val sl = ctrl.deliveryDialog.panel.specsLabels
+            val info = DeliverRenderQueuePanel.RenderJobInfo(
+                spreadsheet = spreadsheetNameWidget.value.get(),
+                pages = when {
+                    pageIndices.size == drawnPages.size -> l10n("ui.deliverConfig.pagesAll")
+                    wholePage -> pageIndices.joinToString { "${it + 1}" }
+                    else -> "${pageIndices.first() + 1} \u2013 ${pageIndices.last() + 1}"
+                },
+                format = "<html>${format.categoryLabel}<br>${format.label}</html>".replace(" ", "&nbsp;"),
+                specs = "<html>${sl[0].text} @ ${sl[1].text}<br>${sl[2].text}</html>".replace(" ", "&nbsp;"),
+                destination = if (!format.fileSeq) fileOrDir.pathString else
+                    fileOrDir.resolve(filenameHashPattern).pathString
+            )
 
-            ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, format.label, destination)
+            ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, info)
         }
     }
 

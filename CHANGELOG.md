@@ -9,6 +9,7 @@ Cinecred Changelog
 
 - A new button in the project window directly opens the credits file either in
   the local spreadsheet editor or the web browser.
+- Additional columns in the delivery queue show spreadsheet, pages, and specs.
 - Added support for the Windows Java Access Bridge.
 
 ### Fixes

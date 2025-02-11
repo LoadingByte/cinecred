@@ -25,7 +25,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
     @Deprecated("ENCAPSULATION LEAK")
     fun leakedProgressSetter(rowIdx: Int, progress: Int = 0, isFinished: Boolean = false) {
         jobTableModel.rows[rowIdx].progress = if (isFinished) FINISHED else progress
-        jobTableModel.fireTableCellUpdated(rowIdx, 2)
+        jobTableModel.fireTableCellUpdated(rowIdx, 5)
     }
     // =========================================
 
@@ -42,19 +42,24 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
             tableHeader.reorderingAllowed = false
+            // The rows should be tall enough to house two lines of text.
+            rowHeight = 40
             columnModel.apply {
                 // These cells will be rendered using special components.
-                getColumn(1).cellRenderer = WordWrapCellRenderer()
-                getColumn(2).cellRenderer = ProgressCellRenderer()
-                getColumn(3).apply {
+                getColumn(4).cellRenderer = WordWrapCellRenderer()
+                getColumn(5).cellRenderer = ProgressCellRenderer()
+                getColumn(6).apply {
                     cellRenderer = CancelButtonCell()
                     cellEditor = CancelButtonCell(::removeRowFromQueue)
                 }
                 // Set some sensible default col widths that define which ratio of the available space each col gets.
-                getColumn(0).preferredWidth = 150
-                getColumn(1).preferredWidth = 450
-                getColumn(2).preferredWidth = 200
-                getColumn(3).apply { minWidth = 24; maxWidth = 24 }
+                getColumn(0).preferredWidth = 120
+                getColumn(1).preferredWidth = 80
+                getColumn(2).preferredWidth = 80
+                getColumn(3).preferredWidth = 150
+                getColumn(4).preferredWidth = 450
+                getColumn(5).preferredWidth = 220
+                getColumn(6).apply { minWidth = 24; maxWidth = 24 }
             }
         }
 
@@ -71,8 +76,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             RenderQueue.setPaused(ctrl.projectDir, !process)
     }
 
-    fun addRenderJobToQueue(job: RenderJob, formatLabel: String, destination: String) {
-        val row = JobTableModel.Row(job, formatLabel, destination)
+    fun addRenderJobToQueue(job: RenderJob, info: RenderJobInfo) {
+        val row = JobTableModel.Row(job, info)
         jobTableModel.rows.add(row)
         jobTableModel.fireTableRowsInserted(jobTableModel.rowCount - 1, jobTableModel.rowCount - 1)
 
@@ -91,7 +96,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             // in the table.
             if (rowIdx != -1) {
                 row.progress = progress
-                jobTableModel.fireTableCellUpdated(rowIdx, 2)
+                jobTableModel.fireTableCellUpdated(rowIdx, 5)
                 if (progress is Int)
                     trySetTaskbarProgress(ctrl.projectFrame, roundingDiv(progress * 100, MAX_RENDER_PROGRESS))
             }
@@ -151,9 +156,18 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
     }
 
 
+    class RenderJobInfo(
+        val spreadsheet: String,
+        val pages: String,
+        val format: String,
+        val specs: String,
+        val destination: String
+    )
+
+
     private class JobTableModel : AbstractTableModel() {
 
-        class Row(val job: RenderJob, val formatLabel: String, val destination: String) {
+        class Row(val job: RenderJob, val info: RenderJobInfo) {
             var startTime: Instant? = null
             var progress: Any = 0
             val isFinished get() = progress !is Int
@@ -162,26 +176,32 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         val rows = mutableListOf<Row>()
 
         override fun getRowCount() = rows.size
-        override fun getColumnCount() = 4
+        override fun getColumnCount() = 7
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
-            0 -> l10n("ui.deliverRenderQueue.format")
-            1 -> l10n("ui.deliverRenderQueue.destination")
-            2 -> l10n("ui.deliverRenderQueue.progress")
-            3 -> ""
+            0 -> l10n("ui.deliverConfig.spreadsheet")
+            1 -> l10n("ui.deliverConfig.pages")
+            2 -> l10n("ui.deliverRenderQueue.format")
+            3 -> l10n("ui.deliverRenderQueue.specs")
+            4 -> l10n("ui.deliverRenderQueue.destination")
+            5 -> l10n("ui.deliverRenderQueue.progress")
+            6 -> ""
             else -> throw IllegalArgumentException()
         }
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
-            0 -> rows[rowIdx].formatLabel
-            1 -> rows[rowIdx].destination
-            2 -> rows[rowIdx]
-            3 -> ""
+            0 -> rows[rowIdx].info.spreadsheet
+            1 -> rows[rowIdx].info.pages
+            2 -> rows[rowIdx].info.format
+            3 -> rows[rowIdx].info.specs
+            4 -> rows[rowIdx].info.destination
+            5 -> rows[rowIdx]
+            6 -> ""
             else -> throw IllegalArgumentException()
         }
 
         // Only the cancel button column should be editable, making the cancel buttons clickable.
-        override fun isCellEditable(rowIndex: Int, colIndex: Int) = colIndex == 3
+        override fun isCellEditable(rowIndex: Int, colIndex: Int) = colIndex == 6
 
     }
 

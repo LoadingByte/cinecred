@@ -67,6 +67,7 @@ interface WelcomeCtrlComms {
 
     fun preferences_authorizeAccount_onClickCancel()
 
+    fun preferences_configureOverlay_verifyName(name: String): String? // Returns an error.
     fun preferences_configureOverlay_onClickCancel()
     fun preferences_configureOverlay_onClickDoneOrApply(
         done: Boolean,

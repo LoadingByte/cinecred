@@ -149,11 +149,13 @@ object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-st
 
 object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-custom", Format.VIDEO_GIF, 900, 620) {
     override fun generate() {
+        ToolTipManager.sharedInstance().isEnabled = false
         val backedUpOverlays = OVERLAYS_PREFERENCE.get()
         OVERLAYS_PREFERENCE.set(emptyList())
         try {
             generate2()
         } finally {
+            ToolTipManager.sharedInstance().isEnabled = true
             OVERLAYS_PREFERENCE.set(backedUpOverlays)
         }
     }

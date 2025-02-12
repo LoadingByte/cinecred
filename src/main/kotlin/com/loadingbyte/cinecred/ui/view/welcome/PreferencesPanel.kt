@@ -225,6 +225,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             startAccountsRemovalButtons.merge(account, removeButton) { o, n -> n.apply { isEnabled = o.isEnabled } }
         }
         startAccountsPanel.isVisible = accounts.isNotEmpty()
+        // Without this, when there are two accounts and the user removes one, an afterimage of the removed one remains.
+        startAccountsPanel.repaint()
     }
 
     fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) {
@@ -365,7 +367,9 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             l10n("ui.preferences.overlays.configure.name"),
             TextWidget(),
             isVisible = { val t = typeWidget.value; t == LinesOverlay::class.java || t == ImageOverlay::class.java },
-            verify = { if (it.isBlank()) Notice(Severity.ERROR, l10n("blank")) else null }
+            verify = { name ->
+                welcomeCtrl.preferences_configureOverlay_verifyName(name)?.let { Notice(Severity.ERROR, it) }
+            }
         )
 
         val aspectRatioHWidget = makeAspectRatioSpinnerWidget()

@@ -71,11 +71,11 @@ inline fun <E> MutableList<E>.removeFirstOrNull(predicate: (E) -> Boolean): E? {
 }
 
 
-inline fun <reified E> List<Any>.requireIsInstance() = requireIsInstance(E::class.java)
+inline fun <reified E> List<*>.requireIsInstance() = requireIsInstance(E::class.java)
 
-fun <E> List<Any>.requireIsInstance(clazz: Class<E>): List<E> {
+fun <E> List<*>.requireIsInstance(clazz: Class<E>): List<E> {
     for (elem in this)
-        if (!clazz.isAssignableFrom(elem.javaClass))
+        if (elem == null || !clazz.isAssignableFrom(elem.javaClass))
             throw IllegalArgumentException("Element of wrong type found in $this.")
     @Suppress("UNCHECKED_CAST")
     return this as List<E>

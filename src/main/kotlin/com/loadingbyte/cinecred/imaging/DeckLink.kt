@@ -176,7 +176,7 @@ class DeckLink(
         return Bitmap.allocate(Bitmap.Spec(mode.resolution, compatibleRepresentation(mode.depths[0], cs))).zero()
     }
 
-    private fun error(msg: String) = LOGGER.error("DeckLink '$name': $msg")
+    private fun error(msg: String) = LOGGER.error("DeckLink '{}': {}", name, msg)
 
 
     companion object {

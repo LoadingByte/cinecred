@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.CLEANER
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.ceilDiv
-import com.loadingbyte.cinecred.imaging.Bitmap.Spec
 import jdk.incubator.vector.FloatVector
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS

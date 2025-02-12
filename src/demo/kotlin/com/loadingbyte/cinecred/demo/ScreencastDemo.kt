@@ -116,7 +116,7 @@ abstract class ScreencastDemo(
             edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
             sleep(500)
             if (dlvWinSize != null || desktopWidth < 1500)
-                dlvWin.size = dlvWinSize ?: Dimension(desktopWidth * 2 / 3, desktopHeight * 3 / 4)
+                dlvWin.size = dlvWinSize ?: Dimension(desktopWidth * 2 / 3, desktopHeight * 4 / 5)
             dt.center(dlvWin)
         }
         sleep(500)

@@ -411,10 +411,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         tryCopyTemplate(projectDir, template)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
-            } catch (e: ForbiddenException) {
+            } catch (_: ForbiddenException) {
                 val error = l10n("ui.projects.create.error.access")
                 SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
-            } catch (e: DownException) {
+            } catch (_: DownException) {
                 val error = l10n("ui.projects.create.error.unresponsive")
                 SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
             } catch (e: IOException) {
@@ -486,6 +486,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
 
     override fun preferences_start_onClickAddOverlay() {
+        currentlyEditedOverlay = null
         welcomeView.preferences_configureOverlay_setForm(
             name = "",
             type = AspectRatioOverlay::class.java,
@@ -524,8 +525,16 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         OVERLAYS_PREFERENCE.set(OVERLAYS_PREFERENCE.get().filter { it != overlay })
     }
 
+    override fun preferences_configureOverlay_verifyName(name: String) = when {
+        name.isBlank() -> l10n("blank")
+        OVERLAYS_PREFERENCE.get().any { overlay ->
+            overlay.uuid != currentlyEditedOverlay?.uuid && overlay.label == name
+        } ->
+            l10n("ui.preferences.accounts.configure.labelAlreadyInUse")
+        else -> null
+    }
+
     override fun preferences_configureOverlay_onClickCancel() {
-        currentlyEditedOverlay = null
         welcomeView.preferences_setCard(PreferencesCard.START)
     }
 
@@ -572,7 +581,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 }
             else -> throw IllegalArgumentException()
         }
-        currentlyEditedOverlay = if (done) null else newOverlay
+        currentlyEditedOverlay = newOverlay
         val newOverlays = OVERLAYS_PREFERENCE.get().toMutableList()
         edited?.let(newOverlays::remove)
         newOverlays.add(newOverlay)

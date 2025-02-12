@@ -361,7 +361,7 @@ private fun matchRuntimeInOneDir(
             // implement explicitly, we instead go another route.
             // We first estimate the elastic scaling using the regular deresolve() function above. Then, we find the
             // actual number of discrete frames under that elastic scaling using the ceiling procedure outlined above.
-            // If it doesn't match the desired frames, we take steps up or down the outline overall stepwise function
+            // If it doesn't match the desired frames, we take steps up or down the outlined overall stepwise function
             // until the desired frames are matched.
             // Notice that due to the stepwise nature of the overall function, there are some very special cases in
             // which the desired frames can't be attained exactly; in those cases, we just stop when we have surpassed
@@ -389,7 +389,7 @@ private fun matchRuntimeInOneDir(
                 }
             }
 
-            if (modestElasticScaling.isNaN() || abs(elasticScaling - 1.0) < abs(modestElasticScaling - 1.0)) {
+            if (modestElasticScaling.isNaN() || abs(ln(elasticScaling)) < abs(ln(modestElasticScaling))) {
                 modestElasticScaling = elasticScaling
                 modestGroup = group
                 modestDiscreteFrames = discreteFrames

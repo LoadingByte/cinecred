@@ -170,7 +170,7 @@ class FileWidget(
     init {
         browse.addActionListener {
             val win = SwingUtilities.getWindowAncestor(browse)
-            var initial = text.toPathSafely()
+            var initial = text.toPathSafely()?.normalize()
             val selected = when (fileType) {
                 FileType.FILE -> {
                     if (fileAction == FileAction.OPEN)
@@ -1046,7 +1046,7 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     }
 
     override val components: List<JComponent> = presetWidget.components +
-            widthWidget.components + listOf(timesLabel) + heightWidget.components
+            widthWidget.components + timesLabel + heightWidget.components
     override val constraints =
         presetWidget.constraints + widthWidget.constraints + listOf("") + heightWidget.constraints
 
@@ -1318,7 +1318,7 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
         valWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
 
-    override val components: List<JComponent> = tagWidget.components + listOf(JLabel("=")) + valWidget.components
+    override val components: List<JComponent> = tagWidget.components + JLabel("=") + valWidget.components
     override val constraints = tagWidget.constraints + listOf("") + valWidget.constraints
 
     override var value: FontFeature

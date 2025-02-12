@@ -239,15 +239,15 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     private val resolutionMultWidget =
         ComboBoxWidget(
-            Int::class.javaObjectType, RESOLUTION_SCALING_LOG2.standardOptions.asList(), widthSpec = WidthSpec.LITTLE,
+            Int::class.javaObjectType, emptyList(), widthSpec = WidthSpec.LITTLE,
             toString = { if (it >= 0) "\u00D7 ${1 shl it}" else "\u00F7 ${1 shl -it}" }
-        ).apply { value = RESOLUTION_SCALING_LOG2.standardDefault }
+        )
 
     private val fpsMultWidget =
         ComboBoxWidget(
-            Int::class.javaObjectType, FPS_SCALING.standardOptions.asList(), widthSpec = WidthSpec.LITTLE,
+            Int::class.javaObjectType, emptyList(), widthSpec = WidthSpec.LITTLE,
             toString = { "\u00D7 $it" }
-        ).apply { value = FPS_SCALING.standardDefault }
+        )
 
     private val depthWidget =
         ComboBoxWidget(
@@ -456,9 +456,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
         pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
         pushFormatPropertyOptions(TRANSPARENCY, transparencyWidget, config, formatChanged)
-        resolutionMultWidget.isEnabled = RESOLUTION_SCALING_LOG2 in config
         pushFormatPropertyOptions(RESOLUTION_SCALING_LOG2, resolutionMultWidget, config, formatChanged)
-        fpsMultWidget.isEnabled = FPS_SCALING in config
         pushFormatPropertyOptions(FPS_SCALING, fpsMultWidget, config, formatChanged)
         pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
         pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)

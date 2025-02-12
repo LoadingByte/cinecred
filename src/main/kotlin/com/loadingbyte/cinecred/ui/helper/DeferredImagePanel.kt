@@ -192,7 +192,7 @@ class DeferredImagePanel(
             private var startViewportCenterY = 0.0
 
             override fun mousePressed(e: MouseEvent) {
-                if (e.button == MouseEvent.BUTTON1) {
+                if (e.button == BUTTON1) {
                     startPoint = e.point
                     startViewportCenterX = viewportCenterX
                     startViewportCenterY = viewportCenterY
@@ -200,7 +200,7 @@ class DeferredImagePanel(
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                if (e.button == MouseEvent.BUTTON1)
+                if (e.button == BUTTON1)
                     startPoint = null
             }
 

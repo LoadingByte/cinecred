@@ -234,13 +234,13 @@ class MultiComboBox<E : Any>(
 
 
     private inner class CustomArrowButton : FlatArrowButton(
-        SwingConstants.SOUTH, arrowType, buttonArrowColor, buttonDisabledArrowColor, buttonHoverArrowColor, null,
+        SOUTH, arrowType, buttonArrowColor, buttonDisabledArrowColor, buttonHoverArrowColor, null,
         buttonPressedArrowColor, null
     ) {
         override fun getMinimumSize(): Dimension = preferredSize  // Would otherwise permit shrinking.
         override fun getMaximumSize(): Dimension = preferredSize  // Would otherwise return humongous values.
-        override fun isHover(): Boolean = super.isHover() || hover
-        override fun isPressed(): Boolean = super.isPressed() || pressed
+        override fun isHover(): Boolean = super.isHover || hover
+        override fun isPressed(): Boolean = super.isPressed || pressed
     }
 
 

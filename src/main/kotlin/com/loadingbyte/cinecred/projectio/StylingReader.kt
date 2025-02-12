@@ -111,7 +111,7 @@ private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any):
     Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> raw as Boolean
     String::class.java -> raw as String
     Locale::class.java -> Locale.forLanguageTag(raw as String)
-    Color4f::class.java -> Color4f((raw as List<*>).filterIsInstance<Number>(), ColorSpace.XYZD50)
+    Color4f::class.java -> Color4f((raw as List<*>).requireIsInstance<Number>(), ColorSpace.XYZD50)
     Resolution::class.java -> Resolution.fromString(raw as String)
     FPS::class.java -> FPS.fromString(raw as String)
     FontRef::class.java -> ctx.resolveFont(raw as String)?.let(::FontRef) ?: FontRef(raw)

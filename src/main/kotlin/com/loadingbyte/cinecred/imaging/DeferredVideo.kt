@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
-import org.bytedeco.ffmpeg.global.avcodec.*
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.geom.AffineTransform
@@ -269,11 +268,10 @@ class DeferredVideo private constructor(
         }
 
         private val numFrames = video.numFrames
-        private val progressiveVideo = run {
-            val interlaced = userSpec.scan != Bitmap.Scan.PROGRESSIVE
-            if (!interlaced && !(randomAccessDraftMode && !video.roundShifts)) video else
-                video.copy(fpsScaling = if (interlaced) 2 else 1, roundShifts = true)
-        }
+        private val progressiveVideo = video.copy(
+            fpsScaling = if (userSpec.scan == Bitmap.Scan.PROGRESSIVE) 1 else 2,
+            roundShifts = randomAccessDraftMode
+        )
         private val userPixelFormat get() = userSpec.representation.pixelFormat
         private val canvasRepresentation = Canvas.compatibleRepresentation(
             ColorSpace.of(userSpec.representation.colorSpace!!.primaries, ColorSpace.Transfer.BLENDING)
@@ -306,7 +304,7 @@ class DeferredVideo private constructor(
 
         private var lastFrameIdx = -1
 
-        /** The returned bitmap is permitted to be [Bitmap.close]d. */
+        /** The returned bitmap is permitted to be [Bitmap.close]d, but must not be modified. */
         fun materializeFrame(frameIdx: Int): Bitmap? {
             if (!randomAccessDraftMode) {
                 require(frameIdx >= lastFrameIdx) { "Backend is not in random access mode." }

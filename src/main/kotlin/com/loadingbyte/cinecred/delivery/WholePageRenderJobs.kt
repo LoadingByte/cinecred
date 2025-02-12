@@ -229,7 +229,7 @@ class WholePagePDFRenderJob private constructor(
         val global = styling.global
 
         // We blend in sRGB because (a) this mirrors SVG, (b) it's most widely supported, and (c) sRGB is very close to
-        // out actual blending transfer characteristics of pure gamma 2.2.
+        // our actual blending transfer characteristics of pure gamma 2.2.
         val colorSpace = ColorSpace.SRGB
 
         val pdfDoc = PDDocument()

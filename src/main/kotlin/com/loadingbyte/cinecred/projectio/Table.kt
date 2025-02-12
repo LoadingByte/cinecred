@@ -118,7 +118,7 @@ class Table(
     private fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
 
     fun isEmpty(row: Int, l10nColName: String): Boolean =
-        colMap[l10nColName]?.let { col -> bodyRecords[row].cells.getOrNull(col).isNullOrBlank() } ?: true
+        colMap[l10nColName]?.let { col -> bodyRecords[row].cells.getOrNull(col).isNullOrBlank() } != false
 
     fun getString(row: Int, l10nColName: String): String? {
         val col = colMap[l10nColName]

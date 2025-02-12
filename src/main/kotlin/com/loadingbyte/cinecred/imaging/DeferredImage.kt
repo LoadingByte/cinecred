@@ -189,8 +189,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         when (insn) {
             is Instruction.DrawDeferredImageLayer -> materializeDeferredImage(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, culling, insn.image,
-                listOf(insn.layer)
+                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, culling,
+                insn.image, listOf(insn.layer)
             )
             is Instruction.DrawShape -> materializeShape(
                 backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
@@ -628,15 +628,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         override fun materializeEmbeddedPicture(
             x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
+            val pic = embeddedPic.picture
             val transform = embeddedPictureTransform(x, y, scaling, embeddedPic)
             // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
             // them with the pixel grid, they will always be reusable unless the scaling changes.
-            if (cache != null && embeddedPic.picture is Picture.Vector) {
+            if (cache != null && pic is Picture.Vector) {
                 val tx = transform.translateX.let { round(it) - it }
                 val ty = transform.translateY.let { round(it) - it }
                 transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
             }
-            val pic = embeddedPic.picture
             val prep = pic.prepareAsBitmap(canvas, if (draft) null else transform, cache?.popPreparedPicture(pic))
                 ?: return
             canvas.drawImage(

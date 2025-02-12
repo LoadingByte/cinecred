@@ -458,16 +458,14 @@ class LabeledListCellRenderer<E>(
 
 var minimumWindowSize = Dimension(600, 450)
 
-fun Window.setup() {
+fun JFrame.setup() {
     minimumSize = minimumWindowSize
-    when (this) {
-        is JFrame -> defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
-        is JDialog -> defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
-    }
+    defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
 }
 
-fun Dialog.setup() {
-    (this as Window).setup()
+fun JDialog.setup() {
+    minimumSize = minimumWindowSize
+    defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
     // On macOS, enable the system-native full-screen buttons also for dialogs.
     if (SystemInfo.isMacOS)
         setWindowCanFullScreenMacOS(this, true)
@@ -558,7 +556,7 @@ private fun <T> openCascade(desktopAction: Desktop.Action, desktopFun: Desktop.(
             try {
                 Desktop.getDesktop().desktopFun(desktopArg)
             } catch (e: Exception) {
-                LOGGER.error("Failed to perform $desktopAction for '$desktopArg'.", e)
+                LOGGER.error("Failed to perform {} for '{}'.", desktopAction, desktopArg, e)
             }
     }
 

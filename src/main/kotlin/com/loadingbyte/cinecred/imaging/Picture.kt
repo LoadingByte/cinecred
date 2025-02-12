@@ -78,7 +78,11 @@ sealed interface Picture : Closeable {
         ) = bitmap.ifNotClosed { canvas.prepareBitmap(bitmap, transform = transform, cached = cached) }
 
         override fun close() {
-            bitmap.close()
+            try {
+                bitmap.close()
+            } catch (_: IllegalStateException) {
+                // If the bitmap is used right now, let the GC collect and close it later.
+            }
         }
 
         companion object {
@@ -138,10 +142,9 @@ sealed interface Picture : Closeable {
                 return curBox
             // The sRGB color space is correct for SVGs and a good guess for most PDFs.
             val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
+            val tr = AffineTransform.getScaleInstance(s, s).apply { translate(-curBox.x, -curBox.y) }
             val px = Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
-                Canvas.forBitmap(bitmap.zero()).use { canvas ->
-                    drawTo(canvas, AffineTransform.getScaleInstance(s, s).apply { translate(-curBox.x, -curBox.y) })
-                }
+                Canvas.forBitmap(bitmap.zero()).use { canvas -> drawTo(canvas, transform = tr) }
                 bitmap.getF(res.widthPx * 4)
             }
             val minX = locateBoundary(px, 0, res.widthPx, 1, res.heightPx, 1, res.widthPx, true)
@@ -404,7 +407,11 @@ sealed interface Picture : Closeable {
         }
 
         override fun close() {
-            lock.withLock(doc::close)
+            try {
+                lock.withLock(doc::close)
+            } catch (e: IOException) {
+                LOGGER.error("Could not close a PDF document.", e)
+            }
         }
 
         companion object {

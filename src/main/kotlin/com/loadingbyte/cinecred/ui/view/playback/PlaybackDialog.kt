@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.helper.center
+import com.loadingbyte.cinecred.ui.helper.setup
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.JDialog
@@ -15,6 +16,8 @@ class PlaybackDialog(ctrl: ProjectController, private val playbackCtrl: Playback
     val panel = PlaybackPanel(playbackCtrl, this)
 
     init {
+        setup()
+
         addWindowListener(object : WindowAdapter() {
             override fun windowOpened(e: WindowEvent) {
                 playbackCtrl.setDialogVisibility(true)

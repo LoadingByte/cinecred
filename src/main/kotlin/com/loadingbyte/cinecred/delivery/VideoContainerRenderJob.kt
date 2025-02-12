@@ -70,7 +70,7 @@ class VideoContainerRenderJob private constructor(
             } catch (e: FFmpegException) {
                 // If some VideoWriterSettings (e.g., VideoToolbox on macOS) fail, fall back to the next ones.
                 if (i != allSettings.lastIndex)
-                    LOGGER.warn("Falling back to next encoder since '${settings.codecName}' did not work: ${e.message}")
+                    LOGGER.warn("Falling back to next encoder as '{}' did not work: {}", settings.codecName, e.message)
                 else
                     throw e
             }
@@ -113,7 +113,7 @@ class VideoContainerRenderJob private constructor(
                 Bitmap.PixelFormat.of(backendPxFmtCode), ColorSpace.of(BT709, BLENDING), Bitmap.Alpha.PREMULTIPLIED
             )
             val rgbRep = Bitmap.Representation(
-                Bitmap.PixelFormat.of(AV_PIX_FMT_GBRPF32), ColorSpace.XYZD50, Bitmap.Alpha.OPAQUE
+                Bitmap.PixelFormat.of(AV_PIX_FMT_GBRPF32), colorSpace, Bitmap.Alpha.OPAQUE
             )
             backendSpec = writerSpec.copy(representation = backendRep)
             blackWriterBitmap = Bitmap.allocate(writerSpec)

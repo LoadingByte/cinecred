@@ -8,7 +8,7 @@ import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.event.*
+import java.awt.event.ItemEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.*
 

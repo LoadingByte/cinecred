@@ -678,7 +678,7 @@ class BitmapConverter(
             val oneVec = FloatVector.broadcast(F, 1f)
             for (y in 0L..<h.toLong()) {
                 var d = y * dstLs
-                for (i in 0..<stepsPerLine) {
+                repeat(stepsPerLine) {
                     oneVec.intoMemorySegment(dstSegA, d, NBO)
                     d += VLEN
                 }

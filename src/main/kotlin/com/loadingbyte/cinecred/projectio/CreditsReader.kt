@@ -268,9 +268,9 @@ private class CreditsReader(
             )
         else {
             if (blockHead != null)
-                table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHead", blockHead))
+                table.log(blockHeadDeclaredRow, "head", WARN, l10n("projectIO.credits.unusedHead"))
             if (blockTail != null)
-                table.log(blockTailDeclaredRow, "tail", WARN, l10n("projectIO.credits.unusedTail", blockTail))
+                table.log(blockTailDeclaredRow, "tail", WARN, l10n("projectIO.credits.unusedTail"))
         }
         blockStyle = contentStyle
         blockHead = null
@@ -414,11 +414,9 @@ private class CreditsReader(
                 stageMeltDeclaredRow = row
             } else
                 try {
-                    val fps = styling.global.fps
-                    val timecodeFormat = styling.global.timecodeFormat
                     val c0 = str[0]
                     val tcStr = if (c0 == '+' || c0 == '-' || c0 == '\u2212') str.substring(1) else str
-                    val n = parseTimecode(fps, timecodeFormat, tcStr)
+                    val n = parseTimecode(styling.global.fps, styling.global.timecodeFormat, tcStr)
                     pageGapAfterFrames = if (c0 == '-' || c0 == '\u2212') -n else n
                 } catch (_: IllegalArgumentException) {
                     val msg = l10n(
@@ -607,7 +605,7 @@ private class CreditsReader(
                         val c = currStyle?.behavior == PageBehavior.SCROLL && currStyle.scrollMeltWithNext
                         val n = nextStyle.behavior == PageBehavior.SCROLL && nextStyle.scrollMeltWithPrev
                         if ((c || n) && currStyle?.behavior != nextStyle.behavior) {
-                            val msd = if (c) MigrationDataSource(currStyle!!, PageStyle::scrollMeltWithNext.st())
+                            val msd = if (c) MigrationDataSource(currStyle, PageStyle::scrollMeltWithNext.st())
                             else MigrationDataSource(nextStyle, PageStyle::scrollMeltWithPrev.st())
                             table.logMigrationPut(row - 1, "pageGap", l10n(MELT_KW.key), msd)
                             false
@@ -772,8 +770,9 @@ private class CreditsReader(
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.linebreakUnsupported"))
                 val missingGlyphLines = styledLines.filter { it.formatted(styling).missesGlyphs }
                 if (missingGlyphLines.isNotEmpty()) {
-                    val lStyleNames = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }.joinToString()
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.missingGlyphs", lStyleNames))
+                    val ns = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }
+                    val k = if (ns.size == 1) "projectIO.credits.missingGlyphs1" else "projectIO.credits.missingGlyphs"
+                    table.log(row, l10nColName, WARN, l10n(k, ns.joinToString()))
                 }
                 BodyElement.Str(styledLines.toPersistentList())
             }

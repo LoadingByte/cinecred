@@ -243,6 +243,8 @@ class VideoReader(
         dec = null
         ic.letIfNonNull(::avformat_close_input)
         ic = null
+        while (true)
+            (queue.poll() ?: break).bitmap.close()
     }
 
 }

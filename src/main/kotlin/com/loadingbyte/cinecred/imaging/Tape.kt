@@ -35,16 +35,16 @@ class Tape private constructor(
         val spec: Bitmap.Spec, val audio: Boolean, val fps: FPS?, val availableRange: OpenEndRange<Timecode>
     )
 
-    /** @throws Exception */
+    /** @throws IllegalStateException */
     val spec: Bitmap.Spec
         get() = metadata.spec
-    /** @throws Exception */
+    /** @throws IllegalStateException */
     val audio: Boolean
         get() = metadata.audio
-    /** @throws Exception */
+    /** @throws IllegalStateException */
     val fps: FPS?
         get() = metadata.fps
-    /** @throws Exception */
+    /** @throws IllegalStateException */
     val availableRange: OpenEndRange<Timecode>
         get() = metadata.availableRange
 

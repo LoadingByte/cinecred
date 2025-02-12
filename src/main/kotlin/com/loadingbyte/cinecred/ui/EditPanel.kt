@@ -13,7 +13,6 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.projectio.ParserMsg
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
-import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.view.playback.PlaybackControlsPanel
 import net.miginfocom.swing.MigLayout
@@ -21,8 +20,6 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.net.URI
 import java.nio.file.FileSystemNotFoundException
 import javax.swing.*
@@ -232,8 +229,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         shortcutModifiers: Int,
         listener: () -> Unit
     ): JButton {
-        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
-        return newToolbarButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, listener)
+        val btn = newToolbarButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, listener)
+        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers) { if (btn.isEnabled) listener() })
+        return btn
     }
 
     private fun newToolbarToggleButtonWithKeyListener(
@@ -301,7 +299,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         """
         val topPanel = JPanel(MigLayout("", topPanelCols)).apply {
             add(pollCreditsButton, "skip 1")
-            add(JSeparator(JSeparator.VERTICAL), "growy")
+            add(JSeparator(JSeparator.VERTICAL), "growy, wmin 0")
             add(undoStylingButton)
             add(redoStylingButton)
             add(saveStylingButton)
@@ -321,7 +319,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             add(deliveryDialogToggleButton)
             add(browseProjectDirButton)
             add(openCreditsFileButton)
-            add(JSeparator(JSeparator.VERTICAL), "growy")
+            add(JSeparator(JSeparator.VERTICAL), "growy, wmin 0")
             add(homeButton)
             add(playbackControls, "newline, span, growx, gapx 8 8, hidemode 3")
             add(JSeparator(), "newline, span, growx")

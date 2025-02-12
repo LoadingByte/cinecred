@@ -176,9 +176,7 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         welcomeFrame.preferences_start_setCheckForUpdates(true)
         welcomeFrame.preferences_start_setAccounts(emptyList())
 
-        sc.hold(2 * hold)
-        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddOverlayButton), 2 * hold)
-        sc.click(4 * hold)
+        sc.hold(4 * hold)
         for (idx in 2 downTo 1) {
             sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayTypeWidget.components[0].getComponent(idx)))
             sc.click(4 * hold)

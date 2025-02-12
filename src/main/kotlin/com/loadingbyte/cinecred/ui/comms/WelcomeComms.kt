@@ -26,6 +26,7 @@ interface WelcomeCtrlComms {
     fun onGlobalKeyEvent(event: KeyEvent): Boolean
     fun commence(openProjectDir: Path? = null)
     fun setTab(tab: WelcomeTab)
+    fun showOverlayCreation()
 
     // ========== FOR WELCOME VIEW ==========
 

@@ -544,7 +544,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
             overlaysMenu.add(JSeparator())
             overlaysMenu.add(JMenuItem(l10n("ui.edit.overlaysAdd"), ARROW_RIGHT_ICON).apply {
-                addActionListener { ctrl.masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES) }
+                addActionListener { ctrl.masterCtrl.showOverlayCreation() }
             })
             overlaysMenu.pack()
             // Re-draw the overlays onto the page images.

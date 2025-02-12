@@ -55,6 +55,11 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         welcomeCtrl!!.commence(openProjectDir)
     }
 
+    override fun showOverlayCreation() {
+        showWelcomeFrame()
+        welcomeCtrl!!.showOverlayCreation()
+    }
+
     override fun tryCloseProjectsAndDisposeAllFrames(force: Boolean): Boolean {
         for (projectCtrl in projectCtrls.toMutableList() /* copy to avoid concurrent modification */)
             if (!projectCtrl.tryCloseProject(force))

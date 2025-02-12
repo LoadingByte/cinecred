@@ -340,6 +340,11 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.setTab(tab)
     }
 
+    override fun showOverlayCreation() {
+        setTab(WelcomeTab.PREFERENCES)
+        preferences_start_onClickAddOverlay()
+    }
+
     override fun onPassHintTrack() {
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.set(false)
     }

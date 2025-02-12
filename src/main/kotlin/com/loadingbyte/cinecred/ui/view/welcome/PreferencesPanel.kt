@@ -251,6 +251,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             startOverlaysPanel.add(overlayPanel)
         }
         startOverlaysPanel.isVisible = overlays.isNotEmpty()
+        // Without this, when there are two overlays and the user removes one, an afterimage of the removed one remains.
+        startOverlaysPanel.repaint()
     }
 
     fun preferences_configureAccount_resetForm() {

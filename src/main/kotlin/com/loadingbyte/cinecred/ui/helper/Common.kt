@@ -317,6 +317,22 @@ class DropdownPopupMenu(
             toggle()
     }
 
+    fun addMouseListenerTo(btn: JComponent) {
+        btn.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (btn.isEnabled && SwingUtilities.isLeftMouseButton(e))
+                    SwingUtilities.invokeLater { toggle() }
+            }
+        })
+    }
+
+    fun addKeyListenerTo(btn: JComponent) {
+        btn.addKeyListener(object : KeyAdapter() {
+            // Note: We need invokeLater() here because otherwise, btn loses focus.
+            override fun keyPressed(e: KeyEvent) = SwingUtilities.invokeLater { reactToOwnerKeyPressed(e) }
+        })
+    }
+
 }
 
 open class DropdownPopupMenuSubmenu(label: String) : JMenu(label) {

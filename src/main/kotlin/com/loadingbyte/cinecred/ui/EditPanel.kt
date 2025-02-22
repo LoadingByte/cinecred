@@ -136,6 +136,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         VK_O, CTRL_DOWN_MASK
     )
     private val overlaysMenu: DropdownPopupMenu = DropdownPopupMenu(overlaysButton)
+        .apply { addMouseListenerTo(overlaysButton) }
 
     private val runtimeLabel = JLabel("\u2014").apply {
         putClientProperty(STYLE_CLASS, "monospaced")
@@ -269,13 +270,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
         } + ")"
         zoomSlider.toolTipText = zoomTooltip
-
-        overlaysButton.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e))
-                    SwingUtilities.invokeLater { overlaysMenu.toggle() }
-            }
-        })
 
         val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {
             toolTipText = text

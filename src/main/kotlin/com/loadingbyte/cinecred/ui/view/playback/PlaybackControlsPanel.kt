@@ -50,14 +50,8 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
 
         deckLinkConfigButton = newToolbarButton(GEAR_ICON, l10n("ui.video.configureDeckLink"), 0, 0)
         deckLinkConfigMenu = DropdownPopupMenu(deckLinkConfigButton)
-        deckLinkConfigButton.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e)) deckLinkConfigMenu.toggle()
-            }
-        })
-        deckLinkConfigButton.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) = deckLinkConfigMenu.reactToOwnerKeyPressed(e)
-        })
+        deckLinkConfigMenu.addMouseListenerTo(deckLinkConfigButton)
+        deckLinkConfigMenu.addKeyListenerTo(deckLinkConfigButton)
         deckLinkSubmenu = DeckLinkSubmenu(
             deckLinkConfigMenu, null, DeckLink::name, playbackCtrl::setSelectedDeckLink
         )

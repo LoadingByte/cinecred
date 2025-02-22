@@ -943,17 +943,8 @@ class ColorWellWidget(
     init {
         picker.addChangeListener { value = picker.value }
         popup.add(picker)
-
-        // Note: We need invokeLater() here because otherwise, btn loses focus.
-        btn.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) = SwingUtilities.invokeLater { popup.reactToOwnerKeyPressed(e) }
-        })
-        btn.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                if (isEnabled && SwingUtilities.isLeftMouseButton(e))
-                    SwingUtilities.invokeLater { popup.toggle() }
-            }
-        })
+        popup.addMouseListenerTo(btn)
+        popup.addKeyListenerTo(btn)
     }
 
     override val components = listOf<JComponent>(btn)

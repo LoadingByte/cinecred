@@ -322,13 +322,16 @@ private class CreditsReader(
         for (row in 0..<table.numRows) {
             val usedPicLoaders = HashSet<PictureLoader>()
             val usedTapes = HashSet<Tape>()
-            parseTaggedString(table.getString(row, "body") ?: continue) { _, tagKey, tagVal ->
-                if (tagKey != null && tagVal != null)
+            parseTaggedString(
+                table.getString(row, "body") ?: continue,
+                visitPlain = {},
+                visitTag = { tag ->
+                    val (tagKey, tagVal) = tag.split(' ', limit = 2).also { if (it.size != 2) return@parseTaggedString }
                     when (tagKey) {
                         in PIC_KW -> picResolver.find(tagVal)?.let(usedPicLoaders::add)
                         in VIDEO_KW -> tapeResolver.find(tagVal)?.let(usedTapes::add)
                     }
-            }
+                })
             for (picLoader in usedPicLoaders) GLOBAL_THREAD_POOL.submit { picLoader.picture }
             for (tape in usedTapes) GLOBAL_THREAD_POOL.submit { tape.spec }
         }
@@ -695,17 +698,21 @@ private class CreditsReader(
         var embeddedPic: DeferredImage.EmbeddedPicture? = null
         var embeddedTape: DeferredImage.EmbeddedTape? = null
         var multiplePicturesOrVideos = false
-        parseTaggedString(str) { plain, tagKey, tagVal ->
-            when {
+        parseTaggedString(
+            str,
+            visitPlain = { plain ->
                 // When we encounter plaintext, add it to the styled string list using the current letter style.
                 // If it contains line delimiters, terminate the current line and commence new ones.
-                plain != null ->
-                    for ((l, plainLine) in plain.split("\n", "\r\n").filterNot(String::isBlank).withIndex()) {
-                        if (l != 0)
-                            styledLines.add(mutableListOf())
-                        styledLines.last().add(Pair(plainLine, curLetterStyle ?: initLetterStyle))
-                    }
-                tagKey != null -> when (tagKey) {
+                for ((l, plainLine) in plain.split("\n", "\r\n").filterNot(String::isBlank).withIndex()) {
+                    if (l != 0)
+                        styledLines.add(mutableListOf())
+                    styledLines.last().add(Pair(plainLine, curLetterStyle ?: initLetterStyle))
+                }
+            },
+            visitTag = { tag ->
+                val tagParts = tag.split(' ', limit = 2)
+                val tagVal = tagParts.getOrNull(1)
+                when (val tagKey = tagParts[0]) {
                     // When we encounter a blank tag, remember it.
                     // We can't immediately return because we want to issue a warning if the blank tag is not lone.
                     in BLANK_KW -> when {
@@ -743,8 +750,7 @@ private class CreditsReader(
                     }
                     else -> table.log(row, l10nColName, WARN, unknownTagMsg(tagKey))
                 }
-            }
-        }
+            })
 
         // To avoid OOM crashes due to absurdly large pictures or tapes, limit their width to a reasonable range.
         val maxW = styling.global.resolution.widthPx * 2
@@ -992,68 +998,6 @@ private class CreditsReader(
         val END_KW = Keyword("projectIO.credits.table.end")
         val IN_KW = Keyword("projectIO.credits.table.in")
         val OUT_KW = Keyword("projectIO.credits.table.out")
-
-        val TAG_DELIMITERS = listOf("{{", "}}")
-
-        inline fun parseTaggedString(str: String, callback: (String?, String?, String?) -> Unit) {
-            var idx = 0
-
-            while (true) {
-                val tagStartIdx = str.indexOfUnescaped("{{", startIdx = idx)
-                if (tagStartIdx == -1)
-                    break
-                val tagEndIdx = str.indexOfUnescaped("}}", startIdx = tagStartIdx + 2)
-                if (tagEndIdx == -1)
-                    break
-
-                if (tagStartIdx != idx)
-                    callback(str.substring(idx, tagStartIdx).unescape(TAG_DELIMITERS), null, null)
-
-                val tag = str.substring(tagStartIdx + 2, tagEndIdx).unescape(TAG_DELIMITERS).trim()
-                val keyEndIdx = tag.indexOf(' ')
-                if (keyEndIdx == -1)
-                    callback(null, tag, null)
-                else
-                    callback(null, tag.substring(0, keyEndIdx), tag.substring(keyEndIdx + 1))
-
-                idx = tagEndIdx + 2
-            }
-
-            if (idx != str.length)
-                callback(str.substring(idx).unescape(TAG_DELIMITERS), null, null)
-        }
-
-        fun String.indexOfUnescaped(seq: String, startIdx: Int): Int {
-            val idx = indexOf(seq, startIdx)
-            if (idx <= 0)
-                return idx
-
-            return if (countPreceding('\\', idx) % 2 == 0)
-                idx
-            else
-                indexOfUnescaped(seq, idx + seq.length)
-        }
-
-        fun String.unescape(seqs: Collection<String>): String {
-            var escIdx = indexOfAny(seqs.map { "\\$it" })
-            if (escIdx == -1)
-                if (isEmpty() || last() != '\\')
-                    return this
-                else
-                    escIdx = lastIndex
-
-            val numBackslashes = countPreceding('\\', escIdx + 1)
-            return substring(0, escIdx - (numBackslashes - 1) / 2) + substring(escIdx + 1).unescape(seqs)
-        }
-
-        // Here, idx is exclusive.
-        fun String.countPreceding(char: Char, idx: Int): Int {
-            val actualIdx = idx.coerceIn(0, length)
-            for (precedingIdx in (actualIdx - 1) downTo 0)
-                if (this[precedingIdx] != char)
-                    return actualIdx - precedingIdx - 1
-            return actualIdx
-        }
 
         fun String.toFiniteDouble(nonNeg: Boolean = false): Double {
             val f = replace(',', '.').toDouble()

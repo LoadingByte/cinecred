@@ -69,6 +69,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
         welcomeView.preferences_start_setOverlays(overlays)
     }
+    private val deliveryDestTemplatesListener = { templates: List<DeliveryDestTemplate> ->
+        welcomeView.preferences_start_setDeliveryDestTemplates(templates)
+    }
 
     /*
      * The [commence] method can be called multiple times on the same object. However, some things should only be run
@@ -86,6 +89,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
 
     private var newBrowseSelection: Path? = null
     private var currentlyEditedOverlay: ConfigurableOverlay? = null
+    private var currentlyEditedDeliveryDestTemplate: DeliveryDestTemplate? = null
 
     private val createProjectThread = AtomicReference<Thread?>()
     private val addAccountThread = AtomicReference<Thread?>()
@@ -96,17 +100,19 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         check(!::welcomeView.isInitialized)
         this.welcomeView = welcomeView
 
-        // Register the accounts and overlays listeners.
+        // Register the accounts, overlays, and delivery location templates listeners.
         addAccountListListener(accountListListener)
         OVERLAYS_PREFERENCE.addListener(overlaysListener)
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.addListener(deliveryDestTemplatesListener)
 
-        // Retrieve the current preferences, accounts, and overlays.
+        // Retrieve the current preferences, accounts, overlays, and delivery location templates.
         welcomeView.preferences_start_setUILocaleWish(UI_LOCALE_PREFERENCE.get())
         welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
         accountListListener()
         overlaysListener(OVERLAYS_PREFERENCE.get())
+        deliveryDestTemplatesListener(DELIVERY_DEST_TEMPLATES_PREFERENCE.get())
 
         // Remove all memorized directories which are no longer project directories.
         val memProjectDirs = PROJECT_DIRS_PREFERENCE.get().toMutableList()
@@ -329,6 +335,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
         removeAccountListListener(accountListListener)
         OVERLAYS_PREFERENCE.removeListener(overlaysListener)
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.removeListener(deliveryDestTemplatesListener)
 
         createProjectThread.getAndSet(null)?.interrupt()
         addAccountThread.getAndSet(null)?.interrupt()
@@ -343,6 +350,11 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun showOverlayCreation() {
         setTab(WelcomeTab.PREFERENCES)
         preferences_start_onClickAddOverlay()
+    }
+
+    override fun showDeliveryDestTemplateCreation() {
+        setTab(WelcomeTab.PREFERENCES)
+        preferences_start_onClickAddDeliveryDestTemplate()
     }
 
     override fun onPassHintTrack() {
@@ -592,6 +604,63 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         // If the user stays in the form, ensure that the image is not saved again the next time he confirms.
         else if (type == ImageOverlay::class.java)
             welcomeView.preferences_configureOverlay_clearImageFile()
+    }
+
+    override fun preferences_start_onClickAddDeliveryDestTemplate() {
+        currentlyEditedDeliveryDestTemplate = null
+        welcomeView.preferences_configureDeliveryDestTemplate_setForm(name = "", templateStr = "")
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_DELIVERY_LOC_TEMPLATE)
+    }
+
+    override fun preferences_start_onClickEditDeliveryDestTemplate(template: DeliveryDestTemplate) {
+        currentlyEditedDeliveryDestTemplate = template
+        welcomeView.preferences_configureDeliveryDestTemplate_setForm(
+            name = template.name, templateStr = template.l10nStr()
+        )
+        welcomeView.preferences_setCard(PreferencesCard.CONFIGURE_DELIVERY_LOC_TEMPLATE)
+    }
+
+    override fun preferences_start_onClickRemoveDeliveryDestTemplate(template: DeliveryDestTemplate) {
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.set(DELIVERY_DEST_TEMPLATES_PREFERENCE.get().filter { it != template })
+    }
+
+    override fun preferences_configureDeliveryDestTemplate_verifyName(name: String) = when {
+        name.isBlank() -> l10n("blank")
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.get().any { template ->
+            template.uuid != currentlyEditedDeliveryDestTemplate?.uuid && template.name == name
+        } ->
+            l10n("ui.preferences.accounts.configure.labelAlreadyInUse")
+        else -> null
+    }
+
+    override fun preferences_configureDeliveryDestTemplate_verifyTemplateStr(templateStr: String): String? {
+        if (templateStr.isBlank())
+            return l10n("blank")
+        try {
+            DeliveryDestTemplate(UUID.randomUUID(), "", templateStr)
+            return null
+        } catch (e: DeliveryDestTemplate.UnrecognizedPlaceholderException) {
+            return l10n("ui.preferences.deliveryDestTemplates.configure.unknownPlaceholder", e.placeholderTag)
+        }
+    }
+
+    override fun preferences_configureDeliveryDestTemplate_onClickCancel() {
+        welcomeView.preferences_setCard(PreferencesCard.START)
+    }
+
+    override fun preferences_configureDeliveryDestTemplate_onClickDoneOrApply(
+        done: Boolean, name: String, templateStr: String
+    ) {
+        val edited = currentlyEditedDeliveryDestTemplate
+        val newTemplate = DeliveryDestTemplate(edited?.uuid ?: UUID.randomUUID(), name, templateStr)
+        currentlyEditedDeliveryDestTemplate = newTemplate
+        val newTemplates = DELIVERY_DEST_TEMPLATES_PREFERENCE.get().toMutableList()
+        edited?.let(newTemplates::remove)
+        newTemplates.add(newTemplate)
+        newTemplates.sortBy(DeliveryDestTemplate::name)
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.set(newTemplates)
+        if (done)
+            welcomeView.preferences_setCard(PreferencesCard.START)
     }
 
 

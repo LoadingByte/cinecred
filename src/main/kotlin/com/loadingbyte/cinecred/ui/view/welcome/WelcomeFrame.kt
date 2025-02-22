@@ -5,12 +5,9 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.projectio.service.Account
-import com.loadingbyte.cinecred.ui.ConfigurableOverlay
-import com.loadingbyte.cinecred.ui.LocaleWish
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.*
-import com.loadingbyte.cinecred.ui.makeWelcomeHintTrack
-import com.loadingbyte.cinecred.ui.play
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -113,6 +110,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_start_setAccountRemovalLocked(account, locked)
     override fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>) =
         panel.preferencesPanel.preferences_start_setOverlays(overlays)
+    override fun preferences_start_setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) =
+        panel.preferencesPanel.preferences_start_setDeliveryDestTemplates(templates)
     override fun preferences_configureAccount_resetForm() =
         panel.preferencesPanel.preferences_configureAccount_resetForm()
     override fun preferences_authorizeAccount_setError(error: String?) =
@@ -127,6 +126,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_configureOverlay_clearImageFile()
     override fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) =
         panel.preferencesPanel.preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment)
+    override fun preferences_configureDeliveryDestTemplate_setForm(name: String, templateStr: String) =
+        panel.preferencesPanel.preferences_configureDeliveryDestTemplate_setForm(name, templateStr)
     // @formatter:on
 
     override fun setChangelog(changelog: String) = panel.setChangelog(changelog)

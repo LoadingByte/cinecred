@@ -221,6 +221,7 @@ class VideoContainerRenderJob private constructor(
         minHeight: Int? = null
     ) : RenderFormat(
         label,
+        auxLabel = null,
         fileSeq = false,
         fileExts = VideoContainerFormat.WRITER
             .filter { codecId in it.supportedCodecIds }

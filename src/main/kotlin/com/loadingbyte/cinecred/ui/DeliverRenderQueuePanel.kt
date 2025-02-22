@@ -159,10 +159,26 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
     class RenderJobInfo(
         val spreadsheet: String,
         val pages: String,
-        val format: String,
-        val specs: String,
+        formatCategory: String,
+        format: String,
+        resolution: String?,
+        fpsAndScan: String?,
+        colorSpace: String?,
         val destination: String
-    )
+    ) {
+        val assembledFormat: String = "<html>${formatCategory}<br>${format}</html>".replace(" ", "&nbsp;")
+        val assembledSpecs: String = buildString {
+            append("<html>")
+            resolution?.let(::append)
+            if (resolution != null && fpsAndScan != null)
+                append(" @ ")
+            fpsAndScan?.let(::append)
+            if ((resolution != null || fpsAndScan != null) && colorSpace != null)
+                append("<br>")
+            colorSpace?.let(::append)
+            append("</html>")
+        }.replace(" ", "&nbsp;")
+    }
 
 
     private class JobTableModel : AbstractTableModel() {
@@ -192,8 +208,8 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> rows[rowIdx].info.spreadsheet
             1 -> rows[rowIdx].info.pages
-            2 -> rows[rowIdx].info.format
-            3 -> rows[rowIdx].info.specs
+            2 -> rows[rowIdx].info.assembledFormat
+            3 -> rows[rowIdx].info.assembledSpecs
             4 -> rows[rowIdx].info.destination
             5 -> rows[rowIdx]
             6 -> ""

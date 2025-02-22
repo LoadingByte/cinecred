@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
 import com.loadingbyte.cinecred.ui.ConfigurableOverlay
+import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.Preference
 import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
@@ -27,6 +28,7 @@ interface WelcomeCtrlComms {
     fun commence(openProjectDir: Path? = null)
     fun setTab(tab: WelcomeTab)
     fun showOverlayCreation()
+    fun showDeliveryDestTemplateCreation()
 
     // ========== FOR WELCOME VIEW ==========
 
@@ -60,6 +62,9 @@ interface WelcomeCtrlComms {
     fun preferences_start_onClickAddOverlay()
     fun preferences_start_onClickEditOverlay(overlay: ConfigurableOverlay)
     fun preferences_start_onClickRemoveOverlay(overlay: ConfigurableOverlay)
+    fun preferences_start_onClickAddDeliveryDestTemplate()
+    fun preferences_start_onClickEditDeliveryDestTemplate(template: DeliveryDestTemplate)
+    fun preferences_start_onClickRemoveDeliveryDestTemplate(template: DeliveryDestTemplate)
 
     fun preferences_configureAccount_verifyLabel(label: String): String? // Returns an error.
     fun preferences_configureAccount_onClickCancel()
@@ -81,6 +86,11 @@ interface WelcomeCtrlComms {
         imageFile: Path,
         imageUnderlay: Boolean
     )
+
+    fun preferences_configureDeliveryDestTemplate_verifyName(name: String): String? // Returns an error.
+    fun preferences_configureDeliveryDestTemplate_verifyTemplateStr(templateStr: String): String? // Returns an error.
+    fun preferences_configureDeliveryDestTemplate_onClickCancel()
+    fun preferences_configureDeliveryDestTemplate_onClickDoneOrApply(done: Boolean, name: String, templateStr: String)
 
 }
 
@@ -119,6 +129,7 @@ interface WelcomeViewComms {
     fun preferences_start_setAccounts(accounts: List<Account>)
     fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean)
     fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>)
+    fun preferences_start_setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>)
 
     fun preferences_configureAccount_resetForm()
 
@@ -138,6 +149,8 @@ interface WelcomeViewComms {
 
     fun preferences_configureOverlay_clearImageFile()
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?)
+
+    fun preferences_configureDeliveryDestTemplate_setForm(name: String, templateStr: String)
 
     fun setChangelog(changelog: String)
     fun setAbout(about: String)
@@ -160,7 +173,14 @@ interface WelcomeViewComms {
 enum class WelcomeTab { PROJECTS, PREFERENCES, CHANGELOG, ABOUT, UPDATE }
 enum class ProjectsCard { START, CREATE_CONFIGURE, CREATE_WAIT }
 enum class CreditsLocation { LOCAL, SERVICE, SKIP }
-enum class PreferencesCard { START, CONFIGURE_ACCOUNT, AUTHORIZE_ACCOUNT, CONFIGURE_OVERLAY }
+
+enum class PreferencesCard {
+    START,
+    CONFIGURE_ACCOUNT,
+    AUTHORIZE_ACCOUNT,
+    CONFIGURE_OVERLAY,
+    CONFIGURE_DELIVERY_LOC_TEMPLATE
+}
 
 
 class License(val name: String, val body: String)

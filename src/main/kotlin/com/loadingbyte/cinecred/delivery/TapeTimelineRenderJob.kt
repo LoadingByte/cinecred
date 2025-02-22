@@ -411,16 +411,16 @@ class TapeTimelineRenderJob private constructor(
 
     companion object {
         private val CSV = Format("csv")
-        private val EDL = Format("edl", " (CMX3600)")
-        private val OTIO = Format("otio", " (OpenTimelineIO)")
-        private val FCPXML = Format("fcpxml", " (Final Cut Pro X XML)")
-        private val XML = Format("xml", " (Final Cut Pro 7 XML)")
+        private val EDL = Format("edl", "CMX3600")
+        private val OTIO = Format("otio", "OpenTimelineIO")
+        private val FCPXML = Format("fcpxml", "Final Cut Pro X XML")
+        private val XML = Format("xml", "Final Cut Pro 7 XML")
         val FORMATS = listOf<RenderFormat>(CSV, EDL, OTIO, FCPXML, XML)
     }
 
 
-    private class Format(fileExt: String, labelSuffix: String = "") : RenderFormat(
-        fileExt.uppercase() + labelSuffix, fileSeq = false, setOf(fileExt), fileExt,
+    private class Format(fileExt: String, auxLabel: String? = null) : RenderFormat(
+        fileExt.uppercase(), auxLabel, fileSeq = false, setOf(fileExt), fileExt,
         choice(FPS_SCALING) * choice(SCAN)
     ) {
         override fun createRenderJob(

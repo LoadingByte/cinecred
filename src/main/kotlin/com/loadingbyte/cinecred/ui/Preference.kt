@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.RGB
+import java.io.File
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -31,6 +32,8 @@ val DECK_LINK_TRC_PREFERENCE: Preference<Int> = IntPreference("deckLinkTransfer"
 val DECK_LINK_CONNECTED_PREFERENCE: Preference<Boolean> = BooleanPreference("deckLinkConnected", false)
 val PROJECT_DIRS_PREFERENCE: Preference<List<Path>> = PathListPreference("projectDirs")
 val OVERLAYS_PREFERENCE: Preference<List<ConfigurableOverlay>> = OverlayListPreference("overlay")
+val DELIVERY_DEST_TEMPLATES_PREFERENCE: Preference<List<DeliveryDestTemplate>> =
+    DeliveryDestTemplateListPreference("deliveryDestinationTemplate")
 
 
 private abstract class AbstractPreference<P : Any> : Preference<P> {
@@ -220,6 +223,29 @@ private class OverlayListPreference(override val key: String) : AbstractPreferen
 }
 
 
+private class DeliveryDestTemplateListPreference(override val key: String) :
+    AbstractPreference<List<DeliveryDestTemplate>>() {
+
+    override fun doGet() = (PreferencesToml.get(key) as? List<*> ?: emptyList<Any>()).mapNotNull {
+        if (it !is Map<*, *>) return@mapNotNull null
+        val name = it["name"] as? String ?: return@mapNotNull null
+        val templateStr = it["template"] as? String ?: return@mapNotNull null
+        try {
+            DeliveryDestTemplate(UUID.randomUUID(), name, templateStr)
+        } catch (_: DeliveryDestTemplate.UnrecognizedPlaceholderException) {
+            null
+        }
+    }
+
+    override fun doSet(value: List<DeliveryDestTemplate>) {
+        PreferencesToml.set(key, value.map { template ->
+            mapOf("name" to template.name, "template" to template.enumStr)
+        })
+    }
+
+}
+
+
 private object PreferencesToml {
 
     private val file = CONFIG_DIR.resolve("preferences.toml")
@@ -292,5 +318,53 @@ sealed interface LocaleWish {
     }
 
     data class Specific(override val locale: Locale) : LocaleWish
+
+}
+
+
+/** @throws UnrecognizedPlaceholderException */
+class DeliveryDestTemplate(val uuid: UUID, val name: String, str: String) {
+
+    enum class Placeholder(private val l10nKey: String? = null, private val fixedTag: String? = null) {
+
+        PROJECT, SPREADSHEET("ui.deliverConfig.spreadsheet"), FIRST_PAGE, LAST_PAGE,
+        FORMAT_CATEGORY, FORMAT("ui.deliverRenderQueue.format"), BIT_DEPTH("bitDepth"),
+        WIDTH, HEIGHT, FRAME_RATE("ui.styling.global.fps"), SCAN("ui.deliverConfig.scan"),
+        CHANNELS, GAMUT("gamut"), EOTF(fixedTag = "EOTF"),
+        YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, TIME_ZONE;
+
+        val tags = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER), ::l10nTag).apply { add(name) }
+        val enumTagBraces: String get() = "{{$name}}"
+        fun l10nTagBraces(): String = "{{${l10nTag()}}}"
+
+        fun l10nTag(locale: Locale = Locale.getDefault()): String =
+            fixedTag ?: l10n(l10nKey ?: "ui.preferences.deliveryDestTemplates.placeholder.$name", locale)
+
+    }
+
+    class UnrecognizedPlaceholderException(val placeholderTag: String) : Exception()
+
+    private val parsed: List<Any> = buildList {
+        parseTaggedString(
+            str.trim(),
+            visitPlain = { plain ->
+                add(if (File.separatorChar == '/') plain.replace('\\', '/') else plain.replace('/', '\\'))
+            },
+            visitTag = { tag ->
+                for (placeholder in Placeholder.entries)
+                    if (tag in placeholder.tags) {
+                        add(placeholder)
+                        return@parseTaggedString
+                    }
+                throw UnrecognizedPlaceholderException(tag)
+            })
+    }
+
+    val isAbsolute: Boolean = fill { "x" }.toPathSafely()?.isAbsolute == true
+    val enumStr: String get() = fill { it.enumTagBraces }
+    fun l10nStr(): String = fill { it.l10nTagBraces() }
+
+    fun fill(resolvePlaceholder: (Placeholder) -> String): String =
+        parsed.joinToString("") { it as? String ?: resolvePlaceholder(it as Placeholder) }
 
 }

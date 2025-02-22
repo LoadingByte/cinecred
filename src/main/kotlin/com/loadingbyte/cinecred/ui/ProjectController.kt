@@ -133,16 +133,22 @@ class ProjectController(
     }
 
     // STEP 4:
-    // Now that the creation of the ProjectController can no longer fail, we can add a listener to the overlays
-    // preference and be sure that it will be removed when the project is closed again.
+    // Now that the creation of the ProjectController can no longer fail, we can add listeners to the overlays and
+    // delivery location templates preferences, and be sure that they will be removed when the project is closed again.
 
     private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
         projectFrame.panel.availableOverlays = (Overlay.BUNDLED + overlays).sorted()
     }
 
+    private val deliveryDestTemplatesListener = { templates: List<DeliveryDestTemplate> ->
+        deliveryDialog.panel.configurationForm.updateDeliveryDestTemplates(templates)
+    }
+
     init {
         OVERLAYS_PREFERENCE.addListener(overlaysListener)
         overlaysListener(OVERLAYS_PREFERENCE.get())
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.addListener(deliveryDestTemplatesListener)
+        deliveryDestTemplatesListener(DELIVERY_DEST_TEMPLATES_PREFERENCE.get())
     }
 
     // END OF INITIALIZATION PROCEDURE
@@ -249,8 +255,9 @@ class ProjectController(
             return false
 
         playbackCtrl.closeProject()
-        // The listener might still be null if this method is called during initialization.
+        // The listeners might still be null if this method is called during initialization.
         overlaysListener?.let(OVERLAYS_PREFERENCE::removeListener)
+        deliveryDestTemplatesListener?.let(DELIVERY_DEST_TEMPLATES_PREFERENCE::removeListener)
 
         onClose()
 

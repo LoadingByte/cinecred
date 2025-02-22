@@ -19,6 +19,7 @@ import java.util.*
 
 abstract class RenderFormat(
     val label: String,
+    val auxLabel: String?,
     val fileSeq: Boolean,
     val fileExts: Set<String>,
     val defaultFileExt: String,

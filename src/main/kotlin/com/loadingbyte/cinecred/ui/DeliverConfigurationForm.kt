@@ -1,8 +1,10 @@
 package com.loadingbyte.cinecred.ui
 
+import com.formdev.flatlaf.FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.isAccessibleDirectory
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFORM_PROFILE
@@ -29,16 +31,18 @@ import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.PageBehavior
+import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder
 import com.loadingbyte.cinecred.ui.helper.*
+import java.awt.Dimension
+import java.io.File
 import java.nio.file.Path
 import java.text.DecimalFormat
-import java.util.Optional
+import java.time.ZonedDateTime
+import java.time.format.TextStyle
+import java.util.*
+import javax.swing.*
 import javax.swing.JOptionPane.*
-import javax.swing.ListCellRenderer
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
-import kotlin.io.path.name
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.floor
 import kotlin.math.pow
@@ -58,9 +62,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         val RenderFormat.categoryLabel
             get() = when (this) {
-                in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat")
+                in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat.short")
                 in VIDEO_FORMATS -> l10n("ui.deliverConfig.videoFormat")
-                in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat")
+                in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat.short")
                 else -> throw IllegalArgumentException()
             }
 
@@ -69,7 +73,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedFormatWidget get() = formatWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedProfileWidget get() = profileWidget
-    @Deprecated("ENCAPSULATION LEAK") val leakedSingleFileWidget get() = singleFileWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedDestinationWidget: Widget<*> get() = destinationWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedDestinationWidgetTemplateMenu get() = destinationWidget.templateMenu
     @Deprecated("ENCAPSULATION LEAK") val leakedTransparencyWidget get() = transparencyWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedResolutionMultWidget get() = resolutionMultWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedScanWidget get() = scanWidget
@@ -78,6 +83,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     // =========================================
 
     private var drawnProject: DrawnProject? = null
+    private var specs = DeliverySpecs.UNKNOWN
 
     private val spreadsheetNameWidget =
         OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE)
@@ -107,9 +113,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         ComboBoxWidget(
             RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDER, scrollbar = false,
             toString = { format ->
+                var fullLabel = format.label
+                format.auxLabel?.let { fullLabel += " ($it)" }
                 val label = when (format) {
-                    in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", format.label)
-                    else -> format.label
+                    in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", fullLabel)
+                    else -> fullLabel
                 }
                 val suffix = when (format) {
                     VideoContainerRenderJob.H264, VideoContainerRenderJob.H265 ->
@@ -200,34 +208,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         )
     )
 
-    private val singleFileWidget = addWidget(
-        l10n("ui.deliverConfig.singleFile"),
-        FileWidget(FileType.FILE, FileAction.SAVE, widthSpec = WidthSpec.WIDER),
-        isVisible = { !formatWidget.value.fileSeq },
-        verify = ::verifyFile
-    )
-
-    private val seqDirWidget = addWidget(
-        l10n("ui.deliverConfig.seqDir"),
-        FileWidget(FileType.DIRECTORY, FileAction.SAVE, widthSpec = WidthSpec.WIDER),
-        isVisible = { formatWidget.value.fileSeq },
-        verify = ::verifyFile
-    )
-    private val seqFilenameSuffixWidget = addWidget(
-        l10n("ui.deliverConfig.seqFilenameSuffix"),
-        FilenameWidget(widthSpec = WidthSpec.WIDER).apply { value = ".#######" },
-        // Reserve space even if invisible to keep the form from changing height when selecting different formats.
-        invisibleSpace = true,
-        isVisible = { formatWidget.value.fileSeq },
-        verify = {
-            val numHoles = Regex("#+").findAll(it).count()
-            if (numHoles == 0)
-                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixMissesHole"))
-            else if (numHoles > 1)
-                Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles"))
-            else null
-        }
-    )
+    private val destinationWidget = DestinationWidget(ctrl)
+    private val destinationFormRow = FormRow(l10n("ui.deliverRenderQueue.destination"), destinationWidget)
+        .also(::addFormRow)
 
     private val transparencyWidget = addWidget(
         l10n("ui.deliverConfig.transparency"),
@@ -296,7 +279,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     init {
         // Get the form into a reasonable state even before the drawn project arrives.
-        onChange(spreadsheetNameWidget)
         onChange(formatWidget)
     }
 
@@ -306,33 +288,29 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         disableOnChange = true
         if (widget == spreadsheetNameWidget) {
-            // If another spreadsheet name is selected, set the output location fields to a reasonable default.
-            // We've actually had a bug report where the project dir didn't have a parent, so in that case, just put the
-            // default output location inside the project dir to at least avoid a crash.
-            val dir = ctrl.projectDir.toAbsolutePath().let { it.parent ?: it }
-            val filename = ctrl.projectDir.fileName.pathString + spreadsheetNameWidget.value.map { " $it" }.orElse("")
-            singleFileWidget.value =
-                (singleFileWidget.value.parent ?: dir).resolve("$filename.${formatWidget.value.defaultFileExt}")
-            seqDirWidget.value = (seqDirWidget.value.parent ?: dir).resolve("$filename Render")
-            // Also populate the page number options.
+            // Populate the page number options.
             pushPageIdxOptions(reset = true)
+            // Notify the destination widget.
+            destinationWidget.spreadsheetName = spreadsheetNameWidget.value.getOrNull()
         } else if (widget == formatWidget) {
             val format = formatWidget.value
             val wholePage = format in WHOLE_PAGE_FORMATS
             pageIndicesWidget.isVisible = wholePage
             firstPageIdxWidget.isVisible = !wholePage
             lastPageIdxWidget.isVisible = !wholePage
-            val singleExt = format.fileExts.singleOrNull()
-            val assName = if (singleExt != null) l10n("ui.deliverConfig.singleFileTypeExt", singleExt.uppercase()) else
-                l10n("ui.deliverConfig.singleFileTypeVideo")
-            val fileExtAssortment = FileExtAssortment(assName, format.fileExts.sorted(), format.defaultFileExt)
-            singleFileWidget.fileExtAssortment = fileExtAssortment
-            seqFilenameSuffixWidget.fileExtAssortment = fileExtAssortment
+            destinationWidget.format = format
             pushFormatPropertyOptions(format.defaultConfig, formatChanged = true)
-        } else if (widget != pageIndicesWidget && widget != firstPageIdxWidget && widget != lastPageIdxWidget &&
-            widget != singleFileWidget && widget != seqDirWidget && widget != seqFilenameSuffixWidget
-        )
+        } else if (widget == pageIndicesWidget || widget == firstPageIdxWidget || widget == lastPageIdxWidget) {
+            destinationWidget.extremePageIndices = when {
+                formatWidget.value in WHOLE_PAGE_FORMATS -> pageIndicesWidget.value.let {
+                    if (it.isEmpty()) Pair(0, selectedDrawnCredits?.drawnPages?.ifEmpty { null }?.lastIndex ?: 0)
+                    else Pair(it.first(), it.last())
+                }
+                else -> Pair(firstPageIdxWidget.value, lastPageIdxWidget.value)
+            }
+        } else if (widget != destinationWidget) {
             currentConfig(ignoreVolatile = true)?.let { pushFormatPropertyOptions(it, formatChanged = false) }
+        }
         disableOnChange = false
 
         super.onChange(widget)
@@ -347,18 +325,37 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             lastPageIdxWidget.setSeverity(-1, notice?.severity)
         }
 
+        if (widget == destinationWidget) {
+            val value = destinationWidget.value
+
+            // Show an error if the destination path is illegal.
+            var notice = when {
+                value.fileOrDir.pathString.isBlank() -> Notice(Severity.ERROR, l10n("blank"))
+                !value.fileOrDir.isAbsolute -> Notice(Severity.ERROR, l10n("ui.deliverConfig.nonAbsolutePath"))
+                else -> null
+            }
+            destinationWidget.setPathWidgetSeverity(notice?.severity)
+
+            if (notice == null && value.filenameHashPattern != null) {
+                // Show an error if the sequence filename suffix doesn't have exactly one ### hole.
+                val numHoles = Regex("#+").findAll(value.filenameHashPattern).count()
+                if (numHoles == 0)
+                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixMissesHole"))
+                else if (numHoles > 1)
+                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles"))
+                destinationWidget.setSuffixWidgetSeverity(notice?.severity)
+            } else
+                destinationWidget.setSuffixWidgetSeverity(null)
+
+            destinationFormRow.noticeOverride = notice
+        }
+
         // Update the specs labels and determine whether the specs are valid.
         // Then disable the add button if there are errors in the form or the specs are invalid.
         // We need the null-safe access because this method might be called before everything is initialized.
         val dialog = ctrl.deliveryDialog as DeliveryDialog?
         if (dialog != null)
             dialog.panel.addButton.isEnabled = updateAndVerifySpecs(dialog.panel) && isErrorFree
-    }
-
-    private fun verifyFile(file: Path): Notice? = when {
-        file.pathString.isBlank() -> Notice(Severity.ERROR, l10n("blank"))
-        !file.isAbsolute -> Notice(Severity.ERROR, l10n("ui.deliverConfig.nonAbsolutePath"))
-        else -> null
     }
 
     private fun updateAndVerifySpecs(panel: DeliveryPanel): Boolean {
@@ -384,16 +381,33 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             .map { stage -> stage.style.scrollPxPerFrame }
             .associateWith { speed -> speed * resMult / fpsMult }
 
-        // Display the scaled specs in the specs labels.
+        // Format the scaled specs.
         val decFmt = DecimalFormat("0.##")
-        panel.specsLabels[0].text =
-            if (RESOLUTION_SCALING_LOG2 !in config) "\u2014" else
-                "$scaledWidth \u00D7 $scaledHeight"
-        panel.specsLabels[1].text =
-            if (FPS_SCALING !in config) "\u2014" else
-                decFmt.format(scaledFPS) + if (scan == Scan.PROGRESSIVE) "p" else "i"
-        panel.specsLabels[2].text =
-            if (PRIMARIES !in config) "\u2014" else "$primaries / $transfer"
+        val specsFPS = decFmt.format(scaledFPS)
+        val specsScan = if (scan == Scan.PROGRESSIVE) "p" else "i"
+        val specsChannels = when (config.getOrDefault(TRANSPARENCY)) {
+            Transparency.GROUNDED -> "RGB"
+            Transparency.TRANSPARENT -> "RGBA"
+            Transparency.MATTE -> "A"
+        }
+        specs = DeliverySpecs(
+            depth = config.getOrDefault(DEPTH),
+            width = scaledWidth,
+            height = scaledHeight,
+            fps = specsFPS,
+            scan = specsScan,
+            channels = specsChannels,
+            primaries = primaries.name,
+            transfer = transfer.name,
+            optResolution = if (RESOLUTION_SCALING_LOG2 !in config) null else "$scaledWidth \u00D7 $scaledHeight",
+            optFPSAndScan = if (FPS_SCALING !in config) null else specsFPS + specsScan,
+            optColorSpace = if (PRIMARIES !in config) null else "$primaries / $transfer"
+        )
+
+        // Display the scaled specs in the specs labels.
+        panel.specsLabels[0].text = specs.optResolution ?: "\u2014"
+        panel.specsLabels[1].text = specs.optFPSAndScan ?: "\u2014"
+        panel.specsLabels[2].text = specs.optColorSpace ?: "\u2014"
         panel.specsLabels[3].text =
             if (FPS_SCALING !in config || scrollSpeeds.isEmpty()) "\u2014" else {
                 val speedsDesc = when (scan) {
@@ -436,6 +450,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
                 warn(l10n("ui.delivery.issues.fractionalFieldShift"))
         }
+
+        // Notify the destination widget about the new specs.
+        destinationWidget.specs = specs
 
         return !err
     }
@@ -513,7 +530,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 if (drawnPages.lastIndex in pageIndices) null else pageDefImages.last()
             )
 
-            val fileOrDir = (if (format.fileSeq) seqDirWidget.value else singleFileWidget.value).normalize()
+            val destinationValue = destinationWidget.value
+            val fileOrDir = destinationValue.fileOrDir
 
             fun wrongFileTypeDialog(msg: String) = showMessageDialog(
                 ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
@@ -554,12 +572,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         return
             }
 
-            val filenameHashPattern = fileOrDir.name + seqFilenameSuffixWidget.value
+            val filenameHashPattern = destinationValue.filenameHashPattern ?: ""
             val filenamePattern = filenameHashPattern.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
 
             val renderJob = format.createRenderJob(config, styling, pageDefImages, video, fileOrDir, filenamePattern)
 
-            val sl = ctrl.deliveryDialog.panel.specsLabels
             val info = DeliverRenderQueuePanel.RenderJobInfo(
                 spreadsheet = spreadsheetNameWidget.value.get(),
                 pages = when {
@@ -567,8 +584,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     wholePage -> pageIndices.joinToString { "${it + 1}" }
                     else -> "${pageIndices.first() + 1} \u2013 ${pageIndices.last() + 1}"
                 },
-                format = "<html>${format.categoryLabel}<br>${format.label}</html>".replace(" ", "&nbsp;"),
-                specs = "<html>${sl[0].text} @ ${sl[1].text}<br>${sl[2].text}</html>".replace(" ", "&nbsp;"),
+                format.categoryLabel, format.label, specs.optResolution, specs.optFPSAndScan, specs.optColorSpace,
                 destination = if (!format.fileSeq) fileOrDir.pathString else
                     fileOrDir.resolve(filenameHashPattern).pathString
             )
@@ -633,6 +649,268 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     fun setSelectedSpreadsheetName(spreadsheetName: String) {
         spreadsheetNameWidget.value = Optional.of(spreadsheetName)
+    }
+
+    fun updateDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
+        destinationWidget.updateTemplates(templates)
+    }
+
+
+    private class DeliverySpecs(
+        val depth: Int,
+        val width: Int,
+        val height: Int,
+        val fps: String,
+        val scan: String,
+        val channels: String,
+        val primaries: String,
+        val transfer: String,
+        val optResolution: String?,
+        val optFPSAndScan: String?,
+        val optColorSpace: String?
+    ) {
+        companion object {
+            val UNKNOWN = DeliverySpecs(0, 0, 0, "?", "?", "?", "?", "?", "?", "?", "?")
+        }
+    }
+
+
+    private class DestinationWidget(private val ctrl: ProjectController) : AbstractWidget<DestinationWidget.Value>() {
+
+        class Value(val fileOrDir: Path, val filenameHashPattern: String?)
+
+        private val bundledTemplates = listOf(
+            DeliveryDestTemplate(
+                UUID.randomUUID(),
+                "${Placeholder.PROJECT.l10nTag()} + ${Placeholder.SPREADSHEET.l10nTag()}",
+                "${Placeholder.PROJECT.enumTagBraces} ${Placeholder.SPREADSHEET.enumTagBraces}"
+            ),
+            DeliveryDestTemplate(
+                UUID.randomUUID(), Placeholder.PROJECT.l10nTag(), Placeholder.PROJECT.enumTagBraces
+            ),
+            DeliveryDestTemplate(
+                UUID.randomUUID(), Placeholder.SPREADSHEET.l10nTag(), Placeholder.SPREADSHEET.enumTagBraces
+            )
+        )
+
+        private val templateBtn = JButton(TEMPLATE_ICON).apply { toolTipText = l10n("template") }
+        val templateMenu = DropdownPopupMenu(templateBtn).apply {
+            addMouseListenerTo(templateBtn)
+            addKeyListenerTo(templateBtn)
+        }
+
+        private val pathWidget = TextWidget(widthSpec = WidthSpec.NONE).apply {
+            value = ctrl.projectDir.absolutePathString()
+        }
+
+        private val browseBtn = JButton(FOLDER_ICON).apply { toolTipText = l10n("ui.form.browse") }
+        private val wrapper = JLabel()
+        private val label1 = JLabel()
+        private val suffixWidget = TextWidget(widthSpec = WidthSpec.NONE).apply { value = ".#######" }
+        private val label2 = JLabel()
+        private val extWidget = ComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.NONE)
+
+        override val components = listOf(templateBtn) + pathWidget.components +
+                wrapper + label1 + suffixWidget.components + label2 + extWidget.components
+        override val constraints = listOf("sg dw") + pathWidget.constraints +
+                "newline, sg dw" + "wmin ${JLabel(".").preferredSize.width}" + suffixWidget.constraints + "" +
+                extWidget.constraints
+
+        init {
+            pathWidget.components[0].putClientProperty(TEXT_FIELD_TRAILING_COMPONENT, browseBtn)
+            pathWidget.changeListeners.add {
+                val path = pathWidget.value
+                for (ext in extWidget.items)
+                    if (path.endsWith(".$ext", ignoreCase = true)) {
+                        pathWidget.value = path.dropLast(ext.length + 1)
+                        extWidget.value = ext
+                        break
+                    }
+                if (format.fileSeq)
+                    refreshLabels()
+            }
+
+            browseBtn.addActionListener {
+                val win = SwingUtilities.getWindowAncestor(browseBtn)
+                if (selectedTemplate == null && !format.fileSeq) {
+                    val exts = extWidget.items
+                    val singleExt = exts.singleOrNull()
+                    val filterName = when {
+                        singleExt != null -> l10n("ui.deliverConfig.singleFileTypeExt", singleExt.uppercase())
+                        else -> l10n("ui.deliverConfig.singleFileTypeVideo")
+                    }
+                    val initial = "${pathWidget.value}.${extWidget.value}".toPathSafely()?.normalize()
+                    var selected = showFileDialog(win, open = false, filterName, exts, initial)?.absolutePathString()
+                        ?: return@addActionListener
+                    for (ext in exts)
+                        if (selected.endsWith(".$ext", ignoreCase = true)) {
+                            extWidget.value = ext
+                            selected = selected.dropLast(ext.length + 1)
+                            break
+                        }
+                    pathWidget.value = selected
+                } else
+                    showFolderDialog(win, pathWidget.value.toPathSafely()?.normalize())?.absolutePathString()
+                        ?.let { pathWidget.value = it }
+            }
+
+            pathWidget.changeListeners.add { notifyChangeListeners() }
+            suffixWidget.changeListeners.add { notifyChangeListeners() }
+            extWidget.changeListeners.add { notifyChangeListeners() }
+        }
+
+        private var selectedTemplate: DeliveryDestTemplate? = bundledTemplates.first()
+        private var prevNonCustomPath: String? = null
+
+        fun updateTemplates(templates: List<DeliveryDestTemplate>) {
+            // Evaluates to null (= custom) if the previously selected template has been removed.
+            val newSel = (bundledTemplates + templates).find { it.uuid == selectedTemplate?.uuid }
+
+            fun makeMenuItem(template: DeliveryDestTemplate?, label: String, icon: Icon) =
+                object : DropdownPopupMenuCheckBoxItem<DeliveryDestTemplate?>(
+                    templateMenu, template, label, icon, isSelected = template == newSel, closeOnMouseClick = true
+                ) {
+                    init {
+                        if (isSelected)
+                            onToggle()
+                    }
+
+                    override fun onToggle() {
+                        if (!isSelected) {
+                            isSelected = true
+                            return
+                        }
+                        for (menuItem in templateMenu.components)
+                            if (menuItem is DropdownPopupMenuCheckBoxItem<*> && menuItem !== this)
+                                menuItem.isSelected = false
+                        if (item == null) {
+                            prevNonCustomPath = pathWidget.value
+                            pathWidget.value = value.fileOrDir.pathString
+                        } else if (selectedTemplate == null)
+                            prevNonCustomPath?.let { pathWidget.value = it }
+                        selectedTemplate = item
+                        pathWidget.components[0].preferredSize = Dimension(if (item == null) 320 else 472, 0)
+                        pathWidget.isVisible = item == null || !item.isAbsolute
+                        wrapper.isVisible = item != null && !item.isAbsolute
+                        refreshLabels()
+                        notifyChangeListeners()
+                    }
+                }
+
+            templateMenu.removeAll()
+            templateMenu.add(makeMenuItem(null, l10n("custom"), GEAR_ICON))
+            templateMenu.add(JSeparator())
+            for (template in bundledTemplates)
+                templateMenu.add(makeMenuItem(template, template.name, TEMPLATE_ICON))
+            if (templates.isNotEmpty()) {
+                templateMenu.add(JSeparator())
+                for (template in templates)
+                    templateMenu.add(makeMenuItem(template, template.name, TEMPLATE_ICON))
+            }
+            templateMenu.add(JSeparator())
+            templateMenu.add(JMenuItem(l10n("ui.deliverConfig.destinationTemplate.add"), ARROW_RIGHT_ICON).apply {
+                addActionListener { ctrl.masterCtrl.showDeliveryDestTemplateCreation() }
+            })
+            templateMenu.pack()
+        }
+
+        var spreadsheetName: String? = null
+            set(spreadsheetName) {
+                field = spreadsheetName
+                refreshLabels()
+            }
+
+        var extremePageIndices = Pair(0, 0)
+            set(extremePageIndices) {
+                field = extremePageIndices
+                refreshLabels()
+            }
+
+        var format = ALL_FORMATS.first()
+            set(format) {
+                field = format
+                suffixWidget.isVisible = format.fileSeq
+                label2.isVisible = format.fileSeq
+                extWidget.items = format.fileExts.sorted()
+                extWidget.value = format.defaultFileExt
+                extWidget.isVisible = extWidget.items.size > 1
+                refreshLabels()
+            }
+
+        var specs = DeliverySpecs.UNKNOWN
+            set(specs) {
+                field = specs
+                refreshLabels()
+            }
+
+        init {
+            updateTemplates(emptyList())
+        }
+
+        override var value: Value
+            get() {
+                val template = selectedTemplate
+                val ext = extWidget.value
+                var path = pathWidget.value.trim().toPathSafely() ?: Path("")
+                if (template != null)
+                    path = path.resolve(fillTemplate(template).trim() + if (format.fileSeq) "" else ".$ext")
+                path = path.normalize()
+                val filenameHashPattern = if (format.fileSeq) "${path.name}${suffixWidget.value}.$ext" else null
+                return Value(path, filenameHashPattern)
+            }
+            set(_) = throw UnsupportedOperationException()
+
+        fun setPathWidgetSeverity(severity: Severity?) = pathWidget.setSeverity(-1, severity)
+        fun setSuffixWidgetSeverity(severity: Severity?) = suffixWidget.setSeverity(-1, severity)
+
+        private fun refreshLabels() {
+            val label2Text = if (extWidget.items.size == 1) ".${extWidget.items.single()}" else "."
+            val label1Text = buildString {
+                selectedTemplate?.let { template ->
+                    if (!template.isAbsolute)
+                        append(File.separator)
+                    append(fillTemplate(template))
+                }
+                if (format.fileSeq)
+                    append(File.separator).append("\u2013''\u2013")
+                else
+                    append(label2Text)
+            }
+            label1.text = label1Text
+            label1.toolTipText = label1Text
+            if (format.fileSeq)
+                label2.text = label2Text
+        }
+
+        private fun fillTemplate(template: DeliveryDestTemplate): String {
+            val dt = ZonedDateTime.now()
+            return template.fill { placeholder ->
+                when (placeholder) {
+                    Placeholder.PROJECT -> ctrl.projectName
+                    Placeholder.SPREADSHEET -> spreadsheetName ?: ""
+                    Placeholder.FIRST_PAGE -> "%02d".format(extremePageIndices.first + 1)
+                    Placeholder.LAST_PAGE -> "%02d".format(extremePageIndices.second + 1)
+                    Placeholder.FORMAT_CATEGORY -> format.categoryLabel
+                    Placeholder.FORMAT -> format.label
+                    Placeholder.BIT_DEPTH -> specs.depth.toString()
+                    Placeholder.WIDTH -> specs.width.toString()
+                    Placeholder.HEIGHT -> specs.height.toString()
+                    Placeholder.FRAME_RATE -> specs.fps
+                    Placeholder.SCAN -> specs.scan
+                    Placeholder.CHANNELS -> specs.channels
+                    Placeholder.GAMUT -> specs.primaries
+                    Placeholder.EOTF -> specs.transfer
+                    Placeholder.YEAR -> "%04d".format(dt.year)
+                    Placeholder.MONTH -> "%02d".format(dt.monthValue)
+                    Placeholder.DAY -> "%02d".format(dt.dayOfMonth)
+                    Placeholder.HOUR -> "%02d".format(dt.hour)
+                    Placeholder.MINUTE -> "%02d".format(dt.minute)
+                    Placeholder.SECOND -> "%02d".format(dt.second)
+                    Placeholder.TIME_ZONE -> dt.zone.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                }
+            }
+        }
+
     }
 
 }

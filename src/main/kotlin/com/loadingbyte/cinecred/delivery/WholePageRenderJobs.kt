@@ -191,7 +191,7 @@ class WholePageSequenceRenderJob private constructor(
 
 
     private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
-        fileExt.uppercase(), fileSeq = true, setOf(fileExt), fileExt,
+        fileExt.uppercase(), auxLabel = null, fileSeq = true, setOf(fileExt), fileExt,
         configAssortment * choice(RESOLUTION_SCALING_LOG2)
     ) {
         override fun createRenderJob(
@@ -276,7 +276,7 @@ class WholePagePDFRenderJob private constructor(
 
 
     private class Format : RenderFormat(
-        "PDF", fileSeq = false, setOf("pdf"), "pdf",
+        "PDF", auxLabel = null, fileSeq = false, setOf("pdf"), "pdf",
         choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(RESOLUTION_SCALING_LOG2) *
                 fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * choice(PDF_PROFILE)
     ) {

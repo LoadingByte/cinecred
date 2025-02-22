@@ -7,11 +7,15 @@ import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Opt
+import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.project.st
+import com.loadingbyte.cinecred.ui.DeliverRenderQueuePanel
 import com.loadingbyte.cinecred.ui.ProjectDialogType
+import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
 import java.nio.file.Path
+import javax.swing.JTextField
 import javax.swing.JTree
 import kotlin.io.path.Path
 import kotlin.io.path.readLines
@@ -103,15 +107,17 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
-            dlvPanel.configurationForm.leakedSingleFileWidget.value = Path("/Render.mp4")
-            addDummyRenderJob(WholePagePDFRenderJob.FORMATS[0])
-            addDummyRenderJob(VideoContainerRenderJob.H264)
-            addDummyRenderJob(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
-            addDummyRenderJob(ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" })
+            dlvPanel.configurationForm.leakedDestinationWidgetTemplateMenu.components
+                .filterIsInstance<DropdownPopupMenuCheckBoxItem<*>>().single { it.item == null }.doClick()
+            (dlvPanel.configurationForm.leakedDestinationWidget.components[1] as JTextField).text = "/Render.mp4"
+            addDummyRenderJob(false, WholePagePDFRenderJob.FORMATS[0])
+            addDummyRenderJob(true, VideoContainerRenderJob.H264)
+            addDummyRenderJob(true, VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
+            addDummyRenderJob(true, ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" })
             dlvPanel.renderQueuePanel.apply {
                 leakedProgressSetter(0, isFinished = true)
                 leakedProgressSetter(1, isFinished = true)
-                leakedProgressSetter(2, progress = 80)
+                leakedProgressSetter(2, progress = 800)
             }
         }
         sleep(500)
@@ -123,11 +129,21 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         RenderQueue.cancelAllJobs()
     }
 
-    private fun addDummyRenderJob(format: RenderFormat) {
+    private fun addDummyRenderJob(videoOrStills: Boolean, format: RenderFormat) {
         var dest = "Render"
         if (format.fileSeq) dest += "/Render.#######"
         dest += "." + format.defaultFileExt
-        dlvPanel.renderQueuePanel.addRenderJobToQueue(DummyRenderJob(), format.label, dest)
+        val info = DeliverRenderQueuePanel.RenderJobInfo(
+            l10n("project.template.spreadsheetName"),
+            l10n("ui.deliverConfig.pagesAll"),
+            l10n(if (videoOrStills) "ui.deliverConfig.videoFormat" else "ui.deliverConfig.wholePageFormat.short"),
+            format.label,
+            PRESET_GLOBAL.resolution.run { "$widthPx \u00D7 $heightPx" },
+            "${PRESET_GLOBAL.fps}p",
+            "${RenderFormat.Property.PRIMARIES.standardDefault} / ${RenderFormat.Property.TRANSFER.standardDefault}",
+            dest
+        )
+        dlvPanel.renderQueuePanel.addRenderJobToQueue(DummyRenderJob(), info)
     }
 
     private class DummyRenderJob : RenderJob {

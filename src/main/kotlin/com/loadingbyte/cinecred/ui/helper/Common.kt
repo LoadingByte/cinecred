@@ -343,22 +343,32 @@ open class DropdownPopupMenuSubmenu(label: String) : JMenu(label) {
     }
 }
 
+open class DropdownPopupMenuItem(label: String, icon: Icon? = null) : JMenuItem(label, icon) {
+    init {
+        iconTextGap = 0
+        putClientProperty(STYLE, "minimumIconSize: 0, 0")
+    }
+}
+
 open class DropdownPopupMenuCheckBoxItem<E>(
     private val popup: DropdownPopupMenu,
     val item: E,
     label: String,
     icon: Icon? = null,
-    isSelected: Boolean = false
+    isSelected: Boolean = false,
+    private val closeOnMouseClick: Boolean = false
 ) : JCheckBoxMenuItem(label, icon, isSelected), ActionListener {
 
     init {
-        putClientProperty("CheckBoxMenuItem.doNotCloseOnMouseClick", true)
+        if (!closeOnMouseClick)
+            putClientProperty("CheckBoxMenuItem.doNotCloseOnMouseClick", true)
         addActionListener(this)
     }
 
     final override fun actionPerformed(e: ActionEvent) {
         // If we don't do this, the menu item loses the hover/navigation effect when it's toggled.
-        SwingUtilities.invokeLater { isArmed = true }
+        if (!closeOnMouseClick)
+            SwingUtilities.invokeLater { isArmed = true }
 
         // When the user opens a popup that is so long it overlaps the box button, him releasing the mouse
         // immediately afterward actually selects the item he's hovering over if he moved the mouse ever so

@@ -36,6 +36,11 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayNameWidget get() = configureOverlayForm.nameWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayLinesHWidget get() = configureOverlayForm.linesHWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayDoneButton get() = configureOverlayDoneButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgTemplateNameWidget
+        get() = configureDeliveryDestTemplateForm.nameWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgTemplateStrWidget
+        get() = configureDeliveryDestTemplateForm.templateStrWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgTemplateDoneButton get() = configureDeliveryDestTemplateDoneButton
     // =========================================
 
     val startPreferencesForm: PreferencesForm
@@ -46,6 +51,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val startAccountsPanel: JPanel
     private val startAccountsRemovalButtons = HashMap<Account, JButton>()
     private val startOverlaysPanel: JPanel
+    private val startDeliveryDestTemplatesPanel: JPanel
 
     private val configureAccountForm: ConfigureAccountForm
     private val configureAccountAuthorizeButton: JButton
@@ -56,6 +62,10 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val configureOverlayForm: ConfigureOverlayForm
     private val configureOverlayDoneButton: JButton
     private val configureOverlayApplyButton: JButton
+
+    private val configureDeliveryDestTemplateForm: ConfigureDeliveryDestTemplateForm
+    private val configureDeliveryDestTemplateDoneButton: JButton
+    private val configureDeliveryDestTemplateApplyButton: JButton
 
     init {
         startPreferencesForm = PreferencesForm(welcomeCtrl).apply {
@@ -76,6 +86,14 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
         }
 
+        val startAddDeliveryDestTemplButton =
+            JButton(l10n("ui.preferences.deliveryDestTemplates.add"), ADD_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickAddDeliveryDestTemplate() }
+            }
+        startDeliveryDestTemplatesPanel = JPanel(MigLayout("insets 0, wrap, fillx", "[fill]")).apply {
+            background = null
+        }
+
         startLowerPanel = JPanel(MigLayout("insets 0, wrap, hidemode 3")).apply {
             background = null
             add(JSeparator(), "growx, pushx, gapy unrel unrel")
@@ -84,6 +102,9 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(JSeparator(), "growx, pushx, gapy unrel unrel")
             add(startAddOverlayButton)
             add(startOverlaysPanel, "growx, pushx, gaptop rel")
+            add(JSeparator(), "growx, pushx, gapy unrel unrel")
+            add(startAddDeliveryDestTemplButton)
+            add(startDeliveryDestTemplatesPanel, "growx, pushx, gaptop rel")
         }
         val startWidgetsPanel = JPanel(MigLayout("insets 0 0 0 10, wrap, gapy 0")).apply {
             background = null
@@ -182,10 +203,41 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(configureOverlayApplyButton)
         }
 
+        configureDeliveryDestTemplateForm = ConfigureDeliveryDestTemplateForm().apply {
+            background = null
+        }
+        val configureDeliveryDestTemplateCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_configureDeliveryDestTemplate_onClickCancel() }
+        }
+
+        fun configureDeliveryDestationDoneOrApplyCallback(done: Boolean) {
+            welcomeCtrl.preferences_configureDeliveryDestTemplate_onClickDoneOrApply(
+                done,
+                configureDeliveryDestTemplateForm.nameWidget.value,
+                configureDeliveryDestTemplateForm.templateStrWidget.value
+            )
+        }
+        configureDeliveryDestTemplateDoneButton = JButton(l10n("ok"), CHECK_ICON).apply {
+            addActionListener { configureDeliveryDestationDoneOrApplyCallback(true) }
+        }
+        configureDeliveryDestTemplateApplyButton = JButton(l10n("apply"), CHECK_ICON).apply {
+            addActionListener { configureDeliveryDestationDoneOrApplyCallback(false) }
+        }
+        configureDeliveryDestTemplateForm.onChange(configureDeliveryDestTemplateForm.nameWidget)  // Run validation
+        val configureDeliverLocationTemplatePanel = JPanel(MigLayout("insets 20, wrap")).apply {
+            background = null
+            add(newLabelTextArea(l10n("ui.preferences.deliveryDestTemplates.configure.prompt")), "growx")
+            add(configureDeliveryDestTemplateForm, "grow, push, gaptop para")
+            add(configureDeliveryDestTemplateCancelButton, "split 3, right")
+            add(configureDeliveryDestTemplateDoneButton)
+            add(configureDeliveryDestTemplateApplyButton)
+        }
+
         add(startPanel, PreferencesCard.START.name)
         add(configureAccountPanel, PreferencesCard.CONFIGURE_ACCOUNT.name)
         add(authorizeAccountPanel, PreferencesCard.AUTHORIZE_ACCOUNT.name)
         add(configureOverlayPanel, PreferencesCard.CONFIGURE_OVERLAY.name)
+        add(configureDeliverLocationTemplatePanel, PreferencesCard.CONFIGURE_DELIVERY_LOC_TEMPLATE.name)
 
         @Suppress("DEPRECATION")
         leakedStartAddAccountButton = startAddAccountButton
@@ -257,6 +309,31 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         startOverlaysPanel.repaint()
     }
 
+    fun preferences_start_setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
+        startDeliveryDestTemplatesPanel.removeAll()
+        for (template in templates) {
+            val editButton = JButton(EDIT_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickEditDeliveryDestTemplate(template) }
+            }
+            val removeButton = JButton(TRASH_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickRemoveDeliveryDestTemplate(template) }
+            }
+            val templatePanel = JPanel(MigLayout("", "[]push[][]")).apply {
+                border = FlatRoundBorder()
+                add(JLabel(template.name, LABEL_ICON, JLabel.LEADING).apply {
+                    toolTipText = text
+                }, "split 2, flowy, wmax 520")
+                add(JLabel(template.l10nStr(), TEMPLATE_ICON, JLabel.LEADING).apply {
+                    toolTipText = text
+                }, "wmax 520")
+                add(editButton)
+                add(removeButton)
+            }
+            startDeliveryDestTemplatesPanel.add(templatePanel)
+        }
+        startDeliveryDestTemplatesPanel.isVisible = templates.isNotEmpty()
+    }
+
     fun preferences_configureAccount_resetForm() {
         configureAccountForm.apply {
             labelWidget.value = ""
@@ -302,6 +379,13 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
     fun preferences_configureOverlay_setImageFileExtAssortment(fileExtAssortment: FileExtAssortment?) {
         configureOverlayForm.imageFileWidget.fileExtAssortment = fileExtAssortment
+    }
+
+    fun preferences_configureDeliveryDestTemplate_setForm(name: String, templateStr: String) {
+        configureDeliveryDestTemplateForm.apply {
+            nameWidget.value = name
+            templateStrWidget.value = templateStr
+        }
     }
 
 
@@ -439,6 +523,37 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             val fine = isErrorFree
             configureOverlayDoneButton.isEnabled = fine
             configureOverlayApplyButton.isEnabled = fine
+        }
+
+    }
+
+
+    private inner class ConfigureDeliveryDestTemplateForm :
+        EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+
+        val nameWidget = addWidget(
+            l10n("ui.preferences.deliveryDestTemplates.configure.name"),
+            TextWidget(),
+            verify = { name ->
+                welcomeCtrl.preferences_configureDeliveryDestTemplate_verifyName(name)
+                    ?.let { Notice(Severity.ERROR, it) }
+            }
+        )
+
+        val templateStrWidget = addWidget(
+            l10n("template"),
+            TextModulesWidget(DeliveryDestTemplate.Placeholder.entries.map { it.l10nTagBraces() }, WidthSpec.FILL),
+            verify = { templateStr ->
+                welcomeCtrl.preferences_configureDeliveryDestTemplate_verifyTemplateStr(templateStr)
+                    ?.let { Notice(Severity.ERROR, it) }
+            }
+        )
+
+        public override fun onChange(widget: Widget<*>) {
+            super.onChange(widget)
+            val fine = isErrorFree
+            configureDeliveryDestTemplateDoneButton.isEnabled = fine
+            configureDeliveryDestTemplateApplyButton.isEnabled = fine
         }
 
     }

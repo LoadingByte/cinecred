@@ -5,6 +5,7 @@ package com.loadingbyte.cinecred.demos
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.delivery.ImageSequenceRenderJob
 import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.delivery.VideoContainerRenderJob
@@ -17,17 +18,15 @@ import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.st
-import com.loadingbyte.cinecred.ui.LocaleWish
-import com.loadingbyte.cinecred.ui.OVERLAYS_PREFERENCE
+import com.loadingbyte.cinecred.ui.*
+import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder.*
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.lang.foreign.MemorySegment.NULL
-import javax.swing.JScrollPane
-import javax.swing.JSpinner
+import javax.swing.*
 import javax.swing.JSpinner.NumberEditor
-import javax.swing.JTextField
 
 
 private const val DIR = "guide/user-interface"
@@ -45,6 +44,7 @@ val GUIDE_USER_INTERFACE_DEMOS
         GuideUserInterfaceVideoPreviewDemo,
         GuideUserInterfaceDeckLinkDemo,
         GuideUserInterfaceDeliveryDemo,
+        GuideUserInterfaceDeliveryDestTemplateDemo,
         GuideUserInterfaceWarningsDemo
     )
 
@@ -177,6 +177,7 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
         welcomeFrame.preferences_start_setCheckForUpdates(true)
         welcomeFrame.preferences_start_setAccounts(emptyList())
+        welcomeFrame.preferences_start_setDeliveryDestTemplates(emptyList())
 
         sc.hold(4 * hold)
         for (idx in 2 downTo 1) {
@@ -191,7 +192,6 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         sc.type(welcomeWin, (linesHSpinner.editor as NumberEditor).textField, "200")
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayDoneButton))
         sc.click(0)
-        welcomeFrame.preferences_start_setAccounts(emptyList())
         sc.hold(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOfCloseButton())
 
@@ -396,6 +396,99 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click(8 * hold)
 
         RenderQueue.cancelAllJobs()
+    }
+}
+
+
+object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
+    "$DIR/delivery-dest-template", Format.VIDEO_GIF, 800, 600
+) {
+    override fun generate() {
+        ToolTipManager.sharedInstance().isEnabled = false
+        val backedUpTemplates = DELIVERY_DEST_TEMPLATES_PREFERENCE.get()
+        DELIVERY_DEST_TEMPLATES_PREFERENCE.set(emptyList())
+        try {
+            generate2()
+        } finally {
+            ToolTipManager.sharedInstance().isEnabled = true
+            DELIVERY_DEST_TEMPLATES_PREFERENCE.set(backedUpTemplates)
+        }
+    }
+
+    private fun generate2() {
+        addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 500))
+        edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
+
+        for (idx in intArrayOf(3, 4)) {
+            sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+            sc.click(0)
+            sleep(500)
+            sc.hold()
+            sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = idx))
+            sc.click(0)
+            sleep(500)
+            sc.hold(4 * hold)
+        }
+        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.click(0)
+        sleep(500)
+        sc.hold()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 6))
+        sc.click(0)
+        sleep(1000)
+
+        addWelcomeWindow()
+        welcomeWin.size = Dimension(750, 490)
+        dt.center(welcomeWin)
+        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
+        welcomeFrame.preferences_start_setCheckForUpdates(true)
+        welcomeFrame.preferences_start_setAccounts(emptyList())
+        welcomeFrame.preferences_start_setOverlays(emptyList())
+
+        sc.hold(4 * hold)
+        sc.type(welcomeWin, prefsPanel.leakedCfgTemplateNameWidget.components[0] as JTextField, "Demo")
+        for (elem in listOf(PROJECT, " ", FORMAT, " ", FRAME_RATE, SCAN)) when (elem) {
+            is String -> {
+                val ta = (prefsPanel.leakedCfgTemplateStrWidget.components[0] as JScrollPane).viewport.view as JTextArea
+                ta.append(elem)
+                ta.caretPosition += elem.length
+            }
+            is DeliveryDestTemplate.Placeholder -> {
+                sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgTemplateStrWidget.components[1]))
+                sc.click()
+                sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(idx = elem.ordinal))
+                sc.click()
+            }
+        }
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgTemplateDoneButton))
+        sc.click(2 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOfCloseButton())
+
+        removeWelcomeWindow()
+        welcomeFrame.close()
+
+        sc.hold(2 * hold)
+        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 6))
+        sc.click(8 * hold)
+        sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
+        sc.click(8 * hold)
+        sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
+        sc.click()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ImageSequenceRenderJob.FORMATS.find { it.label == "PNG" }))
+        sc.click(8 * hold)
+        sc.hold(8 * hold)
+        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.click(0)
+        sleep(500)
+        sc.hold()
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 0))
+        sc.click(0)
+        sleep(500)
+        sc.hold(8 * hold)
     }
 }
 

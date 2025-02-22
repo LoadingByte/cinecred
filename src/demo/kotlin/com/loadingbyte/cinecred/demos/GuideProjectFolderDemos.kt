@@ -73,6 +73,7 @@ object GuideProjectFolderAddOnlineAccountDemo : ScreencastDemo("$DIR/add-online-
         welcomeFrame.preferences_start_setCheckForUpdates(true)
         welcomeFrame.preferences_start_setAccounts(emptyList())
         welcomeFrame.preferences_start_setOverlays(emptyList())
+        welcomeFrame.preferences_start_setDeliveryDestTemplates(emptyList())
 
         sc.hold(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddAccountButton))

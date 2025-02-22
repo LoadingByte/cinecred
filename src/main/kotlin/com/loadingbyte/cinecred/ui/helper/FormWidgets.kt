@@ -34,6 +34,7 @@ import kotlin.math.max
 
 
 enum class WidthSpec(val mig: String) {
+    NONE(""),
     TINIER("width 50:50:"),
     TINY("width 60:60:"),
     LITTLE("width 70:70:"),
@@ -54,6 +55,14 @@ abstract class AbstractTextComponentWidget<V : Any>(
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
+    init {
+        if (tc is JTextArea) {
+            // Use tab key for focus traversal instead of inserting a tab character.
+            tc.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null)
+            tc.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null)
+        }
+    }
+
     override val components = listOf<JComponent>(tc)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.WIDE).mig)
 
@@ -73,8 +82,11 @@ abstract class AbstractTextComponentWidget<V : Any>(
         tc.document = PlainDocument().apply {
             insertString(0, string, null)
             addDocumentListener { notifyChangeListeners() }
+            configureDocument(this)
         }
     }
+
+    protected open fun configureDocument(document: Document) {}
 
     init {
         // Make sure that the document listener is installed.
@@ -105,6 +117,61 @@ class TextListWidget(
         set(value) {
             text = value.filter(String::isNotBlank).joinToString("\n")
         }
+}
+
+
+class TextModulesWidget(
+    modules: List<String>,
+    widthSpec: WidthSpec? = null
+) : AbstractTextComponentWidget<String>(JTextArea(), widthSpec) {
+
+    private val insertModuleBtn = JButton(ADD_ICON)
+    private val popup = DropdownPopupMenu(insertModuleBtn)
+
+    override val components = listOf<JComponent>(JScrollPane(tc), insertModuleBtn)
+    override val constraints = listOf(super.constraints.single() + ", hmax ${10 * STD_HEIGHT}", "growy")
+
+    init {
+        tc as JTextArea
+        tc.lineWrap = true
+        tc.wrapStyleWord = true
+
+        popup.addMouseListenerTo(insertModuleBtn)
+        popup.addKeyListenerTo(insertModuleBtn)
+        for (module in modules) {
+            val menuItem = DropdownPopupMenuItem(module)
+            menuItem.addActionListener {
+                tc.document.insertString(tc.caretPosition, module, null)
+                tc.requestFocusInWindow()
+            }
+            popup.add(menuItem)
+        }
+        popup.pack()
+    }
+
+    private var prevPrefHeight = -1
+
+    override fun configureDocument(document: Document) {
+        document.putProperty("filterNewlines", true)
+        // When the text area changes preferred height because lines are added/removed, the wrapping scroll pane does
+        // not follow until either the user moves the mouse or we call revalidate() on the Form container.
+        // Note that the text area doesn't reliably change its actual height upon edits, so we cannot rely on a
+        // ComponentListener and really need to manually pull the preferred height like this.
+        document.addDocumentListener {
+            val prefHeight = tc.preferredSize.height
+            if (prevPrefHeight != prefHeight) {
+                prevPrefHeight = prefHeight
+                components[0].parent.revalidate()
+            }
+        }
+    }
+
+    override var value: String
+        get() = text
+        set(value) {
+            text = value
+        }
+
 }
 
 

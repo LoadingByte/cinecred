@@ -32,6 +32,7 @@ Cinecred Changelog
 - Remapped Ctrl+W and Ctrl+Q to closing a window or quitting a session.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
 - Canceling a file dialog no longer opens a different second file dialog.
+- Changing the opacity in a color picker no longer causes a crash.
 - Fixed crash upon adding a raster image overlay.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
 

@@ -131,7 +131,7 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         get() = alphaSpinner.value as Float
         set(v) {
             alphaSpinner.value = v
-            alphaSlider.value = (v * 1000f).roundToInt()
+            alphaSlider.value = (v * alphaSlider.maximum).roundToInt()
         }
 
     private fun updateHSBFromRGB() {
@@ -256,9 +256,9 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         if (disableOnChange) return
         withoutOnChange {
             if (slider)
-                alphaSpinner.value = alphaSlider.value
+                alphaSpinner.value = alphaSlider.value / alphaSlider.maximum.toFloat()
             else
-                alphaSlider.value = alphaSpinner.value as Int
+                alphaSlider.value = ((alphaSpinner.value as Float) * alphaSlider.maximum).roundToInt()
             updateHexFromRGB()
         }
         cached = null

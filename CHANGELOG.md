@@ -16,6 +16,8 @@ Cinecred Changelog
 ### Fixes
 
 - XLSX files exported from Google Sheets no longer fail to parse.
+- Fixed off-by-one errors in global runtime fine adjustment when the first or
+  last frame is left blank.
 - Fixed crashes when both forced row height and match row height are active.
 - Fixed rare crashes during interlaced delivery.
 - Fixed SVG rasterization for PDF delivery.

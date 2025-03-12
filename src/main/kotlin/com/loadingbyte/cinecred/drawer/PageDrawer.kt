@@ -59,7 +59,7 @@ fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
         for (page in pages)
             prelimStageLayouts.putAll(layoutStages(global.resolution, drawnStages, page).second)
         // Use that information to scale the vertical gaps.
-        drawnStages = matchRuntime(pages, drawnStages, prelimStageLayouts, global.runtimeFrames, runtimeGroups)
+        drawnStages = matchRuntime(global, pages, drawnStages, prelimStageLayouts, runtimeGroups)
     }
 
     // Finally, do the real layout pass with potentially changed stage images and combine the stage images
@@ -167,10 +167,10 @@ private fun layoutStages(
 
 
 private fun matchRuntime(
+    global: Global,
     pages: List<Page>,
     drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
-    globalDesiredFrames: Opt<Int>,
     runtimeGroups: List<RuntimeGroup>
 ): MutableMap<Stage, DrawnStage> {
     // Prepare two maps which enable simple access to the two stages before and after any scroll stage.
@@ -221,10 +221,12 @@ private fun matchRuntime(
     var globalGroup: RuntimeGroup? = null
     var globalGroupFrames = 0
     val remStages = buildList { for (p in pages) for (s in p.stages) if (runtimeGroups.none { s in it.stages }) add(s) }
-    if (globalDesiredFrames.isActive) {
-        // Subtract the desired runtime of the user-defined runtime groups and the runtime in between pages from the
-        // desired global runtime to obtain the desired runtime of the new group.
-        globalGroupFrames = globalDesiredFrames.value -
+    if (global.runtimeFrames.isActive) {
+        // Subtract the blank first and last frames, the desired runtime of the user-defined runtime groups, and the
+        // runtime in between pages from the desired global runtime to obtain the desired runtime of the new group.
+        globalGroupFrames = global.runtimeFrames.value -
+                (if (global.blankFirstFrame) 1 else 0) -
+                (if (global.blankLastFrame) 1 else 0) -
                 runtimeGroups.sumOf(RuntimeGroup::runtimeFrames) -
                 pages.subList(0, pages.size - 1).sumOf(Page::gapAfterFrames)
         globalGroup = addGroup(remStages, globalGroupFrames)

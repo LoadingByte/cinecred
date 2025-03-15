@@ -24,6 +24,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.io.path.*
 
 
@@ -54,7 +56,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private var currentCreditsFile: Path? = null
     private var linkedCreditsWatcher: ServiceWatcher? = null
 
-    private val auxFileEventBatch = AtomicReference(HashMap<Path, RecursiveFileWatcher.Event>())
+    private var auxFileEventBatch = HashMap<Path, RecursiveFileWatcher.Event>()
+    private val auxFileEventBatchLock = ReentrantLock()
     private val auxFileEventBatchProcessor = AtomicReference<ScheduledFuture<*>?>()
 
     private val projectFonts = HashMap<Path, List<Font>>()
@@ -88,13 +91,18 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 // sequence is copied into the project dir.
                 // For this, we first record the event to a map, overriding the previous event for that file if there
                 // was any. We also record events for the changed file's parent dir to account for image sequences.
-                val batch = auxFileEventBatch.get()
-                val parent = file.parent
-                batch[file] = event
-                batch[parent] = if (parent.exists()) MODIFY else DELETE
+                auxFileEventBatchLock.withLock {
+                    val batch = auxFileEventBatch
+                    val parent = file.parent
+                    batch[file] = event
+                    batch[parent] = if (parent.exists()) MODIFY else DELETE
+                }
                 // We then schedule a task that will later apply the batched changes in one go.
                 val newProcessor = executor.schedule(throwableAwareTask {
-                    for ((defFile, defEvent) in auxFileEventBatch.getAndSet(HashMap())) {
+                    val batch = auxFileEventBatchLock.withLock {
+                        auxFileEventBatch.also { auxFileEventBatch = HashMap() }
+                    }
+                    for ((defFile, defEvent) in batch) {
                         removeAuxFileOrDir(defFile)
                         if (defEvent == MODIFY)
                             reloadAuxFileOrDir(defFile)

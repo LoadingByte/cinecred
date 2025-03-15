@@ -40,7 +40,7 @@ class Template(
 ) {
     // We use a heuristic to determine by how much to scale all sizes in the template:
     // For image widths < 3000, we scale by 1. For image widths >= 3000 and < 5000, we scale by 2. And so on...
-    val scale: Int = min(1, (resolution.widthPx + 1000) / 2000)
+    val scale: Int = max(1, (resolution.widthPx + 1000) / 2000)
 }
 
 

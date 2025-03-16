@@ -972,7 +972,13 @@ private class CreditsReader(
        *********************************** */
 
     private val timecodeFormatLabel get() = styling.global.timecodeFormat.label
-    private val sampleTimecode get() = formatTimecode(styling.global.fps, styling.global.timecodeFormat, 7127)
+
+    private val sampleTimecode: String
+        get() = try {
+            formatTimecode(styling.global.fps, styling.global.timecodeFormat, 7127)
+        } catch (_: IllegalArgumentException) {
+            "???"
+        }
 
 
     companion object {

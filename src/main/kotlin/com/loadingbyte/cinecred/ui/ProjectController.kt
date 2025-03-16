@@ -161,6 +161,13 @@ class ProjectController(
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
+            // Verify the styling in the extra thread because that is not entirely cheap.
+            // If the styling is erroneous, abort and notify the UI about the error.
+            if (verifyConstraints(styling).any { it.severity == ERROR }) {
+                val error = ParserMsg(null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
+                return@submit doneProcessing(input, listOf(error), null)
+            }
+
             // Parse each credits spreadsheet.
             val credits = mutableListOf<Credits>()  // retains insertion order
             val log = mutableListOf<ParserMsg>()
@@ -171,13 +178,6 @@ class ProjectController(
             }
 
             val project = Project(styling, credits.toPersistentList())
-
-            // Verify the styling in the extra thread because that is not entirely cheap.
-            // If the styling is erroneous, abort and notify the UI about the error.
-            if (verifyConstraints(styling).any { it.severity == ERROR }) {
-                val error = ParserMsg(null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
-                return@submit doneProcessing(input, log + error, null)
-            }
 
             // If some page styles contains legacy settings which have not been used to produce a migration message,
             // clear them and put the cleared styling into the history in place of the legacy styling.

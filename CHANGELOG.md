@@ -33,6 +33,7 @@ Cinecred Changelog
   embedded videos in the entire project to load.
 - The video preview and delivery dialogs now default to the currently selected
   page tab each time they are opened.
+- Timecode spinners now properly work with clock timecodes.
 - Added a dedicated setting for the number of columns in a grid content style.
 - Remapped Ctrl+W and Ctrl+Q to closing a window or quitting a session.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.

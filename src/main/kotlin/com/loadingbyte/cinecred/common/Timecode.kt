@@ -153,7 +153,7 @@ sealed interface Timecode : Comparable<Timecode> {
         }
 
         override fun toFrames(fps: FPS) =
-            Frames(((numerator * fps.numerator) / (denominator * fps.denominator)).toInt())
+            Frames(roundingDiv(numerator * fps.numerator, denominator * fps.denominator).toInt())
 
         fun toFramesCeil(fps: FPS) =
             Frames(ceilDiv(numerator * fps.numerator, denominator * fps.denominator).toInt())
@@ -166,7 +166,7 @@ sealed interface Timecode : Comparable<Timecode> {
             val s = seconds % 60
             val m = seconds / 60 % 60
             val h = seconds / 60 / 60 % 24
-            val millis = (numerator * 1000L / denominator) % 1000L
+            val millis = roundingDiv(numerator * 1000L, denominator) % 1000L
             return "%02d:%02d:%02d.%03d".format(Locale.ROOT, h, m, s, millis)
         }
 

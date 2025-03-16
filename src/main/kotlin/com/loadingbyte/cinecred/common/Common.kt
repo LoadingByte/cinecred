@@ -116,6 +116,8 @@ fun ceilDiv(a: Long, b: Long) = (a + ((b - 1L) and (a.inv() shr 31))) / b
 
 /** Implements `round(a / b)`, but works only for non-negative numbers! */
 fun roundingDiv(a: Int, b: Int): Int = (a + (b shr 1)) / b
+/** Implements `round(a / b)`, but works only for non-negative numbers! */
+fun roundingDiv(a: Long, b: Long): Long = (a + (b shr 1)) / b
 
 
 inline fun throwableAwareTask(crossinline task: () -> Unit) = Runnable {

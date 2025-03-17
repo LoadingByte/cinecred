@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.ui.ProjectDialogType
 import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.ctrl.MasterCtrl
 import com.loadingbyte.cinecred.ui.ctrl.WelcomeCtrl
+import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
 import java.awt.*
@@ -240,7 +241,7 @@ class Screencast(
     fun frame(action: (() -> Unit)? = null) {
         action?.invoke()
         desktop.tick(1.0 / fps.frac)
-        writeFrame(buildImage(width, height, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
+        writeFrame(BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR).withG2 { g2 ->
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             // Paint wallpaper
             g2.color = Color(24, 24, 24)

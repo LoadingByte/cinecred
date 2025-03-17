@@ -293,7 +293,7 @@ object GuideLetterStyleLayerTransformDemo : StyleSettingsDemo<Layer>(
         Layer::offsetCoordinateSystem.st(),
         Layer::hOffsetRfh.st(), Layer::vOffsetRfh.st(), Layer::offsetAngleDeg.st(), Layer::offsetDistanceRfh.st(),
         Layer::hScaling.st(), Layer::vScaling.st(), Layer::hShearing.st(), Layer::vShearing.st()
-    ), pageExtend = 40, pageGuides = true
+    ), pageExtendY = 40, pageGuides = true
 ) {
     override fun styles() = buildList<Layer> {
         this += PRESET_LAYER.copy(shape = LayerShape.TEXT)
@@ -330,7 +330,7 @@ object GuideLetterStyleLayerAnchorDemo : StyleSettingsDemo<Layer>(
 
 object GuideLetterStyleLayerAnchorCloneDemo : StyleSettingsDemo<Layer>(
     Layer::class.java, "$DIR/anchor-clone", Format.SLOW_STEP_GIF,
-    listOf(Layer::anchor.st(), Layer::anchorSiblingLayer.st()), pageExtend = 40, pageGuides = true
+    listOf(Layer::anchor.st(), Layer::anchorSiblingLayer.st()), pageExtendY = 40, pageGuides = true
 ) {
     override fun styles() = buildList<Layer> {
         this += PRESET_LAYER.copy(

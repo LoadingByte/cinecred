@@ -226,7 +226,7 @@ I’m dead center!,,0
 
 
 object GuideCreditsSpreadsheetSpinePositionCardDemo : PageDemo(
-    "$DIR/spine-position-card", Format.PNG, pageHeight = 240, pageGuides = true
+    "$DIR/spine-position-card", Format.PNG, pageHeight = 240, pageCenterY = true, pageGuides = true
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(
@@ -260,7 +260,7 @@ I’m a righty!,,150 Parallel
 
 
 object GuideCreditsSpreadsheetSpinePositionHookDemo : PageDemo(
-    "$DIR/spine-position-hook", Format.PNG, pageHeight = 310, pageGuides = true
+    "$DIR/spine-position-hook", Format.PNG, pageHeight = 310, pageCenterY = true, pageGuides = true
 ) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(

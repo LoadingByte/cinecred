@@ -18,32 +18,6 @@ import kotlin.io.path.readLines
 import kotlin.io.path.writeLines
 
 
-fun extractStyling(global: Global, page: Page): Styling {
-    val pageStyles = HashSet<PageStyle>()
-    val contentStyles = HashSet<ContentStyle>()
-    val letterStyles = HashSet<LetterStyle>()
-    for (stage in page.stages) {
-        pageStyles.add(stage.style)
-        for (compound in stage.compounds)
-            for (spine in compound.spines)
-                for (block in spine.blocks) {
-                    contentStyles.add(block.style)
-                    for (elem in block.body)
-                        when (elem) {
-                            is BodyElement.Nil -> letterStyles.add(elem.sty)
-                            is BodyElement.Str -> for (str in elem.lines) for ((_, sty) in str) letterStyles.add(sty)
-                            is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
-                        }
-                    for (str in block.head.orEmpty()) for ((_, style) in str) letterStyles.add(style)
-                    for (str in block.tail.orEmpty()) for ((_, style) in str) letterStyles.add(style)
-                }
-    }
-    return Styling(
-        global, pageStyles.toPersistentList(), contentStyles.toPersistentList(), letterStyles.toPersistentList()
-    )
-}
-
-
 inline fun <R> withDemoProjectDir(block: (Path) -> R): R {
     val projectDir = Path(System.getProperty("java.io.tmpdir")).resolve(l10nDemo("projectDir"))
     projectDir.toFile().deleteRecursively()

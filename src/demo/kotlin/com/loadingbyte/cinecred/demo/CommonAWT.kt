@@ -1,30 +1,18 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.imaging.*
-import com.loadingbyte.cinecred.imaging.Canvas
+import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.ui.helper.preserveTransform
 import com.loadingbyte.cinecred.ui.helper.usableBounds
+import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.view.playback.PlaybackDialog
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGR24
 import java.awt.*
-import java.awt.color.ColorSpace
-import java.awt.image.*
+import java.awt.image.BufferedImage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.swing.SwingUtilities
 import kotlin.concurrent.withLock
-import kotlin.math.roundToInt
-import com.loadingbyte.cinecred.imaging.ColorSpace as ImagingColorSpace
-
-
-inline fun buildImage(width: Int, height: Int, type: Int, draw: (Graphics2D) -> Unit): BufferedImage {
-    val image = BufferedImage(width, height, type)
-    val g2 = image.createGraphics()
-    draw(g2)
-    g2.dispose()
-    return image
-}
 
 
 val gCfg: GraphicsConfiguration =
@@ -46,7 +34,7 @@ fun edt(block: () -> Unit) {
 
 
 fun printWithPopups(component: Component): BufferedImage =
-    buildImage(component.width, component.height, BufferedImage.TYPE_3BYTE_BGR) { g2 ->
+    BufferedImage(component.width, component.height, BufferedImage.TYPE_3BYTE_BGR).withG2 { g2 ->
         printWithPopups(component, g2)
     }
 
@@ -105,36 +93,6 @@ fun reposition(window: Window, width: Int, height: Int) {
 }
 
 
-val CANVAS_REPRESENTATION = Canvas.compatibleRepresentation(
-    ImagingColorSpace.of(ImagingColorSpace.Primaries.BT709, ImagingColorSpace.Transfer.BLENDING)
-)
-
 val BGR24_REPRESENTATION = Bitmap.Representation(
-    Bitmap.PixelFormat.of(AV_PIX_FMT_BGR24), ImagingColorSpace.SRGB, Bitmap.Alpha.OPAQUE
+    Bitmap.PixelFormat.of(AV_PIX_FMT_BGR24), ColorSpace.SRGB, Bitmap.Alpha.OPAQUE
 )
-
-fun bgr24BitmapToImage(bitmap: Bitmap): BufferedImage {
-    require(bitmap.spec.representation == BGR24_REPRESENTATION)
-    val (w, h) = bitmap.spec.resolution
-    val data = bitmap.getB(w * 3)
-    val dataBuffer = DataBufferByte(data, data.size)
-    val raster = Raster.createInterleavedRaster(dataBuffer, w, h, w * 3, 3, intArrayOf(2, 1, 0), null)
-    val cs = ColorSpace.getInstance(ColorSpace.CS_sRGB)
-    val cm = ComponentColorModel(cs, intArrayOf(8, 8, 8), false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE)
-    return BufferedImage(cm, raster, false, null)
-}
-
-fun defImageToImage(grounding: Color4f, layers: List<DeferredImage.Layer>, defImg: DeferredImage): BufferedImage {
-    val res = Resolution(defImg.width.roundToInt(), defImg.height.resolve().roundToInt())
-    val canvasBitmap = Bitmap.allocate(Bitmap.Spec(res, CANVAS_REPRESENTATION))
-    val bgr24Bitmap = Bitmap.allocate(Bitmap.Spec(res, BGR24_REPRESENTATION))
-    Canvas.forBitmap(canvasBitmap).use { canvas ->
-        canvas.fill(Canvas.Shader.Solid(grounding))
-        defImg.materialize(canvas, cache = null, layers)
-    }
-    BitmapConverter.convert(canvasBitmap, bgr24Bitmap, promiseOpaque = true)
-    val img = bgr24BitmapToImage(bgr24Bitmap)
-    canvasBitmap.close()
-    bgr24Bitmap.close()
-    return img
-}

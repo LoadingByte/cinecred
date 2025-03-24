@@ -7,19 +7,29 @@ import kotlin.math.max
 
 enum class TimecodeFormat { SMPTE_NON_DROP_FRAME, SMPTE_DROP_FRAME, EXACT_FRAMES_IN_SECOND, CLOCK, FRAMES }
 
-/** Helper function to quickly format a frame count to a timecode string. */
-fun formatTimecode(fps: FPS, format: TimecodeFormat, frames: Int): String = when (format) {
-    TimecodeFormat.SMPTE_NON_DROP_FRAME ->
-        Timecode.Frames(frames).toSMPTENonDropFrame(fps).toString(fps)
-    TimecodeFormat.SMPTE_DROP_FRAME ->
-        Timecode.Frames(frames).toSMPTEDropFrame(fps).toString(fps)
-    TimecodeFormat.EXACT_FRAMES_IN_SECOND ->
-        Timecode.Frames(frames).toExactFramesInSecond(fps).toString(fps)
-    TimecodeFormat.CLOCK ->
-        Timecode.Frames(frames).toClock(fps).toString()
-    TimecodeFormat.FRAMES ->
-        Timecode.Frames(frames).toString()
+val Timecode.format: TimecodeFormat
+    get() = when (this) {
+        is Timecode.SMPTENonDropFrame -> TimecodeFormat.SMPTE_NON_DROP_FRAME
+        is Timecode.SMPTEDropFrame -> TimecodeFormat.SMPTE_DROP_FRAME
+        is Timecode.ExactFramesInSecond -> TimecodeFormat.EXACT_FRAMES_IN_SECOND
+        is Timecode.Clock -> TimecodeFormat.CLOCK
+        is Timecode.Frames -> TimecodeFormat.FRAMES
+    }
+
+fun Timecode.toFormat(format: TimecodeFormat, fps: FPS): Timecode = when (format) {
+    TimecodeFormat.SMPTE_NON_DROP_FRAME -> toSMPTENonDropFrame(fps)
+    TimecodeFormat.SMPTE_DROP_FRAME -> toSMPTEDropFrame(fps)
+    TimecodeFormat.EXACT_FRAMES_IN_SECOND -> toExactFramesInSecond(fps)
+    TimecodeFormat.CLOCK -> toClock(fps)
+    TimecodeFormat.FRAMES -> toFrames(fps)
 }
+
+fun zeroTimecode(format: TimecodeFormat): Timecode =
+    Timecode.Frames(0).toFormat(format, FPS(1, 1))
+
+/** Helper function to quickly format a frame count to a timecode string. */
+fun formatTimecode(fps: FPS, format: TimecodeFormat, frames: Int): String =
+    Timecode.Frames(frames).toFormat(format, fps).toString(fps)
 
 /** Helper function to quickly parse a timecode string to a frame count. */
 fun parseTimecode(fps: FPS, format: TimecodeFormat, str: String): Int =
@@ -160,6 +170,9 @@ sealed interface Timecode : Comparable<Timecode> {
 
         override fun toClock(fps: FPS) = this
 
+        override fun equals(other: Any?) = this === other || other is Clock && compareTo(other) == 0
+        override fun hashCode() = seconds
+
         override fun toString() = toString(null)
         override fun toString(fps: FPS?): String {
             val seconds = this.seconds
@@ -252,7 +265,7 @@ sealed interface Timecode : Comparable<Timecode> {
 
     companion object {
 
-        private val CLOCK_REGEX = Regex("(\\d+):(\\d+):(\\d+).(\\d+)")
+        private val CLOCK_REGEX = Regex("(\\d+):(\\d+):(\\d+)\\.(\\d+)")
         private val CAF_REGEX_COLON = Regex("(\\d+):(\\d+):(\\d+):(\\d+)")
         private val CAF_REGEX_SEMICOLON = Regex("(\\d+):(\\d+):(\\d+);(\\d+)")
         private val CAF_REGEX_PLUS = Regex("(\\d+):(\\d+):(\\d+)\\+(\\d+)")

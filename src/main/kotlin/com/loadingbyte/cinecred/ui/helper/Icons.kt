@@ -20,7 +20,6 @@ import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 
@@ -65,6 +64,7 @@ val LAYOUT_ICON = SVGIcon.load("/icons/layout.svg")
 val LETTERS_ICON = SVGIcon.load("/icons/letters.svg")
 val PAGE_ICON = SVGIcon.load("/icons/page.svg")
 val PAUSE_ICON = SVGIcon.load("/icons/pause.svg")
+val PICTURE_ICON = SVGIcon.load("/icons/picture.svg")
 val PLAY_ICON = SVGIcon.load("/icons/play.svg")
 val PLUG_ICON = SVGIcon.load("/icons/plug.svg")
 val PREFERENCES_ICON = SVGIcon.load("/icons/preferences.svg")
@@ -606,23 +606,6 @@ class SVGIcon private constructor(
                 return if (newRGB != oldRGB) Color(newRGB, true) else color
             }
         }
-
-    }
-
-
-    class Dual(private val left: SVGIcon, private val right: SVGIcon) :
-        FlatAbstractIcon(left.width + ICON_ICON_GAP + right.width, max(left.height, right.height), null),
-        FlatLaf.DisabledIconProvider {
-
-        override fun paintIcon(c: Component, g2: Graphics2D) {
-            g2.preserveTransform {
-                left.paintIcon(c, g2)
-                g2.translate(left.width + ICON_ICON_GAP, 0)
-                right.paintIcon(c, g2)
-            }
-        }
-
-        override fun getDisabledIcon() = Dual(left.disabledIcon, right.disabledIcon)
 
     }
 

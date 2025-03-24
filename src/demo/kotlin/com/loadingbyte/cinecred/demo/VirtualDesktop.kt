@@ -594,7 +594,7 @@ class FileBrowserVirtualWindow : FakeVirtualWindow() {
 }
 
 
-class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : FakeVirtualWindow() {
+class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int = 0) : FakeVirtualWindow() {
 
     companion object {
         private const val ROW_HEIGHT = 20
@@ -605,6 +605,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
     override val title = "${file.name} \u2013 " + l10nDemo("screencast.spreadsheetEditor.title")
 
     val matrix = CsvFormat.read(file, "").first.single().drop(skipRows).map { it.cells.toMutableList() }
+    var rowOffset = 0
     var colWidths = intArrayOf()
 
     private var selectedCell: Point? = null
@@ -625,8 +626,9 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
         // Paint cell separators
         g2.clip(area)
         g2.color = Color.GRAY.brighter()
-        for (rowIdx in 1..<matrix.size) {
+        for (rowIdx in 1..<100_000) {
             val y = cellY(rowIdx) - SEP_THICKNESS
+            if (y < area.y - SEP_THICKNESS) continue
             if (y > area.y + area.height) break
             g2.fillRect(area.x, y, area.width, SEP_THICKNESS)
         }
@@ -660,6 +662,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
         g2.color = Color.DARK_GRAY
         for (rowIdx in matrix.indices) {
             val y = cellY(rowIdx)
+            if (y < area.y - ROW_HEIGHT) continue
             if (y > area.y + area.height) break
             check(matrix[rowIdx].size == colWidths.size)
             for (colIdx in colWidths.indices) {
@@ -686,7 +689,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int) : Fa
     }
 
     private fun cellX(colIdx: Int) = INSET_L + colIdx * SEP_THICKNESS + colWidths.sumBetween(0, colIdx)
-    private fun cellY(rowIdx: Int) = INSET_T + rowIdx * (ROW_HEIGHT + SEP_THICKNESS)
+    private fun cellY(rowIdx: Int) = INSET_T + (rowIdx - rowOffset) * (ROW_HEIGHT + SEP_THICKNESS)
 
 }
 

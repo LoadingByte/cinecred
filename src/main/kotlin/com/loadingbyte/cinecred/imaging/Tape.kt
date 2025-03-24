@@ -46,15 +46,23 @@ class Tape private constructor(
         get() = metadata.fps
     /** @throws IllegalStateException */
     val availableRange: OpenEndRange<Timecode>
-        get() = metadata.availableRange
+        get() = fileSeqAvailableRange ?: metadata.availableRange
+
+    fun loadMetadataInBackground() {
+        if (!metadataLazy.isInitialized())
+            GLOBAL_THREAD_POOL.submit { metadataLazy.value }
+    }
+
+    private val fileSeqAvailableRange: OpenEndRange<Timecode>? = if (!fileSeq) null else
+        Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
 
     private val metadata: Metadata
-        get() = when (val m = _metadata) {
+        get() = when (val m = metadataLazy.value) {
             is Throwable -> throw IllegalStateException("Metadata of tape '${fileOrDir.name}' cannot be read.", m)
             else -> m as Metadata
         }
 
-    private val _metadata: Any by lazy {
+    private val metadataLazy = lazy {
         try {
             val spec: Bitmap.Spec
             val audio: Boolean
@@ -79,7 +87,7 @@ class Tape private constructor(
                     availableRange = start..<(end!! + pad)
                 }
             else
-                availableRange = Timecode.Frames(firstNumber)..<Timecode.Frames(lastNumber + 1)
+                availableRange = fileSeqAvailableRange!!
             Metadata(spec, audio, fps, availableRange)
         } catch (e: Exception) {
             LOGGER.error("Metadata of tape '{}' cannot be read.", fileOrDir.name, e)
@@ -255,15 +263,18 @@ class Tape private constructor(
         /**
          * If the given [Path] points to a video file or image sequence, this function returns a [Tape] that can be used
          * to access it.
-         *
-         * @throws IOException
          */
         fun recognize(fileOrDir: Path): Tape? = when {
             fileOrDir.isRegularFile() ->
                 if (fileOrDir.extension !in CONTAINER_EXTS) null else
                     Tape(fileSeq = false, fileOrDir, fileOrDir, -1, -1)
             fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true) ->
-                fileOrDir.useDirectoryEntries { seq -> recognizeFileSeq(fileOrDir, seq) }
+                try {
+                    fileOrDir.useDirectoryEntries { seq -> recognizeFileSeq(fileOrDir, seq) }
+                } catch (e: IOException) {
+                    LOGGER.warn("Could not look for an image sequence tape in '{}': {}", fileOrDir, e.message)
+                    null
+                }
             else ->
                 null
         }

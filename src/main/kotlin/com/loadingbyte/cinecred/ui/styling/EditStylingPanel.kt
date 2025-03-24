@@ -4,6 +4,8 @@ import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.drawer.DrawnStageInfo
+import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.*
@@ -30,6 +32,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedPageStyleForm get() = pageStyleForm
     @Deprecated("ENCAPSULATION LEAK") val leakedContentStyleForm get() = contentStyleForm
     @Deprecated("ENCAPSULATION LEAK") val leakedLetterStyleForm get() = letterStyleForm
+    @Deprecated("ENCAPSULATION LEAK") val leakedPictureStyleForm get() = pictureStyleForm
     // =========================================
 
     private val keyListeners = mutableListOf<KeyListener>()
@@ -41,6 +44,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private val pageStyleForm = StyleForm(PageStyle::class.java)
     private val contentStyleForm = StyleForm(ContentStyle::class.java)
     private val letterStyleForm = StyleForm(LetterStyle::class.java)
+    private val pictureStyleForm = StyleForm(PictureStyle::class.java, latent = setOf(PopupStyle::volatile.st()))
+    private val tapeStyleForm = StyleForm(TapeStyle::class.java, latent = setOf(PopupStyle::volatile.st()))
 
     // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
@@ -50,13 +55,15 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         add(JScrollPane(pageStyleForm), "PageStyle")
         add(JScrollPane(contentStyleForm), "ContentStyle")
         add(JScrollPane(letterStyleForm), "LetterStyle")
+        add(JScrollPane(pictureStyleForm), "PictureStyle")
+        add(JScrollPane(tapeStyleForm), "TapeStyle")
     }
 
     private val stylingTree = StylingTree()
 
     // Wire up an adjuster that we can call when various events happen, upon which it will update the StyleForms.
     private val formAdjuster = StyleFormAdjuster(
-        listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm),
+        listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm, pictureStyleForm, tapeStyleForm),
         getCurrentStyling = ::styling,
         getCurrentStyleInActiveForm = { stylingTree.selected as Style? },
         notifyConstraintViolations = ::updateConstraintViolations
@@ -83,7 +90,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             onSelect = { openGlobal(it, globalForm, "Global") }
         )
         stylingTree.addListType(
-            PageStyle::class.java, l10n("ui.styling.pageStyles"), FILMSTRIP_ICON,
+            PageStyle::class.java, l10n("ui.styling.pageStyles"), PAGE_ICON,
             onSelect = { openListedStyle(it, pageStyleForm, "PageStyle") },
             objToString = PageStyle::name
         )
@@ -97,25 +104,49 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             onSelect = { openListedStyle(it, letterStyleForm, "LetterStyle") },
             objToString = LetterStyle::name
         )
+        stylingTree.addListType(
+            PictureStyle::class.java, l10n("ui.styling.pictureStyles"), PICTURE_ICON,
+            onSelect = { openListedStyle(it, pictureStyleForm, "PictureStyle") },
+            objToString = PictureStyle::name,
+            isVolatile = PictureStyle::volatile
+        )
+        stylingTree.addListType(
+            TapeStyle::class.java, l10n("ui.styling.tapeStyles"), FILMSTRIP_ICON,
+            onSelect = { openListedStyle(it, tapeStyleForm, "TapeStyle") },
+            objToString = TapeStyle::name,
+            isVolatile = TapeStyle::volatile
+        )
 
         // Add buttons for adding and removing style nodes.
         val addPageStyleButton = newToolbarButtonWithKeyListener(
-            SVGIcon.Dual(ADD_ICON, FILMSTRIP_ICON), l10n("ui.styling.addPageStyleTooltip"),
+            PAGE_ICON, l10n("ui.styling.addPageStyleTooltip"),
             VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             addAndSelectStyle(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")))
         }
         val addContentStyleButton = newToolbarButtonWithKeyListener(
-            SVGIcon.Dual(ADD_ICON, LAYOUT_ICON), l10n("ui.styling.addContentStyleTooltip"),
+            LAYOUT_ICON, l10n("ui.styling.addContentStyleTooltip"),
             VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             addAndSelectStyle(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")))
         }
         val addLetterStyleButton = newToolbarButtonWithKeyListener(
-            SVGIcon.Dual(ADD_ICON, LETTERS_ICON), l10n("ui.styling.addLetterStyleTooltip"),
+            LETTERS_ICON, l10n("ui.styling.addLetterStyleTooltip"),
             VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             addAndSelectStyle(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")))
+        }
+        val addPictureStyleButton = newToolbarButtonWithKeyListener(
+            PICTURE_ICON, l10n("ui.styling.addPictureStyleTooltip"),
+            VK_I, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
+            addAndSelectStyle(PRESET_PICTURE_STYLE.copy(name = l10n("ui.styling.newPictureStyleName")))
+        }
+        val addTapeStyleButton = newToolbarButtonWithKeyListener(
+            FILMSTRIP_ICON, l10n("ui.styling.addTapeStyleTooltip"),
+            VK_V, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
+            addAndSelectStyle(PRESET_TAPE_STYLE.copy(name = l10n("ui.styling.newTapeStyleName")))
         }
         val duplicateStyleButton = newToolbarButton(
             DUPLICATE_ICON, l10n("ui.styling.duplicateStyleTooltip"), VK_D, CTRL_DOWN_MASK, ::duplicateStyle
@@ -145,6 +176,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             add(addPageStyleButton)
             add(addContentStyleButton)
             add(addLetterStyleButton)
+            add(addPictureStyleButton)
+            add(addTapeStyleButton)
             add(duplicateStyleButton)
             add(removeStyleButton)
         }
@@ -214,7 +247,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     private fun removeStyle() {
         val style = stylingTree.selected
-        if (style !is ListedStyle)
+        if (style !is ListedStyle || style is PopupStyle && style.volatile)
             return
         val selRow = stylingTree.selectedRow
         // Remove the style.
@@ -256,12 +289,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             var newStyle = form.save()
+            // If certain settings are 0 and have now been activated, initialize them.
+            for (spec in getStyleWidgetSpecs(newStyle.javaClass))
+                if (spec is ZeroInitWidgetSpec<Global, *> && performZeroInit(newStyle, form, spec))
+                    newStyle = form.save()
             // If the global runtime setting is 0 and has now been activated, initialize the corresponding timecode
             // spinner with the project's current runtime. This is to provide a good starting value for the user.
-            if (newStyle.runtimeFrames.run { isActive && value == 0 }) {
-                form.openSingleSetting(Global::runtimeFrames.st(), Opt(true, mostRecentRuntime))
+            if (performZeroInit(newStyle, form, ZeroInitWidgetSpec(Global::runtimeFrames.st()) { mostRecentRuntime }))
                 newStyle = form.save()
-            }
             stylingTree.setSingleton(newStyle)
             styling = buildStyling()
             onChange(widget)
@@ -274,13 +309,22 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
             var newStyle = form.save()
-            // If the scroll page runtime setting is 0 and has now been activated, initialize the corresponding timecode
-            // spinner with the scroll page's current runtime. This is to provide a good starting value for the user.
-            if (newStyle is PageStyle && newStyle.scrollRuntimeFrames.run { isActive && value == 0 }) {
-                val newValue = Opt(true, mostRecentScrollRuntimes.getOrDefault(newStyle.name, 1))
-                form.castToStyle(PageStyle::class.java).openSingleSetting(PageStyle::scrollRuntimeFrames.st(), newValue)
+            // If the style has never been edited before, set its "volatile" flag to false.
+            if (newStyle is PopupStyle && newStyle.volatile) {
+                form.castToStyle(PopupStyle::class.java).openSingleSetting(PopupStyle::volatile.st(), false)
                 newStyle = form.save()
             }
+            // If certain settings are 0 and have now been activated, initialize them.
+            for (spec in getStyleWidgetSpecs(newStyle.javaClass))
+                if (spec is ZeroInitWidgetSpec<S, *> && performZeroInit(newStyle, form, spec))
+                    newStyle = form.save()
+            // If the scroll page runtime setting is 0 and has now been activated, initialize the corresponding timecode
+            // spinner with the scroll page's current runtime. This is to provide a good starting value for the user.
+            if (newStyle is PageStyle && performZeroInit(
+                    newStyle, form.castToStyle(PageStyle::class.java),
+                    ZeroInitWidgetSpec(PageStyle::scrollRuntimeFrames.st()) { mostRecentScrollRuntimes[newStyle.name] })
+            )
+                newStyle = form.save()
             stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
             styling = buildStyling()
             val updates = consistencyRetainer.ensureConsistencyAfterEdit(styling!!, newStyle)
@@ -307,7 +351,22 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.getList(PageStyle::class.java).toPersistentList(),
         stylingTree.getList(ContentStyle::class.java).toPersistentList(),
         stylingTree.getList(LetterStyle::class.java).toPersistentList(),
+        stylingTree.getList(PictureStyle::class.java).toPersistentList(),
+        stylingTree.getList(TapeStyle::class.java).toPersistentList()
     )
+
+    private fun <S : Style, SUBJ : Number> performZeroInit(
+        style: S, form: StyleForm<S>, spec: ZeroInitWidgetSpec<S, SUBJ>
+    ): Boolean {
+        var initializedAny = false
+        for (setting in spec.settings)
+            if (setting.get(style).run { isActive && value.toDouble() == 0.0 })
+                spec.getInitialValue(style)?.let { value ->
+                    form.openSingleSetting(setting, Opt(true, value))
+                    initializedAny = true
+                }
+        return initializedAny
+    }
 
     fun setStyling(styling: Styling) {
         this.styling = styling
@@ -323,6 +382,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
         formAdjuster.updateProjectFontFamilies(projectFamilies)
+    }
+
+    fun updatePictureLoaders(pictureLoaders: Collection<Picture.Loader>) {
+        formAdjuster.updatePictureLoaders(pictureLoaders)
+    }
+
+    fun updateTapes(tapes: Collection<Tape>) {
+        formAdjuster.updateTapes(tapes)
     }
 
     fun updateProject(drawnProject: DrawnProject) {

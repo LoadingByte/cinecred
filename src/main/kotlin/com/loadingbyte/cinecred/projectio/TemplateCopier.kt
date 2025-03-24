@@ -9,7 +9,6 @@ import java.util.*
 import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 import kotlin.math.max
-import kotlin.math.min
 
 
 /** @throws IOException */
@@ -57,8 +56,8 @@ private fun tryCopyTemplate(
         tryCopyCreditsTemplate(destDir, template, creditsFormat, creditsAccount, creditsFilename)
     tryCopyStylingTemplate(destDir, template)
     if (template.sample) {
-        tryCopyLogoFile(destDir, "cinecredH.svg")
-        tryCopyLogoFile(destDir, "cinecredV.svg")
+        tryCopyLogoFile(destDir, "cinecredH.svg", "Cinecred H.svg")
+        tryCopyLogoFile(destDir, "cinecredV.svg", "Cinecred V.svg")
     }
 }
 
@@ -121,11 +120,11 @@ private fun tryCopyStylingTemplate(destDir: Path, template: Template) {
 }
 
 
-private fun tryCopyLogoFile(destDir: Path, name: String) {
-    val logoFile = destDir.resolve("Logos").resolve(name.replaceFirstChar(Char::uppercaseChar))
+private fun tryCopyLogoFile(destDir: Path, from: String, to: String) {
+    val logoFile = destDir.resolve("Logos").resolve(to)
     if (logoFile.notExists()) {
         logoFile.parent.createDirectoriesSafely()
-        useResourceStream("/template/$name") { Files.copy(it, logoFile) }
+        useResourceStream("/template/$from") { Files.copy(it, logoFile) }
     }
 }
 
@@ -149,14 +148,7 @@ private fun fillIn(string: String, template: Template): String = string
                     l10n("projectIO.credits.table.head", template.locale),
                     l10n("blank", template.locale),
                     l10n("projectIO.credits.table.pic", template.locale),
-                    l10n("projectIO.credits.table.crop", template.locale),
                     l10n("projectIO.credits.table.video", template.locale),
-                    l10n("projectIO.credits.table.margin", template.locale),
-                    l10n("projectIO.credits.table.fade", template.locale),
-                    l10n("projectIO.credits.table.in", template.locale),
-                    l10n("projectIO.credits.table.out", template.locale),
-                    l10n("projectIO.credits.table.middle", template.locale),
-                    l10n("projectIO.credits.table.end", template.locale),
                     locale = template.locale
                 )
             "projectIO.credits.table.breakMatchDesc" ->

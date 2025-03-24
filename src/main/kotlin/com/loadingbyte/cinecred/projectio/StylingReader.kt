@@ -3,6 +3,8 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
+import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
@@ -18,17 +20,24 @@ fun readStylingVersion(stylingFile: Path): String? =
 
 
 /** @throws IOException */
-fun readStyling(stylingFile: Path, projectFonts: Collection<Font>): Styling {
+fun readStyling(
+    stylingFile: Path,
+    projectFonts: Map<String, Font>,
+    pictureLoaders: Map<String, Picture.Loader>,
+    tapes: Map<String, Tape>
+): Styling {
     val toml = readToml(stylingFile)
 
     val rawStyling = RawStyling(
         asMap(toml["global"]),
         asMaps(toml["pageStyle"]),
         asMaps(toml["contentStyle"]),
-        asMaps(toml["letterStyle"])
+        asMaps(toml["letterStyle"]),
+        asMaps(toml["pictureStyle"]),
+        asMaps(toml["tapeStyle"])
     )
 
-    val ctx = StylingReaderContext(projectFonts.associateBy { font -> font.getFontName(Locale.ROOT) })
+    val ctx = StylingReaderContext(projectFonts, pictureLoaders, tapes)
 
     migrateStyling(ctx, rawStyling)
 
@@ -37,6 +46,8 @@ fun readStyling(stylingFile: Path, projectFonts: Collection<Font>): Styling {
         readStyles(ctx, rawStyling.pageStyles, PageStyle::class.java),
         readStyles(ctx, rawStyling.contentStyles, ContentStyle::class.java),
         readStyles(ctx, rawStyling.letterStyles, LetterStyle::class.java),
+        readStyles(ctx, rawStyling.pictureStyles, PictureStyle::class.java),
+        readStyles(ctx, rawStyling.tapeStyles, TapeStyle::class.java)
     )
 }
 
@@ -45,13 +56,19 @@ class RawStyling(
     val global: MutableMap<String, Any>,
     val pageStyles: MutableList<MutableMap<String, Any>>,
     val contentStyles: MutableList<MutableMap<String, Any>>,
-    val letterStyles: MutableList<MutableMap<String, Any>>
+    val letterStyles: MutableList<MutableMap<String, Any>>,
+    val pictureStyles: MutableList<MutableMap<String, Any>>,
+    val tapeStyles: MutableList<MutableMap<String, Any>>
 )
 
 
-class StylingReaderContext(private val fontsByName: Map<String, Font>) {
+class StylingReaderContext(
+    private val projectFonts: Map<String, Font>,
+    val pictureLoaders: Map<String, Picture.Loader>,
+    val tapes: Map<String, Tape>
+) {
     fun resolveFont(name: String): Font? =
-        fontsByName[name] ?: getBundledFont(name) ?: getSystemFont(name)
+        projectFonts[name] ?: getBundledFont(name) ?: getSystemFont(name)
 }
 
 
@@ -83,6 +100,9 @@ private fun <S : Style> readStyle(ctx: StylingReaderContext, map: Map<*, *>, sty
             } catch (_: RuntimeException) {
                 // Catches IllegalArgumentException, NullPointerException, and ClassCastException.
             }
+        if (PopupStyle::class.java.isAssignableFrom(styleClass))
+            @Suppress("UNCHECKED_CAST")
+            add((PopupStyle::volatile.st() as DirectStyleSetting<S, Boolean>).notarize(false))
     }
     return getPreset(styleClass).copy(notarizedSettingValues)
 }
@@ -115,7 +135,10 @@ private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any):
     Resolution::class.java -> Resolution.fromString(raw as String)
     FPS::class.java -> FPS.fromString(raw as String)
     FontRef::class.java -> ctx.resolveFont(raw as String)?.let(::FontRef) ?: FontRef(raw)
+    PictureRef::class.java -> ctx.pictureLoaders[raw as String]?.let(::PictureRef) ?: PictureRef(raw)
+    TapeRef::class.java -> ctx.tapes[raw as String]?.let(::TapeRef) ?: TapeRef(raw)
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
+    TapeSlice::class.java -> tapeSliceFromStr(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)
         NestedStyle::class.java.isAssignableFrom(type) ->
@@ -128,6 +151,28 @@ private fun fontFeatureFromKV(kv: String): FontFeature {
     val parts = kv.split("=")
     require(parts.size == 2)
     return FontFeature(parts[0], parts[1].toInt())
+}
+
+private fun tapeSliceFromStr(str: String): TapeSlice {
+    val tcStrs = str.split("-")
+    require(tcStrs.size == 2)
+    for (tcFmt in TimecodeFormat.entries) {
+        val tcOpts = try {
+            tcStrs.map { tcStr ->
+                if (tcStr.isBlank())
+                    null
+                else if (tcFmt == TimecodeFormat.CLOCK && "/" in tcStr)
+                    Opt(true, tcStr.split("/").let { Timecode.Clock(it[0].toLong(), it[1].toLong()) })
+                else
+                    Opt(true, parseTimecode(tcFmt, tcStr))
+            }
+        } catch (_: RuntimeException) {
+            continue
+        }
+        val zeroOpt = Opt(false, zeroTimecode((tcOpts[0] ?: tcOpts[1])!!.value.format))
+        return TapeSlice(tcOpts[0] ?: zeroOpt, tcOpts[1] ?: zeroOpt)
+    }
+    throw IllegalArgumentException()
 }
 
 private fun enumFromName(name: String, enumClass: Class<*>): Any =

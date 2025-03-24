@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.demo
 
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
@@ -12,10 +13,7 @@ import java.awt.image.BufferedImage
 import java.nio.file.Path
 import java.util.*
 import javax.imageio.ImageIO
-import kotlin.io.path.Path
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.readLines
-import kotlin.io.path.writeLines
+import kotlin.io.path.*
 
 
 inline fun <R> withDemoProjectDir(block: (Path) -> R): R {
@@ -59,31 +57,37 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
         val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile, "").first.single()
-        val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), emptyList())
-        val pictureLoaders = buildList {
+        val pictureLoaders = buildMap {
             for (file in projectDir.walkSafely())
                 if (file.isRegularFile())
-                    tryReadPictureLoader(file)?.let(::add)
+                    Picture.Loader.recognize(file)?.let { put(file.name, it) }
         }
-        val credits = readCredits(spreadsheet, styling, pictureLoaders, emptyList()).first
-        for (pl in pictureLoaders)
-            pl.dispose()
+        val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), emptyMap(), pictureLoaders, emptyMap())
+        val credits = readCredits(spreadsheet, styling, pictureLoaders, emptyMap()).first
+        for (pictureLoader in pictureLoaders.values)
+            pictureLoader.close()
         Project(styling, persistentListOf(credits))
     }
 
 
-private val LOGO_PIC by lazy { useResourcePath("/logo.svg") { tryReadPictureLoader(it)!!.apply { picture } } }
+val LOGO_PIC by lazy { useResourcePath("/logo.svg") { Picture.Loader.recognize(it)!!.apply { picture } } }
 
-private val RAINBOW_TAPE: Tape by lazy {
+val RAINBOW_TAPE: Tape by lazy {
     val tmpDir = Path(System.getProperty("java.io.tmpdir")).resolve("cinecred-rainbow")
     tmpDir.toFile().apply { deleteRecursively(); deleteOnExit() }
     val tapeDir = tmpDir.resolve("rainbow").also(Path::createDirectoriesSafely).apply { toFile().deleteOnExit() }
-    val img = BufferedImage(16, 9, BufferedImage.TYPE_3BYTE_BGR)
-    for (hue in 0..255)
+    val img = BufferedImage(192, 108, BufferedImage.TYPE_3BYTE_BGR)
+    for (frame in 0..<200)
         ImageIO.write(img.withG2 { g2 ->
-            g2.color = Color(Color.HSBtoRGB(hue / 255f, 1f, 1f))
-            g2.fillRect(0, 0, 16, 9)
-        }, "png", tapeDir.resolve("rainbow.$hue.png").toFile().apply { deleteOnExit() })
+            g2.color = Color(Color.HSBtoRGB(frame / 2 / 100f, 1f, 1f))
+            g2.fillRect(0, 0, img.width, img.height)
+            g2.color = Color(0, 0, 0, 100)
+            g2.font = BUNDLED_FONTS.first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }.deriveFont(40f)
+            val fm = g2.fontMetrics
+            val str = "${frame + 1}"
+            g2.drawString(str, 6, 7 + fm.ascent)
+            g2.drawString(str, img.width - 5 - fm.stringWidth(str), img.height - fm.descent)
+        }, "png", tapeDir.resolve("$frame.png").toFile().apply { deleteOnExit() })
     Tape.recognize(tapeDir)!!
 }
 
@@ -92,17 +96,34 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
     if (resolution != null)
         styling = styling.copy(global = styling.global.copy(resolution = resolution))
     styling = styling.copy(contentStyles = styling.contentStyles.toPersistentList().addAll(contentStyles.asList()))
-
-    val spreadsheet = CsvFormat.read(this, "")
-    val tapes = if ("{{Video rainbow" in this) listOf(RAINBOW_TAPE) else emptyList()
-    val pages = readCredits(spreadsheet, styling, listOf(LOGO_PIC), tapes).first.pages
-    return Pair(styling.global, pages.single())
+    return parseCredits(styling)
 }
 
 fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> {
-    val styling =
-        Styling(PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList())
+    val styling = Styling(
+        PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList(),
+        persistentListOf(), persistentListOf()
+    )
+    return parseCredits(styling)
+}
+
+fun String.parseCreditsPiS(vararg pictureStyles: PictureStyle): Pair<Global, Page> {
+    var styling = TEMPLATE_PROJECT.styling
+    styling = styling.copy(pictureStyles = styling.pictureStyles.toPersistentList().addAll(pictureStyles.asList()))
+    return parseCredits(styling)
+}
+
+fun String.parseCreditsTS(vararg tapeStyles: TapeStyle): Pair<Global, Page> {
+    var styling = TEMPLATE_PROJECT.styling
+    styling = styling.copy(global = styling.global.copy(resolution = Resolution(700, 350), fps = FPS(30, 1)))
+    styling = styling.copy(tapeStyles = styling.tapeStyles.toPersistentList().addAll(tapeStyles.asList()))
+    return parseCredits(styling)
+}
+
+private fun String.parseCredits(styling: Styling): Pair<Global, Page> {
     val spreadsheet = CsvFormat.read(this, "")
-    val pages = readCredits(spreadsheet, styling, emptyList(), emptyList()).first.pages
+    val picLoaders = if ("logo.svg" in this) mapOf(LOGO_PIC.file.name to LOGO_PIC) else emptyMap()
+    val tapes = if ("rainbow" in this) mapOf(RAINBOW_TAPE.fileOrDir.name to RAINBOW_TAPE) else emptyMap()
+    val pages = readCredits(spreadsheet, styling, picLoaders, tapes).first.pages
     return Pair(styling.global, pages.single())
 }

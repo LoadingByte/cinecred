@@ -1,14 +1,9 @@
 package com.loadingbyte.cinecred.drawer
 
-import com.loadingbyte.cinecred.common.ceilDiv
-import com.loadingbyte.cinecred.common.maxOfOr
-import com.loadingbyte.cinecred.common.sumOf
-import com.loadingbyte.cinecred.imaging.Color4f
-import com.loadingbyte.cinecred.imaging.DeferredImage
+import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.Coat
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
-import com.loadingbyte.cinecred.imaging.FormattedString
-import com.loadingbyte.cinecred.imaging.Y
 import com.loadingbyte.cinecred.imaging.Y.Companion.plus
 import com.loadingbyte.cinecred.imaging.Y.Companion.toElasticY
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
@@ -598,10 +593,10 @@ private fun drawBodyImageWithParagraphsBodyLayout(
             val x = justify(hJustify, bodyImageWidth, bodyElemWidth)
             when (bodyElem) {
                 is BodyElement.Nil, is BodyElement.Str -> {}
-                is BodyElement.Pic -> bodyImage.drawEmbeddedPicture(bodyElem.emb, x, y)
-                is BodyElement.Tap -> bodyImage.drawEmbeddedTape(bodyElem.emb, x, y)
-                is BodyElement.Mis -> bodyImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
-            }
+                is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { bodyImage.drawEmbeddedPicture(it, x, y) }
+                is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { bodyImage.drawEmbeddedTape(it, x, y) }
+                is BodyElement.Mis -> null
+            } ?: bodyImage.drawMissing(x, y)
             y += bodyElemHeight
             drawnBodyLines += DrawnBodyLineRecord(x, null, bodyElemWidth, bodyElemHeight)
         }
@@ -708,16 +703,16 @@ private inline fun <T> matchExtent(
 private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> 0.0
     is BodyElement.Str -> lines.first().formatted(styling).width
-    is BodyElement.Pic -> emb.width
-    is BodyElement.Tap -> emb.resolution.widthPx.toDouble()
+    is BodyElement.Pic -> sty.toEmbedded()?.width ?: MISSING_RECT.width
+    is BodyElement.Tap -> sty.toEmbedded(styling)?.run { resolution.widthPx.toDouble() } ?: MISSING_RECT.width
     is BodyElement.Mis -> MISSING_RECT.width
 }
 
 private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
     is BodyElement.Str -> lines.first().formatted(styling).height
-    is BodyElement.Pic -> emb.height
-    is BodyElement.Tap -> emb.resolution.heightPx.toDouble()
+    is BodyElement.Pic -> sty.toEmbedded()?.height ?: MISSING_RECT.height
+    is BodyElement.Tap -> sty.toEmbedded(styling)?.run { resolution.heightPx.toDouble() } ?: MISSING_RECT.height
     is BodyElement.Mis -> MISSING_RECT.height
 }
 
@@ -762,11 +757,11 @@ private class LineGauge(
             is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {
                 val y = lineY + justify(vJustify, height, bodyElem.getHeight(styling))
                 when (bodyElem) {
-                    is BodyElement.Pic -> defImage.drawEmbeddedPicture(bodyElem.emb, x, y)
-                    is BodyElement.Tap -> defImage.drawEmbeddedTape(bodyElem.emb, x, y)
-                    is BodyElement.Mis -> defImage.drawShape(MISSING_COAT, MISSING_RECT, x, y, fill = true)
+                    is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { defImage.drawEmbeddedPicture(it, x, y) }
+                    is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { defImage.drawEmbeddedTape(it, x, y) }
+                    is BodyElement.Mis -> null
                     else -> {}
-                }
+                } ?: defImage.drawMissing(x, y)
             }
         }
     }
@@ -787,8 +782,91 @@ private fun LineHJustify.toSingleLineHJustify(lastLine: Boolean) = when {
 }
 
 
+private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
+    val picture = try {
+        (this@toEmbedded.picture.loader ?: return null).picture
+    } catch (_: IllegalStateException) {
+        return null
+    }
+    val width = if (widthPx.isActive) widthPx.value else null
+    val height = if (heightPx.isActive) heightPx.value else null
+    val crop = if (picture is Picture.Vector) cropBlankSpace else false
+    return DeferredImage.EmbeddedPicture(picture, width, height, crop)
+}
+
+
+private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? {
+    val tap = tape.tape ?: return null
+    val res: Resolution
+    val rng: OpenEndRange<Timecode>
+    try {
+        res = tap.spec.resolution
+        rng = tap.availableRange
+    } catch (_: IllegalStateException) {
+        return null
+    }
+    var inPoint = coerceTimecode(slice.inPoint, tap, styling) ?: rng.start
+    var outPoint = coerceTimecode(slice.outPoint, tap, styling) ?: rng.endExclusive
+    if (inPoint >= outPoint || inPoint >= rng.endExclusive || outPoint <= rng.start)
+        return null
+    if (inPoint < rng.start)
+        inPoint = rng.start
+    if (outPoint > rng.endExclusive)
+        outPoint = rng.endExclusive
+    return DeferredImage.EmbeddedTape(
+        tap,
+        resolution = when {
+            !widthPx.isActive && !heightPx.isActive -> res
+            !widthPx.isActive -> Resolution(roundingDiv(heightPx.value * res.widthPx, res.heightPx), heightPx.value)
+            !heightPx.isActive -> Resolution(widthPx.value, roundingDiv(widthPx.value * res.heightPx, res.widthPx))
+            else -> Resolution(widthPx.value, heightPx.value)
+        },
+        leftTemporalMarginFrames, rightTemporalMarginFrames, fadeInFrames, fadeOutFrames, inPoint..<outPoint,
+        when (temporallyJustify) {
+            HJustify.LEFT -> DeferredImage.EmbeddedTape.Align.START
+            HJustify.CENTER -> DeferredImage.EmbeddedTape.Align.MIDDLE
+            HJustify.RIGHT -> DeferredImage.EmbeddedTape.Align.END
+        }
+    )
+}
+
+private fun coerceTimecode(optTc: Opt<Timecode>, tape: Tape, styling: Styling): Timecode? = when {
+    !optTc.isActive -> null
+    tape.fileSeq ->
+        try {
+            optTc.value.toFrames(styling.global.fps)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+    else -> when (val tc = optTc.value) {
+        // If the user used the timecode format we need, immediately return.
+        is Timecode.Clock -> tc
+        // If the user used a frames or a SMPTE timecode, convert it to the clock format using the fixed FPS.
+        is Timecode.Frames, is Timecode.SMPTEDropFrame, is Timecode.SMPTENonDropFrame ->
+            try {
+                tape.fps?.let(tc::toClock)
+            } catch (_: RuntimeException) {
+                null
+            }
+        // If the user used an exact frames in second timecode, convert it to the clock format by looking up the
+        // referenced frame and taking its clock timecode.
+        is Timecode.ExactFramesInSecond ->
+            try {
+                tape.toClockTimecode(tc)
+            } catch (_: Exception) {
+                // If the tape has internal errors, it can't be rendered anyway, so don't bother the user.
+                null
+            }
+    }
+}
+
+
 private val MISSING_RECT = Rectangle2D.Double(0.0, 0.0, 200.0, 200.0)
-private val MISSING_COAT = Coat.Gradient(
-    Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT,
-    Point2D.Double(0.0, 0.0), Point2D.Double(0.0, MISSING_RECT.height)
+
+private fun DeferredImage.drawMissing(x: Double, y: Y) = drawShape(
+    Coat.Gradient(
+        Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT,
+        Point2D.Double(0.0, 0.0), Point2D.Double(0.0, MISSING_RECT.height)
+    ),
+    MISSING_RECT, x, y, fill = true
 )

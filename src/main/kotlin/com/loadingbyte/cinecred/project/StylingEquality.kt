@@ -14,14 +14,23 @@ private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettin
     styling: Styling,
     other: List<S>
 ): Boolean {
+    var styles1 = toMutableList()
+    var styles2 = other.toMutableList()
+
+    // Ignore styles that have been added automatically and were not edited since.
+    if ((styles1.firstOrNull() ?: styles2.firstOrNull()) is PopupStyle) {
+        styles1.removeIf { s -> (s as PopupStyle).volatile }
+        styles2.removeIf { s -> (s as PopupStyle).volatile }
+    }
+
     // Ensure that both lists have the same number of styles. This condition will be assumed by the following code.
-    if (size != other.size)
+    if (styles1.size != styles2.size)
         return false
 
     // Sort both lists of styles by style name.
     val comp = Comparator<S> { s1, s2 -> String.CASE_INSENSITIVE_ORDER.compare(s1.name, s2.name) }
-    val styles1 = sortedWith(comp)
-    val styles2 = other.sortedWith(comp)
+    styles1.sortWith(comp)
+    styles2.sortWith(comp)
 
     // Ensure that both lists contain the same style names with the same multiplicities. This condition will be assumed
     // by the following duplicate-related code.
@@ -66,9 +75,14 @@ private inline fun <E> List<E>.endOfRange(startIdx: Int, predicate: (E) -> Boole
 }
 
 
-private fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boolean {
-    fun eq(v1: Any, v2: Any) =
-        if (v1 is Style && v2 is Style) v1.equalsIgnoreIneffectiveSettings(styling, v2) else v1 == v2
+fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boolean {
+    fun eq(v1: Any, v2: Any): Boolean =
+        when {
+            v1 is Style && v2 is Style -> v1.equalsIgnoreIneffectiveSettings(styling, v2)
+            v1 is Opt<*> && v2 is Opt<*> -> v1.isActive == v2.isActive && (!v1.isActive || eq(v1.value, v2.value))
+            v1 is TapeSlice && v2 is TapeSlice -> eq(v1.inPoint, v2.inPoint) && eq(v1.outPoint, v2.outPoint)
+            else -> v1 == v2
+        }
 
     if (javaClass != other.javaClass)
         return false
@@ -78,15 +92,9 @@ private fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style
     for (setting in getStyleSettings(javaClass as Class<Style>))
         if (setting !in excludedSettings)
             when (setting) {
-                is DirectStyleSetting ->
+                is DirectStyleSetting, is OptStyleSetting ->
                     if (!eq(setting.get(this), setting.get(other)))
                         return false
-                is OptStyleSetting -> {
-                    val v1 = setting.get(this)
-                    val v2 = setting.get(other)
-                    if (v1.isActive != v2.isActive || v1.isActive /* then v2.isActive is also true */ && !eq(v1, v2))
-                        return false
-                }
                 is ListStyleSetting -> {
                     val vs1 = setting.get(this)
                     val vs2 = setting.get(other)

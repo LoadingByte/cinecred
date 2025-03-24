@@ -43,6 +43,9 @@ fun <S : Style, SUBJ : Any> KProperty1<S, PersistentList<SUBJ>>.st(): ListStyleS
 fun <S : Style> S.copy(notarizedSettingValue: NotarizedStyleSettingValue<in /* super */ S>): S =
     copy(listOf(notarizedSettingValue))
 
+fun <S : Style> S.copy(vararg notarizedSettingValues: NotarizedStyleSettingValue<in /* super */ S>): S =
+    copy(notarizedSettingValues.asList())
+
 fun <S : Style> S.copy(notarizedSettingValues: List<NotarizedStyleSettingValue<in /* super */ S>>): S {
     val settings = getStyleSettings(javaClass)
     val constructorArgs = Array(settings.size) { idx ->

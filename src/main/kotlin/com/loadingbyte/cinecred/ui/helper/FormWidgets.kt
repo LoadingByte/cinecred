@@ -6,9 +6,7 @@ import com.formdev.flatlaf.ui.FlatButtonUI
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
-import com.loadingbyte.cinecred.project.FontFeature
-import com.loadingbyte.cinecred.project.FontRef
-import com.loadingbyte.cinecred.project.Opt
+import com.loadingbyte.cinecred.project.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
@@ -387,21 +385,7 @@ class TimecodeWidget(
         }
 
     private val signed = model.minimum.let { it == null || (it as Int) < 0 }
-
-    private val editor = object : JSpinner.DefaultEditor(spinner) {
-        init {
-            textField.isEditable = true
-        }
-
-        // There is a subtle bug in the JDK which causes JTextField and its subclasses to not utilize a one pixel wide
-        // column at the right for drawing; instead, it is always empty. However, this column is needed to draw the
-        // caret at the rightmost position when the text field has the preferred size that exactly matches the text
-        // width (which happens to this spinner when the width spec is kept as FIT). Hence, when the user positions the
-        // caret at the rightmost location, the text scrolls one pixel to the left to accommodate the caret. We did not
-        // manage to localize the source of this bug, but as a workaround, we just add one more pixel to the preferred
-        // width, thereby providing the required space for the caret when it is at the rightmost position.
-        override fun getPreferredSize() = super.getPreferredSize().apply { if (!isPreferredSizeSet) width += 1 }
-    }
+    private val editor = makeTimecodeEditor(spinner)
 
     init {
         spinner.putClientProperty(STYLE_CLASS, "monospaced")
@@ -440,6 +424,223 @@ class TimecodeWidget(
         } catch (_: Exception) {
             throw ParseException("", 0)
         }
+
+    }
+
+}
+
+
+class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
+
+    private val formatCB = JComboBox(TimecodeFormat.entries.mapTo(Vector(), ::FormatWrapper))
+    private val inCB = LargeCheckBox(STD_HEIGHT)
+    private val outCB = LargeCheckBox(STD_HEIGHT)
+    private val inSpinner = JSpinner(TimecodeModel(zeroTimecode(format)))
+    private val outSpinner = JSpinner(TimecodeModel(zeroTimecode(format)))
+    private val inEditor = makeTimecodeEditor(inSpinner)
+    private val outEditor = makeTimecodeEditor(outSpinner)
+    private val inResetBtn = JButton(RESET_ICON).apply { toolTipText = l10n("ui.form.tapeSliceResetIn") }
+    private val outResetBtn = JButton(RESET_ICON).apply { toolTipText = l10n("ui.form.tapeSliceResetOut") }
+
+    init {
+        formatCB.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) onFPSOrTcFormatOrRangeChanged() }
+        inCB.addItemListener { inSpinner.isEnabled = inCB.isSelected; notifyChangeListeners() }
+        outCB.addItemListener { outSpinner.isEnabled = outCB.isSelected; notifyChangeListeners() }
+        inSpinner.apply {
+            isEnabled = false
+            addChangeListener { notifyChangeListeners() }
+            putClientProperty(STYLE_CLASS, "monospaced")
+            editor = inEditor
+        }
+        outSpinner.apply {
+            isEnabled = false
+            addChangeListener { notifyChangeListeners() }
+            putClientProperty(STYLE_CLASS, "monospaced")
+            editor = outEditor
+        }
+        inResetBtn.addActionListener { range?.start?.let(::coerceToFormat)?.let { inSpinner.value = it } }
+        outResetBtn.addActionListener { range?.endInclusive?.let(::coerceToFormat)?.let { outSpinner.value = it } }
+        onFPSOrTcFormatOrRangeChanged()
+    }
+
+    override val components = listOf<JComponent>(
+        formatCB,
+        JLabel(l10n("ui.form.tapeSliceIn"), JLabel.TRAILING), inCB, inSpinner, inResetBtn,
+        JLabel(l10n("ui.form.tapeSliceOut"), JLabel.TRAILING), outCB, outSpinner, outResetBtn
+    )
+    override val constraints = listOf(
+        "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig,
+        "newline, sg inout", "", "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig, "",
+        "newline, sg inout", "", "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig, ""
+    )
+
+    var fps: FPS? = null
+        set(fps) {
+            if (field == fps)
+                return
+            field = fps
+            onFPSOrTcFormatOrRangeChanged()
+        }
+
+    var timecodeFormats: EnumSet<TimecodeFormat> = EnumSet.allOf(TimecodeFormat::class.java)
+        set(timecodeFormats) {
+            if (field == timecodeFormats)
+                return
+            field = timecodeFormats
+            formatCB.model = DefaultComboBoxModel(timecodeFormats.mapTo(Vector(), ::FormatWrapper)).apply {
+                selectedItem = formatCB.selectedItem ?: FormatWrapper(timecodeFormats.first())
+            }
+        }
+
+    var range: ClosedRange<Timecode>? = null
+        set(range) {
+            if (field == range)
+                return
+            field = range
+            onFPSOrTcFormatOrRangeChanged()
+        }
+
+    override var value: TapeSlice
+        get() = TapeSlice(
+            Opt(inCB.isSelected, inSpinner.value as Timecode),
+            Opt(outCB.isSelected, outSpinner.value as Timecode)
+        )
+        set(value) {
+            if (value == this.value)
+                return
+            withoutChangeListeners {
+                format = value.inPoint.value.format
+                inCB.isSelected = value.inPoint.isActive
+                outCB.isSelected = value.outPoint.isActive
+                inSpinner.value = value.inPoint.value
+                outSpinner.value = value.outPoint.value
+            }
+            notifyChangeListeners()
+        }
+
+    private var format: TimecodeFormat
+        get() = (formatCB.selectedItem as FormatWrapper).item
+        set(format) {
+            formatCB.isEditable = format !in timecodeFormats
+            formatCB.selectedItem = FormatWrapper(format)
+            formatCB.isEditable = false
+        }
+
+    private fun onFPSOrTcFormatOrRangeChanged() {
+        inEditor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
+        outEditor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
+        if (updateSpinnerValue(inSpinner) or updateSpinnerValue(outSpinner))
+            notifyChangeListeners()
+    }
+
+    private fun updateSpinnerValue(spinner: JSpinner): Boolean {
+        val oldValue = spinner.value as Timecode
+        val newValue = coerceToFormat(oldValue) ?: zeroTimecode(format)
+        val model = TimecodeModel(newValue)
+        spinner.model = model
+        // Firing a state change event is necessary to update the text field.
+        withoutChangeListeners { model.fireStateChanged() }
+        return oldValue != newValue
+    }
+
+    private fun coerceToFormat(timecode: Timecode): Timecode? =
+        if (timecode.format == format) timecode else
+            try {
+                fps?.let { fps -> timecode.toFormat(format, fps) }
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+
+    private fun isInRange(timecode: Timecode): Boolean {
+        val range = this.range ?: return true
+        val start = range.start
+        val end = range.endInclusive
+        if (timecode is Timecode.Frames && start is Timecode.Frames && end is Timecode.Frames ||
+            timecode is Timecode.Clock && start is Timecode.Clock && end is Timecode.Clock
+        )
+            return timecode in range
+        try {
+            fps?.let { fps -> return timecode.toClock(fps) in start.toClock(fps)..end.toClock(fps) }
+        } catch (_: IllegalArgumentException) {
+        }
+        // This is a last-resort best-effort check.
+        if (timecode is Timecode.ExactFramesInSecond && start is Timecode.Clock && end is Timecode.Clock)
+            return timecode.seconds in start.seconds..end.seconds
+        return true
+    }
+
+
+    private class FormatWrapper(override val item: TimecodeFormat) : ComboBoxWrapper {
+        override fun toString() = item.label
+        override fun hashCode() = item.hashCode()
+        override fun equals(other: Any?) = this === other || other is FormatWrapper && item == other.item
+    }
+
+
+    private inner class TimecodeModel(private var timecode: Timecode) : AbstractSpinnerModel() {
+
+        public override fun fireStateChanged() = super.fireStateChanged()
+
+        override fun getValue() = timecode
+
+        override fun setValue(value: Any) {
+            if (timecode != value) {
+                timecode = value as Timecode
+                fireStateChanged()
+            }
+        }
+
+        override fun getNextValue() = getNeighboringValue(1)
+        override fun getPreviousValue() = getNeighboringValue(-1)
+
+        private fun getNeighboringValue(sign: Int): Timecode? {
+            val fps = fps
+            val tc = timecode
+            var neighbor: Timecode? = null
+            if (fps != null && tc !is Timecode.Clock /* exclude clock to not deteriorate its precision */)
+                try {
+                    neighbor = Timecode.Frames(max(0, tc.toFrames(fps).frames + sign)).toFormat(tc.format, fps)
+                } catch (_: IllegalArgumentException) {
+                }
+            if (neighbor == null)
+                neighbor = when (tc) {
+                    is Timecode.Frames -> Timecode.Frames(max(0, tc.frames + sign))
+                    is Timecode.Clock -> when {
+                        sign == 1 -> tc + Timecode.Clock(1, 1)
+                        tc.seconds != 0 -> tc - Timecode.Clock(1, 1)
+                        else -> Timecode.Clock(0, 1)
+                    }
+                    is Timecode.ExactFramesInSecond -> Timecode.ExactFramesInSecond(
+                        seconds = max(0, tc.seconds + if (sign == -1 && tc.frames != 0) 0 else sign), frames = 0
+                    )
+                    is Timecode.SMPTENonDropFrame, is Timecode.SMPTEDropFrame -> null
+                }
+            return if (neighbor != null && isInRange(neighbor)) neighbor else null
+        }
+
+    }
+
+
+    private inner class TimecodeFormatter : DefaultFormatter() {
+
+        init {
+            valueClass = Timecode::class.javaObjectType
+            makeSafe()
+        }
+
+        override fun valueToString(value: Any?): String =
+            (value as? Timecode)?.toString(fps) ?: ""
+
+        override fun stringToValue(string: String?): Timecode = try {
+            val tc = parseTimecode(format, string!!)
+            // These checks throw if the entered timecode is invalid.
+            require(isInRange(tc))
+            fps?.let(tc::toFrames)
+            tc
+        } catch (_: Exception) {
+            throw ParseException("", 0)
+        }
+
     }
 
 }
@@ -487,12 +688,12 @@ abstract class AbstractComboBoxWidget<V : Any, E : Any>(
                 return
             field = items
             val oldSelected = unwrap(cb.selectedItem)
-            val keepSelected = shouldKeepSelected(oldSelected)
+            val newSelected = newSelectionAfterItemsChange(oldSelected)
             cb.model = DefaultComboBoxModel(items.mapTo(Vector(), ::Wrapper)).apply {
-                if (keepSelected)
-                    selectedItem = oldSelected?.let(::Wrapper)
+                if (newSelected != null)
+                    selectedItem = if (newSelected.isEmpty) null else Wrapper(newSelected.get())
             }
-            if (!keepSelected)
+            if (unwrap(cb.selectedItem) != oldSelected)
                 notifyChangeListeners()
             if (!scrollbar)
                 cb.maximumRowCount = items.size
@@ -509,8 +710,8 @@ abstract class AbstractComboBoxWidget<V : Any, E : Any>(
     protected fun unwrap(wrapper: Any?): E? =
         (wrapper as AbstractComboBoxWidget<*, *>.Wrapper?)?.item?.let(itemClass::cast)
 
-    protected open fun shouldKeepSelected(selected: E?): Boolean =
-        selected in items
+    protected open fun newSelectionAfterItemsChange(selected: E?): Optional<E>? =
+        if (selected in items) Optional.of(selected!!) else null
 
     init {
         this.items = items
@@ -558,7 +759,7 @@ class InconsistentComboBoxWidget<V : Any>(
 ) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
 
     // Also sets selectedItem to null if it was null before.
-    override fun shouldKeepSelected(selected: V?) = true
+    override fun newSelectionAfterItemsChange(selected: V?) = Optional.ofNullable(selected)
 
     override var value: V
         get() = super.value
@@ -566,6 +767,36 @@ class InconsistentComboBoxWidget<V : Any>(
             cb.isEditable = value !in items
             super.value = value
             cb.isEditable = false
+        }
+
+}
+
+
+class RefComboBoxWidget<V : Any>(
+    valueClass: Class<V>,
+    items: List<V>,
+    toString: (V) -> String,
+    private val makeEmptyRef: (String) -> V,
+    widthSpec: WidthSpec? = null
+) : ComboBoxWidget<V>(valueClass, items, toString, widthSpec) {
+
+    override fun newSelectionAfterItemsChange(selected: V?): Optional<V>? {
+        val selStr = toString(selected ?: return null)
+        return Optional.of(items.find { toString(it) == selStr } ?: makeEmptyRef(selStr))
+    }
+
+    override var value: V
+        get() = super.value
+        set(value) {
+            val valueStr = toString(value)
+            val equivValue = items.find { toString(it) == valueStr }
+            if (equivValue != null)
+                super.value = equivValue
+            else {
+                cb.isEditable = true
+                super.value = makeEmptyRef(valueStr)
+                cb.isEditable = false
+            }
         }
 
 }
@@ -584,8 +815,8 @@ open class EditableComboBoxWidget<V : Any>(
         cb.editor = CustomComboBoxEditor()
     }
 
-    override fun shouldKeepSelected(selected: V?) =
-        selected != null
+    override fun newSelectionAfterItemsChange(selected: V?) =
+        if (selected != null) Optional.of(selected) else null
 
 
     private inner class CustomComboBoxEditor : BasicComboBoxEditor() {
@@ -2163,4 +2394,20 @@ private fun String.removeAnySuffix(suffixes: List<String>, ignoreCase: Boolean =
  */
 private fun DefaultFormatter.makeSafe() {
     commitsOnValidEdit = true
+}
+
+
+private fun makeTimecodeEditor(spinner: JSpinner) = object : JSpinner.DefaultEditor(spinner) {
+    init {
+        textField.isEditable = true
+    }
+
+    // There is a subtle bug in the JDK which causes JTextField and its subclasses to not utilize a one pixel wide
+    // column at the right for drawing; instead, it is always empty. However, this column is needed to draw the
+    // caret at the rightmost position when the text field has the preferred size that exactly matches the text
+    // width (which happens to this spinner when the width spec is kept as FIT). Hence, when the user positions the
+    // caret at the rightmost location, the text scrolls one pixel to the left to accommodate the caret. We did not
+    // manage to localize the source of this bug, but as a workaround, we just add one more pixel to the preferred
+    // width, thereby providing the required space for the caret when it is at the rightmost position.
+    override fun getPreferredSize() = super.getPreferredSize().apply { if (!isPreferredSizeSet) width += 1 }
 }

@@ -110,8 +110,8 @@ class Table(
         log += ParserMsg(spreadsheet.name, row?.let(::getRecordNo), colName, cellValue, severity, msg, mds)
     }
 
-    fun logMigrationPut(row: Int?, l10nColName: String?, value: String, migrationDataSource: MigrationDataSource<*>) {
-        log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", value), migrationDataSource)
+    fun logMigrationPut(row: Int?, l10nColName: String?, value: String, mds: MigrationDataSource<*>? = null) {
+        log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", value), mds)
     }
 
     private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo

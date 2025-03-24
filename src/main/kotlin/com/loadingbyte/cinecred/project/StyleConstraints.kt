@@ -23,6 +23,8 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
     ContentStyle::class.java -> CONTENT_STYLE_CONSTRAINTS
     LetterStyle::class.java -> LETTER_STYLE_CONSTRAINTS
     Layer::class.java -> LAYER_CONSTRAINTS
+    PictureStyle::class.java -> PICTURE_STYLE_CONSTRAINTS
+    TapeStyle::class.java -> TAPE_STYLE_CONSTRAINTS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleConstraint<S, *>>
 
@@ -326,6 +328,72 @@ private fun canWalkBackToSelf(layers: List<Layer>, ownLayerIdx: Int): Boolean {
 }
 
 
+private val PICTURE_STYLE_CONSTRAINTS: List<StyleConstraint<PictureStyle, *>> = listOf(
+    JudgeConstr(WARN, msg("blank"), PictureStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PictureStyle::name.st()) { styling, style ->
+        styling.pictureStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+    },
+    PictureConstr(WARN, PictureStyle::picture.st()),
+    // To avoid OOM crashes due to absurdly large pictures, limit their size to a reasonable range.
+    DoubleConstr(ERROR, PictureStyle::widthPx.st(), min = 0.0, minInclusive = false, max = 10_000.0),
+    DoubleConstr(ERROR, PictureStyle::heightPx.st(), min = 0.0, minInclusive = false, max = 10_000.0)
+)
+
+
+private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf(
+    JudgeConstr(WARN, msg("blank"), TapeStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), TapeStyle::name.st()) { styling, style ->
+        styling.tapeStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+    },
+    TapeConstr(WARN, TapeStyle::tape.st()),
+    // To avoid OOM crashes due to absurdly large tapes, limit their size to a reasonable range.
+    IntConstr(ERROR, TapeStyle::widthPx.st(), min = 1, max = 10_000),
+    IntConstr(ERROR, TapeStyle::heightPx.st(), min = 1, max = 10_000),
+    TapeSliceConstr(
+        WARN, TapeStyle::slice.st(),
+        getFPS = { styling, style ->
+            val tape = style.tape.tape
+            if (tape == null)
+                null
+            else if (tape.fileSeq)
+                styling.global.fps
+            else
+                try {
+                    tape.fps
+                } catch (_: IllegalStateException) {
+                    null
+                }
+        },
+        getTimecodeFormats = { styling, style ->
+            val tape = style.tape.tape
+            if (tape == null)
+                EnumSet.allOf(TimecodeFormat::class.java)
+            else if (tape.fileSeq)
+                styling.global.fps.canonicalTimecodeFormats
+            else
+                try {
+                    // See coerceTimecode() in BodyDrawer.kt for reasoning behind these choices.
+                    tape.fps?.canonicalTimecodeFormats
+                        ?: EnumSet.of(TimecodeFormat.EXACT_FRAMES_IN_SECOND, TimecodeFormat.CLOCK)
+                } catch (_: IllegalStateException) {
+                    EnumSet.allOf(TimecodeFormat::class.java)
+                }
+        },
+        getRange = { _, style ->
+            try {
+                style.tape.tape?.availableRange?.run { start..endExclusive }
+            } catch (_: IllegalStateException) {
+                null
+            }
+        }
+    ),
+    IntConstr(ERROR, TapeStyle::leftTemporalMarginFrames.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::rightTemporalMarginFrames.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::fadeInFrames.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::fadeOutFrames.st(), min = 0)
+)
+
+
 sealed class StyleConstraint<S : Style, SS : StyleSetting<S, *>>(
     vararg settings: SS
 ) {
@@ -404,11 +472,32 @@ class FontConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, FontRef>>(setting)
 
 
+class PictureConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, PictureRef>
+) : StyleConstraint<S, StyleSetting<S, PictureRef>>(setting)
+
+
+class TapeConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, TapeRef>
+) : StyleConstraint<S, StyleSetting<S, TapeRef>>(setting)
+
+
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
     val getAvailableTags: (Styling, S) -> SequencedSet<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
+
+
+class TapeSliceConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, TapeSlice>,
+    val getFPS: (Styling, S) -> FPS?,
+    val getTimecodeFormats: (Styling, S) -> EnumSet<TimecodeFormat>,
+    val getRange: (Styling, S) -> ClosedRange<Timecode>?
+) : StyleConstraint<S, StyleSetting<S, TapeSlice>>(setting)
 
 
 class StyledStringConstr<S : Style>(
@@ -574,6 +663,22 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                         if (fontRef.font == null)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.font"))
                     }
+                is PictureConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, picRef ->
+                        if (picRef.loader == null)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.picture"))
+                    }
+                is TapeConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, tapeRef ->
+                        val tape = tapeRef.tape
+                        if (tape == null)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.tape"))
+                        else try {
+                            tape.spec
+                        } catch (_: IllegalStateException) {
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.tapeCorrupt"))
+                        }
+                    }
                 is FontFeatureConstr -> {
                     val availableTags = cst.getAvailableTags(styling, style)
                     forEachRelevantSetting(cst, ignoreSettings) { st ->
@@ -591,6 +696,36 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
                         }
+                    }
+                }
+                is TapeSliceConstr -> {
+                    val fps = cst.getFPS(styling, style)
+                    val formats = cst.getTimecodeFormats(styling, style)
+                    val range = cst.getRange(styling, style)
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, sl ->
+                        for (tcOpt in arrayOf(sl.inPoint, sl.outPoint)) if (tcOpt.isActive) {
+                            val tc = tcOpt.value
+                            if (tc.format !in formats) {
+                                val msg = l10n("project.styling.constr.timecodeFormatDisallowed")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                            try {
+                                if (fps != null) tc.toFrames(fps)
+                            } catch (_: IllegalArgumentException) {
+                                val msg = l10n("project.styling.constr.timecodeNonexistent")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                            if (range != null && (lessThan(tc, range.start, fps) == true ||
+                                        lessThan(range.endInclusive, tc, fps) == true)
+                            ) {
+                                val msg = l10n("project.styling.constr.timecodeExceedsRange")
+                                log(rootStyle, style, st, idx, cst.severity, msg)
+                            }
+                        }
+                        if (sl.inPoint.isActive && sl.outPoint.isActive &&
+                            lessThan(sl.inPoint.value, sl.outPoint.value, fps) == false
+                        )
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.tapeSpanLT"))
                     }
                 }
                 is StyledStringConstr ->
@@ -651,6 +786,16 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
 
     return violations
 }
+
+private fun lessThan(tc1: Timecode, tc2: Timecode, fps: FPS?): Boolean? =
+    if (tc1 is Timecode.Frames && tc2 is Timecode.Frames || tc1 is Timecode.Clock && tc2 is Timecode.Clock)
+        tc1 < tc2
+    else
+        try {
+            if (fps == null) null else tc1.toClock(fps) < tc2.toClock(fps)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
 
 private inline fun <S : Style, SS : StyleSetting<S, SUBJ>, SUBJ : Any> forEachRelevantSetting(
     constraint: StyleConstraint<S, SS>,

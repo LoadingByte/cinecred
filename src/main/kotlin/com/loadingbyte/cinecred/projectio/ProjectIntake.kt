@@ -1,12 +1,10 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.LOGGER
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.throwableAwareTask
-import com.loadingbyte.cinecred.common.walkSafely
 import com.loadingbyte.cinecred.delivery.RenderQueue
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.DELETE
 import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.MODIFY
@@ -20,6 +18,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -44,9 +43,9 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         fun creditsPolling(possible: Boolean)
         fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, uri: URI?, log: List<ParserMsg>)
         fun pushCreditsSpreadsheetsLog(log: List<ParserMsg>)
-        fun pushProjectFonts(projectFonts: Collection<Font>)
-        fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>)
-        fun pushTapes(tapes: Collection<Tape>)
+        fun pushProjectFonts(projectFonts: SortedMap<String, Font>)
+        fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>)
+        fun pushTapes(tapes: SortedMap<String, Tape>)
     }
 
     private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
@@ -61,7 +60,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private val auxFileEventBatchProcessor = AtomicReference<ScheduledFuture<*>?>()
 
     private val projectFonts = HashMap<Path, List<Font>>()
-    private val pictureLoaders = HashMap<Path, PictureLoader>()
+    private val pictureLoaders = PathTreeMap<Picture.Loader>()
     private val tapes = HashMap<Path, Tape>()
 
     // These are set to true to force calls to the corresponding pushX() method upon initialization.
@@ -128,9 +127,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         RecursiveFileWatcher.unwatch(projectDir)
 
         executor.submit(throwableAwareTask {
-            // Dispose of all loaded pictures.
-            for (pictureLoader in pictureLoaders.values)
-                pictureLoader.dispose()
+            // Close all loaded pictures.
+            pictureLoaders.forEachValue(action = Picture.Loader::close)
 
             // Close all recognized tapes.
             for (tape in tapes.values)
@@ -215,16 +213,16 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             return
         }
 
-        tryReadPictureLoader(fileOrDir)?.let { pictureLoader ->
-            pictureLoaders.put(fileOrDir, pictureLoader)?.dispose()
+        Picture.Loader.recognize(fileOrDir)?.let { pictureLoader ->
+            pictureLoaders.put(fileOrDir, pictureLoader)?.close()
             pictureLoadersChanged = true
             return
         }
 
-        tryRecognizeTape(fileOrDir)?.let { tape ->
+        Tape.recognize(fileOrDir)?.let { tape ->
             tapes.put(fileOrDir, tape)?.close()
             tapesChanged = true
-            // If this is an image sequence tape, disable all picture loaders inside the sequence folder.
+            // If this is a long image sequence tape, disable all picture loaders inside the sequence folder.
             if (tape.fileSeq)
                 pictureLoadersChanged = true
             return
@@ -238,7 +236,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         }
 
         pictureLoaders.remove(fileOrDir)?.let { pictureLoader ->
-            pictureLoader.dispose()
+            pictureLoader.close()
             pictureLoadersChanged = true
             return
         }
@@ -256,23 +254,53 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     private fun pushAuxiliaryFileChanges() {
         if (projectFontsChanged)
-            callbacks.pushProjectFonts(projectFonts.values.flatten())
+            callbacks.pushProjectFonts(buildDedupSortedMap { put ->
+                for (fonts in projectFonts.values)
+                    for (font in fonts)
+                        put(font.getFontName(Locale.ROOT), font)
+            })
 
-        if (pictureLoadersChanged)
-            callbacks.pushPictureLoaders(pictureLoaders.values)
+        if (pictureLoadersChanged) {
+            // Exclude all pictures that belong to a file sequence tape with too many frames.
+            val exclude = tapes.values.mapNotNullTo(HashSet()) { tape ->
+                if (tape.fileSeq && (tape.availableRange.run { endExclusive - start } as Timecode.Frames).frames > 10)
+                    tape.fileOrDir else null
+            }
+            callbacks.pushPictureLoaders(buildDedupSortedMap { put ->
+                pictureLoaders.forEachValue(exclude) { pictureLoader ->
+                    put(pictureLoader.file.name, pictureLoader)
+                }
+            })
+        }
 
         if (tapesChanged)
-            callbacks.pushTapes(tapes.values)
+            callbacks.pushTapes(buildDedupSortedMap { put ->
+                for (tape in tapes.values)
+                    put(tape.fileOrDir.name, tape)
+            })
 
         projectFontsChanged = false
         pictureLoadersChanged = false
         tapesChanged = false
     }
 
+    private fun <V : Any> buildDedupSortedMap(builderAction: ((String, V) -> Unit) -> Unit): SortedMap<String, V> {
+        val map = TreeMap<String, V>()
+        val dupKeys = HashSet<String>()
+        builderAction { key, value ->
+            if (key !in dupKeys && map.put(key, value) != null) {
+                map.remove(key)
+                dupKeys.add(key)
+            }
+        }
+        return map
+    }
+
 
     companion object {
 
         private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + SERVICE_LINK_EXTS
+        private val FONT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ttf", "ttc", "otf", "otc")
 
         fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
             fun availExtsStr() = CREDITS_EXTS.joinToString()
@@ -317,12 +345,73 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     CREDITS_EXTS.any { ext -> ext.equals(fileExt, ignoreCase = true) }
         }
 
+        private fun tryReadFonts(file: Path): List<Font> {
+            if (file.isRegularFile() && file.extension in FONT_EXTS)
+                try {
+                    return Font.createFonts(file.toFile()).asList()
+                } catch (e: Exception) {
+                    LOGGER.error("Font '{}' cannot be read.", file.name, e)
+                }
+            return emptyList()
+        }
+
         private fun safeIsSameFile(p1: Path, p2: Path) =
             try {
                 Files.isSameFile(p1, p2)
             } catch (_: IOException) {
                 false
             }
+
+    }
+
+
+    private class PathTreeMap<V : Any> {
+
+        private val root = Node<V>(Path(""), null)
+
+        operator fun get(path: Path): V? {
+            var node = root
+            for (component in path)
+                node = node.children[component] ?: return null
+            return node.value
+        }
+
+        fun put(path: Path, value: V): V? {
+            var node = root
+            for ((i, component) in path.withIndex())
+                node = node.children.computeIfAbsent(component) {
+                    // We can't use Path.subpath() to compute nodePath as it turns absolute paths into relative ones.
+                    var nodePath = path
+                    repeat(path.nameCount - i - 1) { nodePath = nodePath.parent }
+                    Node(nodePath, null)
+                }
+            return node.value.also { node.value = value }
+        }
+
+        fun remove(path: Path): V? {
+            var parentNode = root
+            for (component in path.parent)
+                parentNode = parentNode.children[component] ?: return null
+            val filename = path.fileName
+            val node = parentNode.children[filename] ?: return null
+            if (node.children.isEmpty())
+                parentNode.children.remove(filename)
+            return node.value
+        }
+
+        fun forEachValue(exclude: Set<Path>? = null, action: (V) -> Unit) {
+            fun recursion(node: Node<V>) {
+                node.value?.let(action)
+                for (child in node.children.values)
+                    if (exclude == null || child.path !in exclude)
+                        recursion(child)
+            }
+            recursion(root)
+        }
+
+        private class Node<V>(val path: Path, var value: V?) {
+            val children = HashMap<Path, Node<V>>()
+        }
 
     }
 

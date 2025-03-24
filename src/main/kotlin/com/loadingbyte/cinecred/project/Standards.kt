@@ -1,10 +1,6 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.TimecodeFormat
-import com.loadingbyte.cinecred.common.getBundledFont
-import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import kotlinx.collections.immutable.persistentListOf
 import java.util.*
@@ -17,6 +13,8 @@ fun <S : Style> getPreset(styleClass: Class<S>): S = when (styleClass) {
     ContentStyle::class.java -> PRESET_CONTENT_STYLE
     LetterStyle::class.java -> PRESET_LETTER_STYLE
     Layer::class.java -> PRESET_LAYER
+    PictureStyle::class.java -> PRESET_PICTURE_STYLE
+    TapeStyle::class.java -> PRESET_TAPE_STYLE
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as S
 
@@ -198,6 +196,31 @@ val PRESET_LAYER = Layer(
     clearingRfh = 0.0,
     clearingJoin = LineJoin.MITER,
     blurRadiusRfh = 0.0
+)
+
+
+val PRESET_PICTURE_STYLE = PictureStyle(
+    name = "???",
+    volatile = false,
+    picture = PictureRef(""),
+    widthPx = Opt(false, 0.0),
+    heightPx = Opt(false, 0.0),
+    cropBlankSpace = false
+)
+
+
+val PRESET_TAPE_STYLE = TapeStyle(
+    name = "???",
+    volatile = false,
+    tape = TapeRef(""),
+    widthPx = Opt(false, 0),
+    heightPx = Opt(false, 0),
+    slice = TapeSlice(Opt(false, Timecode.SMPTENonDropFrame(0, 0)), Opt(false, Timecode.SMPTENonDropFrame(0, 0))),
+    temporallyJustify = HJustify.LEFT,
+    leftTemporalMarginFrames = 0,
+    rightTemporalMarginFrames = 0,
+    fadeInFrames = 0,
+    fadeOutFrames = 0
 )
 
 

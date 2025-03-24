@@ -14,16 +14,22 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
     val toml = buildMap {
         put("version", VERSION)
         put("global", writeStyle(styling, styling.global))
-        if (styling.pageStyles.isNotEmpty())
-            put("pageStyle", styling.pageStyles.map { writeStyle(styling, it) })
-        if (styling.contentStyles.isNotEmpty())
-            put("contentStyle", styling.contentStyles.map { writeStyle(styling, it) })
-        if (styling.letterStyles.isNotEmpty())
-            put("letterStyle", styling.letterStyles.map { writeStyle(styling, it) })
+        putStyles("pageStyle", styling, styling.pageStyles)
+        putStyles("contentStyle", styling, styling.contentStyles)
+        putStyles("letterStyle", styling, styling.letterStyles)
+        putStyles("pictureStyle", styling, styling.pictureStyles)
+        putStyles("tapeStyle", styling, styling.tapeStyles)
     }
 
     stylingFile.parent.createDirectoriesSafely()
     writeToml(stylingFile, toml)
+}
+
+
+private fun MutableMap<String, Any>.putStyles(key: String, styling: Styling, styles: List<Style>) {
+    val filteredStyles = styles.filter { style -> style !is PopupStyle || !style.volatile }
+    if (filteredStyles.isNotEmpty())
+        put(key, filteredStyles.map { writeStyle(styling, it) })
 }
 
 
@@ -36,11 +42,11 @@ private fun <S : Style> writeStyle(styling: Styling, style: S): Map<String, Any>
         if (setting !in excludedSettings)
             when (setting) {
                 is DirectStyleSetting ->
-                    toml[setting.name] = convert(styling, setting.get(style))
+                    convert(styling, setting.get(style))?.let { toml[setting.name] = it }
                 is OptStyleSetting -> {
                     val opt = setting.get(style)
                     if (opt.isActive)
-                        toml[setting.name] = convert(styling, opt.value)
+                        convert(styling, opt.value)?.let { toml[setting.name] = it }
                 }
                 is ListStyleSetting -> {
                     val list = setting.get(style)
@@ -48,14 +54,14 @@ private fun <S : Style> writeStyle(styling: Styling, style: S): Map<String, Any>
                     // Otherwise, the previously empty list would suddenly be filled with the preset list when reading
                     // the style later on.
                     if (list.isNotEmpty() || setting.get(preset).isNotEmpty())
-                        toml[setting.name] = list.map { convert(styling, it) }
+                        toml[setting.name] = list.mapNotNull { convert(styling, it) }
                 }
             }
     return toml
 }
 
 
-private fun convert(styling: Styling, value: Any): Any = when (value) {
+private fun convert(styling: Styling, value: Any): Any? = when (value) {
     is Int, is Double, is Boolean, is String -> value
     is Enum<*> -> value.name
     is Locale -> value.toLanguageTag()
@@ -63,7 +69,13 @@ private fun convert(styling: Styling, value: Any): Any = when (value) {
     is Resolution -> value.toString()
     is FPS -> value.toString()
     is FontRef -> value.name
+    is PictureRef -> value.name
+    is TapeRef -> value.name
     is FontFeature -> "${value.tag}=${value.value}"
+    is TapeSlice -> listOf(value.inPoint, value.outPoint).joinToString("-") {
+        val v = it.value
+        if (!it.isActive) "" else if (v is Timecode.Clock) "${v.numerator}/${v.denominator}" else v.toString()
+    }.let { if (it.length == 1) null else it }
     is Style -> writeStyle(styling, value)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")
 }

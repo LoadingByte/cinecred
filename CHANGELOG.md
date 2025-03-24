@@ -7,6 +7,8 @@ Cinecred Changelog
 
 ### Additions
 
+- Pictures and videos are now configured via the styling window GUI.
+- The aspect ratio of pictures and videos may now be altered.
 - A new button in the project window directly opens the credits file either in
   the local spreadsheet editor or the web browser.
 - Added configurable templates for the delivery destination file/folder.
@@ -28,6 +30,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- Addition and deletion of project fonts is now detected immediately.
 - All pictures and embedded videos are now loaded in parallel.
 - The page preview now appears as soon as possible, and no longer waits for all
   embedded videos in the entire project to load.
@@ -41,6 +44,12 @@ Cinecred Changelog
 - Changing the opacity in a color picker no longer causes a crash.
 - Fixed crash upon adding a raster image overlay.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
+
+### Compatibility Notes
+
+- Picture and video configuration is automatically migrated from spreadsheet
+  tags to the styling window, and warning messages tell the user what to type
+  into which cells in the spreadsheet to complete the migration.
 
 
 1.7.0

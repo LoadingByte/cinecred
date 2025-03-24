@@ -79,10 +79,12 @@ abstract class ScreencastDemo(
         prjWinSplitRatio: Double = if (desktopHeight < 800) 0.85 else 0.9,
         styWinSplitRatio: Double = 0.25,
         vidWinSize: Dimension? = null,
-        dlvWinSize: Dimension? = null
+        dlvWinSize: Dimension? = null,
+        prepareProjectDir: (() -> Unit)? = null
     ) {
         projectCtrl = masterCtrl!!.leakedProjectCtrls.lastOrNull() ?: run {
             tryCopyTemplate(projectDir, template(locale), CsvFormat)
+            prepareProjectDir?.invoke()
             edt { masterCtrl!!.openProject(projectDir, openOnScreen = gCfg) }
             sleep(1500)
             masterCtrl!!.leakedProjectCtrls.last()
@@ -178,6 +180,7 @@ abstract class ScreencastDemo(
     protected val styPageForm get() = styPnl.leakedPageStyleForm
     protected val styContForm get() = styPnl.leakedContentStyleForm
     protected val styLetrForm get() = styPnl.leakedLetterStyleForm
+    protected val styPictForm get() = styPnl.leakedPictureStyleForm
     protected fun styLayrForm(i: Int): StyleForm<Layer> =
         ((styLayrPnl(i).getComponent(6) as JPanel).getComponent(0) as StyleForm<*>).castToStyle(Layer::class.java)
 
@@ -195,6 +198,9 @@ abstract class ScreencastDemo(
         get() = styLetrForm.getWidgetFor(LetterStyle::heightPx.st()).components[0].getComponent(0)!!
     protected val styLayrList
         get() = styLetrForm.getWidgetFor(LetterStyle::layers.st()).components[0] as JPanel
+    protected val styPicHeight
+        get() = ((styPictForm.getWidgetFor(PictureStyle::heightPx.st()).components[1] as JSpinner).editor
+                as JSpinner.NumberEditor).textField
 
     protected fun styLayrAddBtn(i: Int) = styLayrList.let { it.getComponent(it.componentCount - 1 - 2 * i) } as JButton
     protected fun styLayrPnl(i: Int) = styLayrList.let { it.getComponent(it.componentCount - 2 - 2 * i) } as JPanel
@@ -308,15 +314,16 @@ class Screencast(
 
     private inline fun type(text: String, get: () -> String, set: (String) -> Unit) {
         val cur = get()
-        for (n in 1..cur.length) {
-            set(cur.dropLast(n))
-            if (n != cur.length)
+        val prefix = cur.commonPrefixWith(text).length
+        for (n in cur.length - 1 downTo prefix) {
+            set(cur.substring(0, n))
+            if (n != prefix)
                 hold(50)
         }
         hold()
-        for (n in text.length - 1 downTo 0) {
-            set(text.dropLast(n))
-            if (n != 0)
+        for (n in prefix + 1..text.length) {
+            set(text.substring(0, n))
+            if (n != text.length)
                 hold(70)
         }
     }

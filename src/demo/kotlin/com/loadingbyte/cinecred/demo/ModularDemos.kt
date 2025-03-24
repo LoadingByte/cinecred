@@ -66,10 +66,14 @@ abstract class StyleSettingsDemo<S : Style>(
     protected open val suffixes: List<String> get() = emptyList()
     protected open fun credits(style: S): Pair<Global, Page>? = null
     protected open fun augmentStyling(styling: Styling): Styling = styling
+    protected open val pictureLoaders: Collection<Picture.Loader> get() = emptyList()
+    protected open val tapes: Collection<Tape> get() = emptyList()
 
     final override fun doGenerate() {
         val styles = styles()
-        val settImgs = renderStyleSettings(settings, styles, { credits(it)?.let(::extractStyling) }, ::augmentStyling)
+        val settImgs = renderStyleSettings(
+            settings, styles, { credits(it)?.let(::extractStyling) }, ::augmentStyling, pictureLoaders, tapes
+        )
         val pageDefImgsAndGroundings =
             styles.mapNotNull(::credits).map { buildPageDefImgAndGrounding(it, ::augmentStyling, pageScaling) }
         val pageImgs = renderDefImages(pageDefImgsAndGroundings, pageWidth, pageHeight, pageExtendY, false, pageGuides)
@@ -95,23 +99,41 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
 }
 
 
-abstract class TimelineDemo(
+abstract class StyleSettingsTimelineDemo(
     filename: String,
     format: Format,
-    private val leftMargin: Int = 0,
-    private val rightMargin: Int = 0,
-    private val leftFade: Int = 0,
-    private val rightFade: Int = 0
+    private val settings: List<StyleSetting<TapeStyle, *>>
 ) : Demo(filename, format) {
 
-    protected abstract fun credits(): Pair<Global, Page>
+    protected abstract fun styles(): List<TapeStyle>
+    protected abstract fun credits(style: TapeStyle): Pair<Global, Page>
 
     final override fun doGenerate() {
-        val project = buildProject(credits())
-        val video = drawVideo(project, drawPages(project, project.credits.single()))
-        val v = renderDefVideo(video, project.styling.global.grounding)
-        val t = renderTimeline(video.resolution.widthPx, video.numFrames, leftMargin, rightMargin, leftFade, rightFade)
-        stackImages(v.asIterable(), t.asIterable()).forEach(::write)
+        val styles = styles()
+        var settImgs = renderStyleSettings(settings, styles, { extractStyling(credits(it)) })
+        settImgs = stackImages(settImgs.toList(), extendX = listOf(20), extendY = listOf(10))
+        styles.zip(settImgs.asIterable()) { style, settImg ->
+            val project = buildProject(credits(style))
+            val video = drawVideo(project, drawPages(project, project.credits.single()))
+            val videoImgs = renderDefVideo(video, project.styling.global.grounding)
+            val tlImgs = generateTimeline(style, video)
+            stackImages(List(video.numFrames) { settImg }, tlImgs.asIterable(), videoImgs.asIterable()).forEach(::write)
+        }
+    }
+
+    private fun generateTimeline(style: TapeStyle, video: DeferredVideo): Sequence<BufferedImage> {
+        val timeframe = video.numFrames - (style.leftTemporalMarginFrames + style.rightTemporalMarginFrames)
+        val avail = style.tape.tape!!.availableRange
+        var slice = (style.slice.outPoint.orElse { avail.endExclusive }.toFrames(video.fps).frames -
+                style.slice.inPoint.orElse { avail.start }.toFrames(video.fps).frames).coerceAtMost(timeframe)
+        var leftMargin = style.leftTemporalMarginFrames
+        if (style.temporallyJustify == HJustify.CENTER) leftMargin += (timeframe - slice) / 2
+        if (style.temporallyJustify == HJustify.RIGHT) leftMargin += timeframe - slice
+        val rightMargin = video.numFrames - (leftMargin + slice)
+        return renderTimeline(
+            video.resolution.widthPx, video.numFrames, leftMargin, rightMargin, style.leftTemporalMarginFrames,
+            style.rightTemporalMarginFrames, style.fadeInFrames, style.fadeOutFrames
+        )
     }
 
 }
@@ -127,6 +149,8 @@ private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
     val pageStyles = HashSet<PageStyle>()
     val contentStyles = HashSet<ContentStyle>()
     val letterStyles = HashSet<LetterStyle>()
+    val pictureStyles = HashSet<PictureStyle>()
+    val tapeStyles = HashSet<TapeStyle>()
     for (stage in page.stages) {
         pageStyles.add(stage.style)
         for (compound in stage.compounds)
@@ -137,14 +161,21 @@ private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
                         when (elem) {
                             is BodyElement.Nil -> letterStyles.add(elem.sty)
                             is BodyElement.Str -> for (str in elem.lines) for ((_, sty) in str) letterStyles.add(sty)
-                            is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
+                            is BodyElement.Pic -> pictureStyles.add(elem.sty)
+                            is BodyElement.Tap -> tapeStyles.add(elem.sty)
+                            is BodyElement.Mis -> {}
                         }
                     for (str in block.head.orEmpty()) for ((_, style) in str) letterStyles.add(style)
                     for (str in block.tail.orEmpty()) for ((_, style) in str) letterStyles.add(style)
                 }
     }
     return Styling(
-        global, pageStyles.toPersistentList(), contentStyles.toPersistentList(), letterStyles.toPersistentList()
+        global,
+        pageStyles.toPersistentList(),
+        contentStyles.toPersistentList(),
+        letterStyles.toPersistentList(),
+        pictureStyles.toPersistentList(),
+        tapeStyles.toPersistentList()
     )
 }
 
@@ -209,7 +240,9 @@ private fun <S : Style> renderStyleSettings(
     settings: List<StyleSetting<S, *>>,
     styles: List<S>,
     buildStyling: ((S) -> Styling?)?,
-    augmentStyling: ((Styling) -> Styling)?
+    augmentStyling: ((Styling) -> Styling)? = null,
+    pictureLoaders: Collection<Picture.Loader> = emptyList(),
+    tapes: Collection<Tape> = emptyList()
 ) = sequence<BufferedImage> {
     val styleClass = styles[0].javaClass
 
@@ -225,9 +258,13 @@ private fun <S : Style> renderStyleSettings(
     edt {
         @Suppress("UNCHECKED_CAST")
         form = StyleForm(
-            styleClass, constSettings = if (!LayerStyle::class.java.isAssignableFrom(styleClass)) emptyMap() else
-                mapOf(LayerStyle::name.st() to "", LayerStyle::collapsed.st() to false)
-                        as Map<StyleSetting<in S, *>, Any>
+            styleClass, latent = when {
+                PopupStyle::class.java.isAssignableFrom(styleClass) ->
+                    setOf(PopupStyle::volatile.st()) as Set<StyleSetting<in S, *>>
+                LayerStyle::class.java.isAssignableFrom(styleClass) ->
+                    setOf(LayerStyle::name.st(), LayerStyle::collapsed.st()) as Set<StyleSetting<in S, *>>
+                else -> emptySet()
+            }
         )
         frame = JFrame(gCfg).apply {
             contentPane.add(form)
@@ -244,16 +281,20 @@ private fun <S : Style> renderStyleSettings(
         }
     )
     formAdjuster.activeForm = form
+    formAdjuster.updatePictureLoaders(pictureLoaders)
+    formAdjuster.updateTapes(tapes)
     sleep(500)
     edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
 
     // Iterate through the list of styles() and capture a form screenshot for each style.
     for (style in styles) {
         curStyling = buildStyling?.invoke(style) ?: when (style) {
-            is Global -> Styling(style, pl(), pl(), pl())
-            is PageStyle -> Styling(PRESET_GLOBAL, pl(style), pl(), pl())
-            is ContentStyle -> Styling(PRESET_GLOBAL, pl(), pl(style), pl())
-            is LetterStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(style))
+            is Global -> Styling(style, pl(), pl(), pl(), pl(), pl())
+            is PageStyle -> Styling(PRESET_GLOBAL, pl(style), pl(), pl(), pl(), pl())
+            is ContentStyle -> Styling(PRESET_GLOBAL, pl(), pl(style), pl(), pl(), pl())
+            is LetterStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(style), pl(), pl())
+            is PictureStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(style), pl())
+            is TapeStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(), pl(style))
             else -> throw IllegalStateException()
         }
         if (augmentStyling != null)
@@ -299,7 +340,8 @@ private fun <S : Style> renderStyleSettings(
 
 
 private fun renderTimeline(
-    imgW: Int, frames: Int, leftMargin: Int, rightMargin: Int, leftFade: Int, rightFade: Int
+    imgW: Int, frames: Int,
+    leftMargin: Int, rightMargin: Int, leftHatch: Int, rightHatch: Int, leftFade: Int, rightFade: Int
 ) = sequence<BufferedImage> {
     fun roundRect(x: Int, y: Int, w: Int, h: Int, arc: Int) = RoundRectangle2D.Double(
         x.toDouble(), y.toDouble(), w.toDouble(), h.toDouble(), arc.toDouble(), arc.toDouble()
@@ -326,6 +368,11 @@ private fun renderTimeline(
         lineTo(-4.0, 6.0)
         closePath()
     }
+    val hatchTex = BufferedImage(5, 5, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
+        g2.setHighQuality()
+        g2.color = PALETTE_GRAY_COLOR
+        g2.drawLine(-1, 5, 5, -1)
+    }
 
     val imgH = 50
     val timelineW = frames
@@ -342,6 +389,13 @@ private fun renderTimeline(
         g2.fillRect(0, 0, imgW, imgH)
 
         g2.translate(timelineX, timelineY)
+
+        // Hatch
+        g2.paint = TexturePaint(hatchTex, Rectangle(hatchTex.width, hatchTex.height))
+        if (leftHatch > 0)
+            g2.fill(Rectangle(0, clipY, leftHatch, clipH))
+        if (rightHatch > 0)
+            g2.fill(Rectangle(timelineW - rightHatch, clipY, rightHatch, clipH))
 
         // Clip
         g2.color = PALETTE_BLUE_COLOR

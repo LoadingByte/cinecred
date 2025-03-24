@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.imaging.DeferredImage
 import kotlinx.collections.immutable.PersistentList
 
 
@@ -82,8 +81,8 @@ typealias PartitionId = Any
 sealed interface BodyElement {
     class Nil(val sty: LetterStyle) : BodyElement
     class Str(val lines: PersistentList<StyledString>) : BodyElement
-    class Pic(val emb: DeferredImage.EmbeddedPicture) : BodyElement
-    class Tap(val emb: DeferredImage.EmbeddedTape) : BodyElement
+    class Pic(val sty: PictureStyle) : BodyElement
+    class Tap(val sty: TapeStyle) : BodyElement
     object Mis : BodyElement
 }
 

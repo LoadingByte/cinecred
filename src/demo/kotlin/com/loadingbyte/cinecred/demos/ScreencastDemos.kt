@@ -6,20 +6,16 @@ import com.loadingbyte.cinecred.demo.FileBrowserVirtualWindow
 import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
-import com.loadingbyte.cinecred.project.ContentStyle
-import com.loadingbyte.cinecred.project.Global
-import com.loadingbyte.cinecred.project.LetterStyle
-import com.loadingbyte.cinecred.project.st
+import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
+import kotlinx.collections.immutable.persistentListOf
 import java.awt.Dimension
 import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.text.NumberFormat
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.name
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 
 private const val DIR = "screencast"
@@ -57,8 +53,27 @@ object ScreencastScreencastDemo : ScreencastDemo(
 
         sc.hold(4 * hold)
 
-        addProjectWindows(setupVidWin = true, setupDlvWin = true)
-        edt { plyCtl.leakedFrameSlider.valueIsAdjusting = true }
+        val creditsFile = projectDir.resolve("Credits.csv")
+        var picLineIdx = 0
+        addProjectWindows(setupVidWin = true, setupDlvWin = true, prepareProjectDir = {
+            val lines = creditsFile.readLines().toMutableList()
+            lines.subList(0, lines.indexOfFirst { it.startsWith("@") }).clear()
+            val kw = l10n("projectIO.credits.table.pic")
+            val indices = lines.withIndex().filter { "{{$kw" in it.value }.map { it.index }
+            check(indices.isNotEmpty()) { "Expected there to be at least one picture." }
+            check(indices.zipWithNext(Int::minus).all { it == -1 }) { "Expected all pictures to be in one cluster." }
+            picLineIdx = indices.first()
+            lines[picLineIdx] = lines[picLineIdx].replace(Regex("\\{\\{$kw.*}}"), "TODO: LOGO")
+            lines.subList(picLineIdx + 1, indices.last() + 1).clear()
+            creditsFile.writeLines(lines)
+        })
+        edt {
+            val newStyling = projectCtrl.stylingHistory.current.copy(pictureStyles = persistentListOf())
+            projectCtrl.stylingHistory.loadAndRedraw(newStyling)
+            projectCtrl.stylingHistory.save()
+            plyCtl.leakedFrameSlider.valueIsAdjusting = true
+        }
+        sleep(500)
 
         sc.hold(8 * hold)
         sc.caption("screencast.caption.create.done")
@@ -123,8 +138,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         fileBrowserWin.selectedFileName = "Credits.csv"
         sc.hold()
 
-        val creditsFile = projectDir.resolve("Credits.csv")
-        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
+        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile).apply {
             size = Dimension(800, 500)
             colWidths = intArrayOf(160, 160, 50, 80, 110, 50, 80, 80, 80, 80)
         }
@@ -343,6 +357,24 @@ object ScreencastScreencastDemo : ScreencastDemo(
         dt.mouseUp()
         sc.hold()
         sc.caption("screencast.caption.letter.advanced")
+
+        sc.caption("screencast.caption.picture.insert")
+        sc.mouseTo(prjWin.desktopPosOfTab(prjPnl.leakedPageTabs, 2))
+        sc.click()
+        sc.caption("screencast.caption.picture.cell")
+        spreadsheetEditorWin.rowOffset = 75
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.click()
+        sc.type(spreadsheetEditorWin, picLineIdx, 1, "{{${l10n("projectIO.credits.table.pic")} Cinecred H}}", 4 * hold)
+        sc.caption("screencast.caption.picture.config")
+        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.click()
+        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, "Cinecred H"))
+        sc.click()
+        sc.mouseTo(styWin.desktopPosOfSetting(styPictForm, PictureStyle::heightPx.st(), 0))
+        sc.click()
+        sc.type(styWin, styPicHeight, "120", 2 * hold)
+        sc.caption("screencast.caption.picture.videos")
         sc.hold(4 * hold)
 
         edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }

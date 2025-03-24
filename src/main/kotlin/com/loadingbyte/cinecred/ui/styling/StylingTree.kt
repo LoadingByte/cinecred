@@ -66,11 +66,13 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> addListType(
         type: Class<T>, label: String, icon: Icon,
-        onSelect: (T) -> Unit, objToString: (T) -> String
+        onSelect: (T) -> Unit, objToString: (T) -> String, isVolatile: ((T) -> Boolean)? = null
     ) {
         val node = DefaultMutableTreeNode(label, true)
         model.insertNodeInto(node, rootNode, rootNode.childCount)
-        listTypeInfos[type] = TypeInfo.List(icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String)
+        listTypeInfos[type] = TypeInfo.List(
+            icon, node, onSelect as (Any) -> Unit, objToString as (Any) -> String, isVolatile as ((Any) -> Boolean)?
+        )
     }
 
     var selected: Any?
@@ -163,7 +165,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
     }
 
     fun replaceAllListElements(newElements: Iterable<Any>) {
-        val selectedNodeUserObj = selectedNode?.userObject.let { if (it is StoredObj) it else null }
+        val selectedNodeUserObj = selectedNode?.userObject.let { it as? StoredObj }
 
         // If a list node is currently selected, deselect it for now. For this, the onDeselect() function is disabled
         // because a call to a tree method should by contract never trigger such callbacks. Note that we if we wouldn't
@@ -227,8 +229,10 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     private fun sortNode(node: DefaultMutableTreeNode) {
         val parent = node.parent as DefaultMutableTreeNode
-        val nodeStr = node.userObject.toString()
-        val isGrayedOut = (node.userObject as StoredObj).isGrayedOut
+        val nodeUserObj = node.userObject as StoredObj
+        val isVolatile = (nodeUserObj.typeInfo as TypeInfo.List).isVolatile
+        val nodeStr = nodeUserObj.toString()
+        val isGrayedOut = nodeUserObj.isGrayedOut
         val curIdx = parent.getIndex(node)
 
         // By default, if the node's name is used by multiple styles, sort the node below all duplicates. Only sort it
@@ -237,9 +241,15 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         //   - When renaming a style to the name of another which is in use, the other styles remains the preferred one.
         //   - When renaming a used style and the name is already taken by a bunch of unused (and hence irrelevant)
         //     styles, the renamed style remains the preferred one.
+        // When styles can be volatile, also sort above if the style is not volatile, but the currently used (not grayed
+        // out) style of the same name is volatile. This will leave the other style unused, so it will disappear.
         val sortAboveDups = !isGrayedOut && parent.children().asSequence().none { sibling ->
             val sibUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
             sibling !== node && !sibUserObj.isGrayedOut && sibUserObj.toString().equals(nodeStr, ignoreCase = true)
+        } || isVolatile != null && !isVolatile(nodeUserObj.obj) && parent.children().asSequence().any { sibling ->
+            val sibUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
+            sibling !== node && !sibUserObj.isGrayedOut && sibUserObj.toString().equals(nodeStr, ignoreCase = true) &&
+                    isVolatile(sibUserObj.obj)
         }
         var newIdx = parent.children().asSequence().indexOfFirst {
             if (it === node) return@indexOfFirst false
@@ -303,6 +313,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
             override val node: DefaultMutableTreeNode,
             override val onSelect: (Any) -> Unit,
             val objToString: (Any) -> String,
+            val isVolatile: ((Any) -> Boolean)?
         ) : TypeInfo
 
     }

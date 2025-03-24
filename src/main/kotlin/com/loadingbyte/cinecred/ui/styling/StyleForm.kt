@@ -11,8 +11,8 @@ import javax.swing.SpinnerNumberModel
 
 
 class StyleForm<S : Style>(
-    private val styleClass: Class<S>,
-    private val constSettings: Map<StyleSetting<in S, *>, Any> = emptyMap(),
+    val styleClass: Class<S>,
+    latent: Set<StyleSetting<in S, *>> = emptySet(),
     insets: Boolean = true,
     noticeArea: Boolean = true,
     constLabelWidth: Boolean = true
@@ -22,6 +22,7 @@ class StyleForm<S : Style>(
     private val rootFormRows = ArrayList<Pair<FormRow, List<StyleSetting<S, *>>>>()
     private val rootFormRowLookup = HashMap<StyleSetting<S, *>, FormRow>()
 
+    private val latentValues = latent.associateWithTo(HashMap<StyleSetting<in S, *>, Any?>()) { null }
     private var disableOnChange = false
 
     init {
@@ -29,7 +30,7 @@ class StyleForm<S : Style>(
         val unionSpecs = widgetSpecs.filterIsInstance<UnionWidgetSpec<S>>()
 
         for (setting in getStyleSettings(styleClass)) {
-            if (setting in constSettings)
+            if (setting in latent)
                 continue
             val unionSpec = unionSpecs.find { setting in it.settings }
             if (unionSpec == null || unionSpec.settings.first() == setting) {
@@ -104,7 +105,7 @@ class StyleForm<S : Style>(
     private fun <E : Any /* non-null */> makeListWidget(
         setting: ListStyleSetting<S, E>,
         settingConstraints: List<StyleConstraint<S, *>>,
-        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+        settingWidgetSpecs: List<StyleWidgetSpec<S, *>>
     ): Widget<*> {
         val fixedChoiceConstr = settingConstraints.oneOf<FixedChoiceConstr<S, *>>()
         val dynChoiceConstr = settingConstraints.oneOf<DynChoiceConstr<S, *>>()
@@ -156,7 +157,7 @@ class StyleForm<S : Style>(
 
     private fun <E : LayerStyle> makeLayerListWidget(
         setting: ListStyleSetting<S, E>,
-        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+        settingWidgetSpecs: List<StyleWidgetSpec<S, *>>
     ): Widget<*> {
         val layerListWidgetSpec = settingWidgetSpecs.oneOf<LayerListWidgetSpec<S, E>>()!!
 
@@ -171,8 +172,8 @@ class StyleForm<S : Style>(
                 val nestedForm = StyleForm(
                     setting.type,
                     // These settings are always overridden by setElementNameAndAdvanced and thus should be omitted from
-                    // the style form; the exact placeholder values we use here are completely irrelevant.
-                    constSettings = mapOf(LayerStyle::name.st() to "", LayerStyle::collapsed.st() to false),
+                    // the style form.
+                    latent = setOf(LayerStyle::name.st(), LayerStyle::collapsed.st()),
                     // Horizontal space in nested forms is scarce, so save where we can.
                     insets = false, noticeArea = false, constLabelWidth = false
                 )
@@ -182,7 +183,7 @@ class StyleForm<S : Style>(
             getElementName = { style -> style.name },
             getElementAdvanced = { style -> !style.collapsed },
             setElementNameAndAdvanced = { style, name, advanced ->
-                style.copy(listOf(LayerStyle::name.st().notarize(name), LayerStyle::collapsed.st().notarize(!advanced)))
+                style.copy(LayerStyle::name.st().notarize(name), LayerStyle::collapsed.st().notarize(!advanced))
             },
             mapOrdinalsInElement = { nestedStyle, mapping ->
                 nestedStyle.copy(siblingOrdinalSettings.map { setting ->
@@ -200,7 +201,7 @@ class StyleForm<S : Style>(
     private fun <V : Any /* non-null */> makeBackingSettingWidget(
         setting: StyleSetting<S, V>,
         settingConstraints: List<StyleConstraint<S, *>>,
-        settingWidgetSpecs: List<StyleWidgetSpec<S>>
+        settingWidgetSpecs: List<StyleWidgetSpec<S, *>>
     ): Widget<V> {
         val intConstr = settingConstraints.oneOf<IntConstr<S>>()
         val doubleConstr = settingConstraints.oneOf<DoubleConstr<S>>()
@@ -269,7 +270,10 @@ class StyleForm<S : Style>(
             Resolution::class.java -> ResolutionWidget()
             FPS::class.java -> FPSWidget(widthSpec)
             FontRef::class.java -> FontChooserWidget(widthSpec)
+            PictureRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::PictureRef, widthSpec)
+            TapeRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::TapeRef, widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
+            TapeSlice::class.java -> TapeSliceWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {
                     toggleButtonGroupWidgetSpec != null -> makeEnumToggleButtonGroupWidget(
@@ -354,7 +358,7 @@ class StyleForm<S : Style>(
             ".$name"
 
     fun <T : Style> castToStyle(styleClass: Class<T>): StyleForm<T> {
-        if (styleClass == this.styleClass)
+        if (styleClass.isAssignableFrom(this.styleClass))
             @Suppress("UNCHECKED_CAST")
             return this as StyleForm<T>
         throw ClassCastException("Cannot cast StyleForm<${this.styleClass.name}> to StyleForm<${styleClass.name}>")
@@ -372,16 +376,23 @@ class StyleForm<S : Style>(
             for ((setting, widget) in valueWidgets)
                 @Suppress("UNCHECKED_CAST")
                 (widget as Widget<Any>).value = setting.get(stored)
+            for (entry in latentValues)
+                entry.setValue(entry.key.get(stored))
         } finally {
             disableOnChange = false
         }
     }
 
-    fun <SUBJ : Any> openSingleSetting(setting: StyleSetting<S, SUBJ>, value: SUBJ) {
+    fun <SUBJ : Any> openSingleSetting(setting: DirectStyleSetting<S, SUBJ>, value: SUBJ) = openSingle(setting, value)
+    fun <SUBJ : Any> openSingleSetting(setting: OptStyleSetting<S, SUBJ>, value: Opt<SUBJ>) = openSingle(setting, value)
+
+    private fun openSingle(setting: StyleSetting<S, *>, value: Any) {
         disableOnChange = true
         try {
             @Suppress("UNCHECKED_CAST")
-            (valueWidgets.getValue(setting) as Widget<Any>).value = value
+            (valueWidgets[setting] as Widget<Any>?)?.value = value
+            if (setting in latentValues)
+                latentValues[setting] = value
         } finally {
             disableOnChange = false
         }
@@ -389,7 +400,7 @@ class StyleForm<S : Style>(
 
     override fun save(): S =
         newStyleUnsafe(styleClass, getStyleSettings(styleClass).map { setting ->
-            val value = valueWidgets[setting]?.value ?: constSettings[setting]!!
+            val value = valueWidgets[setting]?.value ?: latentValues[setting]!!
             if (value is List<*>) value.toPersistentList() else value
         })
 
@@ -488,17 +499,10 @@ class StyleForm<S : Style>(
             widget.applyConfigurator(configurator)
     }
 
-    fun setProjectFontFamilies(projectFamilies: FontFamilies): Boolean {
-        var updatedImmediately = false
-        val configurator = { w: Widget<*> ->
-            if (w is FontChooserWidget) {
-                w.projectFamilies = projectFamilies
-                updatedImmediately = true
-            }
-        }
+    fun setProjectFontFamilies(projectFamilies: FontFamilies) {
+        val configurator = { w: Widget<*> -> if (w is FontChooserWidget) w.projectFamilies = projectFamilies }
         for (widget in valueWidgets.values)
             widget.applyConfigurator(configurator)
-        return updatedImmediately
     }
 
     fun setChoices(setting: StyleSetting<*, *>, choices: List<Any>, unique: Boolean = false) {
@@ -544,6 +548,18 @@ class StyleForm<S : Style>(
             if (widget is TimecodeWidget) {
                 widget.fps = fps
                 widget.timecodeFormat = timecodeFormat
+            }
+        }
+    }
+
+    fun setTapeSliceContext(
+        setting: StyleSetting<S, *>, fps: FPS?, timecodeFormats: EnumSet<TimecodeFormat>, range: ClosedRange<Timecode>?
+    ) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
+            if (widget is TapeSliceWidget) {
+                widget.fps = fps
+                widget.timecodeFormats = timecodeFormats
+                widget.range = range
             }
         }
     }

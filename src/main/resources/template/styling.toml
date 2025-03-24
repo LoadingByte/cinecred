@@ -143,3 +143,15 @@ heightPx = <100>
 name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = <50>
+
+[[pictureStyle]]
+name = "Cinecred H"
+picture = "Cinecred H.svg"
+heightPx = <90>
+cropBlankSpace = true
+
+[[pictureStyle]]
+name = "Cinecred V"
+picture = "Cinecred V.svg"
+heightPx = <150>
+cropBlankSpace = true

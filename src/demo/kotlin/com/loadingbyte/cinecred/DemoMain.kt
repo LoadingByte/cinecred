@@ -22,6 +22,7 @@ private val enabledDemos: List<Demo>
             GUIDE_LETTER_STYLE_DEMOS +
             GUIDE_LETTER_STYLE_LAYER_DEMOS +
             GUIDE_PAGE_STYLE_DEMOS +
+            GUIDE_PICTURE_VIDEO_DEMOS +
             GUIDE_PROJECT_FOLDER_DEMOS +
             GUIDE_PROJECT_SETTINGS_DEMOS +
             GUIDE_USER_INTERFACE_DEMOS +

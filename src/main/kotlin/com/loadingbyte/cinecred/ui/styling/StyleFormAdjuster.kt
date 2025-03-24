@@ -1,6 +1,8 @@
 package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.Form
@@ -53,10 +55,22 @@ class StyleFormAdjuster(
 
     fun updateProjectFontFamilies(projectFamilies: FontFamilies) {
         for (form in forms)
-            if (form.setProjectFontFamilies(projectFamilies) && form == activeForm) {
-                refreshConstraintViolations()
-                adjustActiveForm()
-            }
+            form.setProjectFontFamilies(projectFamilies)
+    }
+
+    fun updatePictureLoaders(pictureLoaders: Collection<Picture.Loader>) {
+        updateExternalChoices(PictureRef::class.java, pictureLoaders.map(::PictureRef))
+    }
+
+    fun updateTapes(tapes: Collection<Tape>) {
+        updateExternalChoices(TapeRef::class.java, tapes.map(::TapeRef))
+    }
+
+    private fun <V : Any> updateExternalChoices(settingType: Class<V>, choices: List<V>) {
+        for (form in forms)
+            for (setting in getStyleSettings(form.styleClass))
+                if (setting.type == settingType)
+                    form.setChoices(setting, choices)
     }
 
     private fun refreshConstraintViolations() {
@@ -129,6 +143,13 @@ class StyleFormAdjuster(
                 val availableTags = constr.getAvailableTags(styling, curStyle).toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
+            }
+            is TapeSliceConstr -> {
+                val fps = constr.getFPS(styling, curStyle)
+                val timecodeFormats = constr.getTimecodeFormats(styling, curStyle)
+                val range = constr.getRange(styling, curStyle)
+                for (setting in constr.settings)
+                    curForm.setTapeSliceContext(setting, fps, timecodeFormats, range)
             }
             is DynSizeConstr -> {
                 val size = constr.size(styling, curStyle)

@@ -42,13 +42,18 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val editPanel = ctrl.projectFrame.panel
     val stylingPanel = ctrl.stylingDialog.panel
-    val styleTag = l10n("projectIO.credits.table.style")
+    val stylingTreeHint = l10n(
+        "ui.hints.projectTrack.stylingTree",
+        l10n("projectIO.credits.table.style"),
+        l10n("projectIO.credits.table.pic"),
+        l10n("projectIO.credits.table.video")
+    )
     @Suppress("DEPRECATION")
     return listOf(
         Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedCreditsTabs, Side.NONE),
         Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.leakedCreditsLog, Side.TOP),
         Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.leakedStylingDialogButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.stylingTree", styleTag), stylingPanel.leakedStylingTree, Side.RIGHT) {
+        Hint(stylingTreeHint, stylingPanel.leakedStylingTree, Side.RIGHT) {
             ctrl.setDialogVisible(ProjectDialogType.STYLING, true)
         },
         Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.leakedResetStylingButton, Side.BOTTOM),

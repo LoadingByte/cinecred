@@ -24,6 +24,8 @@ fun <S : Style> getStyleEffectivitySpecs(styleClass: Class<S>): List<StyleEffect
     ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS
     LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS
     Layer::class.java -> LAYER_EFFECTIVITY_SPECS
+    PictureStyle::class.java -> PICTURE_STYLE_EFFECTIVITY_SPECS
+    TapeStyle::class.java -> emptyList()
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleEffectivitySpec<S>>
 
@@ -273,11 +275,6 @@ private fun supportsNot(style: LetterStyle, feat: String): Boolean {
 
 
 private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
-    // Don't store whether a layer is collapsed, as we don't want to persist UI information.
-    StyleEffectivitySpec(
-        Layer::collapsed.st(),
-        isTotallyIneffective = { _, _ -> true }
-    ),
     StyleEffectivitySpec(
         Layer::color1.st(),
         isTotallyIneffective = { _, style -> style.coloring == LayerColoring.OFF }
@@ -351,6 +348,14 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
 )
 
 
+private val PICTURE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PictureStyle>> = listOf(
+    StyleEffectivitySpec(
+        PictureStyle::cropBlankSpace.st(),
+        isAlmostEffective = { _, style -> style.picture.loader.let { it == null || it.isRaster } }
+    )
+)
+
+
 class StyleEffectivitySpec<S : Style>(
     vararg settings: StyleSetting<S, *>,
     val isAlmostEffective: ((Styling?, S) -> Boolean)? = null,
@@ -368,6 +373,13 @@ enum class Effectivity { TOTALLY_INEFFECTIVE, ALMOST_EFFECTIVE, EFFECTIVE }
 
 fun <S : Style> findIneffectiveSettings(styling: Styling, style: S): Map<StyleSetting<S, *>, Effectivity> {
     val result = HashMap<StyleSetting<S, *>, Effectivity>()
+
+    if (style is PopupStyle)
+        @Suppress("UNCHECKED_CAST")
+        result[PopupStyle::volatile.st() as StyleSetting<S, *>] = TOTALLY_INEFFECTIVE
+    if (style is LayerStyle)
+        @Suppress("UNCHECKED_CAST")
+        result[LayerStyle::collapsed.st() as StyleSetting<S, *>] = TOTALLY_INEFFECTIVE
 
     fun mark(settings: List<StyleSetting<S, *>>, tier: Effectivity) {
         for (setting in settings)
@@ -387,7 +399,7 @@ fun <S : Style> isEffective(styling: Styling, style: S, setting: StyleSetting<S,
         setting in spec.settings &&
                 (spec.isAlmostEffective.let { it != null && it(styling, style) } ||
                         spec.isTotallyIneffective.let { it != null && it(styling, style) })
-    }
+    } && isImplicitlyEffective(setting)
 
 /** Throws a [NullPointerException] if invoked on a setting where we need a [Styling] to determine its effectivity. */
 fun <S : Style> isEffectiveUnsafe(style: S, setting: StyleSetting<S, *>): Boolean =
@@ -395,4 +407,7 @@ fun <S : Style> isEffectiveUnsafe(style: S, setting: StyleSetting<S, *>): Boolea
         setting in spec.settings &&
                 (spec.isAlmostEffective.let { it != null && it(null, style) } ||
                         spec.isTotallyIneffective.let { it != null && it(null, style) })
-    }
+    } && isImplicitlyEffective(setting)
+
+private fun isImplicitlyEffective(setting: StyleSetting<*, *>): Boolean =
+    setting != PopupStyle::volatile.st() && setting != LayerStyle::collapsed.st()

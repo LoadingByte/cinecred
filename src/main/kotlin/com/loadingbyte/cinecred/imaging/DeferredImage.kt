@@ -333,7 +333,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             when (embeddedPic.picture) {
                 is Picture.Raster -> transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
                 is Picture.Vector -> {
-                    transform.scale(embeddedPic.scaling)
+                    transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
                     if (embeddedPic.isCropped)
                         transform.translate(-embeddedPic.picture.cropX, -embeddedPic.picture.cropY)
                 }
@@ -379,54 +379,32 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
-    class EmbeddedPicture private constructor(
+    class EmbeddedPicture(
         val picture: Picture,
-        private val userWidth: Double,
-        private val userHeight: Double,
-        val isCropped: Boolean
+        width: Double? = null,
+        height: Double? = null,
+        val isCropped: Boolean = false
     ) {
 
-        constructor(picture: Picture) : this(picture, Double.NaN, Double.NaN, false)
-
         init {
-            require((userWidth.isNaN() || userWidth > 0.0) && (userHeight.isNaN() || userHeight > 0.0))
+            require((width == null || width > 0.0) && (height == null || height > 0.0))
+            require(!isCropped || picture is Picture.Vector) { "Raster pictures cannot be cropped." }
         }
 
-        val scaling: Double
-            get() = when {
-                !userWidth.isNaN() && !userHeight.isNaN() -> throw UnsupportedOperationException("X/Y scaling differs.")
-                !userWidth.isNaN() -> scalingX
-                !userHeight.isNaN() -> scalingY
-                else -> 1.0
-            }
+        val scalingX: Double = if (width != null) width / oriWidth else if (height != null) height / oriHeight else 1.0
+        val scalingY: Double = if (height != null) height / oriHeight else if (width != null) width / oriWidth else 1.0
 
-        val scalingX: Double get() = if (!userWidth.isNaN()) userWidth / oriWidth else scaling
-        val scalingY: Double get() = if (!userHeight.isNaN()) userHeight / oriHeight else scaling
-
-        val width: Double get() = roundIfRaster(if (!userWidth.isNaN()) userWidth else scaling * oriWidth)
-        val height: Double get() = roundIfRaster(if (!userHeight.isNaN()) userHeight else scaling * oriHeight)
+        val width: Double = roundIfRaster(width ?: (scalingX * oriWidth))
+        val height: Double = roundIfRaster(height ?: (scalingY * oriHeight))
 
         private val oriWidth get() = if (picture is Picture.Vector && isCropped) picture.cropWidth else picture.width
         private val oriHeight get() = if (picture is Picture.Vector && isCropped) picture.cropHeight else picture.height
         private fun roundIfRaster(size: Double) = if (picture is Picture.Raster) round(size) else size
 
-        fun withForcedResolution(r: Resolution) = withForcedResolution(r.widthPx.toDouble(), r.heightPx.toDouble())
-        fun withForcedResolution(width: Double, height: Double) = when (picture) {
-            is Picture.Raster -> EmbeddedPicture(picture, width, height, isCropped)
-            is Picture.Vector -> throw UnsupportedOperationException("Vector pictures must preserve aspect ratio.")
-        }
-
-        fun withWidthPreservingAspectRatio(width: Double) = EmbeddedPicture(picture, width, Double.NaN, isCropped)
-        fun withHeightPreservingAspectRatio(height: Double) = EmbeddedPicture(picture, Double.NaN, height, isCropped)
-
-        fun cropped() = when (picture) {
-            is Picture.Raster -> throw UnsupportedOperationException("Raster pictures cannot be cropped.")
-            is Picture.Vector -> EmbeddedPicture(picture, userWidth, userHeight, isCropped = true)
-        }
-
     }
 
 
+    /** @throws IllegalStateException */
     data class EmbeddedTape(
         /** Note: Accessing the metadata of this tape is guaranteed to not throw exceptions. */
         val tape: Tape,
@@ -441,30 +419,19 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         enum class Align { START, MIDDLE, END }
 
-        /** @throws Exception */
+        /** @throws IllegalStateException */
         constructor(tape: Tape) : this(tape, tape.spec.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
 
         init {
             require(resolution.run { widthPx > 0 && heightPx > 0 })
             require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
             require(leftFadeFrames >= 0 && rightFadeFrames >= 0)
+            if (tape.fileSeq) require(range.start is Timecode.Frames && range.endExclusive is Timecode.Frames) else
+                require(range.start is Timecode.Clock && range.endExclusive is Timecode.Clock)
             val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.
             require(range.start.let { it >= avail.start && it < range.endExclusive })
             require(range.endExclusive.let { it > range.start && it <= avail.endExclusive })
         }
-
-        fun withWidthPreservingAspectRatio(width: Int): EmbeddedTape {
-            val base = tape.spec.resolution
-            return copy(resolution = Resolution(width, roundingDiv(base.heightPx * width, base.widthPx)))
-        }
-
-        fun withHeightPreservingAspectRatio(height: Int): EmbeddedTape {
-            val base = tape.spec.resolution
-            return copy(resolution = Resolution(roundingDiv(base.widthPx * height, base.heightPx), height))
-        }
-
-        fun withInPoint(timecode: Timecode): EmbeddedTape = copy(range = timecode..<range.endExclusive)
-        fun withOutPoint(timecode: Timecode): EmbeddedTape = copy(range = range.start..<timecode)
 
     }
 
@@ -549,7 +516,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 null
             }
             if (thumbnail != null) {
-                val embeddedThumbnail = EmbeddedPicture(thumbnail).withForcedResolution(embeddedTape.resolution)
+                val res = embeddedTape.resolution
+                val embeddedThumbnail = EmbeddedPicture(thumbnail, res.widthPx.toDouble(), res.heightPx.toDouble())
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
@@ -1052,14 +1020,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             mat.scale(scaling)
             if (rasterizeSVGs && pic is Picture.SVG) {
                 if (embeddedPic.isCropped) {
-                    val es = embeddedPic.scaling
-                    mat.translate(es * -pic.cropX, es * (pic.cropY + pic.cropHeight - pic.height))
+                    val e = embeddedPic
+                    mat.translate(e.scalingX * -pic.cropX, e.scalingY * (pic.cropY + pic.cropHeight - pic.height))
                     mat.scale(pic.width / pic.cropWidth, pic.height / pic.cropHeight)
                 }
                 mat.scale(embeddedPic.width, embeddedPic.height)
                 cs.drawImage(docRes.pdImages.computeIfAbsent(pic) { PDImageXObject(doc) }, mat)
-                val w = ceil(embeddedPic.scaling * pic.width * scaling).toInt()
-                val h = ceil(embeddedPic.scaling * pic.height * scaling).toInt()
+                val w = ceil(embeddedPic.scalingX * pic.width * scaling).toInt()
+                val h = ceil(embeddedPic.scalingY * pic.height * scaling).toInt()
                 docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 return
             }
@@ -1076,7 +1044,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
                 is Picture.Vector -> {
-                    mat.scale(embeddedPic.scaling)
+                    mat.scale(embeddedPic.scalingX, embeddedPic.scalingY)
                     if (embeddedPic.isCropped)
                         mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
                     cs.saveGraphicsState()

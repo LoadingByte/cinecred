@@ -1,11 +1,14 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.getBundledFont
+import com.loadingbyte.cinecred.common.getSystemFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.DrawnCredits
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.drawer.drawPages
 import com.loadingbyte.cinecred.drawer.drawVideo
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
@@ -15,6 +18,7 @@ import com.loadingbyte.cinecred.ui.ctrl.PlaybackCtrl
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.view.playback.PlaybackDialog
+import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Font
 import java.awt.GraphicsConfiguration
@@ -24,6 +28,7 @@ import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Path
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
@@ -48,9 +53,9 @@ class ProjectController(
     private data class Input(
         val creditsSpreadsheets: List<Spreadsheet>,
         val ioLog: List<ParserMsg>,
-        val projectFonts: Collection<Font>?,
-        val pictureLoaders: Collection<PictureLoader>?,
-        val tapes: Collection<Tape>?,
+        val projectFonts: SortedMap<String, Font>?,
+        val pictureLoaders: SortedMap<String, Picture.Loader>?,
+        val tapes: SortedMap<String, Tape>?,
         val styling: Styling?
     )
 
@@ -95,18 +100,20 @@ class ProjectController(
             doneProcessing(currentInput.updateAndGet { it.copy(ioLog = log) }, null, null)
         }
 
-        override fun pushProjectFonts(projectFonts: Collection<Font>) {
-            val projectFamilies = FontFamilies(projectFonts)
+        override fun pushProjectFonts(projectFonts: SortedMap<String, Font>) {
+            val projectFamilies = FontFamilies(projectFonts.values)
             process(currentInput.updateAndGet { it.copy(projectFonts = projectFonts) })
             SwingUtilities.invokeLater { stylingDialog.panel.updateProjectFontFamilies(projectFamilies) }
         }
 
-        override fun pushPictureLoaders(pictureLoaders: Collection<PictureLoader>) {
+        override fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>) {
             process(currentInput.updateAndGet { it.copy(pictureLoaders = pictureLoaders) })
+            SwingUtilities.invokeLater { stylingDialog.panel.updatePictureLoaders(pictureLoaders.values) }
         }
 
-        override fun pushTapes(tapes: Collection<Tape>) {
+        override fun pushTapes(tapes: SortedMap<String, Tape>) {
             process(currentInput.updateAndGet { it.copy(tapes = tapes) })
+            SwingUtilities.invokeLater { stylingDialog.panel.updateTapes(tapes.values) }
         }
 
     })
@@ -119,7 +126,8 @@ class ProjectController(
 
     init {
         val styling = try {
-            readStyling(stylingFile, currentInput.get().projectFonts!!)
+            val input = currentInput.get()
+            readStyling(stylingFile, input.projectFonts!!, input.pictureLoaders!!, input.tapes!!)
         } catch (e: IOException) {
             JOptionPane.showMessageDialog(
                 projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.toString()),
@@ -128,6 +136,10 @@ class ProjectController(
             tryCloseProject(force = true)
             throw ProjectInitializationAbortedException()
         }
+        // The constructor of StylingHistory eventually invokes styling verification, and that needs tape metadata. To
+        // avoid the verifier sequentially loading one tape after the other, we load all of them in parallel in advance.
+        for (style in styling.tapeStyles)
+            style.tape.tape?.loadMetadataInBackground()
         stylingHistory = StylingHistory(styling)
         process(currentInput.updateAndGet { it.copy(styling = styling) })
     }
@@ -154,14 +166,39 @@ class ProjectController(
     // END OF INITIALIZATION PROCEDURE
 
     private fun process(input: Input) {
-        val (creditsSpreadsheets, _, _, pictureLoaders, tapes, styling) = input
+        val (creditsSpreadsheets, _, projectFonts, pictureLoaders, tapes, origStyling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
-        if (creditsSpreadsheets.isEmpty() || pictureLoaders == null || tapes == null || styling == null)
+        if (creditsSpreadsheets.isEmpty() ||
+            projectFonts == null || pictureLoaders == null || tapes == null || origStyling == null
+        )
             return doneProcessing(input, null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
-            // Verify the styling in the extra thread because that is not entirely cheap.
+            var styling: Styling = origStyling
+
+            // Update references to auxiliary files (fonts, pictures, and tapes) in the styling.
+            updateAuxiliaryReferences(
+                styling.letterStyles, LetterStyle::font.st(),
+                FontRef::name, FontRef::font, ::FontRef, ::FontRef,
+                { name -> projectFonts[name] ?: getBundledFont(name) ?: getSystemFont(name) }
+            )?.let { styling = styling.copy(letterStyles = it) }
+            updateAuxiliaryReferences(
+                styling.pictureStyles, PictureStyle::picture.st(),
+                PictureRef::name, PictureRef::loader, ::PictureRef, ::PictureRef,
+                pictureLoaders::get
+            )?.let { styling = styling.copy(pictureStyles = it) }
+            updateAuxiliaryReferences(
+                styling.tapeStyles, TapeStyle::tape.st(),
+                TapeRef::name, TapeRef::tape, ::TapeRef, ::TapeRef,
+                tapes::get
+            )?.let { styling = styling.copy(tapeStyles = it) }
+
+            // The following verification needs tape metadata. To avoid the verifier sequentially loading one tape after
+            // the other, we load all of them in parallel in advance.
+            for (style in styling.tapeStyles)
+                style.tape.tape?.loadMetadataInBackground()
+
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyConstraints(styling).any { it.severity == ERROR }) {
                 val error = ParserMsg(null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
@@ -177,15 +214,38 @@ class ProjectController(
                 log += curLog
             }
 
-            val project = Project(styling, credits.toPersistentList())
+            val usedStyles = findUsedStyles(credits)
 
-            // If some page styles contains legacy settings which have not been used to produce a migration message,
-            // clear them and put the cleared styling into the history in place of the legacy styling.
-            clearLegacyPageStyleSettings(styling, log)?.let {
-                SwingUtilities.invokeLater { stylingHistory.replaceInHistory(styling, it) }
-            }
+            // The styling may be updated depending on the credits spreadsheet, namely in the following cases:
+            //   - If the sheet refers to a new picture/tape style, automatically add it.
+            //   - If the sheet no longer references an automatically added picture/tape style, remove it.
+            //   - If a page style has legacy settings which were not used to produce a migration message, clear them.
+            addRemovePopupStyles(styling.pictureStyles, usedStyles)?.let { styling = styling.copy(pictureStyles = it) }
+            addRemovePopupStyles(styling.tapeStyles, usedStyles)?.let { styling = styling.copy(tapeStyles = it) }
+            clearLegacyPageStyleSettings(styling.pageStyles, log)?.let { styling = styling.copy(pageStyles = it) }
+
+            // If any of the above are the case, or if auxiliary references have been updated further up this method,
+            // put an updated styling into the history in place of the old styling, but only if the styling didn't
+            // change again under our feet. In that case, the next run of this task will apply our updates.
+            if (styling !== origStyling)
+                SwingUtilities.invokeLater {
+                    if (stylingHistory.current === origStyling)
+                        stylingHistory.replaceCurrent(styling)
+                }
+
+            // Each picture and tape that's referenced in the credits must be loaded during drawing, e.g. because we
+            // need to know the width and height. However, if we lazily loaded those files only once encountering them,
+            // we'd load them sequentially. This can take a very long time if many such files are used. To avoid this,
+            // we now trigger the loading of all files in parallel background threads.
+            for (style in usedStyles)
+                when (style) {
+                    is PictureStyle -> style.picture.loader?.loadInBackground()
+                    is TapeStyle -> style.tape.tape?.loadMetadataInBackground()
+                    is PageStyle, is ContentStyle, is LetterStyle -> {}
+                }
 
             // Draw pages and video for each credits spreadsheet.
+            val project = Project(styling, credits.toPersistentList())
             val drawnCredits = credits.map { curCredits ->
                 val drawnPages = drawPages(project, curCredits)
 
@@ -205,7 +265,58 @@ class ProjectController(
         }
     }
 
-    private fun clearLegacyPageStyleSettings(styling: Styling, log: List<ParserMsg>): Styling? {
+    private inline fun <S : Style, R : Any, A : Any> updateAuxiliaryReferences(
+        styles: List<S>,
+        refSetting: DirectStyleSetting<S, R>,
+        ref2name: (R) -> String,
+        ref2aux: (R) -> A?,
+        name2ref: (String) -> R,
+        aux2ref: (A) -> R,
+        name2aux: (String) -> A?,
+    ): PersistentList<S>? {
+        var updatedStyles: MutableList<S>? = null
+        for ((idx, style) in styles.withIndex()) {
+            val ref = refSetting.get(style)
+            val newAux = name2aux(ref2name(ref))
+            if (newAux !== ref2aux(ref)) {
+                val updatedRef = if (newAux != null) aux2ref(newAux) else name2ref(ref2name(ref))
+                if (updatedStyles == null)
+                    updatedStyles = styles.toMutableList()
+                updatedStyles[idx] = style.copy(refSetting.notarize(updatedRef))
+            }
+        }
+        return updatedStyles?.toPersistentList()
+    }
+
+    private inline fun <reified S : PopupStyle> addRemovePopupStyles(
+        styles: List<S>, usedStyles: Set<ListedStyle>
+    ): PersistentList<S>? {
+        var updatedStyles: MutableList<S>? = null
+
+        // Remove automatically added styles that aren't used anymore.
+        for (idx in styles.lastIndex downTo 0) {
+            val style = styles[idx]
+            if (style.volatile && style !in usedStyles) {
+                if (updatedStyles == null)
+                    updatedStyles = styles.toMutableList()
+                updatedStyles.removeAt(idx)
+            }
+        }
+
+        // Automatically add styles that have been generated by the credits reader.
+        for (usedStyle in usedStyles)
+            if (usedStyle is S && styles.none { it === usedStyle }) {
+                if (updatedStyles == null)
+                    updatedStyles = styles.toMutableList()
+                updatedStyles.add(usedStyle)
+            }
+
+        return updatedStyles?.toPersistentList()
+    }
+
+    private fun clearLegacyPageStyleSettings(
+        styles: List<PageStyle>, log: List<ParserMsg>
+    ): PersistentList<PageStyle>? {
         fun <SUBJ : Any> clearSetting(style: PageStyle, setting: DirectStyleSetting<PageStyle, SUBJ>): PageStyle =
             style.copy(setting.notarize(setting.get(PRESET_PAGE_STYLE)))
 
@@ -213,18 +324,18 @@ class ProjectController(
         val usedLegacySettings = log.mapNotNullTo(HashSet(), ParserMsg::migrationDataSource)
 
         var clearedStyles: MutableList<PageStyle>? = null
-        for ((idx, style) in styling.pageStyles.withIndex()) {
+        for ((idx, style) in styles.withIndex()) {
             var clearedStyle = style
             for (st in legacySettings)
                 if (st.get(style) != st.get(PRESET_PAGE_STYLE) && MigrationDataSource(style, st) !in usedLegacySettings)
                     clearedStyle = clearSetting(clearedStyle, st)
             if (clearedStyle !== style) {
                 if (clearedStyles == null)
-                    clearedStyles = styling.pageStyles.toMutableList()
+                    clearedStyles = styles.toMutableList()
                 clearedStyles[idx] = clearedStyle
             }
         }
-        return clearedStyles?.let { styling.copy(pageStyles = it.toPersistentList()) }
+        return clearedStyles?.toPersistentList()
     }
 
     private fun doneProcessing(input: Input, processingLog: List<ParserMsg>?, drawnProject: DrawnProject?) {
@@ -418,17 +529,13 @@ class ProjectController(
                 stylingDialog.panel.setStyling(new)
         }
 
-        /** Replaces the exact object that is [old] with [new], and also refreshes the UI if necessary. */
-        fun replaceInHistory(old: Styling, new: Styling) {
-            // Look from the back of the history because that's where we're likely replacing things.
-            val idx = history.indexOfLast { it === old /* === because we replace a specific object */ }
-            if (idx != -1) {
-                history[idx] = new
-                if (idx == currentIdx) {
-                    currentInput.updateAndGet { it.copy(styling = new) }
-                    updateHistoryIndicators()
-                    stylingDialog.panel.setStyling(new)
-                }
+        /** Replaces the current styling with [new], and also refreshes the UI. Doesn't trigger a redraw. */
+        fun replaceCurrent(new: Styling) {
+            if (current !== new) {
+                history[currentIdx] = new
+                currentInput.updateAndGet { it.copy(styling = new) }
+                updateHistoryIndicators()
+                stylingDialog.panel.setStyling(new)
             }
         }
 

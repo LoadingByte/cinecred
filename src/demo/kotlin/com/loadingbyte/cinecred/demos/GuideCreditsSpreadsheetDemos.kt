@@ -2,8 +2,6 @@ package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.demo.PageDemo
-import com.loadingbyte.cinecred.demo.TimelineDemo
-import com.loadingbyte.cinecred.demo.VideoDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PRESET_CONTENT_STYLE
@@ -16,16 +14,7 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
     get() = listOf(
         GuideCreditsSpreadsheetBlankTagDemo,
         GuideCreditsSpreadsheetStyleTagDemo,
-        GuideCreditsSpreadsheetPicTagDemo,
-        GuideCreditsSpreadsheetPicCropDemo,
-        GuideCreditsSpreadsheetVideoTagMovingDemo,
-        GuideCreditsSpreadsheetVideoTagDemo,
-        GuideCreditsSpreadsheetVideoBehaviorStandardDemo,
-        GuideCreditsSpreadsheetVideoBehaviorMarginDemo,
-        GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo,
-        GuideCreditsSpreadsheetVideoTrimDemo,
-        GuideCreditsSpreadsheetVideoAlignDemo,
-        GuideCreditsSpreadsheetVideoFadeDemo,
+        GuideCreditsSpreadsheetPicAndVideoTagsDemo,
         GuideCreditsSpreadsheetVGapDemo,
         GuideCreditsSpreadsheetContentStylesDemo,
         GuideCreditsSpreadsheetSpinePositionScrollDemo,
@@ -61,122 +50,16 @@ Copyright © 2023 {{Style Name}}Callie Cash{{Style}} and {{Style Name}}Molly Mon
 }
 
 
-object GuideCreditsSpreadsheetPicTagDemo : PageDemo("$DIR/pic-tag", Format.PNG, pageGuides = true) {
+object GuideCreditsSpreadsheetPicAndVideoTagsDemo : PageDemo("$DIR/pic-and-video-tags", Format.PNG, pageGuides = true) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(
         """
 @Body
 {{Pic logo.svg 100x}}
+
+{{Video rainbow}}
         """.parseCreditsCS()
     )
-}
-
-
-object GuideCreditsSpreadsheetPicCropDemo : PageDemo("$DIR/pic-crop", Format.STEP_GIF, pageGuides = true) {
-    override val isLocaleSensitive get() = false
-    override fun credits() = listOf(
-        """
-@Body
-{{Pic logo.svg 100x}}
-        """.parseCreditsCS(),
-        """
-@Body
-{{Pic logo.svg 100x Crop}}
-        """.parseCreditsCS()
-    )
-}
-
-
-object GuideCreditsSpreadsheetVideoTagMovingDemo : VideoDemo("$DIR/video-tag-moving", Format.VIDEO_GIF) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x}}
-        """.parseCreditsCS(resolution = Resolution(700, 350))
-}
-
-
-object GuideCreditsSpreadsheetVideoTagDemo : PageDemo("$DIR/video-tag", Format.PNG, pageGuides = true) {
-    override val isLocaleSensitive get() = false
-    override fun credits() = listOf(
-        """
-@Body
-{{Video rainbow 200x}}
-        """.parseCreditsCS()
-    )
-}
-
-
-object GuideCreditsSpreadsheetVideoBehaviorStandardDemo : TimelineDemo(
-    "$DIR/video-standard-behavior", Format.VIDEO_GIF
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x}}
-        """.parseCreditsCS(resolution = Resolution(700, 400))
-}
-
-
-object GuideCreditsSpreadsheetVideoBehaviorMarginDemo : TimelineDemo(
-    "$DIR/video-margin", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x Margin 00:00:02:00}}
-        """.parseCreditsCS(resolution = Resolution(700, 400))
-}
-
-
-object GuideCreditsSpreadsheetVideoBehaviorTwoMarginsDemo : TimelineDemo(
-    "$DIR/video-two-margins", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 0
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x Margin 00:00:02:00 00:00:00:00}}
-        """.parseCreditsCS(resolution = Resolution(700, 400))
-}
-
-
-object GuideCreditsSpreadsheetVideoTrimDemo : TimelineDemo(
-    "$DIR/video-trim", Format.VIDEO_GIF, rightMargin = 78
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x In 90 Out 165}}
-        """.parseCreditsCS(resolution = Resolution(700, 350))
-}
-
-
-object GuideCreditsSpreadsheetVideoAlignDemo : TimelineDemo(
-    "$DIR/video-align", Format.VIDEO_GIF, leftMargin = 39, rightMargin = 39
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x In 90 Out 165 Middle}}
-        """.parseCreditsCS(resolution = Resolution(700, 350))
-}
-
-
-object GuideCreditsSpreadsheetVideoFadeDemo : TimelineDemo(
-    "$DIR/video-fade", Format.VIDEO_GIF, leftMargin = 48, rightMargin = 48, leftFade = 24, rightFade = 24
-) {
-    override val isLocaleSensitive get() = false
-    override fun credits() =
-        """
-@Body
-{{Video rainbow 200x Margin 00:00:02:00 Fade 00:00:01:00}}
-        """.parseCreditsCS(resolution = Resolution(700, 400))
 }
 
 

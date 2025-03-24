@@ -6,8 +6,20 @@ import java.util.*
 /** Returns a [Set] that compares elements based on identity for better performance. */
 fun findUsedStyles(project: Project): Set<ListedStyle> {
     val usedStyles = Collections.newSetFromMap(IdentityHashMap<ListedStyle, Boolean>())
-    val styling = project.styling
+    findUsedStyles(project.styling, usedStyles)
+    findUsedStyles(project.credits, usedStyles)
+    return usedStyles
+}
 
+/** Returns a [Set] that compares elements based on identity for better performance. */
+fun findUsedStyles(credits: List<Credits>): Set<ListedStyle> {
+    val usedStyles = Collections.newSetFromMap(IdentityHashMap<ListedStyle, Boolean>())
+    findUsedStyles(credits, usedStyles)
+    return usedStyles
+}
+
+
+private fun findUsedStyles(styling: Styling, usedStyles: MutableSet<ListedStyle>) {
     fun <S : Style> processStyle(style: S) {
         val ignoreSettings = findIneffectiveSettings(styling, style)
         for (cst in getStyleConstraints(style.javaClass))
@@ -23,9 +35,12 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
     for (styleClass in ListedStyle.CLASSES)
         for (style in styling.getListedStyles(styleClass))
             processStyle(style)
+}
 
+
+private fun findUsedStyles(credits: List<Credits>, usedStyles: MutableSet<ListedStyle>) {
     // Add the page, content, and letter styles referenced from the read pages.
-    for (page in project.credits.asSequence().flatMap(Credits::pages))
+    for (page in credits.asSequence().flatMap(Credits::pages))
         for (stage in page.stages) {
             // Add the stage's page style.
             usedStyles.add(stage.style)
@@ -43,10 +58,10 @@ fun findUsedStyles(project: Project): Set<ListedStyle> {
                             when (bodyElem) {
                                 is BodyElement.Nil -> usedStyles.add(bodyElem.sty)
                                 is BodyElement.Str -> for (str in bodyElem.lines) for ((_, l) in str) usedStyles.add(l)
-                                is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> {}
+                                is BodyElement.Pic -> usedStyles.add(bodyElem.sty)
+                                is BodyElement.Tap -> usedStyles.add(bodyElem.sty)
+                                is BodyElement.Mis -> {}
                             }
                     }
         }
-
-    return usedStyles
 }

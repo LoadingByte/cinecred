@@ -1,20 +1,22 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.TimecodeFormat
-import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Picture
+import com.loadingbyte.cinecred.imaging.Tape
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Font
 import java.util.*
+import kotlin.io.path.name
 
 
 data class Styling(
     val global: Global,
     val pageStyles: PersistentList<PageStyle>,
     val contentStyles: PersistentList<ContentStyle>,
-    val letterStyles: PersistentList<LetterStyle>
+    val letterStyles: PersistentList<LetterStyle>,
+    val pictureStyles: PersistentList<PictureStyle>,
+    val tapeStyles: PersistentList<TapeStyle>
 ) {
 
     private val parentStyleLookup = IdentityHashMap<NestedStyle, Style>().apply {
@@ -28,6 +30,8 @@ data class Styling(
         PageStyle::class.java -> pageStyles
         ContentStyle::class.java -> contentStyles
         LetterStyle::class.java -> letterStyles
+        PictureStyle::class.java -> pictureStyles
+        TapeStyle::class.java -> tapeStyles
         else -> throw IllegalArgumentException("${styleClass.name} is not a ListedStyle class.")
     } as PersistentList<S>
 
@@ -47,9 +51,19 @@ sealed interface NamedStyle : Style {
 
 sealed interface ListedStyle : NamedStyle {
     companion object {
-        val CLASSES: List<Class<out ListedStyle>> =
-            listOf(PageStyle::class.java, ContentStyle::class.java, LetterStyle::class.java)
+        val CLASSES: List<Class<out ListedStyle>> = listOf(
+            PageStyle::class.java,
+            ContentStyle::class.java,
+            LetterStyle::class.java,
+            PictureStyle::class.java,
+            TapeStyle::class.java
+        )
     }
+}
+
+
+sealed interface PopupStyle : ListedStyle {
+    val volatile: Boolean
 }
 
 
@@ -298,6 +312,65 @@ enum class StripePreset { BACKGROUND, UNDERLINE, STRIKETHROUGH, CUSTOM }
 enum class LineJoin { MITER, ROUND, BEVEL }
 enum class CoordinateSystem { CARTESIAN, POLAR }
 enum class LayerAnchor { INDIVIDUAL, SIBLING, GLOBAL }
+
+
+data class PictureStyle(
+    override val name: String,
+    override val volatile: Boolean,
+    val picture: PictureRef,
+    val widthPx: Opt<Double>,
+    val heightPx: Opt<Double>,
+    val cropBlankSpace: Boolean
+) : PopupStyle
+
+
+data class PictureRef(val name: String) {
+
+    var loader: Picture.Loader? = null
+        private set
+
+    constructor(loader: Picture.Loader) : this(loader.file.name) {
+        this.loader = loader
+    }
+
+}
+
+
+data class TapeStyle(
+    override val name: String,
+    override val volatile: Boolean,
+    val tape: TapeRef,
+    val widthPx: Opt<Int>,
+    val heightPx: Opt<Int>,
+    val slice: TapeSlice,
+    val temporallyJustify: HJustify,
+    val leftTemporalMarginFrames: Int,
+    val rightTemporalMarginFrames: Int,
+    val fadeInFrames: Int,
+    val fadeOutFrames: Int
+) : PopupStyle
+
+
+data class TapeRef(val name: String) {
+
+    var tape: Tape? = null
+        private set
+
+    constructor(tape: Tape) : this(tape.fileOrDir.name) {
+        this.tape = tape
+    }
+
+}
+
+
+data class TapeSlice(
+    val inPoint: Opt<Timecode>,
+    val outPoint: Opt<Timecode>
+) {
+    init {
+        require(inPoint.value.javaClass == outPoint.value.javaClass)
+    }
+}
 
 
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)

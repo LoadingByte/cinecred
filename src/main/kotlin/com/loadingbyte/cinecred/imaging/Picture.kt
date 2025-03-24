@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.pdf.PDFDrawer
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
-import org.apache.pdfbox.Loader
 import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -22,9 +21,11 @@ import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import org.w3c.dom.traversal.NodeFilter.SHOW_TEXT
 import java.awt.geom.AffineTransform
 import java.awt.geom.Rectangle2D
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.StringWriter
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import javax.swing.FocusManager
@@ -42,7 +43,7 @@ import kotlin.math.max
 
 
 /** An abstraction over all the kinds of input images that a [DeferredImage] can work with: Raster, SVG, and PDF. */
-sealed interface Picture : Closeable {
+sealed interface Picture : AutoCloseable {
 
     val width: Double
     val height: Double
@@ -417,10 +418,10 @@ sealed interface Picture : Closeable {
         companion object {
 
             /** @throws IOException */
-            fun load(bytes: ByteArray): PDF = wrap(Loader.loadPDF(bytes))
+            fun load(bytes: ByteArray): PDF = wrap(org.apache.pdfbox.Loader.loadPDF(bytes))
 
             /** @throws IOException */
-            fun load(file: Path): PDF = wrap(Loader.loadPDF(file.toFile()))
+            fun load(file: Path): PDF = wrap(org.apache.pdfbox.Loader.loadPDF(file.toFile()))
 
             private fun wrap(doc: PDDocument): PDF {
                 if (doc.numberOfPages == 0) {
@@ -549,6 +550,54 @@ sealed interface Picture : Closeable {
                 // by the OS the next time the user restarts his system anyways.
                 LOGGER.error("Cannot delete temporary PDF file '{}' created by Ghostscript.", file, e)
             }
+        }
+
+    }
+
+
+    class Loader private constructor(val file: Path) : AutoCloseable {
+
+        private val lock = ReentrantLock()
+        private var loaded: Any? = null
+        private var closed = false
+
+        val isRaster: Boolean
+            get() = file.extension in RASTER_EXTS
+
+        /** @throws IllegalStateException */
+        val picture: Picture
+            get() = lock.withLock {
+                check(!closed) { "The picture loader has already been closed." }
+                if (loaded == null)
+                    try {
+                        loaded = load(file)
+                    } catch (e: Exception) {
+                        LOGGER.error("Picture '{}' cannot be read.", file.name, e)
+                        loaded = e
+                    }
+                when (val l = loaded) {
+                    is Exception -> throw IllegalStateException("Picture '${file.name}' cannot be read.", l)
+                    else -> l as Picture
+                }
+            }
+
+        fun loadInBackground() {
+            if (lock.withLock { loaded == null })
+                GLOBAL_THREAD_POOL.submit { picture }
+        }
+
+        override fun close() {
+            lock.withLock {
+                (loaded as? Picture)?.close()
+                loaded = null
+                closed = true
+            }
+        }
+
+        companion object {
+            /** If the given [Path] points to a picture file, returns a [Loader] that can be used to lazily load it. */
+            fun recognize(file: Path): Loader? =
+                if (file.isRegularFile() && file.extension in EXTS) Loader(file) else null
         }
 
     }

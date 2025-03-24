@@ -4,25 +4,20 @@ import com.google.common.collect.Iterators
 import com.google.common.collect.PeekingIterator
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.END
-import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.MIDDLE
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
-import java.text.DecimalFormat
 import java.util.*
-import kotlin.io.path.name
 
 
 fun readCredits(
     spreadsheet: Spreadsheet,
     styling: Styling,
-    pictureLoaders: Collection<PictureLoader>,
-    tapes: Collection<Tape>
+    pictureLoaders: Map<String, Picture.Loader>,
+    tapes: Map<String, Tape>
 ): Pair<Credits, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
@@ -48,8 +43,8 @@ fun readCredits(
 private class CreditsReader(
     val table: Table,
     val styling: Styling,
-    pictureLoaders: Collection<PictureLoader>,
-    tapes: Collection<Tape>
+    pictureLoaders: Map<String, Picture.Loader>,
+    tapes: Map<String, Tape>
 ) {
 
     /* ************************************
@@ -62,10 +57,28 @@ private class CreditsReader(
     val pageStyleMap = styling.pageStyles.map(PageStyle::name)
     val contentStyleMap = styling.contentStyles.map(ContentStyle::name)
     val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
+    val pictureStyleMap = styling.pictureStyles.map(PictureStyle::name)
+    val tapeStyleMap = styling.tapeStyles.map(TapeStyle::name)
 
     // Prepare resolvers for pictures and tape.
-    val picResolver = AuxiliaryFileResolver(pictureLoaders, PictureLoader::filename)
-    val tapeResolver = AuxiliaryFileResolver(tapes) { tape -> tape.fileOrDir.name }
+    val pictureStyleResolver = AuxiliaryStyleResolver(
+        pictureLoaders, isDirectory = { false }, pictureStyleMap,
+        { name -> PRESET_PICTURE_STYLE.copy(name = name) },
+        { name, pictureLoader -> PRESET_PICTURE_STYLE.copy(name = name, picture = PictureRef(pictureLoader)) }
+    )
+    val tapeStyleResolver = AuxiliaryStyleResolver(
+        tapes, isDirectory = Tape::fileSeq, tapeStyleMap,
+        { name -> PRESET_TAPE_STYLE.copy(name = name) },
+        { name, tape ->
+            val tcFmt = if (tape.fileSeq) TimecodeFormat.FRAMES else try {
+                tape.fps?.let { TimecodeFormat.SMPTE_NON_DROP_FRAME }
+            } catch (_: IllegalArgumentException) {
+                null
+            } ?: TimecodeFormat.EXACT_FRAMES_IN_SECOND
+            val pt = Opt(false, zeroTimecode(tcFmt))
+            PRESET_TAPE_STYLE.copy(name = name, tape = TapeRef(tape), slice = TapeSlice(pt, pt))
+        }
+    )
 
 
     /* *****************************************
@@ -288,13 +301,7 @@ private class CreditsReader(
        ************************************ */
 
     fun read(): Credits {
-        // Each picture and tape that's referenced in the credits must be loaded during reading for various reasons
-        // (e.g., tag configuration checks, or the fact that the following drawer stage needs their width and height).
-        // However, if we lazily load aux files only once encountering them, we load them sequentially, as the credits
-        // reader only continues when the loading is complete. This can take very long if many aux files are used.
-        // Instead, we do a quick first pass over the bodies, detect all referenced pictures and tapes, and trigger
-        // their loading in parallel background threads.
-        preloadUsedAuxFiles()
+        legacyAddStylesForUnhintedAuxFiles()
 
         for (row in 0..<table.numRows) {
             this.row = row
@@ -318,22 +325,18 @@ private class CreditsReader(
         return Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())
     }
 
-    private fun preloadUsedAuxFiles() {
+    fun legacyAddStylesForUnhintedAuxFiles() {
         for (row in 0..<table.numRows) {
-            val usedPicLoaders = HashSet<PictureLoader>()
-            val usedTapes = HashSet<Tape>()
             parseTaggedString(
                 table.getString(row, "body") ?: continue,
                 visitPlain = {},
                 visitTag = { tag ->
                     val (tagKey, tagVal) = tag.split(' ', limit = 2).also { if (it.size != 2) return@parseTaggedString }
                     when (tagKey) {
-                        in PIC_KW -> picResolver.find(tagVal)?.let(usedPicLoaders::add)
-                        in VIDEO_KW -> tapeResolver.find(tagVal)?.let(usedTapes::add)
+                        in PIC_KW -> pictureStyleResolver.legacyAddStyleForUnhinted(tagVal)
+                        in VIDEO_KW -> tapeStyleResolver.legacyAddStyleForUnhinted(tagVal)
                     }
                 })
-            for (picLoader in usedPicLoaders) GLOBAL_THREAD_POOL.submit { picLoader.picture }
-            for (tape in usedTapes) GLOBAL_THREAD_POOL.submit { tape.spec }
         }
     }
 
@@ -695,8 +698,8 @@ private class CreditsReader(
         var blankTagKey: String? = null
         var multipleBlanks = false
         var pictureOrVideoTagKey: String? = null
-        var embeddedPic: DeferredImage.EmbeddedPicture? = null
-        var embeddedTape: DeferredImage.EmbeddedTape? = null
+        var pictureStyle: PictureStyle? = null
+        var tapeStyle: TapeStyle? = null
         var multiplePicturesOrVideos = false
         parseTaggedString(
             str,
@@ -741,8 +744,8 @@ private class CreditsReader(
                             null -> {
                                 pictureOrVideoTagKey = tagKey
                                 when (tagKey) {
-                                    in PIC_KW -> embeddedPic = getEmbeddedPic(l10nColName, tagKey, tagVal)
-                                    in VIDEO_KW -> embeddedTape = getEmbeddedTape(l10nColName, tagKey, tagVal)
+                                    in PIC_KW -> pictureStyle = getPictureStyle(l10nColName, tagKey, tagVal)
+                                    in VIDEO_KW -> tapeStyle = getTapeStyle(l10nColName, tagKey, tagVal)
                                 }
                             }
                             else -> multiplePicturesOrVideos = true
@@ -751,11 +754,6 @@ private class CreditsReader(
                     else -> table.log(row, l10nColName, WARN, unknownTagMsg(tagKey))
                 }
             })
-
-        // To avoid OOM crashes due to absurdly large pictures or tapes, limit their width to a reasonable range.
-        val maxW = styling.global.resolution.widthPx * 2
-        embeddedPic?.let { if (it.width > maxW) embeddedPic = it.withWidthPreservingAspectRatio(maxW.toDouble()) }
-        embeddedTape?.let { if (it.resolution.widthPx > maxW) embeddedTape = it.withWidthPreservingAspectRatio(maxW) }
 
         val hasPlaintext = styledLines[0].isNotEmpty()
         return when {
@@ -767,9 +765,7 @@ private class CreditsReader(
             pictureOrVideoTagKey != null -> {
                 if (hasPlaintext || curLetterStyle != null || multiplePicturesOrVideos)
                     table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureOrVideoTagKey))
-                embeddedPic?.let(BodyElement::Pic)
-                    ?: embeddedTape?.let(BodyElement::Tap)
-                    ?: BodyElement.Mis
+                pictureStyle?.let(BodyElement::Pic) ?: tapeStyle?.let(BodyElement::Tap) ?: BodyElement.Mis
             }
             hasPlaintext -> {
                 if (only1Line && styledLines.size != 1)
@@ -789,28 +785,19 @@ private class CreditsReader(
         }
     }
 
-    fun getEmbeddedPic(l10nColName: String, tagKey: String, tagVal: String?) = picResolver.resolve(
-        l10nColName, tagVal,
-        prepare = { picLoader -> picLoader.picture?.let { pic -> DeferredImage.EmbeddedPicture(pic) } },
-        applyHints = { embPic0, hints ->
-            var embPic = embPic0
+    fun getPictureStyle(l10nColName: String, tagKey: String, tagVal: String?) = pictureStyleResolver.resolve(
+        l10nColName, tagKey, tagVal,
+        applyHints = { style0, hints ->
+            var style = style0
             while (hints.hasNext()) {
                 val hint = hints.next()
-                embPic = try {
+                style = try {
                     when {
                         // Crop the picture.
-                        hint in CROP_KW -> when (embPic.picture) {
-                            is Picture.Vector -> embPic.cropped()
-                            // Raster images cannot be cropped.
-                            is Picture.Raster -> {
-                                val msg = l10n("projectIO.credits.pictureRasterCrop", l10n(CROP_KW.key))
-                                table.log(row, l10nColName, WARN, msg)
-                                continue
-                            }
-                        }
+                        hint in CROP_KW -> style.copy(cropBlankSpace = true)
                         // Apply scaling hints.
-                        hint.startsWith('x') -> embPic.withHeightPreservingAspectRatio(hint.drop(1).toDouble())
-                        hint.endsWith('x') -> embPic.withWidthPreservingAspectRatio(hint.dropLast(1).toDouble())
+                        hint.startsWith('x') -> style.copy(heightPx = Opt(true, hint.drop(1).toDouble()))
+                        hint.endsWith('x') -> style.copy(widthPx = Opt(true, hint.dropLast(1).toDouble()))
                         else -> continue
                     }
                 } catch (_: IllegalArgumentException) {
@@ -818,22 +805,15 @@ private class CreditsReader(
                 }
                 hints.remove()
             }
-            embPic
+            style
         },
-        illFormattedMsg = { l10n("projectIO.credits.pictureIllFormatted", l10n(CROP_KW.key), tagKey) }
+        illFormattedMsg = { l10n("projectIO.credits.pictureIllFormatted", tagKey) }
     )
 
-    fun getEmbeddedTape(l10nColName: String, tagKey: String, tagVal: String?) = tapeResolver.resolve(
-        l10nColName, tagVal,
-        prepare = { tape ->
-            try {
-                DeferredImage.EmbeddedTape(tape)
-            } catch (_: Exception) {
-                null
-            }
-        },
-        applyHints = { embTape0, hints ->
-            var embTape = embTape0
+    fun getTapeStyle(l10nColName: String, tagKey: String, tagVal: String?) = tapeStyleResolver.resolve(
+        l10nColName, tagKey, tagVal,
+        applyHints = { style0, hints ->
+            var style = style0
             while (hints.hasNext()) {
                 val hint = hints.next()
                 val isMargin = hint in MARGIN_KW
@@ -858,35 +838,43 @@ private class CreditsReader(
                             } catch (_: IllegalArgumentException) {
                                 // rFrames just stays the same as lFrames.
                             }
-                        embTape = when {
-                            isMargin -> embTape.copy(leftMarginFrames = lFrames, rightMarginFrames = rFrames)
-                            else -> embTape.copy(leftFadeFrames = lFrames, rightFadeFrames = rFrames)
+                        style = when {
+                            isMargin ->
+                                style.copy(leftTemporalMarginFrames = lFrames, rightTemporalMarginFrames = rFrames)
+                            else -> style.copy(fadeInFrames = lFrames, fadeOutFrames = rFrames)
                         }
                     } catch (_: IllegalArgumentException) {
-                        val ex = formatTimecode(projFPS, projTcFmt, 7127)
-                        val msg = l10n("projectIO.credits.videoIllFormattedRecTimecode", hint, projTcFmt.label, ex)
-                        table.log(row, l10nColName, WARN, msg)
+                        // Pass
                     }
                 } else if (isIn || isOut) {
                     hints.remove()
                     val tcHint = if (hints.hasNext()) hints.next().also { hints.remove() } else null
-                    parseTapeTimecode(l10nColName, hint, tcHint, embTape.tape)?.let { tc ->
-                        try {
-                            embTape = if (isIn) embTape.withInPoint(tc) else embTape.withOutPoint(tc)
-                        } catch (_: IllegalArgumentException) {
-                            val msg = l10n("projectIO.credits.videoIllegalSrcInOut", hint, tcHint)
-                            table.log(row, l10nColName, WARN, msg)
+                    if (tcHint != null)
+                        for (tcFmt in TimecodeFormat.entries) {
+                            val tc = try {
+                                parseTimecode(tcFmt, tcHint)
+                            } catch (_: IllegalArgumentException) {
+                                continue
+                            }
+                            val slice = style.slice
+                            val z = Opt(false, zeroTimecode(tcFmt))
+                            val i = if (isIn) Opt(true, tc) else if (slice.inPoint.isActive) slice.inPoint else z
+                            val o = if (isOut) Opt(true, tc) else if (slice.outPoint.isActive) slice.outPoint else z
+                            try {
+                                style = style.copy(slice = TapeSlice(i, o))
+                            } catch (_: IllegalArgumentException) {
+                            }
+                            break
                         }
-                    }
                 } else if (isMid || isEnd) {
-                    embTape = embTape.copy(align = if (isMid) MIDDLE else END)
+                    style = style.copy(temporallyJustify = if (isMid) HJustify.CENTER else HJustify.RIGHT)
                     hints.remove()
                 } else {
-                    embTape = try {
+                    style = try {
                         when {
                             // Apply scaling hints.
-                            hint.startsWith('x') -> embTape.withHeightPreservingAspectRatio(hint.drop(1).toInt())
-                            hint.endsWith('x') -> embTape.withWidthPreservingAspectRatio(hint.dropLast(1).toInt())
+                            hint.startsWith('x') -> style.copy(heightPx = Opt(true, hint.drop(1).toInt()))
+                            hint.endsWith('x') -> style.copy(widthPx = Opt(true, hint.dropLast(1).toInt()))
                             else -> continue
                         }
                     } catch (_: IllegalArgumentException) {
@@ -895,76 +883,10 @@ private class CreditsReader(
                     hints.remove()
                 }
             }
-            embTape
+            style
         },
-        illFormattedMsg = {
-            l10n(
-                "projectIO.credits.videoIllFormatted",
-                l10n(MARGIN_KW.key), l10n(FADE_KW.key), styling.global.timecodeFormat.label,
-                l10n(IN_KW.key), l10n(OUT_KW.key), l10n(MIDDLE_KW.key), l10n(END_KW.key), tagKey
-            )
-        }
+        illFormattedMsg = { l10n("projectIO.credits.videoIllFormatted", tagKey) }
     )
-
-    private fun parseTapeTimecode(l10nColName: String, kw: String, str: String?, tape: Tape): Timecode? {
-        val fps = if (tape.fileSeq) styling.global.fps else tape.fps
-        val permittedTcFmts = if (tape.fileSeq) EnumSet.of(TimecodeFormat.FRAMES) else
-            (fps ?: FPS(1, 2)).canonicalTimecodeFormats.apply { remove(TimecodeFormat.FRAMES) }
-
-        fun permittedTcSamples() = permittedTcFmts.joinToString { formatTimecode(fps ?: FPS(30000, 1001), it, 7127) }
-
-        for (tcFmt in TimecodeFormat.entries) {
-            val tc = try {
-                parseTimecode(tcFmt, str ?: continue)
-            } catch (_: IllegalArgumentException) {
-                continue
-            }
-            // If parsing has been successful, check whether the timecode format is actually permitted for the
-            // tape's FPS, and notify the user if it isn't.
-            if (tcFmt !in permittedTcFmts) {
-                val msg = l10n(
-                    "projectIO.credits.videoWrongSrcTimecodeFormat",
-                    fps.prettyPrint(), kw, permittedTcFmts.joinToString { it.label }, tcFmt.label, permittedTcSamples()
-                )
-                table.log(row, l10nColName, WARN, msg)
-                return null
-            }
-            return when (tc) {
-                // If the user used the timecode format we need, immediately return.
-                is Timecode.Frames, is Timecode.Clock -> tc
-                // If the user used a SMPTE timecode, convert it to the clock format using the fixed FPS.
-                is Timecode.SMPTEDropFrame, is Timecode.SMPTENonDropFrame ->
-                    try {
-                        // We can only get here when FPS is not a random fraction, so FPS is known to be non-null.
-                        tc.toClock(fps!!)
-                    } catch (_: IllegalArgumentException) {
-                        val msg = l10n("projectIO.credits.videoNonExistentSrcTimecode", str, fps.prettyPrint())
-                        table.log(row, l10nColName, WARN, msg)
-                        null
-                    }
-                // If the user used an exact frames in second timecode, convert it to the clock format by looking up the
-                // referenced frame and taking its clock timecode.
-                is Timecode.ExactFramesInSecond ->
-                    try {
-                        tape.toClockTimecode(tc) ?: null.also {
-                            val msg = l10n("projectIO.credits.videoNonExistentSrcTimecode", str, fps.prettyPrint())
-                            table.log(row, l10nColName, WARN, msg)
-                        }
-                    } catch (_: Exception) {
-                        // If the tape has internal errors, it can't be rendered anyway, so don't bother the user.
-                        null
-                    }
-            }
-        }
-
-        // If the string doesn't match any of the known timecode formats, inform the user.
-        val msg = l10n(
-            "projectIO.credits.videoUnknownSrcTimecodeFormat",
-            fps.prettyPrint(), kw, permittedTcFmts.joinToString { it.label }, permittedTcSamples()
-        )
-        table.log(row, l10nColName, WARN, msg)
-        return null
-    }
 
 
     /* ***********************************
@@ -997,13 +919,16 @@ private class CreditsReader(
         val BLANK_KW = Keyword("blank")
         val STYLE_KW = Keyword("projectIO.credits.table.style")
         val PIC_KW = Keyword("projectIO.credits.table.pic")
-        val CROP_KW = Keyword("projectIO.credits.table.crop")
+        val CROP_KW = legacyKeyword("Crop", "Oříznutí", "Stutzen", "Rogner", "裁剪")
         val VIDEO_KW = Keyword("projectIO.credits.table.video")
-        val MARGIN_KW = Keyword("projectIO.credits.table.margin")
-        val FADE_KW = Keyword("projectIO.credits.table.fade")
-        val END_KW = Keyword("projectIO.credits.table.end")
-        val IN_KW = Keyword("projectIO.credits.table.in")
-        val OUT_KW = Keyword("projectIO.credits.table.out")
+        val MARGIN_KW = legacyKeyword("Margin", "Odsazení", "Rand", "Marge", "边缘")
+        val FADE_KW = legacyKeyword("Fade", "Blende", "Fondu", "淡入")
+        val END_KW = legacyKeyword("End", "Konec", "Ende", "Fin", "末尾")
+        val IN_KW = legacyKeyword("In", "Entrée", "入点")
+        val OUT_KW = legacyKeyword("Out", "Sortie", "出点")
+
+        private fun legacyKeyword(vararg kwSet: String) =
+            TreeSet(String.CASE_INSENSITIVE_ORDER).apply { addAll(kwSet) }
 
         fun String.toFiniteDouble(nonNeg: Boolean = false): Double {
             val f = replace(',', '.').toDouble()
@@ -1011,9 +936,6 @@ private class CreditsReader(
                 throw NumberFormatException()
             return f
         }
-
-        private fun FPS?.prettyPrint(): String =
-            if (this == null) "?" else DecimalFormat("0.##").format(frac)
 
     }
 
@@ -1027,7 +949,13 @@ private class CreditsReader(
     }
 
 
-    inner class AuxiliaryFileResolver<A>(auxiliaries: Collection<A>, name: (A) -> String) {
+    inner class AuxiliaryStyleResolver<S : PopupStyle, A : Any>(
+        auxiliaries: Map<String, A>,
+        isDirectory: (A) -> Boolean,
+        private val styleMap: MutableMap<String, S>,
+        private val makeStyle1: (String) -> S,
+        private val makeStyle2: (String, A) -> S
+    ) {
 
         // Put the auxiliaries into a map whose keys are the filenames. Also record all duplicate filenames.
         // Use a map with case-insensitive keys to ease the user experience.
@@ -1035,8 +963,7 @@ private class CreditsReader(
         private val dupSet = TreeSet(String.CASE_INSENSITIVE_ORDER)
 
         init {
-            for (aux in auxiliaries) {
-                val filename = name(aux)
+            fun registerFilename(filename: String, aux: A) {
                 if (filename !in dupSet)
                     if (filename !in auxMap)
                         auxMap[filename] = aux
@@ -1045,69 +972,85 @@ private class CreditsReader(
                         dupSet.add(filename)
                     }
             }
+
+            for ((name, aux) in auxiliaries)
+                registerFilename(name, aux)
+
+            val primaryFilenames = TreeSet(auxMap.navigableKeySet()) // freeze
+            for ((name, aux) in auxiliaries) {
+                val stem = name.substringBeforeLast(".", "")
+                if (!isDirectory(aux) && !stem.isEmpty() && stem !in primaryFilenames)
+                    registerFilename(stem, aux)
+            }
         }
 
-        fun find(tagVal: String): A? {
-            // A simplified duplicate of the resolve() function that doesn't have any side effects.
-            var splitIdx = tagVal.length
-            do {
-                val filename = tagVal.take(splitIdx).trim()
-                if (filename in dupSet)
-                    break
-                auxMap[filename]?.let { return it }
-                splitIdx = filename.lastIndexOf(' ', splitIdx)
-            } while (splitIdx != -1)
-            return null
+        fun legacyAddStyleForUnhinted(tagVal: String) {
+            auxMap[tagVal]?.let { aux ->
+                styleMap.computeIfAbsent(tagVal) {
+                    makeStyle2(tagVal, aux).copy(PopupStyle::volatile.st().notarize(true))
+                }
+            }
         }
 
-        fun <R> resolve(
+        fun resolve(
             l10nColName: String,
+            tagKey: String,
             tagVal: String?,
-            prepare: (A) -> R?,
-            applyHints: (R, PeekingIterator<String>) -> R,
+            applyHints: (S, PeekingIterator<String>) -> S,
             illFormattedMsg: () -> String
-        ): R? {
+        ): S? {
+            // If the tag value is empty, abort.
             if (tagVal == null) {
                 table.log(row, l10nColName, WARN, illFormattedMsg())
                 return null
             }
+
+            // If a style with this tag value already exists, return that.
+            styleMap[tagVal]?.let { return it }
+
+            var style: S? = null
 
             // Remove arbitrary many space-separated suffixes from the string and each time check whether the remaining
             // string is a filename. If that is the case, try to parse the suffixes as hints.
             var splitIdx = tagVal.length
             do {
                 val filename = tagVal.take(splitIdx).trim()
-
-                // If the filename is used multiple times in the project folder, abort and inform the user.
-                if (filename in dupSet) {
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.auxDuplicate", filename))
-                    return null
-                }
-
-                // If the filename belongs to exactly one auxiliary file, apply the hint suffixes and return the result.
-                auxMap[filename]?.let { aux ->
-                    var res = prepare(aux)
-                    if (res == null) {
-                        table.log(row, l10nColName, WARN, l10n("projectIO.credits.auxCorrupt", filename))
-                        return null
-                    }
+                // If the filename belongs to an auxiliary file, apply the hint suffixes and return the result.
+                val rawStyle = auxMap[filename]?.let { makeStyle2(filename, it) }
+                    ?: if (filename in dupSet) makeStyle1(filename) else null
+                if (rawStyle != null) {
                     val unrecognizedHints = tagVal.substring(splitIdx).splitToSequence(' ')
                         .filterTo(mutableListOf(), String::isNotBlank)
-                    res = applyHints(res, Iterators.peekingIterator(unrecognizedHints.iterator()))
-                    // If some hints could not be recognized, warn the user.
-                    if (unrecognizedHints.isNotEmpty()) {
-                        val msg = l10n("projectIO.credits.auxHintsUnrecognized", unrecognizedHints.joinToString(" "))
-                        table.log(row, l10nColName, WARN, msg + " " + illFormattedMsg())
-                    }
-                    return res
+                    style = applyHints(rawStyle, Iterators.peekingIterator(unrecognizedHints.iterator()))
+                    style = style.copy(PopupStyle::volatile.st().notarize(style == rawStyle))
+                    if (unrecognizedHints.isNotEmpty())
+                        style = style.copy(PopupStyle::name.st().notarize(tagVal))
+                    break
                 }
-
                 splitIdx = filename.lastIndexOf(' ')
             } while (splitIdx != -1)
 
             // The tag value doesn't contain a known filename.
-            table.log(row, l10nColName, WARN, l10n("projectIO.credits.auxNotFound") + " " + illFormattedMsg())
-            return null
+            if (style == null)
+                style = makeStyle1(tagVal).copy(PopupStyle::volatile.st().notarize(true))
+
+            var i = 1
+            while (true) {
+                val rename = style.name + if (i == 1) "" else " $i"
+                val renameNotar = PopupStyle::name.st().notarize(rename)
+                val renamedSty = style.copy(renameNotar)
+                val foundStyle = styleMap.putIfAbsent(rename, renamedSty)
+                if (foundStyle == null ||
+                    // Change name before comparing because == on it is case-sensitive.
+                    foundStyle.copy(renameNotar, PopupStyle::volatile.st().notarize(renamedSty.volatile))
+                        .equalsIgnoreIneffectiveSettings(styling, renamedSty)
+                ) {
+                    if (!rename.equals(tagVal, ignoreCase = true))
+                        table.logMigrationPut(row, l10nColName, "{{$tagKey $rename}}")
+                    return foundStyle ?: renamedSty
+                }
+                i++
+            }
         }
 
     }

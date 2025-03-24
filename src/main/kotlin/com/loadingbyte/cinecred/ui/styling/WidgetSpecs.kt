@@ -10,17 +10,19 @@ import javax.swing.Icon
 
 
 @Suppress("UNCHECKED_CAST")
-fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<S>> = when (styleClass) {
+fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<S, *>> = when (styleClass) {
     Global::class.java -> GLOBAL_WIDGET_SPECS
     PageStyle::class.java -> PAGE_STYLE_WIDGET_SPECS
     ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS
     LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS
     Layer::class.java -> LAYER_WIDGET_SPECS
+    PictureStyle::class.java -> PICTURE_STYLE_WIDGET_SPECS
+    TapeStyle::class.java -> TAPE_STYLE_WIDGET_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
-} as List<StyleWidgetSpec<S>>
+} as List<StyleWidgetSpec<S, *>>
 
 
-private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
+private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global, *>> = listOf(
     UnitWidgetSpec(Global::resolution.st(), Global::unitVGapPx.st(), unit = "px"),
     UnitWidgetSpec(Global::fps.st(), unit = "fps"),
     TimecodeWidgetSpec(
@@ -32,7 +34,7 @@ private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global>> = listOf(
 )
 
 
-private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
+private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle, *>> = listOf(
     ToggleButtonGroupWidgetSpec(PageStyle::behavior.st(), LABEL),
     TimecodeWidgetSpec(
         PageStyle::subsequentGapFrames.st(), PageStyle::cardRuntimeFrames.st(),
@@ -44,7 +46,7 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle>> = listOf(
 )
 
 
-private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = listOf(
+private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> = listOf(
     UnitWidgetSpec(
         ContentStyle::vMarginPx.st(), ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st(),
         ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(), ContentStyle::flowForceCellWidthPx.st(),
@@ -164,7 +166,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle>> = li
 )
 
 
-private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = listOf(
+private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle, *>> = listOf(
     WidthWidgetSpec(LetterStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         LetterStyle::heightPx.st(),
@@ -226,7 +228,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle>> = list
 )
 
 
-private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
+private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer, *>> = listOf(
     MultiplierWidgetSpec(
         Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
         Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(), Layer::stripeWidenLeftRfh.st(),
@@ -333,34 +335,97 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer>> = listOf(
 )
 
 
-sealed class StyleWidgetSpec<S : Style>(
-    vararg settings: StyleSetting<S, *>
+private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> = listOf(
+    WidthWidgetSpec(PictureStyle::widthPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(PictureStyle::heightPx.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        PictureStyle::widthPx.st(), PictureStyle::heightPx.st(),
+        unionName = "resolution", unionUnit = "px", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+    ),
+    ZeroInitWidgetSpec(PictureStyle::widthPx.st()) { style ->
+        try {
+            style.picture.loader?.picture?.width
+        } catch (_: IllegalStateException) {
+            null
+        }
+    },
+    ZeroInitWidgetSpec(PictureStyle::heightPx.st()) { style ->
+        try {
+            style.picture.loader?.picture?.height
+        } catch (_: IllegalStateException) {
+            null
+        }
+    }
+)
+
+
+private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listOf(
+    WidthWidgetSpec(TapeStyle::widthPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(TapeStyle::heightPx.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        TapeStyle::widthPx.st(), TapeStyle::heightPx.st(),
+        unionName = "resolution", unionUnit = "px", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+    ),
+    ZeroInitWidgetSpec(TapeStyle::widthPx.st()) { style ->
+        try {
+            style.tape.tape?.run { spec.resolution.widthPx }
+        } catch (_: IllegalStateException) {
+            null
+        }
+    },
+    ZeroInitWidgetSpec(TapeStyle::heightPx.st()) { style ->
+        try {
+            style.tape.tape?.run { spec.resolution.heightPx }
+        } catch (_: IllegalStateException) {
+            null
+        }
+    },
+    ToggleButtonGroupWidgetSpec(TapeStyle::temporallyJustify.st(), ICON),
+    TimecodeWidgetSpec(
+        TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st(),
+        TapeStyle::fadeInFrames.st(), TapeStyle::fadeOutFrames.st(),
+        getFPS = { styling, _ -> styling.global.fps },
+        getTimecodeFormat = { styling, _ -> styling.global.timecodeFormat }
+    ),
+    UnionWidgetSpec(
+        TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st(),
+        unionName = "temporalMarginFrames", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+    ),
+    UnionWidgetSpec(
+        TapeStyle::fadeInFrames.st(), TapeStyle::fadeOutFrames.st(),
+        unionName = "fadeFrames", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+    )
+)
+
+
+sealed class StyleWidgetSpec<S : Style, SS : StyleSetting<S, *>>(
+    vararg settings: SS
 ) {
-    val settings: List<StyleSetting<S, *>> = settings.toList()
+    val settings: List<SS> = settings.toList()
 }
 
 
 class NewSectionWidgetSpec<S : Style>(
     setting: StyleSetting<S, Any>
-) : StyleWidgetSpec<S>(setting)
+) : StyleWidgetSpec<S, StyleSetting<S, Any>>(setting)
 
 
 class UnitWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Any>,
     val unit: String
-) : StyleWidgetSpec<S>(*settings)
+) : StyleWidgetSpec<S, StyleSetting<S, Any>>(*settings)
 
 
 class WidthWidgetSpec<S : Style>(
     setting: StyleSetting<S, Any>,
     val widthSpec: WidthSpec
-) : StyleWidgetSpec<S>(setting)
+) : StyleWidgetSpec<S, StyleSetting<S, Any>>(setting)
 
 
 class NumberWidgetSpec<S : Style>(
     setting: StyleSetting<S, Number>,
     val step: Number? = null
-) : StyleWidgetSpec<S>(setting)
+) : StyleWidgetSpec<S, StyleSetting<S, Number>>(setting)
 
 
 class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
@@ -368,7 +433,7 @@ class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
     val show: Show,
     val getFixedIcon: ((SUBJ) -> Icon)? = null,
     val getDynIcon: ((Styling, S, SUBJ) -> Icon)? = null
-) : StyleWidgetSpec<S>(setting) {
+) : StyleWidgetSpec<S, StyleSetting<S, SUBJ>>(setting) {
     enum class Show { LABEL, ICON, ICON_AND_LABEL }
 
     init {
@@ -382,14 +447,14 @@ class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(
 class MultiplierWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Double>,
     val getMultiplier: (Styling, S) -> Double
-) : StyleWidgetSpec<S>(*settings)
+) : StyleWidgetSpec<S, StyleSetting<S, Double>>(*settings)
 
 
 class TimecodeWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Number>,
     val getFPS: (Styling, S) -> FPS,
     val getTimecodeFormat: (Styling, S) -> TimecodeFormat
-) : StyleWidgetSpec<S>(*settings)
+) : StyleWidgetSpec<S, StyleSetting<S, Number>>(*settings)
 
 
 class UnionWidgetSpec<S : Style>(
@@ -401,7 +466,7 @@ class UnionWidgetSpec<S : Style>(
     val settingIcons: List<Icon?>? = null,
     val settingGaps: List<String?>? = null,
     val settingNewlines: List<Int> = emptyList()
-) : StyleWidgetSpec<S>(*settings) {
+) : StyleWidgetSpec<S, StyleSetting<S, Any>>(*settings) {
     init {
         require(settingLabels.all(settings.indices::contains))
         require(settingNewlines.all(settings.indices::contains))
@@ -415,22 +480,28 @@ class UnionWidgetSpec<S : Style>(
 }
 
 
+class ZeroInitWidgetSpec<S : Style, SUBJ : Number>(
+    setting: OptStyleSetting<S, SUBJ>,
+    val getInitialValue: (S) -> SUBJ?
+) : StyleWidgetSpec<S, OptStyleSetting<S, SUBJ>>(setting)
+
+
 class SimpleListWidgetSpec<S : Style, SUBJ : Any>(
     setting: ListStyleSetting<S, SUBJ>,
     val newElement: SUBJ? = null,
     val newElementIsLastElement: Boolean = false,
     val elementsPerRow: Int = 1
-) : StyleWidgetSpec<S>(setting)
+) : StyleWidgetSpec<S, ListStyleSetting<S, SUBJ>>(setting)
 
 
 class LayerListWidgetSpec<S : Style, SUBJ : LayerStyle>(
     setting: ListStyleSetting<S, SUBJ>,
     val newElement: SUBJ,
     val advancedSettings: Set<StyleSetting<SUBJ, Any>>
-) : StyleWidgetSpec<S>(setting)
+) : StyleWidgetSpec<S, ListStyleSetting<S, SUBJ>>(setting)
 
 
 class ChoiceWidgetSpec<S : Style>(
     vararg settings: ListStyleSetting<S, Any>,
     val getNoItemsMsg: (() -> String)? = null
-) : StyleWidgetSpec<S>(*settings)
+) : StyleWidgetSpec<S, ListStyleSetting<S, Any>>(*settings)

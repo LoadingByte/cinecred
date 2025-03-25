@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.delivery.MAX_RENDER_PROGRESS
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.ui.helper.*
-import java.awt.BorderLayout
 import java.text.DecimalFormat
 import java.time.Duration
 import java.time.Instant
@@ -272,32 +271,29 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
     private class CancelButtonCell(private val callback: ((Int) -> Unit)? = null) :
         TableCellRenderer, AbstractCellEditor(), TableCellEditor {
 
-        private val panel: JPanel
+        private val button: JButton
         private var curRowIdx = 0
 
         init {
-            val button = JButton(CANCEL_ICON).apply {
+            button = JButton(CANCEL_ICON).apply {
                 putClientProperty(BUTTON_TYPE, BUTTON_TYPE_BORDERLESS)
                 isFocusable = false
                 isRolloverEnabled = false
                 toolTipText = l10n("ui.deliverRenderQueue.cancelTooltip")
                 addActionListener { callback!!(curRowIdx) }
             }
-            panel = JPanel(BorderLayout()).apply {
-                add(button, BorderLayout.CENTER)
-            }
         }
 
         override fun getTableCellRendererComponent(
             table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, rowIdx: Int, colIdx: Int
-        ) = panel.apply { setTableCellBackground(table, rowIdx) }
+        ) = button.apply { setTableCellBackground(table, rowIdx) }
 
         override fun getCellEditorValue() = null
         override fun shouldSelectCell(anEvent: EventObject) = false
 
         override fun getTableCellEditorComponent(
             table: JTable, value: Any, isSelected: Boolean, rowIdx: Int, colIdx: Int
-        ) = panel.apply { setTableCellBackground(table, rowIdx) }.also { curRowIdx = rowIdx }
+        ) = button.apply { setTableCellBackground(table, rowIdx) }.also { curRowIdx = rowIdx }
 
     }
 

@@ -889,10 +889,10 @@ class Canvas private constructor(
         }
 
         private fun differOnlyByIntegerTranslation(t1: AffineTransform, t2: AffineTransform) =
-            abs(t1.scaleX - t2.scaleX) < 0.001 && abs(t1.scaleY - t2.scaleY) < 0.001 &&
-                    abs(t1.shearX - t2.shearX) < 0.001 && abs(t1.shearY - t2.shearY) < 0.001 &&
-                    (t1.translateX - t2.translateX).let { abs(it - round(it)) < 0.001 } &&
-                    (t1.translateY - t2.translateY).let { abs(it - round(it)) < 0.001 }
+            abs(t1.scaleX - t2.scaleX) < 0.00001 && abs(t1.scaleY - t2.scaleY) < 0.00001 &&
+                    abs(t1.shearX - t2.shearX) < 0.00001 && abs(t1.shearY - t2.shearY) < 0.00001 &&
+                    (t1.translateX - t2.translateX).let { abs(it - round(it)) < 0.00001 } &&
+                    (t1.translateY - t2.translateY).let { abs(it - round(it)) < 0.00001 }
 
     }
 

@@ -41,8 +41,10 @@ fun drawStage(
     } else {
         // If this stage is a scroll stage that is preceded by a card stage, add the vertical gap behind the card stage
         // to the front of this stage because card stage images are not allowed to have extremal vertical gaps baked
-        // into them.
-        var y = (if (prevStage != null && prevStage.style.behavior == CARD) prevStage.vGapAfterPx else 0.0).toElasticY()
+        // into them. If, however, this stage is empty and the last stage on the page, drop that vertical gap.
+        var y = 0.0.toY()
+        if (prevStage != null && prevStage.style.behavior == CARD && !(nextStage == null && stage.compounds.isEmpty()))
+            y += prevStage.vGapAfterPx.toElasticY()
         for ((compoundIdx, compound) in stage.compounds.withIndex()) {
             val compoundImage = drawCompound(resolution, drawnBlocks, compound)
             stageImage.drawDeferredImage(compoundImage, 0.0, y)
@@ -50,8 +52,10 @@ fun drawStage(
             if (compoundIdx != stage.compounds.lastIndex)
                 y += (compound as Compound.Scroll).vGapAfterPx
         }
-        // If this stage is a scroll stage and not the last stage on the page, add the gap behind it to its image.
-        if (nextStage != null) y += stage.vGapAfterPx.toElasticY()
+        // If this stage is a scroll stage, is not the last stage on the page, and is not an empty first stage on the
+        // page, add the gap behind it to its image.
+        if (nextStage != null && !(prevStage == null && stage.compounds.isEmpty()))
+            y += stage.vGapAfterPx.toElasticY()
         // Set the stage image's height.
         stageImage.height = y
         return DrawnStage(stageImage, null)

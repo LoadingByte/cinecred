@@ -184,7 +184,9 @@ private class CreditsReader(
     var blockTailDeclaredRow = 0
 
     fun concludePage() {
-        if (pageStages.isNotEmpty()) {
+        // We allow empty scroll stages as long as there's at least one card stage on the page. This is useful to, e.g.,
+        // have a card scroll in (using an empty scroll stage) and then fade out.
+        if (pageStages.any { stage -> stage.compounds.isNotEmpty() }) {
             val gapAfterFrames = pageGapAfterFrames ?: if (stageStyle == null) 0 else
                 pageStages.last().style.subsequentGapFrames
             val page = Page(pageStages.toPersistentList(), gapAfterFrames)
@@ -195,7 +197,8 @@ private class CreditsReader(
     }
 
     fun concludeStage(vGapAfter: Double) {
-        if (stageCompounds.isNotEmpty()) {
+        // Note: We allow empty scroll stages. Pages that are fully empty will be filtered out by concludePage().
+        if (stageCompounds.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
             val stageStyle = this.stageStyle!!
             when (stageStyle.behavior) {
                 PageBehavior.CARD -> {
@@ -221,7 +224,8 @@ private class CreditsReader(
                     }
                 }
             }
-        }
+        } else if (stageStyle != null)
+            table.log(stageDeclaredRow, "pageStyle", WARN, l10n("projectIO.credits.emptyCardPage"))
         stageStyle = nextStageStyle
         stageRuntimeFrames = nextStageRuntimeFrames
         stageRuntimeGroupName = nextStageRuntimeGroupName
@@ -581,9 +585,8 @@ private class CreditsReader(
 
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
-        val isConclusionMarked = isBlockConclusionMarked || isSpineConclusionMarked || isCompoundConclusionMarked ||
-                isStageConclusionMarked
-        if (newHead != null || newTail != null || (isConclusionMarked && bodyElem != null)) {
+        val isConclusionMarked = isBlockConclusionMarked || isSpineConclusionMarked || isCompoundConclusionMarked
+        if (newHead != null || newTail != null || (bodyElem != null && isConclusionMarked) || isStageConclusionMarked) {
             // Pull the accumulated vertical gap.
             val vGap = explicitVGapPx ?: implicitVGapPx
             explicitVGapPx = null
@@ -598,7 +601,7 @@ private class CreditsReader(
                 // Determine whether the stage that we'll conclude in a moment is the last one on its page.
                 val currStyle = stageStyle
                 val nextStyle = nextStageStyle!!
-                val isLastOnPage = when {
+                var isLastOnPage = when {
                     stageMeltWithNext ->
                         if (currStyle?.behavior == nextStyle.behavior) {
                             val msg = l10n("projectIO.credits.cannotMeltSameBehavior")
@@ -621,6 +624,11 @@ private class CreditsReader(
                 }
                 stageMeltWithNext = false
                 concludeStage(vGap)
+                // If the last stage was dropped (probably because it was an empty card stage) and we would now be left
+                // with two back-to-back scroll stages, also conclude the page.
+                if (nextStyle.behavior == PageBehavior.SCROLL &&
+                    pageStages.lastOrNull()?.style?.behavior == PageBehavior.SCROLL
+                ) isLastOnPage = true
                 if (isLastOnPage)
                     concludePage()
             } else if (isCompoundConclusionMarked) {

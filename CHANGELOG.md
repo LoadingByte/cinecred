@@ -10,6 +10,8 @@ Cinecred Changelog
 - Pictures and videos are now configured via the styling window GUI.
 - The aspect ratio of pictures and videos may now be altered.
 - Grid and flow content styles can now sort their body cells.
+- Scroll pages in a group of melted pages may now be left empty, which is useful
+  to, e.g., have an isolated card page scroll in and then fade out.
 - A new button in the project window directly opens the credits file either in
   the local spreadsheet editor or the web browser.
 - Added configurable templates for the delivery destination file/folder.

@@ -8,10 +8,10 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.*
 import java.nio.file.WatchKey
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.nio.file.attribute.FileTime
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.io.path.fileSize
 import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
@@ -29,7 +29,7 @@ object RecursiveFileWatcher {
         var onetimePolling = false
     }
 
-    private class MemoryEntry(var lastModMillis: Long, var lastSeenTick: Long)
+    private class MemoryEntry(var size: Long, var modTime: FileTime, var lastSeenTick: Long)
 
 
     private val watcher = FileSystems.getDefault().newWatchService()
@@ -41,8 +41,12 @@ object RecursiveFileWatcher {
         // We schedule the polling with a fixed delay (as opposed to at a fixed rate) to guarantee that there is some
         // breathing time between poll() calls, even in cases where poll() always takes very long to complete. In that
         // breathing time, the lock is free, so calls to watch() and unwatch() actually have a chance to run.
-        Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "FileWatcher-Poller").apply { isDaemon = true } }
-            .scheduleWithFixedDelay(::poll, 1, 1, TimeUnit.SECONDS)
+        Thread({
+            while (true) {
+                poll()
+                Thread.sleep(1000)
+            }
+        }, "FileWatcher-Poller").apply { isDaemon = true }.start()
 
         Thread({
             while (true) {
@@ -76,11 +80,11 @@ object RecursiveFileWatcher {
             for ((rootDir, order) in orders)
                 if (order.continuousPolling || order.onetimePolling) {
                     order.onetimePolling = false
-                    // Check whether the modification time of any file in the file tree has changed (including new
+                    // Check whether the size or mod time of any file in the file tree has changed (including new
                     // files!), and if so, notify the listener. Also refresh the last seen tick of every existing file.
                     for (file in rootDir.walkSafely())
                         if (file.isRegularFile())
-                            potentialModification(order, file, setLastSeenTick = true)
+                            potentialModification(order, file, notifyListener = true, setLastSeenTick = true)
                     // De-memorize all files which have not been seen this tick, and notify the listener about them.
                     order.memory.entries.remAndDoIf(
                         { (_, memoryEntry) -> memoryEntry.lastSeenTick != pollingTick },
@@ -126,9 +130,9 @@ object RecursiveFileWatcher {
                             order.memory.keys.remAndDoIf({ it.startsWith(file) }, { order.listener(Event.DELETE, it) })
                     }
 
-                    // When a regular file is created or modified, check the modification time and notify the listener.
+                    // When a regular file is created or modified, check its size & mod time and notify the listener.
                     if ((event.kind() == ENTRY_CREATE || event.kind() == ENTRY_MODIFY) && file.isRegularFile())
-                        potentialModification(order, file, setLastSeenTick = false)
+                        potentialModification(order, file, notifyListener = true, setLastSeenTick = false)
 
                     // When a regular file is deleted, de-memorize it and notify the listener.
                     if (event.kind() == ENTRY_DELETE && order.memory.remove(file) != null)
@@ -138,24 +142,10 @@ object RecursiveFileWatcher {
     }
 
     private fun setupFileTree(order: Order, dir: Path, notifyListener: Boolean) {
-        // Memorize all regular files and their current modification times.
+        // Memorize all regular files and their current sizes & mod times.
         for (file in dir.walkSafely())
-            if (file.isRegularFile()) {
-                try {
-                    order.memory[file] = MemoryEntry(file.getLastModifiedTime().toMillis(), -1)
-                } catch (_: NoSuchFileException) {
-                    // The file was deleted right after isRegularFile() returned true. Unlucky timing, but do
-                    // not add the memory entry then.
-                    continue
-                } catch (e: IOException) {
-                    // If we can't get the last modified time for some other reason, do not watch this file.
-                    LOGGER.error("Cannot get the initial last modified time of file '{}'; will not watch it.", file, e)
-                    continue
-                }
-                // If the file was instead successfully memorized, notify the listener about it if requested.
-                if (notifyListener)
-                    order.listener(Event.MODIFY, file)
-            }
+            if (file.isRegularFile())
+                potentialModification(order, file, notifyListener = notifyListener, setLastSeenTick = false)
 
         // Only after the memorization is complete, register a file watcher in each directory of the file tree.
         for (file in dir.walkSafely())
@@ -172,32 +162,27 @@ object RecursiveFileWatcher {
                 }
     }
 
-
-    private fun potentialModification(order: Order, file: Path, setLastSeenTick: Boolean) {
-        val memoryEntry = order.memory.computeIfAbsent(file) { MemoryEntry(-1, -1) }
-        val lastModMillis = try {
-            file.getLastModifiedTime().toMillis()
+    private fun potentialModification(order: Order, file: Path, notifyListener: Boolean, setLastSeenTick: Boolean) {
+        val size: Long
+        val modTime: FileTime
+        try {
+            size = file.fileSize()
+            modTime = file.getLastModifiedTime()
         } catch (_: NoSuchFileException) {
             // The file was deleted between it being detected and this code being reached. Abort this method and let the
             // deletion detector notify the listener in a moment.
             return
         } catch (e: IOException) {
-            // If we can't get the last modified time for some other reason, hope that maybe it'll work again next time.
-            LOGGER.error("Cannot get the last modified time required to check file '{}' for changes.", file, e)
+            // If we can't get the size & mod time for some other reason, hope that maybe it'll work again next time.
+            LOGGER.error("Cannot get the size & mod time required to check file '{}' for changes.", file, e)
             return
         }
-        if (memoryEntry.lastModMillis != lastModMillis) {
-            // Sometimes, the same file is changed multiple times within the same millisecond. If we didn't wait for
-            // a couple of milliseconds here, the first change would correctly be forwarded to the listener, but the
-            // second change would not because the file modification time stayed the same after the first change.
-            // By waiting, we ensure that the second change has already taken place when the function continues.
-            Thread.sleep(5)
-            memoryEntry.lastModMillis = try {
-                file.getLastModifiedTime().toMillis()
-            } catch (_: IOException /* includes NoSuchFileException */) {
-                return
-            }
-            order.listener(Event.MODIFY, file)
+        val memoryEntry = order.memory.computeIfAbsent(file) { MemoryEntry(-1, FileTime.fromMillis(-1), -1) }
+        if (memoryEntry.size != size || memoryEntry.modTime != modTime) {
+            memoryEntry.size = size
+            memoryEntry.modTime = modTime
+            if (notifyListener)
+                order.listener(Event.MODIFY, file)
         }
         if (setLastSeenTick)
             memoryEntry.lastSeenTick = pollingTick

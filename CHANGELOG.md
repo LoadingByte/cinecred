@@ -19,6 +19,8 @@ Cinecred Changelog
 ### Fixes
 
 - XLSX files exported from Google Sheets no longer fail to parse.
+- Copying large amounts of files into the project folder no longer clogs up the
+  file modification detector.
 - Fixed crashes upon parsing an illegal timecode in the spreadsheet while an
   illegal timecode format is selected in the project settings.
 - Newly created 4K projects have their pixel sizes scaled up again.

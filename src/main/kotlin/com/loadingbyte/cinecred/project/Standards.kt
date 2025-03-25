@@ -59,6 +59,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
     vMarginPx = 0.0,
     bodyLetterStyleName = "",
     bodyLayout = BodyLayout.GRID,
+    sort = Sort.OFF,
     gridCols = 1,
     gridFillingOrder = GridFillingOrder.L2R_T2B,
     gridFillingBalanced = true,

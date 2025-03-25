@@ -70,6 +70,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
         ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::tailMatchWidthAcrossStyles.st(),
         getNoItemsMsg = { l10n("ui.styling.content.msg.noMatchStylesAvailable") }
     ),
+    ToggleButtonGroupWidgetSpec(ContentStyle::sort.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingOrder.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridFillingBalanced.st(), ICON, ::gridFillingBalancedIcon),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridStructure.st(), ICON),

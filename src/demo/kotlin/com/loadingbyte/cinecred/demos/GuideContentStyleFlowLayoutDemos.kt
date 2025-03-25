@@ -15,6 +15,7 @@ private const val DIR = "guide/content-style/flow-layout"
 val GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS
     get() = listOf(
         GuideContentStyleFlowLayoutExampleDemo,
+        GuideContentStyleFlowLayoutSortDemo,
         GuideContentStyleFlowLayoutDirectionDemo,
         GuideContentStyleFlowLayoutJustifyLinesDemo,
         GuideContentStyleFlowLayoutSquareCellsDemo,
@@ -30,6 +31,27 @@ val GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS
 
 object GuideContentStyleFlowLayoutExampleDemo : PageDemo("$DIR/example", Format.PNG, pageGuides = true) {
     override fun credits() = listOf(FLOW_SPREADSHEET.parseCreditsCS(bulletsCS.copy(name = "Demo")))
+}
+
+
+object GuideContentStyleFlowLayoutSortDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/sort", Format.SLOW_STEP_GIF,
+    listOf(ContentStyle::sort.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        for (sort in Sort.entries)
+            this += bulletsCS.copy(name = "Demo", sort = sort)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Body,@Content Style
+Chantal,Demo
+Eva,
+Ada,
+Ben,
+Florian
+Dan,
+        """.parseCreditsCS(style)
 }
 
 

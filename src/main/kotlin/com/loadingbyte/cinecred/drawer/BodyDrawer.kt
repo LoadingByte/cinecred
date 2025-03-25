@@ -77,9 +77,8 @@ private fun drawBodyImagesWithGridBodyLayout(
 
     // Flow each block's body elements into the grid configured for that block.
     val colsPerBlock = blocks.associateWith { block ->
-        flowIntoGridCols(
-            block.body, block.style.gridCols, block.style.gridFillingOrder, block.style.gridFillingBalanced
-        )
+        val s = block.style
+        flowIntoGridCols(sort(block.body, s.sort), s.gridCols, s.gridFillingOrder, s.gridFillingBalanced)
     }
 
     // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
@@ -343,9 +342,9 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // We will later use this function to flow a block's body cells into lines.
     fun flowIntoLines(block: Block): List<List<BodyElement>> {
         // Determine which body elements should lie on which line. We use the simplest possible flow algorithm for this.
-        val style = block.style
+        val s = block.style
         val sharedCellWidth = sharedCellWidthPerBlock[block]
-        return flowIntoLines(block.body, style.flowDirection, style.flowLineWidthPx, style.flowHGapPx) { bodyElem ->
+        return flowIntoLines(sort(block.body, s.sort), s.flowDirection, s.flowLineWidthPx, s.flowHGapPx) { bodyElem ->
             sharedCellWidth?.value ?: bodyElem.getWidth(styling)
         }
     }
@@ -714,6 +713,18 @@ private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
     is BodyElement.Pic -> sty.toEmbedded()?.height ?: MISSING_RECT.height
     is BodyElement.Tap -> sty.toEmbedded(styling)?.run { resolution.heightPx.toDouble() } ?: MISSING_RECT.height
     is BodyElement.Mis -> MISSING_RECT.height
+}
+
+
+private fun sort(body: List<BodyElement>, sort: Sort): List<BodyElement> = when (sort) {
+    Sort.OFF -> body
+    Sort.ASCENDING -> body.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, ::sortingSelector))
+    Sort.DESCENDING -> body.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER, ::sortingSelector))
+}
+
+private fun sortingSelector(bodyElem: BodyElement) = when (bodyElem) {
+    is BodyElement.Str -> bodyElem.lines.first().joinToString("") { (run, _) -> run }
+    is BodyElement.Nil, is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> ""
 }
 
 

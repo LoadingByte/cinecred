@@ -115,6 +115,7 @@ data class ContentStyle(
     val vMarginPx: Double,
     val bodyLetterStyleName: String,
     val bodyLayout: BodyLayout,
+    val sort: Sort,
     val gridCols: Int,
     val gridFillingOrder: GridFillingOrder,
     val gridFillingBalanced: Boolean,
@@ -205,6 +206,7 @@ enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER,
 enum class AppendageVShelve { FIRST, OVERALL_MIDDLE, LAST }
 enum class AppendageVJustify { TOP, MIDDLE, BOTTOM, BASELINE }
 enum class MatchExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
+enum class Sort { OFF, ASCENDING, DESCENDING }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
 enum class GridStructure { FREE, EQUAL_WIDTH_COLS, SQUARE_CELLS }
 enum class GridColUnderoccupancy { LEFT_OMIT, LEFT_RETAIN, RIGHT_OMIT, RIGHT_RETAIN }
@@ -389,7 +391,7 @@ val Enum<*>.label: String
         AppendageVJustify.MIDDLE -> VJustify.MIDDLE.label
         AppendageVJustify.BOTTOM -> VJustify.BOTTOM.label
         GridStructure.SQUARE_CELLS -> l10n("ui.styling.content.flowSquareCells")
-        SmallCaps.OFF, Superscript.OFF -> l10n("off")
+        Sort.OFF, SmallCaps.OFF, Superscript.OFF -> l10n("off")
         Superscript.CUSTOM, StripePreset.CUSTOM -> l10n("custom")
         else -> l10n("project.${javaClass.simpleName}.${name}")
     }

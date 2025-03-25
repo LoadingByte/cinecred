@@ -62,6 +62,10 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
 
 private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentStyle>> = listOf(
     StyleEffectivitySpec(
+        ContentStyle::sort.st(),
+        isTotallyIneffective = { _, style -> style.bodyLayout.let { it != GRID && it != FLOW } }
+    ),
+    StyleEffectivitySpec(
         ContentStyle::gridCols.st(),
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(), ContentStyle::gridStructure.st(),
         ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridMatchColWidths.st(),

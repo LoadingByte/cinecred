@@ -227,6 +227,17 @@ val MatchExtent.icon
     }
 
 
+private val SORT_ASCENDING_ICON = SVGIcon.load("/icons/sort/ascending.svg")
+private val SORT_DESCENDING_ICON = SVGIcon.load("/icons/sort/descending.svg")
+
+val Sort.icon
+    get() = when (this) {
+        Sort.OFF -> CROSS_ICON
+        Sort.ASCENDING -> SORT_ASCENDING_ICON
+        Sort.DESCENDING -> SORT_DESCENDING_ICON
+    }
+
+
 private val GRID_FILLING_ORDER_L2R_T2B_ICON = SVGIcon.load("/icons/gridFillingOrder/l2r-t2b.svg")
 private val GRID_FILLING_ORDER_R2L_T2B_ICON = SVGIcon.load("/icons/gridFillingOrder/r2l-t2b.svg")
 private val GRID_FILLING_ORDER_T2B_L2R_ICON = SVGIcon.load("/icons/gridFillingOrder/t2b-l2r.svg")
@@ -395,6 +406,7 @@ val Enum<*>.icon
         is AppendageVShelve -> icon
         is AppendageVJustify -> icon
         is MatchExtent -> icon
+        is Sort -> icon
         is GridFillingOrder -> icon
         is GridStructure -> icon
         is GridColUnderoccupancy -> icon

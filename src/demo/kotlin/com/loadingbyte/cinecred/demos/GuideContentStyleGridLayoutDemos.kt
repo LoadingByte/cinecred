@@ -13,6 +13,7 @@ private const val DIR = "guide/content-style/grid-layout"
 val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
     get() = listOf(
         GuideContentStyleGridLayoutExampleDemo,
+        GuideContentStyleGridLayoutSortDemo,
         GuideContentStyleGridColsDemo,
         GuideContentStyleGridLayoutFillingOrderDemo,
         GuideContentStyleGridLayoutFillingBalancedDemo,
@@ -28,6 +29,27 @@ val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
 
 object GuideContentStyleGridLayoutExampleDemo : PageDemo("$DIR/example", Format.PNG, pageGuides = true) {
     override fun credits() = listOf(GRID_SPREADSHEET.parseCreditsCS(tabularCS.copy(name = "Demo")))
+}
+
+
+object GuideContentStyleGridLayoutSortDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/sort", Format.SLOW_STEP_GIF,
+    listOf(ContentStyle::sort.st()), pageGuides = true
+) {
+    override fun styles() = buildList<ContentStyle> {
+        for (sort in Sort.entries)
+            this += tabularCS.copy(name = "Demo", sort = sort)
+    }
+
+    override fun credits(style: ContentStyle) = """
+@Body,@Content Style
+Chantal,Demo
+Eva,
+Ada,
+Ben,
+Florian
+Dan,
+        """.parseCreditsCS(style)
 }
 
 

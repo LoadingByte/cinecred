@@ -14,6 +14,7 @@ import com.loadingbyte.cinecred.ui.ctrl.WelcomeCtrl
 import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
+import sun.font.FontUtilities
 import java.awt.*
 import java.awt.font.LineBreakMeasurer
 import java.awt.font.TextAttribute
@@ -234,9 +235,11 @@ class Screencast(
 ) {
 
     companion object {
+        @Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
         private val CAPTION_FONT = BUNDLED_FONTS
             .first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }
             .deriveFont(48f)
+            .let(FontUtilities::getCompositeFontUIResource)
     }
 
     private val width = desktop.width

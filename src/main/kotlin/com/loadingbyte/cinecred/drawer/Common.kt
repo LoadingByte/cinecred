@@ -46,14 +46,14 @@ fun justify(vJustify: VJustify, areaHeight: Double, objHeight: Double): Double =
     }
 
 
-fun partitionToTransitiveClosures(
-    contentStyles: List<ContentStyle>,
-    getMemberStyleNames: (ContentStyle) -> List<String>,
-    filter: ContentStyle.() -> Boolean
+inline fun List<ContentStyle>.filter(predicate: ContentStyle.() -> Boolean) =
+    (this as Iterable<ContentStyle>).filter(predicate)
+
+fun List<ContentStyle>.partitionIntoTransitiveClosures(
+    getMemberStyleNames: (ContentStyle) -> List<String>
 ): Map<ContentStyle, PartitionId> {
-    val filteredStyles = contentStyles.filter(filter)
     val partitioner = HashMap<String, Pair<Any, MutableList<ContentStyle>>>()
-    for (style in filteredStyles) {
+    for (style in this) {
         val partition = partitioner.computeIfAbsent(style.name) { Pair(Any() /* unique partition ID */, ArrayList()) }
         partition.second.add(style)
         // For each referenced style that is actually available for partitioning...
@@ -61,7 +61,7 @@ fun partitionToTransitiveClosures(
         // consider two available styles referencing the same unavailable style. Even though these references are
         // invalid, they would lead to both styles ending up in the same partition.
         for (refStyleName in getMemberStyleNames(style))
-            if (filteredStyles.any { it.name == refStyleName }) {
+            if (this.any { it.name == refStyleName }) {
                 val partition2 = partitioner[refStyleName]
                 // If "partition2" doesn't exist yet, insert "partition" in its place.
                 if (partition2 == null)
@@ -81,5 +81,5 @@ fun partitionToTransitiveClosures(
                 }
             }
     }
-    return filteredStyles.associateWithTo(IdentityHashMap()) { style -> partitioner.getValue(style.name).first }
+    return this.associateWithTo(IdentityHashMap()) { style -> partitioner.getValue(style.name).first }
 }

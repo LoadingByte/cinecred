@@ -24,7 +24,7 @@ val GUIDE_CONTENT_STYLE_DEMOS
         GuideContentStyleHasHeadDemo,
         GuideContentStyleHeadLetterStyleDemo,
         GuideContentStyleHeadForceWidthDemo,
-        GuideContentStyleHeadMatchWidthDemo,
+        GuideContentStyleHeadHarmonizeWidthDemo,
         GuideContentStyleHeadHJustifyDemo,
         GuideContentStyleHeadVJustifyDemo,
         GuideContentStyleHeadGapDemo,
@@ -182,20 +182,20 @@ object GuideContentStyleHeadForceWidthDemo : StyleSettingsDemo<ContentStyle>(
 }
 
 
-object GuideContentStyleHeadMatchWidthDemo : StyleSettingsDemo<ContentStyle>(
-    ContentStyle::class.java, "$DIR/head-match-width", Format.STEP_GIF,
-    listOf(ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st()), pageGuides = true
+object GuideContentStyleHeadHarmonizeWidthDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/head-harmonize-width", Format.STEP_GIF,
+    listOf(ContentStyle::headHarmonizeWidth.st(), ContentStyle::headHarmonizeWidthAcrossStyles.st()), pageGuides = true
 ) {
     private val altStyleName get() = l10n("project.template.contentStyleGutter") + " 2"
 
     override fun styles() = buildList<ContentStyle> {
         this += gutterCS.copy(
-            name = "Demo", gridMatchColWidths = MatchExtent.OFF, headMatchWidth = MatchExtent.OFF
+            name = "Demo", gridHarmonizeColWidths = HarmonizeExtent.OFF, headHarmonizeWidth = HarmonizeExtent.OFF
         )
-        this += last().copy(headMatchWidth = MatchExtent.ACROSS_BLOCKS)
+        this += last().copy(headHarmonizeWidth = HarmonizeExtent.ACROSS_BLOCKS)
         this += last().copy(
-            headMatchWidth = MatchExtent.ACROSS_BLOCKS,
-            headMatchWidthAcrossStyles = persistentListOf(altStyleName)
+            headHarmonizeWidth = HarmonizeExtent.ACROSS_BLOCKS,
+            headHarmonizeWidthAcrossStyles = persistentListOf(altStyleName)
         )
     }
 
@@ -211,7 +211,7 @@ Best Boy,Francesco Foreman,
         """.parseCreditsCS(
         style,
         gutterCS.copy(
-            name = altStyleName, bodyLetterStyleName = "Song Title", gridMatchColWidths = MatchExtent.OFF,
+            name = altStyleName, bodyLetterStyleName = "Song Title", gridHarmonizeColWidths = HarmonizeExtent.OFF,
             headLetterStyleName = "Normal"
         )
     )

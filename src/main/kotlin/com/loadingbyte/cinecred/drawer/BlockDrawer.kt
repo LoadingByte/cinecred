@@ -9,7 +9,7 @@ import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
-import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import kotlin.math.floor
 
@@ -51,21 +51,24 @@ private fun drawHorizontalBlocks(
     // Horizontal blocks are free to potentially harmonize their head and tail width. This, for example, could allow the
     // user to justify all heads "left" in a meaningful way. For both widths that can be harmonized (i.e., head and tail
     // width), find which styles should harmonize together.
-    val cs = styling.contentStyles
-    val matchHeadWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::headMatchWidthAcrossStyles) {
-        blockOrientation == HORIZONTAL && !headForceWidthPx.isActive && headMatchWidth == ACROSS_BLOCKS
-    }
-    val matchTailWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::tailMatchWidthAcrossStyles) {
-        blockOrientation == HORIZONTAL && !tailForceWidthPx.isActive && tailMatchWidth == ACROSS_BLOCKS
-    }
+    val harmonizeHeadWidthPartitionIds = styling.contentStyles
+        .filter { blockOrientation == HORIZONTAL && !headForceWidthPx.isActive && headHarmonizeWidth == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::headHarmonizeWidthAcrossStyles)
+    val harmonizeTailWidthPartitionIds = styling.contentStyles
+        .filter { blockOrientation == HORIZONTAL && !tailForceWidthPx.isActive && tailHarmonizeWidth == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::tailHarmonizeWidthAcrossStyles)
 
     // Determine the groups of blocks which should share the same head/tail width, and of course also find those widths.
-    val sharedHeadWidths = matchWidth(blocks, matchHeadWidthPartitionIds, Block::matchHeadPartitionId) { group ->
-        group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(styling).width }
-    }
-    val sharedTailWidths = matchWidth(blocks, matchTailWidthPartitionIds, Block::matchTailPartitionId) { group ->
-        group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(styling).width }
-    }
+    val sharedHeadWidths = harmonizeWidth(
+        blocks, harmonizeHeadWidthPartitionIds, Block::harmonizeHeadPartitionId,
+        sharedGroupWidth = { group ->
+            group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(styling).width }
+        })
+    val sharedTailWidths = harmonizeWidth(
+        blocks, harmonizeTailWidthPartitionIds, Block::harmonizeTailPartitionId,
+        sharedGroupWidth = { group ->
+            group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(styling).width }
+        })
 
     // Draw a deferred image for each block.
     blocks.associateWithTo(out) { block ->
@@ -215,18 +218,18 @@ private fun drawHorizontalBlocks(
 }
 
 
-private inline fun matchWidth(
+private inline fun harmonizeWidth(
     blocks: List<Block>,
-    styleMatchPartitionIds: Map<ContentStyle, PartitionId>,
-    blockMatchPartitionId: (Block) -> PartitionId,
+    styleHarmonizationPartitionIds: Map<ContentStyle, PartitionId>,
+    blockHarmonizationPartitionId: (Block) -> PartitionId,
     sharedGroupWidth: (List<Block>) -> Double
 ): Map<Block, Double> {
     val grouper = HashMap<Any, MutableList<Block>>()
     for (block in blocks) {
-        // If the block's style is in some partition (!= null), matching the head/tail width across blocks is enabled
+        // If the block's style is in some partition (!= null), harmonizing the head/tail width across blocks is enabled
         // for that style. Hence, group the block according to both (a) the style's partition and (b) the global
-        // head/tail match partition which arises from the "@Break Match" column in the credits table.
-        val key = Pair(styleMatchPartitionIds[block.style] ?: continue, blockMatchPartitionId(block))
+        // head/tail harmonization partition which arises from the "@Break Harmonization" column in the credits table.
+        val key = Pair(styleHarmonizationPartitionIds[block.style] ?: continue, blockHarmonizationPartitionId(block))
         grouper.computeIfAbsent(key) { ArrayList() }.add(block)
     }
     // Now that the grouping is done, record the shared extent of each group.

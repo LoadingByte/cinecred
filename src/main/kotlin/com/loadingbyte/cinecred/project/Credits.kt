@@ -68,9 +68,9 @@ class Block(
     val body: PersistentList<BodyElement>,
     val tail: PersistentList<StyledString>?,
     val vGapAfterPx: Double,
-    val matchHeadPartitionId: PartitionId,
-    val matchBodyPartitionId: PartitionId,
-    val matchTailPartitionId: PartitionId
+    val harmonizeHeadPartitionId: PartitionId,
+    val harmonizeBodyPartitionId: PartitionId,
+    val harmonizeTailPartitionId: PartitionId
 )
 
 

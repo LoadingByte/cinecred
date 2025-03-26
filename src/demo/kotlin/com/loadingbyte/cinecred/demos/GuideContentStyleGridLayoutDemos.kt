@@ -19,8 +19,8 @@ val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
         GuideContentStyleGridLayoutFillingBalancedDemo,
         GuideContentStyleGridLayoutStructureDemo,
         GuideContentStyleGridLayoutForceColWidthAndRowHeightDemo,
-        GuideContentStyleGridLayoutMatchColWidthsDemo,
-        GuideContentStyleGridLayoutMatchRowHeightDemo,
+        GuideContentStyleGridLayoutHarmonizeColWidthsDemo,
+        GuideContentStyleGridLayoutHarmonizeRowHeightDemo,
         GuideContentStyleGridLayoutCellHJustifyPerColDemo,
         GuideContentStyleGridLayoutCellVJustifyDemo,
         GuideContentStyleGridLayoutRowAndColGapsDemo
@@ -145,11 +145,11 @@ Florian
 }
 
 
-object GuideContentStyleGridLayoutMatchColWidthsDemo : StyleSettingsDemo<ContentStyle>(
-    ContentStyle::class.java, "$DIR/match-col-widths", Format.SLOW_STEP_GIF,
+object GuideContentStyleGridLayoutHarmonizeColWidthsDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/harmonize-col-widths", Format.SLOW_STEP_GIF,
     listOf(
-        ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
-        ContentStyle::gridMatchColUnderoccupancy.st()
+        ContentStyle::gridHarmonizeColWidths.st(), ContentStyle::gridHarmonizeColWidthsAcrossStyles.st(),
+        ContentStyle::gridHarmonizeColUnderoccupancy.st()
     ), pageGuides = true
 ) {
     private val altStyleName get() = l10n("project.template.contentStyleTabular") + " 2"
@@ -160,10 +160,10 @@ object GuideContentStyleGridLayoutMatchColWidthsDemo : StyleSettingsDemo<Content
             gridStructure = GridStructure.FREE,
             gridCellHJustifyPerCol = persistentListOf(HJustify.CENTER, HJustify.CENTER)
         )
-        this += last().copy(gridMatchColWidths = MatchExtent.ACROSS_BLOCKS)
-        this += last().copy(gridMatchColWidthsAcrossStyles = persistentListOf(altStyleName))
-        this += last().copy(gridMatchColUnderoccupancy = GridColUnderoccupancy.LEFT_RETAIN)
-        this += last().copy(gridMatchColUnderoccupancy = GridColUnderoccupancy.RIGHT_RETAIN)
+        this += last().copy(gridHarmonizeColWidths = HarmonizeExtent.ACROSS_BLOCKS)
+        this += last().copy(gridHarmonizeColWidthsAcrossStyles = persistentListOf(altStyleName))
+        this += last().copy(gridHarmonizeColUnderoccupancy = GridColUnderoccupancy.LEFT_RETAIN)
+        this += last().copy(gridHarmonizeColUnderoccupancy = GridColUnderoccupancy.RIGHT_RETAIN)
     }
 
     override fun credits(style: ContentStyle) = """
@@ -185,23 +185,24 @@ Don,,,
         style,
         tabularCS.copy(
             name = altStyleName, spineAttachment = SpineAttachment.BODY_LEFT, bodyLetterStyleName = "Small",
-            gridStructure = GridStructure.FREE, gridMatchColWidths = MatchExtent.ACROSS_BLOCKS
+            gridStructure = GridStructure.FREE, gridHarmonizeColWidths = HarmonizeExtent.ACROSS_BLOCKS
         )
     )
 }
 
 
-object GuideContentStyleGridLayoutMatchRowHeightDemo : StyleSettingsDemo<ContentStyle>(
-    ContentStyle::class.java, "$DIR/match-row-height", Format.SLOW_STEP_GIF,
-    listOf(ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st()), pageGuides = true
+object GuideContentStyleGridLayoutHarmonizeRowHeightDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/harmonize-row-height", Format.SLOW_STEP_GIF,
+    listOf(ContentStyle::gridHarmonizeRowHeight.st(), ContentStyle::gridHarmonizeRowHeightAcrossStyles.st()),
+    pageGuides = true
 ) {
     private val altStyleName get() = l10n("project.template.contentStyleTabular") + " 2"
 
     override fun styles() = buildList<ContentStyle> {
         this += tabularCS.copy(name = "Demo", gridStructure = GridStructure.FREE)
-        this += last().copy(gridMatchRowHeight = MatchExtent.WITHIN_BLOCK)
-        this += last().copy(gridMatchRowHeight = MatchExtent.ACROSS_BLOCKS)
-        this += last().copy(gridMatchRowHeightAcrossStyles = persistentListOf(altStyleName))
+        this += last().copy(gridHarmonizeRowHeight = HarmonizeExtent.WITHIN_BLOCK)
+        this += last().copy(gridHarmonizeRowHeight = HarmonizeExtent.ACROSS_BLOCKS)
+        this += last().copy(gridHarmonizeRowHeightAcrossStyles = persistentListOf(altStyleName))
     }
 
     override fun credits(style: ContentStyle) = """
@@ -224,7 +225,7 @@ Harold,,
         style,
         tabularCS.copy(
             name = altStyleName, bodyLetterStyleName = "Small",
-            gridStructure = GridStructure.FREE, gridMatchRowHeight = MatchExtent.ACROSS_BLOCKS
+            gridStructure = GridStructure.FREE, gridHarmonizeRowHeight = HarmonizeExtent.ACROSS_BLOCKS
         )
     )
 }

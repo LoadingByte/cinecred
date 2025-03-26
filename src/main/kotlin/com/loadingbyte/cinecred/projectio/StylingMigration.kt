@@ -302,6 +302,23 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.7.0 -> 1.8.0: The number of grid columns is now controlled by a dedicated setting.
     for (contentStyle in rawStyling.contentStyles)
         (contentStyle["gridCellHJustifyPerCol"] as? List<*>)?.let { contentStyle.putIfAbsent("gridCols", it.size) }
+
+    // 1.7.0 -> 1.8.0: The "*Match*" settings are renamed to "*Harmonize*".
+    for (contentSty in rawStyling.contentStyles) {
+        contentSty["gridMatchColWidths"]?.let { contentSty["gridHarmonizeColWidths"] = it }
+        contentSty["gridMatchColWidthsAcrossStyles"]?.let { contentSty["gridHarmonizeColWidthsAcrossStyles"] = it }
+        contentSty["gridMatchColUnderoccupancy"]?.let { contentSty["gridHarmonizeColUnderoccupancy"] = it }
+        contentSty["gridMatchRowHeight"]?.let { contentSty["gridHarmonizeRowHeight"] = it }
+        contentSty["gridMatchRowHeightAcrossStyles"]?.let { contentSty["gridHarmonizeRowHeightAcrossStyles"] = it }
+        contentSty["flowMatchCellWidth"]?.let { contentSty["flowHarmonizeCellWidth"] = it }
+        contentSty["flowMatchCellWidthAcrossStyles"]?.let { contentSty["flowHarmonizeCellWidthAcrossStyles"] = it }
+        contentSty["flowMatchCellHeight"]?.let { contentSty["flowHarmonizeCellHeight"] = it }
+        contentSty["flowMatchCellHeightAcrossStyles"]?.let { contentSty["flowHarmonizeCellHeightAcrossStyles"] = it }
+        contentSty["headMatchWidth"]?.let { contentSty["headHarmonizeWidth"] = it }
+        contentSty["headMatchWidthAcrossStyles"]?.let { contentSty["headHarmonizeWidthAcrossStyles"] = it }
+        contentSty["tailMatchWidth"]?.let { contentSty["tailHarmonizeWidth"] = it }
+        contentSty["tailMatchWidthAcrossStyles"]?.let { contentSty["tailHarmonizeWidthAcrossStyles"] = it }
+    }
 }
 
 

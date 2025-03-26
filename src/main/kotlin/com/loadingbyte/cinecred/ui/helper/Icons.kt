@@ -216,14 +216,14 @@ val AppendageVJustify.icon
     }
 
 
-private val MATCH_EXTENT_WITHIN_BLOCK_ICON = SVGIcon.load("/icons/matchExtent/withinBlock.svg")
-private val MATCH_EXTENT_ACROSS_BLOCKS_ICON = SVGIcon.load("/icons/matchExtent/acrossBlocks.svg")
+private val HARMONIZE_EXTENT_WITHIN_BLOCK_ICON = SVGIcon.load("/icons/harmonizeExtent/withinBlock.svg")
+private val HARMONIZE_EXTENT_ACROSS_BLOCKS_ICON = SVGIcon.load("/icons/harmonizeExtent/acrossBlocks.svg")
 
-val MatchExtent.icon
+val HarmonizeExtent.icon
     get() = when (this) {
-        MatchExtent.OFF -> CROSS_ICON
-        MatchExtent.WITHIN_BLOCK -> MATCH_EXTENT_WITHIN_BLOCK_ICON
-        MatchExtent.ACROSS_BLOCKS -> MATCH_EXTENT_ACROSS_BLOCKS_ICON
+        HarmonizeExtent.OFF -> CROSS_ICON
+        HarmonizeExtent.WITHIN_BLOCK -> HARMONIZE_EXTENT_WITHIN_BLOCK_ICON
+        HarmonizeExtent.ACROSS_BLOCKS -> HARMONIZE_EXTENT_ACROSS_BLOCKS_ICON
     }
 
 
@@ -405,7 +405,7 @@ val Enum<*>.icon
         is SingleLineHJustify -> icon
         is AppendageVShelve -> icon
         is AppendageVJustify -> icon
-        is MatchExtent -> icon
+        is HarmonizeExtent -> icon
         is Sort -> icon
         is GridFillingOrder -> icon
         is GridStructure -> icon

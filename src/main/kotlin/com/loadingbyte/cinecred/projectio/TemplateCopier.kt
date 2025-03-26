@@ -151,7 +151,7 @@ private fun fillIn(string: String, template: Template): String = string
                     l10n("projectIO.credits.table.video", template.locale),
                     locale = template.locale
                 )
-            "projectIO.credits.table.breakMatchDesc" ->
+            "projectIO.credits.table.breakHarmonizationDesc" ->
                 l10n(
                     key,
                     l10n("projectIO.credits.table.head", template.locale),

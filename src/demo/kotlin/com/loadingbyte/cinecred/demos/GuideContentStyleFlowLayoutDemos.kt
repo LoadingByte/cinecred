@@ -20,7 +20,7 @@ val GUIDE_CONTENT_STYLE_FLOW_LAYOUT_DEMOS
         GuideContentStyleFlowLayoutJustifyLinesDemo,
         GuideContentStyleFlowLayoutSquareCellsDemo,
         GuideContentStyleFlowLayoutForceCellWidthAndHeightDemo,
-        GuideContentStyleFlowLayoutMatchCellWidthAndHeightDemo,
+        GuideContentStyleFlowLayoutHarmonizeCellWidthAndHeightDemo,
         GuideContentStyleFlowLayoutCellHJustifyAndVJustifyDemo,
         GuideContentStyleFlowLayoutLineWidthDemo,
         GuideContentStyleFlowLayoutLineGapAndHGapDemo,
@@ -128,23 +128,23 @@ Eva,
 }
 
 
-object GuideContentStyleFlowLayoutMatchCellWidthAndHeightDemo : StyleSettingsDemo<ContentStyle>(
-    ContentStyle::class.java, "$DIR/match-cell-width-and-height", Format.SLOW_STEP_GIF,
+object GuideContentStyleFlowLayoutHarmonizeCellWidthAndHeightDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/harmonize-cell-width-and-height", Format.SLOW_STEP_GIF,
     listOf(
-        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
-        ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st()
+        ContentStyle::flowHarmonizeCellWidth.st(), ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
+        ContentStyle::flowHarmonizeCellHeight.st(), ContentStyle::flowHarmonizeCellHeightAcrossStyles.st()
     ), pageGuides = true
 ) {
     private val altStyleName get() = l10n("project.template.contentStyleBullets") + " 2"
 
     override fun styles() = buildList<ContentStyle> {
         this += bulletsCS.copy(name = "Demo", flowLineWidthPx = 500.0)
-        this += last().copy(flowMatchCellWidth = MatchExtent.WITHIN_BLOCK)
-        this += last().copy(flowMatchCellWidth = MatchExtent.ACROSS_BLOCKS)
-        this += last().copy(flowMatchCellWidthAcrossStyles = persistentListOf(altStyleName))
-        this += last().copy(flowMatchCellHeight = MatchExtent.WITHIN_BLOCK)
-        this += last().copy(flowMatchCellHeight = MatchExtent.ACROSS_BLOCKS)
-        this += last().copy(flowMatchCellHeightAcrossStyles = persistentListOf(altStyleName))
+        this += last().copy(flowHarmonizeCellWidth = HarmonizeExtent.WITHIN_BLOCK)
+        this += last().copy(flowHarmonizeCellWidth = HarmonizeExtent.ACROSS_BLOCKS)
+        this += last().copy(flowHarmonizeCellWidthAcrossStyles = persistentListOf(altStyleName))
+        this += last().copy(flowHarmonizeCellHeight = HarmonizeExtent.WITHIN_BLOCK)
+        this += last().copy(flowHarmonizeCellHeight = HarmonizeExtent.ACROSS_BLOCKS)
+        this += last().copy(flowHarmonizeCellHeightAcrossStyles = persistentListOf(altStyleName))
     }
 
     override fun credits(style: ContentStyle) = """
@@ -164,8 +164,8 @@ Philipp,,
         """.parseCreditsCS(
         style,
         bulletsCS.copy(
-            name = altStyleName, bodyLetterStyleName = "Small", flowMatchCellWidth = MatchExtent.ACROSS_BLOCKS,
-            flowMatchCellHeight = MatchExtent.ACROSS_BLOCKS, flowLineWidthPx = 500.0
+            name = altStyleName, bodyLetterStyleName = "Small", flowHarmonizeCellWidth = HarmonizeExtent.ACROSS_BLOCKS,
+            flowHarmonizeCellHeight = HarmonizeExtent.ACROSS_BLOCKS, flowLineWidthPx = 500.0
         )
     )
 }
@@ -177,7 +177,7 @@ object GuideContentStyleFlowLayoutCellHJustifyAndVJustifyDemo : StyleSettingsDem
 ) {
     override fun styles() = buildList<ContentStyle> {
         this += bulletsCS.copy(
-            name = "Demo", flowMatchCellWidth = MatchExtent.WITHIN_BLOCK,
+            name = "Demo", flowHarmonizeCellWidth = HarmonizeExtent.WITHIN_BLOCK,
             flowCellHJustify = HJustify.LEFT, flowCellVJustify = VJustify.TOP
         )
         this += last().copy(flowCellHJustify = HJustify.CENTER)

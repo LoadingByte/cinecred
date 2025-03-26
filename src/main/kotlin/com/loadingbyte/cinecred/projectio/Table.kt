@@ -80,7 +80,8 @@ class Table(
                 // Prepare the column name which will be shown in a warning message.
                 val colName = "@${l10n(key)}"
                 // The column might be missing, but first look for a legacy column name. Emit a warning if we find one.
-                val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList()).map { "@$it" }
+                val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList())
+                    .filterNot(possibleColNames::contains).map { "@$it" }
                 for (legacyColName in possibleLegacyColNames) {
                     val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
                     if (col != -1) {

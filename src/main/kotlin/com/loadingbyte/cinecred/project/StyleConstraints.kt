@@ -9,8 +9,8 @@ import com.loadingbyte.cinecred.project.BodyLayout.FLOW
 import com.loadingbyte.cinecred.project.BodyLayout.GRID
 import com.loadingbyte.cinecred.project.GridStructure.FREE
 import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
-import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
-import com.loadingbyte.cinecred.project.MatchExtent.OFF
+import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.HarmonizeExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
 import java.util.*
 import kotlin.math.floor
@@ -84,8 +84,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     },
     DoubleConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0.0),
     FixedChoiceConstr(
-        WARN, ContentStyle::gridMatchColWidths.st(), ContentStyle::headMatchWidth.st(),
-        ContentStyle::tailMatchWidth.st(),
+        WARN, ContentStyle::gridHarmonizeColWidths.st(), ContentStyle::headHarmonizeWidth.st(),
+        ContentStyle::tailHarmonizeWidth.st(),
         choices = EnumSet.of(OFF, ACROSS_BLOCKS)
     ),
     StyleNameConstr(
@@ -107,24 +107,24 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::gridForceRowHeightPx.st(), min = 0.0),
     StyleNameConstr(
-        ERROR, ContentStyle::gridMatchColWidthsAcrossStyles.st(),
+        ERROR, ContentStyle::gridHarmonizeColWidthsAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.bodyLayout == GRID && !o.gridForceColWidthPx.isActive && o.gridMatchColWidths == ACROSS_BLOCKS
+                o.bodyLayout == GRID && !o.gridForceColWidthPx.isActive && o.gridHarmonizeColWidths == ACROSS_BLOCKS
             }
         }
     ),
-    DynChoiceConstr(WARN, ContentStyle::gridMatchRowHeight.st()) { _, style ->
+    DynChoiceConstr(WARN, ContentStyle::gridHarmonizeRowHeight.st()) { _, style ->
         if (style.gridStructure == SQUARE_CELLS) EnumSet.of(OFF, ACROSS_BLOCKS)
-        else EnumSet.allOf(MatchExtent::class.java)
+        else EnumSet.allOf(HarmonizeExtent::class.java)
     },
     StyleNameConstr(
-        ERROR, ContentStyle::gridMatchRowHeightAcrossStyles.st(),
+        ERROR, ContentStyle::gridHarmonizeRowHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridMatchRowHeight == ACROSS_BLOCKS
+                o.bodyLayout == GRID && !o.gridForceRowHeightPx.isActive && o.gridHarmonizeRowHeight == ACROSS_BLOCKS
             }
         }
     ),
@@ -133,25 +133,27 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellHeightPx.st(), min = 0.0),
-    DynChoiceConstr(WARN, ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellHeight.st()) { _, style ->
+    DynChoiceConstr(
+        WARN, ContentStyle::flowHarmonizeCellWidth.st(), ContentStyle::flowHarmonizeCellHeight.st()
+    ) { _, style ->
         if (style.flowSquareCells) EnumSet.of(OFF, ACROSS_BLOCKS)
-        else EnumSet.allOf(MatchExtent::class.java)
+        else EnumSet.allOf(HarmonizeExtent::class.java)
     },
     StyleNameConstr(
-        ERROR, ContentStyle::flowMatchCellWidthAcrossStyles.st(),
+        ERROR, ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.bodyLayout == FLOW && !o.flowForceCellWidthPx.isActive && o.flowMatchCellWidth == ACROSS_BLOCKS
+                o.bodyLayout == FLOW && !o.flowForceCellWidthPx.isActive && o.flowHarmonizeCellWidth == ACROSS_BLOCKS
             }
         }
     ),
     StyleNameConstr(
-        ERROR, ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        ERROR, ContentStyle::flowHarmonizeCellHeightAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.bodyLayout == FLOW && !o.flowForceCellHeightPx.isActive && o.flowMatchCellHeight == ACROSS_BLOCKS
+                o.bodyLayout == FLOW && !o.flowForceCellHeightPx.isActive && o.flowHarmonizeCellHeight == ACROSS_BLOCKS
             }
         }
     ),
@@ -166,11 +168,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::paragraphsLineGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::headForceWidthPx.st(), min = 0.0),
     StyleNameConstr(
-        ERROR, ContentStyle::headMatchWidthAcrossStyles.st(),
+        ERROR, ContentStyle::headHarmonizeWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.blockOrientation == HORIZONTAL && !o.headForceWidthPx.isActive && o.headMatchWidth == ACROSS_BLOCKS
+                o.blockOrientation == HORIZONTAL && !o.headForceWidthPx.isActive && o.headHarmonizeWidth == ACROSS_BLOCKS
             }
         }
     ),
@@ -183,11 +185,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     DoubleConstr(ERROR, ContentStyle::headLeaderSpacingPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::tailForceWidthPx.st(), min = 0.0),
     StyleNameConstr(
-        ERROR, ContentStyle::tailMatchWidthAcrossStyles.st(),
+        ERROR, ContentStyle::tailHarmonizeWidthAcrossStyles.st(),
         styleClass = ContentStyle::class.java, clustering = true,
         choices = { styling, _ ->
             styling.contentStyles.filter { o ->
-                o.blockOrientation == HORIZONTAL && !o.tailForceWidthPx.isActive && o.tailMatchWidth == ACROSS_BLOCKS
+                o.blockOrientation == HORIZONTAL && !o.tailForceWidthPx.isActive && o.tailHarmonizeWidth == ACROSS_BLOCKS
             }
         }
     ),

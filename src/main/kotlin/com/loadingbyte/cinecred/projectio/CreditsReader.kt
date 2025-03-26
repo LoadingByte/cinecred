@@ -22,13 +22,17 @@ fun readCredits(
     // Try to find the table in the spreadsheet.
     val table = Table(
         spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
-            "head", "body", "tail", "vGap", "contentStyle", "breakMatch", "spinePos",
+            "head", "body", "tail", "vGap", "contentStyle", "breakHarmonization", "spinePos",
             "pageStyle", "pageRuntime", "pageGap"
         ), legacyColNames = mapOf(
             // 1.2.0 -> 1.3.0: The vertical gap is no longer abbreviated.
             "vGap" to listOf("Vert. Gap", "Senkr. Lücke"),
             // 1.2.0 -> 1.3.0: Cross-block alignment is renamed to matching.
-            "breakMatch" to listOf("Break Align", "Breche Ausrichtung"),
+            // 1.7.0 -> 1.8.0: Cross-block matching is renamed to harmonization
+            "breakHarmonization" to listOf(
+                "Break Align", "Breche Ausrichtung",
+                "Break Match", "Porušit sjednocení", "Breche Angleichung", "Briser l’adaptation", "断开区块匹配"
+            ),
             // 1.2.0 -> 1.3.0: The column position is renamed to spine position.
             "spinePos" to listOf("Column Pos.", "Spaltenposition")
         )
@@ -107,10 +111,10 @@ private class CreditsReader(
     var contentStyle: ContentStyle? = null
 
     // These variables keep track of the partitions which the next concluded block should belong to. These variables
-    // remain valid until the next "@Break Match" indication.
-    var matchHeadPartitionId = 0
-    var matchBodyPartitionId = 0
-    var matchTailPartitionId = 0
+    // remain valid until the next "@Break Harmonization" indication.
+    var harmonizeHeadPartitionId = 0
+    var harmonizeBodyPartitionId = 0
+    var harmonizeTailPartitionId = 0
 
     // These variables keep track of the vertical gap that should be inserted AFTER the next CONCLUDED credits element.
     // If the gap is not specified explicitly in the vGap table column, it will be implicitly inferred from the number
@@ -170,9 +174,9 @@ private class CreditsReader(
     var blockHead: PersistentList<StyledString>? = null
     val blockBody = mutableListOf<BodyElement>()
     var blockTail: PersistentList<StyledString>? = null
-    var blockMatchHeadPartitionId = 0
-    var blockMatchBodyPartitionId = 0
-    var blockMatchTailPartitionId = 0
+    var blockHarmonizeHeadPartitionId = 0
+    var blockHarmonizeBodyPartitionId = 0
+    var blockHarmonizeTailPartitionId = 0
 
     // Keep track where each stage has been declared, for use in an error message.
     var nextStageDeclaredRow = 0
@@ -281,7 +285,7 @@ private class CreditsReader(
         if (blockBody.isNotEmpty())
             spineBlocks += Block(
                 blockStyle!!, blockHead, blockBody.toPersistentList(), blockTail, vGapAfter,
-                blockMatchHeadPartitionId, blockMatchBodyPartitionId, blockMatchTailPartitionId
+                blockHarmonizeHeadPartitionId, blockHarmonizeBodyPartitionId, blockHarmonizeTailPartitionId
             )
         else {
             if (blockHead != null)
@@ -293,9 +297,9 @@ private class CreditsReader(
         blockHead = null
         blockBody.clear()
         blockTail = null
-        blockMatchHeadPartitionId = matchHeadPartitionId
-        blockMatchBodyPartitionId = matchBodyPartitionId
-        blockMatchTailPartitionId = matchTailPartitionId
+        blockHarmonizeHeadPartitionId = harmonizeHeadPartitionId
+        blockHarmonizeBodyPartitionId = harmonizeBodyPartitionId
+        blockHarmonizeTailPartitionId = harmonizeTailPartitionId
         isBlockConclusionMarked = false
     }
 
@@ -553,24 +557,24 @@ private class CreditsReader(
             isBlockConclusionMarked = true
         }
 
-        // If the break match cell is non-empty, start a new matching partition for the head, body, and/or tail,
+        // If the break harmonization cell is used, start a new harmonization partition for the head, body, and/or tail,
         // and mark the previous block for conclusion (if there was any).
-        table.getString(row, "breakMatch")?.let { str ->
+        table.getString(row, "breakHarmonization")?.let { str ->
             val parts = str.split(' ')
             val unknown = mutableListOf<String>()
             for (part in parts)
                 when (part) {
-                    in HEAD_KW -> matchHeadPartitionId++
-                    in BODY_KW -> matchBodyPartitionId++
-                    in TAIL_KW -> matchTailPartitionId++
+                    in HEAD_KW -> harmonizeHeadPartitionId++
+                    in BODY_KW -> harmonizeBodyPartitionId++
+                    in TAIL_KW -> harmonizeTailPartitionId++
                     else -> unknown.add(part)
                 }
             if (unknown.size != parts.size)
                 isBlockConclusionMarked = true
             if (unknown.isNotEmpty()) {
                 val opts = "${l10n(HEAD_KW.key)}, ${l10n(BODY_KW.key)}, ${l10n(TAIL_KW.key)}"
-                val msg = l10n("projectIO.credits.unknownBreakMatchKeyword", unknown.joinToString(" "), opts)
-                table.log(row, "breakMatch", WARN, msg)
+                val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", unknown.joinToString(" "), opts)
+                table.log(row, "breakHarmonization", WARN, msg)
             }
         }
 

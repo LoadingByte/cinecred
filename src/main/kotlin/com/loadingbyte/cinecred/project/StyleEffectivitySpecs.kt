@@ -11,8 +11,8 @@ import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.Effectivity.ALMOST_EFFECTIVE
 import com.loadingbyte.cinecred.project.Effectivity.TOTALLY_INEFFECTIVE
 import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
-import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
-import com.loadingbyte.cinecred.project.MatchExtent.OFF
+import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.HarmonizeExtent.OFF
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
 
@@ -68,18 +68,18 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
     StyleEffectivitySpec(
         ContentStyle::gridCols.st(),
         ContentStyle::gridFillingOrder.st(), ContentStyle::gridFillingBalanced.st(), ContentStyle::gridStructure.st(),
-        ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridMatchColWidths.st(),
-        ContentStyle::gridForceRowHeightPx.st(), ContentStyle::gridMatchRowHeight.st(),
-        ContentStyle::gridMatchColWidthsAcrossStyles.st(), ContentStyle::gridMatchColUnderoccupancy.st(),
-        ContentStyle::gridMatchRowHeightAcrossStyles.st(), ContentStyle::gridCellHJustifyPerCol.st(),
+        ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridHarmonizeColWidths.st(),
+        ContentStyle::gridForceRowHeightPx.st(), ContentStyle::gridHarmonizeRowHeight.st(),
+        ContentStyle::gridHarmonizeColWidthsAcrossStyles.st(), ContentStyle::gridHarmonizeColUnderoccupancy.st(),
+        ContentStyle::gridHarmonizeRowHeightAcrossStyles.st(), ContentStyle::gridCellHJustifyPerCol.st(),
         ContentStyle::gridCellVJustify.st(), ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(),
         isTotallyIneffective = { _, style -> style.bodyLayout != GRID }
     ),
     StyleEffectivitySpec(
         ContentStyle::flowDirection.st(), ContentStyle::flowLineHJustify.st(), ContentStyle::flowSquareCells.st(),
         ContentStyle::flowForceCellWidthPx.st(), ContentStyle::flowForceCellHeightPx.st(),
-        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
-        ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        ContentStyle::flowHarmonizeCellWidth.st(), ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
+        ContentStyle::flowHarmonizeCellHeight.st(), ContentStyle::flowHarmonizeCellHeightAcrossStyles.st(),
         ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(), ContentStyle::flowLineWidthPx.st(),
         ContentStyle::flowLineGapPx.st(), ContentStyle::flowHGapPx.st(), ContentStyle::flowSeparator.st(),
         ContentStyle::flowSeparatorLetterStyleName.st(), ContentStyle::flowSeparatorVJustify.st(),
@@ -91,9 +91,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isTotallyIneffective = { _, style -> style.bodyLayout != PARAGRAPHS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headLetterStyleName.st(), ContentStyle::headForceWidthPx.st(), ContentStyle::headMatchWidth.st(),
-        ContentStyle::headMatchWidthAcrossStyles.st(), ContentStyle::headHJustify.st(), ContentStyle::headVShelve.st(),
-        ContentStyle::headVJustify.st(), ContentStyle::headGapPx.st(), ContentStyle::headLeader.st(),
+        ContentStyle::headLetterStyleName.st(), ContentStyle::headForceWidthPx.st(),
+        ContentStyle::headHarmonizeWidth.st(), ContentStyle::headHarmonizeWidthAcrossStyles.st(),
+        ContentStyle::headHJustify.st(), ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(),
+        ContentStyle::headGapPx.st(), ContentStyle::headLeader.st(),
         isTotallyIneffective = { _, style -> !style.hasHead }
     ),
     StyleEffectivitySpec(
@@ -105,9 +106,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailLetterStyleName.st(), ContentStyle::tailForceWidthPx.st(), ContentStyle::tailMatchWidth.st(),
-        ContentStyle::tailMatchWidthAcrossStyles.st(), ContentStyle::tailHJustify.st(), ContentStyle::tailVShelve.st(),
-        ContentStyle::tailVJustify.st(), ContentStyle::tailGapPx.st(), ContentStyle::tailLeader.st(),
+        ContentStyle::tailLetterStyleName.st(), ContentStyle::tailForceWidthPx.st(),
+        ContentStyle::tailHarmonizeWidth.st(), ContentStyle::tailHarmonizeWidthAcrossStyles.st(),
+        ContentStyle::tailHJustify.st(), ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(),
+        ContentStyle::tailGapPx.st(), ContentStyle::tailLeader.st(),
         isTotallyIneffective = { _, style -> !style.hasTail }
     ),
     StyleEffectivitySpec(
@@ -119,34 +121,34 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchColWidthsAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.gridMatchColWidths != ACROSS_BLOCKS }
+        ContentStyle::gridHarmonizeColWidthsAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.gridHarmonizeColWidths != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchColUnderoccupancy.st(),
+        ContentStyle::gridHarmonizeColUnderoccupancy.st(),
         isTotallyIneffective = { _, style ->
-            style.gridMatchColWidths != ACROSS_BLOCKS || style.gridMatchColWidthsAcrossStyles.isEmpty()
+            style.gridHarmonizeColWidths != ACROSS_BLOCKS || style.gridHarmonizeColWidthsAcrossStyles.isEmpty()
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchRowHeightAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.gridMatchRowHeight != ACROSS_BLOCKS }
+        ContentStyle::gridHarmonizeRowHeightAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.gridHarmonizeRowHeight != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowMatchCellWidthAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.flowMatchCellWidth != ACROSS_BLOCKS }
+        ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.flowHarmonizeCellWidth != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowMatchCellHeightAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.flowMatchCellHeight != ACROSS_BLOCKS }
+        ContentStyle::flowHarmonizeCellHeightAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.flowHarmonizeCellHeight != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headMatchWidthAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.headMatchWidth != ACROSS_BLOCKS }
+        ContentStyle::headHarmonizeWidthAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.headHarmonizeWidth != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailMatchWidthAcrossStyles.st(),
-        isTotallyIneffective = { _, style -> style.tailMatchWidth != ACROSS_BLOCKS }
+        ContentStyle::tailHarmonizeWidthAcrossStyles.st(),
+        isTotallyIneffective = { _, style -> style.tailHarmonizeWidth != ACROSS_BLOCKS }
     ),
     StyleEffectivitySpec(
         ContentStyle::blockOrientation.st(),
@@ -157,28 +159,28 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.gridCols < 2 }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchColWidths.st(), ContentStyle::gridMatchColWidthsAcrossStyles.st(),
-        ContentStyle::gridMatchColUnderoccupancy.st(),
+        ContentStyle::gridHarmonizeColWidths.st(), ContentStyle::gridHarmonizeColWidthsAcrossStyles.st(),
+        ContentStyle::gridHarmonizeColUnderoccupancy.st(),
         isAlmostEffective = { _, style -> style.gridForceColWidthPx.isActive }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchColUnderoccupancy.st(),
+        ContentStyle::gridHarmonizeColUnderoccupancy.st(),
         isAlmostEffective = { styling, style ->
             styling!!.contentStyles.all { o ->
-                (o.name != style.name /* for duplicate names */ && o.name !in style.gridMatchColWidthsAcrossStyles) ||
+                (o.name != style.name /* for duplicate names */ && o.name !in style.gridHarmonizeColWidthsAcrossStyles) ||
                         style.gridCols >= o.gridCols
             }
         }
     ),
     StyleEffectivitySpec(
-        ContentStyle::gridMatchRowHeight.st(), ContentStyle::gridMatchRowHeightAcrossStyles.st(),
+        ContentStyle::gridHarmonizeRowHeight.st(), ContentStyle::gridHarmonizeRowHeightAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.gridForceRowHeightPx.isActive }
     ),
     StyleEffectivitySpec(
         ContentStyle::gridCellVJustify.st(),
         isAlmostEffective = { _, style ->
             style.gridCols < 2 && style.gridStructure != SQUARE_CELLS &&
-                    !style.gridForceRowHeightPx.isActive && style.gridMatchRowHeight == OFF
+                    !style.gridForceRowHeightPx.isActive && style.gridHarmonizeRowHeight == OFF
         }
     ),
     StyleEffectivitySpec(
@@ -186,17 +188,17 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.gridCols < 2 }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowMatchCellWidth.st(), ContentStyle::flowMatchCellWidthAcrossStyles.st(),
+        ContentStyle::flowHarmonizeCellWidth.st(), ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.flowForceCellWidthPx.isActive }
     ),
     StyleEffectivitySpec(
-        ContentStyle::flowMatchCellHeight.st(), ContentStyle::flowMatchCellHeightAcrossStyles.st(),
+        ContentStyle::flowHarmonizeCellHeight.st(), ContentStyle::flowHarmonizeCellHeightAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.flowForceCellHeightPx.isActive }
     ),
     StyleEffectivitySpec(
         ContentStyle::flowCellHJustify.st(),
         isAlmostEffective = { _, style ->
-            !style.flowSquareCells && !style.flowForceCellWidthPx.isActive && style.flowMatchCellWidth == OFF
+            !style.flowSquareCells && !style.flowForceCellWidthPx.isActive && style.flowHarmonizeCellWidth == OFF
         }
     ),
     StyleEffectivitySpec(
@@ -208,14 +210,14 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
-        ContentStyle::headMatchWidth.st(), ContentStyle::headMatchWidthAcrossStyles.st(),
+        ContentStyle::headHarmonizeWidth.st(), ContentStyle::headHarmonizeWidthAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL || style.headForceWidthPx.isActive }
     ),
     StyleEffectivitySpec(
         ContentStyle::headHJustify.st(),
         isAlmostEffective = { _, style ->
             style.blockOrientation != VERTICAL && !style.headForceWidthPx.isActive &&
-                    style.headMatchWidth != ACROSS_BLOCKS
+                    style.headHarmonizeWidth != ACROSS_BLOCKS
         }
     ),
     StyleEffectivitySpec(
@@ -227,14 +229,14 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL }
     ),
     StyleEffectivitySpec(
-        ContentStyle::tailMatchWidth.st(), ContentStyle::tailMatchWidthAcrossStyles.st(),
+        ContentStyle::tailHarmonizeWidth.st(), ContentStyle::tailHarmonizeWidthAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.blockOrientation != HORIZONTAL || style.tailForceWidthPx.isActive }
     ),
     StyleEffectivitySpec(
         ContentStyle::tailHJustify.st(),
         isAlmostEffective = { _, style ->
             style.blockOrientation != VERTICAL && !style.tailForceWidthPx.isActive &&
-                    style.tailMatchWidth != ACROSS_BLOCKS
+                    style.tailHarmonizeWidth != ACROSS_BLOCKS
         }
     ),
     StyleEffectivitySpec(

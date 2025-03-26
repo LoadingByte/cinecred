@@ -22,7 +22,7 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
         GuideCreditsSpreadsheetSpinePositionParallelDemo,
         GuideCreditsSpreadsheetSpinePositionHookDemo,
         GuideCreditsSpreadsheetPageGapMeltDemo,
-        GuideCreditsSpreadsheetBreakMatchDemo
+        GuideCreditsSpreadsheetBreakHarmonizationDemo
     )
 
 
@@ -181,16 +181,18 @@ object GuideCreditsSpreadsheetPageGapMeltDemo : PageDemo(
 }
 
 
-object GuideCreditsSpreadsheetBreakMatchDemo : PageDemo("$DIR/break-match", Format.STEP_GIF, pageGuides = true) {
+object GuideCreditsSpreadsheetBreakHarmonizationDemo : PageDemo(
+    "$DIR/break-harmonization", Format.STEP_GIF, pageGuides = true
+) {
     override val isLocaleSensitive get() = false
     override fun credits() = listOf(buildCredits(""), buildCredits("Head Body"))
-    private fun buildCredits(breakMatch: String) = """
-@Head,@Body,@Content Style,@Break Match
+    private fun buildCredits(breakHarmonization: String) = """
+@Head,@Body,@Content Style,@Break Harmonization
 Director of Photography,Peter Panner,Gutter,
 ,,,
 1st AC,Paul Puller,,
 2nd AC,Charly Clapper,,
-,,,$breakMatch
+,,,$breakHarmonization
 Gaffer,Gustav Gluehbirne,,
 Key Grip,Detlef “Dolly” Driver,,
 Best Boy,Francesco Foreman,,

@@ -122,11 +122,11 @@ data class ContentStyle(
     val gridStructure: GridStructure,
     val gridForceColWidthPx: Opt<Double>,
     val gridForceRowHeightPx: Opt<Double>,
-    val gridMatchColWidths: MatchExtent,
-    val gridMatchColWidthsAcrossStyles: PersistentList<String>,
-    val gridMatchColUnderoccupancy: GridColUnderoccupancy,
-    val gridMatchRowHeight: MatchExtent,
-    val gridMatchRowHeightAcrossStyles: PersistentList<String>,
+    val gridHarmonizeColWidths: HarmonizeExtent,
+    val gridHarmonizeColWidthsAcrossStyles: PersistentList<String>,
+    val gridHarmonizeColUnderoccupancy: GridColUnderoccupancy,
+    val gridHarmonizeRowHeight: HarmonizeExtent,
+    val gridHarmonizeRowHeightAcrossStyles: PersistentList<String>,
     val gridCellHJustifyPerCol: PersistentList<HJustify>,
     val gridCellVJustify: VJustify,
     val gridRowGapPx: Double,
@@ -136,10 +136,10 @@ data class ContentStyle(
     val flowSquareCells: Boolean,
     val flowForceCellWidthPx: Opt<Double>,
     val flowForceCellHeightPx: Opt<Double>,
-    val flowMatchCellWidth: MatchExtent,
-    val flowMatchCellWidthAcrossStyles: PersistentList<String>,
-    val flowMatchCellHeight: MatchExtent,
-    val flowMatchCellHeightAcrossStyles: PersistentList<String>,
+    val flowHarmonizeCellWidth: HarmonizeExtent,
+    val flowHarmonizeCellWidthAcrossStyles: PersistentList<String>,
+    val flowHarmonizeCellHeight: HarmonizeExtent,
+    val flowHarmonizeCellHeightAcrossStyles: PersistentList<String>,
     val flowCellHJustify: HJustify,
     val flowCellVJustify: VJustify,
     val flowLineWidthPx: Double,
@@ -155,8 +155,8 @@ data class ContentStyle(
     val hasHead: Boolean,
     val headLetterStyleName: String,
     val headForceWidthPx: Opt<Double>,
-    val headMatchWidth: MatchExtent,
-    val headMatchWidthAcrossStyles: PersistentList<String>,
+    val headHarmonizeWidth: HarmonizeExtent,
+    val headHarmonizeWidthAcrossStyles: PersistentList<String>,
     val headHJustify: HJustify,
     val headVShelve: AppendageVShelve,
     val headVJustify: AppendageVJustify,
@@ -171,8 +171,8 @@ data class ContentStyle(
     val hasTail: Boolean,
     val tailLetterStyleName: String,
     val tailForceWidthPx: Opt<Double>,
-    val tailMatchWidth: MatchExtent,
-    val tailMatchWidthAcrossStyles: PersistentList<String>,
+    val tailHarmonizeWidth: HarmonizeExtent,
+    val tailHarmonizeWidthAcrossStyles: PersistentList<String>,
     val tailHJustify: HJustify,
     val tailVShelve: AppendageVShelve,
     val tailVJustify: AppendageVJustify,
@@ -205,7 +205,7 @@ enum class SingleLineHJustify { LEFT, CENTER, RIGHT, FULL }
 enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
 enum class AppendageVShelve { FIRST, OVERALL_MIDDLE, LAST }
 enum class AppendageVJustify { TOP, MIDDLE, BOTTOM, BASELINE }
-enum class MatchExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
+enum class HarmonizeExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
 enum class Sort { OFF, ASCENDING, DESCENDING }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
 enum class GridStructure { FREE, EQUAL_WIDTH_COLS, SQUARE_CELLS }

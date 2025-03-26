@@ -12,8 +12,8 @@ import com.loadingbyte.cinecred.project.BodyLayout.*
 import com.loadingbyte.cinecred.project.GridColUnderoccupancy.*
 import com.loadingbyte.cinecred.project.GridStructure.EQUAL_WIDTH_COLS
 import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
-import com.loadingbyte.cinecred.project.MatchExtent.ACROSS_BLOCKS
-import com.loadingbyte.cinecred.project.MatchExtent.WITHIN_BLOCK
+import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
+import com.loadingbyte.cinecred.project.HarmonizeExtent.WITHIN_BLOCK
 import java.awt.geom.Point2D
 import java.awt.geom.Rectangle2D
 import java.util.*
@@ -84,21 +84,20 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
     // to create neatly aligned tabular layouts that span multiple blocks. For both "extents" that can be harmonized
     // (i.e., col widths and row height), find which styles should harmonize together.
-    val cs = styling.contentStyles
-    val matchColWidthsPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchColWidthsAcrossStyles) {
-        bodyLayout == GRID && !gridForceColWidthPx.isActive && gridMatchColWidths == ACROSS_BLOCKS
-    }
-    val matchRowHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::gridMatchRowHeightAcrossStyles) {
-        bodyLayout == GRID && !gridForceRowHeightPx.isActive && gridMatchRowHeight == ACROSS_BLOCKS
-    }
+    val harmonizeColWidthsPartitionIds = styling.contentStyles
+        .filter { bodyLayout == GRID && !gridForceColWidthPx.isActive && gridHarmonizeColWidths == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::gridHarmonizeColWidthsAcrossStyles)
+    val harmonizeRowHeightPartitionIds = styling.contentStyles
+        .filter { bodyLayout == GRID && !gridForceRowHeightPx.isActive && gridHarmonizeRowHeight == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::gridHarmonizeRowHeightAcrossStyles)
 
     // Determine the groups of blocks which should share the same column widths (for simplicity of implementation, this
     // also includes ungrouped blocks whose grid structure mandates square cells, and ungrouped blocks with forced
     // column width), and then find those shared widths.
     fun colWidth(col: List<BodyElement>) = col.maxOfOr(0.0) { bodyElem -> bodyElem.getWidth(styling) }
-    val sharedColWidthsPerBlock: Map<Block, Array<Extent>> = matchExtent(
-        blocks, matchColWidthsPartitionIds,
-        matchWithinBlock = {
+    val sharedColWidthsPerBlock: Map<Block, Array<Extent>> = harmonizeExtent(
+        blocks, harmonizeColWidthsPartitionIds,
+        harmonizeWithinBlock = {
             gridStructure == EQUAL_WIDTH_COLS || gridStructure == SQUARE_CELLS || gridForceColWidthPx.isActive
         },
         sharedBlockExtent = { block ->
@@ -112,10 +111,10 @@ private fun drawBodyImagesWithGridBodyLayout(
             for (block in group) {
                 val cols = colsPerBlock.getValue(block)
                 // If the blocks in the group have differing amounts of columns, the user can decide whether he'd like
-                // to match each block with the leftmost or rightmost shared columns.
-                val offset = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - cols.size else 0
+                // to harmonize each block with the leftmost or rightmost shared columns.
+                val shift = if (block.style.gridHarmonizeColUnderoccupancy.alignRight) colWidths.size - cols.size else 0
                 for ((colIdx, col) in cols.withIndex()) {
-                    val extent = colWidths[offset + colIdx]
+                    val extent = colWidths[shift + colIdx]
                     extent.value = max(extent.value, colWidth(col))
                 }
             }
@@ -142,10 +141,10 @@ private fun drawBodyImagesWithGridBodyLayout(
         }
     }
 
-    val sharedRowHeightPerBlock: Map<Block, Extent> = matchExtent(
-        blocks, matchRowHeightPartitionIds,
-        matchWithinBlock = {
-            gridForceRowHeightPx.isActive || gridMatchRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS
+    val sharedRowHeightPerBlock: Map<Block, Extent> = harmonizeExtent(
+        blocks, harmonizeRowHeightPartitionIds,
+        harmonizeWithinBlock = {
+            gridForceRowHeightPx.isActive || gridHarmonizeRowHeight == WITHIN_BLOCK || gridStructure == SQUARE_CELLS
         },
         sharedBlockExtent = { block -> Extent((block.style.gridForceRowHeightPx.orElse { maxRowHeight(block) })) },
         sharedGroupExtent = { group -> Extent(group.maxOf(::maxRowHeight)) }
@@ -164,7 +163,7 @@ private fun drawBodyImagesWithGridBodyLayout(
             if (numCols == 0)
                 continue
             val colWidths = sharedColWidthsPerBlock.getValue(block)
-            val startIdx = if (block.style.gridMatchColUnderoccupancy.alignRight) colWidths.size - numCols else 0
+            val startIdx = if (block.style.gridHarmonizeColUnderoccupancy.alignRight) colWidths.size - numCols else 0
             val endIdx = startIdx + numCols
             if (block.style.gridStructure == EQUAL_WIDTH_COLS) {
                 val startColWidth = colWidths[startIdx]
@@ -194,7 +193,7 @@ private fun drawBodyImageWithGridBodyLayout(
     sharedRowHeight: Extent?
 ): DrawnBody {
     val style = block.style
-    val unocc = style.gridMatchColUnderoccupancy
+    val unocc = style.gridHarmonizeColUnderoccupancy
 
     val numCols = cols.size
     val numRows = cols.maxOf { col -> col.size }
@@ -321,20 +320,21 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // Flow blocks are free to potentially harmonize their cell width and height. This allows the user to create neatly
     // aligned grid-like yet dynamic layouts that can even span multiple blocks. For both "extents" that can be
     // harmonized (i.e., cell width and height), find which styles should harmonize together.
-    val cs = styling.contentStyles
-    val matchCellWidthPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellWidthAcrossStyles) {
-        bodyLayout == FLOW && !flowForceCellWidthPx.isActive && flowMatchCellWidth == ACROSS_BLOCKS
-    }
-    val matchCellHeightPartitionIds = partitionToTransitiveClosures(cs, ContentStyle::flowMatchCellHeightAcrossStyles) {
-        bodyLayout == FLOW && !flowForceCellHeightPx.isActive && flowMatchCellHeight == ACROSS_BLOCKS
-    }
+    val harmonizeCellWidthPartitionIds = styling.contentStyles
+        .filter { bodyLayout == FLOW && !flowForceCellWidthPx.isActive && flowHarmonizeCellWidth == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::flowHarmonizeCellWidthAcrossStyles)
+    val harmonizeCellHeightPartitionIds = styling.contentStyles
+        .filter { bodyLayout == FLOW && !flowForceCellHeightPx.isActive && flowHarmonizeCellHeight == ACROSS_BLOCKS }
+        .partitionIntoTransitiveClosures(ContentStyle::flowHarmonizeCellHeightAcrossStyles)
 
     // Determine the blocks which have uniform cell width, optionally shared across multiple blocks, and then find
     // those shared widths.
     fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(styling) }
-    val sharedCellWidthPerBlock: Map<Block, Extent> = matchExtent(
-        blocks, matchCellWidthPartitionIds,
-        matchWithinBlock = { flowForceCellWidthPx.isActive || flowMatchCellWidth == WITHIN_BLOCK || flowSquareCells },
+    val sharedCellWidthPerBlock: Map<Block, Extent> = harmonizeExtent(
+        blocks, harmonizeCellWidthPartitionIds,
+        harmonizeWithinBlock = {
+            flowForceCellWidthPx.isActive || flowHarmonizeCellWidth == WITHIN_BLOCK || flowSquareCells
+        },
         sharedBlockExtent = { block -> Extent(block.style.flowForceCellWidthPx.orElse { maxElemWidth(block) }) },
         sharedGroupExtent = { group -> Extent(group.maxOf(::maxElemWidth)) }
     )
@@ -349,8 +349,9 @@ private fun drawBodyImagesWithFlowBodyLayout(
         }
     }
 
-    // Flow the body cells of all non-square blocks into lines now. The lines will be needed for cell height matching in
-    // the next step. For an explanation, see the row height matching comment in drawBodyImagesWithGridBodyLayout().
+    // Flow the body cells of all non-square blocks into lines now. The lines will be needed for cell height
+    // harmonization in the next step. For an explanation, see the row height harmonization comment in
+    // drawBodyImagesWithGridBodyLayout().
     val linesPerBlock = HashMap<Block, List<List<BodyElement>>>()
     for (block in blocks)
         if (!block.style.flowSquareCells)
@@ -363,9 +364,11 @@ private fun drawBodyImagesWithFlowBodyLayout(
         if (block.style.flowSquareCells) LineGauge.getHeight(block.body, styling)
         else linesPerBlock.getValue(block).maxOf { line -> LineGauge.getHeight(line, styling) }
 
-    val sharedCellHeightPerBlock: Map<Block, Extent> = matchExtent(
-        blocks, matchCellHeightPartitionIds,
-        matchWithinBlock = { flowForceCellHeightPx.isActive || flowMatchCellHeight == WITHIN_BLOCK || flowSquareCells },
+    val sharedCellHeightPerBlock: Map<Block, Extent> = harmonizeExtent(
+        blocks, harmonizeCellHeightPartitionIds,
+        harmonizeWithinBlock = {
+            flowForceCellHeightPx.isActive || flowHarmonizeCellHeight == WITHIN_BLOCK || flowSquareCells
+        },
         sharedBlockExtent = { block -> Extent(block.style.flowForceCellHeightPx.orElse { maxLineHeight(block) }) },
         sharedGroupExtent = { group -> Extent(group.maxOf(::maxLineHeight)) }
     )
@@ -670,24 +673,24 @@ private class Extent(value: Double) {
 }
 
 
-private inline fun <T> matchExtent(
+private inline fun <T> harmonizeExtent(
     blocks: List<Block>,
-    styleMatchPartitionIds: Map<ContentStyle, PartitionId>,
-    matchWithinBlock: ContentStyle.() -> Boolean,
+    styleHarmonizationPartitionIds: Map<ContentStyle, PartitionId>,
+    harmonizeWithinBlock: ContentStyle.() -> Boolean,
     sharedBlockExtent: (Block) -> T,
     sharedGroupExtent: (List<Block>) -> T
 ): Map<Block, T> {
     val groupExtents = HashMap<Block, T>(2 * blocks.size)
     val grouper = HashMap<Any /* group key */, MutableList<Block>>()
     for (block in blocks) {
-        val stylePartitionId = styleMatchPartitionIds[block.style]
-        // If the block's style is in some partition (!= null), matching the specific extent across blocks is enabled
+        val stylePartitionId = styleHarmonizationPartitionIds[block.style]
+        // If the block's style is in some partition (!= null), harmonizing the specific extent across blocks is enabled
         // for that style. Hence, group the block according to both (a) the style's partition and (b) the global body
-        // match partition which arises from the "@Break Match" column in the credits table.
+        // harmonization partition which arises from the "@Break Harmonization" column in the credits table.
         if (stylePartitionId != null)
-            grouper.computeIfAbsent(Pair(stylePartitionId, block.matchBodyPartitionId)) { ArrayList() }.add(block)
-        // Otherwise, if the block is at least configured to internally match its extents, record the shared extent now.
-        else if (matchWithinBlock(block.style))
+            grouper.computeIfAbsent(Pair(stylePartitionId, block.harmonizeBodyPartitionId)) { ArrayList() }.add(block)
+        // Else, if the block is at least configured to internally harmonize its extents, record the shared extent now.
+        else if (harmonizeWithinBlock(block.style))
             groupExtents[block] = sharedBlockExtent(block)
     }
     // Now that the grouping is done, record the shared extent of each group.

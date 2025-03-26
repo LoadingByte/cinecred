@@ -1,16 +1,22 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.helper.ADD_ICON
-import com.loadingbyte.cinecred.ui.helper.PAUSE_ICON
-import com.loadingbyte.cinecred.ui.helper.PLAY_ICON
+import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
+import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.CTRL_DOWN_MASK
+import java.awt.event.KeyEvent.VK_B
 import javax.swing.*
 
 
 class DeliveryPanel(ctrl: ProjectController) : JPanel() {
+
+    private val keyListeners = mutableListOf<KeyListener>()
+
+    fun onKeyEvent(event: KeyEvent): Boolean =
+        keyListeners.any { it.onKeyEvent(event) }
 
     val configurationForm = DeliverConfigurationForm(ctrl)
     val renderQueuePanel = DeliverRenderQueuePanel(ctrl)
@@ -31,7 +37,9 @@ class DeliveryPanel(ctrl: ProjectController) : JPanel() {
         specsAndIssuesPanel.add(specsPanel, "center")
 
         addButton.isEnabled = false
+        addButton.toolTipText = shortcutHint(VK_B, CTRL_DOWN_MASK)
         addButton.addActionListener { configurationForm.addRenderJobToQueue() }
+        keyListeners.add(KeyListener(VK_B, CTRL_DOWN_MASK, configurationForm::addRenderJobToQueue))
 
         processButton.addItemListener {
             renderQueuePanel.setProcessRenderJobs(processButton.isSelected)

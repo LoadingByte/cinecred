@@ -168,13 +168,11 @@ private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcutKeyCode:
     btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
     btn.isFocusable = false
 
-    if (shortcutKeyCode == 0) {
+    val shortcutHint = shortcutHint(shortcutKeyCode, shortcutModifiers)
+    if (shortcutHint == null) {
         btn.toolTipText = tooltip
         return
     }
-    var shortcutHint = getKeyText(shortcutKeyCode)
-    if (shortcutModifiers != 0)
-        shortcutHint = getModifiersExText(shortcutModifiers) + "+" + shortcutHint
     btn.toolTipText = if ("<br>" !in tooltip) "$tooltip ($shortcutHint)" else {
         val idx = tooltip.indexOf("<br>")
         tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
@@ -569,6 +567,13 @@ class KeyListener(
         return match
     }
 }
+
+fun shortcutHint(shortcutKeyCode: Int, shortcutModifiers: Int): String? =
+    if (shortcutKeyCode == 0) null else buildString {
+        if (shortcutModifiers != 0)
+            append(getModifiersExText(shortcutModifiers)).append("+")
+        append(getKeyText(shortcutKeyCode))
+    }
 
 
 fun tryOpen(file: Path) = openCascade(Desktop.Action.OPEN, Desktop::open, file.toFile(), file.toUri())

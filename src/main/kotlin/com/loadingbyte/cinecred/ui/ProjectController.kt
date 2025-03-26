@@ -407,7 +407,10 @@ class ProjectController(
             window = window.owner
         if (window != projectFrame && window != stylingDialog && window != playbackDialog && window != deliveryDialog)
             return false
-        if (projectFrame.panel.onKeyEvent(event) || stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event))
+        if (projectFrame.panel.onKeyEvent(event) ||
+            stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event) ||
+            deliveryDialog.isVisible && deliveryDialog.panel.onKeyEvent(event)
+        )
             return true
         when (event.modifiersEx) {
             0 -> when (event.keyCode) {

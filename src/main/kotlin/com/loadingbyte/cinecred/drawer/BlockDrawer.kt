@@ -83,7 +83,7 @@ private fun drawHorizontalBlocks(
         val headEndX = headStartX + headWidth
         val bodyStartX = headEndX + (if (!style.hasHead) 0.0 else style.headGapPx)
         val bodyEndX = bodyStartX + bodyImage.width
-        val tailStartX = bodyEndX + (if (!style.hasHead) 0.0 else style.tailGapPx)
+        val tailStartX = bodyEndX + (if (!style.hasTail) 0.0 else style.tailGapPx)
         val tailEndX = tailStartX + tailWidth
 
         // Draw the block image.

@@ -28,6 +28,7 @@ Cinecred Changelog
 - Newly created 4K projects have their pixel sizes scaled up again.
 - Fixed off-by-one errors in global runtime fine adjustment when the first or
   last frame is left blank.
+- Fixed that a horizontal tail-body gap is ineffective if the head is disabled.
 - Fixed crashes when both forced row height and match row height are active.
 - Fixed rare crashes during interlaced delivery.
 - Fixed SVG rasterization for PDF delivery.

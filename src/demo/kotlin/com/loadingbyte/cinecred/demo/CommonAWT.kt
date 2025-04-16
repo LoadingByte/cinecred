@@ -11,6 +11,7 @@ import java.awt.*
 import java.awt.image.BufferedImage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
 import kotlin.concurrent.withLock
 
@@ -74,12 +75,26 @@ inline fun forEachVisiblePopupOf(window: Window, action: (Window) -> Unit) {
 }
 
 
+val Window.insetsInclTitlePane: Insets
+    get() {
+        val insets = this.insets
+        if (this is RootPaneContainer) {
+            val rootInsets = this.rootPane.insets
+            insets.left += rootInsets.left
+            insets.right += rootInsets.right
+            insets.top += rootInsets.top + this.contentPane.y
+            insets.bottom += rootInsets.bottom
+        }
+        return insets
+    }
+
+
 fun reposition(window: Window, width: Int, height: Int) {
     edt {
         window.minimumSize = Dimension(0, 0)
 
         // Add the window decorations to the size.
-        val insets = window.insets
+        val insets = window.insetsInclTitlePane
         val winWidth = width + insets.left + insets.right
         val winHeight = height + insets.top + insets.bottom
 

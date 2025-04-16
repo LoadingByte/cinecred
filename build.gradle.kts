@@ -20,7 +20,7 @@ val slf4jVersion = "2.0.16"
 val twelveMonkeysVersion = "3.11.0"
 val javacppVersion = "1.5.10"
 val ffmpegVersion = "6.1.1-$javacppVersion"
-val flatlafVersion = "3.5.1"
+val flatlafVersion = "3.6"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124

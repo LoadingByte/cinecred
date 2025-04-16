@@ -29,11 +29,13 @@ import javax.swing.text.Document
 import kotlin.math.roundToInt
 
 
-const val PALETTE_RED: String = "#C75450"
+const val PALETTE_RED: String = "#DB5C5C"
+const val PALETTE_YELLOW: String = "#F0A732"
 const val PALETTE_GREEN: String = "#499C54"
-const val PALETTE_BLUE: String = "#3592C4"
-const val PALETTE_GRAY: String = "#AFB1B3"
+const val PALETTE_BLUE: String = "#548AF7"
+const val PALETTE_GRAY: String = "#CED0D6"
 val PALETTE_RED_COLOR = Color(Integer.decode(PALETTE_RED))
+val PALETTE_YELLOW_COLOR = Color(Integer.decode(PALETTE_YELLOW))
 val PALETTE_GREEN_COLOR = Color(Integer.decode(PALETTE_GREEN))
 val PALETTE_BLUE_COLOR = Color(Integer.decode(PALETTE_BLUE))
 val PALETTE_GRAY_COLOR = Color(Integer.decode(PALETTE_GRAY))
@@ -540,6 +542,25 @@ fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
                 )
             }
         })
+
+    // On Linux, when a window that vertically covers the entire screen is made visible for the first time, AWT sets its
+    // extendedState property to MAXIMIZED_VERT. Unfortunately, that state has a couple of problems:
+    //   - When the user drags the window, it will get "minimized", i.e. it shrinks vertically. This is different from
+    //     the behavior on other OS, and quite inconvenient as it could mess up the window's vertical layout.
+    //   - FlatLaf's custom window decorations disallow resizing the window by dragging its boundaries.
+    //   - When clicking on the "maximize" button in the window's title bar, a special Linux condition in FlatLaf's
+    //     FlatTitlePane.maximize() method actually minimizes the window vertically, but maximizes it horizontally,
+    //     i.e. it shrinks vertically and expands horizontally.
+    // Our fix is to avoid the extendedState ever being set to MAXIMIZED_VERT. To trick AWT into this, we shrink the
+    // window by 1 pixel vertically, then make it visible, and finally add the pixel back.
+    if (SystemInfo.isLinux) {
+        setSize(winBounds.width, winBounds.height - 1)
+        addWindowListener(object : WindowAdapter() {
+            override fun windowOpened(e: WindowEvent?) {
+                size = winBounds.size
+            }
+        })
+    }
 }
 
 val GraphicsConfiguration.usableBounds: Rectangle

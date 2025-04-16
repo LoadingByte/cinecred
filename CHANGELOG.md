@@ -55,6 +55,7 @@ Cinecred Changelog
 - Changing the opacity in a color picker no longer causes a crash.
 - Fixed crash upon adding a raster image overlay.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
+- Increased the UI contrast to improve legibility.
 
 ### Compatibility Notes
 

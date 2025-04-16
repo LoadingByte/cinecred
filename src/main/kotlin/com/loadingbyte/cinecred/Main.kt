@@ -4,6 +4,7 @@ package com.loadingbyte.cinecred
 
 import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatIconColors
 import com.formdev.flatlaf.FlatSystemProperties
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
@@ -14,10 +15,7 @@ import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.UI_LOCALE_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
-import com.loadingbyte.cinecred.ui.helper.MacOSMenuLocalizer
-import com.loadingbyte.cinecred.ui.helper.fixTaskbarProgressBarOnMacOS
-import com.loadingbyte.cinecred.ui.helper.fixTextFieldVerticalCentering
-import com.loadingbyte.cinecred.ui.helper.tryMail
+import com.loadingbyte.cinecred.ui.helper.*
 import com.oracle.si.Singleton
 import net.miginfocom.layout.PlatformDefaults
 import net.miginfocom.swing.MigLayout
@@ -130,6 +128,11 @@ private fun mainSwing(args: Array<String>) {
 
     // Set the Swing Look & Feel.
     FlatDarkLaf.setup()
+    // Activate custom window decorations also on Linux. On Windows, they're the default anyway.
+    if (SystemInfo.isLinux) {
+        JFrame.setDefaultLookAndFeelDecorated(true)
+        JDialog.setDefaultLookAndFeelDecorated(true)
+    }
     // If text antialiasing is not enabled by the OS (which may choose a specific variant like subpixel rendering)
     // or we cannot detect it, enable its most generic variant now.
     val h = UIManager.get(RenderingHints.KEY_TEXT_ANTIALIASING)
@@ -153,6 +156,12 @@ private fun mainSwing(args: Array<String>) {
         val defaultFont = UIManager.getFont("defaultFont")
         UIManager.put("defaultFont", defaultFont.deriveFont(defaultFont.size.toFloat()))
     }
+    // Apart from yellow and green, we use IntelliJ's new icon colors, and we need to tell FlatLaf about them.
+    UIManager.put(FlatIconColors.ACTIONS_RED.key, PALETTE_RED_COLOR)
+    UIManager.put(FlatIconColors.ACTIONS_YELLOW.key, PALETTE_YELLOW_COLOR)
+    UIManager.put(FlatIconColors.ACTIONS_GREEN.key, PALETTE_GREEN_COLOR)
+    UIManager.put(FlatIconColors.ACTIONS_BLUE.key, PALETTE_BLUE_COLOR)
+    UIManager.put(FlatIconColors.ACTIONS_GREY.key, PALETTE_GRAY_COLOR)
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
     // Fix the slightly offset vertical centering of text in text fields.

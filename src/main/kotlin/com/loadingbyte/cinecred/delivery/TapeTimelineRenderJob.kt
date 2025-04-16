@@ -49,7 +49,6 @@ class TapeTimelineRenderJob private constructor(
     override fun render(progressCallback: (Int) -> Unit) {
         val tapeSpans = video.copy(fpsScaling = config[FPS_SCALING] * extraFPSMul)
             .collectTapeSpans(listOf(TAPES))
-            .filter { tapeSpan -> tapeSpan.embeddedTape.tape.audio }
             .sortedWith(Comparator.comparingInt(TapeSpan::firstFrameIdx).thenComparingInt(TapeSpan::lastFrameIdx))
         when (format) {
             CSV -> writeCSV(tapeSpans)

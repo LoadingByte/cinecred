@@ -31,16 +31,11 @@ class Tape private constructor(
        ********** METADATA **********
        ****************************** */
 
-    private class Metadata(
-        val spec: Bitmap.Spec, val audio: Boolean, val fps: FPS?, val availableRange: OpenEndRange<Timecode>
-    )
+    private class Metadata(val spec: Bitmap.Spec, val fps: FPS?, val availableRange: OpenEndRange<Timecode>)
 
     /** @throws IllegalStateException */
     val spec: Bitmap.Spec
         get() = metadata.spec
-    /** @throws IllegalStateException */
-    val audio: Boolean
-        get() = metadata.audio
     /** @throws IllegalStateException */
     val fps: FPS?
         get() = metadata.fps
@@ -65,13 +60,11 @@ class Tape private constructor(
     private val metadataLazy = lazy {
         try {
             val spec: Bitmap.Spec
-            val audio: Boolean
             val fps: FPS?
             val start: Timecode.Clock?
             val dur: Timecode.Clock?
             VideoReader(fileOrPattern, if (fileSeq) Timecode.Frames(firstNumber) else null).use { videoReader ->
                 spec = videoReader.spec
-                audio = videoReader.audio
                 fps = videoReader.fps
                 start = if (fileSeq) null else videoReader.read()!!.timecode as Timecode.Clock
                 dur = videoReader.estimatedDuration
@@ -88,7 +81,7 @@ class Tape private constructor(
                 }
             else
                 availableRange = fileSeqAvailableRange!!
-            Metadata(spec, audio, fps, availableRange)
+            Metadata(spec, fps, availableRange)
         } catch (e: Exception) {
             LOGGER.error("Metadata of tape '{}' cannot be read.", fileOrDir.name, e)
             e

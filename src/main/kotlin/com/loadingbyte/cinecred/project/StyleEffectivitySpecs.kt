@@ -24,8 +24,9 @@ fun <S : Style> getStyleEffectivitySpecs(styleClass: Class<S>): List<StyleEffect
     ContentStyle::class.java -> CONTENT_STYLE_EFFECTIVITY_SPECS
     LetterStyle::class.java -> LETTER_STYLE_EFFECTIVITY_SPECS
     Layer::class.java -> LAYER_EFFECTIVITY_SPECS
+    TransitionStyle::class.java -> emptyList()
     PictureStyle::class.java -> PICTURE_STYLE_EFFECTIVITY_SPECS
-    TapeStyle::class.java -> emptyList()
+    TapeStyle::class.java -> TAPE_STYLE_EFFECTIVITY_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
 } as List<StyleEffectivitySpec<S>>
 
@@ -45,7 +46,9 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
     ),
     // From here on, the regular specs start.
     StyleEffectivitySpec(
-        PageStyle::cardRuntimeFrames.st(), PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st(),
+        PageStyle::cardRuntimeFrames.st(),
+        PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeInTransitionStyleName.st(),
+        PageStyle::cardFadeOutFrames.st(), PageStyle::cardFadeOutTransitionStyleName.st(),
         isTotallyIneffective = { _, style -> style.behavior != CARD }
     ),
     StyleEffectivitySpec(
@@ -56,6 +59,14 @@ private val PAGE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PageStyle>> 
     StyleEffectivitySpec(
         PageStyle::subsequentGapFrames.st(),
         isAlmostEffective = { _, style -> style.behavior == SCROLL && style.scrollMeltWithNext }
+    ),
+    StyleEffectivitySpec(
+        PageStyle::cardFadeInTransitionStyleName.st(),
+        isAlmostEffective = { _, style -> style.cardFadeInFrames == 0 }
+    ),
+    StyleEffectivitySpec(
+        PageStyle::cardFadeOutTransitionStyleName.st(),
+        isAlmostEffective = { _, style -> style.cardFadeOutFrames == 0 }
     )
 )
 
@@ -358,6 +369,18 @@ private val PICTURE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PictureSt
     StyleEffectivitySpec(
         PictureStyle::cropBlankSpace.st(),
         isAlmostEffective = { _, style -> style.picture.loader.let { it == null || it.isRaster } }
+    )
+)
+
+
+private val TAPE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TapeStyle>> = listOf(
+    StyleEffectivitySpec(
+        TapeStyle::fadeInTransitionStyleName.st(),
+        isAlmostEffective = { _, style -> style.fadeInFrames == 0 }
+    ),
+    StyleEffectivitySpec(
+        TapeStyle::fadeOutTransitionStyleName.st(),
+        isAlmostEffective = { _, style -> style.fadeOutFrames == 0 }
     )
 )
 

@@ -819,6 +819,10 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
     } catch (_: IllegalStateException) {
         return null
     }
+    val fadeInTransition = styling.transitionStyles.find { it.name == fadeInTransitionStyleName }?.graph
+        ?: Transition.LINEAR
+    val fadeOutTransition = styling.transitionStyles.find { it.name == fadeOutTransitionStyleName }?.graph
+        ?: Transition.LINEAR
     var inPoint = coerceTimecode(slice.inPoint, tap, styling) ?: rng.start
     var outPoint = coerceTimecode(slice.outPoint, tap, styling) ?: rng.endExclusive
     if (inPoint >= outPoint || inPoint >= rng.endExclusive || outPoint <= rng.start)
@@ -835,7 +839,10 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
             !heightPx.isActive -> Resolution(widthPx.value, roundingDiv(widthPx.value * res.heightPx, res.widthPx))
             else -> Resolution(widthPx.value, heightPx.value)
         },
-        leftTemporalMarginFrames, rightTemporalMarginFrames, fadeInFrames, fadeOutFrames, inPoint..<outPoint,
+        leftTemporalMarginFrames, rightTemporalMarginFrames,
+        fadeInFrames, fadeInTransition,
+        fadeOutFrames, fadeOutTransition,
+        inPoint..<outPoint,
         when (temporallyJustify) {
             HJustify.LEFT -> DeferredImage.EmbeddedTape.Align.START
             HJustify.CENTER -> DeferredImage.EmbeddedTape.Align.MIDDLE

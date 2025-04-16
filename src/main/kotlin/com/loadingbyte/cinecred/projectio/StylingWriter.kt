@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
+import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
 import java.io.IOException
 import java.nio.file.Path
@@ -17,6 +18,7 @@ fun writeStyling(stylingFile: Path, styling: Styling) {
         putStyles("pageStyle", styling, styling.pageStyles)
         putStyles("contentStyle", styling, styling.contentStyles)
         putStyles("letterStyle", styling, styling.letterStyles)
+        putStyles("transitionStyle", styling, styling.transitionStyles)
         putStyles("pictureStyle", styling, styling.pictureStyles)
         putStyles("tapeStyle", styling, styling.tapeStyles)
     }
@@ -72,6 +74,7 @@ private fun convert(styling: Styling, value: Any): Any? = when (value) {
     is PictureRef -> value.name
     is TapeRef -> value.name
     is FontFeature -> "${value.tag}=${value.value}"
+    is Transition -> listOf(value.ctrl1X, value.ctrl1Y, value.ctrl2X, value.ctrl2Y)
     is TapeSlice -> listOf(value.inPoint, value.outPoint).joinToString("-") {
         val v = it.value
         if (!it.isActive) "" else if (v is Timecode.Clock) "${v.numerator}/${v.denominator}" else v.toString()

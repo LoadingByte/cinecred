@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.imaging.DeferredVideo
+import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.Project
 
 
@@ -34,19 +35,43 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                         firstStage -> fadeInFrames += opaqueFrames
                         lastStage -> fadeOutFrames += opaqueFrames
                     }
-                    if (firstStage)
-                        video.playFade(drawnPage.defImage, fadeInFrames, shift, 0.0, 1.0)
+                    if (firstStage) {
+                        val transition = project.styling.transitionStyles
+                            .find { it.name == stage.style.cardFadeInTransitionStyleName }?.graph ?: Transition.LINEAR
+                        video.playFade(drawnPage.defImage, fadeInFrames, shift, transition, fadeIn = true)
+                    }
                     video.playStatic(drawnPage.defImage, opaqueFrames, shift, 1.0)
-                    if (stageIdx == page.stages.lastIndex)
-                        video.playFade(drawnPage.defImage, fadeOutFrames, shift, 1.0, 0.0)
+                    if (lastStage) {
+                        val transition = project.styling.transitionStyles
+                            .find { it.name == stage.style.cardFadeOutTransitionStyleName }?.graph ?: Transition.LINEAR
+                        video.playFade(drawnPage.defImage, fadeOutFrames, shift, transition, fadeIn = false)
+                    }
                 }
-                is DrawnStageInfo.Scroll ->
+                is DrawnStageInfo.Scroll -> {
+                    val steadyStartY = stageInfo.scrollStartY.resolve() + stageInfo.startRampHeight
+                    val steadyStopY = stageInfo.scrollStopY.resolve() - stageInfo.stopRampHeight
+                    val prevStage = page.stages.getOrNull(stageIdx - 1)
+                    if (prevStage?.transitionAfterStyle != null)
+                        video.playScrollRamp(
+                            drawnPage.defImage, prevStage.transitionAfterFrames,
+                            startShift = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
+                            stopShift = steadyStartY - video.resolution.heightPx / 2.0,
+                            prevStage.transitionAfterStyle.graph, speedUp = true, alpha = 1.0
+                        )
                     video.playScroll(
-                        drawnPage.defImage, stageInfo.frames, stage.style.scrollPxPerFrame,
-                        startShift = stageInfo.scrollStartY.resolve() - video.resolution.heightPx / 2.0,
-                        stopShift = stageInfo.scrollStopY.resolve() - video.resolution.heightPx / 2.0,
+                        drawnPage.defImage, stageInfo.steadyFrames, stage.style.scrollPxPerFrame,
+                        startShift = steadyStartY - video.resolution.heightPx / 2.0,
+                        stopShift = steadyStopY - video.resolution.heightPx / 2.0,
                         alpha = 1.0
                     )
+                    if (stage.transitionAfterStyle != null)
+                        video.playScrollRamp(
+                            drawnPage.defImage, stage.transitionAfterFrames,
+                            startShift = steadyStopY - video.resolution.heightPx / 2.0,
+                            stopShift = stageInfo.scrollStopY.resolve() - video.resolution.heightPx / 2.0,
+                            stage.transitionAfterStyle.graph, speedUp = false, alpha = 1.0
+                        )
+                }
             }
         if (pageIdx != drawnPages.lastIndex)
             video.playBlank(page.gapAfterFrames)

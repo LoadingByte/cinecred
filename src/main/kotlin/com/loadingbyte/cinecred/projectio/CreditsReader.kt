@@ -61,6 +61,7 @@ private class CreditsReader(
     val pageStyleMap = styling.pageStyles.map(PageStyle::name)
     val contentStyleMap = styling.contentStyles.map(ContentStyle::name)
     val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
+    val transitionStyleMap = styling.transitionStyles.map(TransitionStyle::name)
     val pictureStyleMap = styling.pictureStyles.map(PictureStyle::name)
     val tapeStyleMap = styling.tapeStyles.map(TapeStyle::name)
 
@@ -154,6 +155,8 @@ private class CreditsReader(
     var stageRuntimeFrames: Int? = null
     var stageRuntimeGroupName: String? = null
     var stageMeltWithNext = false
+    var stageTransitionAfterFrames = 0
+    var stageTransitionAfterStyle: TransitionStyle? = null
 
     // Current compound
     var compoundVAnchor = VAnchor.MIDDLE
@@ -204,14 +207,15 @@ private class CreditsReader(
         // Note: We allow empty scroll stages. Pages that are fully empty will be filtered out by concludePage().
         if (stageCompounds.isNotEmpty() || stageStyle?.behavior == PageBehavior.SCROLL) {
             val stageStyle = this.stageStyle!!
+            val cardRuntimeFrames = stageRuntimeFrames ?: stageStyle.cardRuntimeFrames
+            val stage = Stage(
+                stageStyle, cardRuntimeFrames, stageCompounds.toPersistentList(), vGapAfter,
+                stageTransitionAfterFrames, stageTransitionAfterStyle
+            )
+            pageStages += stage
             when (stageStyle.behavior) {
-                PageBehavior.CARD -> {
-                    val cardRuntimeFrames = stageRuntimeFrames ?: stageStyle.cardRuntimeFrames
-                    pageStages += Stage(stageStyle, cardRuntimeFrames, stageCompounds.toPersistentList(), vGapAfter)
-                }
+                PageBehavior.CARD -> {}
                 PageBehavior.SCROLL -> {
-                    val stage = Stage(stageStyle, 0, stageCompounds.toPersistentList(), vGapAfter)
-                    pageStages += stage
                     // If directed, add the new stage to a runtime group.
                     val groupName = stageRuntimeGroupName
                     if (groupName != null && groupName in namedRuntimeGroups) {
@@ -235,6 +239,8 @@ private class CreditsReader(
         stageRuntimeGroupName = nextStageRuntimeGroupName
         stageDeclaredRow = nextStageDeclaredRow
         stageCompounds.clear()
+        stageTransitionAfterFrames = 0
+        stageTransitionAfterStyle = null
         nextStageStyle = null
         nextStageRuntimeFrames = null
         nextStageRuntimeGroupName = null
@@ -419,13 +425,38 @@ private class CreditsReader(
         }
 
         table.getString(row, "pageGap")?.let { str ->
+            fun illFormattedPageGapMsg() = l10n(
+                "projectIO.credits.illFormattedPageGap",
+                timecodeFormatLabel, sampleTimecode, "-$sampleTimecode", l10n(MELT_KW.key),
+                "${l10n(MELT_KW.key)} $sampleTimecode ${l10n("project.template.transitionStyleLinear")}"
+            )
+
+            fun unavailableTransitionStyleMsg(name: String) =
+                l10n("projectIO.credits.unavailableTransitionStyle", name, transitionStyleMap.keys.joinToString())
+
             if (!table.isEmpty(row, "pageStyle"))
                 table.log(row, "pageGap", WARN, l10n("projectIO.credits.pageGapInNewPageRow"))
             else if (pageGapAfterFrames != null || stageMeltWithNext)
                 table.log(row, "pageGap", WARN, l10n("projectIO.credits.pageGapAlreadySet"))
-            else if (str in MELT_KW) {
+            else if (str.substringBefore(' ') in MELT_KW) {
                 stageMeltWithNext = true
                 stageMeltDeclaredRow = row
+                val parts = str.split(' ', limit = 3)
+                when (parts.size) {
+                    2 -> table.log(row, "pageGap", WARN, illFormattedPageGapMsg())
+                    3 -> {
+                        try {
+                            stageTransitionAfterFrames =
+                                parseTimecode(styling.global.fps, styling.global.timecodeFormat, parts[1])
+                        } catch (_: IllegalArgumentException) {
+                            table.log(row, "pageGap", WARN, illFormattedPageGapMsg())
+                            return@let
+                        }
+                        stageTransitionAfterStyle = transitionStyleMap[parts[2]]
+                        if (stageTransitionAfterStyle == null)
+                            table.log(row, "pageGap", WARN, unavailableTransitionStyleMsg(parts[2]))
+                    }
+                }
             } else
                 try {
                     val c0 = str[0]
@@ -433,11 +464,7 @@ private class CreditsReader(
                     val n = parseTimecode(styling.global.fps, styling.global.timecodeFormat, tcStr)
                     pageGapAfterFrames = if (c0 == '-' || c0 == '\u2212') -n else n
                 } catch (_: IllegalArgumentException) {
-                    val msg = l10n(
-                        "projectIO.credits.illFormattedPageGap",
-                        timecodeFormatLabel, sampleTimecode, "-$sampleTimecode", l10n(MELT_KW.key)
-                    )
-                    table.log(row, "pageGap", WARN, msg)
+                    table.log(row, "pageGap", WARN, illFormattedPageGapMsg())
                 }
         }
 
@@ -853,7 +880,13 @@ private class CreditsReader(
                         style = when {
                             isMargin ->
                                 style.copy(leftTemporalMarginFrames = lFrames, rightTemporalMarginFrames = rFrames)
-                            else -> style.copy(fadeInFrames = lFrames, fadeOutFrames = rFrames)
+                            else -> {
+                                val linearName = l10n("project.template.transitionStyleLinear")
+                                style.copy(
+                                    fadeInFrames = lFrames, fadeInTransitionStyleName = linearName,
+                                    fadeOutFrames = rFrames, fadeOutTransitionStyleName = linearName
+                                )
+                            }
                         }
                     } catch (_: IllegalArgumentException) {
                         // Pass

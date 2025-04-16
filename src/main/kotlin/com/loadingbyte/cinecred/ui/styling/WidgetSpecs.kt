@@ -16,6 +16,7 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
     ContentStyle::class.java -> CONTENT_STYLE_WIDGET_SPECS
     LetterStyle::class.java -> LETTER_STYLE_WIDGET_SPECS
     Layer::class.java -> LAYER_WIDGET_SPECS
+    TransitionStyle::class.java -> emptyList()
     PictureStyle::class.java -> PICTURE_STYLE_WIDGET_SPECS
     TapeStyle::class.java -> TAPE_STYLE_WIDGET_SPECS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
@@ -42,7 +43,15 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle, *>> = listO
         getFPS = { styling, _ -> styling.global.fps },
         getTimecodeFormat = { styling, _ -> styling.global.timecodeFormat }
     ),
-    UnitWidgetSpec(PageStyle::scrollPxPerFrame.st(), unit = "px")
+    UnitWidgetSpec(PageStyle::scrollPxPerFrame.st(), unit = "px"),
+    UnionWidgetSpec(
+        PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeInTransitionStyleName.st(),
+        unionName = "cardFadeIn", settingIcons = listOf(null, TRANSITION_ICON)
+    ),
+    UnionWidgetSpec(
+        PageStyle::cardFadeOutFrames.st(), PageStyle::cardFadeOutTransitionStyleName.st(),
+        unionName = "cardFadeOut", settingIcons = listOf(null, TRANSITION_ICON)
+    )
 )
 
 
@@ -393,8 +402,12 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
         unionName = "temporalMarginFrames", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
     ),
     UnionWidgetSpec(
-        TapeStyle::fadeInFrames.st(), TapeStyle::fadeOutFrames.st(),
-        unionName = "fadeFrames", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+        TapeStyle::fadeInFrames.st(), TapeStyle::fadeInTransitionStyleName.st(),
+        unionName = "fadeIn", settingIcons = listOf(null, TRANSITION_ICON)
+    ),
+    UnionWidgetSpec(
+        TapeStyle::fadeOutFrames.st(), TapeStyle::fadeOutTransitionStyleName.st(),
+        unionName = "fadeOut", settingIcons = listOf(null, TRANSITION_ICON)
     )
 )
 

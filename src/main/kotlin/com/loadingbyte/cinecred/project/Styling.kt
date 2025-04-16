@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
+import com.loadingbyte.cinecred.imaging.Transition
 import kotlinx.collections.immutable.PersistentList
 import java.awt.Font
 import java.util.*
@@ -15,6 +16,7 @@ data class Styling(
     val pageStyles: PersistentList<PageStyle>,
     val contentStyles: PersistentList<ContentStyle>,
     val letterStyles: PersistentList<LetterStyle>,
+    val transitionStyles: PersistentList<TransitionStyle>,
     val pictureStyles: PersistentList<PictureStyle>,
     val tapeStyles: PersistentList<TapeStyle>
 ) {
@@ -30,6 +32,7 @@ data class Styling(
         PageStyle::class.java -> pageStyles
         ContentStyle::class.java -> contentStyles
         LetterStyle::class.java -> letterStyles
+        TransitionStyle::class.java -> transitionStyles
         PictureStyle::class.java -> pictureStyles
         TapeStyle::class.java -> tapeStyles
         else -> throw IllegalArgumentException("${styleClass.name} is not a ListedStyle class.")
@@ -55,6 +58,7 @@ sealed interface ListedStyle : NamedStyle {
             PageStyle::class.java,
             ContentStyle::class.java,
             LetterStyle::class.java,
+            TransitionStyle::class.java,
             PictureStyle::class.java,
             TapeStyle::class.java
         )
@@ -95,7 +99,9 @@ data class PageStyle(
     val behavior: PageBehavior,
     val cardRuntimeFrames: Int,
     val cardFadeInFrames: Int,
+    val cardFadeInTransitionStyleName: String,
     val cardFadeOutFrames: Int,
+    val cardFadeOutTransitionStyleName: String,
     /** Only retained for backwards compatibility. */
     val scrollMeltWithPrev: Boolean,
     /** Only retained for backwards compatibility. */
@@ -316,6 +322,12 @@ enum class CoordinateSystem { CARTESIAN, POLAR }
 enum class LayerAnchor { INDIVIDUAL, SIBLING, GLOBAL }
 
 
+data class TransitionStyle(
+    override val name: String,
+    val graph: Transition
+) : ListedStyle
+
+
 data class PictureStyle(
     override val name: String,
     override val volatile: Boolean,
@@ -349,7 +361,9 @@ data class TapeStyle(
     val leftTemporalMarginFrames: Int,
     val rightTemporalMarginFrames: Int,
     val fadeInFrames: Int,
-    val fadeOutFrames: Int
+    val fadeInTransitionStyleName: String,
+    val fadeOutFrames: Int,
+    val fadeOutTransitionStyleName: String
 ) : PopupStyle
 
 

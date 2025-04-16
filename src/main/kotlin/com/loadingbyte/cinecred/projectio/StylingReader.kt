@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.Color4f
-import com.loadingbyte.cinecred.imaging.ColorSpace
-import com.loadingbyte.cinecred.imaging.Picture
-import com.loadingbyte.cinecred.imaging.Tape
+import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
@@ -33,6 +30,7 @@ fun readStyling(
         asMaps(toml["pageStyle"]),
         asMaps(toml["contentStyle"]),
         asMaps(toml["letterStyle"]),
+        asMaps(toml["transitionStyle"]),
         asMaps(toml["pictureStyle"]),
         asMaps(toml["tapeStyle"])
     )
@@ -46,6 +44,7 @@ fun readStyling(
         readStyles(ctx, rawStyling.pageStyles, PageStyle::class.java),
         readStyles(ctx, rawStyling.contentStyles, ContentStyle::class.java),
         readStyles(ctx, rawStyling.letterStyles, LetterStyle::class.java),
+        readStyles(ctx, rawStyling.transitionStyles, TransitionStyle::class.java),
         readStyles(ctx, rawStyling.pictureStyles, PictureStyle::class.java),
         readStyles(ctx, rawStyling.tapeStyles, TapeStyle::class.java)
     )
@@ -57,6 +56,7 @@ class RawStyling(
     val pageStyles: MutableList<MutableMap<String, Any>>,
     val contentStyles: MutableList<MutableMap<String, Any>>,
     val letterStyles: MutableList<MutableMap<String, Any>>,
+    val transitionStyles: MutableList<MutableMap<String, Any>>,
     val pictureStyles: MutableList<MutableMap<String, Any>>,
     val tapeStyles: MutableList<MutableMap<String, Any>>
 )
@@ -138,6 +138,7 @@ private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any):
     PictureRef::class.java -> ctx.pictureLoaders[raw as String]?.let(::PictureRef) ?: PictureRef(raw)
     TapeRef::class.java -> ctx.tapes[raw as String]?.let(::TapeRef) ?: TapeRef(raw)
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
+    Transition::class.java -> transitionFromList((raw as List<*>).requireIsInstance<Number>())
     TapeSlice::class.java -> tapeSliceFromStr(raw as String)
     else -> when {
         Enum::class.java.isAssignableFrom(type) -> enumFromName(raw as String, type)
@@ -152,6 +153,9 @@ private fun fontFeatureFromKV(kv: String): FontFeature {
     require(parts.size == 2)
     return FontFeature(parts[0], parts[1].toInt())
 }
+
+private fun transitionFromList(l: List<Number>): Transition =
+    Transition(l[0].toDouble(), l[1].toDouble(), l[2].toDouble(), l[3].toDouble())
 
 private fun tapeSliceFromStr(str: String): TapeSlice {
     val tcStrs = str.split("-")

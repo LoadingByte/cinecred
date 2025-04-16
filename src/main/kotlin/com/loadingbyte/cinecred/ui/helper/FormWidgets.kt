@@ -6,6 +6,7 @@ import com.formdev.flatlaf.ui.FlatButtonUI
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
 import net.miginfocom.swing.MigLayout
 import java.awt.*
@@ -13,6 +14,9 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.dnd.*
 import java.awt.event.*
+import java.awt.geom.CubicCurve2D
+import java.awt.geom.Ellipse2D
+import java.awt.geom.Line2D
 import java.nio.file.Path
 import java.text.NumberFormat
 import java.text.ParseException
@@ -1621,6 +1625,134 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
         configurator(this)
         tagWidget.applyConfigurator(configurator)
         valWidget.applyConfigurator(configurator)
+    }
+
+}
+
+
+class TransitionWidget : Form.AbstractWidget<Transition>() {
+
+    override val components = listOf<JComponent>(GraphEditor())
+    override val constraints = listOf("")
+
+    override var value: Transition = Transition.LINEAR
+        set(value) {
+            if (field == value)
+                return
+            field = value
+            components[0].repaint()
+            notifyChangeListeners()
+        }
+
+
+    private inner class GraphEditor : JComponent() {
+
+        private val normalBackground = UIManager.getColor("ComboBox.background")
+        private val disabledBackground = UIManager.getColor("ComboBox.disabledBackground")
+        private val normalBorderColor = UIManager.getColor("Component.borderColor")
+        private val disabledBorderColor = UIManager.getColor("Component.disabledBorderColor")
+        private val normalForeground = UIManager.getColor("textText")
+        private val disabledForeground = UIManager.getColor("textInactiveText")
+        private val borderWidth = (UIManager.get("Component.borderWidth") as Number).toInt()
+
+        private val timeLabel = l10n("ui.form.transitionTime")
+        private val valueLabel = l10n("ui.form.transitionValue")
+
+        init {
+            preferredSize = Dimension(300, 300)
+
+            val mouseListener = object : MouseAdapter() {
+                private var dragging = 0
+
+                override fun mousePressed(e: MouseEvent) {
+                    if (e.button == MouseEvent.BUTTON1) {
+                        val p = e.point
+                        val d1 = p.distance(x1, y1)
+                        val d2 = p.distance(x2, y2)
+                        if (d1 < 30 || d2 < 30)
+                            dragging = if (d1 < d2) 1 else 2
+                    }
+                }
+
+                override fun mouseReleased(e: MouseEvent) {
+                    if (e.button == MouseEvent.BUTTON1)
+                        dragging = 0
+                }
+
+                override fun mouseDragged(e: MouseEvent) {
+                    if (dragging != 0) {
+                        val ctrlX = ((e.x - marginLeft) / (canvasWidth - 1).toDouble()).coerceIn(0.0, 1.0)
+                        val ctrlY = (1 - (e.y - marginTop) / (canvasHeight - 1).toDouble()).coerceIn(0.0, 1.0)
+                        when (dragging) {
+                            1 -> value = value.copy(ctrl1X = ctrlX, ctrl1Y = ctrlY)
+                            2 -> value = value.copy(ctrl2X = ctrlX, ctrl2Y = ctrlY)
+                        }
+                    }
+                }
+            }
+            addMouseListener(mouseListener)
+            addMouseMotionListener(mouseListener)
+        }
+
+        override fun paintComponent(g: Graphics) {
+            g.withNewG2 { g2 ->
+                FlatUIUtils.setRenderingHints(g2)
+
+                val borderColor = if (isEnabled) normalBorderColor else disabledBorderColor
+                val backgroundColor = if (isEnabled) normalBackground else disabledBackground
+                FlatUIUtils.paintOutlinedComponent(
+                    g2,
+                    marginLeft - borderWidth,
+                    marginTop - borderWidth,
+                    canvasWidth + 2 * borderWidth,
+                    canvasHeight + 2 * borderWidth,
+                    0f, 0f, 0f, borderWidth.toFloat(), 0f, null, borderColor, backgroundColor
+                )
+
+                g2.color = if (isEnabled) normalForeground else disabledForeground
+
+                val fm = g2.fontMetrics
+                g2.drawString(
+                    timeLabel,
+                    marginLeft + (canvasWidth - fm.stringWidth(timeLabel)) / 2,
+                    height - fontHeight + fm.ascent + fm.leading / 2
+                )
+                g2.preserveTransform {
+                    g2.rotate(-0.5 * Math.PI, 0.5 * width, 0.5 * height)
+                    g2.drawString(
+                        valueLabel,
+                        marginBot + (canvasHeight - fm.stringWidth(valueLabel)) / 2,
+                        fm.ascent + fm.leading / 2
+                    )
+                }
+
+                g2.fill(Ellipse2D.Double(x1 - handleRadius, y1 - handleRadius, 2.0 * handleRadius, 2.0 * handleRadius))
+                g2.fill(Ellipse2D.Double(x2 - handleRadius, y2 - handleRadius, 2.0 * handleRadius, 2.0 * handleRadius))
+                g2.clipRect(marginLeft, marginTop, canvasWidth, canvasHeight)
+                g2.draw(Line2D.Double(x0, y0, x1, y1))
+                g2.draw(Line2D.Double(x3, y3, x2, y2))
+                g2.draw(CubicCurve2D.Double(x0, y0, x1, y1, x2, y2, x3, y3))
+            }
+        }
+
+        private val handleRadius get() = 5
+        private val fontHeight get() = getFontMetrics(font).height
+        private val marginLeft get() = fontHeight + handleRadius + borderWidth
+        private val marginRight get() = handleRadius + borderWidth
+        private val marginTop get() = marginRight
+        private val marginBot get() = marginLeft
+        private val canvasWidth get() = width - marginLeft - marginRight
+        private val canvasHeight get() = height - marginTop - marginBot
+
+        private val x0 get() = marginLeft.toDouble()
+        private val y0 get() = (marginTop + (canvasHeight - 1)).toDouble()
+        private val x1 get() = marginLeft + (canvasWidth - 1) * value.ctrl1X
+        private val y1 get() = marginTop + (canvasHeight - 1) * (1 - value.ctrl1Y)
+        private val x2 get() = marginLeft + (canvasWidth - 1) * value.ctrl2X
+        private val y2 get() = marginTop + (canvasHeight - 1) * (1 - value.ctrl2Y)
+        private val x3 get() = (marginLeft + (canvasWidth - 1)).toDouble()
+        private val y3 get() = marginTop.toDouble()
+
     }
 
 }

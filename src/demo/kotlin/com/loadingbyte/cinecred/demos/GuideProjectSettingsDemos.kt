@@ -147,5 +147,5 @@ private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, u
     }.toPersistentList()
     val spine = Spine(null, VAnchor.TOP, VAnchor.TOP, 0.0, 0.0, blocks)
     val compound = Compound.Scroll(0.0, persistentListOf(spine), 0.0)
-    return Page(persistentListOf(Stage(PRESET_PAGE_STYLE, 0, persistentListOf(compound), 0.0)), 0)
+    return Page(persistentListOf(Stage(PRESET_PAGE_STYLE, 0, persistentListOf(compound), 0.0, 0, null)), 0)
 }

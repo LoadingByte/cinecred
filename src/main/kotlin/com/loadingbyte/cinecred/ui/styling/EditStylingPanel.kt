@@ -44,6 +44,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     private val pageStyleForm = StyleForm(PageStyle::class.java)
     private val contentStyleForm = StyleForm(ContentStyle::class.java)
     private val letterStyleForm = StyleForm(LetterStyle::class.java)
+    private val transitionStyleForm = StyleForm(TransitionStyle::class.java)
     private val pictureStyleForm = StyleForm(PictureStyle::class.java, latent = setOf(PopupStyle::volatile.st()))
     private val tapeStyleForm = StyleForm(TapeStyle::class.java, latent = setOf(PopupStyle::volatile.st()))
 
@@ -55,6 +56,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         add(JScrollPane(pageStyleForm), "PageStyle")
         add(JScrollPane(contentStyleForm), "ContentStyle")
         add(JScrollPane(letterStyleForm), "LetterStyle")
+        add(JScrollPane(transitionStyleForm), "TransitionStyle")
         add(JScrollPane(pictureStyleForm), "PictureStyle")
         add(JScrollPane(tapeStyleForm), "TapeStyle")
     }
@@ -63,7 +65,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
     // Wire up an adjuster that we can call when various events happen, upon which it will update the StyleForms.
     private val formAdjuster = StyleFormAdjuster(
-        listOf(globalForm, pageStyleForm, contentStyleForm, letterStyleForm, pictureStyleForm, tapeStyleForm),
+        listOf(
+            globalForm,
+            pageStyleForm, contentStyleForm, letterStyleForm, transitionStyleForm, pictureStyleForm, tapeStyleForm
+        ),
         getCurrentStyling = ::styling,
         getCurrentStyleInActiveForm = { stylingTree.selected as Style? },
         notifyConstraintViolations = ::updateConstraintViolations
@@ -105,6 +110,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             objToString = LetterStyle::name
         )
         stylingTree.addListType(
+            TransitionStyle::class.java, l10n("ui.styling.transitionStyles"), TRANSITION_ICON,
+            onSelect = { openListedStyle(it, transitionStyleForm, "TransitionStyle") },
+            objToString = TransitionStyle::name
+        )
+        stylingTree.addListType(
             PictureStyle::class.java, l10n("ui.styling.pictureStyles"), PICTURE_ICON,
             onSelect = { openListedStyle(it, pictureStyleForm, "PictureStyle") },
             objToString = PictureStyle::name,
@@ -135,6 +145,12 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
         ) {
             addAndSelectStyle(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")))
+        }
+        val addTransitionStyleButton = newToolbarButtonWithKeyListener(
+            TRANSITION_ICON, l10n("ui.styling.addTransitionStyleTooltip"),
+            VK_T, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+        ) {
+            addAndSelectStyle(PRESET_TRANSITION_STYLE.copy(name = l10n("ui.styling.newTransitionStyleName")))
         }
         val addPictureStyleButton = newToolbarButtonWithKeyListener(
             PICTURE_ICON, l10n("ui.styling.addPictureStyleTooltip"),
@@ -176,6 +192,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             add(addPageStyleButton)
             add(addContentStyleButton)
             add(addLetterStyleButton)
+            add(addTransitionStyleButton)
             add(addPictureStyleButton)
             add(addTapeStyleButton)
             add(duplicateStyleButton)
@@ -193,8 +210,8 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, leftPanel, rightPanel)
         // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
         SwingUtilities.invokeLater {
-            splitPane.setDividerLocation(0.25)
-            SwingUtilities.invokeLater { splitPane.setDividerLocation(0.25) }
+            splitPane.setDividerLocation(0.27)
+            SwingUtilities.invokeLater { splitPane.setDividerLocation(0.27) }
         }
 
         layout = MigLayout()
@@ -351,6 +368,7 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         stylingTree.getList(PageStyle::class.java).toPersistentList(),
         stylingTree.getList(ContentStyle::class.java).toPersistentList(),
         stylingTree.getList(LetterStyle::class.java).toPersistentList(),
+        stylingTree.getList(TransitionStyle::class.java).toPersistentList(),
         stylingTree.getList(PictureStyle::class.java).toPersistentList(),
         stylingTree.getList(TapeStyle::class.java).toPersistentList()
     )

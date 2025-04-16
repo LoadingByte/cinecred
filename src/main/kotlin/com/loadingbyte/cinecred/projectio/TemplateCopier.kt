@@ -172,7 +172,12 @@ private fun fillIn(string: String, template: Template): String = string
                     locale = template.locale
                 )
             "projectIO.credits.table.pageGapDesc" ->
-                l10n(key, l10n("projectIO.credits.table.melt", template.locale), locale = template.locale)
+                l10n(
+                    key,
+                    l10n("projectIO.credits.table.melt", template.locale),
+                    l10n("project.template.transitionStyleLinear", template.locale),
+                    locale = template.locale
+                )
             else -> l10n(key, template.locale)
         }
     }

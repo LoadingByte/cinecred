@@ -66,10 +66,16 @@ object GuidePageStyleCardRuntimeDemo : StyleSettingsDemo<PageStyle>(
 
 object GuidePageStyleCardFadeDemo : StyleSettingsDemo<PageStyle>(
     PageStyle::class.java, "$DIR/card-fade", Format.PNG,
-    listOf(PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeOutFrames.st())
+    listOf(
+        PageStyle::cardFadeInFrames.st(), PageStyle::cardFadeInTransitionStyleName.st(),
+        PageStyle::cardFadeOutFrames.st(), PageStyle::cardFadeOutTransitionStyleName.st()
+    )
 ) {
     override fun styles() = buildList<PageStyle> {
-        this += PRESET_PAGE_STYLE.copy(behavior = PageBehavior.CARD)
+        val lin = l10n("project.template.transitionStyleLinear")
+        this += PRESET_PAGE_STYLE.copy(
+            behavior = PageBehavior.CARD, cardFadeInTransitionStyleName = lin, cardFadeOutTransitionStyleName = lin
+        )
     }
 }
 

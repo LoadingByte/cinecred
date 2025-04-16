@@ -42,8 +42,9 @@ private fun findUsedStyles(credits: List<Credits>, usedStyles: MutableSet<Listed
     // Add the page, content, and letter styles referenced from the read pages.
     for (page in credits.asSequence().flatMap(Credits::pages))
         for (stage in page.stages) {
-            // Add the stage's page style.
+            // Add the stage's page style and transition style.
             usedStyles.add(stage.style)
+            stage.transitionAfterStyle?.let(usedStyles::add)
             for (compound in stage.compounds)
                 for (spine in compound.spines)
                     for (block in spine.blocks) {

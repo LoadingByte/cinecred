@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
@@ -273,6 +274,7 @@ class StyleForm<S : Style>(
             PictureRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::PictureRef, widthSpec)
             TapeRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::TapeRef, widthSpec)
             FontFeature::class.java -> FontFeatureWidget()
+            Transition::class.java -> TransitionWidget()
             TapeSlice::class.java -> TapeSliceWidget()
             else -> when {
                 Enum::class.java.isAssignableFrom(setting.type) -> when {

@@ -9,6 +9,10 @@ Cinecred Changelog
 
 - Pictures and videos are now configured via the styling window GUI.
 - The aspect ratio of pictures and videos may now be altered.
+- The scroll speed can now slowly accelerate or decelerate between melted card
+  and scroll pages.
+- The new transition styles admit custom opacity and speed ramps, which can be
+  applied to fades and melted page scroll speed transitions.
 - Grid and flow content styles can now sort their body cells.
 - Scroll pages in a group of melted pages may now be left empty, which is useful
   to, e.g., have an isolated card page scroll in and then fade out.

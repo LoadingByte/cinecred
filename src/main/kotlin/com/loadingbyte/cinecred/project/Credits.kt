@@ -24,7 +24,9 @@ class Stage(
     val style: PageStyle,
     val cardRuntimeFrames: Int,
     val compounds: PersistentList<Compound>,
-    val vGapAfterPx: Double
+    val vGapAfterPx: Double,
+    val transitionAfterFrames: Int,
+    val transitionAfterStyle: TransitionStyle?
 )
 
 

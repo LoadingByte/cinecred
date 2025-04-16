@@ -25,6 +25,7 @@ private val enabledDemos: List<Demo>
             GUIDE_PICTURE_VIDEO_DEMOS +
             GUIDE_PROJECT_FOLDER_DEMOS +
             GUIDE_PROJECT_SETTINGS_DEMOS +
+            GUIDE_TRANSITION_STYLE_DEMOS +
             GUIDE_USER_INTERFACE_DEMOS +
             HOME_DEMOS +
             SCREENCAST_DEMOS

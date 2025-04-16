@@ -242,10 +242,17 @@ object GuidePictureVideoVideoTemporalMarginDemo : StyleSettingsTimelineDemo(
 
 object GuidePictureVideoVideoFadeDemo : StyleSettingsTimelineDemo(
     "$DIR/video-fade", Format.VIDEO_GIF,
-    listOf(TapeStyle::fadeInFrames.st(), TapeStyle::fadeOutFrames.st())
+    listOf(
+        TapeStyle::fadeInFrames.st(), TapeStyle::fadeInTransitionStyleName.st(),
+        TapeStyle::fadeOutFrames.st(), TapeStyle::fadeOutTransitionStyleName.st()
+    )
 ) {
     override fun styles() = buildList<TapeStyle> {
-        this += TAPE_STYLE.copy(leftTemporalMarginFrames = 42, rightTemporalMarginFrames = 42)
+        val linear = l10n("project.template.transitionStyleLinear")
+        this += TAPE_STYLE.copy(
+            leftTemporalMarginFrames = 42, rightTemporalMarginFrames = 42,
+            fadeInTransitionStyleName = linear, fadeOutTransitionStyleName = linear
+        )
         this += last().copy(fadeInFrames = 30)
         this += last().copy(fadeOutFrames = 10)
     }

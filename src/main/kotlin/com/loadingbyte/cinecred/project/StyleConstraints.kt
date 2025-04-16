@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
@@ -23,6 +24,7 @@ fun <S : Style> getStyleConstraints(styleClass: Class<S>): List<StyleConstraint<
     ContentStyle::class.java -> CONTENT_STYLE_CONSTRAINTS
     LetterStyle::class.java -> LETTER_STYLE_CONSTRAINTS
     Layer::class.java -> LAYER_CONSTRAINTS
+    TransitionStyle::class.java -> TRANSITION_STYLE_CONSTRAINTS
     PictureStyle::class.java -> PICTURE_STYLE_CONSTRAINTS
     TapeStyle::class.java -> TAPE_STYLE_CONSTRAINTS
     else -> throw IllegalArgumentException("${styleClass.name} is not a style class.")
@@ -49,6 +51,11 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
     IntConstr(ERROR, PageStyle::cardRuntimeFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeOutFrames.st(), min = 0),
+    StyleNameConstr(
+        WARN, PageStyle::cardFadeInTransitionStyleName.st(), PageStyle::cardFadeOutTransitionStyleName.st(),
+        styleClass = TransitionStyle::class.java,
+        choices = { styling, _ -> styling.transitionStyles }
+    ),
     DoubleConstr(ERROR, PageStyle::scrollPxPerFrame.st(), min = 0.0, minInclusive = false),
     JudgeConstr(INFO, msg("project.styling.constr.fractionalScrollPx"), PageStyle::scrollPxPerFrame.st()) { _, style ->
         val value = style.scrollPxPerFrame
@@ -330,6 +337,15 @@ private fun canWalkBackToSelf(layers: List<Layer>, ownLayerIdx: Int): Boolean {
 }
 
 
+private val TRANSITION_STYLE_CONSTRAINTS: List<StyleConstraint<TransitionStyle, *>> = listOf(
+    JudgeConstr(WARN, msg("blank"), TransitionStyle::name.st()) { _, style -> style.name.isNotBlank() },
+    JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), TransitionStyle::name.st()) { styling, style ->
+        styling.transitionStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+    },
+    TransitionConstr(ERROR, TransitionStyle::graph.st())
+)
+
+
 private val PICTURE_STYLE_CONSTRAINTS: List<StyleConstraint<PictureStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), PictureStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PictureStyle::name.st()) { styling, style ->
@@ -392,7 +408,12 @@ private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf
     IntConstr(ERROR, TapeStyle::leftTemporalMarginFrames.st(), min = 0),
     IntConstr(ERROR, TapeStyle::rightTemporalMarginFrames.st(), min = 0),
     IntConstr(ERROR, TapeStyle::fadeInFrames.st(), min = 0),
-    IntConstr(ERROR, TapeStyle::fadeOutFrames.st(), min = 0)
+    IntConstr(ERROR, TapeStyle::fadeOutFrames.st(), min = 0),
+    StyleNameConstr(
+        WARN, TapeStyle::fadeInTransitionStyleName.st(), TapeStyle::fadeOutTransitionStyleName.st(),
+        styleClass = TransitionStyle::class.java,
+        choices = { styling, _ -> styling.transitionStyles }
+    )
 )
 
 
@@ -491,6 +512,12 @@ class FontFeatureConstr<S : Style>(
     setting: StyleSetting<S, FontFeature>,
     val getAvailableTags: (Styling, S) -> SequencedSet<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
+
+
+class TransitionConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, Transition>
+) : StyleConstraint<S, StyleSetting<S, Transition>>(setting)
 
 
 class TapeSliceConstr<S : Style>(
@@ -700,6 +727,13 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                         }
                     }
                 }
+                is TransitionConstr ->
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, transition ->
+                        if (transition.ctrl1X !in 0.0..1.0 || transition.ctrl1Y !in 0.0..1.0 ||
+                            transition.ctrl2X !in 0.0..1.0 || transition.ctrl2Y !in 0.0..1.0
+                        )
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.transition"))
+                    }
                 is TapeSliceConstr -> {
                     val fps = cst.getFPS(styling, style)
                     val formats = cst.getTimecodeFormats(styling, style)

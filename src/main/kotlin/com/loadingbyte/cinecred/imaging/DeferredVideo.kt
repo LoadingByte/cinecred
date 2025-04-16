@@ -88,10 +88,10 @@ class DeferredVideo private constructor(
         playPhase(image, Phase.Static(numFrames, shift, alpha))
     }
 
-    fun playFade(image: DeferredImage, numFrames: Int, shift: Double, startAlpha: Double, stopAlpha: Double) {
+    fun playFade(image: DeferredImage, numFrames: Int, shift: Double, transition: Transition, fadeIn: Boolean) {
         if (numFrames <= 0) return
         mutate()
-        playPhase(image, Phase.Fade(numFrames, shift, startAlpha, stopAlpha))
+        playPhase(image, Phase.Fade(numFrames, shift, transition, fadeIn))
     }
 
     /** Note that [startShift] is exclusive, so the first displayed frame has shift `startShift + 1 * speed`. */
@@ -101,6 +101,16 @@ class DeferredVideo private constructor(
         if (numFrames <= 0) return
         mutate()
         playPhase(image, Phase.Scroll(numFrames, speed, startShift, stopShift, alpha))
+    }
+
+    /** Note that if [speedUp] is true, [startShift] is exclusive, otherwise [stopShift] is exclusive. */
+    fun playScrollRamp(
+        image: DeferredImage,
+        numFrames: Int, startShift: Double, stopShift: Double, transition: Transition, speedUp: Boolean, alpha: Double
+    ) {
+        if (numFrames <= 0) return
+        mutate()
+        playPhase(image, Phase.ScrollRamp(numFrames, startShift, stopShift, transition, speedUp, alpha))
     }
 
     private fun playPhase(image: DeferredImage, phase: Phase) {
@@ -205,14 +215,15 @@ class DeferredVideo private constructor(
         class Fade(
             private val numFrames: Int,
             private val shift: Double,
-            private val startAlpha: Double,
-            private val stopAlpha: Double
+            private val transition: Transition,
+            private val fadeIn: Boolean
         ) : Phase {
             override fun numFrames(fpsScaling: Int) = numFrames * fpsScaling
             override fun shift(fpsScaling: Int, frameIdx: Int) = shift
-            // Choose alpha such that the fade sequence contains neither full startAlpha nor full stopAlpha.
-            override fun alpha(fpsScaling: Int, frameIdx: Int) =
-                startAlpha + (stopAlpha - startAlpha) * (frameIdx + 1) / (numFrames(fpsScaling) + 1)
+            // Alpha is chosen such that the fade sequence contains neither an alpha of 0 nor 1.
+            override fun alpha(fpsScaling: Int, frameIdx: Int) = transition.y(
+                (if (fadeIn) 0.0 else 1.0) + (if (fadeIn) 1.0 else -1.0) * (frameIdx + 1) / (numFrames(fpsScaling) + 1)
+            )
         }
 
         class Scroll(
@@ -233,6 +244,29 @@ class DeferredVideo private constructor(
 
             override fun shift(fpsScaling: Int, frameIdx: Int) =
                 startShift + speed * ((frameIdx + 1) / fpsScaling.toDouble())
+
+            override fun alpha(fpsScaling: Int, frameIdx: Int) = alpha
+
+        }
+
+        class ScrollRamp(
+            private val numFrames: Int,
+            private val startShift: Double,
+            private val stopShift: Double,
+            private val transition: Transition,
+            private val speedUp: Boolean,
+            private val alpha: Double
+        ) : Phase {
+
+            override fun numFrames(fpsScaling: Int) = numFrames * fpsScaling
+
+            override fun shift(fpsScaling: Int, frameIdx: Int): Double {
+                val effNumFrames = (numFrames * fpsScaling).toDouble()
+                return startShift + (stopShift - startShift) * when (speedUp) {
+                    true -> transition.yIntegral((frameIdx + 1) / effNumFrames) / transition.yIntegral(1.0)
+                    false -> 1.0 - transition.yIntegral(1.0 - frameIdx / effNumFrames) / transition.yIntegral(1.0)
+                }
+            }
 
             override fun alpha(fpsScaling: Int, frameIdx: Int) = alpha
 
@@ -1106,13 +1140,12 @@ class DeferredVideo private constructor(
                     val y = (span.placed.y - span.insn.shifts[relFrameIdx]).roundToInt()
 
                     var alpha = span.insn.alphas[relFrameIdx]
-                    val leftFadeFrames = span.embeddedTape.leftFadeFrames * video.fpsScaling
-                    val rightFadeFrames = span.embeddedTape.rightFadeFrames * video.fpsScaling
-                    if (pastFrames < leftFadeFrames || futureFrames < rightFadeFrames)
+                    val fadeInFrames = span.embeddedTape.fadeInFrames * video.fpsScaling
+                    val fadeOutFrames = span.embeddedTape.fadeOutFrames * video.fpsScaling
+                    if (pastFrames < fadeInFrames || futureFrames < fadeOutFrames)
                         alpha *= minOf(
-                            1.0,
-                            (pastFrames + 1) / (leftFadeFrames + 1).toDouble(),
-                            (futureFrames + 1) / (rightFadeFrames + 1).toDouble()
+                            span.embeddedTape.fadeInTransition.y((pastFrames + 1) / (fadeInFrames + 1).toDouble()),
+                            span.embeddedTape.fadeOutTransition.y((futureFrames + 1) / (fadeOutFrames + 1).toDouble())
                         )
 
                     add(Response(span, timecode, fileSeqFirstField, x, y, alpha))

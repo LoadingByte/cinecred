@@ -149,10 +149,12 @@ private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
     val pageStyles = HashSet<PageStyle>()
     val contentStyles = HashSet<ContentStyle>()
     val letterStyles = HashSet<LetterStyle>()
+    val transitionStyles = HashSet<TransitionStyle>()
     val pictureStyles = HashSet<PictureStyle>()
     val tapeStyles = HashSet<TapeStyle>()
     for (stage in page.stages) {
         pageStyles.add(stage.style)
+        stage.transitionAfterStyle?.let(transitionStyles::add)
         for (compound in stage.compounds)
             for (spine in compound.spines)
                 for (block in spine.blocks) {
@@ -174,6 +176,7 @@ private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
         pageStyles.toPersistentList(),
         contentStyles.toPersistentList(),
         letterStyles.toPersistentList(),
+        transitionStyles.toPersistentList(),
         pictureStyles.toPersistentList(),
         tapeStyles.toPersistentList()
     )
@@ -289,12 +292,13 @@ private fun <S : Style> renderStyleSettings(
     // Iterate through the list of styles() and capture a form screenshot for each style.
     for (style in styles) {
         curStyling = buildStyling?.invoke(style) ?: when (style) {
-            is Global -> Styling(style, pl(), pl(), pl(), pl(), pl())
-            is PageStyle -> Styling(PRESET_GLOBAL, pl(style), pl(), pl(), pl(), pl())
-            is ContentStyle -> Styling(PRESET_GLOBAL, pl(), pl(style), pl(), pl(), pl())
-            is LetterStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(style), pl(), pl())
-            is PictureStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(style), pl())
-            is TapeStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(), pl(style))
+            is Global -> Styling(style, pl(), pl(), pl(), pl(), pl(), pl())
+            is PageStyle -> Styling(PRESET_GLOBAL, pl(style), pl(), pl(), pl(), pl(), pl())
+            is ContentStyle -> Styling(PRESET_GLOBAL, pl(), pl(style), pl(), pl(), pl(), pl())
+            is LetterStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(style), pl(), pl(), pl())
+            is TransitionStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(style), pl(), pl())
+            is PictureStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(), pl(style), pl())
+            is TapeStyle -> Styling(PRESET_GLOBAL, pl(), pl(), pl(), pl(), pl(), pl(style))
             else -> throw IllegalStateException()
         }
         if (augmentStyling != null)

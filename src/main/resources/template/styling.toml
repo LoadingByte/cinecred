@@ -12,7 +12,9 @@ subsequentGapFrames = {subsequentGapFrames}
 behavior = "CARD"
 cardRuntimeFrames = {cardRuntimeFrames}
 cardFadeInFrames = {cardFadeFrames}
+cardFadeInTransitionStyleName = "{project.template.transitionStyleLinear}"
 cardFadeOutFrames = {cardFadeFrames}
+cardFadeOutTransitionStyleName = "{project.template.transitionStyleLinear}"
 
 [[pageStyle]]
 name = "{project.PageBehavior.SCROLL}"
@@ -143,6 +145,9 @@ heightPx = <100>
 name = "{project.template.letterStyleCardSmall}"
 fontName = "Archivo Narrow Regular"
 heightPx = <50>
+
+[[transitionStyle]]
+name = "{project.template.transitionStyleLinear}"
 
 [[pictureStyle]]
 name = "Cinecred H"

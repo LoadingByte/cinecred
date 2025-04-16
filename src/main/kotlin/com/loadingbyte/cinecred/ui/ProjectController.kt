@@ -241,7 +241,7 @@ class ProjectController(
                 when (style) {
                     is PictureStyle -> style.picture.loader?.loadInBackground()
                     is TapeStyle -> style.tape.tape?.loadMetadataInBackground()
-                    is PageStyle, is ContentStyle, is LetterStyle -> {}
+                    is PageStyle, is ContentStyle, is LetterStyle, is TransitionStyle -> {}
                 }
 
             // Draw pages and video for each credits spreadsheet.

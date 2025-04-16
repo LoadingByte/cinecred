@@ -102,7 +102,7 @@ fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolu
 fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> {
     val styling = Styling(
         PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList(),
-        persistentListOf(), persistentListOf()
+        persistentListOf(), persistentListOf(), persistentListOf()
     )
     return parseCredits(styling)
 }

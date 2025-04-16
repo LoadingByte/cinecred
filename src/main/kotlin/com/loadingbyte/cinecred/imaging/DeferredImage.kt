@@ -408,24 +408,23 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     data class EmbeddedTape(
         /** Note: Accessing the metadata of this tape is guaranteed to not throw exceptions. */
         val tape: Tape,
-        val resolution: Resolution,
-        val leftMarginFrames: Int,
-        val rightMarginFrames: Int,
-        val leftFadeFrames: Int,
-        val rightFadeFrames: Int,
-        val range: OpenEndRange<Timecode>,
-        val align: Align
+        val resolution: Resolution = tape.spec.resolution,
+        val leftMarginFrames: Int = 0,
+        val rightMarginFrames: Int = 0,
+        val fadeInFrames: Int = 0,
+        val fadeInTransition: Transition = Transition.LINEAR,
+        val fadeOutFrames: Int = 0,
+        val fadeOutTransition: Transition = Transition.LINEAR,
+        val range: OpenEndRange<Timecode> = tape.availableRange,
+        val align: Align = Align.START
     ) {
 
         enum class Align { START, MIDDLE, END }
 
-        /** @throws IllegalStateException */
-        constructor(tape: Tape) : this(tape, tape.spec.resolution, 0, 0, 0, 0, tape.availableRange, Align.START)
-
         init {
             require(resolution.run { widthPx > 0 && heightPx > 0 })
             require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
-            require(leftFadeFrames >= 0 && rightFadeFrames >= 0)
+            require(fadeInFrames >= 0 && fadeOutFrames >= 0)
             if (tape.fileSeq) require(range.start is Timecode.Frames && range.endExclusive is Timecode.Frames) else
                 require(range.start is Timecode.Clock && range.endExclusive is Timecode.Clock)
             val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.

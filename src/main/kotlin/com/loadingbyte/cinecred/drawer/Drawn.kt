@@ -23,8 +23,12 @@ sealed interface DrawnStageInfo {
     class Scroll(
         val scrollStartY: Y,
         val scrollStopY: Y,
+        val startRampHeight: Double,
+        val stopRampHeight: Double,
         val ownedScrollHeight: Y,
-        val frames: Int
+        val frames: Int,
+        val steadyFrames: Int,
+        val rampFrames: Int
     ) : DrawnStageInfo
 
 }

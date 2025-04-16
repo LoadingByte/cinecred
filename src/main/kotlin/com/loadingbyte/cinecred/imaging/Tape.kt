@@ -65,9 +65,14 @@ class Tape private constructor(
             val dur: Timecode.Clock?
             VideoReader(fileOrPattern, if (fileSeq) Timecode.Frames(firstNumber) else null).use { videoReader ->
                 spec = videoReader.spec
-                fps = videoReader.fps
-                start = if (fileSeq) null else videoReader.read()!!.timecode as Timecode.Clock
+                start = if (fileSeq) null else videoReader.read()!!.apply { bitmap.close() }.timecode as Timecode.Clock
                 dur = videoReader.estimatedDuration
+                fps = if (fileSeq ||
+                    // Try to detect variable framerates by looking at the timecode differences between the first couple
+                    // of frames. If VFR is detected, set fps to null.
+                    (sequenceOf(start!!) + generateSequence { videoReader.read()?.apply { bitmap.close() }?.timecode })
+                        .take(20).zipWithNext { tc1, tc2 -> tc2 - tc1 }.zipWithNext { d1, d2 -> d1 != d2 }.any { it }
+                ) null else videoReader.fps
             }
             val availableRange: OpenEndRange<Timecode>
             if (!fileSeq)

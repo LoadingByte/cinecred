@@ -63,7 +63,7 @@ object GuideProjectSettingsRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>
         this += last().copy(runtimeFrames = last().runtimeFrames.copy(isActive = true))
     }
 
-    override fun credits(style: Global) = Pair(style, TEMPLATE_SCROLL_PAGE_FROM_DOP)
+    override fun credits(style: Global) = Pair(style, listOf(TEMPLATE_SCROLL_PAGE_FROM_DOP))
 }
 
 
@@ -88,7 +88,7 @@ object GuideProjectSettingsGroundingDemo : StyleSettingsDemo<Global>(
         this += last().copy(grounding = Color4f.fromSRGBHexString("#006400"))
     }
 
-    override fun credits(style: Global) = Pair(style, TEMPLATE_SCROLL_PAGE_FROM_DOP)
+    override fun credits(style: Global) = Pair(style, listOf(TEMPLATE_SCROLL_PAGE_FROM_DOP))
 }
 
 
@@ -102,7 +102,7 @@ object GuideProjectSettingsUnitVGapDemo : StyleSettingsDemo<Global>(
     }
 
     override fun credits(style: Global) =
-        Pair(style, buildPage(style, listOf("Peter Panner", "Paul Puller", "Charly Clapper"), vGap = 1.0))
+        Pair(style, listOf(buildPage(style, listOf("Peter Panner", "Paul Puller", "Charly Clapper"), vGap = 1.0)))
 }
 
 
@@ -115,7 +115,7 @@ object GuideProjectSettingsLocaleDemo : StyleSettingsDemo<Global>(
         this += last().copy(locale = Locale.of("tr"))
     }
 
-    override fun credits(style: Global) = Pair(style, buildPage(style, listOf("Tina Times"), uppercase = true))
+    override fun credits(style: Global) = Pair(style, listOf(buildPage(style, listOf("Tina Times"), uppercase = true)))
 }
 
 
@@ -133,7 +133,7 @@ object GuideProjectSettingsUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
 
     override fun credits(style: Global) = run {
         val texts = listOf("Ronny von Tommy", "Cleavon Tommy", "Johnny MacRonny", "Johnny Macbeth")
-        Pair(style, buildPage(style, texts, uppercase = true))
+        Pair(style, listOf(buildPage(style, texts, uppercase = true)))
     }
 }
 

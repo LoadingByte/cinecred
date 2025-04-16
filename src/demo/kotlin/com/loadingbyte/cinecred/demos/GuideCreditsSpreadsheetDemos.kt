@@ -4,7 +4,7 @@ import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.demo.PageDemo
 import com.loadingbyte.cinecred.demo.VideoDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
-import com.loadingbyte.cinecred.demo.parseCreditsTS
+import com.loadingbyte.cinecred.demo.parseCreditsPS
 import com.loadingbyte.cinecred.project.HJustify
 import com.loadingbyte.cinecred.project.PRESET_CONTENT_STYLE
 import kotlinx.collections.immutable.persistentListOf
@@ -192,7 +192,7 @@ object GuideCreditsSpreadsheetPageGapMeltVideoDemo : VideoDemo("$DIR/page-gap-me
 2nd AC,Charly Clapper,,,,,,
 ,,,5,,,,Melt 00:00:02:00 Linear
 ,Copyright © 2023,,,Blurb,Card,00:00:03:00,
-        """.parseCreditsTS()
+        """.parseCreditsPS()
 }
 
 

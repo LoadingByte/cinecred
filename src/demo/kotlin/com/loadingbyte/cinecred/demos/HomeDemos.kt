@@ -163,5 +163,5 @@ object HomeCreditsRuntimeDemo : StyleSettingsDemo<Global>(
     }
 
     override val suffixes = listOf("-natural", "-adjusted")
-    override fun credits(style: Global) = Pair(style, TEMPLATE_SCROLL_PAGE_FROM_DOP)
+    override fun credits(style: Global) = Pair(style, listOf(TEMPLATE_SCROLL_PAGE_FROM_DOP))
 }

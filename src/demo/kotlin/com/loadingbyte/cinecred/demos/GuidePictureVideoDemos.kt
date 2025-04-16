@@ -195,9 +195,9 @@ object GuidePictureVideoVideoPreviewDemo : PageDemo("$DIR/video-preview", Format
 }
 
 
-object GuidePictureVideoVideoSliceDemo : StyleSettingsTimelineDemo(
+object GuidePictureVideoVideoSliceDemo : StyleSettingsVideoDemo<TapeStyle>(
     "$DIR/video-slice", Format.VIDEO_GIF,
-    listOf(TapeStyle::slice.st())
+    listOf(TapeStyle::slice.st()), timeline = true
 ) {
     override fun styles() = buildList<TapeStyle> {
         this += TAPE_STYLE
@@ -209,9 +209,9 @@ object GuidePictureVideoVideoSliceDemo : StyleSettingsTimelineDemo(
 }
 
 
-object GuidePictureVideoVideoTemporallyJustifyDemo : StyleSettingsTimelineDemo(
+object GuidePictureVideoVideoTemporallyJustifyDemo : StyleSettingsVideoDemo<TapeStyle>(
     "$DIR/video-temporally-justify", Format.VIDEO_GIF,
-    listOf(TapeStyle::temporallyJustify.st())
+    listOf(TapeStyle::temporallyJustify.st()), timeline = true
 ) {
     override fun styles() = buildList<TapeStyle> {
         this += TAPE_STYLE.copy(
@@ -226,9 +226,9 @@ object GuidePictureVideoVideoTemporallyJustifyDemo : StyleSettingsTimelineDemo(
 }
 
 
-object GuidePictureVideoVideoTemporalMarginDemo : StyleSettingsTimelineDemo(
+object GuidePictureVideoVideoTemporalMarginDemo : StyleSettingsVideoDemo<TapeStyle>(
     "$DIR/video-temporal-margin", Format.VIDEO_GIF,
-    listOf(TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st())
+    listOf(TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st()), timeline = true
 ) {
     override fun styles() = buildList<TapeStyle> {
         this += TAPE_STYLE
@@ -240,12 +240,12 @@ object GuidePictureVideoVideoTemporalMarginDemo : StyleSettingsTimelineDemo(
 }
 
 
-object GuidePictureVideoVideoFadeDemo : StyleSettingsTimelineDemo(
+object GuidePictureVideoVideoFadeDemo : StyleSettingsVideoDemo<TapeStyle>(
     "$DIR/video-fade", Format.VIDEO_GIF,
     listOf(
         TapeStyle::fadeInFrames.st(), TapeStyle::fadeInTransitionStyleName.st(),
         TapeStyle::fadeOutFrames.st(), TapeStyle::fadeOutTransitionStyleName.st()
-    )
+    ), timeline = true
 ) {
     override fun styles() = buildList<TapeStyle> {
         val linear = l10n("project.template.transitionStyleLinear")

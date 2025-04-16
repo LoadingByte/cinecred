@@ -38,7 +38,7 @@ abstract class PageDemo(
     private val pageGuides: Boolean = false
 ) : Demo(filename, format) {
 
-    protected abstract fun credits(): List<Pair<Global, Page>>
+    protected abstract fun credits(): List<Pair<Global, List<Page>>>
     protected open val suffixes: List<String> get() = emptyList()
 
     final override fun doGenerate() {
@@ -64,7 +64,7 @@ abstract class StyleSettingsDemo<S : Style>(
 
     protected abstract fun styles(): List<S>
     protected open val suffixes: List<String> get() = emptyList()
-    protected open fun credits(style: S): Pair<Global, Page>? = null
+    protected open fun credits(style: S): Pair<Global, List<Page>>? = null
     protected open fun augmentStyling(styling: Styling): Styling = styling
     protected open val pictureLoaders: Collection<Picture.Loader> get() = emptyList()
     protected open val tapes: Collection<Tape> get() = emptyList()
@@ -77,9 +77,10 @@ abstract class StyleSettingsDemo<S : Style>(
         val pageDefImgsAndGroundings =
             styles.mapNotNull(::credits).map { buildPageDefImgAndGrounding(it, ::augmentStyling, pageScaling) }
         val pageImgs = renderDefImages(pageDefImgsAndGroundings, pageWidth, pageHeight, pageExtendY, false, pageGuides)
-        val rows = listOf(settImgs.toList()) +
-                if (pageDefImgsAndGroundings.isEmpty()) emptyList() else listOf(pageImgs.asIterable())
-        stackImages(*rows.toTypedArray(), extendX = listOf(20), extendY = listOf(10))
+        stackImages(buildList {
+            add(settImgs.toList())
+            if (pageDefImgsAndGroundings.isNotEmpty()) add(pageImgs.asIterable())
+        }, extendX = listOf(20), extendY = listOf(10))
             .forEachIndexed { idx, img -> write(img, suffixes.getOrElse(idx) { "" }) }
     }
 
@@ -88,7 +89,7 @@ abstract class StyleSettingsDemo<S : Style>(
 
 abstract class VideoDemo(filename: String, format: Format) : Demo(filename, format) {
 
-    protected abstract fun credits(): Pair<Global, Page>
+    protected abstract fun credits(): Pair<Global, List<Page>>
 
     final override fun doGenerate() {
         val project = buildProject(credits())
@@ -99,25 +100,28 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
 }
 
 
-abstract class StyleSettingsTimelineDemo(
+abstract class StyleSettingsVideoDemo<S : Style>(
     filename: String,
     format: Format,
-    private val settings: List<StyleSetting<TapeStyle, *>>
+    private val settings: List<StyleSetting<S, *>>,
+    private val timeline: Boolean = false
 ) : Demo(filename, format) {
 
-    protected abstract fun styles(): List<TapeStyle>
-    protected abstract fun credits(style: TapeStyle): Pair<Global, Page>
+    protected abstract fun styles(): List<S>
+    protected abstract fun credits(style: S): Pair<Global, List<Page>>
 
     final override fun doGenerate() {
         val styles = styles()
         var settImgs = renderStyleSettings(settings, styles, { extractStyling(credits(it)) })
-        settImgs = stackImages(settImgs.toList(), extendX = listOf(20), extendY = listOf(10))
+        settImgs = stackImages(listOf(settImgs.toList()), extendX = listOf(20), extendY = listOf(10))
         styles.zip(settImgs.asIterable()) { style, settImg ->
             val project = buildProject(credits(style))
             val video = drawVideo(project, drawPages(project, project.credits.single()))
-            val videoImgs = renderDefVideo(video, project.styling.global.grounding)
-            val tlImgs = generateTimeline(style, video)
-            stackImages(List(video.numFrames) { settImg }, tlImgs.asIterable(), videoImgs.asIterable()).forEach(::write)
+            stackImages(buildList {
+                add(List(video.numFrames) { settImg })
+                if (timeline && style is TapeStyle) add(generateTimeline(style, video).asIterable())
+                add(renderDefVideo(video, project.styling.global.grounding).asIterable())
+            }).forEach(::write)
         }
     }
 
@@ -144,15 +148,15 @@ abstract class StyleSettingsTimelineDemo(
    ******************************************* */
 
 
-private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
-    val (global, page) = globalAndPage
+private fun extractStyling(globalAndPages: Pair<Global, List<Page>>): Styling {
+    val (global, pages) = globalAndPages
     val pageStyles = HashSet<PageStyle>()
     val contentStyles = HashSet<ContentStyle>()
     val letterStyles = HashSet<LetterStyle>()
     val transitionStyles = HashSet<TransitionStyle>()
     val pictureStyles = HashSet<PictureStyle>()
     val tapeStyles = HashSet<TapeStyle>()
-    for (stage in page.stages) {
+    for (page in pages) for (stage in page.stages) {
         pageStyles.add(stage.style)
         stage.transitionAfterStyle?.let(transitionStyles::add)
         for (compound in stage.compounds)
@@ -183,19 +187,21 @@ private fun extractStyling(globalAndPage: Pair<Global, Page>): Styling {
 }
 
 
-private fun buildProject(globalAndPage: Pair<Global, Page>, augmentStyling: ((Styling) -> Styling)? = null): Project {
-    var styling = extractStyling(globalAndPage)
+private fun buildProject(
+    globalAndPages: Pair<Global, List<Page>>, augmentStyling: ((Styling) -> Styling)? = null
+): Project {
+    var styling = extractStyling(globalAndPages)
     if (augmentStyling != null)
         styling = augmentStyling(styling)
-    val credits = Credits("", pl(globalAndPage.second), pl())
+    val credits = Credits("", globalAndPages.second.toPersistentList(), pl())
     return Project(styling, pl(credits))
 }
 
 
 private fun buildPageDefImgAndGrounding(
-    globalAndPage: Pair<Global, Page>, augmentStyling: ((Styling) -> Styling)? = null, scaling: Double = 1.0
+    globalAndPages: Pair<Global, List<Page>>, augmentStyling: ((Styling) -> Styling)? = null, scaling: Double = 1.0
 ): Pair<DeferredImage, Color4f> {
-    val project = buildProject(globalAndPage, augmentStyling)
+    val project = buildProject(globalAndPages, augmentStyling)
     val pageDefImg = drawPages(project, project.credits.single()).single().defImage.copy(universeScaling = scaling)
     return Pair(pageDefImg, project.styling.global.grounding)
 }
@@ -443,7 +449,7 @@ private fun renderTimeline(
 
 
 private fun stackImages(
-    vararg rows: Iterable<BufferedImage>, extendX: List<Int> = emptyList(), extendY: List<Int> = emptyList()
+    rows: List<Iterable<BufferedImage>>, extendX: List<Int> = emptyList(), extendY: List<Int> = emptyList()
 ) = sequence<BufferedImage> {
     fun dim(img: BufferedImage, rowIdx: Int) = Dimension(
         img.width + 2 * (extendX.getOrElse(rowIdx) { 0 }),

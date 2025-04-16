@@ -404,7 +404,7 @@ private fun buildCredits(
     bold: Boolean = false,
     height: Double = 32.0,
     tracking: Double = 0.0
-): Pair<Global, Page> {
+): Pair<Global, List<Page>> {
     val spreadsheet = "@Body\n{{Style Demo}}" + if (neque) "Neque porro quisquam" else "Lorem ipsum dolor"
     val letterStyle = PRESET_LETTER_STYLE.copy(
         name = "Demo",

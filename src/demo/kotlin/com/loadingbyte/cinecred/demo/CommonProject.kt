@@ -91,15 +91,22 @@ val RAINBOW_TAPE: Tape by lazy {
     Tape.recognize(tapeDir)!!
 }
 
-fun String.parseCreditsCS(vararg contentStyles: ContentStyle, resolution: Resolution? = null): Pair<Global, Page> {
+fun String.parseCreditsPS(vararg pageStyles: PageStyle): Pair<Global, List<Page>> {
     var styling = TEMPLATE_PROJECT.styling
-    if (resolution != null)
-        styling = styling.copy(global = styling.global.copy(resolution = resolution))
-    styling = styling.copy(contentStyles = styling.contentStyles.toPersistentList().addAll(contentStyles.asList()))
+    styling = styling.copy(global = styling.global.copy(resolution = Resolution(700, 350), fps = FPS(30, 1)))
+    styling = styling.copy(pageStyles = styling.pageStyles.addAll(pageStyles.asList()))
     return parseCredits(styling)
 }
 
-fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> {
+fun String.parseCreditsCS(vararg contStyles: ContentStyle, resolution: Resolution? = null): Pair<Global, List<Page>> {
+    var styling = TEMPLATE_PROJECT.styling
+    if (resolution != null)
+        styling = styling.copy(global = styling.global.copy(resolution = resolution))
+    styling = styling.copy(contentStyles = styling.contentStyles.addAll(contStyles.asList()))
+    return parseCredits(styling)
+}
+
+fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, List<Page>> {
     val styling = Styling(
         PRESET_GLOBAL, persistentListOf(), persistentListOf(), letterStyles.asList().toPersistentList(),
         persistentListOf(), persistentListOf(), persistentListOf()
@@ -107,23 +114,23 @@ fun String.parseCreditsLS(vararg letterStyles: LetterStyle): Pair<Global, Page> 
     return parseCredits(styling)
 }
 
-fun String.parseCreditsPiS(vararg pictureStyles: PictureStyle): Pair<Global, Page> {
+fun String.parseCreditsPiS(vararg pictureStyles: PictureStyle): Pair<Global, List<Page>> {
     var styling = TEMPLATE_PROJECT.styling
-    styling = styling.copy(pictureStyles = styling.pictureStyles.toPersistentList().addAll(pictureStyles.asList()))
+    styling = styling.copy(pictureStyles = styling.pictureStyles.addAll(pictureStyles.asList()))
     return parseCredits(styling)
 }
 
-fun String.parseCreditsTS(vararg tapeStyles: TapeStyle): Pair<Global, Page> {
+fun String.parseCreditsTS(vararg tapeStyles: TapeStyle): Pair<Global, List<Page>> {
     var styling = TEMPLATE_PROJECT.styling
     styling = styling.copy(global = styling.global.copy(resolution = Resolution(700, 350), fps = FPS(30, 1)))
-    styling = styling.copy(tapeStyles = styling.tapeStyles.toPersistentList().addAll(tapeStyles.asList()))
+    styling = styling.copy(tapeStyles = styling.tapeStyles.addAll(tapeStyles.asList()))
     return parseCredits(styling)
 }
 
-private fun String.parseCredits(styling: Styling): Pair<Global, Page> {
+private fun String.parseCredits(styling: Styling): Pair<Global, List<Page>> {
     val spreadsheet = CsvFormat.read(this, "")
     val picLoaders = if ("logo.svg" in this) mapOf(LOGO_PIC.file.name to LOGO_PIC) else emptyMap()
     val tapes = if ("rainbow" in this) mapOf(RAINBOW_TAPE.fileOrDir.name to RAINBOW_TAPE) else emptyMap()
     val pages = readCredits(spreadsheet, styling, picLoaders, tapes).first.pages
-    return Pair(styling.global, pages.single())
+    return Pair(styling.global, pages)
 }

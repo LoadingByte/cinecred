@@ -49,6 +49,7 @@ Cinecred Changelog
 - Timecode spinners now properly work with clock timecodes.
 - Added a dedicated setting for the number of columns in a grid content style.
 - Renamed the "matching" settings found in content styles to "harmonization".
+- Added maximization buttons to the styling, video, and delivery windows.
 - Remapped Ctrl+W and Ctrl+Q to closing a window or quitting a session.
 - The Yes/No/OK/Cancel buttons in dialogs are now universally translated.
 - Canceling a file dialog no longer opens a different second file dialog.

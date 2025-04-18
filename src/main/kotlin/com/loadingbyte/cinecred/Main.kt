@@ -164,6 +164,8 @@ private fun mainSwing(args: Array<String>) {
     UIManager.put(FlatIconColors.ACTIONS_GREY.key, PALETTE_GRAY_COLOR)
     // Enable alternated coloring of table rows.
     UIManager.put("Table.alternateRowColor", HSLColor(UIManager.getColor("Table.background")).adjustTone(10f))
+    // Add maximization buttons to plain dialog windows.
+    fixTitlePane()
     // Fix the slightly offset vertical centering of text in text fields.
     fixTextFieldVerticalCentering()
     // Fix the inability to get a dock progress bar to appear on macOS.

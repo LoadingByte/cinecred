@@ -366,7 +366,7 @@ class MultipliedSpinnerWidget(
 
 
 class TimecodeWidget(
-    model: SpinnerNumberModel,
+    private val model: SpinnerNumberModel,
     fps: FPS,
     timecodeFormat: TimecodeFormat,
     widthSpec: WidthSpec? = null
@@ -398,15 +398,11 @@ class TimecodeWidget(
     }
 
     private fun updateFormatter() {
-        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter(fps, timecodeFormat, signed))
+        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
     }
 
 
-    private class TimecodeFormatter(
-        private val fps: FPS,
-        private val timecodeFormat: TimecodeFormat,
-        private val signed: Boolean
-    ) : DefaultFormatter() {
+    private inner class TimecodeFormatter : DefaultFormatter() {
         init {
             valueClass = Int::class.javaObjectType
             makeSafe()
@@ -424,7 +420,10 @@ class TimecodeWidget(
         override fun stringToValue(string: String?): Int = try {
             val c0 = string!![0]
             val n = parseTimecode(fps, timecodeFormat, if (c0 == '+' || c0 == '-') string.substring(1) else string)
-            if (signed && c0 == '-') -n else n
+            val s = if (signed && c0 == '-') -n else n
+            require(model.minimum.let { it == null || it as Int <= s })
+            require(model.maximum.let { it == null || it as Int >= s })
+            s
         } catch (_: Exception) {
             throw ParseException("", 0)
         }

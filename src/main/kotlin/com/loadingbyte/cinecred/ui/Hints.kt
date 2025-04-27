@@ -60,7 +60,7 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
         Hint(l10n("ui.hints.projectTrack.guides"), editPanel.leakedGuidesButton, Side.BOTTOM),
         Hint(l10n("ui.hints.projectTrack.video"), editPanel.leakedVideoDialogButton, Side.BOTTOM),
         Hint(l10n("ui.hints.projectTrack.delivery"), editPanel.leakedDeliveryDialogButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.finished"), editPanel, Side.NONE)
+        Hint(l10n("ui.hints.projectTrack.finished", "<i>cinecred.com</i>"), editPanel, Side.NONE)
     )
 }
 

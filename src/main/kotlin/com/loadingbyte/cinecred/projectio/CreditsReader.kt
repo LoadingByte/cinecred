@@ -57,13 +57,13 @@ private class CreditsReader(
 
     // Note: We use maps whose keys are case-insensitive here because style references should be case-insensitive.
     // We also reverse the list so that if there are duplicate names, the first style from the list will survive.
-    inline fun <S> List<S>.map(n: (S) -> String) = asReversed().associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER), n)
-    val pageStyleMap = styling.pageStyles.map(PageStyle::name)
-    val contentStyleMap = styling.contentStyles.map(ContentStyle::name)
-    val letterStyleMap = styling.letterStyles.map(LetterStyle::name)
-    val transitionStyleMap = styling.transitionStyles.map(TransitionStyle::name)
-    val pictureStyleMap = styling.pictureStyles.map(PictureStyle::name)
-    val tapeStyleMap = styling.tapeStyles.map(TapeStyle::name)
+    inline fun <S> List<S>.mkm(n: (S) -> String) = asReversed().associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER), n)
+    val pageStyleMap = styling.pageStyles.mkm(PageStyle::name)
+    val contentStyleMap = styling.contentStyles.mkm(ContentStyle::name)
+    val letterStyleMap = styling.letterStyles.mkm(LetterStyle::name)
+    val transitionStyleMap = styling.transitionStyles.mkm(TransitionStyle::name)
+    val pictureStyleMap = styling.pictureStyles.mkm(PictureStyle::name)
+    val tapeStyleMap = styling.tapeStyles.mkm(TapeStyle::name)
 
     // Prepare resolvers for pictures and tape.
     val pictureStyleResolver = AuxiliaryStyleResolver(
@@ -374,7 +374,7 @@ private class CreditsReader(
                     else
                         table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapPx))
                 } catch (_: IllegalArgumentException) {
-                    table.log(row, "vGap", WARN, l10n("projectIO.credits.illFormattedVGap", "px"))
+                    table.log(row, "vGap", WARN, l10n("projectIO.credits.illFormattedVGap", "<i>px</i>"))
                 }
         }
 
@@ -413,7 +413,8 @@ private class CreditsReader(
                     } else
                         nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
                 } catch (_: IllegalArgumentException) {
-                    val msg = l10n("projectIO.credits.illFormattedPageRuntime", timecodeFormatLabel, sampleTimecode)
+                    val examples = l10nEnumQuoted(sampleTimecode, "XYZ $sampleTimecode", "XYZ")
+                    val msg = l10n("projectIO.credits.illFormattedPageRuntime", "<i>$timecodeFormatLabel</i>", examples)
                     table.log(row, "pageRuntime", WARN, msg)
                 }
             }
@@ -431,8 +432,10 @@ private class CreditsReader(
                 "${l10n(MELT_KW.key)} $sampleTimecode ${l10n("project.template.transitionStyleLinear")}"
             )
 
-            fun unavailableTransitionStyleMsg(name: String) =
-                l10n("projectIO.credits.unavailableTransitionStyle", name, transitionStyleMap.keys.joinToString())
+            fun unavailableTransitionStyleMsg(name: String) = l10n(
+                "projectIO.credits.unavailableTransitionStyle",
+                name, "<i>${l10nEnum(transitionStyleMap.keys)}</i>"
+            )
 
             if (!table.isEmpty(row, "pageStyle"))
                 table.log(row, "pageGap", WARN, l10n("projectIO.credits.pageGapInNewPageRow"))
@@ -556,18 +559,36 @@ private class CreditsReader(
             }
             if (warn) {
                 val msg = when {
-                    hookKw -> l10n(
-                        "projectIO.credits.illFormattedSpinePosHook", parts[0], u,
-                        l10n(TOP_KW.key), l10n(MIDDLE_KW.key), l10n(BOTTOM_KW.key)
-                    )
-                    onCard -> l10n(
-                        "projectIO.credits.illFormattedSpinePosCard",
-                        l10n(BELOW_KW.key), l10n(ABOVE_KW.key), l10n(PARALLEL_KW.key), l10n(HOOK_KW.key)
-                    )
-                    else -> l10n(
-                        "projectIO.credits.illFormattedSpinePosScroll",
-                        l10n(PARALLEL_KW.key), l10n(HOOK_KW.key)
-                    )
+                    hookKw -> {
+                        val kw = parts[0]
+                        val top = l10n(TOP_KW.key)
+                        val mid = l10n(MIDDLE_KW.key)
+                        val bot = l10n(BOTTOM_KW.key)
+                        l10n(
+                            "projectIO.credits.illFormattedSpinePosHook", kw, u,
+                            "<i>$top</i>", "<i>$mid</i>", "<i>$bot</i>",
+                            l10nEnumQuoted("$kw 1 $bot-$top", "$kw 1 $top-$top 800", "$kw 2 $bot-$mid 800 100")
+                        )
+                    }
+                    onCard -> {
+                        val below = l10n(BELOW_KW.key)
+                        val parallel = l10n(PARALLEL_KW.key)
+                        val hook = l10n(HOOK_KW.key)
+                        l10n(
+                            "projectIO.credits.illFormattedSpinePosCard",
+                            "<i>$below</i>", "<i>${l10n(ABOVE_KW.key)}</i>", "<i>$parallel</i>", "<i>$hook</i>",
+                            l10nEnumQuoted("-400", "-400 200", "-400 200 $below", "-400 $parallel", "$hook \u2026")
+                        )
+                    }
+                    else -> {
+                        val parallel = l10n(PARALLEL_KW.key)
+                        val hook = l10n(HOOK_KW.key)
+                        l10n(
+                            "projectIO.credits.illFormattedSpinePosScroll",
+                            "<i>$parallel</i>", "<i>$hook</i>",
+                            l10nEnumQuoted("-400", "-400 $parallel", "$hook \u2026")
+                        )
+                    }
                 }
                 table.log(row, "spinePos", WARN, msg)
             }
@@ -599,8 +620,9 @@ private class CreditsReader(
             if (unknown.size != parts.size)
                 isBlockConclusionMarked = true
             if (unknown.isNotEmpty()) {
-                val opts = "${l10n(HEAD_KW.key)}, ${l10n(BODY_KW.key)}, ${l10n(TAIL_KW.key)}"
-                val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", unknown.joinToString(" "), opts)
+                val kws = "<i>${l10nEnum(unknown)}</i>"
+                val opts = "<i>${l10nEnum(l10n(HEAD_KW.key), l10n(BODY_KW.key), l10n(TAIL_KW.key))}</i>"
+                val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", kws, opts)
                 table.log(row, "breakHarmonization", WARN, msg)
             }
         }
@@ -702,11 +724,11 @@ private class CreditsReader(
         // issue a warning and discard the head resp. tail.
         if (newHead != null && !contentStyle!!.hasHead) {
             blockHead = null
-            table.log(row, "head", WARN, l10n("projectIO.credits.headUnsupported", contentStyle!!.name))
+            table.log(row, "head", WARN, l10n("projectIO.credits.headUnsupported", "<i>${contentStyle!!.name}</i>"))
         }
         if (newTail != null && !contentStyle!!.hasTail) {
             blockTail = null
-            table.log(row, "tail", WARN, l10n("projectIO.credits.tailUnsupported", contentStyle!!.name))
+            table.log(row, "tail", WARN, l10n("projectIO.credits.tailUnsupported", "<i>${contentStyle!!.name}</i>"))
         }
 
         // If the body cell is non-empty, add its content to the current block.
@@ -722,11 +744,11 @@ private class CreditsReader(
         l10nColName: String, initLetterStyleName: String?, only1Line: Boolean, onlyStr: Boolean = false
     ): BodyElement? {
         fun unavailableLetterStyleMsg(name: String) =
-            l10n("projectIO.credits.unavailableLetterStyle", name, letterStyleMap.keys.joinToString())
+            l10n("projectIO.credits.unavailableLetterStyle", name, "<i>${l10nEnum(letterStyleMap.keys)}</i>")
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", tagKey,
-            "{{${l10n(BLANK_KW.key)}}}, {{${l10n(STYLE_KW.key)}}}, {{${l10n(PIC_KW.key)}}}, {{${l10n(VIDEO_KW.key)}}}"
+            "<i>" + l10nEnum(listOf(BLANK_KW, STYLE_KW, PIC_KW, VIDEO_KW).map { "{{${l10n(it.key)}}}" }) + "</i>"
         )
 
         val str = table.getString(row, l10nColName) ?: return null
@@ -812,8 +834,9 @@ private class CreditsReader(
                 val missingGlyphLines = styledLines.filter { it.formatted(styling).missesGlyphs }
                 if (missingGlyphLines.isNotEmpty()) {
                     val ns = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }
-                    val k = if (ns.size == 1) "projectIO.credits.missingGlyphs1" else "projectIO.credits.missingGlyphs"
-                    table.log(row, l10nColName, WARN, l10n(k, ns.joinToString()))
+                    val k = if (ns.size == 1) "project.styling.constr.missingGlyphs" else
+                        "projectIO.credits.missingGlyphs"
+                    table.log(row, l10nColName, WARN, l10n(k, l10nEnumQuoted(ns)))
                 }
                 BodyElement.Str(styledLines.toPersistentList())
             }

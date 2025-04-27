@@ -140,17 +140,29 @@ private fun fillIn(string: String, template: Template): String = string
             "cardRuntimeFrames" -> template.fps.run { 5 * numerator / denominator }.toString()
             "cardFadeFrames" -> template.fps.run { numerator / (2 * denominator) }.toString()
             "scrollPxPerFrame" -> max(1, template.fps.run { 78 * denominator / numerator } * template.scale).toString()
-            "projectIO.credits.table.headDesc", "projectIO.credits.table.tailDesc",
-            "projectIO.credits.table.bodyDesc" ->
+            "projectIO.credits.table.headDesc" -> {
+                val styleKw = l10n("projectIO.credits.table.style", template.locale)
+                val name = l10n("project.template.letterStyleName", template.locale)
+                l10n(
+                    key,
+                    styleKw,
+                    l10nEnumQuoted("Copyright 2023 {{$styleKw $name}}Thomas Cash", locale = template.locale),
+                    locale = template.locale
+                )
+            }
+            "projectIO.credits.table.tailDesc", "projectIO.credits.table.bodyDesc" -> {
+                val picKw = l10n("projectIO.credits.table.pic", template.locale)
+                val videoKw = l10n("projectIO.credits.table.video", template.locale)
                 l10n(
                     key,
                     l10n("projectIO.credits.table.style", template.locale),
                     l10n("projectIO.credits.table.head", template.locale),
                     l10n("blank", template.locale),
-                    l10n("projectIO.credits.table.pic", template.locale),
-                    l10n("projectIO.credits.table.video", template.locale),
+                    picKw, videoKw,
+                    l10nEnumQuoted("{{$picKw Cinecred Logo}}", "{{$videoKw Blooper 3.mov XXL}}", locale = template.locale),
                     locale = template.locale
                 )
+            }
             "projectIO.credits.table.breakHarmonizationDesc" ->
                 l10n(
                     key,
@@ -159,16 +171,31 @@ private fun fillIn(string: String, template: Template): String = string
                     l10n("projectIO.credits.table.tail", template.locale),
                     locale = template.locale
                 )
-            "projectIO.credits.table.spinePosDesc" ->
+            "projectIO.credits.table.spinePosDesc" -> {
+                val below = l10n("projectIO.credits.table.below", template.locale)
+                val parallel = l10n("projectIO.credits.table.parallel", template.locale)
+                val hook = l10n("projectIO.credits.table.hook", template.locale)
+                val top = l10n("projectIO.credits.table.top", template.locale)
+                val mid = l10n("projectIO.credits.table.middle", template.locale)
+                val bot = l10n("projectIO.credits.table.bottom", template.locale)
                 l10n(
                     key,
-                    l10n("projectIO.credits.table.below", template.locale),
+                    below,
                     l10n("projectIO.credits.table.above", template.locale),
-                    l10n("projectIO.credits.table.parallel", template.locale),
-                    l10n("projectIO.credits.table.hook", template.locale),
-                    l10n("projectIO.credits.table.top", template.locale),
-                    l10n("projectIO.credits.table.middle", template.locale),
-                    l10n("projectIO.credits.table.bottom", template.locale),
+                    l10nEnumQuoted("-400", "-400 200", "-400 200 $below", locale = template.locale),
+                    l10nEnumQuoted("-400", locale = template.locale),
+                    parallel, hook,
+                    l10nEnumQuoted(
+                        "-400 $parallel", "$hook 1 $bot-$top", "$hook 1 $top-$top 800", "$hook 2 $bot-$mid 800 100",
+                        locale = template.locale
+                    ),
+                    locale = template.locale
+                )
+            }
+            "projectIO.credits.table.pageRuntimeDesc" ->
+                l10n(
+                    key,
+                    l10nEnumQuoted("00:04:56:23", "XYZ 00:04:56:23", "XYZ", locale = template.locale),
                     locale = template.locale
                 )
             "projectIO.credits.table.pageGapDesc" ->

@@ -326,6 +326,21 @@ fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): 
     return MessageFormat(str).format(effArgs)
 }
 
+fun l10nQuoted(string: String, locale: Locale = Locale.getDefault()): String =
+    l10n("quoted", string, locale = locale)
+
+fun l10nEnum(vararg strings: String, locale: Locale = Locale.getDefault()): String =
+    l10nEnum(strings.asList(), locale)
+
+fun l10nEnum(strings: Iterable<String>, locale: Locale = Locale.getDefault()): String =
+    strings.joinToString(l10n("enumSep", locale))
+
+fun l10nEnumQuoted(vararg strings: String, locale: Locale = Locale.getDefault()): String =
+    l10nEnumQuoted(strings.asList(), locale)
+
+fun l10nEnumQuoted(strings: Iterable<String>, locale: Locale = Locale.getDefault()): String =
+    strings.joinToString(l10n("enumSep", locale)) { l10nQuoted(it, locale = locale) }
+
 fun comprehensivelyApplyLocale(locale: Locale) {
     SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.
     Locale.setDefault(locale)

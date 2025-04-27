@@ -491,14 +491,16 @@ sealed interface Picture : AutoCloseable {
                 LOGGER.warn("Encountered unexpected exception while looking for the Ghostscript executable.", e)
             }
 
+            val line1 = l10n("imaging.ghostscriptMissing.msg.1", "<code>ai</code>/<code>eps</code>/<code>ps</code>")
             val linkWin = " href=\"https://ghostscript.com/releases/gsdnld.html\""
             val linkMac = " href=\"https://pages.uoregon.edu/koch/\""
-            val osSpecific = when {
+            val line2 = when {
                 SystemInfo.isWindows -> l10n("imaging.ghostscriptMissing.msg.windows", linkWin)
                 SystemInfo.isMacOS -> l10n("imaging.ghostscriptMissing.msg.macos", linkMac)
                 else -> l10n("imaging.ghostscriptMissing.msg.linux")
             }
-            val msg = "<html>" + l10n("imaging.ghostscriptMissing.msg", osSpecific).replace("\n", "<br>") + "</html>"
+            val line3 = l10n("imaging.ghostscriptMissing.msg.3")
+            val msg = "<html>$line1<br>$line2<br>$line3</html>"
             val ep = newLabelEditorPane("text/html", msg)
             ep.addHyperlinkListener { e ->
                 if (e.eventType == HyperlinkEvent.EventType.ACTIVATED)

@@ -23,6 +23,9 @@ end_of_line = crlf
 [{*.dist,*.html,*.plist,*.sh,*.svg,*.wxl,*.wxs,*.xml}]
 indent_size = 2
 
+[*.properties]
+trim_trailing_whitespace = false
+
 [*.svg]
 insert_final_newline = false
 

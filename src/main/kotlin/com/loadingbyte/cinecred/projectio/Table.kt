@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.Severity.MIGRATE
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nEnum
 import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
 import java.util.*
@@ -86,7 +87,7 @@ class Table(
                     val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
                     if (col != -1) {
                         colMap[l10nColName] = col
-                        val msg = l10n("projectIO.table.migration.renameColumn", colName)
+                        val msg = l10n("projectIO.table.migration.renameColumn", "<i>$colName</i>")
                         log += ParserMsg(spreadsheet.name, headerRecordNo, legacyColName, null, MIGRATE, msg)
                         continue@outer
                     }
@@ -137,7 +138,7 @@ class Table(
     fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {
         val str = getString(row, l10nColName) ?: return null
         map[str]?.let { return it }
-        log(row, l10nColName, WARN, l10n(l10Warning, map.keys.joinToString()))
+        log(row, l10nColName, WARN, l10n(l10Warning, "<i>${l10nEnum(map.keys)}</i>"))
         return fallback
     }
 

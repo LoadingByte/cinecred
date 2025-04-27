@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nEnum
 import com.loadingbyte.cinecred.drawer.DrawnCredits
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.DeckLink
@@ -266,9 +267,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
         })
 
-        val zoomTooltip = l10n("ui.edit.zoom") + " (" + intArrayOf(VK_PLUS, VK_MINUS, VK_0).joinToString {
+        val zoomTooltip = l10n("ui.edit.zoom") + " (" + l10nEnum(intArrayOf(VK_PLUS, VK_MINUS, VK_0).map {
             getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
-        } + ")"
+        }) + ")"
         zoomSlider.toolTipText = zoomTooltip
 
         val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {

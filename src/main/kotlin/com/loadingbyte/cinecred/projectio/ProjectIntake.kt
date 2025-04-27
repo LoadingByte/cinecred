@@ -303,19 +303,20 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         private val FONT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ttf", "ttc", "otf", "otc")
 
         fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-            fun availExtsStr() = CREDITS_EXTS.joinToString()
+            fun availExtsStr() = "<i>${l10nEnum(CREDITS_EXTS)}</i>"
 
             var creditsFile: Path? = null
             val log = mutableListOf<ParserMsg>()
 
             val candidates = getCreditsFileCandidates(projectDir)
             if (candidates.isEmpty()) {
-                val msg = l10n("projectIO.credits.noCreditsFile", availExtsStr())
+                val msg = l10n("projectIO.credits.noCreditsFile", "<i>${availExtsStr()}</i>")
                 log.add(ParserMsg(null, null, null, null, ERROR, msg))
             } else {
                 creditsFile = candidates.first()
                 if (candidates.size > 1) {
-                    val msg = l10n("projectIO.credits.multipleCreditsFiles", availExtsStr(), creditsFile.fileName)
+                    val chosen = creditsFile.fileName
+                    val msg = l10n("projectIO.credits.multipleCreditsFiles", "<i>${availExtsStr()}</i>", chosen)
                     log.add(ParserMsg(null, null, null, null, WARN, msg))
                 }
             }

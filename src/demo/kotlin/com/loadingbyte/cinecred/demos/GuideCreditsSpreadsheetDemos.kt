@@ -25,6 +25,7 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
         GuideCreditsSpreadsheetSpinePositionHookDemo,
         GuideCreditsSpreadsheetPageGapMeltDemo,
         GuideCreditsSpreadsheetPageGapMeltVideoDemo,
+        GuideCreditsSpreadsheetPageGapScrollAwayDemo,
         GuideCreditsSpreadsheetBreakHarmonizationDemo
     )
 
@@ -192,6 +193,20 @@ object GuideCreditsSpreadsheetPageGapMeltVideoDemo : VideoDemo("$DIR/page-gap-me
 2nd AC,Charly Clapper,,,,,,
 ,,,5,,,,Melt 00:00:02:00 Linear
 ,Copyright © 2023,,,Blurb,Card,00:00:03:00,
+        """.parseCreditsPS()
+}
+
+
+object GuideCreditsSpreadsheetPageGapScrollAwayDemo : VideoDemo("$DIR/page-gap-scroll-away", Format.VIDEO_GIF) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = """
+@Head,@Body,@Content Style,@Page Style,@Page Runtime,@Page Gap
+1st AC,Paul Puller,Gutter,Scroll,,
+2nd AC,Charly Clapper,,,,
+,,,,,-00:00:03:00
+,,,Scroll,,
+,,,,,Melt
+,Copyright © 2023,Blurb,Card,00:00:03:00,
         """.parseCreditsPS()
 }
 

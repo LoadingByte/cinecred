@@ -2160,7 +2160,6 @@ class BitmapConverter(
                 eq[AV_PIX_FMT_BAYER_GBRG16BE] = -1
                 eq[AV_PIX_FMT_BAYER_GRBG16LE] = -1
                 eq[AV_PIX_FMT_BAYER_GRBG16BE] = -1
-                eq[AV_PIX_FMT_XVMC] = -1
                 eq[AV_PIX_FMT_YUV440P10LE] = AV_PIX_FMT_YUV440P10
                 eq[AV_PIX_FMT_YUV440P10BE] = AV_PIX_FMT_YUV440P10
                 eq[AV_PIX_FMT_YUV440P12LE] = AV_PIX_FMT_YUV440P12
@@ -2237,6 +2236,7 @@ class BitmapConverter(
                 eq[AV_PIX_FMT_P412LE] = AV_PIX_FMT_YUV444P12
                 eq[AV_PIX_FMT_GBRAP14BE] = AV_PIX_FMT_GBRAP14
                 eq[AV_PIX_FMT_GBRAP14LE] = AV_PIX_FMT_GBRAP14
+                eq[AV_PIX_FMT_D3D12] = -1
                 for (code in eq.indices)
                     if (eq[code] == -2)
                         throw NotImplementedError("@Developer: please add entry for $code to zimg-equiv pix fmt table.")

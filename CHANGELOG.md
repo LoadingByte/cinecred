@@ -32,6 +32,7 @@ Cinecred Changelog
 - Newly created 4K projects have their pixel sizes scaled up again.
 - Fixed off-by-one errors in global runtime fine adjustment when the first or
   last frame is left blank.
+- Fixed crashes when runtime fine adjustment is active yet there are no pages.
 - Fixed that a horizontal tail-body gap is ineffective if the head is disabled.
 - Fixed crashes when both forced row height and match row height are active.
 - Fixed rare crashes during interlaced delivery.

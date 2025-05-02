@@ -214,6 +214,10 @@ class ProjectController(
                 log += curLog
             }
 
+            // If the credits are erroneous, abort.
+            if (log.any { it.severity == ERROR })
+                return@submit doneProcessing(input, log, null)
+
             val usedStyles = findUsedStyles(credits)
 
             // The styling may be updated depending on the credits spreadsheet, namely in the following cases:

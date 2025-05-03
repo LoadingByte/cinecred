@@ -408,6 +408,8 @@ class DeferredVideo private constructor(
                         renderCanvasSpec, renderUserSpec,
                         promiseOpaque = grounding != null, approxTransfer = randomAccessDraftMode
                     ).use { converter ->
+                        // Note: Despite this map operation potentially being expensive if there are lots of bitmaps,
+                        // we cannot parallelize it because BitmapConverter.convert() is not thread-safe.
                         return transparentCanvasBitmaps.map { transparentCanvasBitmap ->
                             val userBitmap = Bitmap.allocate(renderUserSpec)
                             if (grounding == null)
@@ -886,14 +888,14 @@ class DeferredVideo private constructor(
                     // If all shifts are integers, the only micro shift that occurs is 0.
                     countedMicroShifts == null ->
                         doubleArrayOf(0.0)
-                    // If we don't exceed the maximum number of allowed micro shifts, use all of them.
-                    countedMicroShifts.size <= MAX_MICRO_SHIFTS ->
-                        DoubleArray(countedMicroShifts.size) { countedMicroShifts[it].microShift }
-                    // Otherwise, use only the most frequently occurring micro shifts. For the others, we later resort
-                    // to directly drawing deferred images, which is of course slower.
+                    // Otherwise, use only the most frequently occurring micro shifts up to a maximum count, and also
+                    // drop micro shifts that occur rarely. For the others, we later resort to directly drawing deferred
+                    // images, which would of course be slower for often occurring images.
                     else -> {
                         countedMicroShifts.sortByDescending { it.count }
-                        DoubleArray(MAX_MICRO_SHIFTS) { countedMicroShifts[it].microShift }
+                        val firstRareIdx = countedMicroShifts.indexOfFirst { it.count < MIN_MICRO_SHIFT_OCCURRENCES }
+                            .let { if (it != -1) it else countedMicroShifts.size }
+                        DoubleArray(min(MAX_MICRO_SHIFTS, firstRareIdx)) { countedMicroShifts[it].microShift }
                     }
                 }
 
@@ -1007,6 +1009,7 @@ class DeferredVideo private constructor(
             private const val MIN_CHUNK_BUFFER = 200
             private const val MAX_CHUNK_PIXELS = 20_000_000
             private const val MAX_MICRO_SHIFTS = 16
+            private const val MIN_MICRO_SHIFT_OCCURRENCES = 5
         }
 
 

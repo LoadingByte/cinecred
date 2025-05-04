@@ -19,6 +19,8 @@ Cinecred Changelog
 - A new button in the project window directly opens the credits file either in
   the local spreadsheet editor or the web browser.
 - Added configurable templates for the delivery destination file/folder.
+- The video delivery resolution may now be forced to an arbitrary one, which is
+  accomplished by cropping or "uncropping" the video.
 - Additional columns in the delivery queue show spreadsheet, pages, and specs.
 - Added support for the Windows Java Access Bridge.
 

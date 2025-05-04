@@ -15,11 +15,12 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_P
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SPATIAL_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
+import com.loadingbyte.cinecred.delivery.RenderFormat.Sliders
 import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_CL
@@ -51,6 +52,7 @@ import kotlin.math.pow
 class VideoContainerRenderJob private constructor(
     private val format: Format,
     private val config: Config,
+    private val sliders: Sliders,
     private val styling: Styling,
     private val video: DeferredVideo,
     private val file: Path
@@ -83,7 +85,12 @@ class VideoContainerRenderJob private constructor(
         val ceiling = if (colorSpace.transfer.isHDR) null else 1f
         val scan = config[SCAN]
         val grounding = if (config[TRANSPARENCY] == GROUNDED) styling.global.grounding else null
-        val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
+        var scaledVideo = video.copy(2.0.pow(config[SPATIAL_SCALING_LOG2]), fpsScaling = config[FPS_SCALING])
+        if (sliders.resolution != null)
+            scaledVideo = scaledVideo.copy(
+                resolutionPaddingH = (sliders.resolution.widthPx - scaledVideo.resolution.widthPx) / 2.0,
+                resolutionPaddingV = (sliders.resolution.heightPx - scaledVideo.resolution.heightPx) / 2.0,
+            )
 
         val writerSpec = Bitmap.Spec(
             scaledVideo.resolution,
@@ -227,7 +234,7 @@ class VideoContainerRenderJob private constructor(
             .filter { codecId in it.supportedCodecIds }
             .flatMapTo(HashSet()) { it.extensions },
         defaultFileExt,
-        configAssortment * choice(RESOLUTION_SCALING_LOG2) * choice(FPS_SCALING),
+        configAssortment * choice(SPATIAL_SCALING_LOG2) * choice(FPS_SCALING),
         widthMod, heightMod, minWidth, minHeight
     ) {
 
@@ -235,12 +242,13 @@ class VideoContainerRenderJob private constructor(
 
         override fun createRenderJob(
             config: Config,
+            sliders: Sliders,
             styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = VideoContainerRenderJob(this, config, styling, video!!, fileOrDir)
+        ) = VideoContainerRenderJob(this, config, sliders, styling, video!!, fileOrDir)
 
     }
 

@@ -12,11 +12,12 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COM
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SPATIAL_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
+import com.loadingbyte.cinecred.delivery.RenderFormat.Sliders
 import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency.*
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.GRAY
@@ -40,6 +41,7 @@ import kotlin.math.pow
 class ImageSequenceRenderJob private constructor(
     private val format: Format,
     private val config: Config,
+    private val sliders: Sliders,
     private val styling: Styling,
     private val video: DeferredVideo,
     private val dir: Path,
@@ -61,7 +63,12 @@ class ImageSequenceRenderJob private constructor(
         val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val scan = config[SCAN]
         val grounding = if (config[TRANSPARENCY] == GROUNDED) styling.global.grounding else null
-        val scaledVideo = video.copy(2.0.pow(config[RESOLUTION_SCALING_LOG2]), config[FPS_SCALING])
+        var scaledVideo = video.copy(2.0.pow(config[SPATIAL_SCALING_LOG2]), fpsScaling = config[FPS_SCALING])
+        if (sliders.resolution != null)
+            scaledVideo = scaledVideo.copy(
+                resolutionPaddingH = (sliders.resolution.widthPx - scaledVideo.resolution.widthPx) / 2.0,
+                resolutionPaddingV = (sliders.resolution.heightPx - scaledVideo.resolution.heightPx) / 2.0,
+            )
 
         val bitmapWriter = when (format) {
             PNG -> BitmapWriter.PNG(family, embedAlpha, colorSpace, config[DEPTH])
@@ -168,16 +175,17 @@ class ImageSequenceRenderJob private constructor(
 
     private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
         fileExt.uppercase(), auxLabel = null, fileSeq = true, setOf(fileExt), fileExt,
-        configAssortment * choice(RESOLUTION_SCALING_LOG2) * choice(FPS_SCALING) * choice(SCAN)
+        configAssortment * choice(SPATIAL_SCALING_LOG2) * choice(FPS_SCALING) * choice(SCAN)
     ) {
         override fun createRenderJob(
             config: Config,
+            sliders: Sliders,
             styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
             fileOrDir: Path,
             filenamePattern: String?
-        ) = ImageSequenceRenderJob(this, config, styling, video!!, fileOrDir, filenamePattern!!)
+        ) = ImageSequenceRenderJob(this, config, sliders, styling, video!!, fileOrDir, filenamePattern!!)
     }
 
 }

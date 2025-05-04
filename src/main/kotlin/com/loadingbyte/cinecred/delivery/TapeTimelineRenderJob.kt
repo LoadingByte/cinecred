@@ -424,6 +424,7 @@ class TapeTimelineRenderJob private constructor(
     ) {
         override fun createRenderJob(
             config: Config,
+            sliders: Sliders,
             styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,

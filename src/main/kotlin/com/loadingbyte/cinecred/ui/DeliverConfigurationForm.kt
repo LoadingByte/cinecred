@@ -17,8 +17,8 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PDF_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SPATIAL_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
@@ -76,7 +76,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     @Deprecated("ENCAPSULATION LEAK") val leakedDestinationWidget: Widget<*> get() = destinationWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedDestinationWidgetTemplateMenu get() = destinationWidget.templateMenu
     @Deprecated("ENCAPSULATION LEAK") val leakedTransparencyWidget get() = transparencyWidget
-    @Deprecated("ENCAPSULATION LEAK") val leakedResolutionMultWidget get() = resolutionMultWidget
+    @Deprecated("ENCAPSULATION LEAK") val leakedSpatialScalingWidget get() = spatialScalingWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedScanWidget get() = scanWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedPrimariesWidget get() = primariesWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedTransferWidget get() = transferWidget
@@ -220,16 +220,36 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         )
     )
 
-    private val resolutionMultWidget =
+    private val spatialScalingWidget =
         ComboBoxWidget(
             Int::class.javaObjectType, emptyList(), widthSpec = WidthSpec.LITTLE,
             toString = { if (it >= 0) "\u00D7 ${1 shl it}" else "\u00F7 ${1 shl -it}" }
         )
 
-    private val fpsMultWidget =
+    private val resolutionWidget =
+        OptionalResolutionWidget(nullLabel = l10n("automatic"), compactCustom = true)
+            .apply { value = Optional.empty() }
+
+    init {
+        addWidget(
+            l10n("ui.styling.layer.scaling"),
+            UnionWidget(
+                listOf(spatialScalingWidget, resolutionWidget),
+                labels = listOf(null, l10n("ui.styling.global.resolution"))
+            )
+        )
+    }
+
+    private val fpsScalingWidget =
         ComboBoxWidget(
             Int::class.javaObjectType, emptyList(), widthSpec = WidthSpec.LITTLE,
             toString = { "\u00D7 $it" }
+        )
+
+    private val scanWidget =
+        ComboBoxWidget(
+            Scan::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE,
+            toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
         )
 
     private val depthWidget =
@@ -240,21 +260,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
     init {
         addWidget(
-            l10n("ui.styling.global.resolution"),
+            l10n("ui.styling.global.fps"),
             UnionWidget(
-                listOf(resolutionMultWidget, fpsMultWidget, depthWidget),
-                labels = listOf(null, l10n("ui.styling.global.fps"), l10n("bitDepth"))
+                listOf(fpsScalingWidget, scanWidget, depthWidget),
+                labels = listOf(null, l10n("ui.deliverConfig.scan"), l10n("bitDepth"))
             )
         )
     }
-
-    private val scanWidget = addWidget(
-        l10n("ui.deliverConfig.scan"),
-        ComboBoxWidget(
-            Scan::class.java, emptyList(), widthSpec = WidthSpec.WIDER,
-            toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
-        )
-    )
 
     private val primariesWidget =
         ComboBoxWidget(ColorSpace.Primaries::class.java, emptyList(), widthSpec = WidthSpec.NARROW)
@@ -364,22 +376,23 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         val format = formatWidget.value
         val config = currentConfig() ?: return false
-        val resMult = 2.0.pow(config.getOrDefault(RESOLUTION_SCALING_LOG2))
-        val fpsMult = config.getOrDefault(FPS_SCALING)
+        val sliders = currentSliders()
+        val spatialScaling = 2.0.pow(config.getOrDefault(SPATIAL_SCALING_LOG2))
+        val fpsScaling = config.getOrDefault(FPS_SCALING)
         val scan = config.getOrDefault(SCAN)
         val primaries = config.getOrDefault(PRIMARIES)
         val transfer = config.getOrDefault(TRANSFER)
 
         // Determine the scaled specs.
         val resolution = project.styling.global.resolution
-        val scaledWidth = (resMult * resolution.widthPx).roundToInt()
-        val scaledHeight = (resMult * resolution.heightPx).roundToInt()
-        val scaledFPS = project.styling.global.fps.frac * fpsMult
+        val scaledWidth = sliders.resolution?.widthPx ?: (spatialScaling * resolution.widthPx).roundToInt()
+        val scaledHeight = sliders.resolution?.heightPx ?: (spatialScaling * resolution.heightPx).roundToInt()
+        val scaledFPS = project.styling.global.fps.frac * fpsScaling
         val scrollSpeeds = credits.pages.asSequence()
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
-            .associateWith { speed -> speed * resMult / fpsMult }
+            .associateWith { speed -> speed * spatialScaling / fpsScaling }
 
         // Format the scaled specs.
         val decFmt = DecimalFormat("0.##")
@@ -399,7 +412,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             channels = specsChannels,
             primaries = primaries.name,
             transfer = transfer.name,
-            optResolution = if (RESOLUTION_SCALING_LOG2 !in config) null else "$scaledWidth \u00D7 $scaledHeight",
+            optResolution = if (SPATIAL_SCALING_LOG2 !in config) null else "$scaledWidth \u00D7 $scaledHeight",
             optFPSAndScan = if (FPS_SCALING !in config) null else specsFPS + specsScan,
             optColorSpace = if (PRIMARIES !in config) null else "$primaries / $transfer"
         )
@@ -433,7 +446,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         fun error(msg: String) = panel.addIssue(ERROR_ICON, msg).also { err = true }
         // Check for violated restrictions of the currently selected format.
         val forLabel = format.label
-        if (RESOLUTION_SCALING_LOG2 in config) {
+        if (SPATIAL_SCALING_LOG2 in config) {
             if (scaledWidth % format.widthMod != 0)
                 error(l10n("ui.delivery.issues.widthMod", forLabel, format.widthMod))
             if (scaledHeight % format.heightMod != 0)
@@ -450,6 +463,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
                 warn(l10n("ui.delivery.issues.fractionalFieldShift"))
         }
+        // Check for popping extremal scroll stages due to an enlarged vertical resolution.
+        if (sliders.resolution != null && scaledHeight > (spatialScaling * resolution.heightPx).roundToInt() &&
+            credits.pages
+                .flatMap { page -> listOf(page.stages.first(), page.stages.last()) }
+                .any { stage -> stage.style.behavior == PageBehavior.SCROLL }
+        )
+            warn(l10n("ui.delivery.issues.poppingScrollPages"))
 
         // Notify the destination widget about the new specs.
         destinationWidget.specs = specs
@@ -473,10 +493,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
         pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
         pushFormatPropertyOptions(TRANSPARENCY, transparencyWidget, config, formatChanged)
-        pushFormatPropertyOptions(RESOLUTION_SCALING_LOG2, resolutionMultWidget, config, formatChanged)
-        pushFormatPropertyOptions(FPS_SCALING, fpsMultWidget, config, formatChanged)
-        pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
+        pushFormatPropertyOptions(SPATIAL_SCALING_LOG2, spatialScalingWidget, config, formatChanged)
+        resolutionWidget.isEnabled = formatWidget.value in VIDEO_FORMATS
+        pushFormatPropertyOptions(FPS_SCALING, fpsScalingWidget, config, formatChanged)
         pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)
+        pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
         pushFormatPropertyOptions(PRIMARIES, primariesWidget, config, formatChanged)
         pushFormatPropertyOptions(TRANSFER, transferWidget, config, formatChanged)
         pushFormatPropertyOptions(YUV, yuvWidget, config, formatChanged)
@@ -516,6 +537,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         else {
             val format = formatWidget.value
             val config = currentConfig() ?: return
+            val sliders = currentSliders()
             val styling = drawnProject.project.styling
 
             val wholePage = format in WHOLE_PAGE_FORMATS
@@ -575,7 +597,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val filenameHashPattern = destinationValue.filenameHashPattern ?: ""
             val filenamePattern = filenameHashPattern.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
 
-            val renderJob = format.createRenderJob(config, styling, pageDefImages, video, fileOrDir, filenamePattern)
+            val renderJob = format.createRenderJob(
+                config, sliders, styling, pageDefImages, video, fileOrDir, filenamePattern
+            )
 
             val info = DeliverRenderQueuePanel.RenderJobInfo(
                 spreadsheet = spreadsheetNameWidget.value.get(),
@@ -613,14 +637,14 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             }
         if (transparencyWidget.items.isNotEmpty())
             lookup[TRANSPARENCY] = transparencyWidget.value
-        if (resolutionMultWidget.items.isNotEmpty())
-            lookup[RESOLUTION_SCALING_LOG2] = resolutionMultWidget.value
-        if (fpsMultWidget.items.isNotEmpty())
-            lookup[FPS_SCALING] = fpsMultWidget.value
-        if (depthWidget.items.isNotEmpty())
-            lookup[DEPTH] = depthWidget.value
+        if (spatialScalingWidget.items.isNotEmpty())
+            lookup[SPATIAL_SCALING_LOG2] = spatialScalingWidget.value
+        if (fpsScalingWidget.items.isNotEmpty())
+            lookup[FPS_SCALING] = fpsScalingWidget.value
         if (scanWidget.items.isNotEmpty())
             lookup[SCAN] = scanWidget.value
+        if (depthWidget.items.isNotEmpty())
+            lookup[DEPTH] = depthWidget.value
         if (primariesWidget.items.isNotEmpty())
             lookup[PRIMARIES] = primariesWidget.value
         if (transferWidget.items.isNotEmpty())
@@ -633,6 +657,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         return lookup.findConfig(format)
     }
 
+    private fun currentSliders(): Sliders =
+        Sliders(if (formatWidget.value in VIDEO_FORMATS) resolutionWidget.value.getOrNull() else null)
+
     fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
 
@@ -643,8 +670,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         // Update the page number options.
         pushPageIdxOptions(reset = false)
 
-        // Re-verify the resolution multiplier because with the update, the page scroll speeds might have changed.
-        onChange(resolutionMultWidget)
+        // Re-verify the spatial scaling because with the update, the page scroll speeds might have changed.
+        onChange(spatialScalingWidget)
     }
 
     fun setSelectedSpreadsheetName(spreadsheetName: String) {

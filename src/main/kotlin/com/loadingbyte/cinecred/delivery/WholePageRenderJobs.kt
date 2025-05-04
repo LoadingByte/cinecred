@@ -11,7 +11,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COM
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PDF_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
-import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.RESOLUTION_SCALING_LOG2
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SPATIAL_SCALING_LOG2
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
@@ -71,7 +71,7 @@ class WholePageSequenceRenderJob private constructor(
         val embedAlpha = config[TRANSPARENCY] == TRANSPARENT
         val matte = config[TRANSPARENCY] == MATTE
         val family = if (matte) GRAY else RGB
-        val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
+        val spatialScaling = 2.0.pow(config[SPATIAL_SCALING_LOG2])
         val colorSpace = if (matte) null else ColorSpace.of(config[PRIMARIES], config[TRANSFER])
         val ceiling = if (config.getOrDefault(HDR) || colorSpace?.transfer?.isHDR == true) null else 1f
         val global = styling.global
@@ -87,7 +87,7 @@ class WholePageSequenceRenderJob private constructor(
         for ((idx, unscaledPageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val pageDefImage = unscaledPageDefImage.copy(universeScaling = resolutionScaling)
+            val pageDefImage = unscaledPageDefImage.copy(universeScaling = spatialScaling)
             val pageWidth = pageDefImage.width.roundToInt()
             val pageHeight = pageDefImage.height.resolve().roundToInt()
             val pageFile = dir.resolve(filenamePattern.format(idx + 1))
@@ -192,10 +192,11 @@ class WholePageSequenceRenderJob private constructor(
 
     private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
         fileExt.uppercase(), auxLabel = null, fileSeq = true, setOf(fileExt), fileExt,
-        configAssortment * choice(RESOLUTION_SCALING_LOG2)
+        configAssortment * choice(SPATIAL_SCALING_LOG2)
     ) {
         override fun createRenderJob(
             config: Config,
+            sliders: Sliders,
             styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,
@@ -222,7 +223,7 @@ class WholePagePDFRenderJob private constructor(
         file.parent.createDirectoriesSafely()
 
         val ground = config[TRANSPARENCY] == GROUNDED
-        val resolutionScaling = 2.0.pow(config[RESOLUTION_SCALING_LOG2])
+        val spatialScaling = 2.0.pow(config[SPATIAL_SCALING_LOG2])
         val profile = config[PDF_PROFILE]
         val lossy = profile == LOSSY_VECTORSVG || profile == LOSSY_RASTERSVG
         val rasterizeSVGs = profile == LOSSY_RASTERSVG || profile == LOSSLESS_RASTERSVG
@@ -253,7 +254,7 @@ class WholePagePDFRenderJob private constructor(
         for ((idx, unscaledPageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
-            val page = unscaledPageDefImage.copy(universeScaling = resolutionScaling)
+            val page = unscaledPageDefImage.copy(universeScaling = spatialScaling)
 
             val pdfPage = PDPage(PDRectangle(page.width.toFloat(), page.height.resolve().toFloat()))
             pdfDoc.addPage(pdfPage)
@@ -277,11 +278,12 @@ class WholePagePDFRenderJob private constructor(
 
     private class Format : RenderFormat(
         "PDF", auxLabel = null, fileSeq = false, setOf("pdf"), "pdf",
-        choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(RESOLUTION_SCALING_LOG2) *
+        choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(SPATIAL_SCALING_LOG2) *
                 fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB) * choice(PDF_PROFILE)
     ) {
         override fun createRenderJob(
             config: Config,
+            sliders: Sliders,
             styling: Styling,
             pageDefImages: List<DeferredImage>?,
             video: DeferredVideo?,

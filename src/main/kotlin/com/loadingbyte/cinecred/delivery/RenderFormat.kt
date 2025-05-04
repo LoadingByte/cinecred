@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.delivery
 
+import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_CL
 import com.loadingbyte.cinecred.imaging.Bitmap.YUVCoefficients.Companion.BT2020_NCL
@@ -56,6 +57,7 @@ abstract class RenderFormat(
 
     abstract fun createRenderJob(
         config: Config,
+        sliders: Sliders,
         styling: Styling,
         pageDefImages: List<DeferredImage>?,
         video: DeferredVideo?,
@@ -71,7 +73,7 @@ abstract class RenderFormat(
 
         companion object {
             val TRANSPARENCY = Property(*Transparency.values(), default = Transparency.GROUNDED)
-            val RESOLUTION_SCALING_LOG2 = Property(-2, -1, 0, 1, 2, default = 0)
+            val SPATIAL_SCALING_LOG2 = Property(-2, -1, 0, 1, 2, default = 0)
             val FPS_SCALING = Property(1, 2, 3, 4, default = 1)
             val PRIMARIES = Property(*ColorSpace.Primaries.COMMON.toTypedArray(), default = ColorSpace.Primaries.BT709)
             val TRANSFER = Property(*ColorSpace.Transfer.COMMON.toTypedArray(), default = ColorSpace.Transfer.BT1886)
@@ -176,5 +178,8 @@ abstract class RenderFormat(
         CF_422_LOW, CF_422_MED, CF_422_HI, CF_422_FILM1, CF_422_FILM2, CF_422_FILM3,
         CF_444_LOW, CF_444_MED, CF_444_HI, CF_444_FILM1, CF_444_FILM2, CF_444_FILM3
     }
+
+
+    class Sliders(val resolution: Resolution?)
 
 }

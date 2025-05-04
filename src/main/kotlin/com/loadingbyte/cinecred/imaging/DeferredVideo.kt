@@ -23,17 +23,19 @@ class DeferredVideo private constructor(
     private val origResolution: Resolution,
     private val origFPS: FPS,
     private val resolutionScaling: Double,
+    private val resolutionPaddingH: Double,
+    private val resolutionPaddingV: Double,
     private val fpsScaling: Int,
     private val roundShifts: Boolean,
     private var frozen: Boolean,
     private val flows: MutableList<Flow>
 ) {
 
-    val resolution: Resolution = if (resolutionScaling == 1.0) origResolution else Resolution(
-        (origResolution.widthPx * resolutionScaling).roundToInt(),
-        (origResolution.heightPx * resolutionScaling).roundToInt()
+    val resolution: Resolution = Resolution(
+        (origResolution.widthPx * resolutionScaling + 2 * resolutionPaddingH).roundToInt(),
+        (origResolution.heightPx * resolutionScaling + 2 * resolutionPaddingV).roundToInt()
     )
-    val fps: FPS = if (fpsScaling == 1) origFPS else FPS(origFPS.numerator * fpsScaling, origFPS.denominator)
+    val fps: FPS = FPS(origFPS.numerator * fpsScaling, origFPS.denominator)
 
     // Convenient accessors:
     private val width get() = resolution.widthPx
@@ -47,9 +49,15 @@ class DeferredVideo private constructor(
         }
         private set
 
-    constructor(resolution: Resolution, fps: FPS) : this(resolution, fps, 1.0, 1, false, false, ArrayList())
+    constructor(resolution: Resolution, fps: FPS) : this(resolution, fps, 1.0, 0.0, 0.0, 1, false, false, ArrayList())
 
-    fun copy(resolutionScaling: Double = 1.0, fpsScaling: Int = 1, roundShifts: Boolean = false): DeferredVideo {
+    fun copy(
+        resolutionScaling: Double = 1.0,
+        resolutionPaddingH: Double = 0.0,
+        resolutionPaddingV: Double = 0.0,
+        fpsScaling: Int = 1,
+        roundShifts: Boolean = false
+    ): DeferredVideo {
         require(resolutionScaling > 0.0)
         require(fpsScaling >= 1)
         frozen = true
@@ -57,6 +65,8 @@ class DeferredVideo private constructor(
             origResolution,
             origFPS,
             this.resolutionScaling * resolutionScaling,
+            this.resolutionPaddingH + resolutionPaddingH,
+            this.resolutionPaddingV + resolutionPaddingV,
             this.fpsScaling * fpsScaling,
             this.roundShifts || roundShifts,
             frozen = true,
@@ -67,7 +77,8 @@ class DeferredVideo private constructor(
     fun sub(firstImg: DeferredImage?, lastImg: DeferredImage?): DeferredVideo {
         frozen = true
         return DeferredVideo(
-            origResolution, origFPS, resolutionScaling, fpsScaling, roundShifts, frozen = true,
+            origResolution, origFPS, resolutionScaling, resolutionPaddingH, resolutionPaddingV, fpsScaling, roundShifts,
+            frozen = true,
             flows.subList(
                 if (firstImg == null) 0 else flows.indexOfFirst { it is Flow.DefImg && it.image == firstImg },
                 if (lastImg == null) flows.size else flows.indexOfFirst { it is Flow.DefImg && it.image == lastImg } + 1
@@ -145,7 +156,16 @@ class DeferredVideo private constructor(
                 is Flow.Blank ->
                     firstFrameIdx += flow.numFrames(fpsScaling)
                 is Flow.DefImg -> {
-                    val insnImage = flow.image.copy(universeScaling = resolutionScaling)
+                    val insnImage = DeferredImage(
+                        width = flow.image.width * resolutionScaling + 2 * resolutionPaddingH,
+                        height = flow.image.height * resolutionScaling + 2 * resolutionPaddingV
+                    )
+                    insnImage.drawDeferredImage(
+                        flow.image,
+                        x = resolutionPaddingH,
+                        y = resolutionPaddingV.toY(),
+                        universeScaling = resolutionScaling
+                    )
                     val insn = makeInstruction(firstFrameIdx, insnImage, flow.phases)
                     firstFrameIdx = insn.lastFrameIdx + 1
                     list.add(insn)

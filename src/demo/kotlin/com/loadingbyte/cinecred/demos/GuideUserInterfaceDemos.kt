@@ -376,7 +376,7 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(RenderFormat.Transparency.TRANSPARENT))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvResMult))
+        sc.mouseTo(dlvWin.desktopPosOf(dlvSpaceScal))
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(1))
         sc.click()

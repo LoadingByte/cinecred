@@ -1273,11 +1273,15 @@ class ColorWellWidget(
 }
 
 
-class ResolutionWidget : Form.AbstractWidget<Resolution>() {
+abstract class AbstractResolutionWidget<V : Any> protected constructor(
+    extraPresets: List<Preset>,
+    private val compactCustom: Boolean
+) : Form.AbstractWidget<V>() {
 
-    private sealed interface Preset {
+    protected sealed interface Preset {
         class Choice(val label: String, val resolution: Resolution) : Preset
         object Custom : Preset
+        class Null(val label: String) : Preset
     }
 
     companion object {
@@ -1293,11 +1297,12 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     }
 
     private val presetWidget = ComboBoxWidget(
-        Preset::class.java, listOf(Preset.Custom) + CHOICE_PRESETS,
+        Preset::class.java, extraPresets + listOf(Preset.Custom) + CHOICE_PRESETS,
         toString = { p ->
             when (p) {
                 is Preset.Choice -> "${p.label} (${p.resolution.widthPx} \u00D7 ${p.resolution.heightPx})"
                 is Preset.Custom -> l10n("custom")
+                is Preset.Null -> p.label
             }
         }
     ).apply { value = CHOICE_PRESETS[1] /* start out with Full HD */ }
@@ -1307,7 +1312,7 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     private val timesLabel = JLabel("\u00D7")
 
     private var initializedCustom = false
-    private var prevPreset: Preset = presetWidget.value
+    private var prevChoicePreset = presetWidget.value as Preset.Choice
 
     private fun makeDimensionSpinner() =
         SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 10), "#", WidthSpec.LITTLE)
@@ -1316,7 +1321,11 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
         // If necessary, also update the custom resolution visibility.
         presetWidget.changeListeners.add { widget ->
-            val isCustom = presetWidget.value == Preset.Custom
+            val preset = presetWidget.value
+            val isCustom = preset == Preset.Custom
+            if (compactCustom)
+                presetWidget.components[0]
+                    .apply { preferredSize = if (isCustom) preferredSize.apply { width = 100 } else null }
             widthWidget.isVisible = isCustom
             heightWidget.isVisible = isCustom
             timesLabel.isVisible = isCustom
@@ -1324,13 +1333,13 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
             if (!initializedCustom)
                 if (isCustom) {
                     initializedCustom = true
-                    val initRes = (prevPreset as Preset.Choice).resolution
+                    val initRes = prevChoicePreset.resolution
                     withoutChangeListeners {
                         widthWidget.value = initRes.widthPx
                         heightWidget.value = initRes.heightPx
                     }
-                } else
-                    prevPreset = presetWidget.value
+                } else if (preset is Preset.Choice)
+                    prevChoicePreset = preset
             notifyChangeListenersAboutOtherWidgetChange(widget)
         }
         widthWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
@@ -1342,12 +1351,17 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
     override val constraints =
         presetWidget.constraints + widthWidget.constraints + listOf("") + heightWidget.constraints
 
-    override var value: Resolution
+    protected var rawValue: Resolution?
         get() = when (val preset = presetWidget.value) {
+            is Preset.Null -> null
             is Preset.Custom -> Resolution(widthWidget.value, heightWidget.value)
             is Preset.Choice -> preset.resolution
         }
         set(value) {
+            if (value == null) {
+                presetWidget.value = presetWidget.items.first { it is Preset.Null }
+                return
+            }
             val preset = CHOICE_PRESETS.find { it.resolution == value } ?: Preset.Custom
             presetWidget.value = preset
             if (preset == Preset.Custom) {
@@ -1371,6 +1385,27 @@ class ResolutionWidget : Form.AbstractWidget<Resolution>() {
         heightWidget.applyConfigurator(configurator)
     }
 
+}
+
+
+class ResolutionWidget : AbstractResolutionWidget<Resolution>(emptyList(), compactCustom = false) {
+    override var value: Resolution
+        get() = rawValue!!
+        set(value) {
+            rawValue = value
+        }
+}
+
+
+class OptionalResolutionWidget(
+    nullLabel: String,
+    compactCustom: Boolean
+) : AbstractResolutionWidget<Optional<Resolution>>(listOf(Preset.Null(nullLabel)), compactCustom) {
+    override var value: Optional<Resolution>
+        get() = Optional.ofNullable(rawValue)
+        set(value) {
+            rawValue = value.getOrNull()
+        }
 }
 
 

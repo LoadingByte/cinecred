@@ -139,10 +139,17 @@ inline fun <V> throwableAwareValuedTask(crossinline task: () -> V) = Callable<V?
 
 
 /** @throws IOException */
-fun execProcess(cmd: List<String>, env: Map<String, String>? = null, logger: Logger = LoggerFactory.getLogger(cmd[0])) {
+fun execProcess(
+    cmd: List<String>,
+    env: Map<String, String>? = null,
+    stdin: String? = null,
+    logger: Logger = LoggerFactory.getLogger(cmd[0])
+) {
     val process = ProcessBuilder(cmd).apply { env?.let(environment()::putAll) }.start()
     GLOBAL_THREAD_POOL.submit { process.inputReader().lines().forEach { logger.info(it) } }
     GLOBAL_THREAD_POOL.submit { process.errorReader().lines().forEach { logger.error(it) } }
+    if (stdin != null)
+        process.outputWriter().use { it.write(stdin) }
     val exitCode = process.waitFor()
     if (exitCode != 0)
         throw IOException("Process '${cmd.joinToString(" ")}' terminated with error exit code $exitCode.")

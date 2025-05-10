@@ -4,8 +4,11 @@ import ch.rabanti.nanoxlsx4j.Address
 import ch.rabanti.nanoxlsx4j.styles.CellXf
 import ch.rabanti.nanoxlsx4j.styles.NumberFormat
 import ch.rabanti.nanoxlsx4j.styles.NumberFormat.FormatNumber
+import com.formdev.flatlaf.util.SystemInfo
 import com.github.miachm.sods.Borders
+import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.execProcess
 import com.loadingbyte.cinecred.common.l10n
 import de.siegmar.fastcsv.reader.CsvReader
 import de.siegmar.fastcsv.reader.StringArrayHandler
@@ -17,9 +20,10 @@ import jxl.write.Label
 import jxl.write.NumberFormats
 import jxl.write.WritableCellFormat
 import jxl.write.WritableFont
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Path
-import kotlin.io.path.readText
+import kotlin.io.path.*
 
 
 class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
@@ -44,13 +48,14 @@ class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Sprea
 
 
 // The formats are ordered according to decreasing preference.
-val SPREADSHEET_FORMATS = listOf(XlsxFormat, XlsFormat, OdsFormat, CsvFormat)
+val SPREADSHEET_FORMATS = listOf(XlsxFormat, XlsFormat, OdsFormat, NumbersFormat, CsvFormat)
 
 
 interface SpreadsheetFormat {
 
     val fileExt: String
     val label: String
+    val available: Boolean get() = true
 
     /** @throws Exception */
     fun read(file: Path, defaultName: String): Pair<List<Spreadsheet>, List<ParserMsg>>
@@ -279,6 +284,90 @@ object OdsFormat : SpreadsheetFormat {
 }
 
 
+object NumbersFormat : SpreadsheetFormat {
+
+    override val fileExt get() = "numbers"
+    override val label get() = "Apple Numbers"
+
+    override val available = SystemInfo.isMacOS && try {
+        runScript("AppleScript", "tell application \"Numbers\" to id")
+        true
+    } catch (_: IOException) {
+        LOGGER.warn("Apple Numbers is not installed.")
+        false
+    }
+
+    override fun read(file: Path, defaultName: String): Pair<List<Spreadsheet>, List<ParserMsg>> {
+        if (!available)
+            throw FormatUnavailableException(l10n("projectIO.spreadsheet.numbersUnavailable", ".numbers"))
+        val script = """
+            function run(argv) {
+                const Numbers = Application("Numbers")
+                const args = {to: Path(argv[1]), as: "Microsoft Excel", withProperties: {excludeSummaryWorksheet: true}}
+                for (const doc of Numbers.documents()) {
+                    if (doc.file() == argv[0]) {
+                        Numbers.export(doc, args)
+                        return
+                    }
+                }
+                const doc = Numbers.open(Path(argv[0]))
+                try {
+                    Numbers.windows[0].visible = false
+                    Numbers.export(doc, args)
+                } finally {
+                    Numbers.close(doc, {saving: "no"})
+                }
+            }
+        """
+        return withTempFile("cinecred-numbers2xlsx-") { tmpFile ->
+            runScript("JavaScript", script, file.absolutePathString(), tmpFile.pathString)
+            XlsxFormat.read(tmpFile, defaultName)
+        }
+    }
+
+    override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
+        if (!available)
+            throw FormatUnavailableException(l10n("projectIO.spreadsheet.numbersUnavailable", ".numbers"))
+        val script = """
+            function run(argv) {
+                const Numbers = Application("Numbers")
+                const doc = Numbers.open(Path(argv[0]))
+                try {
+                    Numbers.windows[0].visible = false
+                    Numbers.save(doc, {in: Path(argv[1])})
+                } finally {
+                    Numbers.close(doc, {saving: "no"})
+                }
+            }
+        """
+        withTempFile("cinecred-xlsx2numbers-") { tmpFile ->
+            XlsxFormat.write(tmpFile, spreadsheet, look)
+            runScript("JavaScript", script, tmpFile.pathString, file.absolutePathString())
+        }
+    }
+
+    private fun <R> withTempFile(prefix: String, action: (Path) -> R): R {
+        val tmpFile = createTempFile(prefix, ".xlsx")
+        try {
+            return action(tmpFile)
+        } finally {
+            try {
+                tmpFile.deleteExisting()
+            } catch (e: IOException) {
+                // Ignore; file will be deleted upon OS restart anyway.
+                LOGGER.error("Cannot delete temporary XLSX file '{}' created for Apple Numbers.", tmpFile, e)
+            }
+        }
+    }
+
+    private fun runScript(language: String, script: String, vararg args: String) {
+        val logger = LoggerFactory.getLogger("AppleNumbers")
+        execProcess(listOf("osascript", "-l", language, "-") + args, stdin = script, logger = logger)
+    }
+
+}
+
+
 object CsvFormat : SpreadsheetFormat {
 
     override val fileExt get() = "csv"
@@ -308,6 +397,9 @@ object CsvFormat : SpreadsheetFormat {
     }
 
 }
+
+
+class FormatUnavailableException(message: String) : IOException(message)
 
 
 // Helper function to avoid duplicate code.

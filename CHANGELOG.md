@@ -22,6 +22,7 @@ Cinecred Changelog
 - The video delivery resolution may now be forced to an arbitrary one, which is
   accomplished by cropping or "uncropping" the video.
 - Additional columns in the delivery queue show spreadsheet, pages, and specs.
+- On macOS, the credits file may now be an Apple Numbers spreadsheet.
 - Added support for the Windows Java Access Bridge.
 
 ### Fixes

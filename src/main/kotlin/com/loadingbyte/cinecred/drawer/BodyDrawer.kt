@@ -78,7 +78,7 @@ private fun drawBodyImagesWithGridBodyLayout(
     // Flow each block's body elements into the grid configured for that block.
     val colsPerBlock = blocks.associateWith { block ->
         val s = block.style
-        flowIntoGridCols(sort(block.body, s.sort), s.gridCols, s.gridFillingOrder, s.gridFillingBalanced)
+        flowIntoGridCols(sort(styling, block.body, s.sort), s.gridCols, s.gridFillingOrder, s.gridFillingBalanced)
     }
 
     // Grid blocks are free to potentially harmonize their grid column widths and grid row height, permitting the user
@@ -344,7 +344,9 @@ private fun drawBodyImagesWithFlowBodyLayout(
         // Determine which body elements should lie on which line. We use the simplest possible flow algorithm for this.
         val s = block.style
         val sharedCellWidth = sharedCellWidthPerBlock[block]
-        return flowIntoLines(sort(block.body, s.sort), s.flowDirection, s.flowLineWidthPx, s.flowHGapPx) { bodyElem ->
+        return flowIntoLines(
+            sort(styling, block.body, s.sort), s.flowDirection, s.flowLineWidthPx, s.flowHGapPx
+        ) { bodyElem ->
             sharedCellWidth?.value ?: bodyElem.getWidth(styling)
         }
     }
@@ -719,16 +721,19 @@ private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
 }
 
 
-private fun sort(body: List<BodyElement>, sort: Sort): List<BodyElement> = when (sort) {
+private fun sort(styling: Styling, body: List<BodyElement>, sort: Sort): List<BodyElement> = when (sort) {
     Sort.OFF -> body
-    Sort.ASCENDING -> body.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, ::sortingSelector))
-    Sort.DESCENDING -> body.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER, ::sortingSelector))
+    Sort.ASCENDING -> sort(styling, body, true)
+    Sort.DESCENDING -> sort(styling, body, false)
 }
 
-private fun sortingSelector(bodyElem: BodyElement) = when (bodyElem) {
-    is BodyElement.Str -> bodyElem.lines.first().joinToString("") { (run, _) -> run }
-    is BodyElement.Nil, is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> ""
-}
+private fun sort(styling: Styling, body: List<BodyElement>, ascending: Boolean): List<BodyElement> =
+    body.sortedWithCollator(caseInsensitiveCollator(styling.global.locale), ascending) { bodyElem ->
+        when (bodyElem) {
+            is BodyElement.Str -> bodyElem.lines.first().joinToString("") { (run, _) -> run }
+            is BodyElement.Nil, is BodyElement.Pic, is BodyElement.Tap, is BodyElement.Mis -> ""
+        }
+    }
 
 
 private class DrawnBodyLineRecord(

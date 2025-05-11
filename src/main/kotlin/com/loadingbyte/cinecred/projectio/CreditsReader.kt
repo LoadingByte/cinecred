@@ -58,13 +58,13 @@ private class CreditsReader(
 
     // Note: We use maps whose keys are case-insensitive here because style references should be case-insensitive.
     // We also reverse the list so that if there are duplicate names, the first style from the list will survive.
-    inline fun <S> List<S>.mkm(n: (S) -> String) = asReversed().associateByTo(TreeMap(String.CASE_INSENSITIVE_ORDER), n)
-    val pageStyleMap = styling.pageStyles.mkm(PageStyle::name)
-    val contentStyleMap = styling.contentStyles.mkm(ContentStyle::name)
-    val letterStyleMap = styling.letterStyles.mkm(LetterStyle::name)
-    val transitionStyleMap = styling.transitionStyles.mkm(TransitionStyle::name)
-    val pictureStyleMap = styling.pictureStyles.mkm(PictureStyle::name)
-    val tapeStyleMap = styling.tapeStyles.mkm(TapeStyle::name)
+    inline fun <S> List<S>.sm(n: (S) -> String) = asReversed().associateByTo(TreeMap(ROOT_CASE_INSENSITIVE_COLLATOR), n)
+    val pageStyleMap = styling.pageStyles.sm(PageStyle::name)
+    val contentStyleMap = styling.contentStyles.sm(ContentStyle::name)
+    val letterStyleMap = styling.letterStyles.sm(LetterStyle::name)
+    val transitionStyleMap = styling.transitionStyles.sm(TransitionStyle::name)
+    val pictureStyleMap = styling.pictureStyles.sm(PictureStyle::name)
+    val tapeStyleMap = styling.tapeStyles.sm(TapeStyle::name)
 
     // Prepare resolvers for pictures and tape.
     val pictureStyleResolver = AuxiliaryStyleResolver(
@@ -997,7 +997,7 @@ private class CreditsReader(
         val OUT_KW = legacyKeyword("Out", "Sortie", "出点")
 
         private fun legacyKeyword(vararg kwSet: String) =
-            TreeSet(String.CASE_INSENSITIVE_ORDER).apply { addAll(kwSet) }
+            TreeSet(ROOT_CASE_INSENSITIVE_COLLATOR).apply { addAll(kwSet) }
 
         fun String.toFiniteDouble(nonNeg: Boolean = false): Double {
             val f = replace(',', '.').toDouble()
@@ -1010,7 +1010,7 @@ private class CreditsReader(
 
 
     class Keyword(val key: String) {
-        private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER)) { l ->
+        private val kwSet = TRANSLATED_LOCALES.mapTo(TreeSet(ROOT_CASE_INSENSITIVE_COLLATOR)) { l ->
             l10n(key, l).also { kw -> require(' ' !in kw) { "Keyword '$kw' from $key @ $l contains whitespace" } }
         }
 
@@ -1028,8 +1028,8 @@ private class CreditsReader(
 
         // Put the auxiliaries into a map whose keys are the filenames. Also record all duplicate filenames.
         // Use a map with case-insensitive keys to ease the user experience.
-        private val auxMap = TreeMap<String, A>(String.CASE_INSENSITIVE_ORDER)
-        private val dupSet = TreeSet(String.CASE_INSENSITIVE_ORDER)
+        private val auxMap = TreeMap<String, A>(ROOT_CASE_INSENSITIVE_COLLATOR)
+        private val dupSet = TreeSet(ROOT_CASE_INSENSITIVE_COLLATOR)
 
         init {
             fun registerFilename(filename: String, aux: A) {
@@ -1114,7 +1114,7 @@ private class CreditsReader(
                     foundStyle.copy(renameNotar, PopupStyle::volatile.st().notarize(renamedSty.volatile))
                         .equalsIgnoreIneffectiveSettings(styling, renamedSty)
                 ) {
-                    if (!rename.equals(tagVal, ignoreCase = true))
+                    if (!ROOT_CASE_INSENSITIVE_COLLATOR.equals(rename, tagVal))
                         table.logMigrationPut(row, l10nColName, "{{$tagKey $rename}}")
                     return foundStyle ?: renamedSty
                 }

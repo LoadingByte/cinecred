@@ -333,7 +333,7 @@ class DeliveryDestTemplate(val uuid: UUID, val name: String, str: String) {
         CHANNELS, GAMUT("gamut"), EOTF(fixedTag = "EOTF"),
         YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, TIME_ZONE;
 
-        val tags = TRANSLATED_LOCALES.mapTo(TreeSet(String.CASE_INSENSITIVE_ORDER), ::l10nTag).apply { add(name) }
+        val tags = TRANSLATED_LOCALES.mapTo(TreeSet(ROOT_CASE_INSENSITIVE_COLLATOR), ::l10nTag).apply { add(name) }
         val enumTagBraces: String get() = "{{$name}}"
         fun l10nTagBraces(): String = "{{${l10nTag()}}}"
 

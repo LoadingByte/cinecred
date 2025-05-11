@@ -1,7 +1,9 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
+import com.loadingbyte.cinecred.common.ROOT_CASE_INSENSITIVE_COLLATOR
 import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.sortedWithCollator
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
@@ -17,13 +19,15 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
         l10n("ui.preferences.uiLocaleWish"),
         ComboBoxWidget(
             LocaleWish::class.java,
-            listOf(LocaleWish.System) + TRANSLATED_LOCALES.map(LocaleWish::Specific),
+            listOf(LocaleWish.System) + TRANSLATED_LOCALES
+                .sortedWithCollator(ROOT_CASE_INSENSITIVE_COLLATOR) { it.getDisplayName(it) }
+                .map(LocaleWish::Specific),
             toString = { wish ->
                 when (wish) {
                     is LocaleWish.System -> l10n("ui.preferences.uiLocaleWishSystem")
                     is LocaleWish.Specific ->
                         if (Locale.getDefault() != wish.locale)
-                            "${wish.locale.displayName} \u2013 ${wish.locale.getDisplayName(wish.locale)}"
+                            "${wish.locale.getDisplayName(wish.locale)} \u2013 ${wish.locale.displayName}"
                         else
                             wish.locale.displayName
                 }

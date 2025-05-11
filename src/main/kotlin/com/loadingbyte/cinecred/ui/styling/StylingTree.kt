@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.common.ROOT_CASE_INSENSITIVE_COLLATOR
+import com.loadingbyte.cinecred.common.caseInsensitiveCollator
 import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
 import com.loadingbyte.cinecred.ui.helper.ICON_ICON_GAP
 import com.loadingbyte.cinecred.ui.helper.SVGIcon
@@ -156,7 +158,9 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
                 leafUserObj.obj = newElement
                 // If the node's name has not changed, there is no need to change the current ordering. Having this explicit
                 // exception also ensures that nodes with duplicate names do not jump around when editing them.
-                if (!oldTypeInfo.objToString(oldElement).equals(oldTypeInfo.objToString(newElement), ignoreCase = true))
+                if (!ROOT_CASE_INSENSITIVE_COLLATOR
+                        .equals(oldTypeInfo.objToString(oldElement), oldTypeInfo.objToString(newElement))
+                )
                     sortNode(leaf)
                 return
             }
@@ -243,18 +247,23 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         //     styles, the renamed style remains the preferred one.
         // When styles can be volatile, also sort above if the style is not volatile, but the currently used (not grayed
         // out) style of the same name is volatile. This will leave the other style unused, so it will disappear.
-        val sortAboveDups = !isGrayedOut && parent.children().asSequence().none { sibling ->
-            val sibUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
-            sibling !== node && !sibUserObj.isGrayedOut && sibUserObj.toString().equals(nodeStr, ignoreCase = true)
-        } || isVolatile != null && !isVolatile(nodeUserObj.obj) && parent.children().asSequence().any { sibling ->
-            val sibUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
-            sibling !== node && !sibUserObj.isGrayedOut && sibUserObj.toString().equals(nodeStr, ignoreCase = true) &&
-                    isVolatile(sibUserObj.obj)
+        val activeElemsWithSameName = buildList {
+            for (sibling in parent.children())
+                if (sibling !== node) {
+                    val siblingUserObj = (sibling as DefaultMutableTreeNode).userObject as StoredObj
+                    if (!siblingUserObj.isGrayedOut &&
+                        ROOT_CASE_INSENSITIVE_COLLATOR.equals(siblingUserObj.toString(), nodeStr)
+                    ) add(siblingUserObj.obj)
+                }
         }
+        val sortAboveDups = !isGrayedOut && activeElemsWithSameName.isEmpty() ||
+                isVolatile != null && !isVolatile(nodeUserObj.obj) && activeElemsWithSameName.all(isVolatile)
+        val uiCollator = caseInsensitiveCollator()
         var newIdx = parent.children().asSequence().indexOfFirst {
             if (it === node) return@indexOfFirst false
-            val c = String.CASE_INSENSITIVE_ORDER.compare((it as DefaultMutableTreeNode).userObject.toString(), nodeStr)
-            if (sortAboveDups) c >= 0 else c > 0
+            val itStr = (it as DefaultMutableTreeNode).userObject.toString()
+            val isEq = ROOT_CASE_INSENSITIVE_COLLATOR.equals(itStr, nodeStr)
+            sortAboveDups && isEq || (sortAboveDups || !isEq) && uiCollator.compare(itStr, nodeStr) >= 0
         }
         if (newIdx == -1)
             newIdx = parent.childCount

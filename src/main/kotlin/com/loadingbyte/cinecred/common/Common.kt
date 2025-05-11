@@ -24,6 +24,7 @@ import java.io.StringWriter
 import java.lang.ref.Cleaner
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
+import java.text.Collator
 import java.text.MessageFormat
 import java.text.NumberFormat
 import java.util.*
@@ -360,6 +361,22 @@ fun comprehensivelyApplyLocale(locale: Locale) {
     UIManager.put("OptionPane.noButtonText", l10n("no"))
     UIManager.put("OptionPane.okButtonText", l10n("ok"))
     UIManager.put("OptionPane.cancelButtonText", l10n("cancel"))
+}
+
+val ROOT_CASE_INSENSITIVE_COLLATOR: Collator = caseInsensitiveCollator(Locale.ROOT)
+
+fun caseInsensitiveCollator(locale: Locale = Locale.getDefault()): Collator = Collator.getInstance(locale).apply {
+    strength = Collator.SECONDARY
+    decomposition = Collator.FULL_DECOMPOSITION
+}
+
+inline fun <E> List<E>.sortedWithCollator(collator: Collator, selector: (E) -> String): List<E> =
+    sortedWithCollator(collator, true, selector)
+
+inline fun <E> List<E>.sortedWithCollator(collator: Collator, ascending: Boolean, selector: (E) -> String): List<E> {
+    val helper = mapTo(mutableListOf()) { elem -> Pair(elem, collator.getCollationKey(selector(elem))) }
+    if (ascending) helper.sortBy { it.second } else helper.sortByDescending { it.second }
+    return helper.map { it.first }
 }
 
 

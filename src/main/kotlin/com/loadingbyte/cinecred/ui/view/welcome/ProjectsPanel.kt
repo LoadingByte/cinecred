@@ -232,7 +232,11 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         val localeWidget = addWidget(
             l10n("ui.styling.global.locale"),
-            ComboBoxWidget(Locale::class.java, TRANSLATED_LOCALES, toString = { it.displayName })
+            ComboBoxWidget(
+                Locale::class.java,
+                TRANSLATED_LOCALES.sortedWithCollator(caseInsensitiveCollator(), Locale::getDisplayName),
+                toString = Locale::getDisplayName
+            )
         )
 
         val resolutionWidget = addWidget(

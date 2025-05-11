@@ -1,11 +1,8 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.MIGRATE
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.l10nEnum
 import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
 import java.util.*
@@ -72,7 +69,7 @@ class Table(
                 val key = "$l10nPrefix$l10nColName"
                 val possibleColNames = TRANSLATED_LOCALES.map { "@${l10n(key, it)}" }
                 for (colName in possibleColNames) {
-                    val col = headerRecord.indexOfFirst { it.equals(colName, ignoreCase = true) }
+                    val col = headerRecord.indexOfFirst { ROOT_CASE_INSENSITIVE_COLLATOR.equals(it, colName) }
                     if (col != -1) {
                         colMap[l10nColName] = col
                         continue@outer
@@ -84,7 +81,7 @@ class Table(
                 val possibleLegacyColNames = legacyColNames.getOrDefault(l10nColName, emptyList())
                     .filterNot(possibleColNames::contains).map { "@$it" }
                 for (legacyColName in possibleLegacyColNames) {
-                    val col = headerRecord.indexOfFirst { it.equals(legacyColName, ignoreCase = true) }
+                    val col = headerRecord.indexOfFirst { ROOT_CASE_INSENSITIVE_COLLATOR.equals(it, legacyColName) }
                     if (col != -1) {
                         colMap[l10nColName] = col
                         val msg = l10n("projectIO.table.migration.renameColumn", "<i>$colName</i>")

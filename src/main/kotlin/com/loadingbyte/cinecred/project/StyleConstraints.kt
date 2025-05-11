@@ -46,7 +46,7 @@ private val GLOBAL_CONSTRAINTS: List<StyleConstraint<Global, *>> = listOf(
 private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), PageStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PageStyle::name.st()) { styling, style ->
-        styling.pageStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.pageStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     IntConstr(ERROR, PageStyle::cardRuntimeFrames.st(), min = 0),
     IntConstr(ERROR, PageStyle::cardFadeInFrames.st(), min = 0),
@@ -68,7 +68,7 @@ private val PAGE_STYLE_CONSTRAINTS: List<StyleConstraint<PageStyle, *>> = listOf
 private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), ContentStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), ContentStyle::name.st()) { styling, style ->
-        styling.contentStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.contentStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     DynChoiceConstr(WARN, ContentStyle::spineAttachment.st()) { _, style ->
         when (style.blockOrientation) {
@@ -213,7 +213,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
 private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), LetterStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), LetterStyle::name.st()) { styling, style ->
-        styling.letterStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.letterStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     FontConstr(WARN, LetterStyle::font.st()),
     DoubleConstr(ERROR, LetterStyle::heightPx.st(), min = 1.0),
@@ -340,7 +340,7 @@ private fun canWalkBackToSelf(layers: List<Layer>, ownLayerIdx: Int): Boolean {
 private val TRANSITION_STYLE_CONSTRAINTS: List<StyleConstraint<TransitionStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), TransitionStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), TransitionStyle::name.st()) { styling, style ->
-        styling.transitionStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.transitionStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     TransitionConstr(ERROR, TransitionStyle::graph.st())
 )
@@ -349,7 +349,7 @@ private val TRANSITION_STYLE_CONSTRAINTS: List<StyleConstraint<TransitionStyle, 
 private val PICTURE_STYLE_CONSTRAINTS: List<StyleConstraint<PictureStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), PictureStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), PictureStyle::name.st()) { styling, style ->
-        styling.pictureStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.pictureStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     PictureConstr(WARN, PictureStyle::picture.st()),
     // To avoid OOM crashes due to absurdly large pictures, limit their size to a reasonable range.
@@ -361,7 +361,7 @@ private val PICTURE_STYLE_CONSTRAINTS: List<StyleConstraint<PictureStyle, *>> = 
 private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf(
     JudgeConstr(WARN, msg("blank"), TapeStyle::name.st()) { _, style -> style.name.isNotBlank() },
     JudgeConstr(WARN, msg("project.styling.constr.duplicateStyleName"), TapeStyle::name.st()) { styling, style ->
-        styling.tapeStyles.all { o -> o === style || !o.name.equals(style.name, ignoreCase = true) }
+        styling.tapeStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     TapeConstr(WARN, TapeStyle::tape.st()),
     // To avoid OOM crashes due to absurdly large tapes, limit their size to a reasonable range.

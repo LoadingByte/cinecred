@@ -59,19 +59,19 @@ object CSS {
     ) {
 
         fun matches(element: Element): Boolean {
-            if (type != "*" && !type.equals(element.localName, ignoreCase = true))
+            if (type != "*" && type != element.localName)
                 return false
-            if (id != null && !id.equals(element.getAttribute("id"), ignoreCase = true))
+            if (id != null && id != element.getAttribute("id"))
                 return false
             if (classes.isNotEmpty()) {
                 val attr = element.getAttribute("class")
                 if (attr.isEmpty())
                     return false
                 val avail = attr.split(' ', '\t')
-                if (classes.any { cl -> avail.none { it.equals(cl, ignoreCase = true) } })
+                if (!avail.containsAll(classes))
                     return false
             }
-            if (pseudoClasses.any { it.equals("first-child", ignoreCase = true) } && element.previousSibling != null)
+            if ("first-child" in pseudoClasses && element.previousSibling != null)
                 return false
             if (attributeConditions.isNotEmpty())
                 for (cond in attributeConditions) {
@@ -82,15 +82,15 @@ object CSS {
                                 return false
 
                         AttributeMatcher.EQUALS ->
-                            if (!attr.equals(cond.value, ignoreCase = true))
+                            if (attr != cond.value)
                                 return false
 
                         AttributeMatcher.INCLUDES ->
-                            if (attr.split(' ', '\t').none { it.contains(cond.value!!, ignoreCase = true) })
+                            if (attr.split(' ', '\t').none { cond.value!! in it })
                                 return false
 
                         AttributeMatcher.DASH_MATCH ->
-                            if (!attr.startsWith(cond.value!!, ignoreCase = true) ||
+                            if (!attr.startsWith(cond.value!!) ||
                                 attr.length != cond.value.length && cond.value[attr.length] != '-'
                             ) return false
                     }

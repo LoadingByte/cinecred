@@ -1563,6 +1563,8 @@ class FontChooserWidget(
             add(label2, "width 100!, height ::22")
         }
 
+        private val sampleTextCache = WeakHashMap<Font, Optional<String>>()
+
         override fun getListCellRendererComponent(
             list: JList<out E>, value: E?, index: Int,
             isSelected: Boolean, cellHasFocus: Boolean
@@ -1581,45 +1583,45 @@ class FontChooserWidget(
             panel.foreground = fg
 
             label1.text = value?.toString() ?: ""
+            label1.border = if (index == -1) null else BorderFactory.createEmptyBorder(5, 0, 5, 0)
 
-            // Show the sample text only in the popup menu, but not in the combo box. Make the label invisible
-            // in the combo box to ensure that fonts with large ascent don't stretch out the combo box.
-            label1.border = null
-            label2.isVisible = false
-            label2.font = list.font
-            if (index != -1) {
-                label1.border = BorderFactory.createEmptyBorder(5, 0, 5, 0)
-                value?.font?.let { sampleFont ->
-                    val effSampleFont = sampleFont.deriveFont(list.font.size2D * 1.25f)
+            val sampleFont = value?.font
+            val sampleText = if (index == -1 || sampleFont == null) null else
+                sampleTextCache.computeIfAbsent(sampleFont) { sampleFont ->
                     val family = getFamilyOf(sampleFont)
-                    when {
+                    Optional.ofNullable(
                         // Try to get the sample text from the font.
-                        trySample(effSampleFont, family?.getSampleTextOf(sampleFont, Locale.getDefault())) -> {}
+                        trySampleText(sampleFont, family?.getSampleTextOf(sampleFont, Locale.getDefault())) ?:
                         // If none is specified, or it has only unknown glyphs, use a standard one in the UI language.
-                        trySample(effSampleFont, l10n("ui.form.fontSample")) -> {}
+                        trySampleText(sampleFont, l10n("ui.form.fontSample")) ?:
                         // If the standard sample text only has unknown glyphs, use a Latin one.
-                        trySample(effSampleFont, l10n("ui.form.fontSample", FALLBACK_TRANSLATED_LOCALE)) -> {}
+                        trySampleText(sampleFont, l10n("ui.form.fontSample", FALLBACK_TRANSLATED_LOCALE)) ?:
                         // If the Latin one also doesn't work, try all other sample texts we have available.
-                        else -> for (locale in TRANSLATED_LOCALES)
-                            if (trySample(effSampleFont, l10n("ui.form.fontSample", locale))) break
-                    }
-                }
+                        TRANSLATED_LOCALES.firstNotNullOfOrNull { locale ->
+                            trySampleText(sampleFont, l10n("ui.form.fontSample", locale))
+                        }
+                    )
+                }.getOrNull()
+            if (sampleText == null) {
+                label2.font = list.font
+                // We empty the text instead of turning the label invisible, as the latter triggers costly revalidation.
+                label2.text = ""
+            } else {
+                label2.font = sampleFont!!.deriveFont(list.font.size2D * 1.25f)
+                label2.text = sampleText
             }
 
             return panel
         }
 
-        private fun trySample(sampleFont: Font, sampleText: String?): Boolean {
+        private fun trySampleText(sampleFont: Font, sampleText: String?): String? {
             val missingGlyph = sampleFont.missingGlyphCode
-            val gv = sampleFont.createGlyphVector(REF_FRC, sampleText ?: return false)
+            val gv = sampleFont.createGlyphVector(REF_FRC, sampleText ?: return null)
             // Only display the sample when at least one glyph is not the missing glyph placeholder.
-            for (glyphIdx in 0..<gv.numGlyphs) if (gv.getGlyphCode(glyphIdx) != missingGlyph) {
-                label2.isVisible = true
-                label2.font = sampleFont
-                label2.text = sampleText
-                return true
-            }
-            return false
+            for (glyphIdx in 0..<gv.numGlyphs)
+                if (gv.getGlyphCode(glyphIdx) != missingGlyph)
+                    return sampleText
+            return null
         }
 
     }

@@ -31,7 +31,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedStartAddOverlayButton: JButton
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountLabelWidget get() = configureAccountForm.labelWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountServiceWidget get() = configureAccountForm.serviceWidget
-    @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountAuthButton get() = configureAccountAuthorizeButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedCfgAccountEstButton get() = configureAccountEstablishButton
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayTypeWidget get() = configureOverlayForm.typeWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayNameWidget get() = configureOverlayForm.nameWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgOverlayLinesHWidget get() = configureOverlayForm.linesHWidget
@@ -54,10 +54,11 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val startDeliveryDestTemplatesPanel: JPanel
 
     private val configureAccountForm: ConfigureAccountForm
-    private val configureAccountAuthorizeButton: JButton
+    private val configureAccountEstablishButton: JButton
 
-    private val authorizeAccountErrorTextArea: JTextArea
-    private val authorizeAccountResponseTextArea: JTextArea
+    private val establishAccountMsgTextArea: JTextArea
+    private val establishAccountErrorTextArea: JTextArea
+    private val establishAccountResponseTextArea: JTextArea
 
     private val configureOverlayForm: ConfigureOverlayForm
     private val configureOverlayDoneButton: JButton
@@ -130,15 +131,16 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val configureAccountCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
             addActionListener { welcomeCtrl.preferences_configureAccount_onClickCancel() }
         }
-        configureAccountAuthorizeButton = JButton().apply {
+        configureAccountEstablishButton = JButton().apply {
             margin = Insets(1, 1, 1, margin.right)
             iconTextGap = margin.right
             putClientProperty(STYLE_CLASS, "large")
         }
-        configureAccountAuthorizeButton.addActionListener {
-            welcomeCtrl.preferences_configureAccount_onClickAuthorize(
+        configureAccountEstablishButton.addActionListener {
+            welcomeCtrl.preferences_configureAccount_onClickEstablish(
                 configureAccountForm.labelWidget.value,
-                configureAccountForm.serviceWidget.value.get()
+                configureAccountForm.serviceWidget.value.get(),
+                configureAccountForm.serverWidget.value
             )
         }
         configureAccountForm.onChange(configureAccountForm.labelWidget)  // Run validation
@@ -147,24 +149,25 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(newLabelTextArea(l10n("ui.preferences.accounts.configure.prompt")), "growx")
             add(configureAccountForm, "grow, push, gaptop para")
             add(configureAccountCancelButton, "split 2, right, bottom")
-            add(configureAccountAuthorizeButton, "gapleft unrel, hidemode 3")
+            add(configureAccountEstablishButton, "gapleft unrel, hidemode 3")
         }
 
-        authorizeAccountErrorTextArea = newLabelTextArea(l10n("ui.preferences.accounts.authorize.error")).apply {
+        establishAccountMsgTextArea = newLabelTextArea()
+        establishAccountErrorTextArea = newLabelTextArea().apply {
             putClientProperty(STYLE, "foreground: $PALETTE_RED")
         }
-        authorizeAccountResponseTextArea = newLabelTextArea().apply {
+        establishAccountResponseTextArea = newLabelTextArea().apply {
             putClientProperty(STYLE, "foreground: $PALETTE_RED")
         }
-        val authorizeAccountCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
-            addActionListener { welcomeCtrl.preferences_authorizeAccount_onClickCancel() }
+        val establishAccountCancelButton = JButton(l10n("cancel"), CROSS_ICON).apply {
+            addActionListener { welcomeCtrl.preferences_establishAccount_onClickCancel() }
         }
-        val authorizeAccountPanel = JPanel(MigLayout("insets 20, wrap", "", "[][][]push[]")).apply {
+        val establishAccountPanel = JPanel(MigLayout("insets 20, wrap", "", "[][][]push[]")).apply {
             background = null
-            add(newLabelTextArea(l10n("ui.preferences.accounts.authorize.msg")), "growx, pushx")
-            add(authorizeAccountErrorTextArea, "growx")
-            add(authorizeAccountResponseTextArea, "growx")
-            add(authorizeAccountCancelButton, "right")
+            add(establishAccountMsgTextArea, "growx, pushx")
+            add(establishAccountErrorTextArea, "growx")
+            add(establishAccountResponseTextArea, "growx")
+            add(establishAccountCancelButton, "right")
         }
 
         configureOverlayForm = ConfigureOverlayForm().apply {
@@ -235,7 +238,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         add(startPanel, PreferencesCard.START.name)
         add(configureAccountPanel, PreferencesCard.CONFIGURE_ACCOUNT.name)
-        add(authorizeAccountPanel, PreferencesCard.AUTHORIZE_ACCOUNT.name)
+        add(establishAccountPanel, PreferencesCard.ESTABLISH_ACCOUNT.name)
         add(configureOverlayPanel, PreferencesCard.CONFIGURE_OVERLAY.name)
         add(configureDeliverLocationTemplatePanel, PreferencesCard.CONFIGURE_DELIVERY_LOC_TEMPLATE.name)
 
@@ -338,15 +341,25 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         configureAccountForm.apply {
             labelWidget.value = ""
             serviceWidget.value = Optional.empty()
+            serverWidget.value = "https://"
         }
-        configureAccountForm.labelWidget.value = ""
     }
 
-    fun preferences_authorizeAccount_setError(error: String?) {
+    fun preferences_establishAccount_setAction(authorize: Boolean) {
+        if (authorize) {
+            establishAccountMsgTextArea.text = l10n("ui.preferences.accounts.authorize.msg")
+            establishAccountErrorTextArea.text = l10n("ui.preferences.accounts.authorize.error")
+        } else {
+            establishAccountMsgTextArea.text = l10n("ui.preferences.accounts.validate.msg")
+            establishAccountErrorTextArea.text = l10n("ui.preferences.accounts.validate.error")
+        }
+    }
+
+    fun preferences_establishAccount_setError(error: String?) {
         val hasError = error != null
-        authorizeAccountErrorTextArea.isVisible = hasError
-        authorizeAccountResponseTextArea.isVisible = hasError
-        authorizeAccountResponseTextArea.text = error ?: ""
+        establishAccountErrorTextArea.isVisible = hasError
+        establishAccountResponseTextArea.isVisible = hasError
+        establishAccountResponseTextArea.text = error ?: ""
     }
 
     fun preferences_configureOverlay_setForm(
@@ -411,12 +424,22 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             }
         )
 
+        val serverWidget = addWidget(
+            l10n("ui.preferences.accounts.configure.server"),
+            TextWidget(),
+            isVisible = { serviceWidget.value.getOrNull()?.accountNeedsServer ?: false },
+            verify = { server ->
+                welcomeCtrl.preferences_configureAccount_verifyServer(serviceWidget.value.getOrNull(), server)
+                    ?.let { Notice(Severity.ERROR, it) }
+            }
+        )
+
         public override fun onChange(widget: Widget<*>) {
             super.onChange(widget)
             val service = serviceWidget.value.getOrNull()
-            val authorizeText = service
-                ?.let { l10n("ui.preferences.accounts.configure.authorize", service.authenticator) }.orEmpty()
-            val authorizeIcon = service?.let {
+            val establishText = service?.authorizer?.let { l10n("ui.preferences.accounts.configure.authorize", it) }
+                ?: l10n("ui.preferences.accounts.add")
+            val establishIcon = service?.let {
                 val icon = service.icon
                 object : FlatAbstractIcon(36, 36, null) {
                     override fun paintIcon(c: Component, g2: Graphics2D) {
@@ -426,10 +449,10 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
                     }
                 }
             }
-            configureAccountAuthorizeButton.apply {
+            configureAccountEstablishButton.apply {
                 isVisible = isErrorFree
-                text = authorizeText
-                icon = authorizeIcon
+                text = establishText
+                icon = establishIcon
             }
         }
 

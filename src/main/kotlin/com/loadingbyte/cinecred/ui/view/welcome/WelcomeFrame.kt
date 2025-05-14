@@ -114,8 +114,10 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_start_setDeliveryDestTemplates(templates)
     override fun preferences_configureAccount_resetForm() =
         panel.preferencesPanel.preferences_configureAccount_resetForm()
-    override fun preferences_authorizeAccount_setError(error: String?) =
-        panel.preferencesPanel.preferences_authorizeAccount_setError(error)
+    override fun preferences_establishAccount_setAction(authorize: Boolean) =
+        panel.preferencesPanel.preferences_establishAccount_setAction(authorize)
+    override fun preferences_establishAccount_setError(error: String?) =
+        panel.preferencesPanel.preferences_establishAccount_setError(error)
     override fun preferences_configureOverlay_setForm(
         type: Class<out ConfigurableOverlay>, name: String, aspectRatioH: Double, aspectRatioV: Double,
         linesColor: Color4f?, linesH: List<Int>, linesV: List<Int>, imageFile: Path, imageUnderlay: Boolean

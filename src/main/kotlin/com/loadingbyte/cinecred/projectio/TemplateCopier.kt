@@ -88,11 +88,12 @@ private fun tryCopyCreditsTemplate(
             destDir.createDirectoriesSafely()
             creditsFormat.write(destFile, spreadsheet, look)
         }
-        creditsAccount != null && creditsFilename != null -> {
+        creditsAccount != null -> {
             val destFile = destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT")
             if (!destFile.notExists())
                 return
-            val link = creditsAccount.upload(creditsFilename, spreadsheet, look)
+            val name = if (creditsAccount.service.uploadNeedsFilename) requireNotNull(creditsFilename) else null
+            val link = creditsAccount.upload(name, spreadsheet, look)
             // Uploading the credits file can take some time. If the user cancels in the meantime, the uploader is
             // actually not interrupted. So instead, we detect interruption here and stop project initialization.
             if (Thread.interrupted())

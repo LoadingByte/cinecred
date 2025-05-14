@@ -298,7 +298,10 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         val creditsFilenameWidget = addWidget(
             l10n("ui.projects.create.creditsFilename"),
             TextWidget(),
-            isVisible = { creditsLocationWidget.value == CreditsLocation.SERVICE }
+            isVisible = {
+                creditsLocationWidget.value == CreditsLocation.SERVICE &&
+                        creditsAccountWidget.value.getOrNull()?.service?.uploadNeedsFilename ?: false
+            }
         )
 
         init {

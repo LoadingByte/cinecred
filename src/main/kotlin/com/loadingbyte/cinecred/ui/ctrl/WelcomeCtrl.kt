@@ -17,6 +17,7 @@ import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI
+import java.net.URISyntaxException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -260,7 +261,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 projects_createWait_onClickCancel()
                 return true
             } else if (tab == WelcomeTab.PREFERENCES) {
-                preferences_authorizeAccount_onClickCancel()
+                preferences_establishAccount_onClickCancel()
                 preferences_configureOverlay_onClickCancel()
                 return true
             }
@@ -468,14 +469,26 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         else -> null
     }
 
+    override fun preferences_configureAccount_verifyServer(service: Service?, server: String): String? {
+        val server = try {
+            URI(server)
+        } catch (_: URISyntaxException) {
+            null
+        }
+        return if (server == null ||
+            service != null && service.accountNeedsServer && service.isServerPlausible(server)
+        ) l10n("ui.preferences.accounts.configure.invalidURL") else null
+    }
+
     override fun preferences_configureAccount_onClickCancel() = welcomeView.preferences_setCard(PreferencesCard.START)
 
-    override fun preferences_configureAccount_onClickAuthorize(label: String, service: Service) {
-        welcomeView.preferences_authorizeAccount_setError(null)
-        welcomeView.preferences_setCard(PreferencesCard.AUTHORIZE_ACCOUNT)
+    override fun preferences_configureAccount_onClickEstablish(label: String, service: Service, server: String) {
+        welcomeView.preferences_establishAccount_setAction(authorize = service.authorizer != null)
+        welcomeView.preferences_establishAccount_setError(null)
+        welcomeView.preferences_setCard(PreferencesCard.ESTABLISH_ACCOUNT)
         addAccountThread.set(Thread({
             try {
-                service.addAccount(label)
+                service.addAccount(label, if (service.accountNeedsServer) URI(server) else null)
                 SwingUtilities.invokeLater { welcomeView.preferences_setCard(PreferencesCard.START) }
             } catch (e: IOException) {
                 val error = e.message ?: e.toString()
@@ -487,7 +500,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         }, "AddAccount").apply { isDaemon = true; start() })
     }
 
-    override fun preferences_authorizeAccount_onClickCancel() {
+    override fun preferences_establishAccount_onClickCancel() {
         addAccountThread.getAndSet(null)?.interrupt()
         welcomeView.preferences_setCard(PreferencesCard.START)
     }

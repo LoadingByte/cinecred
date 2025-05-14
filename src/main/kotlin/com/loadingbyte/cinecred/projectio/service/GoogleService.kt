@@ -50,7 +50,9 @@ import kotlin.math.roundToInt
 object GoogleService : Service {
 
     override val product get() = "Google Sheets"
-    override val authenticator get() = "Google"
+    override val authorizer get() = "Google"
+    override val accountNeedsServer get() = false
+    override val uploadNeedsFilename get() = true
 
     override val accounts: List<Account> get() = _accounts.get()
 
@@ -88,7 +90,7 @@ object GoogleService : Service {
     private val watchersForPolling = LinkedBlockingQueue<GoogleWatcher>()
     private val watchersPoller = AtomicReference<Thread?>()
 
-    override fun addAccount(accountId: String) {
+    override fun addAccount(accountId: String, server: URI?) {
         require(_accounts.get().none { it.id == accountId }) { "Account ID already in use." }
         val account = GoogleAccount(accountId)
         account.sheets(authorizeIfNeeded = true)
@@ -328,7 +330,7 @@ object GoogleService : Service {
             return sheets
         }
 
-        override fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
+        override fun upload(filename: String?, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI {
             // Get the sheets object.
             val sheets = sheets(false) ?: throw IOException("Account is missing credentials.")
             // Construct the request object.
@@ -373,7 +375,7 @@ object GoogleService : Service {
                 .setProperties(SheetProperties().setTitle(spreadsheet.name).setGridProperties(gridProps))
                 .setData(listOf(gridData))
             val sSheet = Spreadsheet()
-                .setProperties(SpreadsheetProperties().setTitle(filename))
+                .setProperties(SpreadsheetProperties().setTitle(filename!!))
                 .setSheets(listOf(sheet))
             val request = sheets.spreadsheets().create(sSheet).setFields("spreadsheetUrl")
             // Send the request object.

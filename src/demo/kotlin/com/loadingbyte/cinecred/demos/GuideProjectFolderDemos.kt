@@ -83,6 +83,6 @@ object GuideProjectFolderAddOnlineAccountDemo : ScreencastDemo("$DIR/add-online-
         sc.click()
         sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(idx = 0))
         sc.click()
-        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgAccountAuthButton), 4 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgAccountEstButton), 4 * hold)
     }
 }

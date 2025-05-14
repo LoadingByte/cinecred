@@ -67,10 +67,11 @@ interface WelcomeCtrlComms {
     fun preferences_start_onClickRemoveDeliveryDestTemplate(template: DeliveryDestTemplate)
 
     fun preferences_configureAccount_verifyLabel(label: String): String? // Returns an error.
+    fun preferences_configureAccount_verifyServer(service: Service?, server: String): String? // Returns an error.
     fun preferences_configureAccount_onClickCancel()
-    fun preferences_configureAccount_onClickAuthorize(label: String, service: Service)
+    fun preferences_configureAccount_onClickEstablish(label: String, service: Service, server: String)
 
-    fun preferences_authorizeAccount_onClickCancel()
+    fun preferences_establishAccount_onClickCancel()
 
     fun preferences_configureOverlay_verifyName(name: String): String? // Returns an error.
     fun preferences_configureOverlay_onClickCancel()
@@ -133,7 +134,8 @@ interface WelcomeViewComms {
 
     fun preferences_configureAccount_resetForm()
 
-    fun preferences_authorizeAccount_setError(error: String?)
+    fun preferences_establishAccount_setAction(authorize: Boolean)
+    fun preferences_establishAccount_setError(error: String?)
 
     fun preferences_configureOverlay_setForm(
         type: Class<out ConfigurableOverlay>,
@@ -177,7 +179,7 @@ enum class CreditsLocation { LOCAL, SERVICE, SKIP }
 enum class PreferencesCard {
     START,
     CONFIGURE_ACCOUNT,
-    AUTHORIZE_ACCOUNT,
+    ESTABLISH_ACCOUNT,
     CONFIGURE_OVERLAY,
     CONFIGURE_DELIVERY_LOC_TEMPLATE
 }

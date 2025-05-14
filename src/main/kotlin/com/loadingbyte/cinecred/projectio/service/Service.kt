@@ -15,7 +15,7 @@ import kotlin.io.path.writeText
 
 
 val SERVICE_CONFIG_DIR: Path = CONFIG_DIR.resolve("services")
-val SERVICES: List<Service> = listOf(GoogleService)
+val SERVICES: List<Service> = listOf(GoogleService, EtherCalcService)
 
 private val ACCOUNT_LIST_LISTENERS = CopyOnWriteArrayList<() -> Unit>()
 
@@ -36,12 +36,16 @@ fun invokeAccountListListeners() {
 interface Service {
 
     val product: String
-    val authenticator: String
+    val authorizer: String?
+    val accountNeedsServer: Boolean
+    val uploadNeedsFilename: Boolean
 
     val accounts: List<Account>
 
+    /** If [accountNeedsServer] is true, checks very quickly whether a server looks plausible for this service. */
+    fun isServerPlausible(server: URI): Boolean = throw NotImplementedError()
     /** @throws IOException */
-    fun addAccount(accountId: String)
+    fun addAccount(accountId: String, server: URI?)
     /** @throws IOException */
     fun removeAccount(account: Account)
 
@@ -59,7 +63,7 @@ interface Account {
     val service: Service
 
     /** @throws IOException */
-    fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
+    fun upload(filename: String?, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
 
 }
 

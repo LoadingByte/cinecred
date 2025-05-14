@@ -8,6 +8,7 @@ import com.github.weisj.jsvg.parser.SVGLoader
 import com.loadingbyte.cinecred.common.Severity
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.SpineAttachment.*
+import com.loadingbyte.cinecred.projectio.service.EtherCalcService
 import com.loadingbyte.cinecred.projectio.service.GoogleService
 import com.loadingbyte.cinecred.projectio.service.Service
 import java.awt.Color
@@ -531,10 +532,12 @@ private class SpineAttachmentIcon(
 
 
 private val SERVICE_GOOGLE_ICON = SVGIcon.load("/icons/service/google.svg")
+private val SERVICE_ETHERCALC_ICON = SVGIcon.load("/icons/service/ethercalc.svg")
 
 val Service.icon
     get() = when (this) {
         is GoogleService -> SERVICE_GOOGLE_ICON
+        is EtherCalcService -> SERVICE_ETHERCALC_ICON
         else -> throw IllegalArgumentException()
     }
 

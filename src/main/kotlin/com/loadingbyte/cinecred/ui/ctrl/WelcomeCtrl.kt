@@ -423,14 +423,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         tryCopyTemplate(projectDir, template)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
-            } catch (_: ForbiddenException) {
-                val error = l10n("ui.projects.create.error.access")
-                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
-            } catch (_: DownException) {
-                val error = l10n("ui.projects.create.error.unresponsive")
-                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(error) }
             } catch (e: IOException) {
-                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.toString()) }
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.message ?: e.toString()) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             }
@@ -459,7 +453,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 service.removeAccount(account)
             } catch (e: IOException) {
                 SwingUtilities.invokeLater {
-                    welcomeView.showCannotRemoveAccountMessage(account, e.toString())
+                    welcomeView.showCannotRemoveAccountMessage(account, e.message ?: e.toString())
                     welcomeView.preferences_start_setAccountRemovalLocked(account, false)
                 }
             }
@@ -484,7 +478,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 service.addAccount(label)
                 SwingUtilities.invokeLater { welcomeView.preferences_setCard(PreferencesCard.START) }
             } catch (e: IOException) {
-                SwingUtilities.invokeLater { welcomeView.preferences_authorizeAccount_setError(e.toString()) }
+                val error = e.message ?: e.toString()
+                SwingUtilities.invokeLater { welcomeView.preferences_establishAccount_setError(error) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             }
@@ -587,7 +582,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         }
                     ImageOverlay(uuid, name, raster, rasterPersisted = false, imageUnderlay)
                 } catch (e: Exception) {
-                    welcomeView.showCannotReadOverlayImageMessage(imageFile, e.toString())
+                    welcomeView.showCannotReadOverlayImageMessage(imageFile, e.message ?: e.toString())
                     welcomeView.preferences_setCard(PreferencesCard.START)
                     return
                 }

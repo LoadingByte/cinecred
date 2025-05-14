@@ -58,11 +58,7 @@ interface Account {
     val id: String
     val service: Service
 
-    /**
-     * @throws ForbiddenException
-     * @throws DownException
-     * @throws IOException
-     */
+    /** @throws IOException */
     fun upload(filename: String, spreadsheet: Spreadsheet, look: SpreadsheetLook): URI
 
 }
@@ -83,10 +79,6 @@ interface ServiceWatcher {
     enum class Problem { INACCESSIBLE, DOWN }
 
 }
-
-
-class ForbiddenException : IOException()
-class DownException : IOException()
 
 
 const val WRITTEN_SERVICE_LINK_EXT = "url"

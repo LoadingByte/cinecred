@@ -484,4 +484,8 @@ object GoogleService : Service {
 
     }
 
+
+    private class ForbiddenException : IOException(l10n("ui.projects.create.error.access"))
+    private class DownException : IOException(l10n("ui.projects.create.error.unresponsive"))
+
 }

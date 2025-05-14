@@ -1,7 +1,9 @@
 package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.projectio.service.*
+import com.loadingbyte.cinecred.projectio.service.Account
+import com.loadingbyte.cinecred.projectio.service.WRITTEN_SERVICE_LINK_EXT
+import com.loadingbyte.cinecred.projectio.service.writeServiceLink
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,11 +23,7 @@ fun tryCopyTemplate(destDir: Path, template: Template, creditsFormat: Spreadshee
     tryCopyTemplate(destDir, template, creditsFormat, null, null)
 }
 
-/**
- * @throws ForbiddenException
- * @throws DownException
- * @throws IOException
- */
+/** @throws IOException */
 fun tryCopyTemplate(destDir: Path, template: Template, creditsAccount: Account, creditsFilename: String) {
     tryCopyTemplate(destDir, template, null, creditsAccount, creditsFilename)
 }

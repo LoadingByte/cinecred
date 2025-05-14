@@ -130,7 +130,7 @@ class ProjectController(
             readStyling(stylingFile, input.projectFonts!!, input.pictureLoaders!!, input.tapes!!)
         } catch (e: IOException) {
             JOptionPane.showMessageDialog(
-                projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.toString()),
+                projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.message ?: e.toString()),
                 l10n("ui.edit.cannotLoadStyling.title"), JOptionPane.ERROR_MESSAGE
             )
             tryCloseProject(force = true)
@@ -551,7 +551,7 @@ class ProjectController(
                 writeStyling(stylingFile, current)
             } catch (e: IOException) {
                 JOptionPane.showMessageDialog(
-                    projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.toString()),
+                    projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.message ?: e.toString()),
                     l10n("ui.edit.cannotSaveStyling.title"), JOptionPane.ERROR_MESSAGE
                 )
             }

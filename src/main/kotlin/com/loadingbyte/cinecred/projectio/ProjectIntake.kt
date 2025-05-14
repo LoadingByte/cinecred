@@ -188,7 +188,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 // An IO exception can occur if the credits file has disappeared in the meantime. If that happens,
                 // the file watcher should quickly trigger a call to this method again. Still, we push an
                 // error message in case something else goes wrong too.
-                val note = if (e is FormatUnavailableException) e.message!! else e.toString()
+                val note = e.message ?: e.toString()
                 val msg = l10n("projectIO.credits.cannotReadCreditsFile", activeFile.fileName, note)
                 val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
                 callbacks.pushCreditsSpreadsheets(emptyList(), activeFile.toUri(), locatingLog + msgObj)

@@ -1,91 +1,145 @@
 diff --git a/src/nfd_cocoa.m b/src/nfd_cocoa.m
-index babd6d4..879689d 100644
+index babd6d4..6a5d2c6 100644
 --- a/src/nfd_cocoa.m
 +++ b/src/nfd_cocoa.m
-@@ -174,6 +174,14 @@ static nfdresult_t CopyUtf8String(const char* utf8Str, nfdnchar_t** out) {
+@@ -174,6 +174,29 @@ static nfdresult_t CopyUtf8String(const char* utf8Str, nfdnchar_t** out) {
      return NFD_ERROR;
  }
  
++static nfdresult_t HandleException(NSException* e) {
++    NSLog(@"%@: %@\n%@", [e name], [e reason], [e callStackSymbols]);
++    NFDi_SetError("Exception logged.");
++    return NFD_ERROR;
++}
++
 +// macOS crashes the process if a file dialog is opened from a non-main thread.
-+static void InMainThread(dispatch_block_t block) {
++@interface Dispatcher : NSObject
+++ (void)performBlockOnMainThread:(void (^)(void))block;
++@end
++
++@implementation Dispatcher
+++ (void)_performBlock:(void (^)(void))block {
++    block();
++}
+++ (void)performBlockOnMainThread:(void (^)(void))block {
 +    if ([NSThread isMainThread])
 +        block();
 +    else
-+        dispatch_sync(dispatch_get_main_queue(), block);
++        [self performSelectorOnMainThread:@selector(_performBlock:) withObject:block waitUntilDone:YES modes:@[NSDefaultRunLoopMode, NSModalPanelRunLoopMode, NSEventTrackingRunLoopMode, @"AWTRunLoopMode"]];
 +}
++@end
 +
  /* public */
  
  const char* NFD_GetError(void) {
-@@ -215,7 +223,8 @@ nfdresult_t NFD_OpenDialogN(nfdnchar_t** outPath,
+@@ -195,6 +218,7 @@ void NFD_FreePathU8(nfdu8char_t* filePath) {
+ static NSApplicationActivationPolicy old_app_policy;
+ 
+ nfdresult_t NFD_Init(void) {
++    @try {
+     NSApplication* app = [NSApplication sharedApplication];
+     old_app_policy = [app activationPolicy];
+     if (old_app_policy == NSApplicationActivationPolicyProhibited) {
+@@ -203,20 +227,25 @@ nfdresult_t NFD_Init(void) {
+             return NFD_ERROR;
+         }
+     }
++    } @catch (NSException* e) { return HandleException(e); }
+     return NFD_OKAY;
+ }
+ 
+ /* call this to de-initialize NFD, if NFD_Init returned NFD_OKAY */
+ void NFD_Quit(void) {
++    @try {
+     [[NSApplication sharedApplication] setActivationPolicy:old_app_policy];
++    } @catch (NSException* e) {HandleException(e); }
+ }
+ 
+ nfdresult_t NFD_OpenDialogN(nfdnchar_t** outPath,
                              const nfdnfilteritem_t* filterList,
                              nfdfiltersize_t filterCount,
                              const nfdnchar_t* defaultPath) {
 -    nfdresult_t result = NFD_CANCEL;
 +    __block nfdresult_t result = NFD_CANCEL;
-+    InMainThread(^{
++    [Dispatcher performBlockOnMainThread:^{
      @autoreleasepool {
++    @try {
          NSWindow* keyWindow = [[NSApplication sharedApplication] keyWindow];
  
-@@ -237,6 +246,7 @@ nfdresult_t NFD_OpenDialogN(nfdnchar_t** outPath,
+         NSOpenPanel* dialog = [NSOpenPanel openPanel];
+@@ -236,7 +265,9 @@ nfdresult_t NFD_OpenDialogN(nfdnchar_t** outPath,
+ 
          // return focus to the key window (i.e. main window)
          [keyWindow makeKeyAndOrderFront:nil];
++    } @catch (NSException* e) { result = HandleException(e); }
      }
-+    });
++    }];
      return result;
  }
  
-@@ -251,7 +261,8 @@ nfdresult_t NFD_OpenDialogMultipleN(const nfdpathset_t** outPaths,
+@@ -251,8 +282,10 @@ nfdresult_t NFD_OpenDialogMultipleN(const nfdpathset_t** outPaths,
                                      const nfdnfilteritem_t* filterList,
                                      nfdfiltersize_t filterCount,
                                      const nfdnchar_t* defaultPath) {
 -    nfdresult_t result = NFD_CANCEL;
 +    __block nfdresult_t result = NFD_CANCEL;
-+    InMainThread(^{
++    [Dispatcher performBlockOnMainThread:^{
      @autoreleasepool {
++    @try {
          NSWindow* keyWindow = [[NSApplication sharedApplication] keyWindow];
  
-@@ -278,6 +289,7 @@ nfdresult_t NFD_OpenDialogMultipleN(const nfdpathset_t** outPaths,
+         NSOpenPanel* dialog = [NSOpenPanel openPanel];
+@@ -277,7 +310,9 @@ nfdresult_t NFD_OpenDialogMultipleN(const nfdpathset_t** outPaths,
+ 
          // return focus to the key window (i.e. main window)
          [keyWindow makeKeyAndOrderFront:nil];
++    } @catch (NSException* e) { result = HandleException(e); }
      }
-+    });
++    }];
      return result;
  }
  
-@@ -293,7 +305,8 @@ nfdresult_t NFD_SaveDialogN(nfdnchar_t** outPath,
+@@ -293,8 +328,10 @@ nfdresult_t NFD_SaveDialogN(nfdnchar_t** outPath,
                              nfdfiltersize_t filterCount,
                              const nfdnchar_t* defaultPath,
                              const nfdnchar_t* defaultName) {
 -    nfdresult_t result = NFD_CANCEL;
 +    __block nfdresult_t result = NFD_CANCEL;
-+    InMainThread(^{
++    [Dispatcher performBlockOnMainThread:^{
      @autoreleasepool {
++    @try {
          NSWindow* keyWindow = [[NSApplication sharedApplication] keyWindow];
  
-@@ -321,6 +334,7 @@ nfdresult_t NFD_SaveDialogN(nfdnchar_t** outPath,
+         NSSavePanel* dialog = [NSSavePanel savePanel];
+@@ -320,7 +357,9 @@ nfdresult_t NFD_SaveDialogN(nfdnchar_t** outPath,
+ 
          // return focus to the key window (i.e. main window)
          [keyWindow makeKeyAndOrderFront:nil];
++    } @catch (NSException* e) { result = HandleException(e); }
      }
-+    });
++    }];
      return result;
  }
  
-@@ -333,7 +347,8 @@ nfdresult_t NFD_SaveDialogU8(nfdu8char_t** outPath,
+@@ -333,8 +372,10 @@ nfdresult_t NFD_SaveDialogU8(nfdu8char_t** outPath,
  }
  
  nfdresult_t NFD_PickFolderN(nfdnchar_t** outPath, const nfdnchar_t* defaultPath) {
 -    nfdresult_t result = NFD_CANCEL;
 +    __block nfdresult_t result = NFD_CANCEL;
-+    InMainThread(^{
++    [Dispatcher performBlockOnMainThread:^{
      @autoreleasepool {
++    @try {
          NSWindow* keyWindow = [[NSApplication sharedApplication] keyWindow];
  
-@@ -355,6 +370,7 @@ nfdresult_t NFD_PickFolderN(nfdnchar_t** outPath, const nfdnchar_t* defaultPath)
+         NSOpenPanel* dialog = [NSOpenPanel openPanel];
+@@ -354,7 +395,9 @@ nfdresult_t NFD_PickFolderN(nfdnchar_t** outPath, const nfdnchar_t* defaultPath)
+ 
          // return focus to the key window (i.e. main window)
          [keyWindow makeKeyAndOrderFront:nil];
++    } @catch (NSException* e) { result = HandleException(e); }
      }
-+    });
++    }];
      return result;
  }
  

@@ -1,17 +1,18 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.loadingbyte.cinecred.common.GLOBAL_THREAD_POOL
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.natives.nfd.nfd_h.*
 import com.loadingbyte.cinecred.natives.nfd.nfdu8filteritem_t
+import java.awt.Toolkit
 import java.awt.Window
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySegment.NULL
 import java.lang.foreign.ValueLayout.ADDRESS
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JFileChooser
 import javax.swing.JPanel
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -39,12 +40,12 @@ fun showFileDialog(
         filename = initialFolderOrFile?.name
     }
 
-    if (NFD_Init() == NFD_ERROR())
-        logCurrentError()
     // Don't block the AWT thread with native calls to avoid rare hangs.
-    else GLOBAL_THREAD_POOL.submit<Path?> {
+    val ref = AtomicReference<Path?>()
+    val loop = Toolkit.getDefaultToolkit().systemEventQueue.createSecondaryLoop()
+    Thread({
         try {
-            Arena.ofConfined().use { arena ->
+            if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
                 val filterHandle = nfdu8filteritem_t.allocate(arena)
                 nfdu8filteritem_t.`name$set`(filterHandle, arena.allocateUtf8String(filterName))
@@ -57,16 +58,18 @@ fun showFileDialog(
                     NFD_SaveDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle, defaultNameHandle)
                 }
                 when (result) {
-                    NFD_OKAY() -> return@submit consumeOutPath(outPathPtr)
-                    NFD_CANCEL() -> return@submit SENTINEL
+                    NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
+                    NFD_CANCEL() -> ref.set(SENTINEL)
                     NFD_ERROR() -> logCurrentError()
                 }
             }
         } finally {
             NFD_Quit()
+            loop.exit()
         }
-        null
-    }.get()?.let { return if (it === SENTINEL) null else it }
+    }, "FileDialog").start()
+    loop.enter()
+    ref.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser()
     val desc = "$filterName (${filterExts.joinToString()})"
@@ -88,25 +91,27 @@ fun showFolderDialog(
 ): Path? {
     val folder = findFirstExistingAncestorFolder(initialFolder)
 
-    if (NFD_Init() == NFD_ERROR())
-        logCurrentError()
     // Don't block the AWT thread with native calls to avoid rare hangs.
-    else GLOBAL_THREAD_POOL.submit<Path?> {
+    val ref = AtomicReference<Path?>()
+    val loop = Toolkit.getDefaultToolkit().systemEventQueue.createSecondaryLoop()
+    Thread({
         try {
-            Arena.ofConfined().use { arena ->
+            if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
                 val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateUtf8String) ?: NULL
                 when (NFD_PickFolderU8(outPathPtr, defaultPathHandle)) {
-                    NFD_OKAY() -> return@submit consumeOutPath(outPathPtr)
-                    NFD_CANCEL() -> return@submit SENTINEL
+                    NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
+                    NFD_CANCEL() -> ref.set(SENTINEL)
                     NFD_ERROR() -> logCurrentError()
                 }
             }
         } finally {
             NFD_Quit()
+            loop.exit()
         }
-        null
-    }.get()?.let { return if (it === SENTINEL) null else it }
+    }, "FileDialog").start()
+    loop.enter()
+    ref.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser(folder?.toFile())
     fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY

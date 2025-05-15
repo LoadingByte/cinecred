@@ -72,7 +72,8 @@ class StyleForm<S : Style>(
             val valueWidget = makeSettingWidget(setting)
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
-            wrappedLabels?.add(if (idx !in spec.settingLabels) null else {
+            wrappedLabels?.add(
+                if (idx !in spec.settingLabels) null else {
                 var wrappedLabel = l10n(l10nKey(setting.name))
                 spec.settingUnits?.getOrNull(idx)?.let { wrappedLabel += " [$it]" }
                 wrappedLabel

@@ -158,7 +158,10 @@ private fun fillIn(string: String, template: Template): String = string
                     l10n("projectIO.credits.table.head", template.locale),
                     l10n("blank", template.locale),
                     picKw, videoKw,
-                    l10nEnumQuoted("{{$picKw Cinecred Logo}}", "{{$videoKw Blooper 3.mov XXL}}", locale = template.locale),
+                    l10nEnumQuoted(
+                        "{{$picKw Cinecred Logo}}", "{{$videoKw Blooper 3.mov XXL}}",
+                        locale = template.locale
+                    ),
                     locale = template.locale
                 )
             }

@@ -276,8 +276,12 @@ fun readToml(file: Path): MutableMap<String, Any> =
 fun writeToml(file: Path, toml: Map<String, Any?>) {
     // First write to a string and not directly to the file so that it's not corrupted if the TOML writer crashes.
     val text = StringWriter().also { writer ->
-        // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
-        TomlWriter(writer, 1, false, "\n").write(toml)
+        try {
+            // Use the Unix line separator (\n) and not the OS-specific one, which would be the default.
+            TomlWriter(writer, 1, false, "\n").write(toml)
+        } catch (e: TomlException) {
+            throw IOException(e)
+        }
     }.toString()
     // Then write the string to the file.
     file.writeText(text)

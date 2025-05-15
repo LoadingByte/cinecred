@@ -1512,7 +1512,8 @@ class BitmapConverter(
             val (bSeg1, bSeg2, bSeg3) = planarSegsOrderedLikeInterleavedComps(bBitmap, aBitmap)
             val aLs = aBitmap.linesize(0)
             val bLs = bBitmap.linesize(0)
-            iterate(aBitmap.spec.resolution, aLs, bLs, bytesPerAPx, 4, pxPerVec, vecOvershootBytesInALine,
+            iterate(
+                aBitmap.spec.resolution, aLs, bLs, bytesPerAPx, 4, pxPerVec, vecOvershootBytesInALine,
                 { a, b -> vecAction(aSeg, a, bSeg1, bSeg2, bSeg3, b) },
                 { a, b -> tradAction(aSeg, a, bSeg1, bSeg2, bSeg3, b) }
             )
@@ -1530,7 +1531,8 @@ class BitmapConverter(
             val (bSeg1, bSeg2, bSeg3, bSeg4) = planarSegsOrderedLikeInterleavedComps(bBitmap, aBitmap)
             val aLs = aBitmap.linesize(0)
             val bLs = bBitmap.linesize(0)
-            iterate(aBitmap.spec.resolution, aLs, bLs, bytesPerAPx, 4, pxPerVec, 0,
+            iterate(
+                aBitmap.spec.resolution, aLs, bLs, bytesPerAPx, 4, pxPerVec, 0,
                 { a, b -> vecAction(aSeg, a, bSeg1, bSeg2, bSeg3, bSeg4, b) },
                 { a, b -> tradAction(aSeg, a, bSeg1, bSeg2, bSeg3, bSeg4, b) }
             )

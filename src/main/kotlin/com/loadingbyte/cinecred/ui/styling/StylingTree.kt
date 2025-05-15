@@ -242,7 +242,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         // By default, if the node's name is used by multiple styles, sort the node below all duplicates. Only sort it
         // above if the node is currently in use (not grayed out) and all other nodes with the same name are not in use
         // (grayed out). This ensures that:
-        //   - When renaming a style to the name of another which is in use, the other styles remains the preferred one.
+        //   - When renaming a style to the name of another which is in use, the other style remains the preferred one.
         //   - When renaming a used style and the name is already taken by a bunch of unused (and hence irrelevant)
         //     styles, the renamed style remains the preferred one.
         // When styles can be volatile, also sort above if the style is not volatile, but the currently used (not grayed

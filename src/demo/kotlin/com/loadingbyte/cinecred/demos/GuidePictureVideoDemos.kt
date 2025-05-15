@@ -190,7 +190,6 @@ object GuidePictureVideoVideoMovingDemo : VideoDemo("$DIR/video-moving", Format.
 
 
 object GuidePictureVideoVideoPreviewDemo : PageDemo("$DIR/video-preview", Format.PNG, pageGuides = true) {
-    override val isLocaleSensitive get() = false
     override fun credits() = listOf(TAPE_SPREADSHEET.parseCreditsCS())
 }
 

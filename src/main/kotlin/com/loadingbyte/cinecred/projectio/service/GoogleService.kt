@@ -134,7 +134,8 @@ object GoogleService : Service {
         if (link.scheme != "http" && link.scheme != "https" || link.host != "docs.google.com")
             return null
         val path = link.path.split('/')
-        if (path[1] != "spreadsheets" || path[2] != "d") return null
+        if (path.size < 4 || path[1] != "spreadsheets" || path[2] != "d")
+            return null
         return path[3]
     }
 
@@ -379,7 +380,12 @@ object GoogleService : Service {
                 .setSheets(listOf(sheet))
             val request = sheets.spreadsheets().create(sSheet).setFields("spreadsheetUrl")
             // Send the request object.
-            return URI(send(request).spreadsheetUrl)
+            val url = send(request).spreadsheetUrl
+            return try {
+                URI(url)
+            } catch (e: URISyntaxException) {
+                throw IOException("Received malformed spreadsheet URL: $url", e)
+            }
         }
 
         /**

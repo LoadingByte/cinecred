@@ -31,7 +31,8 @@ import org.apache.pdfbox.pdmodel.graphics.state.PDSoftMask
 import org.apache.pdfbox.util.Matrix
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY8
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_RGB24
-import org.w3c.dom.*
+import org.w3c.dom.Attr
+import org.w3c.dom.Element
 import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import java.awt.BasicStroke
 import java.awt.Shape
@@ -1048,7 +1049,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
                     cs.saveGraphicsState()
                     cs.transform(mat)
-                    cs.drawForm(docRes.pdForms.getOrPut(pic) {
+                    cs.drawForm(docRes.pdForms.computeIfAbsent(pic) {
                         when (pic) {
                             is Picture.SVG -> {
                                 val canvas = Canvas.forPDF(pic.width, pic.height, ColorSpace.SRGB)

@@ -27,7 +27,7 @@ import org.apache.pdfbox.pdmodel.graphics.pattern.PDShadingPattern
 import org.apache.pdfbox.pdmodel.graphics.pattern.PDTilingPattern
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading
 import org.apache.pdfbox.pdmodel.graphics.state.RenderingMode
-import org.apache.pdfbox.rendering.*
+import org.apache.pdfbox.rendering.RenderDestination
 import org.apache.pdfbox.util.Matrix
 import org.apache.pdfbox.util.Vector
 import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GRAY16LE

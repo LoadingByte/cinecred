@@ -116,7 +116,7 @@ private const val MAC_ENGLISH_LANG = TrueTypeFont.MACROMAN_ENGLISH_LANG.toShort(
 
 private val LCID_TO_LOCALE: Map<Short, Locale> = HashMap<Short, Locale>().apply {
     useResourceStream("/lcid.csv") { s ->
-        CsvReader.builder().commentStrategy(CommentStrategy.SKIP).build(StringArrayHandler(), s.bufferedReader())
+        CsvReader.builder().commentStrategy(CommentStrategy.SKIP).build(StringArrayHandler.of(), s.bufferedReader())
             .forEach { (lcid, tag) -> put(Integer.decode(lcid).toShort(), Locale.forLanguageTag(tag)) }
     }
 }

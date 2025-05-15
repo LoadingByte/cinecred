@@ -53,12 +53,12 @@ private class TextContext(val styling: Styling) {
     private val fmtStrEqCache = ConcurrentHashMap<String, MutableMap<LetterStyle, FormattedString>>()
 
     fun getFmtStrFonts(letterStyle: LetterStyle): Fonts =
-        fmtStrFontsCache.getOrPut(letterStyle) {
+        fmtStrFontsCache.computeIfAbsent(letterStyle) {
             generateFmtStrFonts(letterStyle) ?: getFmtStrFonts(PLACEHOLDER_LETTER_STYLE)
         }
 
     fun getFmtStrDesign(letterStyle: LetterStyle): FormattedString.Design =
-        fmtStrDesignCache.getOrPut(letterStyle) {
+        fmtStrDesignCache.computeIfAbsent(letterStyle) {
             if (letterStyle.inheritLayersFromStyle.isActive) {
                 val refStyle = styling.letterStyles.find { o -> o.name == letterStyle.inheritLayersFromStyle.value }
                     ?: letterStyle.copy(

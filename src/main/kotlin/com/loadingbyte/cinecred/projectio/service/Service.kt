@@ -70,7 +70,7 @@ interface Account {
 
 interface ServiceWatcher {
 
-    /** Asynchronously polls for changes. */
+    /** Asynchronously polls for changes. Doesn't throw [IOException], instead calls the problem callback. */
     fun poll()
     /** Once this method returns, it is guaranteed that no more calls to the [Callbacks] will be made. */
     fun cancel()

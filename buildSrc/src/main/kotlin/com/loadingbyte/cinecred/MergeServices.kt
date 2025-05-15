@@ -25,6 +25,9 @@ abstract class MergeServices : DefaultTask() {
     @TaskAction
     fun run() {
         val outputDir = outputDir.get().asFile
+
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
         for (file in classpath)
             for (serviceFile in fileOperations.zipTree(file).matching { include("META-INF/services/*") })
                 outputDir.resolve(serviceFile.name).appendText(serviceFile.readText())

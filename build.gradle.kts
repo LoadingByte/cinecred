@@ -339,7 +339,7 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
     }
 }
 
-val preparePackaging by tasks.registering {
+tasks.register("preparePackaging") {
     group = "Packaging Preparation"
     description = "For each platform, prepares files for building a package for that platform on that platform."
     dependsOn(preparePlatformPackagingTasks)
@@ -351,7 +351,7 @@ val mergeServices by tasks.registering(MergeServices::class) {
     outputDir = layout.buildDirectory.dir("generated/allJar/services")
 }
 
-val allJar by tasks.registering(Jar::class) {
+tasks.register<Jar>("allJar") {
     group = "Build"
     description = "Assembles a jar archive containing the program classes and all dependencies, excluding natives."
     archiveClassifier = "all"

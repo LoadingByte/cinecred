@@ -14,8 +14,8 @@ private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettin
     styling: Styling,
     other: List<S>
 ): Boolean {
-    var styles1 = toMutableList()
-    var styles2 = other.toMutableList()
+    val styles1 = toMutableList()
+    val styles2 = other.toMutableList()
 
     // Ignore styles that have been added automatically and were not edited since.
     if ((styles1.firstOrNull() ?: styles2.firstOrNull()) is PopupStyle) {
@@ -28,7 +28,7 @@ private fun <S : ListedStyle> List<S>.equalsIgnoreStyleOrderAndIneffectiveSettin
         return false
 
     // Sort both lists of styles by style name.
-    val comp = Comparator<S> { s1, s2 -> String.CASE_INSENSITIVE_ORDER.compare(s1.name, s2.name) }
+    val comp = compareBy(ListedStyle::name)
     styles1.sortWith(comp)
     styles2.sortWith(comp)
 

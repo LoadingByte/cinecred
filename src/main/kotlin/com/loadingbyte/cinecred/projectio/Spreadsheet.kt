@@ -224,7 +224,7 @@ object XlsFormat : SpreadsheetFormat {
 object OdsFormat : SpreadsheetFormat {
 
     override val fileExt get() = "ods"
-    override val label get() = "OpenOffice/LibreOffice Calc"
+    override val label get() = "LibreOffice Calc"
 
     override fun read(file: Path, defaultName: String) = readOfficeDocument(
         file,
@@ -382,7 +382,7 @@ object CsvFormat : SpreadsheetFormat {
         val trimmed = text.trimStart(0xFEFF.toChar())
 
         // Parse the CSV file into a string matrix.
-        val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler(), trimmed)
+        val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler.of(), trimmed)
             .map(Array<String>::asList)
 
         // Create a spreadsheet.

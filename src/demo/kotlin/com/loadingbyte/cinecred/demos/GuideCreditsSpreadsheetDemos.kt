@@ -55,7 +55,6 @@ Copyright © 2023 {{Style Name}}Callie Cash{{Style}} and {{Style Name}}Molly Mon
 
 
 object GuideCreditsSpreadsheetPicAndVideoTagsDemo : PageDemo("$DIR/pic-and-video-tags", Format.PNG, pageGuides = true) {
-    override val isLocaleSensitive get() = false
     override fun credits() = listOf(
         """
 @Body

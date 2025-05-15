@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.Severity.MIGRATE
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
-import java.util.*
 
 
 data class ParserMsg(
@@ -63,7 +62,7 @@ class Table(
             numRows = bodyRecords.size
 
             // 1. Find the index of each expected column name. Emit warnings for legacy and missing columns.
-            colMap = TreeMap(String.CASE_INSENSITIVE_ORDER)
+            colMap = HashMap()
             outer@
             for (l10nColName in l10nColNames) {
                 val key = "$l10nPrefix$l10nColName"

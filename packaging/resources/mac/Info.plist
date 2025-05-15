@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+ <dict>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>LSApplicationCategoryType</key>
+  <string>DEPLOY_APP_CATEGORY</string>
+  <key>CFBundleIdentifier</key>
+  <string>DEPLOY_BUNDLE_IDENTIFIER</string>
+  <key>CFBundleName</key>
+  <string>DEPLOY_BUNDLE_NAME</string>
+  <key>CFBundleVersion</key>
+  <string>DEPLOY_BUNDLE_CFBUNDLE_VERSION</string>
+  <key>CFBundleShortVersionString</key>
+  <string>DEPLOY_BUNDLE_SHORT_VERSION</string>
+  <key>CFBundleIconFile</key>
+  <string>DEPLOY_ICON_FILE</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>DEPLOY_BUNDLE_COPYRIGHT</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+@MAC_BUNDLE_LOCALIZATIONS@
+  </array>
+  <key>CFBundleAllowMixedLocalizations</key>
+  <true/>DEPLOY_FILE_ASSOCIATIONS
+  <key>CFBundleExecutable</key>
+  <string>DEPLOY_LAUNCHER_NAME</string>
+  <key>NSHighResolutionCapable</key>
+  <string>true</string>
+ </dict>
+</plist>

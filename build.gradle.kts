@@ -305,6 +305,9 @@ val preparePlatformPackagingTasks = Platform.values().map { platform ->
                 "VENDOR" to vendor,
                 "EMAIL" to email,
                 "COPYRIGHT" to copyright,
+                "MAC_BUNDLE_LOCALIZATIONS" to locales.joinToString("\n") { locale ->
+                    "    <string>${locale.toLanguageTag()}</string>"
+                },
                 "LINUX_SHORTCUT_COMMENTS" to mainBundles.get().entries.joinToString("\n") { (locale, bundle) ->
                     "Comment" + (if (locale == Locale.ENGLISH) "" else "[$locale]") + "=" + bundle.getString("slogan")
                 },

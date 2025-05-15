@@ -6,7 +6,7 @@ jdk_dir="work/jdk-$JDK_MAJOR$JDK_MINOR+$JDK_PATCH"
 
 if [[ "@OS@" == mac ]]; then
   jdk_bin="$jdk_dir/Contents/Home/bin"
-  jpackage_args="--name Cinecred --icon images/icon.icns @settings/jpackage-mac"
+  jpackage_args="--name Cinecred --icon images/icon.icns --resource-dir resources/mac @settings/jpackage-mac"
 elif [[ "@OS@" == linux ]]; then
   jdk_bin="$jdk_dir/bin"
   jpackage_args="--name cinecred"

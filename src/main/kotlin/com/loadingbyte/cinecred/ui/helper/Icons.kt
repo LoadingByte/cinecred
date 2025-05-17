@@ -104,6 +104,11 @@ val FONT_HEIGHT_TOTAL_ICON = SVGIcon.load("/icons/fontHeight/total.svg")
 val FONT_HEIGHT_LEADING_TOP_ICON = SVGIcon.load("/icons/fontHeight/leadingTop.svg")
 val FONT_HEIGHT_LEADING_BOTTOM_ICON = SVGIcon.load("/icons/fontHeight/leadingBottom.svg")
 
+val GUILLEMET_LEFT_ICON = SVGIcon.load("/icons/guillemet/left.svg")
+val GUILLEMET_RIGHT_ICON = SVGIcon.load("/icons/guillemet/right.svg")
+val GUILLEMET_UP_ICON = SVGIcon.load("/icons/guillemet/up.svg")
+val GUILLEMET_DOWN_ICON = SVGIcon.load("/icons/guillemet/down.svg")
+
 val LEADER_GAP_MARGIN_LEFT_ICON = SVGIcon.load("/icons/leaderGap/marginLeft.svg")
 val LEADER_GAP_MARGIN_RIGHT_ICON = SVGIcon.load("/icons/leaderGap/marginRight.svg")
 val LEADER_GAP_SPACING_ICON = SVGIcon.load("/icons/leaderGap/spacing.svg")

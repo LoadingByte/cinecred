@@ -399,7 +399,7 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     ),
     UnionWidgetSpec(
         TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st(),
-        unionName = "temporalMarginFrames", settingIcons = listOf(BEARING_LEFT_ICON, BEARING_RIGHT_ICON)
+        unionName = "temporalMarginFrames", settingIcons = listOf(GUILLEMET_LEFT_ICON, GUILLEMET_RIGHT_ICON)
     ),
     UnionWidgetSpec(
         TapeStyle::fadeInFrames.st(), TapeStyle::fadeInTransitionStyleName.st(),

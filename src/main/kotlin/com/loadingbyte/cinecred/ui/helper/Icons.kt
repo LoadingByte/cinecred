@@ -56,7 +56,6 @@ val GEAR_ICON = SVGIcon.load("/icons/gear.svg")
 val GIFT_ICON = SVGIcon.load("/icons/gift.svg")
 val GLOBE_ICON = SVGIcon.load("/icons/globe.svg")
 val GUIDES_ICON = SVGIcon.load("/icons/guides.svg")
-val HEIGHT_ICON = SVGIcon.load("/icons/height.svg")
 val HOME_ICON = SVGIcon.load("/icons/home.svg")
 val IMAGE_ICON = SVGIcon.load("/icons/image.svg")
 val INFO_ICON = SVGIcon.load("/icons/info.svg")
@@ -119,6 +118,9 @@ val PROJECT_DIALOG_DELIVERY_ICON = SVGIcon.load("/icons/projectDialog/delivery.s
 
 val SHEARING_HORIZONTAL_ICON = SVGIcon.load("/icons/shearing/horizontal.svg")
 val SHEARING_VERTICAL_ICON = SVGIcon.load("/icons/shearing/vertical.svg")
+
+val SIZE_WIDTH_ICON = SVGIcon.load("/icons/size/width.svg")
+val SIZE_HEIGHT_ICON = SVGIcon.load("/icons/size/height.svg")
 
 
 val Severity.icon

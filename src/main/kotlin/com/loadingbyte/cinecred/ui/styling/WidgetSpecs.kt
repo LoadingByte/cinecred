@@ -260,7 +260,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer, *>> = listOf(
     UnionWidgetSpec(
         Layer::coloring.st(), Layer::color1.st(), Layer::color2.st(),
         Layer::gradientAngleDeg.st(), Layer::gradientExtentRfh.st(), Layer::gradientShiftRfh.st(),
-        unionUnit = "px", settingIcons = listOf(null, null, null, ANGLE_ICON, HEIGHT_ICON, ARROW_DIAGONAL_ICON)
+        unionUnit = "px", settingIcons = listOf(null, null, null, ANGLE_ICON, SIZE_HEIGHT_ICON, ARROW_DIAGONAL_ICON)
     ),
     ToggleButtonGroupWidgetSpec(Layer::shape.st(), ICON_AND_LABEL),
     ToggleButtonGroupWidgetSpec(Layer::stripePreset.st(), ICON),
@@ -268,7 +268,7 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer, *>> = listOf(
     WidthWidgetSpec(Layer::stripeOffsetRfh.st(), WidthSpec.TINY),
     UnionWidgetSpec(
         Layer::stripePreset.st(), Layer::stripeHeightRfh.st(), Layer::stripeOffsetRfh.st(),
-        unionUnit = "px", settingIcons = listOf(null, HEIGHT_ICON, ARROW_UP_DOWN_ICON)
+        unionUnit = "px", settingIcons = listOf(null, SIZE_HEIGHT_ICON, ARROW_UP_DOWN_ICON)
     ),
     WidthWidgetSpec(Layer::stripeWidenLeftRfh.st(), WidthSpec.TINY),
     WidthWidgetSpec(Layer::stripeWidenRightRfh.st(), WidthSpec.TINY),
@@ -350,7 +350,7 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
     WidthWidgetSpec(PictureStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         PictureStyle::widthPx.st(), PictureStyle::heightPx.st(),
-        unionName = "resolution", unionUnit = "px", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+        unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     ZeroInitWidgetSpec(PictureStyle::widthPx.st()) { style ->
         try {
@@ -374,7 +374,7 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     WidthWidgetSpec(TapeStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         TapeStyle::widthPx.st(), TapeStyle::heightPx.st(),
-        unionName = "resolution", unionUnit = "px", settingIcons = listOf(ARROW_LEFT_RIGHT_ICON, ARROW_UP_DOWN_ICON)
+        unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     ZeroInitWidgetSpec(TapeStyle::widthPx.st()) { style ->
         try {

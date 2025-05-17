@@ -32,9 +32,7 @@ import org.apache.http.client.utils.URLEncodedUtils
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.StringReader
-import java.net.InetSocketAddress
-import java.net.ServerSocket
-import java.net.URI
+import java.net.*
 import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -304,6 +302,7 @@ object GoogleService : Service {
             val flow = GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, clientSecrets, scopes)
                 .setCredentialDataStore(credentialDataStore)
                 .setAccessType("offline")
+                .enablePKCE()
                 .build()
 
             // Obtain the credential. If it is already stored on disk, use that. Otherwise, perform authorization,
@@ -429,11 +428,11 @@ object GoogleService : Service {
         private val semaphore = Semaphore(0)
 
         override fun getRedirectUri(): String {
-            val server = HttpServer.create(InetSocketAddress(findOpenPort()), 0)
+            val server = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), findOpenPort()), 0)
             this.server = server
             server.createContext("/", CallbackHandler())
             server.start()
-            return "http://localhost:${server.address.port}/"
+            return "http://127.0.0.1:${server.address.port}/"
         }
 
         private fun findOpenPort() =

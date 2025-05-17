@@ -57,7 +57,7 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle, *>> = listO
 
 private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> = listOf(
     UnitWidgetSpec(
-        ContentStyle::vMarginPx.st(), ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st(),
+        ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st(),
         ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(), ContentStyle::flowForceCellWidthPx.st(),
         ContentStyle::flowForceCellHeightPx.st(), ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(),
         ContentStyle::flowHGapPx.st(), ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
@@ -70,6 +70,12 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
     ToggleButtonGroupWidgetSpec(
         ContentStyle::spineAttachment.st(), ICON,
         getDynIcon = { _, style, spineAtt -> spineAtt.icon(style.blockOrientation, style.hasHead, style.hasTail) }
+    ),
+    WidthWidgetSpec(ContentStyle::vMarginTopPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(ContentStyle::vMarginBottomPx.st(), WidthSpec.LITTLE),
+    UnionWidgetSpec(
+        ContentStyle::vMarginTopPx.st(), ContentStyle::vMarginBottomPx.st(),
+        unionName = "vMarginPx", unionUnit = "px", settingIcons = listOf(GUILLEMET_UP_ICON, GUILLEMET_DOWN_ICON)
     ),
     NewSectionWidgetSpec(ContentStyle::bodyLayout.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::bodyLayout.st(), ICON_AND_LABEL),

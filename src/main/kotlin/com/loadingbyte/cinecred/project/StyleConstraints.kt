@@ -89,7 +89,8 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     },
-    DoubleConstr(ERROR, ContentStyle::vMarginPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::vMarginTopPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::vMarginBottomPx.st(), min = 0.0),
     FixedChoiceConstr(
         WARN, ContentStyle::gridHarmonizeColWidths.st(), ContentStyle::headHarmonizeWidth.st(),
         ContentStyle::tailHarmonizeWidth.st(),

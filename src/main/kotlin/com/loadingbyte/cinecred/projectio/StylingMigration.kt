@@ -320,6 +320,10 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
         contentSty["tailMatchWidthAcrossStyles"]?.let { contentSty["tailHarmonizeWidthAcrossStyles"] = it }
     }
 
+    // 1.7.0 -> 1.8.0: The vertical margin setting has been split into separate top and bottom settings.
+    for (contentSty in rawStyling.contentStyles)
+        contentSty["vMarginPx"]?.let { contentSty["vMarginTopPx"] = it; contentSty["vMarginBottomPx"] = it; }
+
     // 1.7.0 -> 1.8.0: There are now transition styles, and card page fades now reference a transition style.
     if (rawStyling.transitionStyles.isEmpty()) {
         val linearName = l10n("project.template.transitionStyleLinear")

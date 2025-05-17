@@ -81,14 +81,14 @@ A,Dirc Director,Film,Demo
 
 object GuideContentStyleVMarginDemo : StyleSettingsDemo<ContentStyle>(
     ContentStyle::class.java, "$DIR/vmargin", Format.STEP_GIF,
-    listOf(ContentStyle::vMarginPx.st()), pageGuides = true
+    listOf(ContentStyle::vMarginTopPx.st(), ContentStyle::vMarginBottomPx.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
         this += gutterCS.copy(name = "Demo")
-        this += last().copy(vMarginPx = 16.0)
-        this += last().copy(vMarginPx = 32.0)
-        this += last().copy(vMarginPx = 48.0)
-        this += last().copy(vMarginPx = 64.0)
+        this += last().copy(vMarginTopPx = 16.0, vMarginBottomPx = 16.0)
+        this += last().copy(vMarginTopPx = 32.0, vMarginBottomPx = 32.0)
+        this += last().copy(vMarginTopPx = 48.0, vMarginBottomPx = 48.0)
+        this += last().copy(vMarginTopPx = 64.0, vMarginBottomPx = 64.0)
     }
 
     override fun credits(style: ContentStyle) = """

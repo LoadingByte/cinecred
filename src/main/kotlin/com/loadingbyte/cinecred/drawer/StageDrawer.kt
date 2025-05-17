@@ -173,7 +173,7 @@ private fun drawSpine(
         spineImage.drawDeferredImage(drawnBlock.defImage, x, y)
         y += drawnBlock.defImage.height
         if (blockIdx != spine.blocks.lastIndex)
-            y += maxOf(block.vGapAfterPx, block.style.vMarginPx, spine.blocks[blockIdx + 1].style.vMarginPx)
+            y += maxOf(block.vGapAfterPx, block.style.vMarginBottomPx, spine.blocks[blockIdx + 1].style.vMarginTopPx)
                 .toElasticY()
     }
     // Set the spine image's height.

@@ -145,6 +145,7 @@ private fun fillIn(string: String, template: Template): String = string
                 l10n(
                     key,
                     styleKw,
+                    l10nQuoted("{{$styleKw}}", template.locale),
                     l10nEnumQuoted("Copyright 2023 {{$styleKw $name}}Thomas Cash", locale = template.locale),
                     locale = template.locale
                 )
@@ -154,9 +155,9 @@ private fun fillIn(string: String, template: Template): String = string
                 val videoKw = l10n("projectIO.credits.table.video", template.locale)
                 l10n(
                     key,
-                    l10n("projectIO.credits.table.style", template.locale),
-                    l10n("projectIO.credits.table.head", template.locale),
-                    l10n("blank", template.locale),
+                    l10nQuoted("{{${l10n("projectIO.credits.table.style", template.locale)} …}}", template.locale),
+                    "@" + l10n("projectIO.credits.table.head", template.locale),
+                    l10nQuoted("{{${l10n("blank", template.locale)}}}"),
                     picKw, videoKw,
                     l10nEnumQuoted(
                         "{{$picKw Cinecred Logo}}", "{{$videoKw Blooper 3.mov XXL}}",
@@ -165,12 +166,14 @@ private fun fillIn(string: String, template: Template): String = string
                     locale = template.locale
                 )
             }
+            "projectIO.credits.table.vGapDesc" ->
+                l10n(key, l10nQuoted("px"))
             "projectIO.credits.table.breakHarmonizationDesc" ->
                 l10n(
                     key,
-                    l10n("projectIO.credits.table.head", template.locale),
-                    l10n("projectIO.credits.table.body", template.locale),
-                    l10n("projectIO.credits.table.tail", template.locale),
+                    l10nQuoted(l10n("projectIO.credits.table.head", template.locale), template.locale),
+                    l10nQuoted(l10n("projectIO.credits.table.body", template.locale), template.locale),
+                    l10nQuoted(l10n("projectIO.credits.table.tail", template.locale), template.locale),
                     locale = template.locale
                 )
             "projectIO.credits.table.spinePosDesc" -> {
@@ -182,11 +185,12 @@ private fun fillIn(string: String, template: Template): String = string
                 val bot = l10n("projectIO.credits.table.bottom", template.locale)
                 l10n(
                     key,
-                    below,
-                    l10n("projectIO.credits.table.above", template.locale),
+                    l10nQuoted(below, template.locale),
+                    l10nQuoted(l10n("projectIO.credits.table.above", template.locale), template.locale),
                     l10nEnumQuoted("-400", "-400 200", "-400 200 $below", locale = template.locale),
                     l10nEnumQuoted("-400", locale = template.locale),
-                    parallel, hook,
+                    l10nQuoted(parallel, template.locale),
+                    l10nQuoted(hook, template.locale),
                     l10nEnumQuoted(
                         "-400 $parallel", "$hook 1 $bot-$top", "$hook 1 $top-$top 800", "$hook 2 $bot-$mid 800 100",
                         locale = template.locale
@@ -200,13 +204,19 @@ private fun fillIn(string: String, template: Template): String = string
                     l10nEnumQuoted("00:04:56:23", "XYZ 00:04:56:23", "XYZ", locale = template.locale),
                     locale = template.locale
                 )
-            "projectIO.credits.table.pageGapDesc" ->
+            "projectIO.credits.table.pageGapDesc" -> {
+                val melt = l10n("projectIO.credits.table.melt", template.locale)
+                val linear = l10n("project.template.transitionStyleLinear", template.locale)
                 l10n(
                     key,
-                    l10n("projectIO.credits.table.melt", template.locale),
-                    l10n("project.template.transitionStyleLinear", template.locale),
+                    l10nQuoted(melt, template.locale),
+                    l10nEnumQuoted(
+                        "00:04:56:23", "-00:04:56:23", melt, "$melt 00:00:02:00 $linear",
+                        locale = template.locale
+                    ),
                     locale = template.locale
                 )
+            }
             else -> l10n(key, template.locale)
         }
     }

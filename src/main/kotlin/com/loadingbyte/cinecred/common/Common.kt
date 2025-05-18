@@ -324,7 +324,7 @@ private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strin
 fun l10n(key: String, locale: Locale = Locale.getDefault()): String = getL10nBundle(locale).getString(key)
 
 private val DOUBLE_BRACE_REGEX = Regex("(?<!\\{)\\{\\{|}}(?!})")
-fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): String {
+fun l10n(key: String, vararg args: Any, locale: Locale = Locale.getDefault()): String {
     val effArgs = if (args.none { it is Float || it is Double }) args else {
         val fmt = NumberFormat.getInstance()
         Array(args.size) { idx ->
@@ -338,20 +338,20 @@ fun l10n(key: String, vararg args: Any?, locale: Locale = Locale.getDefault()): 
     return MessageFormat(str).format(effArgs)
 }
 
-fun l10nQuoted(string: String, locale: Locale = Locale.getDefault()): String =
-    l10n("quoted", string, locale = locale)
+fun l10nQuoted(obj: Any, locale: Locale = Locale.getDefault()): String =
+    l10n("quoted", obj, locale = locale)
 
-fun l10nEnum(vararg strings: String, locale: Locale = Locale.getDefault()): String =
-    l10nEnum(strings.asList(), locale)
+fun l10nEnum(vararg objs: Any, locale: Locale = Locale.getDefault()): String =
+    l10nEnum(objs.asList(), locale)
 
-fun l10nEnum(strings: Iterable<String>, locale: Locale = Locale.getDefault()): String =
-    strings.joinToString(l10n("enumSep", locale))
+fun l10nEnum(objs: Iterable<Any>, locale: Locale = Locale.getDefault()): String =
+    objs.joinToString(l10n("enumSep", locale))
 
-fun l10nEnumQuoted(vararg strings: String, locale: Locale = Locale.getDefault()): String =
-    l10nEnumQuoted(strings.asList(), locale)
+fun l10nEnumQuoted(vararg objs: Any, locale: Locale = Locale.getDefault()): String =
+    l10nEnumQuoted(objs.asList(), locale)
 
-fun l10nEnumQuoted(strings: Iterable<String>, locale: Locale = Locale.getDefault()): String =
-    strings.joinToString(l10n("enumSep", locale)) { l10nQuoted(it, locale = locale) }
+fun l10nEnumQuoted(objs: Iterable<Any>, locale: Locale = Locale.getDefault()): String =
+    objs.joinToString(l10n("enumSep", locale)) { l10nQuoted(it, locale = locale) }
 
 fun comprehensivelyApplyLocale(locale: Locale) {
     SYSTEM_LOCALE  // Run the initializer and thereby remember the default local before we change it in a moment.

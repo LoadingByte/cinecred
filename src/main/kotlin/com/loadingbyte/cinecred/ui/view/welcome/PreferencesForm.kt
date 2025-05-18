@@ -1,9 +1,6 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
-import com.loadingbyte.cinecred.common.ROOT_CASE_INSENSITIVE_COLLATOR
-import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.sortedWithCollator
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
@@ -37,7 +34,7 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
     private val checkForUpdatesWidget = addWidget(
         l10n("ui.preferences.checkForUpdates"),
         CheckBoxWidget(),
-        description = l10n("ui.preferences.checkForUpdates.desc")
+        description = l10n("ui.preferences.checkForUpdates.desc", l10nQuoted("cinecred.com"))
     )
 
     private val welcomeHintTrckPendingWidget = addWidget(

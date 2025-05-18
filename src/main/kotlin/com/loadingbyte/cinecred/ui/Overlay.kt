@@ -72,7 +72,7 @@ class SafeAreasOverlay private constructor(
 ) : Overlay {
 
     override val uuid: UUID = UUID.randomUUID()
-    override val label get() = l10n(l10nKey, actionSafe, titleSafe)
+    override val label get() = l10n(l10nKey, "$actionSafe/$titleSafe")
 
     override fun draw(
         resolution: Resolution,
@@ -101,7 +101,7 @@ class AspectRatioOverlay(
     val v: Double
 ) : ConfigurableOverlay {
 
-    override val label get() = l10n("ui.overlays.label.aspectRatio", h, v)
+    override val label get() = l10n("ui.overlays.label.aspectRatio", "$h:$v")
 
     override fun draw(
         resolution: Resolution,

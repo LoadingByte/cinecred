@@ -678,7 +678,10 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                             val aspectRatio = resolution.widthPx.toDouble() / resolution.heightPx
                             val aspectRatioLimit = 32
                             if (aspectRatio !in 1.0 / aspectRatioLimit..aspectRatioLimit / 1.0) {
-                                val msg = l10n("project.styling.constr.extremeAspectRatio", aspectRatioLimit)
+                                val msg = l10n(
+                                    "project.styling.constr.extremeAspectRatio",
+                                    "1:$aspectRatioLimit", "$aspectRatioLimit:1"
+                                )
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
                         }
@@ -856,4 +859,4 @@ private inline fun <S : Style, SS : StyleSetting<S, SUBJ>, SUBJ : Any> S.forEach
 
 
 private fun msg(key: String): () -> String = { l10n(key) }
-private fun msg(key: String, vararg args: Any?): () -> String = { l10n(key, *args) }
+private fun msg(key: String, vararg args: Any): () -> String = { l10n(key, *args) }

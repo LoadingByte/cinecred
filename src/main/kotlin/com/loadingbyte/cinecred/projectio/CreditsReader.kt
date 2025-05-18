@@ -373,7 +373,7 @@ private class CreditsReader(
                     if (explicitVGapPx == null)
                         explicitVGapPx = vGap
                     else
-                        table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapPx))
+                        table.log(row, "vGap", WARN, l10n("projectIO.credits.vGapAlreadySet", explicitVGapPx!!))
                 } catch (_: IllegalArgumentException) {
                     table.log(row, "vGap", WARN, l10n("projectIO.credits.illFormattedVGap", "<i>px</i>"))
                 }
@@ -407,7 +407,7 @@ private class CreditsReader(
                         val timecode = parts.last()
                         runtimeGroupName = parts.subList(0, parts.size - 1).joinToString(" ")
                         if (runtimeGroupName in namedRuntimeGroups || runtimeGroupName == stageRuntimeGroupName) {
-                            val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", runtimeGroupName)
+                            val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", l10nQuoted(runtimeGroupName))
                             table.log(row, "pageRuntime", WARN, msg)
                         } else
                             nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
@@ -427,15 +427,19 @@ private class CreditsReader(
         }
 
         table.getString(row, "pageGap")?.let { str ->
-            fun illFormattedPageGapMsg() = l10n(
-                "projectIO.credits.illFormattedPageGap",
-                timecodeFormatLabel, sampleTimecode, "-$sampleTimecode", l10n(MELT_KW.key),
-                "${l10n(MELT_KW.key)} $sampleTimecode ${l10n("project.template.transitionStyleLinear")}"
-            )
+            fun illFormattedPageGapMsg(): String {
+                val melt = l10n(MELT_KW.key)
+                return l10n(
+                    "projectIO.credits.illFormattedPageGap",
+                    "<i>$timecodeFormatLabel</i>", l10nQuoted(sampleTimecode), l10nQuoted("-$sampleTimecode"),
+                    "<i>$melt</i>", l10nQuoted(melt),
+                    l10nQuoted("$melt $sampleTimecode ${l10n("project.template.transitionStyleLinear")}")
+                )
+            }
 
             fun unavailableTransitionStyleMsg(name: String) = l10n(
                 "projectIO.credits.unavailableTransitionStyle",
-                name, "<i>${l10nEnum(transitionStyleMap.keys)}</i>"
+                l10nQuoted(name), "<i>${l10nEnum(transitionStyleMap.keys)}</i>"
             )
 
             if (!table.isEmpty(row, "pageStyle"))
@@ -475,6 +479,8 @@ private class CreditsReader(
         // If the spine pos cell is non-empty, conclude the previous spine (if there was any) and start a new one.
         // Also conclude the previous compound if applicable.
         table.getString(row, "spinePos")?.let { str ->
+            fun hookAtNewPageMsg(kw: String) = l10n("projectIO.credits.hookAtNewPage", l10nQuoted(kw))
+
             val parts = str.split(' ')
             val hookKw = parts[0] in HOOK_KW
 
@@ -487,7 +493,7 @@ private class CreditsReader(
             try {
                 if (hookKw) {
                     if (isStageConclusionMarked) {
-                        table.log(row, "spinePos", WARN, l10n("projectIO.credits.hookAtNewPage", parts[0]))
+                        table.log(row, "spinePos", WARN, hookAtNewPageMsg(parts[0]))
                         return@let
                     }
                     hook = true
@@ -495,8 +501,10 @@ private class CreditsReader(
                         val i = parts[1].toInt()
                         if (i in 1..u)
                             nextSpineHookTo = u - i
-                        else
-                            table.log(row, "spinePos", WARN, l10n("projectIO.credits.invalidHookOrdinal", i, u))
+                        else {
+                            val msg = l10n("projectIO.credits.invalidHookOrdinal", l10nQuoted(i), u)
+                            table.log(row, "spinePos", WARN, msg)
+                        }
                     }
                     if (parts.size > 2) {
                         val anchors = parts[2].split('-')
@@ -526,7 +534,7 @@ private class CreditsReader(
                     val hOffsetPx = parts[0].toFiniteDouble()
                     if (parts.size > 1 && parts[1] in PARALLEL_KW) {
                         if (isStageConclusionMarked) {
-                            table.log(row, "spinePos", WARN, l10n("projectIO.credits.hookAtNewPage", parts[1]))
+                            table.log(row, "spinePos", WARN, hookAtNewPageMsg(parts[1]))
                             return@let
                         }
                         hook = true
@@ -566,7 +574,7 @@ private class CreditsReader(
                         val mid = l10n(MIDDLE_KW.key)
                         val bot = l10n(BOTTOM_KW.key)
                         l10n(
-                            "projectIO.credits.illFormattedSpinePosHook", kw, u,
+                            "projectIO.credits.illFormattedSpinePosHook", l10nQuoted(kw), u,
                             "<i>$top</i>", "<i>$mid</i>", "<i>$bot</i>",
                             l10nEnumQuoted("$kw 1 $bot-$top", "$kw 1 $top-$top 800", "$kw 2 $bot-$mid 800 100")
                         )
@@ -621,7 +629,7 @@ private class CreditsReader(
             if (unknown.size != parts.size)
                 isBlockConclusionMarked = true
             if (unknown.isNotEmpty()) {
-                val kws = "<i>${l10nEnum(unknown)}</i>"
+                val kws = l10nEnumQuoted(unknown)
                 val opts = "<i>${l10nEnum(l10n(HEAD_KW.key), l10n(BODY_KW.key), l10n(TAIL_KW.key))}</i>"
                 val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", kws, opts)
                 table.log(row, "breakHarmonization", WARN, msg)
@@ -744,13 +752,17 @@ private class CreditsReader(
     fun getBodyElement(
         l10nColName: String, initLetterStyleName: String?, only1Line: Boolean, onlyStr: Boolean = false
     ): BodyElement? {
-        fun unavailableLetterStyleMsg(name: String) =
-            l10n("projectIO.credits.unavailableLetterStyle", name, "<i>${l10nEnum(letterStyleMap.keys)}</i>")
+        fun unavailableLetterStyleMsg(name: String) = l10n(
+            "projectIO.credits.unavailableLetterStyle", l10nQuoted(name), "<i>${l10nEnum(letterStyleMap.keys)}</i>"
+        )
 
         fun unknownTagMsg(tagKey: String) = l10n(
-            "projectIO.credits.unknownTagKeyword", tagKey,
+            "projectIO.credits.unknownTagKeyword", l10nQuoted("{{$tagKey …}}"), l10nQuoted("\\{{$tagKey …}}"),
             "<i>" + l10nEnum(listOf(BLANK_KW, STYLE_KW, PIC_KW, VIDEO_KW).map { "{{${l10n(it.key)}}}" }) + "</i>"
         )
+
+        fun tagDisallowedMsg(tagKey: String) = l10n("projectIO.credits.tagDisallowed", l10nQuoted("{{$tagKey …}}"))
+        fun tagNotLoneMsg(tagKey: String) = l10n("projectIO.credits.tagNotLone", l10nQuoted("{{$tagKey …}}"))
 
         val str = table.getString(row, l10nColName) ?: return null
         val initLetterStyle = initLetterStyleName?.let { letterStyleMap[it] } ?: PLACEHOLDER_LETTER_STYLE
@@ -781,7 +793,7 @@ private class CreditsReader(
                     // When we encounter a blank tag, remember it.
                     // We can't immediately return because we want to issue a warning if the blank tag is not lone.
                     in BLANK_KW -> when {
-                        onlyStr -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        onlyStr -> table.log(row, l10nColName, WARN, tagDisallowedMsg(tagKey))
                         else -> when (blankTagKey) {
                             null -> blankTagKey = tagKey
                             else -> multipleBlanks = true
@@ -801,7 +813,7 @@ private class CreditsReader(
                     // When we encounter a picture or video tag, read it and remember the loaded picture/tape for now.
                     // We can't immediately return because we want to issue a warning if the tag is not lone.
                     in PIC_KW, in VIDEO_KW -> when {
-                        onlyStr -> table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagDisallowed", tagKey))
+                        onlyStr -> table.log(row, l10nColName, WARN, tagDisallowedMsg(tagKey))
                         else -> when (pictureOrVideoTagKey) {
                             null -> {
                                 pictureOrVideoTagKey = tagKey
@@ -821,12 +833,12 @@ private class CreditsReader(
         return when {
             blankTagKey != null -> {
                 if (hasPlaintext || curLetterStyle != null || multipleBlanks || pictureOrVideoTagKey != null)
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", blankTagKey))
+                    table.log(row, l10nColName, WARN, tagNotLoneMsg(blankTagKey))
                 BodyElement.Nil(initLetterStyle)
             }
             pictureOrVideoTagKey != null -> {
                 if (hasPlaintext || curLetterStyle != null || multiplePicturesOrVideos)
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.tagNotLone", pictureOrVideoTagKey))
+                    table.log(row, l10nColName, WARN, tagNotLoneMsg(pictureOrVideoTagKey))
                 pictureStyle?.let(BodyElement::Pic) ?: tapeStyle?.let(BodyElement::Tap) ?: BodyElement.Mis
             }
             hasPlaintext -> {
@@ -870,7 +882,12 @@ private class CreditsReader(
             }
             style
         },
-        illFormattedMsg = { l10n("projectIO.credits.pictureIllFormatted", tagKey) }
+        illFormattedMsg = {
+            l10n(
+                "projectIO.credits.pictureIllFormatted",
+                l10nEnumQuoted("{{$tagKey Cinecred Logo}}", "{{$tagKey Cinecred Logo.svg Large}}")
+            )
+        }
     )
 
     fun getTapeStyle(l10nColName: String, tagKey: String, tagVal: String?) = tapeStyleResolver.resolve(
@@ -954,7 +971,12 @@ private class CreditsReader(
             }
             style
         },
-        illFormattedMsg = { l10n("projectIO.credits.videoIllFormatted", tagKey) }
+        illFormattedMsg = {
+            l10n(
+                "projectIO.credits.videoIllFormatted",
+                l10nEnumQuoted("{{$tagKey Blooper 3}}", "{{$tagKey Blooper 3.mov Large}}")
+            )
+        }
     )
 
 

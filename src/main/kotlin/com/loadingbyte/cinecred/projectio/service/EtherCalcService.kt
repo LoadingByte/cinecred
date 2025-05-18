@@ -70,7 +70,7 @@ object EtherCalcService : Service {
         val req = httpRequestBuilder(server.resolve("_exists/x")).build()
         val resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() != 200 || resp.body().let { it != "true" && it != "false" })
-            throw IOException(l10n("ui.preferences.accounts.establish.noServerFound", product, server))
+            throw IOException(l10n("ui.preferences.accounts.establish.noServerFound", product, l10nQuoted(server)))
         val account = EtherCalcAccount(accountId, server)
         accountsLock.withLock {
             _accounts = _accounts.add(account)

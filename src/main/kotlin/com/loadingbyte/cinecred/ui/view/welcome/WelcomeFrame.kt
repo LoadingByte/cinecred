@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nQuoted
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.STYLING_FILE_NAME
 import com.loadingbyte.cinecred.projectio.service.Account
@@ -147,42 +148,42 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
 
     override fun showNotADirMessage(path: Path) {
         JOptionPane.showMessageDialog(
-            this, l10n("ui.projects.notADir.msg", path),
+            this, l10n("ui.projects.notADir.msg", l10nQuoted(path)),
             l10n("ui.projects.notADir.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 
     override fun showIllegalPathMessage(path: Path) {
         JOptionPane.showMessageDialog(
-            this, l10n("ui.projects.illegalPath.msg", path),
+            this, l10n("ui.projects.illegalPath.msg", l10nQuoted(path)),
             l10n("ui.projects.illegalPath.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 
     override fun showNotAProjectMessage(dir: Path) {
         JOptionPane.showMessageDialog(
-            this, l10n("ui.projects.notAProject.msg", dir, STYLING_FILE_NAME),
+            this, l10n("ui.projects.notAProject.msg", l10nQuoted(dir), l10nQuoted(STYLING_FILE_NAME)),
             l10n("ui.projects.notAProject.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 
     override fun showAlreadyOpenMessage(projectDir: Path) {
         JOptionPane.showMessageDialog(
-            this, l10n("ui.projects.alreadyOpen.msg", projectDir),
+            this, l10n("ui.projects.alreadyOpen.msg", l10nQuoted(projectDir)),
             l10n("ui.projects.alreadyOpen.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 
     override fun showNewerVersionQuestion(projectDir: Path, projectVersion: String): Boolean {
         return JOptionPane.showConfirmDialog(
-            this, l10n("ui.projects.newerVersion.msg", projectDir, projectVersion, VERSION),
+            this, l10n("ui.projects.newerVersion.msg", l10nQuoted(projectDir), projectVersion, VERSION),
             l10n("ui.projects.newerVersion.title"), JOptionPane.YES_NO_OPTION
         ) == JOptionPane.YES_OPTION
     }
 
     override fun showNotEmptyQuestion(projectDir: Path): Boolean {
         return JOptionPane.showConfirmDialog(
-            this, l10n("ui.projects.create.notEmpty.msg", projectDir),
+            this, l10n("ui.projects.create.notEmpty.msg", l10nQuoted(projectDir)),
             l10n("ui.projects.create.notEmpty.title"), JOptionPane.YES_NO_OPTION
         ) == JOptionPane.YES_OPTION
     }
@@ -196,14 +197,14 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
 
     override fun showCannotRemoveAccountMessage(account: Account, error: String) {
         JOptionPane.showMessageDialog(
-            this, arrayOf(l10n("ui.preferences.accounts.cannotRemove.msg", account.id), error),
+            this, arrayOf(l10n("ui.preferences.accounts.cannotRemove.msg", l10nQuoted(account.id)), error),
             l10n("ui.preferences.accounts.cannotRemove.title"), JOptionPane.ERROR_MESSAGE
         )
     }
 
     override fun showCannotReadOverlayImageMessage(file: Path, error: String) {
         JOptionPane.showMessageDialog(
-            this, arrayOf(l10n("ui.preferences.overlays.configure.cannotReadImageFile.msg", file), error),
+            this, arrayOf(l10n("ui.preferences.overlays.configure.cannotReadImageFile.msg", l10nQuoted(file)), error),
             l10n("ui.preferences.overlays.configure.cannotReadImageFile.title"), JOptionPane.ERROR_MESSAGE
         )
     }

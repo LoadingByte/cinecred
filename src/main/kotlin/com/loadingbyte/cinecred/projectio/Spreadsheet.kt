@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.execProcess
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nQuoted
 import de.siegmar.fastcsv.reader.CsvReader
 import de.siegmar.fastcsv.reader.StringArrayHandler
 import de.siegmar.fastcsv.writer.CsvWriter
@@ -416,8 +417,10 @@ private inline fun <W> readOfficeDocument(
     try {
         val numSheets = getNumSheets(workbook)
 
-        if (numSheets == 0)
-            log.add(ParserMsg(null, null, null, null, ERROR, l10n("projectIO.spreadsheet.noSheet", file)))
+        if (numSheets == 0) {
+            val msg = l10n("projectIO.spreadsheet.noSheet", l10nQuoted(file.name))
+            log.add(ParserMsg(null, null, null, null, ERROR, msg))
+        }
 
         return Pair(if (numSheets == 0) emptyList() else List(numSheets) { read(workbook, it) }, log)
     } finally {

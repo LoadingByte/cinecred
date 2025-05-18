@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.ui
 
 import com.formdev.flatlaf.FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT
-import com.loadingbyte.cinecred.common.Severity
-import com.loadingbyte.cinecred.common.isAccessibleDirectory
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.toPathSafely
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFORM_PROFILE
@@ -351,10 +348,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             if (notice == null && value.filenameHashPattern != null) {
                 // Show an error if the sequence filename suffix doesn't have exactly one ### hole.
                 val numHoles = Regex("#+").findAll(value.filenameHashPattern).count()
+                fun h() = l10nQuoted("###")
                 if (numHoles == 0)
-                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixMissesHole"))
+                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixMissesHole", h()))
                 else if (numHoles > 1)
-                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles"))
+                    notice = Notice(Severity.ERROR, l10n("ui.deliverConfig.seqFilenameSuffixHasTooManyHoles", h()))
                 destinationWidget.setSuffixWidgetSeverity(notice?.severity)
             } else
                 destinationWidget.setSuffixWidgetSeverity(null)
@@ -571,26 +569,26 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             // If there is any issue with the output file or folder, inform the user and abort if necessary.
             if (format.fileSeq) {
                 if (fileOrDir.exists() && !fileOrDir.isAccessibleDirectory()) {
-                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", fileOrDir))
+                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", l10nQuoted(fileOrDir)))
                     return
                 } else if (fileOrDir == ctrl.projectDir) {
                     overwriteProjectDirDialog()
                     return
                 } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", fileOrDir)))
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", l10nQuoted(fileOrDir))))
                         return
                 } else if (fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true))
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", fileOrDir)))
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", l10nQuoted(fileOrDir))))
                         return
             } else {
                 if (fileOrDir.isDirectory()) {
-                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.dir", fileOrDir))
+                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.dir", l10nQuoted(fileOrDir)))
                     return
                 } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", fileOrDir)))
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", l10nQuoted(fileOrDir))))
                         return
                 } else if (fileOrDir.exists())
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileExists", fileOrDir)))
+                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileExists", l10nQuoted(fileOrDir))))
                         return
             }
 

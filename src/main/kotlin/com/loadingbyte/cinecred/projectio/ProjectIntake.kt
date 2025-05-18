@@ -158,7 +158,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     val link = readServiceLink(activeFile)
                     val service = SERVICES.find { it.canWatch(link) }
                     if (service == null) {
-                        val msg = l10n("projectIO.credits.unsupportedServiceLink", link)
+                        val msg = l10n("projectIO.credits.unsupportedServiceLink", l10nQuoted(link))
                         val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
                         callbacks.pushCreditsSpreadsheets(emptyList(), link, locatingLog + msgObj)
                     } else {
@@ -189,7 +189,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 // the file watcher should quickly trigger a call to this method again. Still, we push an
                 // error message in case something else goes wrong too.
                 val note = e.message ?: e.toString()
-                val msg = l10n("projectIO.credits.cannotReadCreditsFile", activeFile.fileName, note)
+                val msg = l10n("projectIO.credits.cannotReadCreditsFile", l10nQuoted(activeFile.name), note)
                 val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
                 callbacks.pushCreditsSpreadsheets(emptyList(), activeFile.toUri(), locatingLog + msgObj)
             }
@@ -316,7 +316,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             } else {
                 creditsFile = candidates.first()
                 if (candidates.size > 1) {
-                    val chosen = creditsFile.fileName
+                    val chosen = l10nQuoted(creditsFile.name)
                     val msg = l10n("projectIO.credits.multipleCreditsFiles", "<i>${availExtsStr()}</i>", chosen)
                     log.add(ParserMsg(null, null, null, null, WARN, msg))
                 }

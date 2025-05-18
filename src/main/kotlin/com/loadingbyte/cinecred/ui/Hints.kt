@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui
 import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nQuoted
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.withNewG2
@@ -29,9 +30,14 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
     val projPanel = welcPanel.projectsPanel
     val goProjStartPnl = fun() { welcPanel.setTab(WelcomeTab.PROJECTS); projPanel.projects_setCard(ProjectsCard.START) }
     val goPrefsPnl = fun() { welcPanel.setTab(WelcomeTab.PREFERENCES) }
+    val welcomeHint = l10n(
+        "ui.hints.welcomeTrack.welcome",
+        l10nQuoted(l10n("ui.welcome.preferences")),
+        l10nQuoted(l10n("ui.welcome.projects"))
+    )
     @Suppress("DEPRECATION")
     return listOf(
-        Hint(l10n("ui.hints.welcomeTrack.welcome"), welcPanel, Side.NONE, goPrefsPnl),
+        Hint(welcomeHint, welcPanel, Side.NONE, goPrefsPnl),
         Hint(l10n("ui.hints.welcomeTrack.project"), projPanel, Side.NONE, goProjStartPnl),
         Hint(l10n("ui.hints.welcomeTrack.create"), projPanel.leakedStartCreateButton, Side.BOTTOM, goProjStartPnl),
         Hint(l10n("ui.hints.welcomeTrack.open"), projPanel.leakedStartOpenButton, Side.BOTTOM, goProjStartPnl),

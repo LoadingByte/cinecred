@@ -495,7 +495,7 @@ sealed interface Picture : AutoCloseable {
             val linkWin = " href=\"https://ghostscript.com/releases/gsdnld.html\""
             val linkMac = " href=\"https://pages.uoregon.edu/koch/\""
             val line2 = when {
-                SystemInfo.isWindows -> l10n("imaging.ghostscriptMissing.msg.windows", linkWin)
+                SystemInfo.isWindows -> l10n("imaging.ghostscriptMissing.msg.windows", linkWin, l10nQuoted("Ghostscript AGPL Release"))
                 SystemInfo.isMacOS -> l10n("imaging.ghostscriptMissing.msg.macos", linkMac)
                 else -> l10n("imaging.ghostscriptMissing.msg.linux")
             }

@@ -109,7 +109,7 @@ class Table(
     }
 
     fun logMigrationPut(row: Int?, l10nColName: String?, value: String, mds: MigrationDataSource<*>? = null) {
-        log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", value), mds)
+        log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", l10nQuoted(value)), mds)
     }
 
     private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo

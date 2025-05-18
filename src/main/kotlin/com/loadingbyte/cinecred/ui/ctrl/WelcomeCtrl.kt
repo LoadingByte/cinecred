@@ -648,7 +648,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             DeliveryDestTemplate(UUID.randomUUID(), "", templateStr)
             return null
         } catch (e: DeliveryDestTemplate.UnrecognizedPlaceholderException) {
-            return l10n("ui.preferences.deliveryDestTemplates.configure.unknownPlaceholder", e.placeholderTag)
+            val tag = l10nQuoted("{{${e.placeholderTag}}}")
+            return l10n("ui.preferences.deliveryDestTemplates.configure.unknownPlaceholder", tag)
         }
     }
 

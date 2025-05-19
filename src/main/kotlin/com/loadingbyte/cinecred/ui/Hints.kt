@@ -50,9 +50,9 @@ fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
     val stylingPanel = ctrl.stylingDialog.panel
     val stylingTreeHint = l10n(
         "ui.hints.projectTrack.stylingTree",
-        l10n("projectIO.credits.table.style"),
-        l10n("projectIO.credits.table.pic"),
-        l10n("projectIO.credits.table.video")
+        l10nQuoted("{{${l10n("projectIO.credits.table.style")} [${l10n("ui.styling.letter.name")}]}}"),
+        l10nQuoted("{{${l10n("projectIO.credits.table.pic")} [${l10n("filename")}]}}"),
+        l10nQuoted("{{${l10n("projectIO.credits.table.video")} [${l10n("filename")}]}}"),
     )
     @Suppress("DEPRECATION")
     return listOf(

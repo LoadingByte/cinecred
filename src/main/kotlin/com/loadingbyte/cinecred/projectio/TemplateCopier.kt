@@ -141,10 +141,12 @@ private fun fillIn(string: String, template: Template): String = string
             "scrollPxPerFrame" -> max(1, template.fps.run { 78 * denominator / numerator } * template.scale).toString()
             "projectIO.credits.table.headDesc" -> {
                 val styleKw = l10n("projectIO.credits.table.style", template.locale)
+                val stylePlaceholder = "[${l10n("ui.styling.letter.name", template.locale)}]"
                 val name = l10n("project.template.letterStyleName", template.locale)
                 l10n(
                     key,
-                    styleKw,
+                    l10nQuoted("{{$styleKw $stylePlaceholder}}", template.locale),
+                    stylePlaceholder,
                     l10nQuoted("{{$styleKw}}", template.locale),
                     l10nEnumQuoted("Copyright 2023 {{$styleKw $name}}Thomas Cash", locale = template.locale),
                     locale = template.locale
@@ -153,12 +155,14 @@ private fun fillIn(string: String, template: Template): String = string
             "projectIO.credits.table.tailDesc", "projectIO.credits.table.bodyDesc" -> {
                 val picKw = l10n("projectIO.credits.table.pic", template.locale)
                 val videoKw = l10n("projectIO.credits.table.video", template.locale)
+                val filenamePlaceholder = "[${l10n("filename", template.locale)}]"
                 l10n(
                     key,
                     l10nQuoted("{{${l10n("projectIO.credits.table.style", template.locale)} …}}", template.locale),
                     "@" + l10n("projectIO.credits.table.head", template.locale),
-                    l10nQuoted("{{${l10n("blank", template.locale)}}}"),
-                    picKw, videoKw,
+                    l10nQuoted("{{${l10n("blank", template.locale)}}}", template.locale),
+                    l10nQuoted("{{$picKw $filenamePlaceholder}}", template.locale),
+                    l10nQuoted("{{$videoKw $filenamePlaceholder}}", template.locale),
                     l10nEnumQuoted(
                         "{{$picKw Cinecred Logo}}", "{{$videoKw Blooper 3.mov XXL}}",
                         locale = template.locale
@@ -167,7 +171,7 @@ private fun fillIn(string: String, template: Template): String = string
                 )
             }
             "projectIO.credits.table.vGapDesc" ->
-                l10n(key, l10nQuoted("px"))
+                l10n(key, l10nQuoted("px", template.locale), locale = template.locale)
             "projectIO.credits.table.breakHarmonizationDesc" ->
                 l10n(
                     key,

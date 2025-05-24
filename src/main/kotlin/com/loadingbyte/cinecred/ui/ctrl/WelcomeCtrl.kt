@@ -23,7 +23,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
-import java.text.MessageFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
@@ -132,7 +131,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_configureOverlay_setImageFileExtAssortment(imageAss)
 
         welcomeView.setChangelog(CHANGELOG_HTML)
-        welcomeView.setAbout(ABOUT_HTML)
+        welcomeView.setAbout(aboutHtml())
         welcomeView.setLicenses(LICENSES)
     }
 
@@ -699,10 +698,30 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             """
         }
 
-        private val ABOUT_HTML = MessageFormat.format(
-            useResourceStream("/about.html") { it.bufferedReader().readText() },
-            VERSION, l10n("slogan"), COPYRIGHT, l10n("ui.about.translators")
-        )
+        private fun aboutHtml(): String {
+            val translators = useResourceStream("/translators.properties") { Properties().apply { load(it.reader()) } }
+                .entries
+                .map { (tag, people) -> Locale.forLanguageTag(tag as String).displayName to people }
+                .sortedWithCollator(caseInsensitiveCollator()) { (lang, _) -> lang }
+                .joinToString("  \u2022  ") { (lang, people) ->
+                    "$lang: <i>".replace(' ', '\u00A0') +
+                            l10nEnum((people as String).split(',').map { it.replace(' ', '\u00A0') }) + "</i>"
+                }
+            return """
+                <html>
+                    <body style="text-align: center">
+                        <p style="margin-top: 0">
+                            Cinecred $VERSION: ${l10n("slogan")}<br>
+                            <i>$COPYRIGHT</i>
+                        </p>
+                        <p>
+                            <u>${l10n("ui.about.translators")}</u><br>
+                            $translators
+                        </p>
+                    </body>
+                </html>
+            """
+        }
 
         private val LICENSES = run {
             val rawAppLicenses = useResourcePath("/licenses") { appLicensesDir ->

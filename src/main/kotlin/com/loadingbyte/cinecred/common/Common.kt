@@ -196,6 +196,13 @@ fun Path.isAccessibleDirectory(thatContainsNonHiddenFiles: Boolean = false): Boo
             false
         }
 
+fun Path.isSameFileAsSafely(other: Path): Boolean =
+    try {
+        isSameFileAs(other)
+    } catch (_: IOException) {
+        false
+    }
+
 
 /**
  * The implementation of [createDirectories] will throw an exception if the path already exists and is a symbolic link

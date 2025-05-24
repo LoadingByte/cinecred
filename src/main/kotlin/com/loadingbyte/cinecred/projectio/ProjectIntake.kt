@@ -15,7 +15,6 @@ import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.awt.Font
 import java.io.IOException
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.*
@@ -147,7 +146,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         if (activeFile == null)
             callbacks.pushCreditsSpreadsheets(emptyList(), null, locatingLog)
         else if (
-            changedFile == activeFile || currentCreditsFile.let { it == null || !safeIsSameFile(it, activeFile) }
+            changedFile == activeFile || currentCreditsFile.let { it == null || !it.isSameFileAsSafely(activeFile) }
         ) {
             linkedCreditsWatcher?.cancel()
             linkedCreditsWatcher = null
@@ -356,13 +355,6 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 }
             return emptyList()
         }
-
-        private fun safeIsSameFile(p1: Path, p2: Path) =
-            try {
-                Files.isSameFile(p1, p2)
-            } catch (_: IOException) {
-                false
-            }
 
     }
 

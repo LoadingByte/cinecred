@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
+import com.loadingbyte.cinecred.common.isSameFileAsSafely
 import com.loadingbyte.cinecred.ui.PROJECT_HINT_TRACK_PENDING_PREFERENCE
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
@@ -99,6 +100,6 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
     }
 
     override fun isProjectDirOpen(projectDir: Path): Boolean =
-        projectCtrls.any { it.projectDir == projectDir }
+        projectCtrls.any { it.projectDir.isSameFileAsSafely(projectDir) }
 
 }

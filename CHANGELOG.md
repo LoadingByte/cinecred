@@ -65,6 +65,7 @@ Cinecred Changelog
 - Fixed crash upon adding a raster image overlay.
 - Fixed opening of folders, websites, and mail templates on newer KDE versions.
 - Increased the UI contrast to improve legibility.
+- On macOS, the window title bars are now always dark.
 - The macOS file chooser is now localized.
 
 ### Compatibility Notes

@@ -847,9 +847,8 @@ private class CreditsReader(
                 val missingGlyphLines = styledLines.filter { it.formatted(styling).missesGlyphs }
                 if (missingGlyphLines.isNotEmpty()) {
                     val ns = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }
-                    val k = if (ns.size == 1) "project.styling.constr.missingGlyphs" else
-                        "projectIO.credits.missingGlyphs"
-                    table.log(row, l10nColName, WARN, l10n(k, l10nEnumQuoted(ns)))
+                    val msg = l10n("project.styling.constr.missingGlyphs", ns.size, l10nEnumQuoted(ns))
+                    table.log(row, l10nColName, WARN, msg)
                 }
                 BodyElement.Str(styledLines.toPersistentList())
             }

@@ -774,7 +774,7 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                             val letterStyleName = cst.getLetterStyleName(styling, style)
                             val letterStyle = styling.letterStyles.find { l -> l.name == letterStyleName }
                             if (letterStyle != null && format(string, letterStyle, styling).missesGlyphs) {
-                                val msg = l10n("project.styling.constr.missingGlyphs", l10nQuoted(letterStyleName))
+                                val msg = l10n("project.styling.constr.missingGlyphs", 1, l10nQuoted(letterStyleName))
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
                         }

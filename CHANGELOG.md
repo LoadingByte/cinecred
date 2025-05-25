@@ -25,6 +25,7 @@ Cinecred Changelog
 - The credits table may now be an online EtherCalc spreadsheet.
 - On macOS, the credits file may now be an Apple Numbers spreadsheet.
 - Added support for the Windows Java Access Bridge.
+- Added a translation to Spanish.
 
 ### Fixes
 

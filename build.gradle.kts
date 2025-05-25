@@ -35,7 +35,7 @@ val addOpens = javaProperties.getProperty("addOpens").split(' ')
 val splashScreen = javaProperties.getProperty("splashScreen")!!
 val javaOptions = javaProperties.getProperty("javaOptions")!!
 
-val locales = listOf("cs", "de", "en", "fr", "zh-CN").map(Locale::forLanguageTag)
+val locales = listOf("cs", "de", "en", "es", "fr", "zh-CN").map(Locale::forLanguageTag)
 val url = "https://cinecred.com"
 val vendor = "Felix Mujkanovic"
 val email = "felix@cinecred.com"

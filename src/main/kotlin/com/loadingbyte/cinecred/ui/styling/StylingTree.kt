@@ -303,6 +303,9 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         }
     }
 
+    // This is a hack to ensure that the tree is never scrolled horizontally when inside a JScrollPane.
+    override fun getPreferredSize(): Dimension = super.preferredSize.apply { width = 0 }
+
 
     private sealed interface TypeInfo {
 

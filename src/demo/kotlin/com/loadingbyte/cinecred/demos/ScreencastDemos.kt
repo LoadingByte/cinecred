@@ -55,7 +55,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
 
         val creditsFile = projectDir.resolve("Credits.csv")
         var picLineIdx = 0
-        addProjectWindows(setupVidWin = true, setupDlvWin = true, prepareProjectDir = {
+        addProjectWindows(setupVidWin = true, setupDlvWin = true, styWinSplitRatio = 0.225, prepareProjectDir = {
             val lines = creditsFile.readLines().toMutableList()
             lines.subList(0, lines.indexOfFirst { it.startsWith("@") }).clear()
             val kw = l10n("projectIO.credits.table.pic")

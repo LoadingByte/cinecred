@@ -462,10 +462,11 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
         form: StyleForm<S>, setting: StyleSetting<S, *>, idx: Int = 0, center: Boolean = true
     ): Point {
         fun inSimpleListWidget(widget: SimpleListWidget<*>): Component {
-            if (idx == 0)
-                return widget.components[0]
-            var ctr = 1
-            for (c in widget.components[1].components)
+            var ctr = 0
+            if (widget.components.size == 2)
+                if (idx == 0) return widget.components[0]
+                else ctr = 1
+            for (c in widget.components.last().components)
                 if (c is JPanel /* ToggleButtonGroupWidget's GroupPanel */) {
                     for (button in c.components)
                         if (ctr++ == idx) return button

@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.ui.helper.*
+import java.text.NumberFormat
 import java.util.*
 import javax.swing.Icon
 
@@ -101,7 +102,8 @@ class AspectRatioOverlay(
     val v: Double
 ) : ConfigurableOverlay {
 
-    override val label get() = l10n("ui.overlays.label.aspectRatio", "$h:$v")
+    override val label
+        get() = l10n("ui.overlays.label.aspectRatio", NumberFormat.getInstance().run { "${format(h)}:${format(v)}" })
 
     override fun draw(
         resolution: Resolution,

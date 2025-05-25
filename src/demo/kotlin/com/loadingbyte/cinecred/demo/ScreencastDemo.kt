@@ -347,7 +347,7 @@ class Screencast(
                 break
         }
         check(caption.size <= 2) { "Caption '$l10nKey' has ${caption.size} lines (only 2 are allowed)." }
-        hold(1000 + 35 * text.length, holdAction)
+        hold(1000 + 35 * text.codePoints().map { c -> if (Character.isIdeographic(c)) 4 else 1 }.sum(), holdAction)
         caption.clear()
     }
 

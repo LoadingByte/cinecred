@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
 import com.loadingbyte.cinecred.natives.nfd.nfd_h.*
 import com.loadingbyte.cinecred.natives.nfd.nfdu8filteritem_t
-import java.awt.Toolkit
 import java.awt.Window
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
@@ -42,7 +41,6 @@ fun showFileDialog(
 
     // Don't block the AWT thread with native calls to avoid rare hangs.
     val ref = AtomicReference<Path?>()
-    val loop = Toolkit.getDefaultToolkit().systemEventQueue.createSecondaryLoop()
     Thread({
         try {
             if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
@@ -65,10 +63,8 @@ fun showFileDialog(
             }
         } finally {
             NFD_Quit()
-            loop.exit()
         }
-    }, "FileDialog").start()
-    loop.enter()
+    }, "FileDialog").apply { start(); join() }
     ref.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser()
@@ -93,7 +89,6 @@ fun showFolderDialog(
 
     // Don't block the AWT thread with native calls to avoid rare hangs.
     val ref = AtomicReference<Path?>()
-    val loop = Toolkit.getDefaultToolkit().systemEventQueue.createSecondaryLoop()
     Thread({
         try {
             if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
@@ -107,10 +102,8 @@ fun showFolderDialog(
             }
         } finally {
             NFD_Quit()
-            loop.exit()
         }
-    }, "FileDialog").start()
-    loop.enter()
+    }, "FileDialog").apply { start(); join() }
     ref.get()?.let { return if (it === SENTINEL) null else it }
 
     val fc = JFileChooser(folder?.toFile())

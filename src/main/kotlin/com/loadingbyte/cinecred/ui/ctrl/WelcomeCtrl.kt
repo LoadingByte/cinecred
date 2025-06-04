@@ -227,7 +227,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         else if (CHECK_FOR_UPDATES_PREFERENCE.get()) {
             val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build()
             val req = HttpRequest.newBuilder(URI.create("https://cinecred.com/dl/api/v1/components"))
-                .setHeader("User-Agent", "Cinecred/$VERSION").build()
+                .setHeader("User-Agent", USER_AGENT).build()
             client.sendAsync(req, HttpResponse.BodyHandlers.ofString()).thenAccept { resp ->
                 if (resp.statusCode() != 200)
                     return@thenAccept

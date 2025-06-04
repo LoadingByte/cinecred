@@ -43,6 +43,18 @@ import kotlin.math.sqrt
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
 val COPYRIGHT = useResourceStream("/copyright") { it.bufferedReader().readText().trim() }
 
+val USER_AGENT =
+    "Cinecred/$VERSION (" + when {
+        SystemInfo.isWindows -> "Windows"
+        SystemInfo.isMacOS -> "macOS"
+        SystemInfo.isLinux -> "Linux"
+        else -> "?"
+    } + " ${System.getProperty("os.version")} " + when {
+        SystemInfo.isX86_64 -> "x86_64"
+        SystemInfo.isAARCH64 -> "arm64"
+        else -> "?"
+    } + ")"
+
 
 val LOGGER: Logger = LoggerFactory.getLogger("Cinecred")
 val CLEANER: Cleaner = Cleaner.create()

@@ -29,7 +29,7 @@ object EtherCalcService : Service {
     override val accounts: List<Account> get() = _accounts
 
     private val httpClient by lazy { HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build() }
-    private fun httpRequestBuilder(uri: URI) = HttpRequest.newBuilder(uri).setHeader("User-Agent", "Cinecred/$VERSION")
+    private fun httpRequestBuilder(uri: URI) = HttpRequest.newBuilder(uri).setHeader("User-Agent", USER_AGENT)
 
     private val accountsFile = SERVICE_CONFIG_DIR.resolve("ethercalc.toml")
     private val accountsLock = ReentrantLock()

@@ -5,6 +5,10 @@ Cinecred Changelog
 1.8.1-SNAPSHOT
 --------------
 
+### Fixes
+
+- Fixed crashes upon entering illegal text into the break harmonization column.
+
 
 1.8.0
 -----

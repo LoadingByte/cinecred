@@ -631,7 +631,7 @@ private class CreditsReader(
             if (unknown.isNotEmpty()) {
                 val kws = l10nEnumQuoted(unknown)
                 val opts = "<i>${l10nEnum(l10n(HEAD_KW.key), l10n(BODY_KW.key), l10n(TAIL_KW.key))}</i>"
-                val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", kws, opts)
+                val msg = l10n("projectIO.credits.unknownBreakHarmonizationKeyword", unknown.size, kws, opts)
                 table.log(row, "breakHarmonization", WARN, msg)
             }
         }

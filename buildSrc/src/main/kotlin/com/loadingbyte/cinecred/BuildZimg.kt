@@ -65,8 +65,8 @@ abstract class BuildZimg : DefaultTask() {
             )
         } else {
             if (forPlatform.os == MAC) {
-                cc += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11")
-                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11", "-dynamiclib")
+                cc += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos12")
+                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos12", "-dynamiclib")
                 ld += "-Wl,-install_name,@rpath/${outFile.name}"
             } else if (forPlatform.os == LINUX) {
                 cc += listOf("g++")

@@ -47,7 +47,7 @@ abstract class BuildNFD : DefaultTask() {
             var lnkArgs = emptyList<String>()
             if (forPlatform.os == MAC) {
                 cmd += listOf("clang", "-isysroot", "/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk")
-                cmd += listOf("-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos11")
+                cmd += listOf("-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos12")
                 cmd += "-Wl,-install_name,@rpath/${outFile.name}"
                 cmd += listOf("-framework", "AppKit", "-framework", "UniformTypeIdentifiers")
                 srcFile = repoDir.resolve("nfd_cocoa.m")

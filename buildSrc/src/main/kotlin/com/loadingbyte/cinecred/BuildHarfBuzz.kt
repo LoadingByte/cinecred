@@ -56,7 +56,7 @@ abstract class BuildHarfBuzz : DefaultTask() {
             cmd += listOf("cmd", "/C", sub.joinToString(" "))
         } else {
             if (forPlatform.os == MAC) {
-                cmd += listOf("clang", "-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos11")
+                cmd += listOf("clang", "-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos12")
                 cmd += "-Wl,-install_name,@rpath/${outFile.name}"
             } else if (forPlatform.os == LINUX)
                 cmd += listOf("gcc", "-shared", "-s")

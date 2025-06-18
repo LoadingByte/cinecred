@@ -56,7 +56,7 @@ update, which means:
     - To build Skia, you also need Python and Git on all platforms. If there are
       Python errors, just running the Gradle task again usually works. And on
       Windows, the build works best when launched from the Git Bash.
-    - For macOS, we build on and for macOS 11 as Skia and JavaCPP do that too.
+    - For macOS, we build on and for macOS 12 as JavaCPP does that too.
     - Also on macOS, cross-compiling for ARM on x86 works flawlessly.
     - For Linux, we build on Debian 11 to guarantee a low enough GLIBC version.
 - Generating Java bindings using jextract, which go into `src/main/java`.

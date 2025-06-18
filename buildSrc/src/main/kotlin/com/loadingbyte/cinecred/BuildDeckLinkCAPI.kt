@@ -43,7 +43,7 @@ abstract class BuildDeckLinkCAPI : DefaultTask() {
             cmd += listOf("cmd", "/C", sub.joinToString(" "))
         } else {
             if (forPlatform.os == MAC) {
-                cmd += listOf("clang++", "-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos11")
+                cmd += listOf("clang++", "-dynamiclib", "-target", "${forPlatform.arch.slug}-apple-macos12")
                 cmd += listOf("-Wl,-install_name,@rpath/${outFile.name}", "-framework", "CoreFoundation")
             } else if (forPlatform.os == LINUX)
                 cmd += listOf("g++", "-shared", "-s", "-Wl,-rpath,\$ORIGIN")

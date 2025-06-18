@@ -62,7 +62,7 @@ abstract class BuildSkia : DefaultTask() {
             if (forPlatform.os == Platform.OS.MAC) {
                 // Just like on Windows, Skia's build system can't resolve symbols, but we don't care.
                 gnArgs += "extra_ldflags=[\"-Wl,-undefined,dynamic_lookup\"]"
-                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos11", "-dynamiclib")
+                ld += listOf("clang++", "-target", "${forPlatform.arch.slug}-apple-macos12", "-dynamiclib")
                 // Just like on Windows, our actual final library also contains some missing symbols.
                 ld += listOf("-dead_strip", "-Wl,-undefined,dynamic_lookup", "-Wl,-install_name,@rpath/${outFile.name}")
             } else if (forPlatform.os == Platform.OS.LINUX)

@@ -100,103 +100,18 @@ private:
 };
 
 
-class VideoFrameImpl : public IDeckLinkVideoFrame, public IDeckLinkVideoFrameMetadataExtensions {
+class VideoBufferImpl : public IDeckLinkVideoBuffer {
 public:
-    VideoFrameImpl(int width, int height, int rowBytes, BMDPixelFormat pixelFormat, FRAME_METADATA, void* bytes) :
-        fWidth(width), fHeight(height), fRowBytes(rowBytes), fPixelFormat(pixelFormat),
-        fEOTF(eotf), fRX(rx), fRY(ry), fGX(gx), fGY(gy), fBX(bx), fBY(by), fWX(wx), fWY(wy), fMaxDML(maxDML), fMinDML(minDML), fMaxCLL(maxCLL), fMaxFALL(maxFALL), fCS(cs),
-        fBytes(bytes) {}
-    // IDeckLinkVideoFrame
-    long GetWidth(void) { return fWidth; }
-    long GetHeight(void) { return fHeight; }
-    long GetRowBytes(void) { return fRowBytes; }
-    BMDPixelFormat GetPixelFormat(void) { return fPixelFormat; }
-    BMDFrameFlags GetFlags(void) { return bmdFrameContainsHDRMetadata; }
+    VideoBufferImpl(void* bytes) : fBytes(bytes) {}
     HRESULT GetBytes(void** buffer) {
         *buffer = fBytes;
         return S_OK;
     }
-    HRESULT GetTimecode(BMDTimecodeFormat, IDeckLinkTimecode**) { return S_FALSE; }
-    HRESULT GetAncillaryData(IDeckLinkVideoFrameAncillary**) { return S_FALSE; }
-    // IDeckLinkVideoFrameMetadataExtensions
-    HRESULT GetInt(BMDDeckLinkFrameMetadataID metadataID, int64_t* value) {
-        switch (metadataID) {
-            case bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc:
-                *value = fEOTF;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataColorspace:
-                *value = fCS;
-                return S_OK;
-            default:
-                *value = 0;
-                return E_INVALIDARG;
-        }
-    }
-    HRESULT GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value) {
-        switch (metadataID) {
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX:
-                *value = fRX;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY:
-                *value = fRY;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX:
-                *value = fGX;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY:
-                *value = fGY;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX:
-                *value = fBX;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY:
-                *value = fBY;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRWhitePointX:
-                *value = fWX;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRWhitePointY:
-                *value = fWY;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance:
-                *value = fMaxDML;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance:
-                *value = fMinDML;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel:
-                *value = fMaxCLL;
-                return S_OK;
-            case bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel:
-                *value = fMaxFALL;
-                return S_OK;
-            default:
-                *value = 0;
-                return E_INVALIDARG;
-        }
-    }
-    HRESULT GetFlag(BMDDeckLinkFrameMetadataID, nativeBool_t* value) {
-        *value = false;
-        return E_INVALIDARG;
-    }
-    HRESULT GetString(BMDDeckLinkFrameMetadataID, nativeStr_t* value) {
-        *value = nullptr;
-        return E_INVALIDARG;
-    }
-    HRESULT GetBytes(BMDDeckLinkFrameMetadataID, void*, unsigned int* bufferSize) {
-        *bufferSize = 0;
-        return E_INVALIDARG;
-    }
-    // IUnknown
+    HRESULT StartAccess(BMDBufferAccessFlags flags) { return S_OK; }
+    HRESULT EndAccess(BMDBufferAccessFlags flags) { return S_OK; }
     HRESULT QueryInterface(REFIID iid, LPVOID* ppv) {
-        if (std::memcmp(&iid, &IID_IDeckLinkVideoFrameMetadataExtensions, sizeof(REFIID)) == 0) {
-            AddRef();
-            *ppv = static_cast<IDeckLinkVideoFrameMetadataExtensions*>(this);
-            return S_OK;
-        } else {
-            *ppv = nullptr;
-            return E_NOINTERFACE;
-        }
+        *ppv = nullptr;
+        return E_NOINTERFACE;
     }
     ULONG AddRef() { return ++fRefCount; }
     ULONG Release() {
@@ -206,14 +121,6 @@ public:
         return refCount;
     }
 private:
-    int fWidth;
-    int fHeight;
-    int fRowBytes;
-    BMDPixelFormat fPixelFormat;
-    int fEOTF;
-    double fRX, fRY, fGX, fGY, fBX, fBY, fWX, fWY;
-    double fMaxDML, fMinDML, fMaxCLL, fMaxFALL;
-    int fCS;
     void* fBytes;
     std::atomic<ULONG> fRefCount = 1;
 };
@@ -260,8 +167,8 @@ IDeckLinkVideoOutputCallback* IDeckLinkVideoOutputCallback_Create(scheduledFrame
     return new VideoOutputCallbackImpl(callback);
 }
 
-IDeckLinkVideoFrame* IDeckLinkVideoFrame_Create(int width, int height, int rowBytes, int pixelFormat, FRAME_METADATA, void* bytes) {
-    return new VideoFrameImpl(width, height, rowBytes, static_cast<BMDPixelFormat>(pixelFormat), eotf, rx, ry, gx, gy, bx, by, wx, wy, maxDML, minDML, maxCLL, maxFALL, cs, bytes);
+IDeckLinkVideoBuffer* IDeckLinkVideoBuffer_Create(void* bytes) {
+    return new VideoBufferImpl(bytes);
 }
 
 
@@ -347,6 +254,11 @@ bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput* output
     return output->SetScheduledFrameCompletionCallback(callback) == S_OK;
 }
 
+IDeckLinkVideoFrame* IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput* output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer* buffer) {
+    IDeckLinkMutableVideoFrame* frame;
+    return output->CreateVideoFrameWithBuffer(width, height, rowBytes, static_cast<BMDPixelFormat>(pixelFormat), bmdFrameFlagDefault, buffer, &frame) == S_OK ? frame : nullptr;
+}
+
 bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput* output, IDeckLinkVideoFrame* frame) {
     return output->DisplayVideoFrameSync(frame) == S_OK;
 }
@@ -383,3 +295,32 @@ long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode* mode) {
 
 int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode* mode) { return mode->GetFieldDominance(); }
 int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode* mode) { return mode->GetFlags(); }
+
+
+bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame* frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs) {
+    IDeckLinkMutableVideoFrame* mutableFrame;
+    if (frame->QueryInterface(IID_IDeckLinkMutableVideoFrame, (void**) &mutableFrame) != S_OK)
+        return false;
+    bool success = mutableFrame->SetFlags(bmdFrameContainsHDRMetadata) == S_OK;
+    mutableFrame->Release();
+    IDeckLinkVideoFrameMutableMetadataExtensions* metadata;
+    if (frame->QueryInterface(IID_IDeckLinkVideoFrameMutableMetadataExtensions, (void**) &metadata) != S_OK)
+        return false;
+    success &=
+        metadata->SetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, eotf) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, rx) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, ry) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, gx) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, gy) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, bx) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, by) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, wx) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, wy) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, maxDML) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, minDML) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, maxCLL) == S_OK &&
+        metadata->SetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, maxFALL) == S_OK &&
+        metadata->SetInt(bmdDeckLinkFrameMetadataColorspace, cs) == S_OK;
+    metadata->Release();
+    return success;
+}

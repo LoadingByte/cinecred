@@ -86,11 +86,14 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigRec2020Output                               = /* 'rec2' */ 0x72656332,	// Ensure output is Rec.2020 colorspace
     bmdDeckLinkConfigQuadLinkSDIVideoOutputSquareDivisionSplit   = /* 'SDQS' */ 0x53445153,
     bmdDeckLinkConfigOutput1080pAsPsF                            = /* 'pfpr' */ 0x70667072,
+    bmdDeckLinkConfigOutputValidateEDIDForDolbyVision            = /* 'pred' */ 0x70726564,
 
     /* Video Output Integers */
 
     bmdDeckLinkConfigVideoOutputConnection                       = /* 'vocn' */ 0x766F636E,
     bmdDeckLinkConfigVideoOutputConversionMode                   = /* 'vocm' */ 0x766F636D,
+    bmdDeckLinkConfigVideoOutputConversionColorspaceDestination  = /* 'vccd' */ 0x76636364,	// Parameter is of type BMDColorspace
+    bmdDeckLinkConfigVideoOutputConversionColorspaceSource       = /* 'vccs' */ 0x76636373,	// Parameter is of type BMDColorspace
     bmdDeckLinkConfigAnalogVideoOutputFlags                      = /* 'avof' */ 0x61766F66,
     bmdDeckLinkConfigReferenceInputTimingOffset                  = /* 'glot' */ 0x676C6F74,
     bmdDeckLinkConfigReferenceOutputMode                         = /* 'glOm' */ 0x676C4F6D,
@@ -110,6 +113,9 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigVideoOutputCompositeChromaGain              = /* 'oicg' */ 0x6F696367,
     bmdDeckLinkConfigVideoOutputSVideoLumaGain                   = /* 'oslg' */ 0x6F736C67,
     bmdDeckLinkConfigVideoOutputSVideoChromaGain                 = /* 'oscg' */ 0x6F736367,
+    bmdDeckLinkConfigDolbyVisionCMVersion                        = /* 'dvvr' */ 0x64767672,
+    bmdDeckLinkConfigDolbyVisionMasterMinimumNits                = /* 'mnnt' */ 0x6D6E6E74,
+    bmdDeckLinkConfigDolbyVisionMasterMaximumNits                = /* 'mxnt' */ 0x6D786E74,
 
     /* Video Input Flags */
 
@@ -185,6 +191,7 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigEthernetPTPPriority1                        = /* 'PTP1' */ 0x50545031,
     bmdDeckLinkConfigEthernetPTPPriority2                        = /* 'PTP2' */ 0x50545032,
     bmdDeckLinkConfigEthernetPTPDomain                           = /* 'PTPD' */ 0x50545044,
+    bmdDeckLinkConfigEthernetPTPLogAnnounceInterval              = /* 'PTPA' */ 0x50545041,
 
     /* Network Strings */
 

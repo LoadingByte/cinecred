@@ -161,13 +161,31 @@ class DeckLink(
             else -> Colorspace_Rec709()
         }
         val chr = rep.colorSpace.primaries.chromaticities ?: ColorSpace.Primaries.BT709.chromaticities!!
-        return IDeckLinkVideoFrame_Create(
-            w, h, bitmap.linesize(0), depth.code, eotf,
-            chr.rx.toDouble(), chr.ry.toDouble(), chr.gx.toDouble(), chr.gy.toDouble(),
-            chr.bx.toDouble(), chr.by.toDouble(), chr.wx.toDouble(), chr.wy.toDouble(),
-            1000.0, 0.0001, 1000.0, 50.0, cs,
-            bitmap.memorySegment(0)
+        val buffer = IDeckLinkVideoBuffer_Create(bitmap.memorySegment(0))
+        if (buffer == NULL) {
+            error("Failed to create frame buffer.")
+            return null
+        }
+        val frame = IDeckLinkOutput_CreateVideoFrameWithBuffer(
+            outputHandle, w, h, bitmap.linesize(0), depth.code, buffer
         )
+        IUnknown_Release(buffer)
+        if (frame == NULL) {
+            error("Failed to create frame.")
+            return null
+        }
+        if (!IDeckLinkVideoFrame_SetMetadata(
+                frame, eotf,
+                chr.rx.toDouble(), chr.ry.toDouble(), chr.gx.toDouble(), chr.gy.toDouble(),
+                chr.bx.toDouble(), chr.by.toDouble(), chr.wx.toDouble(), chr.wy.toDouble(),
+                1000.0, 0.0001, 1000.0, 50.0, cs
+            )
+        ) {
+            error("Failed to apply frame metadata.")
+            IUnknown_Release(frame)
+            return null
+        }
+        return frame
     }
 
     private fun createBlackBitmap(): Bitmap? {
@@ -258,7 +276,10 @@ class DeckLink(
                 return
             if (!IDeckLinkProfileAttributes_IsActive(attributesHandle) ||
                 !IDeckLinkProfileAttributes_SupportsPlayback(attributesHandle)
-            ) return
+            ) {
+                IUnknown_Release(attributesHandle)
+                return
+            }
             val id = getDeviceId(attributesHandle)
             IUnknown_Release(attributesHandle)
             val outputHandle = IDeckLink_QueryIDeckLinkOutput(deviceHandle)
@@ -266,8 +287,10 @@ class DeckLink(
                 return
             val name = getDeviceName(deviceHandle)
             val modes = getDeviceModes(outputHandle)
-            if (modes.isEmpty())
+            if (modes.isEmpty()) {
+                IUnknown_Release(outputHandle)
                 return
+            }
             IUnknown_AddRef(deviceHandle)
             notificationLock.withLock {
                 deckLinks += DeckLink(deviceHandle, outputHandle, id, name, modes)
@@ -279,7 +302,8 @@ class DeckLink(
 
         private fun deviceRemoved(deviceHandle: MemorySegment) {
             notificationLock.withLock {
-                if (deckLinks.removeIf { it.deviceHandle == deviceHandle }) {
+                deckLinks.removeFirstOrNull { it.deviceHandle == deviceHandle }?.let { deckLink ->
+                    IUnknown_Release(deckLink.outputHandle)
                     IUnknown_Release(deviceHandle)
                     val deckLinksCopy = deckLinks.toMutableList()
                     for (listener in listeners)
@@ -332,6 +356,7 @@ class DeckLink(
                 ) modes += Mode(name, code, Resolution(width, height), FPS(fpsNumerator, fpsDenominator), scan, depths)
                 IUnknown_Release(modeHandle)
             }
+            IUnknown_Release(modeIterHandle)
             modes.sortWith(Comparator.comparingInt<Mode> { it.resolution.widthPx }
                 .thenComparing(Mode::scan)
                 .thenComparingDouble { it.fps.frac })

@@ -281,24 +281,24 @@ public class decklinkcapi_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkVideoFrame_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$26,"IDeckLinkVideoFrame_Create");
+    public static MethodHandle IDeckLinkVideoBuffer_Create$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.const$25,"IDeckLinkVideoBuffer_Create");
     }
     /**
      * {@snippet :
-     * IDeckLinkVideoFrame* IDeckLinkVideoFrame_Create(int width, int height, int rowBytes, int pixelFormat, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs, void* bytes);
+     * IDeckLinkVideoBuffer* IDeckLinkVideoBuffer_Create(void* bytes);
      * }
      */
-    public static MemorySegment IDeckLinkVideoFrame_Create(int width, int height, int rowBytes, int pixelFormat, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs, MemorySegment bytes) {
-        var mh$ = IDeckLinkVideoFrame_Create$MH();
+    public static MemorySegment IDeckLinkVideoBuffer_Create(MemorySegment bytes) {
+        var mh$ = IDeckLinkVideoBuffer_Create$MH();
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(width, height, rowBytes, pixelFormat, eotf, rx, ry, gx, gy, bx, by, wx, wy, maxDML, minDML, maxCLL, maxFALL, cs, bytes);
+            return (java.lang.foreign.MemorySegment)mh$.invokeExact(bytes);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
     }
     public static MethodHandle IUnknown_AddRef$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$27,"IUnknown_AddRef");
+        return RuntimeHelper.requireNonNull(constants$0.const$26,"IUnknown_AddRef");
     }
     /**
      * {@snippet :
@@ -314,7 +314,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IUnknown_Release$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$28,"IUnknown_Release");
+        return RuntimeHelper.requireNonNull(constants$0.const$27,"IUnknown_Release");
     }
     /**
      * {@snippet :
@@ -330,7 +330,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDiscovery_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$30,"IDeckLinkDiscovery_Create");
+        return RuntimeHelper.requireNonNull(constants$0.const$29,"IDeckLinkDiscovery_Create");
     }
     /**
      * {@snippet :
@@ -346,7 +346,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDiscovery_InstallDeviceNotifications$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$32,"IDeckLinkDiscovery_InstallDeviceNotifications");
+        return RuntimeHelper.requireNonNull(constants$0.const$31,"IDeckLinkDiscovery_InstallDeviceNotifications");
     }
     /**
      * {@snippet :
@@ -362,7 +362,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLink_GetDisplayName$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$34,"IDeckLink_GetDisplayName");
+        return RuntimeHelper.requireNonNull(constants$0.const$33,"IDeckLink_GetDisplayName");
     }
     /**
      * {@snippet :
@@ -378,7 +378,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLink_QueryIDeckLinkProfileAttributes$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$35,"IDeckLink_QueryIDeckLinkProfileAttributes");
+        return RuntimeHelper.requireNonNull(constants$0.const$34,"IDeckLink_QueryIDeckLinkProfileAttributes");
     }
     /**
      * {@snippet :
@@ -394,7 +394,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLink_QueryIDeckLinkOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$36,"IDeckLink_QueryIDeckLinkOutput");
+        return RuntimeHelper.requireNonNull(constants$0.const$35,"IDeckLink_QueryIDeckLinkOutput");
     }
     /**
      * {@snippet :
@@ -410,7 +410,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkProfileAttributes_GetDeviceHandle$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$37,"IDeckLinkProfileAttributes_GetDeviceHandle");
+        return RuntimeHelper.requireNonNull(constants$0.const$36,"IDeckLinkProfileAttributes_GetDeviceHandle");
     }
     /**
      * {@snippet :
@@ -426,7 +426,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkProfileAttributes_IsActive$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$39,"IDeckLinkProfileAttributes_IsActive");
+        return RuntimeHelper.requireNonNull(constants$0.const$38,"IDeckLinkProfileAttributes_IsActive");
     }
     /**
      * {@snippet :
@@ -442,7 +442,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkProfileAttributes_SupportsPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$40,"IDeckLinkProfileAttributes_SupportsPlayback");
+        return RuntimeHelper.requireNonNull(constants$0.const$39,"IDeckLinkProfileAttributes_SupportsPlayback");
     }
     /**
      * {@snippet :
@@ -458,7 +458,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_GetDisplayModeIterator$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$41,"IDeckLinkOutput_GetDisplayModeIterator");
+        return RuntimeHelper.requireNonNull(constants$0.const$40,"IDeckLinkOutput_GetDisplayModeIterator");
     }
     /**
      * {@snippet :
@@ -474,7 +474,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_DoesSupportVideoMode$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$43,"IDeckLinkOutput_DoesSupportVideoMode");
+        return RuntimeHelper.requireNonNull(constants$0.const$42,"IDeckLinkOutput_DoesSupportVideoMode");
     }
     /**
      * {@snippet :
@@ -490,7 +490,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_EnableVideoOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$45,"IDeckLinkOutput_EnableVideoOutput");
+        return RuntimeHelper.requireNonNull(constants$0.const$44,"IDeckLinkOutput_EnableVideoOutput");
     }
     /**
      * {@snippet :
@@ -506,7 +506,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_DisableVideoOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$46,"IDeckLinkOutput_DisableVideoOutput");
+        return RuntimeHelper.requireNonNull(constants$0.const$45,"IDeckLinkOutput_DisableVideoOutput");
     }
     /**
      * {@snippet :
@@ -522,7 +522,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_StartScheduledPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$48,"IDeckLinkOutput_StartScheduledPlayback");
+        return RuntimeHelper.requireNonNull(constants$0.const$47,"IDeckLinkOutput_StartScheduledPlayback");
     }
     /**
      * {@snippet :
@@ -538,7 +538,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_StopScheduledPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$50,"IDeckLinkOutput_StopScheduledPlayback");
+        return RuntimeHelper.requireNonNull(constants$0.const$49,"IDeckLinkOutput_StopScheduledPlayback");
     }
     /**
      * {@snippet :
@@ -554,7 +554,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_SetScheduledFrameCompletionCallback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$51,"IDeckLinkOutput_SetScheduledFrameCompletionCallback");
+        return RuntimeHelper.requireNonNull(constants$0.const$50,"IDeckLinkOutput_SetScheduledFrameCompletionCallback");
     }
     /**
      * {@snippet :
@@ -569,8 +569,24 @@ public class decklinkcapi_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle IDeckLinkOutput_CreateVideoFrameWithBuffer$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.const$52,"IDeckLinkOutput_CreateVideoFrameWithBuffer");
+    }
+    /**
+     * {@snippet :
+     * IDeckLinkVideoFrame* IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput* output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer* buffer);
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_CreateVideoFrameWithBuffer(MemorySegment output, int width, int height, int rowBytes, int pixelFormat, MemorySegment buffer) {
+        var mh$ = IDeckLinkOutput_CreateVideoFrameWithBuffer$MH();
+        try {
+            return (java.lang.foreign.MemorySegment)mh$.invokeExact(output, width, height, rowBytes, pixelFormat, buffer);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MethodHandle IDeckLinkOutput_DisplayVideoFrameSync$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$52,"IDeckLinkOutput_DisplayVideoFrameSync");
+        return RuntimeHelper.requireNonNull(constants$0.const$53,"IDeckLinkOutput_DisplayVideoFrameSync");
     }
     /**
      * {@snippet :
@@ -586,7 +602,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkOutput_ScheduleVideoFrame$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$54,"IDeckLinkOutput_ScheduleVideoFrame");
+        return RuntimeHelper.requireNonNull(constants$0.const$55,"IDeckLinkOutput_ScheduleVideoFrame");
     }
     /**
      * {@snippet :
@@ -602,7 +618,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayModeIterator_Next$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$55,"IDeckLinkDisplayModeIterator_Next");
+        return RuntimeHelper.requireNonNull(constants$0.const$56,"IDeckLinkDisplayModeIterator_Next");
     }
     /**
      * {@snippet :
@@ -618,7 +634,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetName$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$56,"IDeckLinkDisplayMode_GetName");
+        return RuntimeHelper.requireNonNull(constants$0.const$57,"IDeckLinkDisplayMode_GetName");
     }
     /**
      * {@snippet :
@@ -634,7 +650,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetDisplayMode$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$58,"IDeckLinkDisplayMode_GetDisplayMode");
+        return RuntimeHelper.requireNonNull(constants$0.const$59,"IDeckLinkDisplayMode_GetDisplayMode");
     }
     /**
      * {@snippet :
@@ -650,7 +666,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetWidth$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$59,"IDeckLinkDisplayMode_GetWidth");
+        return RuntimeHelper.requireNonNull(constants$0.const$60,"IDeckLinkDisplayMode_GetWidth");
     }
     /**
      * {@snippet :
@@ -666,7 +682,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetHeight$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$60,"IDeckLinkDisplayMode_GetHeight");
+        return RuntimeHelper.requireNonNull(constants$0.const$61,"IDeckLinkDisplayMode_GetHeight");
     }
     /**
      * {@snippet :
@@ -682,7 +698,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetFrameRate$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$62,"IDeckLinkDisplayMode_GetFrameRate");
+        return RuntimeHelper.requireNonNull(constants$0.const$63,"IDeckLinkDisplayMode_GetFrameRate");
     }
     /**
      * {@snippet :
@@ -698,7 +714,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetFieldDominance$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$63,"IDeckLinkDisplayMode_GetFieldDominance");
+        return RuntimeHelper.requireNonNull(constants$0.const$64,"IDeckLinkDisplayMode_GetFieldDominance");
     }
     /**
      * {@snippet :
@@ -714,7 +730,7 @@ public class decklinkcapi_h  {
         }
     }
     public static MethodHandle IDeckLinkDisplayMode_GetFlags$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$64,"IDeckLinkDisplayMode_GetFlags");
+        return RuntimeHelper.requireNonNull(constants$0.const$65,"IDeckLinkDisplayMode_GetFlags");
     }
     /**
      * {@snippet :
@@ -725,6 +741,22 @@ public class decklinkcapi_h  {
         var mh$ = IDeckLinkDisplayMode_GetFlags$MH();
         try {
             return (int)mh$.invokeExact(mode);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle IDeckLinkVideoFrame_SetMetadata$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.const$67,"IDeckLinkVideoFrame_SetMetadata");
+    }
+    /**
+     * {@snippet :
+     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame* frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs);
+     * }
+     */
+    public static boolean IDeckLinkVideoFrame_SetMetadata(MemorySegment frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs) {
+        var mh$ = IDeckLinkVideoFrame_SetMetadata$MH();
+        try {
+            return (boolean)mh$.invokeExact(frame, eotf, rx, ry, gx, gy, bx, by, wx, wy, maxDML, minDML, maxCLL, maxFALL, cs);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }

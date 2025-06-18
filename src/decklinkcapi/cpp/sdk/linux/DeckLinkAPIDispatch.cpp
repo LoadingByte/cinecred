@@ -87,7 +87,7 @@ static void	InitDeckLinkAPI (void)
 	gCreateAPIInformationFunc = (CreateAPIInformationFunc)dlsym(libraryHandle, "CreateDeckLinkAPIInformationInstance_0001");
 	if (!gCreateAPIInformationFunc)
 		fprintf(stderr, "%s\n", dlerror());
-	gCreateVideoConversionFunc = (CreateVideoConversionInstanceFunc)dlsym(libraryHandle, "CreateVideoConversionInstance_0001");
+	gCreateVideoConversionFunc = (CreateVideoConversionInstanceFunc)dlsym(libraryHandle, "CreateVideoConversionInstance_0002");
 	if (!gCreateVideoConversionFunc)
 		fprintf(stderr, "%s\n", dlerror());
 	gCreateDeckLinkDiscoveryFunc = (CreateDeckLinkDiscoveryInstanceFunc)dlsym(libraryHandle, "CreateDeckLinkDiscoveryInstance_0003");
@@ -108,10 +108,10 @@ static void	InitDeckLinkPreviewAPI (void)
 		fprintf(stderr, "%s\n", dlerror());
 		return;
 	}
-	gCreateOpenGLPreviewFunc = (CreateOpenGLScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGLScreenPreviewHelper_0001");
+	gCreateOpenGLPreviewFunc = (CreateOpenGLScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGLScreenPreviewHelper_0002");
 	if (!gCreateOpenGLPreviewFunc)
 		fprintf(stderr, "%s\n", dlerror());
-	gCreateOpenGL3PreviewFunc = (CreateOpenGL3ScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGL3ScreenPreviewHelper_0001");
+	gCreateOpenGL3PreviewFunc = (CreateOpenGL3ScreenPreviewHelperFunc)dlsym(libraryHandle, "CreateOpenGL3ScreenPreviewHelper_0002");
 	if (!gCreateOpenGL3PreviewFunc)
 		fprintf(stderr, "%s\n", dlerror());
 }

@@ -8,6 +8,7 @@ class IDeckLinkDiscovery;
 class IDeckLinkDeviceNotificationCallback;
 class IDeckLinkDisplayMode;
 class IDeckLinkDisplayModeIterator;
+class IDeckLinkVideoBuffer;
 class IDeckLinkVideoFrame;
 class IDeckLinkOutput;
 class IDeckLinkProfileAttributes;
@@ -21,14 +22,13 @@ typedef void IDeckLinkDiscovery;
 typedef void IDeckLinkDeviceNotificationCallback;
 typedef void IDeckLinkDisplayMode;
 typedef void IDeckLinkDisplayModeIterator;
+typedef void IDeckLinkVideoBuffer;
 typedef void IDeckLinkVideoFrame;
 typedef void IDeckLinkOutput;
 typedef void IDeckLinkProfileAttributes;
 typedef void IDeckLinkVideoOutputCallback;
 typedef void IUnknown;
 #endif
-
-#define FRAME_METADATA int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs
 
 typedef void (*deviceNotificationCallback_t)(IDeckLink* device);
 typedef void (*scheduledFrameCompletionCallback_t)(IDeckLinkVideoFrame* frame, int result);
@@ -53,7 +53,7 @@ CAPI bool initDeckLinkAPI(void);
 
 CAPI IDeckLinkDeviceNotificationCallback* IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback);
 CAPI IDeckLinkVideoOutputCallback* IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback);
-CAPI IDeckLinkVideoFrame* IDeckLinkVideoFrame_Create(int width, int height, int rowBytes, int pixelFormat, FRAME_METADATA, void* bytes);
+CAPI IDeckLinkVideoBuffer* IDeckLinkVideoBuffer_Create(void* bytes);
 
 CAPI void IUnknown_AddRef(IUnknown* object);
 CAPI void IUnknown_Release(IUnknown* object);
@@ -76,6 +76,7 @@ CAPI bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput* output);
 CAPI bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput* output, long long startTime, long long timeScale, double speed);
 CAPI bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput* output, long long stopTime, long long timeScale);
 CAPI bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput* output, IDeckLinkVideoOutputCallback* callback);
+CAPI IDeckLinkVideoFrame* IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput* output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer* buffer);
 CAPI bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput* output, IDeckLinkVideoFrame* frame);
 CAPI bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput* output, IDeckLinkVideoFrame* frame, long long displayTime, long long displayDuration, long long timeScale);
 
@@ -88,6 +89,8 @@ CAPI int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode* mode);
 CAPI long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode* mode);
 CAPI int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode* mode);
 CAPI int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode* mode);
+
+CAPI bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame* frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs);
 
 #ifdef __cplusplus
 }

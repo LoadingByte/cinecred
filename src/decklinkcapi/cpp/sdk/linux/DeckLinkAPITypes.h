@@ -51,6 +51,7 @@ typedef int64_t BMDTimeValue;
 typedef int64_t BMDTimeScale;
 typedef uint32_t BMDTimecodeBCD;
 typedef uint32_t BMDTimecodeUserBits;
+typedef int64_t BMDIPFlowID;
 
 // Interface ID Declarations
 

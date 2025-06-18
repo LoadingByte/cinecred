@@ -95,184 +95,196 @@ final class constants$0 {
         "IDeckLinkVideoOutputCallback_Create",
         constants$0.const$23
     );
-    static final FunctionDescriptor const$25 = FunctionDescriptor.of(RuntimeHelper.POINTER,
-        JAVA_INT,
-        JAVA_INT,
-        JAVA_INT,
-        JAVA_INT,
-        JAVA_INT,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_DOUBLE,
-        JAVA_INT,
-        RuntimeHelper.POINTER
+    static final MethodHandle const$25 = RuntimeHelper.downcallHandle(
+        "IDeckLinkVideoBuffer_Create",
+        constants$0.const$23
     );
     static final MethodHandle const$26 = RuntimeHelper.downcallHandle(
-        "IDeckLinkVideoFrame_Create",
-        constants$0.const$25
-    );
-    static final MethodHandle const$27 = RuntimeHelper.downcallHandle(
         "IUnknown_AddRef",
         constants$0.const$0
     );
-    static final MethodHandle const$28 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$27 = RuntimeHelper.downcallHandle(
         "IUnknown_Release",
         constants$0.const$0
     );
-    static final FunctionDescriptor const$29 = FunctionDescriptor.of(RuntimeHelper.POINTER);
-    static final MethodHandle const$30 = RuntimeHelper.downcallHandle(
+    static final FunctionDescriptor const$28 = FunctionDescriptor.of(RuntimeHelper.POINTER);
+    static final MethodHandle const$29 = RuntimeHelper.downcallHandle(
         "IDeckLinkDiscovery_Create",
-        constants$0.const$29
+        constants$0.const$28
     );
-    static final FunctionDescriptor const$31 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$30 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         RuntimeHelper.POINTER
     );
-    static final MethodHandle const$32 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$31 = RuntimeHelper.downcallHandle(
         "IDeckLinkDiscovery_InstallDeviceNotifications",
-        constants$0.const$31
+        constants$0.const$30
     );
-    static final FunctionDescriptor const$33 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$32 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         RuntimeHelper.POINTER,
         JAVA_LONG
     );
-    static final MethodHandle const$34 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$33 = RuntimeHelper.downcallHandle(
         "IDeckLink_GetDisplayName",
-        constants$0.const$33
+        constants$0.const$32
     );
-    static final MethodHandle const$35 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$34 = RuntimeHelper.downcallHandle(
         "IDeckLink_QueryIDeckLinkProfileAttributes",
         constants$0.const$23
     );
-    static final MethodHandle const$36 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$35 = RuntimeHelper.downcallHandle(
         "IDeckLink_QueryIDeckLinkOutput",
         constants$0.const$23
     );
-    static final MethodHandle const$37 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$36 = RuntimeHelper.downcallHandle(
         "IDeckLinkProfileAttributes_GetDeviceHandle",
-        constants$0.const$33
+        constants$0.const$32
     );
-    static final FunctionDescriptor const$38 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$37 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER
     );
-    static final MethodHandle const$39 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$38 = RuntimeHelper.downcallHandle(
         "IDeckLinkProfileAttributes_IsActive",
-        constants$0.const$38
+        constants$0.const$37
+    );
+    static final MethodHandle const$39 = RuntimeHelper.downcallHandle(
+        "IDeckLinkProfileAttributes_SupportsPlayback",
+        constants$0.const$37
     );
     static final MethodHandle const$40 = RuntimeHelper.downcallHandle(
-        "IDeckLinkProfileAttributes_SupportsPlayback",
-        constants$0.const$38
-    );
-    static final MethodHandle const$41 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_GetDisplayModeIterator",
         constants$0.const$23
     );
-    static final FunctionDescriptor const$42 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$41 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         JAVA_INT,
         JAVA_INT
     );
-    static final MethodHandle const$43 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$42 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_DoesSupportVideoMode",
-        constants$0.const$42
+        constants$0.const$41
     );
-    static final FunctionDescriptor const$44 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$43 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         JAVA_INT
     );
-    static final MethodHandle const$45 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$44 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_EnableVideoOutput",
-        constants$0.const$44
+        constants$0.const$43
     );
-    static final MethodHandle const$46 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$45 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_DisableVideoOutput",
-        constants$0.const$38
+        constants$0.const$37
     );
-    static final FunctionDescriptor const$47 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$46 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         JAVA_LONG,
         JAVA_LONG,
         JAVA_DOUBLE
     );
-    static final MethodHandle const$48 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$47 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_StartScheduledPlayback",
-        constants$0.const$47
+        constants$0.const$46
     );
-    static final FunctionDescriptor const$49 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final FunctionDescriptor const$48 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         JAVA_LONG,
         JAVA_LONG
+    );
+    static final MethodHandle const$49 = RuntimeHelper.downcallHandle(
+        "IDeckLinkOutput_StopScheduledPlayback",
+        constants$0.const$48
     );
     static final MethodHandle const$50 = RuntimeHelper.downcallHandle(
-        "IDeckLinkOutput_StopScheduledPlayback",
-        constants$0.const$49
-    );
-    static final MethodHandle const$51 = RuntimeHelper.downcallHandle(
         "IDeckLinkOutput_SetScheduledFrameCompletionCallback",
-        constants$0.const$31
+        constants$0.const$30
+    );
+    static final FunctionDescriptor const$51 = FunctionDescriptor.of(RuntimeHelper.POINTER,
+        RuntimeHelper.POINTER,
+        JAVA_INT,
+        JAVA_INT,
+        JAVA_INT,
+        JAVA_INT,
+        RuntimeHelper.POINTER
     );
     static final MethodHandle const$52 = RuntimeHelper.downcallHandle(
-        "IDeckLinkOutput_DisplayVideoFrameSync",
-        constants$0.const$31
+        "IDeckLinkOutput_CreateVideoFrameWithBuffer",
+        constants$0.const$51
     );
-    static final FunctionDescriptor const$53 = FunctionDescriptor.of(JAVA_BOOLEAN,
+    static final MethodHandle const$53 = RuntimeHelper.downcallHandle(
+        "IDeckLinkOutput_DisplayVideoFrameSync",
+        constants$0.const$30
+    );
+    static final FunctionDescriptor const$54 = FunctionDescriptor.of(JAVA_BOOLEAN,
         RuntimeHelper.POINTER,
         RuntimeHelper.POINTER,
         JAVA_LONG,
         JAVA_LONG,
         JAVA_LONG
     );
-    static final MethodHandle const$54 = RuntimeHelper.downcallHandle(
-        "IDeckLinkOutput_ScheduleVideoFrame",
-        constants$0.const$53
-    );
     static final MethodHandle const$55 = RuntimeHelper.downcallHandle(
+        "IDeckLinkOutput_ScheduleVideoFrame",
+        constants$0.const$54
+    );
+    static final MethodHandle const$56 = RuntimeHelper.downcallHandle(
         "IDeckLinkDisplayModeIterator_Next",
         constants$0.const$23
     );
-    static final MethodHandle const$56 = RuntimeHelper.downcallHandle(
+    static final MethodHandle const$57 = RuntimeHelper.downcallHandle(
         "IDeckLinkDisplayMode_GetName",
-        constants$0.const$33
+        constants$0.const$32
     );
-    static final FunctionDescriptor const$57 = FunctionDescriptor.of(JAVA_INT,
+    static final FunctionDescriptor const$58 = FunctionDescriptor.of(JAVA_INT,
         RuntimeHelper.POINTER
-    );
-    static final MethodHandle const$58 = RuntimeHelper.downcallHandle(
-        "IDeckLinkDisplayMode_GetDisplayMode",
-        constants$0.const$57
     );
     static final MethodHandle const$59 = RuntimeHelper.downcallHandle(
-        "IDeckLinkDisplayMode_GetWidth",
-        constants$0.const$57
+        "IDeckLinkDisplayMode_GetDisplayMode",
+        constants$0.const$58
     );
     static final MethodHandle const$60 = RuntimeHelper.downcallHandle(
-        "IDeckLinkDisplayMode_GetHeight",
-        constants$0.const$57
+        "IDeckLinkDisplayMode_GetWidth",
+        constants$0.const$58
     );
-    static final FunctionDescriptor const$61 = FunctionDescriptor.of(JAVA_LONG,
+    static final MethodHandle const$61 = RuntimeHelper.downcallHandle(
+        "IDeckLinkDisplayMode_GetHeight",
+        constants$0.const$58
+    );
+    static final FunctionDescriptor const$62 = FunctionDescriptor.of(JAVA_LONG,
         RuntimeHelper.POINTER
     );
-    static final MethodHandle const$62 = RuntimeHelper.downcallHandle(
-        "IDeckLinkDisplayMode_GetFrameRate",
-        constants$0.const$61
-    );
     static final MethodHandle const$63 = RuntimeHelper.downcallHandle(
-        "IDeckLinkDisplayMode_GetFieldDominance",
-        constants$0.const$57
+        "IDeckLinkDisplayMode_GetFrameRate",
+        constants$0.const$62
     );
     static final MethodHandle const$64 = RuntimeHelper.downcallHandle(
+        "IDeckLinkDisplayMode_GetFieldDominance",
+        constants$0.const$58
+    );
+    static final MethodHandle const$65 = RuntimeHelper.downcallHandle(
         "IDeckLinkDisplayMode_GetFlags",
-        constants$0.const$57
+        constants$0.const$58
+    );
+    static final FunctionDescriptor const$66 = FunctionDescriptor.of(JAVA_BOOLEAN,
+        RuntimeHelper.POINTER,
+        JAVA_INT,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_DOUBLE,
+        JAVA_INT
+    );
+    static final MethodHandle const$67 = RuntimeHelper.downcallHandle(
+        "IDeckLinkVideoFrame_SetMetadata",
+        constants$0.const$66
     );
 }
 

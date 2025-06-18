@@ -43,6 +43,7 @@ typedef LONGLONG BMDTimeValue;
 typedef LONGLONG BMDTimeScale;
 typedef unsigned int BMDTimecodeBCD;
 typedef unsigned int BMDTimecodeUserBits;
+typedef LONGLONG BMDIPFlowID;
 
 // Enumeration Mapping
 

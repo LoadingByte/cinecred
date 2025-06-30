@@ -26,6 +26,7 @@ fun readStyling(
     val toml = readToml(stylingFile)
 
     val rawStyling = RawStyling(
+        toml["version"] as? String,
         asMap(toml["global"]),
         asMaps(toml["pageStyle"]),
         asMaps(toml["contentStyle"]),
@@ -52,6 +53,7 @@ fun readStyling(
 
 
 class RawStyling(
+    val version: String?,
     val global: MutableMap<String, Any>,
     val pageStyles: MutableList<MutableMap<String, Any>>,
     val contentStyles: MutableList<MutableMap<String, Any>>,

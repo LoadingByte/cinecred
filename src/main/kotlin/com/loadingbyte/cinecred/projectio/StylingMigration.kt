@@ -1,9 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
-import com.loadingbyte.cinecred.common.SuperscriptMetrics
-import com.loadingbyte.cinecred.common.getSuperscriptMetrics
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.lineMetrics
+import com.loadingbyte.cinecred.common.*
 import java.awt.Font
 import kotlin.math.abs
 import kotlin.math.pow
@@ -14,6 +11,26 @@ import kotlin.math.pow
  * since then, this function adjusts the TOML maps to reflect the new structure.
  */
 fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
+    val idx = migrations.indexOfFirst { (version, _) -> version == rawStyling.version }
+    if (idx != -1)
+        for ((_, migration) in migrations.subList(idx, migrations.size))
+            migration?.invoke(ctx, rawStyling)
+}
+
+
+private val migrations = listOf(
+    null to ::migrateStylingFrom100,
+    "1.7.0" to ::migrateStylingFrom170,
+    "1.8.0" to null,
+    "1.8.1" to null,
+).also { migrations ->
+    val appVersion = VERSION.removeSuffix("-SNAPSHOT")
+    if (migrations.none { (version, _) -> version == appVersion })
+        throw NotImplementedError("@Developer: please add version $appVersion to styling migrations.")
+}
+
+
+fun migrateStylingFrom100(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.0.0 -> 1.1.0: Enum lists are now stored as string lists instead of space-delimited strings.
     for (contentStyle in rawStyling.contentStyles) {
         val gridElemHJustifyPerCol = contentStyle["gridElemHJustifyPerCol"]
@@ -247,8 +264,10 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
             "BOTTOM" -> "LAST_MIDDLE"
             else -> vJustify
         }
-        (contentStyle["headVJustify"] as? String)?.let { contentStyle["headVJustify"] = patch(it) }
-        (contentStyle["tailVJustify"] as? String)?.let { contentStyle["tailVJustify"] = patch(it) }
+        if ("headVShelve" !in contentStyle)
+            (contentStyle["headVJustify"] as? String)?.let { contentStyle["headVJustify"] = patch(it) }
+        if ("tailVShelve" !in contentStyle)
+            (contentStyle["tailVJustify"] as? String)?.let { contentStyle["tailVJustify"] = patch(it) }
     }
 
     // 1.5.1 -> 1.6.0: "afterwardSlugFrames" is renamed to "subsequentGapFrames".
@@ -298,7 +317,10 @@ fun migrateStyling(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.6.0 -> 1.7.0: "fontName" is renamed to "font".
     for (letterStyle in rawStyling.letterStyles)
         letterStyle["fontName"]?.let { letterStyle["font"] = it }
+}
 
+
+fun migrateStylingFrom170(ctx: StylingReaderContext, rawStyling: RawStyling) {
     // 1.7.0 -> 1.8.0: The number of grid columns is now controlled by a dedicated setting.
     for (contentStyle in rawStyling.contentStyles)
         (contentStyle["gridCellHJustifyPerCol"] as? List<*>)?.let { contentStyle.putIfAbsent("gridCols", it.size) }

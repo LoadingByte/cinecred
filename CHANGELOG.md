@@ -9,6 +9,7 @@ Cinecred Changelog
 
 - Top and bottom vertical head or tail justification is no longer lost when
   saving and then loading the styling.
+- Manual newlines which neighbor a style tag are no longer omitted.
 - Fixed crashes upon entering illegal text into the break harmonization column.
 - DeckLink playout now supports driver versions 14.4 and newer.
 

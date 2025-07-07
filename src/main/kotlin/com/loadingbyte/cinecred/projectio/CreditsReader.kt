@@ -780,10 +780,11 @@ private class CreditsReader(
             visitPlain = { plain ->
                 // When we encounter plaintext, add it to the styled string list using the current letter style.
                 // If it contains line delimiters, terminate the current line and commence new ones.
-                for ((l, plainLine) in plain.split("\n", "\r\n").filterNot(String::isBlank).withIndex()) {
+                for ((l, plainLine) in plain.split("\n", "\r\n").withIndex()) {
                     if (l != 0)
                         styledLines.add(mutableListOf())
-                    styledLines.last().add(Pair(plainLine, curLetterStyle ?: initLetterStyle))
+                    if (plainLine.isNotEmpty())
+                        styledLines.last().add(Pair(plainLine, curLetterStyle ?: initLetterStyle))
                 }
             },
             visitTag = { tag ->
@@ -829,7 +830,8 @@ private class CreditsReader(
                 }
             })
 
-        val hasPlaintext = styledLines[0].isNotEmpty()
+        styledLines.removeIf { it.isEmpty() }
+        val hasPlaintext = styledLines.isNotEmpty()
         return when {
             blankTagKey != null -> {
                 if (hasPlaintext || curLetterStyle != null || multipleBlanks || pictureOrVideoTagKey != null)

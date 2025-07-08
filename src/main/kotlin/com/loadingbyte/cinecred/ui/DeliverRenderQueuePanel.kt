@@ -95,6 +95,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             // in the table.
             if (rowIdx != -1) {
                 row.progress = progress
+                row.updatedTime = Instant.now()
                 jobTableModel.fireTableCellUpdated(rowIdx, 5)
                 if (progress is Int)
                     trySetTaskbarProgress(ctrl.projectFrame, roundingDiv(progress * 100, MAX_RENDER_PROGRESS))
@@ -184,6 +185,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
         class Row(val job: RenderJob, val info: RenderJobInfo) {
             var startTime: Instant? = null
+            var updatedTime: Instant? = null
             var progress: Any = 0
             val isFinished get() = progress !is Int
         }
@@ -241,7 +243,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                     string = if (progress == 0)
                         percentage
                     else {
-                        val d = Duration.between(row.startTime, Instant.now())
+                        val d = Duration.between(row.startTime, row.updatedTime)
                             .multipliedBy(MAX_RENDER_PROGRESS - progress.toLong()).dividedBy(progress.toLong())
                         val timeRemaining = l10n(
                             "ui.deliverRenderQueue.timeRemaining",
@@ -256,7 +258,12 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                 model.value = MAX_RENDER_PROGRESS
                 putClientProperty(STYLE, "foreground: $PALETTE_GREEN")
                 setTableCellBackground(table, rowIdx)
-                isStringPainted = false
+                isStringPainted = true
+                val d = Duration.between(row.startTime, row.updatedTime)
+                string = l10n(
+                    "ui.deliverRenderQueue.timeTaken",
+                    "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
+                )
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
                 table, "${progress.javaClass.simpleName}: ${progress.localizedMessage ?: ""}",

@@ -5,6 +5,10 @@ Cinecred Changelog
 1.8.1-SNAPSHOT
 --------------
 
+### Additions
+
+- Completed render jobs now show their total runtime.
+
 ### Fixes
 
 - Top and bottom vertical head or tail justification is no longer lost when

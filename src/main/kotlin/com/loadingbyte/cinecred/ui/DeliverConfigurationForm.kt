@@ -808,10 +808,10 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         for (menuItem in templateMenu.components)
                             if (menuItem is DropdownPopupMenuCheckBoxItem<*> && menuItem !== this)
                                 menuItem.isSelected = false
-                        if (item == null) {
+                        if (item == null && selectedTemplate != null) {
                             prevNonCustomPath = pathWidget.value
                             pathWidget.value = value.fileOrDir.pathString
-                        } else if (selectedTemplate == null)
+                        } else if (item != null && selectedTemplate == null)
                             prevNonCustomPath?.let { pathWidget.value = it }
                         selectedTemplate = item
                         pathWidget.components[0].preferredSize = Dimension(if (item == null) 320 else 472, 0)

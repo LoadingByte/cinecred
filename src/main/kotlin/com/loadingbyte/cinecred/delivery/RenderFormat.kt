@@ -84,6 +84,7 @@ abstract class RenderFormat(
             val TIFF_COMPRESSION = Property(*TIFF.Compression.values(), default = TIFF.Compression.DEFLATE)
             val DPX_COMPRESSION = Property(*DPX.Compression.values(), default = DPX.Compression.NONE)
             val EXR_COMPRESSION = Property(*EXR.Compression.values(), default = EXR.Compression.ZIP)
+            val GENERIC_PROFILE = Property(*GenericProfile.values(), default = GenericProfile.HIGH)
             val PRORES_PROFILE = Property(*ProResProfile.values(), default = ProResProfile.PRORES_422)
             val DNXHR_PROFILE = Property(*DNxHRProfile.values(), default = DNxHRProfile.DNXHR_HQ)
             val CINEFORM_PROFILE = Property(*CineFormProfile.values(), default = CineFormProfile.CF_422_FILM1)
@@ -172,6 +173,7 @@ abstract class RenderFormat(
 
     enum class Transparency { GROUNDED, TRANSPARENT, MATTE }
     enum class PDFProfile { LOSSY_VECTORSVG, LOSSY_RASTERSVG, LOSSLESS_VECTORSVG, LOSSLESS_RASTERSVG }
+    enum class GenericProfile { MEDIUM, HIGH, BEST }
     enum class ProResProfile { PRORES_422_PROXY, PRORES_422_LT, PRORES_422, PRORES_422_HQ, PRORES_4444, PRORES_4444_XQ }
     enum class DNxHRProfile { DNXHR_LB, DNXHR_SQ, DNXHR_HQ, DNXHR_HQX, DNXHR_444 }
     enum class CineFormProfile {

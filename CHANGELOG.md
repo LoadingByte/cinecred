@@ -7,6 +7,7 @@ Cinecred Changelog
 
 ### Additions
 
+- Added higher quality profiles for H.264 and H.265 delivery.
 - Completed render jobs now show their total runtime.
 
 ### Fixes

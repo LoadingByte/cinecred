@@ -13,6 +13,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFOR
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.GENERIC_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRORES_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
@@ -189,10 +190,12 @@ class VideoContainerRenderJob private constructor(
     companion object {
 
         val H264: RenderFormat = H26XFormat(
-            "H.264", AV_CODEC_ID_H264, "libx264", AV_PROFILE_H264_HIGH, AV_PROFILE_H264_HIGH_10
+            "H.264", AV_CODEC_ID_H264, "libx264", AV_PROFILE_H264_HIGH, AV_PROFILE_H264_HIGH_10,
+            listOf("23", "20", "17"), listOf("medium", "slow", "veryslow")
         )
         val H265: RenderFormat = H26XFormat(
-            "H.265", AV_CODEC_ID_H265, "libx265", AV_PROFILE_HEVC_MAIN, AV_PROFILE_HEVC_MAIN_10
+            "H.265", AV_CODEC_ID_H265, "libx265", AV_PROFILE_HEVC_MAIN, AV_PROFILE_HEVC_MAIN_10,
+            listOf("28", "23", "17"), listOf("medium", "slow", "slower")
         )
 
         val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat())
@@ -266,18 +269,26 @@ class VideoContainerRenderJob private constructor(
         codecId: Int,
         private val codecName: String,
         private val codecProfile8: Int,
-        private val codecProfile10: Int
+        private val codecProfile10: Int,
+        private val codecCRFOptions: List<String>,
+        private val codecPresetOptions: List<String>
     ) : Format(
         label, codecId, "mp4",
-        opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE),
+        opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+                choice(GENERIC_PROFILE),
         widthMod = 2,
         heightMod = 2
     ) {
         override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
+            val profile = config[GENERIC_PROFILE]
             val depth = config[DEPTH]
             val codecProfile = if (depth == 8) codecProfile8 else codecProfile10
+            val codecOptions = mutableMapOf(
+                "crf" to codecCRFOptions[profile.ordinal],
+                "preset" to codecPresetOptions[profile.ordinal]
+            )
             val pixelFormat = Bitmap.PixelFormat.of(if (depth == 8) AV_PIX_FMT_YUV420P else AV_PIX_FMT_YUV420P10)
-            return listOf(VideoWriterSettings(codecName, codecProfile, emptyMap(), pixelFormat))
+            return listOf(VideoWriterSettings(codecName, codecProfile, codecOptions, pixelFormat))
         }
     }
 

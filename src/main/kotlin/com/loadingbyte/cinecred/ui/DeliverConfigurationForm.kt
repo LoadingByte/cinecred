@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DNXHR_P
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DPX_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.EXR_COMPRESSION
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
+import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.GENERIC_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.HDR
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PDF_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.PRIMARIES
@@ -116,12 +117,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", fullLabel)
                     else -> fullLabel
                 }
-                val suffix = when (format) {
-                    VideoContainerRenderJob.H264, VideoContainerRenderJob.H265 ->
-                        "  \u2013  " + l10n("ui.deliverConfig.reducedQualityFormat")
-                    else -> ""
-                }
-                "${format.categoryLabel}  \u2013  ${label}$suffix"
+                "${format.categoryLabel}  \u2013  $label"
             },
             // Use a custom render that shows category headers.
             rendererDecorator = object : AbstractComboBoxWidget.RendererDecorator {
@@ -164,6 +160,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                         EXR.Compression.ZIPS -> "ZIPS"
                         EXR.Compression.ZIP -> "ZIP"
                     }
+                    is GenericProfile -> l10n("ui.deliverConfig.profile.generic.$prof")
                     is ProResProfile -> when (prof) {
                         ProResProfile.PRORES_422_PROXY -> "ProRes 422 Proxy"
                         ProResProfile.PRORES_422_LT -> "ProRes 422 LT"
@@ -517,6 +514,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         TIFF_COMPRESSION in config -> TIFF_COMPRESSION
         DPX_COMPRESSION in config -> DPX_COMPRESSION
         EXR_COMPRESSION in config -> EXR_COMPRESSION
+        GENERIC_PROFILE in config -> GENERIC_PROFILE
         PRORES_PROFILE in config -> PRORES_PROFILE
         DNXHR_PROFILE in config -> DNXHR_PROFILE
         CINEFORM_PROFILE in config -> CINEFORM_PROFILE
@@ -628,6 +626,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 is TIFF.Compression -> lookup[TIFF_COMPRESSION] = value
                 is DPX.Compression -> lookup[DPX_COMPRESSION] = value
                 is EXR.Compression -> lookup[EXR_COMPRESSION] = value
+                is GenericProfile -> lookup[GENERIC_PROFILE] = value
                 is ProResProfile -> lookup[PRORES_PROFILE] = value
                 is DNxHRProfile -> lookup[DNXHR_PROFILE] = value
                 is CineFormProfile -> lookup[CINEFORM_PROFILE] = value

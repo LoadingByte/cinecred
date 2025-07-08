@@ -30,6 +30,10 @@ class VideoWriter(
     fps: FPS,
     codecName: String,
     codecProfile: Int,
+    /**
+     * There are codec-specific and codec-agnostic options. The latter are enumerated here:
+     * https://ffmpeg.org/doxygen/7.0/libavcodec_2options__table_8h_source.html
+     */
     codecOptions: Map<String, String>,
     muxerOptions: Map<String, String>
 ) : AutoCloseable {

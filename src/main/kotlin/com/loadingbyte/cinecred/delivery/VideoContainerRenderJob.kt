@@ -198,7 +198,7 @@ class VideoContainerRenderJob private constructor(
             listOf("28", "23", "17"), listOf("medium", "slow", "slower")
         )
 
-        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat())
+        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat(), TheoraFormat())
 
         private fun allTransparenciesTimesColorSpace() =
             choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * choice(TRANSFER) +
@@ -385,6 +385,24 @@ class VideoContainerRenderJob private constructor(
             }
             val px = Bitmap.PixelFormat.of(pixelFormatCode)
             return listOf(VideoWriterSettings("cfhd", AV_PROFILE_UNKNOWN, mapOf("quality" to codecQualityOption), px))
+        }
+    }
+
+
+    private class TheoraFormat : Format(
+        "Theora", AV_CODEC_ID_THEORA, "ogv",
+        opaqueTransparenciesTimesColorProps() * fixed(DEPTH, 8) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+                choice(GENERIC_PROFILE)
+    ) {
+        override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {
+            val qscale = when (config[GENERIC_PROFILE]) {
+                GenericProfile.MEDIUM -> 6
+                GenericProfile.HIGH -> 8
+                GenericProfile.BEST -> 10
+            }
+            val codecOptions = mapOf("flags" to "qscale", "global_quality" to (qscale * FF_QP2LAMBDA).toString())
+            val pixelFormat = Bitmap.PixelFormat.of(AV_PIX_FMT_YUV420P)
+            return listOf(VideoWriterSettings("libtheora", AV_PROFILE_UNKNOWN, codecOptions, pixelFormat))
         }
     }
 

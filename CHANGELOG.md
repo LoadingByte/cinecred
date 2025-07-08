@@ -13,6 +13,10 @@ Cinecred Changelog
 - Fixed crashes upon entering illegal text into the break harmonization column.
 - DeckLink playout now supports driver versions 14.4 and newer.
 
+### UI Fixes
+
+- Setting a custom delivery destination no longer fails for single file exports.
+
 
 1.8.0
 -----

@@ -878,7 +878,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 val ext = extWidget.value
                 var path = pathWidget.value.trim().toPathSafely() ?: Path("")
                 if (template != null)
-                    path = path.resolve(fillTemplate(template).trim() + if (format.fileSeq) "" else ".$ext")
+                    path = path.resolve(fillTemplate(template).trim())
+                if (!format.fileSeq)
+                    path = path.resolveSibling("${path.name}.$ext")
                 path = path.normalize()
                 val filenameHashPattern = if (format.fileSeq) "${path.name}${suffixWidget.value}.$ext" else null
                 return Value(path, filenameHashPattern)

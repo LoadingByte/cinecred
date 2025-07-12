@@ -10,6 +10,8 @@ Cinecred Changelog
 - Added higher quality profiles for H.264 and H.265 delivery.
 - Added Theora delivery.
 - Completed render jobs now show their total runtime.
+- Added shortcuts for switching between pages (Ctrl+Page Up/Down) and sheets
+  (Shift+Page Up/Down).
 
 ### Fixes
 

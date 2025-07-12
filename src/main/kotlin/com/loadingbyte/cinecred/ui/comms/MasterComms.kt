@@ -8,7 +8,8 @@ import java.nio.file.Path
 
 interface MasterCtrlComms {
 
-    fun onGlobalKeyEvent(event: KeyEvent): Boolean
+    fun preGlobalKeyEvent(event: KeyEvent): Boolean
+    fun postGlobalKeyEvent(event: KeyEvent): Boolean
     fun showWelcomeFrame(openProjectDir: Path? = null, tab: WelcomeTab? = null)
     fun showOverlayCreation()
     fun showDeliveryDestTemplateCreation()

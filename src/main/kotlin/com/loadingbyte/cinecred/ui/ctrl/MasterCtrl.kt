@@ -36,15 +36,26 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         }
     }
 
-    override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
-        if (event.isConsumed ||
-            event.id != KeyEvent.KEY_PRESSED ||
-            // Some components consume the KEY_TYPED instead of the KEY_PRESSED event. If we didn't do anything about
-            // this, non-modifier key bindings (like L for playing the video preview) would activate while, e.g., typing
-            // in a text field. So as a workaround, we just block any non-modifier key events when any component
-            // susceptible to this behavior is focused.
-            event.modifiersEx == 0 && event.component.let { it is JTextComponent || it is JComboBox<*> || it is JTree }
-        ) return false
+    // Key presses with a modifier are handled by us before Swing components are asked. This allows us to create truly
+    // global keyboard shortcuts, at the cost of sometimes sacrificing unimportant component shortcuts.
+    override fun preGlobalKeyEvent(event: KeyEvent): Boolean =
+        if (event.modifiersEx != 0) onGlobalKeyEvent(event) else false
+
+    // Key presses without a modifier are handled by Swing components before we give it to our handler. This ensures
+    // that regularly typing text into a component doesn't accidentally trigger a shortcut.
+    override fun postGlobalKeyEvent(event: KeyEvent): Boolean =
+        if (event.modifiersEx == 0 &&
+            // Some components only consume the KEY_TYPED event and not the KEY_PRESSED event, while our handler always
+            // looks for KEY_PRESSED events. For such components, both the component and our handler would get an
+            // unconsumed key event. Hence, in addition to the component correctly handling the event, our shortcut
+            // would accidentally trigger. As a workaround, we just don't key events to our handler when any component
+            // that is susceptible to this behavior is focused.
+            event.component.let { it !is JTextComponent && it !is JComboBox<*> && it !is JTree }
+        ) onGlobalKeyEvent(event) else false
+
+    private fun onGlobalKeyEvent(event: KeyEvent): Boolean {
+        if (event.isConsumed || event.id != KeyEvent.KEY_PRESSED)
+            return false
         welcomeCtrl?.let { if (it.onGlobalKeyEvent(event)) return true }
         return projectCtrls.any { it.onGlobalKeyEvent(event) }
     }

@@ -431,8 +431,9 @@ class ProjectController(
                 else -> return false
             }
             SHIFT_DOWN_MASK -> when (event.keyCode) {
-                VK_LEFT, VK_KP_LEFT -> playbackCtrl.scrubRelativeSeconds(-1)
-                VK_RIGHT, VK_KP_RIGHT -> playbackCtrl.scrubRelativeSeconds(1)
+                // Don't listen for the regular left/right keys here as those are reserved for text fields.
+                VK_KP_LEFT -> playbackCtrl.scrubRelativeSeconds(-1)
+                VK_KP_RIGHT -> playbackCtrl.scrubRelativeSeconds(1)
                 else -> return false
             }
             CTRL_DOWN_MASK -> when (event.keyCode) {

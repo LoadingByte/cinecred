@@ -177,7 +177,8 @@ private fun mainSwing(args: Array<String>) {
     masterCtrl = UIFactory().master()
 
     // Globally listen to all key events.
-    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(masterCtrl::onGlobalKeyEvent)
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::preGlobalKeyEvent)
+    KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(masterCtrl::postGlobalKeyEvent)
 
     // On macOS, allow the user to open the about and preferences tabs via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT))

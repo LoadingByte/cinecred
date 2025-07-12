@@ -370,6 +370,15 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
         keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
         keyListeners.add(KeyListener(VK_O, CTRL_DOWN_MASK) { overlaysMenu.toggle() })
+        keyListeners.add(KeyListener(VK_PAGE_UP, CTRL_DOWN_MASK) { selectedPageTabs.switch(-1) })
+        keyListeners.add(KeyListener(VK_PAGE_DOWN, CTRL_DOWN_MASK) { selectedPageTabs.switch(1) })
+        keyListeners.add(KeyListener(VK_PAGE_UP, SHIFT_DOWN_MASK) { creditsTabs.switch(-1) })
+        keyListeners.add(KeyListener(VK_PAGE_DOWN, SHIFT_DOWN_MASK) { creditsTabs.switch(1) })
+    }
+
+    private val selectedPageTabs get() = creditsTabs.selectedComponent as JTabbedPane
+    private fun JTabbedPane.switch(offset: Int) {
+        selectedIndex = (selectedIndex + offset).coerceIn(0, tabCount - 1)
     }
 
     val selectedSpreadsheetName: String?
@@ -482,7 +491,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
                 addChangeListener { updateDeferredImagePanelPresentationStatuses() }
             }
-            creditsTabs.addTab("", TABLE_ICON, pageTabs)
+            creditsTabs.addTab("", TABLE_ICON, pageTabs, tabTooltip(SHIFT_DOWN_MASK))
         }
         // Then fill each tab with its corresponding credits.
         for ((idx, drawnCredits) in drawnProject.drawnCredits.withIndex()) {
@@ -504,7 +513,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
                 layers = getVisibleLayers()
                 zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
             }
-            pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel)
+            pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel, tabTooltip(CTRL_DOWN_MASK))
         }
         // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
         // Also make the currently selected layers and overlays visible.
@@ -517,6 +526,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             imagePanel.setImageAndGroundingAndLayers(image, drawnProject.project.styling.global.grounding, layers)
         }
     }
+
+    private fun tabTooltip(switchMod: Int) = l10n(
+        "ui.edit.switchTabs", l10nEnum(shortcutHint(VK_PAGE_UP, switchMod)!!, shortcutHint(VK_PAGE_DOWN, switchMod)!!)
+    )
 
     var availableOverlays: List<Overlay> = emptyList()
         set(overlays) {

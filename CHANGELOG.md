@@ -18,6 +18,7 @@ Cinecred Changelog
   saving and then loading the styling.
 - Manual newlines which neighbor a style tag are no longer omitted.
 - Fixed crashes upon entering illegal text into the break harmonization column.
+- Fixed crashes upon using the page runtime column for an empty scroll page.
 - DeckLink playout now supports driver versions 14.4 and newer.
 
 ### UI Fixes

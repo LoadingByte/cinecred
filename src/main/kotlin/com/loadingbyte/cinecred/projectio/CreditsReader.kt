@@ -199,6 +199,11 @@ private class CreditsReader(
                 pageStages.last().style.subsequentGapFrames
             val page = Page(pageStages.toPersistentList(), gapAfterFrames)
             pages.add(page)
+        } else {
+            // When discarding a page, remove its stages from all runtime groups. Otherwise, these orphaned stages might
+            // confuse the subsequent processing steps.
+            unnamedRuntimeGroups.replaceAll { g -> RuntimeGroup(g.stages.removeAll(pageStages), g.runtimeFrames) }
+            namedRuntimeGroups.replaceAll { _, g -> RuntimeGroup(g.stages.removeAll(pageStages), g.runtimeFrames) }
         }
         pageStages.clear()
         pageGapAfterFrames = null

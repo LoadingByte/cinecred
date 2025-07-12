@@ -547,11 +547,11 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     override fun toggleActualSize() = setActualSize(!actualSize)
 
     override fun setFullScreen(fullScreen: Boolean) {
-        for (view in views) view.setFullScreen(fullScreen)
+        if (dialogVisible) for (view in views) view.setFullScreen(fullScreen)
     }
 
     override fun toggleFullScreen() {
-        for (view in views) view.toggleFullScreen()
+        if (dialogVisible) for (view in views) view.toggleFullScreen()
     }
 
 

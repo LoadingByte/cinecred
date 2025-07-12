@@ -23,6 +23,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- Pressing F11 while the video preview dialog is hidden no longer messes it up.
 - Setting a custom delivery destination no longer fails for single file exports.
 
 

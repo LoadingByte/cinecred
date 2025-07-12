@@ -445,10 +445,10 @@ sealed interface Picture : AutoCloseable {
 
         private val RASTER_EXTS = ImageIO.getReaderFileSuffixes().asList().toSortedSet(String.CASE_INSENSITIVE_ORDER)
         private const val SVG_EXT = "svg"
-        private const val PDF_EXT = "pdf"
-        private val POSTSCRIPT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ai", "eps", "ps")
+        private val PDF_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "pdf", "ai")
+        private val POSTSCRIPT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "eps", "ps")
 
-        val EXTS = (RASTER_EXTS + SVG_EXT + PDF_EXT + POSTSCRIPT_EXTS).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+        val EXTS = (RASTER_EXTS + SVG_EXT + PDF_EXTS + POSTSCRIPT_EXTS).toSortedSet(String.CASE_INSENSITIVE_ORDER)
 
         /** @throws Exception */
         fun load(file: Path): Picture {
@@ -457,7 +457,7 @@ sealed interface Picture : AutoCloseable {
                 when {
                     ext in RASTER_EXTS -> return Raster.load(file)
                     ext.equals(SVG_EXT, ignoreCase = true) -> return SVG.load(file)
-                    ext.equals(PDF_EXT, ignoreCase = true) -> return PDF.load(file)
+                    ext in PDF_EXTS -> return PDF.load(file)
                     ext in POSTSCRIPT_EXTS -> return loadPostScript(file)
                 }
             throw IllegalArgumentException("Not a picture file: $file")
@@ -491,7 +491,7 @@ sealed interface Picture : AutoCloseable {
                 LOGGER.warn("Encountered unexpected exception while looking for the Ghostscript executable.", e)
             }
 
-            val line1 = l10n("imaging.ghostscriptMissing.msg.1", "<code>ai</code>/<code>eps</code>/<code>ps</code>")
+            val line1 = l10n("imaging.ghostscriptMissing.msg.1", "<code>eps</code>/<code>ps</code>")
             val linkWin = " href=\"https://ghostscript.com/releases/gsdnld.html\""
             val linkMac = " href=\"https://pages.uoregon.edu/koch/\""
             val line2 = when {

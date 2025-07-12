@@ -13,6 +13,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Ghostscript is no longer needed to embed `.ai` files.
 - Top and bottom vertical head or tail justification is no longer lost when
   saving and then loading the styling.
 - Manual newlines which neighbor a style tag are no longer omitted.

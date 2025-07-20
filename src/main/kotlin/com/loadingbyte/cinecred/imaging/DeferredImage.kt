@@ -112,10 +112,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun drawEmbeddedPicture(embeddedPic: EmbeddedPicture, x: Double, y: Y, layer: Layer = STATIC) {
+        if (embeddedPic.run { width == 0.0 || height == 0.0 }) return
         addInstruction(layer, Instruction.DrawEmbeddedPicture(x, y, embeddedPic))
     }
 
     fun drawEmbeddedTape(embeddedTape: EmbeddedTape, x: Double, y: Y, layer: Layer = TAPES) {
+        if (embeddedTape.resolution.run { widthPx == 0 || heightPx == 0 }) return
         // When the deferred image is materialized later, we'll need the tape's thumbnail, so already start loading it.
         val asyncThumbnail = embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)
         addInstruction(layer, Instruction.DrawEmbeddedTape(x, y, embeddedTape, asyncThumbnail))
@@ -387,16 +389,23 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val isCropped: Boolean = false
     ) {
 
+        val width: Double
+        val height: Double
+
         init {
-            require((width == null || width > 0.0) && (height == null || height > 0.0))
+            require((width == null || width >= 0.0) && (height == null || height >= 0.0))
             require(!isCropped || picture is Picture.Vector) { "Raster pictures cannot be cropped." }
+            // Note: Even though the Canvas would align raster pictures with the pixel grid anyway, it is a good idea to
+            // already round the embedded size now so that the layout code sees the same size as is later drawn.
+            // In addition, this aligns the vector backends with the canvas backend when it comes to embedded size.
+            val w = width?.let(::roundIfRaster)
+            val h = height?.let(::roundIfRaster)
+            this.width = w ?: roundIfRaster(oriWidth * if (h != null) h / oriHeight else 1.0)
+            this.height = h ?: roundIfRaster(oriHeight * if (w != null) w / oriWidth else 1.0)
         }
 
-        val scalingX: Double = if (width != null) width / oriWidth else if (height != null) height / oriHeight else 1.0
-        val scalingY: Double = if (height != null) height / oriHeight else if (width != null) width / oriWidth else 1.0
-
-        val width: Double = roundIfRaster(width ?: (scalingX * oriWidth))
-        val height: Double = roundIfRaster(height ?: (scalingY * oriHeight))
+        val scalingX: Double = this.width / oriWidth
+        val scalingY: Double = this.height / oriHeight
 
         private val oriWidth get() = if (picture is Picture.Vector && isCropped) picture.cropWidth else picture.width
         private val oriHeight get() = if (picture is Picture.Vector && isCropped) picture.cropHeight else picture.height
@@ -423,7 +432,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         enum class Align { START, MIDDLE, END }
 
         init {
-            require(resolution.run { widthPx > 0 && heightPx > 0 })
+            require(resolution.run { widthPx >= 0 && heightPx >= 0 })
             require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
             require(fadeInFrames >= 0 && fadeOutFrames >= 0)
             if (tape.fileSeq) require(range.start is Timecode.Frames && range.endExclusive is Timecode.Frames) else
@@ -1435,7 +1444,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         ) {
             var res = embeddedTape.resolution
             res = Resolution((res.widthPx * scaling).roundToInt(), (res.heightPx * scaling).roundToInt())
-            collected.add(PlacedTape(embeddedTape.copy(resolution = res), x, y))
+            if (res.widthPx != 0 && res.heightPx != 0)
+                collected.add(PlacedTape(embeddedTape.copy(resolution = res), x, y))
         }
 
     }

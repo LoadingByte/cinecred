@@ -66,7 +66,7 @@ object HomeScreenshotStylingDemo : ProjectDemo("$DIR/screenshot-styling", Format
         sleep(500)
         reposition(styDialog, 760, 570)
         sleep(500)
-        edt { styPanel.leakedSplitPane.setDividerLocation(0.3) }
+        edt { styPanel.leakedSplitPane.setDividerLocation(0.26) }
         sleep(500)
         selectLastRowWithLabel(styPanel.leakedStylingTree, l10n("project.template.contentStyleGutter", locale))
         sleep(500)

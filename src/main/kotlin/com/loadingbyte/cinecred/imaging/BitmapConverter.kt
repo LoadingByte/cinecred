@@ -307,7 +307,7 @@ class BitmapConverter(
             fullFPool += Fmt(planarFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
             fullFPool += Fmt(interleavedFloatEquiv(srcRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
             fullFPool += Fmt(interleavedFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
-            val fmtObjList = ArrayList<Fmt>()
+            val fmtObjList = mutableListOf<Fmt>()
             fmtObjList += srcAny
             fmtObjList += fullFPool
             fmtObjList += dstAny.asReversed()

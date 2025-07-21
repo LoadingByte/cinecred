@@ -59,7 +59,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     private val instructions = HashMap<Layer, MutableList<Instruction>>()
 
     private fun addInstruction(layer: Layer, insn: Instruction) {
-        instructions.computeIfAbsent(layer) { ArrayList() }.add(insn)
+        instructions.computeIfAbsent(layer) { mutableListOf() }.add(insn)
     }
 
     fun copy(universeScaling: Double = 1.0, elasticScaling: Double = 1.0): DeferredImage {
@@ -524,14 +524,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             } catch (_: Exception) {
                 null
             }
+            val (w, h) = embeddedTape.resolution
             if (thumbnail != null) {
-                val res = embeddedTape.resolution
-                val embeddedThumbnail = EmbeddedPicture(thumbnail, res.widthPx.toDouble(), res.heightPx.toDouble())
+                val embeddedThumbnail = EmbeddedPicture(thumbnail, w.toDouble(), h.toDouble())
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
             } else {
-                val (w, h) = embeddedTape.resolution
                 val rect = Rectangle2D.Double(x, y, w * scaling, h * scaling)
                 val coat = Coat.Gradient(
                     Color4f.MISSING_MEDIA_TOP, Color4f.MISSING_MEDIA_BOT,

@@ -268,7 +268,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         })
 
         val zoomTooltip = l10n("ui.edit.zoom") + " (" + l10nEnum(intArrayOf(VK_PLUS, VK_MINUS, VK_0).map {
-            getModifiersExText(CTRL_DOWN_MASK) + "+" + getKeyText(it)
+            shortcutHint(it, CTRL_DOWN_MASK)!!
         }) + ")"
         zoomSlider.toolTipText = zoomTooltip
 

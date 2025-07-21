@@ -20,7 +20,7 @@ class StyleForm<S : Style>(
 ) : Form.Storable<S>(insets, noticeArea, constLabelWidth) {
 
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
-    private val rootFormRows = ArrayList<Pair<FormRow, List<StyleSetting<S, *>>>>()
+    private val rootFormRows = mutableListOf<Pair<FormRow, List<StyleSetting<S, *>>>>()
     private val rootFormRowLookup = HashMap<StyleSetting<S, *>, FormRow>()
 
     private val latentValues = latent.associateWithTo(HashMap<StyleSetting<in S, *>, Any?>()) { null }
@@ -74,10 +74,10 @@ class StyleForm<S : Style>(
             valueWidgets[setting] = valueWidget
             wrappedLabels?.add(
                 if (idx !in spec.settingLabels) null else {
-                var wrappedLabel = l10n(l10nKey(setting.name))
-                spec.settingUnits?.getOrNull(idx)?.let { wrappedLabel += " [$it]" }
-                wrappedLabel
-            })
+                    var wrappedLabel = l10n(l10nKey(setting.name))
+                    spec.settingUnits?.getOrNull(idx)?.let { wrappedLabel += " [$it]" }
+                    wrappedLabel
+                })
         }
         val unionWidget = UnionWidget(
             wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingGaps, spec.settingNewlines

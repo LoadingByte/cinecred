@@ -144,7 +144,7 @@ private class CreditsReader(
     // Final result
     val pages = mutableListOf<Page>()
     val unnamedRuntimeGroups = mutableListOf<RuntimeGroup>()
-    val namedRuntimeGroups = mutableMapOf<String, RuntimeGroup>()
+    val namedRuntimeGroups = HashMap<String, RuntimeGroup>()
 
     // Current page
     val pageStages = mutableListOf<Stage>()

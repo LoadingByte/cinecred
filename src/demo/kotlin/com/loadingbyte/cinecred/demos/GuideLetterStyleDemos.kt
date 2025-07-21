@@ -47,7 +47,7 @@ object GuideLetterStyleFontDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(font = FontRef(getBundledFont("Titillium Regular Upright")!!))
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -60,7 +60,7 @@ object GuideLetterStyleHeightDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(heightPx = last().heightPx * 2.0)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -78,7 +78,7 @@ object GuideLetterStyleLeadingDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(leadingTopRh = 4.0 / 32.0)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -94,7 +94,7 @@ object GuideLetterStyleTrackingDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(trackingEm = -0.05)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -107,7 +107,7 @@ object GuideLetterStyleKerningDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(kerning = false)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}Tan").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}Tan").parseCreditsLS(style)
 }
 
 
@@ -120,7 +120,7 @@ object GuideLetterStyleLigaturesDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(ligatures = false)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}ffi").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}ffi").parseCreditsLS(style)
 }
 
 
@@ -135,7 +135,7 @@ object GuideLetterStyleUppercaseDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(useUppercaseSpacing = false)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}Ronny von Tommy").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}Ronny von Tommy").parseCreditsLS(style)
 }
 
 
@@ -149,7 +149,7 @@ object GuideLetterStyleSmallCapsDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(smallCaps = SmallCaps.PETITE_CAPS)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -171,13 +171,13 @@ object GuideLetterStyleSuperscriptDemo : StyleSettingsDemo<LetterStyle>(
 
     override fun credits(style: LetterStyle) =
         if (style.superscript == Superscript.SUP_SUP)
-            textBox("{{Stil Ctx1}}a{{Stil Ctx2}}b{{Stil Demo}}c").parseCreditsLS(
+            textBox("{{Style Ctx1}}a{{Style Ctx2}}b{{Style Demo}}c").parseCreditsLS(
                 style,
                 PRESET_LETTER_STYLE.copy(name = "Ctx1"),
                 PRESET_LETTER_STYLE.copy(name = "Ctx2", superscript = Superscript.SUP)
             )
         else
-            textBox("{{Stil Ctx}}a{{Stil Demo}}b").parseCreditsLS(
+            textBox("{{Style Ctx}}a{{Style Demo}}b").parseCreditsLS(
                 style,
                 PRESET_LETTER_STYLE.copy(name = "Ctx")
             )
@@ -196,7 +196,7 @@ object GuideLetterStyleHScalingDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(hScaling = 24.0 / 32.0)
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}$LOREM").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
 }
 
 
@@ -210,7 +210,7 @@ object GuideLetterStyleFeaturesDemo : StyleSettingsDemo<LetterStyle>(
         this += last().copy(features = last().features.add(FontFeature("ss01", 1)))
     }
 
-    override fun credits(style: LetterStyle) = textBox("{{Stil Demo}}56789 gg").parseCreditsLS(style)
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}56789 gg").parseCreditsLS(style)
 }
 
 

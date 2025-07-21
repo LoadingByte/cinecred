@@ -492,11 +492,15 @@ sealed interface Picture : AutoCloseable {
             }
 
             val line1 = l10n("imaging.ghostscriptMissing.msg.1", "<code>eps</code>/<code>ps</code>")
-            val linkWin = " href=\"https://ghostscript.com/releases/gsdnld.html\""
-            val linkMac = " href=\"https://pages.uoregon.edu/koch/\""
             val line2 = when {
-                SystemInfo.isWindows -> l10n("imaging.ghostscriptMissing.msg.windows", linkWin, l10nQuoted("Ghostscript AGPL Release"))
-                SystemInfo.isMacOS -> l10n("imaging.ghostscriptMissing.msg.macos", linkMac)
+                SystemInfo.isWindows -> l10n(
+                    "imaging.ghostscriptMissing.msg.windows",
+                    " href=\"https://ghostscript.com/releases/gsdnld.html\"", l10nQuoted("Ghostscript AGPL Release")
+                )
+                SystemInfo.isMacOS -> l10n(
+                    "imaging.ghostscriptMissing.msg.macos",
+                    " href=\"https://pages.uoregon.edu/koch/\""
+                )
                 else -> l10n("imaging.ghostscriptMissing.msg.linux")
             }
             val line3 = l10n("imaging.ghostscriptMissing.msg.3")

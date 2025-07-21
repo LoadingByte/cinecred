@@ -283,7 +283,7 @@ class VideoContainerRenderJob private constructor(
             val profile = config[GENERIC_PROFILE]
             val depth = config[DEPTH]
             val codecProfile = if (depth == 8) codecProfile8 else codecProfile10
-            val codecOptions = mutableMapOf(
+            val codecOptions = mapOf(
                 "crf" to codecCRFOptions[profile.ordinal],
                 "preset" to codecPresetOptions[profile.ordinal]
             )

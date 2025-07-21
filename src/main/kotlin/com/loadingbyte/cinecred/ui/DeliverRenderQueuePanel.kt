@@ -57,7 +57,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                 getColumn(2).preferredWidth = 80
                 getColumn(3).preferredWidth = 150
                 getColumn(4).preferredWidth = 450
-                getColumn(5).preferredWidth = 220
+                getColumn(5).preferredWidth = 230
                 getColumn(6).apply { minWidth = 24; maxWidth = 24 }
             }
         }

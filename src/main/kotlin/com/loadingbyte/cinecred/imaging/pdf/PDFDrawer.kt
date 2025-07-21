@@ -51,7 +51,7 @@ class PDFDrawer(
 ) : PDFGraphicsStreamEngine(page) {
 
     private val groupStack = ArrayDeque<Group>()
-    private val textClippings = ArrayList<Shape>()
+    private val textClippings = mutableListOf<Shape>()
     private var nestedHiddenOCGCount = 0
 
     fun drawTo(canvas: Canvas, transform: AffineTransform?) {
@@ -839,7 +839,7 @@ class PDFDrawer(
 
     companion object {
 
-        private val BLEND_MODE_LOOKUP = hashMapOf(
+        private val BLEND_MODE_LOOKUP = mapOf(
             BlendMode.NORMAL to Canvas.BlendMode.SRC_OVER,
             BlendMode.MULTIPLY to Canvas.BlendMode.MULTIPLY,
             BlendMode.SCREEN to Canvas.BlendMode.SCREEN,

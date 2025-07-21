@@ -541,6 +541,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         if (!dialogVisible)
             return
         this.actualSize = actualSize
+        for (view in views) view.setActualSize(actualSize)
         setupAWTFrameSource()
     }
 

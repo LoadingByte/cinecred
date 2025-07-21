@@ -76,7 +76,7 @@ class StylingReaderContext(
 
 @Suppress("UNCHECKED_CAST")
 private fun asMap(map: Any?): MutableMap<String, Any> =
-    if (map !is MutableMap<*, *>) mutableMapOf()
+    if (map !is MutableMap<*, *>) HashMap()
     else map as MutableMap<String, Any>
 
 private fun asMaps(mapList: Any?): MutableList<MutableMap<String, Any>> =

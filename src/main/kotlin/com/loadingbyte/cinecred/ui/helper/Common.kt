@@ -482,7 +482,7 @@ class LabeledListCellRenderer<E>(
 }
 
 
-var minimumWindowSize = Dimension(600, 450)
+var minimumWindowSize = Dimension(700, 500)
 
 fun JFrame.setup() {
     minimumSize = minimumWindowSize

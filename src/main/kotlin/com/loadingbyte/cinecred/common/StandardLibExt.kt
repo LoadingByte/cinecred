@@ -29,14 +29,6 @@ inline fun <E> Collection<E>.maxOfOr(default: Double, selector: (E) -> Double): 
     if (isEmpty()) default else maxOf(selector)
 
 
-inline fun <E> Iterable<E>.sumOf(selector: (E) -> Double): Double {
-    var sum = 0.0
-    for (elem in this)
-        sum += selector(elem)
-    return sum
-}
-
-
 fun IntArray.sumBetween(startIdx: Int, endIdx: Int): Int {
     var sum = 0
     for (idx in startIdx..<endIdx)

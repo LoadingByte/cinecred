@@ -482,7 +482,7 @@ class Tape private constructor(
         fun close() {
             val slices = lock.withLock {
                 closed = true
-                ArrayList(slices).also { slices.clear() }
+                slices.toMutableList().also { slices.clear() }
             }
             for (slice in slices)
                 (slice as Slice).close()
@@ -517,7 +517,7 @@ class Tape private constructor(
                         SliceResp(SliceRespStatus.GOT, CompletableFuture.completedFuture(items[idx]))
                     else {
                         val future = CompletableFuture<I>()
-                        (pendingFutures[idx] ?: ArrayList<CompletableFuture<I>>().also {
+                        (pendingFutures[idx] ?: mutableListOf<CompletableFuture<I>>().also {
                             pendingFutures[idx] = it
                         }) += future
                         SliceResp(SliceRespStatus.GOT, future)

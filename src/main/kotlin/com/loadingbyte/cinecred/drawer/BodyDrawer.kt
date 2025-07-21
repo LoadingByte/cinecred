@@ -510,14 +510,14 @@ private inline fun <E> flowIntoLines(
         return emptyList()
 
     val queue: Queue<E> = ArrayDeque(list)
-    val lines = ArrayList<MutableList<E>>()
+    val lines = mutableListOf<MutableList<E>>()
     var x: Double
 
     // We extracted this code from the loop below to ensure that the first line list is never an empty list,
     // even if there are floating point inaccuracies.
     val firstElem = queue.remove()
     x = getWidth(firstElem)
-    lines.add(arrayListOf(firstElem))
+    lines.add(mutableListOf(firstElem))
 
     while (queue.isNotEmpty()) {
         val elem = queue.remove()
@@ -528,7 +528,7 @@ private inline fun <E> flowIntoLines(
             lines.last().add(elem)
         } else {
             // Case 2: The element does not fit on the current line. Start a new line.
-            lines.add(arrayListOf(elem))
+            lines.add(mutableListOf(elem))
             x = elemWidth
         }
     }
@@ -644,7 +644,7 @@ private class Extent(value: Double) {
             if (group2Extents == null) {
                 other.group = group1
                 group1.value = max
-                group1.extents = ArrayList<Extent>().apply { add(this@Extent); add(other) }
+                group1.extents = mutableListOf(this, other)
             } else {
                 this.group = group2
                 group2.value = max

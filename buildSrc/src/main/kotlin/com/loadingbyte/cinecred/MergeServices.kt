@@ -20,7 +20,7 @@ abstract class MergeServices : DefaultTask() {
     abstract val outputDir: DirectoryProperty
 
     @get:Inject
-    abstract val fileOperations: FileOperations
+    abstract val fileOps: FileOperations
 
     @TaskAction
     fun run() {
@@ -29,7 +29,7 @@ abstract class MergeServices : DefaultTask() {
         outputDir.deleteRecursively()
         outputDir.mkdirs()
         for (file in classpath)
-            for (serviceFile in fileOperations.zipTree(file).matching { include("META-INF/services/*") })
+            for (serviceFile in fileOps.zipTree(file).matching { include("META-INF/services/*") })
                 outputDir.resolve(serviceFile.name).appendText(serviceFile.readText())
     }
 

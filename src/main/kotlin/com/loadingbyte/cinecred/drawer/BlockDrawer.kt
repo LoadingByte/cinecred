@@ -230,7 +230,7 @@ private inline fun harmonizeWidth(
         // for that style. Hence, group the block according to both (a) the style's partition and (b) the global
         // head/tail harmonization partition which arises from the "@Break Harmonization" column in the credits table.
         val key = Pair(styleHarmonizationPartitionIds[block.style] ?: continue, blockHarmonizationPartitionId(block))
-        grouper.computeIfAbsent(key) { ArrayList() }.add(block)
+        grouper.computeIfAbsent(key) { mutableListOf() }.add(block)
     }
     // Now that the grouping is done, record the shared extent of each group.
     val groupWidths = HashMap<Block, Double>(2 * blocks.size)

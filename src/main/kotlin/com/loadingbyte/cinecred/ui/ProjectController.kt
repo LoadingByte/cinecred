@@ -411,10 +411,7 @@ class ProjectController(
             window = window.owner
         if (window != projectFrame && window != stylingDialog && window != playbackDialog && window != deliveryDialog)
             return false
-        if (projectFrame.panel.onKeyEvent(event) ||
-            stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event) ||
-            deliveryDialog.isVisible && deliveryDialog.panel.onKeyEvent(event)
-        )
+        if (projectFrame.panel.onKeyEvent(event) || stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event))
             return true
         when (event.modifiersEx) {
             0 -> when (event.keyCode) {
@@ -440,6 +437,7 @@ class ProjectController(
                 VK_Q -> tryCloseProject()
                 VK_W -> if (window == projectFrame) tryCloseProject() else
                     setDialogVisible(ProjectDialogType.entries.first { getDialog(it) == window }, false)
+                VK_B if deliveryDialog.isVisible -> deliveryDialog.panel.configurationForm.addRenderJobToQueue()
                 VK_L -> playbackCtrl.toggleDeckLinkConnected()
                 VK_1 -> playbackCtrl.toggleActualSize()
                 else -> return false

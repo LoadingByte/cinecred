@@ -19,10 +19,8 @@ abstract class BuildNFD : DefaultTask() {
 
     @get:Input
     abstract val forPlatform: Property<Platform>
-
     @get:InputDirectory
     abstract val repositoryDir: DirectoryProperty
-
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 

@@ -9,8 +9,10 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.io.File
+import javax.inject.Inject
 
 
 abstract class BuildNFD : DefaultTask() {
@@ -24,6 +26,9 @@ abstract class BuildNFD : DefaultTask() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
+    @get:Inject
+    abstract val execOps: ExecOperations
+
     @TaskAction
     fun run() {
         val forPlatform = forPlatform.get()
@@ -36,7 +41,7 @@ abstract class BuildNFD : DefaultTask() {
         val cmd = mutableListOf<String>()
         if (forPlatform.os == WINDOWS) {
             val sub = mutableListOf<String>()
-            sub += listOf(Tools.vcvars(project), "&&", "cl", "/LD", "/std:c++17", "/O2", "/GL", "/GR-")
+            sub += listOf(Tools.vcvars(execOps), "&&", "cl", "/LD", "/std:c++17", "/O2", "/GL", "/GR-")
             sub += macros.map { "/D$it" }
             sub += listOf("\"/Fe:${outFile.absolutePath}\"", "/I", "\"${incDir.absolutePath}\"")
             sub += "\"${repoDir.resolve("nfd_win.cpp").absolutePath}\""
@@ -64,12 +69,12 @@ abstract class BuildNFD : DefaultTask() {
             cmd += lnkArgs
         }
 
-        project.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
     }
 
     private fun pkgConfig(vararg args: String): List<String> {
         val baos = ByteArrayOutputStream()
-        project.exec { commandLine("pkg-config", *args).setStandardOutput(baos) }
+        execOps.exec { commandLine("pkg-config", *args).standardOutput = baos }
             .rethrowFailure().assertNormalExitValue()
         return baos.toString(Charsets.UTF_8).trim().split(' ')
     }

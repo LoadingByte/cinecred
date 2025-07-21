@@ -9,7 +9,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import java.io.File
+import javax.inject.Inject
 
 
 abstract class BuildDeckLinkCAPI : DefaultTask() {
@@ -21,6 +23,9 @@ abstract class BuildDeckLinkCAPI : DefaultTask() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
 
+    @get:Inject
+    abstract val execOps: ExecOperations
+
     @TaskAction
     fun run() {
         val forPlatform = forPlatform.get()
@@ -31,10 +36,10 @@ abstract class BuildDeckLinkCAPI : DefaultTask() {
         val cmd = mutableListOf<String>()
         if (forPlatform.os == WINDOWS) {
             // First run MIDL to generate an actual .h file from DeckLink's .idl file.
-            val vcvars = Tools.vcvars(project)
+            val vcvars = Tools.vcvars(execOps)
             val idlFile = srcDir.resolve("sdk/windows/DeckLinkAPI.idl")
             val midlCmd = listOf("cmd", "/C", "$vcvars && midl /notlb /h DeckLinkAPI.h ${idlFile.absolutePath}")
-            project.exec { commandLine(midlCmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
+            execOps.exec { commandLine(midlCmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
             val sub = mutableListOf<String>()
             sub += listOf(vcvars, "&&", "cl", "/LD", "/std:c++17", "/O2", "/GL", "/GR-", "/DCAPI=__declspec(dllexport)")
             sub += listOf("\"/Fe:${outFile.absolutePath}\"", "/I", "\"${temporaryDir.absolutePath}\"")
@@ -52,7 +57,7 @@ abstract class BuildDeckLinkCAPI : DefaultTask() {
             cmd += srcPaths
         }
 
-        project.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

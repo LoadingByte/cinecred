@@ -9,6 +9,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 
 abstract class BuildHarfBuzz : DefaultTask() {
@@ -19,6 +21,9 @@ abstract class BuildHarfBuzz : DefaultTask() {
     abstract val repositoryDir: DirectoryProperty
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
 
     @TaskAction
     fun run() {
@@ -49,7 +54,7 @@ abstract class BuildHarfBuzz : DefaultTask() {
         val cmd = mutableListOf<String>()
         if (forPlatform.os == WINDOWS) {
             val sub = mutableListOf<String>()
-            sub += listOf(Tools.vcvars(project), "&&", "cl", "/LD", "/std:c++11", "/O2", "/GL", "/GR-")
+            sub += listOf(Tools.vcvars(execOps), "&&", "cl", "/LD", "/std:c++11", "/O2", "/GL", "/GR-")
             sub += macros.map { "/D$it" } + "/DHB_EXTERN=__declspec(dllexport)"
             sub += listOf("\"/Fe:${outFile.absolutePath}\"", "\"${srcFile.absolutePath}\"")
             sub += listOf("/link", "/NOIMPLIB", "/NOEXP")
@@ -65,7 +70,7 @@ abstract class BuildHarfBuzz : DefaultTask() {
             cmd += listOf("-o", outFile.absolutePath, srcFile.absolutePath)
         }
 
-        project.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

@@ -11,7 +11,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import java.io.File
+import javax.inject.Inject
 
 
 abstract class BuildZimg : DefaultTask() {
@@ -22,6 +24,9 @@ abstract class BuildZimg : DefaultTask() {
     abstract val repositoryDir: DirectoryProperty
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
 
     @TaskAction
     fun run() {
@@ -48,10 +53,10 @@ abstract class BuildZimg : DefaultTask() {
         val obj: String
         val simdFlavors: Map<String, List<String>>
         if (forPlatform.os == WINDOWS) {
-            cc += listOf(Tools.clangCl(project), "/c", "/std:c++14", "/EHsc", "/O2", "/GS-", "-flto", "-Wno-assume")
+            cc += listOf(Tools.clangCl(execOps), "/c", "/std:c++14", "/EHsc", "/O2", "/GS-", "-flto", "-Wno-assume")
             cc += macros.map { "/D$it" }
             cc += listOf("/I", srcDir.absolutePath)
-            ld += listOf(Tools.lldLink(project), "/DLL", "/NOIMPLIB", "/OUT:${outFile.absolutePath}")
+            ld += listOf(Tools.lldLink(execOps), "/DLL", "/NOIMPLIB", "/OUT:${outFile.absolutePath}")
             obj = "obj"
             // Note: There are no switches for SSE and SSE2 in clang-cl; both are always enabled.
             simdFlavors = mapOf(
@@ -108,7 +113,7 @@ abstract class BuildZimg : DefaultTask() {
     }
 
     private fun exec(objDir: File, commandLine: List<String>) {
-        project.exec { commandLine(commandLine).workingDir(objDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(commandLine).workingDir(objDir) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

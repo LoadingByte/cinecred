@@ -3,14 +3,15 @@ package com.loadingbyte.cinecred
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.io.File
 
 
 object Tools {
 
-    fun vcvars(project: Project): String {
-        locateVisualStudioBuildTools(project)?.let { baseDir ->
+    fun vcvars(execOps: ExecOperations): String {
+        locateVSBuildTools(execOps)?.let { baseDir ->
             val bat = baseDir.resolve("VC/Auxiliary/Build/vcvars64.bat")
             if (bat.canExecute())
                 return bat.absolutePath.replace(Regex("[ ()]"), "^\$0")
@@ -18,12 +19,12 @@ object Tools {
         throw InvalidUserDataException("You must install the MSVC compiler from the Build Tools for Visual Studio.")
     }
 
-    fun vsLlvmHome(project: Project): String = locateVisualStudioLlvmHome(project).absolutePath
-    fun clangCl(project: Project): String = locateVisualStudioLlvmHome(project).resolve("bin/clang-cl.exe").absolutePath
-    fun lldLink(project: Project): String = locateVisualStudioLlvmHome(project).resolve("bin/lld-link.exe").absolutePath
+    fun vsLlvmHome(execOps: ExecOperations): String = locateVSLlvmHome(execOps).absolutePath
+    fun clangCl(execOps: ExecOperations): String = locateVSLlvmHome(execOps).resolve("bin/clang-cl.exe").absolutePath
+    fun lldLink(execOps: ExecOperations): String = locateVSLlvmHome(execOps).resolve("bin/lld-link.exe").absolutePath
 
-    private fun locateVisualStudioLlvmHome(project: Project): File {
-        locateVisualStudioBuildTools(project)?.let { baseDir ->
+    private fun locateVSLlvmHome(execOps: ExecOperations): File {
+        locateVSBuildTools(execOps)?.let { baseDir ->
             val homeDir = baseDir.resolve("VC/Tools/Llvm/x64")
             if (homeDir.isDirectory)
                 return homeDir
@@ -31,7 +32,7 @@ object Tools {
         throw InvalidUserDataException("You must install the Clang compiler from the Build Tools for Visual Studio.")
     }
 
-    private fun locateVisualStudioBuildTools(project: Project): File? {
+    private fun locateVSBuildTools(execOps: ExecOperations): File? {
         val cmd = listOf(
             File(System.getenv("ProgramFiles(x86)") ?: return null)
                 .resolve("Microsoft Visual Studio/Installer/vswhere.exe").absolutePath,
@@ -41,7 +42,7 @@ object Tools {
             "-utf8"
         )
         val baos = ByteArrayOutputStream()
-        if (project.exec { commandLine(cmd).setStandardOutput(baos) }.rethrowFailure().exitValue != 0)
+        if (execOps.exec { commandLine(cmd).standardOutput = baos }.rethrowFailure().exitValue != 0)
             return null
         val baseDir = File(baos.toString(Charsets.UTF_8).trim())
         return if (baseDir.isDirectory) baseDir else null

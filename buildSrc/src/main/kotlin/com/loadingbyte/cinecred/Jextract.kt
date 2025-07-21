@@ -6,6 +6,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 
 abstract class Jextract : DefaultTask() {
@@ -28,6 +30,9 @@ abstract class Jextract : DefaultTask() {
     abstract val includeDir: DirectoryProperty
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
 
     /** We put these here to not clutter the buildscript. */
     fun addHarfBuzzIncludes() {
@@ -136,7 +141,7 @@ abstract class Jextract : DefaultTask() {
         cmd += listOf("--output", outputDir.absolutePath, headerFile.absolutePath)
 
         outputDir.resolve(targetPackage.replace('.', '/')).deleteRecursively()
-        project.exec { commandLine(cmd) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(cmd) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

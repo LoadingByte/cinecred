@@ -6,7 +6,9 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import org.gradle.process.ExecOperations
 import java.io.File
+import javax.inject.Inject
 
 
 abstract class BuildSkiaCAPI : DefaultTask() {
@@ -21,6 +23,9 @@ abstract class BuildSkiaCAPI : DefaultTask() {
     abstract val linkedFile: RegularFileProperty
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
 
     @TaskAction
     fun run() {
@@ -37,7 +42,7 @@ abstract class BuildSkiaCAPI : DefaultTask() {
         if (forPlatform.os == WINDOWS) {
             val sub = mutableListOf<String>()
             // Skia requires C++17.
-            sub += listOf(Tools.vcvars(project), "&&", "cl", "/LD", "/std:c++17", "/O2", "/GL", "/GR-")
+            sub += listOf(Tools.vcvars(execOps), "&&", "cl", "/LD", "/std:c++17", "/O2", "/GL", "/GR-")
             sub += macros.map { "/D$it" } + "/DCAPI=__declspec(dllexport)"
             sub += listOf("\"/Fe:${outFile.absolutePath}\"", "/I", "\"${repoDir.absolutePath}\"")
             sub += srcPaths.map { "\"$it\"" }
@@ -58,7 +63,7 @@ abstract class BuildSkiaCAPI : DefaultTask() {
             cmd += listOf("-L${lnkFile.parentFile.absolutePath}", "-l${lnkFile.nameWithoutExtension.substring(3)}")
         }
 
-        project.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

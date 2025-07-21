@@ -9,7 +9,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import java.io.File
+import javax.inject.Inject
 
 
 abstract class BuildSkia : DefaultTask() {
@@ -20,6 +22,9 @@ abstract class BuildSkia : DefaultTask() {
     abstract val repositoryDir: DirectoryProperty
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
 
     @TaskAction
     fun run() {
@@ -38,7 +43,7 @@ abstract class BuildSkia : DefaultTask() {
         val obj: String
         if (forPlatform.os == Platform.OS.WINDOWS) {
             gnArgs += listOf(
-                "clang_win=\"${Tools.vsLlvmHome(project)}\"",
+                "clang_win=\"${Tools.vsLlvmHome(execOps)}\"",
                 // Skia's own version detection algorithm expects a directory "x.y.z", but the actual directory is
                 // called "17" at the time of writing. Since the result is irrelevant anyway, we just put a placeholder
                 // to prevent Skia's algorithm from running at all.
@@ -53,7 +58,7 @@ abstract class BuildSkia : DefaultTask() {
             //   - The SVG module looks for text shaping, but we don't compile that in and instead remove all <text>
             //     tags from the SVG before passing it to Skia.
             //   - Some Windows-specific image format code looks for Windows libraries, but we don't use that code.
-            ld += listOf(Tools.lldLink(project), "/DLL", "/FORCE:UNRESOLVED", "/OPT:ICF", "/OPT:REF")
+            ld += listOf(Tools.lldLink(execOps), "/DLL", "/FORCE:UNRESOLVED", "/OPT:ICF", "/OPT:REF")
             ld += "/OUT:${outFile.absolutePath}"
             obj = "obj"
         } else {
@@ -147,7 +152,7 @@ abstract class BuildSkia : DefaultTask() {
 
     private fun exec(workDir: File, vararg commandLine: String) = exec(workDir, commandLine.asList())
     private fun exec(workDir: File, commandLine: List<String>) {
-        project.exec { commandLine(commandLine).workingDir(workDir) }.rethrowFailure().assertNormalExitValue()
+        execOps.exec { commandLine(commandLine).workingDir(workDir) }.rethrowFailure().assertNormalExitValue()
     }
 
 }

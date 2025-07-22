@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
 import com.loadingbyte.cinecred.common.isSameFileAsSafely
+import com.loadingbyte.cinecred.showLog
 import com.loadingbyte.cinecred.ui.PROJECT_HINT_TRACK_PENDING_PREFERENCE
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
@@ -12,6 +13,7 @@ import com.loadingbyte.cinecred.ui.play
 import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
+import java.awt.event.KeyEvent.*
 import java.nio.file.Path
 import javax.swing.JComboBox
 import javax.swing.JTree
@@ -54,8 +56,12 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         ) onGlobalKeyEvent(event) else false
 
     private fun onGlobalKeyEvent(event: KeyEvent): Boolean {
-        if (event.isConsumed || event.id != KeyEvent.KEY_PRESSED)
+        if (event.isConsumed || event.id != KEY_PRESSED)
             return false
+        if (event.modifiersEx == SHIFT_DOWN_MASK or CTRL_DOWN_MASK or ALT_DOWN_MASK && event.keyCode == VK_L) {
+            showLog()
+            return true
+        }
         welcomeCtrl?.let { if (it.onGlobalKeyEvent(event)) return true }
         return projectCtrls.any { it.onGlobalKeyEvent(event) }
     }

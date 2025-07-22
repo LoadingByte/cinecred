@@ -305,6 +305,20 @@ Locale: ${Locale.getDefault().toLanguageTag()}
 }
 
 
+fun showLog() {
+    val win = FocusManager.getCurrentKeyboardFocusManager().activeWindow
+    val screenBounds = (win?.graphicsConfiguration
+        ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration).usableBounds
+    val log = JULBuilderHandler.log.toString()
+    val msgComp = JScrollPane(JTextArea(log).apply {
+        isEditable = false
+        putClientProperty(STYLE_CLASS, "monospaced")
+    })
+    msgComp.preferredSize = Dimension(screenBounds.width / 2, screenBounds.height / 2)
+    JOptionPane.showMessageDialog(win, msgComp, "Log", JOptionPane.INFORMATION_MESSAGE)
+}
+
+
 private object JULFormatter : Formatter() {
     private val startMillis = System.currentTimeMillis()
     override fun format(record: LogRecord): String {

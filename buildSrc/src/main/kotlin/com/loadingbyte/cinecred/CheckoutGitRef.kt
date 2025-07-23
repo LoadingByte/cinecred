@@ -19,6 +19,9 @@ abstract class CheckoutGitRef : DefaultTask() {
     abstract val ref: Property<String>
     @get:Input
     @get:Optional
+    abstract val submodules: Property<Boolean>
+    @get:Input
+    @get:Optional
     abstract val patch: Property<String>
     @get:OutputDirectory
     abstract val repositoryDir: DirectoryProperty
@@ -37,6 +40,10 @@ abstract class CheckoutGitRef : DefaultTask() {
         git.reset().setMode(ResetCommand.ResetType.HARD).call()
         git.clean().setForce(true).setCleanDirectories(true).call()
         git.checkout().setName(ref).call()
+        if (submodules.isPresent && submodules.get()) {
+            git.submoduleInit().call()
+            git.submoduleUpdate().call()
+        }
         if (patch.isPresent)
             git.apply().setPatch(javaClass.getResourceAsStream(patch.get())).call()
     }

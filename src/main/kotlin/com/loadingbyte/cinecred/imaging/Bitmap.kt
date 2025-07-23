@@ -808,6 +808,9 @@ class Bitmap private constructor(
                 addCB(AVCOL_SPC_CHROMA_DERIVED_NCL, "Chromaticity-Derived Constant Luminance")
                 addCB(AVCOL_SPC_CHROMA_DERIVED_CL, "Chromaticity-Derived Non-Constant Luminance")
                 addCB(AVCOL_SPC_ICTCP, "ICtCp")
+                addCB(AVCOL_SPC_IPT_C2, "IPT-C2")
+                addCB(AVCOL_SPC_YCGCO_RE, "YCgCo-R Even")
+                addCB(AVCOL_SPC_YCGCO_RO, "YCgCo-R Odd")
             }
 
             private fun addCB(code: Int, name: String) {

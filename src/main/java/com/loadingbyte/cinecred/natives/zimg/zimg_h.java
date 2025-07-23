@@ -397,6 +397,22 @@ public class zimg_h  {
     }
     /**
      * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_WLC = 1015;
+     * }
+     */
+    public static int ZIMG_CPU_X86_AVX512_WLC() {
+        return (int)1015L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_cpu_type_e.ZIMG_CPU_X86_AVX512_GLC = 1016;
+     * }
+     */
+    public static int ZIMG_CPU_X86_AVX512_GLC() {
+        return (int)1016L;
+    }
+    /**
+     * {@snippet :
      * enum zimg_pixel_type_e.ZIMG_PIXEL_BYTE = 0;
      * }
      */
@@ -669,6 +685,14 @@ public class zimg_h  {
     }
     /**
      * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ST2085_YDZDX = 11;
+     * }
+     */
+    public static int ZIMG_MATRIX_ST2085_YDZDX() {
+        return (int)11L;
+    }
+    /**
+     * {@snippet :
      * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_CHROMATICITY_DERIVED_NCL = 12;
      * }
      */
@@ -685,11 +709,35 @@ public class zimg_h  {
     }
     /**
      * {@snippet :
-     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ICTCP = 14;
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_BT2100_ICTCP = 14;
      * }
      */
-    public static int ZIMG_MATRIX_ICTCP() {
+    public static int ZIMG_MATRIX_BT2100_ICTCP() {
         return (int)14L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_ST2128_IPT_C2 = 15;
+     * }
+     */
+    public static int ZIMG_MATRIX_ST2128_IPT_C2() {
+        return (int)15L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_YCGCO_RE = 16;
+     * }
+     */
+    public static int ZIMG_MATRIX_YCGCO_RE() {
+        return (int)16L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_matrix_coefficients_e.ZIMG_MATRIX_YCGCO_RO = 17;
+     * }
+     */
+    public static int ZIMG_MATRIX_YCGCO_RO() {
+        return (int)17L;
     }
     /**
      * {@snippet :
@@ -778,6 +826,14 @@ public class zimg_h  {
      */
     public static int ZIMG_TRANSFER_IEC_61966_2_4() {
         return (int)11L;
+    }
+    /**
+     * {@snippet :
+     * enum zimg_transfer_characteristics_e.ZIMG_TRANSFER_BT1361 = 12;
+     * }
+     */
+    public static int ZIMG_TRANSFER_BT1361() {
+        return (int)12L;
     }
     /**
      * {@snippet :
@@ -1234,6 +1290,14 @@ public class zimg_h  {
      */
     public static int ZIMG_MATRIX_2020_CL() {
         return (int)10L;
+    }
+    /**
+     * {@snippet :
+     * #define ZIMG_MATRIX_ICTCP 14
+     * }
+     */
+    public static int ZIMG_MATRIX_ICTCP() {
+        return (int)14L;
     }
     /**
      * {@snippet :

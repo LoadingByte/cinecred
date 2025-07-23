@@ -1,23 +1,23 @@
 diff --git a/src/zimg/api/zimg.cpp b/src/zimg/api/zimg.cpp
-index 87bc9ea..3a7ea60 100644
+index eae9957..5f048f3 100644
 --- a/src/zimg/api/zimg.cpp
 +++ b/src/zimg/api/zimg.cpp
-@@ -291,7 +291,8 @@ zimg::colorspace::ColorPrimaries translate_primaries(zimg_color_primaries_e prim
+@@ -285,7 +285,8 @@ zimg::colorspace::ColorPrimaries translate_primaries(zimg_color_primaries_e prim
  {
  	using zimg::colorspace::ColorPrimaries;
-
--	static SM_CONSTEXPR_14 const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 12> map{
-+	static SM_CONSTEXPR_14 const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 13> map{
+ 
+-	static constexpr const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 12> map{
++	static constexpr const zimg::static_map<zimg_color_primaries_e, ColorPrimaries, 13> map{
 +		{ ZIMG_PRIMARIES_XYZ_D50,     ColorPrimaries::XYZ_D50 },
  		{ ZIMG_PRIMARIES_BT470_M,     ColorPrimaries::REC_470_M },
  		{ ZIMG_PRIMARIES_BT470_BG,    ColorPrimaries::REC_470_BG },
  		{ ZIMG_PRIMARIES_BT709,       ColorPrimaries::REC_709 },
 diff --git a/src/zimg/api/zimg.h b/src/zimg/api/zimg.h
-index 1a4fb14..df28a5d 100644
+index ad194f8..91381c9 100644
 --- a/src/zimg/api/zimg.h
 +++ b/src/zimg/api/zimg.h
 @@ -5,7 +5,7 @@
-
+ 
  /* Support for ELF hidden visibility. DLL targets use export maps instead. */
  #if defined(_WIN32) || defined(__CYGWIN__)
 -  #define ZIMG_VISIBILITY
@@ -25,8 +25,8 @@ index 1a4fb14..df28a5d 100644
  #elif defined(__GNUC__)
    #define ZIMG_VISIBILITY __attribute__((visibility("default")))
  #else
-@@ -328,6 +328,7 @@ typedef enum zimg_transfer_characteristics_e {
-
+@@ -338,6 +338,7 @@ typedef enum zimg_transfer_characteristics_e {
+ 
  typedef enum zimg_color_primaries_e {
  	ZIMG_PRIMARIES_INTERNAL    = -1, /**< Not part of the API. */
 +	ZIMG_PRIMARIES_XYZ_D50     = 100,
@@ -34,11 +34,11 @@ index 1a4fb14..df28a5d 100644
  	ZIMG_PRIMARIES_UNSPECIFIED = 2,
  	ZIMG_PRIMARIES_BT470_M     = 4,
 diff --git a/src/zimg/colorspace/colorspace.h b/src/zimg/colorspace/colorspace.h
-index 4dfba19..a7c8c75 100644
+index 99eac00..b352425 100644
 --- a/src/zimg/colorspace/colorspace.h
 +++ b/src/zimg/colorspace/colorspace.h
-@@ -52,6 +52,7 @@ enum class TransferCharacteristics {
-
+@@ -49,6 +49,7 @@ enum class TransferCharacteristics {
+ 
  enum class ColorPrimaries {
  	UNSPECIFIED,
 +	XYZ_D50,
@@ -46,10 +46,10 @@ index 4dfba19..a7c8c75 100644
  	REC_470_BG,
  	SMPTE_C,
 diff --git a/src/zimg/colorspace/colorspace_param.cpp b/src/zimg/colorspace/colorspace_param.cpp
-index 9c1edee..27f5eaf 100644
+index 785f3a9..5d524f5 100644
 --- a/src/zimg/colorspace/colorspace_param.cpp
 +++ b/src/zimg/colorspace/colorspace_param.cpp
-@@ -56,6 +56,8 @@ Vector3 xy_to_xyz(double x, double y)
+@@ -55,6 +55,8 @@ Vector3 xy_to_xyz(double x, double y)
  Vector3 get_white_point(ColorPrimaries primaries)
  {
  	switch (primaries) {
@@ -58,33 +58,46 @@ index 9c1edee..27f5eaf 100644
  	case ColorPrimaries::REC_470_M:
  	case ColorPrimaries::FILM:
  		return xy_to_xyz(ILLUMINANT_C[0], ILLUMINANT_C[1]);
-@@ -248,7 +250,7 @@ Matrix3x3 lms_to_ictcp_matrix(TransferCharacteristics transfer)
+@@ -247,7 +249,7 @@ Matrix3x3 lms_to_ictcp_matrix(TransferCharacteristics transfer)
  // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
  Matrix3x3 gamut_rgb_to_xyz_matrix(ColorPrimaries primaries)
  {
 -	if (primaries == ColorPrimaries::XYZ)
 +	if (primaries == ColorPrimaries::XYZ || primaries == ColorPrimaries::XYZ_D50)
  		return Matrix3x3::identity();
-
+ 
  	Matrix3x3 xyz_matrix = get_primaries_xyz(primaries);
-@@ -262,7 +264,7 @@ Matrix3x3 gamut_rgb_to_xyz_matrix(ColorPrimaries primaries)
-
+@@ -261,7 +263,7 @@ Matrix3x3 gamut_rgb_to_xyz_matrix(ColorPrimaries primaries)
+ 
  Matrix3x3 gamut_xyz_to_rgb_matrix(ColorPrimaries primaries)
  {
 -	if (primaries == ColorPrimaries::XYZ)
 +	if (primaries == ColorPrimaries::XYZ || primaries == ColorPrimaries::XYZ_D50)
  		return Matrix3x3::identity();
-
+ 
  	return inverse(gamut_rgb_to_xyz_matrix(primaries));
 diff --git a/src/zimg/colorspace/colorspace_param.h b/src/zimg/colorspace/colorspace_param.h
-index a78faa0..bc4a373 100644
+index c254a52..5561028 100644
 --- a/src/zimg/colorspace/colorspace_param.h
 +++ b/src/zimg/colorspace/colorspace_param.h
-@@ -34,6 +34,7 @@ constexpr double DCI_P3_PRIMARIES[3][2] = { { 0.680, 0.320 } , { 0.265, 0.690 },
- constexpr double JEDEC_P22_PRIMARIES[3][2] = { { 0.630, 0.340 }, { 0.295, 0.605 }, { 0.155, 0.077 } };
-
+@@ -33,6 +33,7 @@ constexpr double DCI_P3_PRIMARIES[3][2] = { { 0.680, 0.320 } , { 0.265, 0.690 },
+ constexpr double EBU_3213_E_PRIMARIES[3][2] = { { 0.630, 0.340 }, { 0.295, 0.605 }, { 0.155, 0.077 } };
+ 
  // White points in XY.
 +constexpr double ILLUMINANT_D50[2] = { 0.3457, 0.3585 };
  constexpr double ILLUMINANT_C[2]   = { 0.31, 0.316 };
  constexpr double ILLUMINANT_DCI[2] = { 0.314, 0.351 };
  constexpr double ILLUMINANT_D65[2] = { 0.3127, 0.3290 };
+diff --git a/src/zimg/colorspace/x86/operation_impl_x86.cpp b/src/zimg/colorspace/x86/operation_impl_x86.cpp
+index f4ff8f6..bb43dee 100644
+--- a/src/zimg/colorspace/x86/operation_impl_x86.cpp
++++ b/src/zimg/colorspace/x86/operation_impl_x86.cpp
+@@ -16,7 +16,7 @@ std::unique_ptr<Operation> create_matrix_operation_x86(const Matrix3x3 &m, CPUCl
+ 	if (cpu_is_autodetect(cpu)) {
+ 		if (!ret && cpu == CPUClass::AUTO_64B && caps.avx512f)
+ 			ret = create_matrix_operation_avx512(m);
+-		if (!ret && caps.avx)
++		if (!ret && caps.avx2)
+ 			ret = create_matrix_operation_avx2(m);
+ 	} else {
+ 		if (!ret && cpu >= CPUClass::X86_AVX512)

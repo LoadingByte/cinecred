@@ -7,6 +7,7 @@ import com.loadingbyte.cinecred.imaging.Bitmap.Alpha.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.*
 import com.loadingbyte.cinecred.imaging.Bitmap.Range.FULL
 import com.loadingbyte.cinecred.imaging.Bitmap.Range.LIMITED
+import com.loadingbyte.cinecred.imaging.BitmapConverter.Companion.convert
 import com.loadingbyte.cinecred.imaging.BitmapConverter.StageType.*
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.natives.skcms.skcms_Curve
@@ -1953,6 +1954,7 @@ class BitmapConverter(
                         AVCOL_TRC_LOG -> ZIMG_TRANSFER_LOG_100()
                         AVCOL_TRC_LOG_SQRT -> ZIMG_TRANSFER_LOG_316()
                         AVCOL_TRC_IEC61966_2_4 -> ZIMG_TRANSFER_IEC_61966_2_4()
+                        AVCOL_TRC_BT1361_ECG -> ZIMG_TRANSFER_BT1361()
                         AVCOL_TRC_IEC61966_2_1 -> ZIMG_TRANSFER_IEC_61966_2_1()
                         AVCOL_TRC_BT2020_10 -> ZIMG_TRANSFER_BT2020_10()
                         AVCOL_TRC_BT2020_12 -> ZIMG_TRANSFER_BT2020_12()
@@ -1972,9 +1974,13 @@ class BitmapConverter(
                         AVCOL_SPC_YCGCO -> ZIMG_MATRIX_YCGCO()
                         AVCOL_SPC_BT2020_NCL -> ZIMG_MATRIX_BT2020_NCL()
                         AVCOL_SPC_BT2020_CL -> ZIMG_MATRIX_BT2020_CL()
+                        AVCOL_SPC_SMPTE2085 -> ZIMG_MATRIX_ST2085_YDZDX()
                         AVCOL_SPC_CHROMA_DERIVED_NCL -> ZIMG_MATRIX_CHROMATICITY_DERIVED_NCL()
                         AVCOL_SPC_CHROMA_DERIVED_CL -> ZIMG_MATRIX_CHROMATICITY_DERIVED_CL()
-                        AVCOL_SPC_ICTCP -> ZIMG_MATRIX_ICTCP()
+                        AVCOL_SPC_ICTCP -> ZIMG_MATRIX_BT2100_ICTCP()
+                        AVCOL_SPC_IPT_C2 -> ZIMG_MATRIX_ST2128_IPT_C2()
+                        AVCOL_SPC_YCGCO_RE -> ZIMG_MATRIX_YCGCO_RE()
+                        AVCOL_SPC_YCGCO_RO -> ZIMG_MATRIX_YCGCO_RO()
                         else -> throw IllegalArgumentException("YUV coefficients not supported by zimg: $coeff")
                     }
 

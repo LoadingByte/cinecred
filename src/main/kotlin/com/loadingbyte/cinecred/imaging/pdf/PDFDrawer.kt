@@ -43,7 +43,7 @@ import java.util.*
 import kotlin.math.*
 
 
-/** Based on the source code of PageDrawer and related classes in PDFBox 3.0.0. */
+/** Based on the source code of PageDrawer and related classes in PDFBox 3.0.5. */
 class PDFDrawer(
     private val document: PDDocument,
     page: PDPage,
@@ -163,7 +163,7 @@ class PDFDrawer(
         if (group.clipWindingRule != -1) {
             linePath.setWindingRule(group.clipWindingRule)
             if (!linePath.getPathIterator(null).isDone)
-                graphicsState.intersectClippingPath(linePath)
+                graphicsState.intersectClippingPath(adjustClipForPath(linePath))
             group.clipWindingRule = -1
         }
         linePath.reset()
@@ -200,15 +200,18 @@ class PDFDrawer(
         val transform = graphicsState.currentTransformationMatrix.createAffineTransform()
         // Notice: PDF assumes that all images have size (1, 1), and that appropriate scaling is done by the CTM.
         transform.scale(1.0 / pdImage.width, 1.0 / pdImage.height)
+        // Ignoring the context soft mask if the image has a MASK or SMASK is pretty weird, but PDFBox does it as well,
+        // and we've observed that it indeed is necessary for some PDFs to be rendered correctly.
+        val noSoftMask = pdImage.cosObject.containsKey(COSName.MASK) || pdImage.cosObject.containsKey(COSName.SMASK)
         if (pdImage.isStencil)
             convert1BitPDFImageToShortMask(pdImage)?.let { bitmap ->
-                doDrawBitmap(bitmap, false, false, transform, false, true, pdImage.interpolate)
+                doDrawBitmap(bitmap, false, false, transform, false, true, pdImage.interpolate, noSoftMask)
                 bitmap.close()
             }
         else
             convertPDFImageToXYZAD50(pdImage, group.devCS)?.let { (bitmap, promiseOpaque) ->
                 val modBitmap = bitmap.use(::applyCurrentTransferFunction)
-                doDrawBitmap(modBitmap, promiseOpaque, false, transform, false, false, pdImage.interpolate)
+                doDrawBitmap(modBitmap, promiseOpaque, false, transform, false, false, pdImage.interpolate, noSoftMask)
                 modBitmap.close()
             }
     }
@@ -251,14 +254,14 @@ class PDFDrawer(
         val ctm = graphicsState.currentTransformationMatrix
         val (tgBitmap, tgBounds) = renderTransparencyGroup(form, false, group.devCS, null, ctm) ?: return
         val offsetTransform = AffineTransform.getTranslateInstance(tgBounds.getX(), tgBounds.getY())
-        doDrawBitmap(tgBitmap, false, true, offsetTransform, true, false, false)
+        doDrawBitmap(tgBitmap, false, true, offsetTransform, true, false, false, false)
         tgBitmap.close()
     }
 
     override fun beginMarkedContentSequence(tag: COSName?, properties: COSDictionary?) {
         if (nestedHiddenOCGCount > 0)
             nestedHiddenOCGCount++
-        else if (tag != null && resources != null && isHiddenOCG(resources.getProperties(tag)))
+        else if (properties != null && isHiddenOCG(PDPropertyList.create(properties)))
             nestedHiddenOCGCount = 1
     }
 
@@ -280,6 +283,9 @@ class PDFDrawer(
             } else if (printState == RenderState.OFF)
                 return true
         } else if (propertyList is PDOptionalContentMembershipDictionary) {
+            val veArray = propertyList.cosObject.getCOSArray(COSName.VE)
+            if (veArray != null && veArray.size() != 0)
+                return isHiddenVisibilityExpression(veArray)
             val ocgs = propertyList.ocGs.ifEmpty { return false }
             return when (propertyList.visibilityPolicy) {
                 COSName.ALL_ON -> ocgs.any { isHiddenOCG(it) }
@@ -289,6 +295,71 @@ class PDFDrawer(
             }
         }
         return false
+    }
+
+    private fun isHiddenVisibilityExpression(veArray: COSArray): Boolean {
+        if (veArray.size() == 0)
+            return false
+        when (veArray.getName(0)) {
+            "And" -> {
+                for (idx in 1..<veArray.size()) {
+                    val base = veArray.getObject(idx)
+                    if (base is COSArray && isHiddenVisibilityExpression(base) ||
+                        base is COSDictionary && isHiddenOCG(PDPropertyList.create(base))
+                    ) return true
+                }
+                return false
+            }
+            "Or" -> {
+                for (idx in 1..<veArray.size()) {
+                    val base = veArray.getObject(idx)
+                    if (base is COSArray && !isHiddenVisibilityExpression(base) ||
+                        base is COSDictionary && !isHiddenOCG(PDPropertyList.create(base))
+                    ) return false
+                }
+                return true
+            }
+            "Not" ->
+                return veArray.size() == 2 && when (val base = veArray.getObject(1)) {
+                    is COSArray -> !isHiddenVisibilityExpression(base)
+                    is COSDictionary -> !isHiddenOCG(PDPropertyList.create(base))
+                    else -> false
+                }
+            else -> return false
+        }
+    }
+
+    private fun adjustClipForPath(linePath: GeneralPath): GeneralPath {
+        val transform = group.pageToCanvasTransform
+        if (transform.type and AffineTransform.TYPE_MASK_SCALE != 0 &&
+            transform.type and (AffineTransform.TYPE_TRANSLATION or AffineTransform.TYPE_FLIP or
+                    AffineTransform.TYPE_MASK_SCALE).inv() == 0
+        ) {
+            val sx = abs(transform.scaleX)
+            val sy = abs(transform.scaleY)
+            if (sx > 1.0 && sy > 1.0)
+                return linePath
+            val bounds = linePath.bounds
+            var w = bounds.getWidth()
+            var h = bounds.getHeight()
+            val sw = sx * w
+            val sh = sy * h
+            val minSize = 2.0
+            if (sw < minSize || sh < minSize) {
+                var x = bounds.getX()
+                var y = bounds.getY()
+                if (sw < minSize) {
+                    w = minSize / sx
+                    x = bounds.centerX - w / 2
+                }
+                if (sh < minSize) {
+                    h = minSize / sy
+                    y = bounds.centerY - h / 2
+                }
+                return GeneralPath(Rectangle2D.Double(x, y, w, h))
+            }
+        }
+        return linePath
     }
 
     private val group: Group get() = groupStack.peek()
@@ -361,7 +432,8 @@ class PDFDrawer(
         transform: AffineTransform,
         isTotalTransform: Boolean,
         isMask: Boolean,
-        interpolate: Boolean
+        interpolate: Boolean,
+        noSoftMask: Boolean
     ) {
         val alpha = graphicsState.nonStrokeAlphaConstant
         if (alpha <= 0.0) return
@@ -377,7 +449,7 @@ class PDFDrawer(
         val nearestNeigh = !interpolate && (totalTransform.scalingFactorX > 1.0 || totalTransform.scalingFactorY > 1.0)
         val shader = if (isMask) currentShader(stroking = false, boundsOnCanvas) ?: return else null
         val blendMode = currentBlendMode()
-        val matte = currentSoftMaskMatte()
+        val matte = if (noSoftMask) null else currentSoftMaskMatte()
 
         val clip = group.clipCache.transform(graphicsState.currentClippingPaths)
         for (canvas in group.canvases)
@@ -544,7 +616,8 @@ class PDFDrawer(
         val pdCS = form.group.getColorSpace(form.resources)
         val backdropColor = if (softMask.subType != COSName.LUMINOSITY) null else
             softMask.backdropColor?.let { bc ->
-                pdCS?.let { convertPDFColorToXYZAD50(bc.toFloatArray(), it, null) }
+                if (pdCS == null || pdCS.numberOfComponents != bc.size()) null else
+                    convertPDFColorToXYZAD50(bc.toFloatArray(), pdCS, null)
             } ?: floatArrayOf(0f, 0f, 0f, 1f)
         val transfer = try {
             softMask.transferFunction.let { if (it is PDFunctionTypeIdentity) null else it }
@@ -808,7 +881,7 @@ class PDFDrawer(
             for (x in 0..<width) {
                 // Note: These formulas differ from PDFBox and the PDF spec because (a) all the bitmaps have
                 // premultiplied alpha, and (b) we optimized them a bit.
-                val oA = oSeg.getFloat(b + 12L)
+                val oA = oSeg.getFloat(o + 12L)
                 val aA = aSeg.getFloat(a + 12L)
                 val bA = bSeg.getFloat(b + 12L)
                 if (oA <= 0f || aA <= 0f)

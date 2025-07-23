@@ -25,10 +25,12 @@ class DeviceCS(val deviceGray: ICCProfile?, val deviceRGB: ICCProfile?, val devi
 
 
 fun convertPDFColorToXYZAD50(pdColor: PDColor, devCS: DeviceCS?): FloatArray? =
-    convertPDFColorToXYZAD50(pdColor.components, pdColor.colorSpace, devCS)
+    pdColor.colorSpace?.let { pdCS -> convertPDFColorToXYZAD50(pdColor.components, pdCS, devCS) }
 
 /** Converts an array of PDF pixel colors to an array of XYZA (D50) pixel colors (A is always set to 1). */
 fun convertPDFColorToXYZAD50(inPx: FloatArray, pdCS: PDColorSpace, devCS: DeviceCS?): FloatArray? {
+    if (inPx.size % pdCS.numberOfComponents != 0)
+        return null
     val outPx = FloatArray(inPx.size / pdCS.numberOfComponents * 4)
     return if (convertColor(inPx, outPx, pdCS, devCS)) outPx else null
 }

@@ -158,7 +158,10 @@ private fun drawBodyImagesWithGridBodyLayout(
     //     |Nathanial A.|  |   Tim C.   |
     //     | Richard B. |  |  Sarah D.  |
     for (block in blocks)
-        if (block.style.gridStructure.let { it == EQUAL_WIDTH_COLS || it == SQUARE_CELLS }) {
+        if (block.style.gridStructure == EQUAL_WIDTH_COLS && !block.style.gridForceColWidthPx.isActive ||
+            block.style.gridStructure == SQUARE_CELLS &&
+            !block.style.gridForceColWidthPx.isActive && !block.style.gridForceRowHeightPx.isActive
+        ) {
             val numCols = colsPerBlock.getValue(block).size
             if (numCols == 0)
                 continue
@@ -327,13 +330,16 @@ private fun drawBodyImagesWithFlowBodyLayout(
         .filter { bodyLayout == FLOW && !flowForceCellHeightPx.isActive && flowHarmonizeCellHeight == ACROSS_BLOCKS }
         .partitionIntoTransitiveClosures(ContentStyle::flowHarmonizeCellHeightAcrossStyles)
 
+    fun ContentStyle.actuallySquareCells() =
+        flowSquareCells && !flowForceCellWidthPx.isActive && !flowForceCellHeightPx.isActive
+
     // Determine the blocks which have uniform cell width, optionally shared across multiple blocks, and then find
     // those shared widths.
     fun maxElemWidth(block: Block) = block.body.maxOf { bodyElem -> bodyElem.getWidth(styling) }
     val sharedCellWidthPerBlock: Map<Block, Extent> = harmonizeExtent(
         blocks, harmonizeCellWidthPartitionIds,
         harmonizeWithinBlock = {
-            flowForceCellWidthPx.isActive || flowHarmonizeCellWidth == WITHIN_BLOCK || flowSquareCells
+            flowForceCellWidthPx.isActive || flowHarmonizeCellWidth == WITHIN_BLOCK || actuallySquareCells()
         },
         sharedBlockExtent = { block -> Extent(block.style.flowForceCellWidthPx.orElse { maxElemWidth(block) }) },
         sharedGroupExtent = { group -> Extent(group.maxOf(::maxElemWidth)) }
@@ -356,20 +362,20 @@ private fun drawBodyImagesWithFlowBodyLayout(
     // drawBodyImagesWithGridBodyLayout().
     val linesPerBlock = HashMap<Block, List<List<BodyElement>>>()
     for (block in blocks)
-        if (!block.style.flowSquareCells)
+        if (!block.style.actuallySquareCells())
             linesPerBlock[block] = flowIntoLines(block)
 
     // Determine the blocks which have uniform cell height, optionally shared across multiple blocks, and then find
     // those shared heights.
     fun maxLineHeight(block: Block) =
         // For blocks with square cells, consider all blocks to be in the same line for simplicity.
-        if (block.style.flowSquareCells) LineGauge.getHeight(block.body, styling)
+        if (block.style.actuallySquareCells()) LineGauge.getHeight(block.body, styling)
         else linesPerBlock.getValue(block).maxOf { line -> LineGauge.getHeight(line, styling) }
 
     val sharedCellHeightPerBlock: Map<Block, Extent> = harmonizeExtent(
         blocks, harmonizeCellHeightPartitionIds,
         harmonizeWithinBlock = {
-            flowForceCellHeightPx.isActive || flowHarmonizeCellHeight == WITHIN_BLOCK || flowSquareCells
+            flowForceCellHeightPx.isActive || flowHarmonizeCellHeight == WITHIN_BLOCK || actuallySquareCells()
         },
         sharedBlockExtent = { block -> Extent(block.style.flowForceCellHeightPx.orElse { maxLineHeight(block) }) },
         sharedGroupExtent = { group -> Extent(group.maxOf(::maxLineHeight)) }
@@ -377,12 +383,12 @@ private fun drawBodyImagesWithFlowBodyLayout(
 
     // Harmonize the cell width and height of square cells.
     for (block in blocks)
-        if (block.style.flowSquareCells)
+        if (block.style.actuallySquareCells())
             sharedCellWidthPerBlock.getValue(block).link(sharedCellHeightPerBlock.getValue(block))
 
     // Now that we also know the widths of square cells, also flow the blocks containing them into lines.
     for (block in blocks)
-        if (block.style.flowSquareCells)
+        if (block.style.actuallySquareCells())
             linesPerBlock[block] = flowIntoLines(block)
 
     // Draw a deferred image for the body of each block.

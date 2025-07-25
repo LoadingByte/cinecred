@@ -18,6 +18,8 @@ Cinecred Changelog
 - Ghostscript is no longer needed to embed `.ai` files.
 - Top and bottom vertical head or tail justification is no longer lost when
   saving and then loading the styling.
+- Rationalized the interplay between grid structure or flow cell squaring and
+  forced cell width or height.
 - Manual newlines which neighbor a style tag are no longer omitted.
 - Fixed crashes upon entering illegal text into the break harmonization column.
 - Fixed crashes upon using the page runtime column for an empty scroll page.

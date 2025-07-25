@@ -199,6 +199,10 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         isAlmostEffective = { _, style -> style.gridCols < 2 }
     ),
     StyleEffectivitySpec(
+        ContentStyle::flowSquareCells.st(),
+        isAlmostEffective = { _, style -> style.flowForceCellWidthPx.isActive || style.flowForceCellHeightPx.isActive }
+    ),
+    StyleEffectivitySpec(
         ContentStyle::flowHarmonizeCellWidth.st(), ContentStyle::flowHarmonizeCellWidthAcrossStyles.st(),
         isAlmostEffective = { _, style -> style.flowForceCellWidthPx.isActive }
     ),

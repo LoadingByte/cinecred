@@ -8,8 +8,7 @@ import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
 import com.loadingbyte.cinecred.project.BodyLayout.GRID
-import com.loadingbyte.cinecred.project.GridStructure.FREE
-import com.loadingbyte.cinecred.project.GridStructure.SQUARE_CELLS
+import com.loadingbyte.cinecred.project.GridStructure.*
 import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.HarmonizeExtent.OFF
 import com.loadingbyte.cinecred.project.SpineAttachment.*
@@ -105,11 +104,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     ),
     IntConstr(ERROR, ContentStyle::gridCols.st(), min = 1, max = 100),
     DynChoiceConstr(WARN, ContentStyle::gridStructure.st()) { _, style ->
-        val forceColWidth = style.gridForceColWidthPx.isActive
-        when {
-            forceColWidth && style.gridForceRowHeightPx.isActive -> EnumSet.of(FREE)
-            forceColWidth || style.gridCols < 2 -> EnumSet.of(FREE, SQUARE_CELLS)
-            else -> EnumSet.allOf(GridStructure::class.java)
+        EnumSet.of(FREE).apply {
+            if (!style.gridForceColWidthPx.isActive) {
+                if (!style.gridForceRowHeightPx.isActive) add(SQUARE_CELLS)
+                if (style.gridCols >= 2) add(EQUAL_WIDTH_COLS)
+            }
         }
     },
     DoubleConstr(ERROR, ContentStyle::gridForceColWidthPx.st(), min = 0.0),

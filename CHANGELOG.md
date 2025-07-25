@@ -26,6 +26,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- Adding a letter style layer below the top one no longer resets the top layer.
 - Pressing F11 while the video preview dialog is hidden no longer messes it up.
 - Setting a custom delivery destination no longer fails for single file exports.
 

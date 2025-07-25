@@ -1875,12 +1875,8 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
         get() = elementWidgets.mapIndexed(::getPartElement)
         set(value) {
             withoutChangeListeners { elementCount = value.size }
-            for ((idx, widget) in partWidgets.withIndex()) {
-                val vis = idx < value.size
-                setPartVisible(idx, widget, vis)
-                if (vis)
-                    withoutChangeListeners { setPartElement(idx, widget, value[idx]) }
-            }
+            for ((idx, widget) in elementWidgets.withIndex())
+                withoutChangeListeners { setPartElement(idx, widget, value[idx]) }
             notifyChangeListeners()
         }
 
@@ -1901,18 +1897,16 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
 
     protected fun userAdd(idx: Int, element: E? = null) {
         require(idx in 0..elementCount)
-        // If there is still an unused part at the back of the list, just reactivate it. Otherwise, create a new one.
-        if (elementCount + 1 <= partWidgets.size)
-            setPartVisible(elementCount, partWidgets[elementCount], true)
-        else
-            appendNewPart()
+        withoutChangeListeners { elementCount++ }
+        if (element != null)
+            withoutChangeListeners { setPartElement(elementCount - 1, partWidgets[elementCount - 1], element) }
         // This reorder mapping shifts list elements to the right to make room for the added one.
-        val mapping = IntArray(elementCount + 1) { it }
-        mapping[elementCount /* exceeds current list size, hence filled with fillElement */] = idx
-        for (i in idx..<elementCount)
+        val mapping = IntArray(elementCount) { it }
+        mapping[elementCount - 1] = idx
+        for (i in idx..elementCount - 2)
             mapping[i] = i + 1
-        withoutChangeListeners { reorder(mapping, element ?: getFillElement()) }
-        elementCount++
+        withoutChangeListeners { reorder(mapping) }
+        notifyChangeListeners()
     }
 
     protected fun userDel(idx: Int) {
@@ -1950,15 +1944,13 @@ abstract class AbstractListWidget<E : Any, W : Form.Widget<E>>(
 
     /**
      * Reorders the list based on the given mapping. Querying the mapping array at `fromIdx` yields `toIdx`. Values of
-     * `fromIdx` exceeding the current list size are assumed to refer to the given [fillElement]. Values of `toIdx` that
-     * are -1 prevent the element from being copied anywhere.
+     * `toIdx` that are -1 prevent the element from being copied anywhere.
      */
-    private fun reorder(mapping: IntArray, fillElement: E? = null) {
+    private fun reorder(mapping: IntArray) {
         val oldList = value
         for ((fromIdx, toIdx) in mapping.withIndex())
             if (toIdx != -1) {
-                val element = if (fromIdx >= oldList.size) fillElement!! else
-                    adjustElementOnReorder(oldList[fromIdx], mapping)
+                val element = adjustElementOnReorder(oldList[fromIdx], mapping)
                 if (toIdx >= oldList.size || oldList[toIdx] != element)
                     setPartElement(toIdx, partWidgets[toIdx], element)
             }

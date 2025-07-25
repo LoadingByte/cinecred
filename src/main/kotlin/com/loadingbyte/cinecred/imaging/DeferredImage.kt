@@ -1083,18 +1083,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     val color = coat.color.convert(masterColorSpace, clamp = true)
                     val pdColor = PDColor(color.rgb(), obtainICCBasedCS(masterColorSpace))
                     if (fill) cs.setNonStrokingColor(pdColor) else cs.setStrokingColor(pdColor)
-                    val extGState = docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, color.a)) {
-                        PDExtendedGraphicsState().apply {
-                            if (fill) nonStrokingAlphaConstant = color.a else strokingAlphaConstant = color.a
-                        }
-                    }
-                    cs.setGraphicsStateParameters(extGState)
+                    if (color.a != 1f) cs.setGraphicsStateParameters(makeExtGState(fill, color.a))
                 }
                 is Coat.Gradient -> {
                     // Notice that we do not cache the COS objects we create for gradients. That is because pattern
                     // coordinates are always global to the page irrespective of any user matrix, so we'd need a new
                     // pattern for every place where we want to use it anyway.
-                    if (coat.color1.a != 1f || coat.color2.a != 1f) {
+                    if (coat.color1.a != 1f && coat.color1.a == coat.color2.a)
+                        cs.setGraphicsStateParameters(makeExtGState(fill, coat.color1.a))
+                    else if (coat.color1.a != 1f || coat.color2.a != 1f) {
                         // First construct a form XObject.
                         val bboxW = bbox.width.toFloat()
                         val bboxH = bbox.height.toFloat()
@@ -1140,6 +1137,13 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 }
             }
         }
+
+        private fun makeExtGState(fill: Boolean, alpha: Float) =
+            docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, alpha)) {
+                PDExtendedGraphicsState().apply {
+                    if (fill) nonStrokingAlphaConstant = alpha else strokingAlphaConstant = alpha
+                }
+            }
 
         private fun makeShadingPattern(coat: Coat.Gradient, forAlpha: Boolean): PDShadingPattern {
             fun makeColorArray(color: Color4f) = COSArray().apply {

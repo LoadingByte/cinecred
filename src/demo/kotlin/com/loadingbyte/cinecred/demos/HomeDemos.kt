@@ -103,7 +103,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
     override fun generate() {
         edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
         sleep(500)
-        reposition(dlvDialog, 820, 590)
+        reposition(dlvDialog, 820, 600)
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()

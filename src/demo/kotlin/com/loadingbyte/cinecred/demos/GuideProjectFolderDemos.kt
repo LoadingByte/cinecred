@@ -1,7 +1,8 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.demo.ScreencastDemo
-import com.loadingbyte.cinecred.projectio.CsvFormat
+import com.loadingbyte.cinecred.demo.l10nDemo
+import com.loadingbyte.cinecred.projectio.OdsFormat
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.projectio.service.Account
@@ -45,7 +46,7 @@ object GuideProjectFolderCreateProjectDemo : ScreencastDemo("$DIR/create-project
         sc.click(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgFormatWidget.components[0]))
         sc.click()
-        sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(CsvFormat))
+        sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(OdsFormat))
         sc.click()
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgDoneButton))
         dt.mouseDown()
@@ -56,7 +57,7 @@ object GuideProjectFolderCreateProjectDemo : ScreencastDemo("$DIR/create-project
     }
 
     private object DummyAccount : Account {
-        override val id get() = "John Doe"
+        override val id get() = l10nDemo("genericName")
         override val service get() = GoogleService
         override fun upload(filename: String?, spreadsheet: Spreadsheet, look: SpreadsheetLook) =
             throw UnsupportedOperationException()
@@ -78,7 +79,7 @@ object GuideProjectFolderAddOnlineAccountDemo : ScreencastDemo("$DIR/add-online-
         sc.hold(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddAccountButton))
         sc.click()
-        sc.type(welcomeWin, prefsPanel.leakedCfgAccountLabelWidget.components[0] as JTextField, "John Doe")
+        sc.type(welcomeWin, prefsPanel.leakedCfgAccountLabelWidget.components[0] as JTextField, l10nDemo("genericName"))
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgAccountServiceWidget.components[0]))
         sc.click()
         sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(idx = 0))

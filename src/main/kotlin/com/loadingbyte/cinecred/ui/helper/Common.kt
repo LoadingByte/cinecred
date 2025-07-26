@@ -482,10 +482,11 @@ class LabeledListCellRenderer<E>(
 }
 
 
-var minimumWindowSize = Dimension(700, 500)
+var minimumWindowSize = Dimension(600, 450)
+var minimumWelcomeFrameSize = Dimension(700, 500)
 
-fun JFrame.setup() {
-    minimumSize = minimumWindowSize
+fun JFrame.setup(welcomeFrame: Boolean = false) {
+    minimumSize = if (welcomeFrame) minimumWelcomeFrameSize else minimumWindowSize
     defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
 }
 

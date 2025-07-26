@@ -26,7 +26,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     val panel = WelcomePanel(welcomeCtrl)
 
     init {
-        setup()
+        setup(welcomeFrame = true)
         iconImages = WINDOW_ICON_IMAGES
 
         addWindowListener(object : WindowAdapter() {

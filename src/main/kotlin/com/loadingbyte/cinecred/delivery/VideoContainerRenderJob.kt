@@ -198,7 +198,8 @@ class VideoContainerRenderJob private constructor(
             listOf("28", "23", "17"), listOf("medium", "slow", "slower")
         )
 
-        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat(), TheoraFormat())
+        val FORMATS = listOf(H264, H265, ProResFormat(), DNxHRFormat(), CineFormFormat()) +
+                if (TheoraFormat.isSupported()) listOf(TheoraFormat()) else emptyList()
 
         private fun allTransparenciesTimesColorSpace() =
             choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * choice(TRANSFER) +
@@ -403,6 +404,10 @@ class VideoContainerRenderJob private constructor(
             val codecOptions = mapOf("flags" to "qscale", "global_quality" to (qscale * FF_QP2LAMBDA).toString())
             val pixelFormat = Bitmap.PixelFormat.of(AV_PIX_FMT_YUV420P)
             return listOf(VideoWriterSettings("libtheora", AV_PROFILE_UNKNOWN, codecOptions, pixelFormat))
+        }
+
+        companion object {
+            fun isSupported(): Boolean = avcodec_find_encoder_by_name("libtheora").let { it != null && !it.isNull }
         }
     }
 

@@ -22,7 +22,7 @@ private val migrations = listOf(
     null to ::migrateStylingFrom100,
     "1.7.0" to ::migrateStylingFrom170,
     "1.8.0" to null,
-    "1.8.1" to null,
+    "1.8.1" to ::migrateStylingFrom181,
     "1.9.0" to null,
 ).also { migrations ->
     val appVersion = VERSION.removeSuffix("-SNAPSHOT")
@@ -358,6 +358,29 @@ fun migrateStylingFrom170(ctx: StylingReaderContext, rawStyling: RawStyling) {
                 pageStyle.putIfAbsent("cardFadeOutTransitionStyleName", linearName)
         }
     }
+}
+
+
+fun migrateStylingFrom181(ctx: StylingReaderContext, rawStyling: RawStyling) {
+    // 1.8.1 -> 1.9.0: Flow lines are now called rows.
+    for (contentStyle in rawStyling.contentStyles) {
+        contentStyle["flowLineHJustify"]?.let { contentStyle["flowRowHJustify"] = it }
+        contentStyle["flowLineWidthPx"]?.let { contentStyle["flowRowWidthPx"] = it }
+        contentStyle["flowLineGapPx"]?.let { contentStyle["flowRowGapPx"] = it }
+    }
+
+    // 1.8.1 -> 1.9.0: Vertical head/tail justification is now phrased in terms of vertical fragments.
+    for (contentStyle in rawStyling.contentStyles)
+        for (prefix in arrayOf("head", "tail"))
+            when (contentStyle["${prefix}VShelve"]) {
+                "OVERALL_MIDDLE" -> {
+                    contentStyle["${prefix}VJustifyBodyFragment"] = "ALL_ROWS"
+                    contentStyle["${prefix}VJustify${prefix.replaceFirstChar(Char::uppercaseChar)}Fragment"] =
+                        "ALL_LINES"
+                }
+                "FIRST" -> contentStyle["${prefix}VJustifyBodyFragment"] = "FIRST_ROW_FIRST_LINE"
+                "LAST" -> contentStyle["${prefix}VJustifyBodyFragment"] = "LAST_ROW_FIRST_LINE"
+            }
 }
 
 

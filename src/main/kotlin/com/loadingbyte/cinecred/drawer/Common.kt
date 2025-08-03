@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
+import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import java.util.*
 
@@ -15,10 +16,16 @@ val BODY_WIDTH_GUIDE_COLOR = Color4f.fromSRGBHexString("#820000")
 val HEAD_TAIL_GUIDE_COLOR = Color4f.fromSRGBHexString("#006400")
 
 
-fun SingleLineHJustify.toHJustify() = when (this) {
-    SingleLineHJustify.LEFT -> HJustify.LEFT
-    SingleLineHJustify.CENTER, SingleLineHJustify.FULL -> HJustify.CENTER
-    SingleLineHJustify.RIGHT -> HJustify.RIGHT
+fun HJustifyCrumbs.toHJustify(): HJustify = when (this) {
+    HJustifyCrumbs.LEFT -> HJustify.LEFT
+    HJustifyCrumbs.CENTER, HJustifyCrumbs.FULL -> HJustify.CENTER
+    HJustifyCrumbs.RIGHT -> HJustify.RIGHT
+}
+
+fun VJustifyText.toVJustify(): VJustify = when (this) {
+    VJustifyText.TOP -> VJustify.TOP
+    VJustifyText.MIDDLE, VJustifyText.BASELINE -> VJustify.MIDDLE
+    VJustifyText.BOTTOM -> VJustify.BOTTOM
 }
 
 
@@ -41,6 +48,13 @@ fun justify(hJustify: HJustify, areaWidth: Double, objWidth: Double): Double =
 fun justify(vJustify: VJustify, areaHeight: Double, objHeight: Double): Double =
     when (vJustify) {
         VJustify.TOP -> 0.0
+        VJustify.MIDDLE -> (areaHeight - objHeight) / 2.0
+        VJustify.BOTTOM -> (areaHeight - objHeight)
+    }
+
+fun justify(vJustify: VJustify, areaHeight: Y, objHeight: Double): Y =
+    when (vJustify) {
+        VJustify.TOP -> 0.0.toY()
         VJustify.MIDDLE -> (areaHeight - objHeight) / 2.0
         VJustify.BOTTOM -> (areaHeight - objHeight)
     }

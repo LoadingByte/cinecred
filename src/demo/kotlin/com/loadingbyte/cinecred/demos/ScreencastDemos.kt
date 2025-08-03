@@ -290,7 +290,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.contentStyleBullets")))
         sc.click()
         sc.caption("screencast.caption.bullets.justify")
-        sc.demonstrateSetting(styWin, styContForm, ContentStyle::flowLineHJustify.st(), 0, 6, 1)
+        sc.demonstrateSetting(styWin, styContForm, ContentStyle::flowRowHJustify.st(), 0, 6, 1)
         sc.caption("screencast.caption.bullets.harmonize")
         sc.demonstrateSetting(styWin, styContForm, ContentStyle::flowHarmonizeCellWidth.st(), 1, 2, 0)
         sc.caption("screencast.caption.bullets.sep")

@@ -642,13 +642,11 @@ private class CreditsReader(
         }
 
         // Get the body element, which may either be a styled string or a picture or tape.
-        val bodyOnly1Line = contentStyle?.bodyLayout != BodyLayout.PARAGRAPHS
-        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName, bodyOnly1Line)
+        val bodyElem = getBodyElement("body", contentStyle?.bodyLetterStyleName, false)
 
         // Get the head and tail, which may only be styled strings.
-        val ht1L = contentStyle?.blockOrientation != BlockOrientation.VERTICAL
-        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, ht1L, true) as BodyElement.Str?)?.lines
-        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, ht1L, true) as BodyElement.Str?)?.lines
+        val newHead = (getBodyElement("head", contentStyle?.headLetterStyleName, true) as BodyElement.Str?)?.lines
+        val newTail = (getBodyElement("tail", contentStyle?.tailLetterStyleName, true) as BodyElement.Str?)?.lines
 
         // If either head or tail is available, or if a body is available and the conclusion of the previous block
         // has been marked, conclude the previous block (if there was any) and start a new one.
@@ -754,9 +752,7 @@ private class CreditsReader(
             isBlockConclusionMarked = true
     }
 
-    fun getBodyElement(
-        l10nColName: String, initLetterStyleName: String?, only1Line: Boolean, onlyStr: Boolean = false
-    ): BodyElement? {
+    fun getBodyElement(l10nColName: String, initLetterStyleName: String?, onlyStr: Boolean): BodyElement? {
         fun unavailableLetterStyleMsg(name: String) = l10n(
             "projectIO.credits.unavailableLetterStyle", l10nQuoted(name), "<i>${l10nEnum(letterStyleMap.keys)}</i>"
         )
@@ -849,8 +845,6 @@ private class CreditsReader(
                 pictureStyle?.let(BodyElement::Pic) ?: tapeStyle?.let(BodyElement::Tap) ?: BodyElement.Mis
             }
             hasPlaintext -> {
-                if (only1Line && styledLines.size != 1)
-                    table.log(row, l10nColName, WARN, l10n("projectIO.credits.linebreakUnsupported"))
                 val missingGlyphLines = styledLines.filter { it.formatted(styling).missesGlyphs }
                 if (missingGlyphLines.isNotEmpty()) {
                     val ns = missingGlyphLines.flatten().mapTo(TreeSet()) { it.second.name }

@@ -5,6 +5,22 @@ Cinecred Changelog
 1.9.0-SNAPSHOT
 --------------
 
+### Additions
+
+- Manual newlines are now also supported in grid and flow body cells, as well as
+  in horizontal heads and tails. As such, they are now supported everywhere.
+    - When employing manual newlines, one can control in detail which body lines
+      should be aligned with each other, and which head or tail line should be
+      aligned with which body line.
+- When different fonts are used within the same grid or flow row, the text may
+  now be vertically justified in an arbitrary way, while previously it was just
+  being baseline-aligned.
+
+### Compatibility Notes
+
+- Dropped support for dot leaders when the head or tail is vertically justified
+  with the "Overall Middle" of the body.
+
 
 1.8.1
 -----

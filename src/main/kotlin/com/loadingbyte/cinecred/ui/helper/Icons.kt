@@ -175,53 +175,73 @@ val VJustify.icon
     }
 
 
-val SingleLineHJustify.icon
+val HJustifyCrumbs.icon
     get() = when (this) {
-        SingleLineHJustify.LEFT -> BEARING_LEFT_ICON
-        SingleLineHJustify.CENTER -> BEARING_CENTER_ICON
-        SingleLineHJustify.RIGHT -> BEARING_RIGHT_ICON
-        SingleLineHJustify.FULL -> BEARING_LEFT_RIGHT_ICON
+        HJustifyCrumbs.LEFT -> BEARING_LEFT_ICON
+        HJustifyCrumbs.CENTER -> BEARING_CENTER_ICON
+        HJustifyCrumbs.RIGHT -> BEARING_RIGHT_ICON
+        HJustifyCrumbs.FULL -> BEARING_LEFT_RIGHT_ICON
     }
 
 
-private val LINE_H_JUSTIFY_LEFT_ICON = SVGIcon.load("/icons/lineHJustify/left.svg")
-private val LINE_H_JUSTIFY_CENTER_ICON = SVGIcon.load("/icons/lineHJustify/center.svg")
-private val LINE_H_JUSTIFY_RIGHT_ICON = SVGIcon.load("/icons/lineHJustify/right.svg")
-private val LINE_H_JUSTIFY_FULL_LAST_LEFT_ICON = SVGIcon.load("/icons/lineHJustify/fullLastLeft.svg")
-private val LINE_H_JUSTIFY_FULL_LAST_CENTER_ICON = SVGIcon.load("/icons/lineHJustify/fullLastCenter.svg")
-private val LINE_H_JUSTIFY_FULL_LAST_RIGHT_ICON = SVGIcon.load("/icons/lineHJustify/fullLastRight.svg")
-private val LINE_H_JUSTIFY_FULL_LAST_FULL_ICON = SVGIcon.load("/icons/lineHJustify/fullLastFull.svg")
+private val H_JUSTIFY_CRUMBS_STACK_LEFT_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/left.svg")
+private val H_JUSTIFY_CRUMBS_STACK_CENTER_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/center.svg")
+private val H_JUSTIFY_CRUMBS_STACK_RIGHT_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/right.svg")
+private val H_JUSTIFY_CRUMBS_STACK_FULL_LAST_LEFT_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/fullLastLeft.svg")
+private val H_JUSTIFY_CRUMBS_STACK_FULL_LAST_CENTER_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/fullLastCenter.svg")
+private val H_JUSTIFY_CRUMBS_STACK_FULL_LAST_RIGHT_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/fullLastRight.svg")
+private val H_JUSTIFY_CRUMBS_STACK_FULL_LAST_FULL_ICON = SVGIcon.load("/icons/hJustifyCrumbsStack/fullLastFull.svg")
 
-val LineHJustify.icon
+val HJustifyCrumbsStack.icon
     get() = when (this) {
-        LineHJustify.LEFT -> LINE_H_JUSTIFY_LEFT_ICON
-        LineHJustify.CENTER -> LINE_H_JUSTIFY_CENTER_ICON
-        LineHJustify.RIGHT -> LINE_H_JUSTIFY_RIGHT_ICON
-        LineHJustify.FULL_LAST_LEFT -> LINE_H_JUSTIFY_FULL_LAST_LEFT_ICON
-        LineHJustify.FULL_LAST_CENTER -> LINE_H_JUSTIFY_FULL_LAST_CENTER_ICON
-        LineHJustify.FULL_LAST_RIGHT -> LINE_H_JUSTIFY_FULL_LAST_RIGHT_ICON
-        LineHJustify.FULL_LAST_FULL -> LINE_H_JUSTIFY_FULL_LAST_FULL_ICON
+        HJustifyCrumbsStack.LEFT -> H_JUSTIFY_CRUMBS_STACK_LEFT_ICON
+        HJustifyCrumbsStack.CENTER -> H_JUSTIFY_CRUMBS_STACK_CENTER_ICON
+        HJustifyCrumbsStack.RIGHT -> H_JUSTIFY_CRUMBS_STACK_RIGHT_ICON
+        HJustifyCrumbsStack.FULL_LAST_LEFT -> H_JUSTIFY_CRUMBS_STACK_FULL_LAST_LEFT_ICON
+        HJustifyCrumbsStack.FULL_LAST_CENTER -> H_JUSTIFY_CRUMBS_STACK_FULL_LAST_CENTER_ICON
+        HJustifyCrumbsStack.FULL_LAST_RIGHT -> H_JUSTIFY_CRUMBS_STACK_FULL_LAST_RIGHT_ICON
+        HJustifyCrumbsStack.FULL_LAST_FULL -> H_JUSTIFY_CRUMBS_STACK_FULL_LAST_FULL_ICON
     }
 
 
-private val APPENDAGE_V_SHELVE_FIRST_ICON = SVGIcon.load("/icons/appendageVShelve/first.svg")
-private val APPENDAGE_V_SHELVE_OVERALL_MIDDLE_ICON = SVGIcon.load("/icons/appendageVShelve/overallMiddle.svg")
-private val APPENDAGE_V_SHELVE_LAST_ICON = SVGIcon.load("/icons/appendageVShelve/last.svg")
-
-val AppendageVShelve.icon
+val VJustifyText.icon
     get() = when (this) {
-        AppendageVShelve.FIRST -> APPENDAGE_V_SHELVE_FIRST_ICON
-        AppendageVShelve.OVERALL_MIDDLE -> APPENDAGE_V_SHELVE_OVERALL_MIDDLE_ICON
-        AppendageVShelve.LAST -> APPENDAGE_V_SHELVE_LAST_ICON
+        VJustifyText.TOP -> BEARING_TOP_ICON
+        VJustifyText.MIDDLE -> BEARING_MIDDLE_ICON
+        VJustifyText.BOTTOM -> BEARING_BOTTOM_ICON
+        VJustifyText.BASELINE -> BASELINE_ICON
     }
 
 
-val AppendageVJustify.icon
+private val V_TEXT_FRAGMENT_ALL_LINES_ICON = SVGIcon.load("/icons/vTextFragment/allLines.svg")
+private val V_TEXT_FRAGMENT_FIRST_LINE_ICON = SVGIcon.load("/icons/vTextFragment/firstLine.svg")
+private val V_TEXT_FRAGMENT_LAST_LINE_ICON = SVGIcon.load("/icons/vTextFragment/lastLine.svg")
+
+val VTextFragment.icon
     get() = when (this) {
-        AppendageVJustify.TOP -> BEARING_TOP_ICON
-        AppendageVJustify.MIDDLE -> BEARING_MIDDLE_ICON
-        AppendageVJustify.BOTTOM -> BEARING_BOTTOM_ICON
-        AppendageVJustify.BASELINE -> BASELINE_ICON
+        VTextFragment.ALL_LINES -> V_TEXT_FRAGMENT_ALL_LINES_ICON
+        VTextFragment.FIRST_LINE -> V_TEXT_FRAGMENT_FIRST_LINE_ICON
+        VTextFragment.LAST_LINE -> V_TEXT_FRAGMENT_LAST_LINE_ICON
+    }
+
+
+private val V_BODY_FRAGMENT_ALL_ROWS_ICON = SVGIcon.load("/icons/vBodyFragment/allRows.svg")
+private val V_BODY_FRAGMENT_FIRST_ROW_ICON = SVGIcon.load("/icons/vBodyFragment/firstRow.svg")
+private val V_BODY_FRAGMENT_LAST_ROW_ICON = SVGIcon.load("/icons/vBodyFragment/lastRow.svg")
+private val V_BODY_FRAGMENT_FIRST_ROW_FIRST_LINE_ICON = SVGIcon.load("/icons/vBodyFragment/firstRowFirstLine.svg")
+private val V_BODY_FRAGMENT_FIRST_ROW_LAST_LINE_ICON = SVGIcon.load("/icons/vBodyFragment/firstRowLastLine.svg")
+private val V_BODY_FRAGMENT_LAST_ROW_FIRST_LINE_ICON = SVGIcon.load("/icons/vBodyFragment/lastRowFirstLine.svg")
+private val V_BODY_FRAGMENT_LAST_ROW_LAST_LINE_ICON = SVGIcon.load("/icons/vBodyFragment/lastRowLastLine.svg")
+
+val VBodyFragment.icon
+    get() = when (this) {
+        VBodyFragment.ALL_ROWS -> V_BODY_FRAGMENT_ALL_ROWS_ICON
+        VBodyFragment.FIRST_ROW -> V_BODY_FRAGMENT_FIRST_ROW_ICON
+        VBodyFragment.LAST_ROW -> V_BODY_FRAGMENT_LAST_ROW_ICON
+        VBodyFragment.FIRST_ROW_FIRST_LINE -> V_BODY_FRAGMENT_FIRST_ROW_FIRST_LINE_ICON
+        VBodyFragment.FIRST_ROW_LAST_LINE -> V_BODY_FRAGMENT_FIRST_ROW_LAST_LINE_ICON
+        VBodyFragment.LAST_ROW_FIRST_LINE -> V_BODY_FRAGMENT_LAST_ROW_FIRST_LINE_ICON
+        VBodyFragment.LAST_ROW_LAST_LINE -> V_BODY_FRAGMENT_LAST_ROW_LAST_LINE_ICON
     }
 
 
@@ -410,10 +430,11 @@ val Enum<*>.icon
         is BodyLayout -> icon
         is HJustify -> icon
         is VJustify -> icon
-        is LineHJustify -> icon
-        is SingleLineHJustify -> icon
-        is AppendageVShelve -> icon
-        is AppendageVJustify -> icon
+        is HJustifyCrumbs -> icon
+        is HJustifyCrumbsStack -> icon
+        is VJustifyText -> icon
+        is VTextFragment -> icon
+        is VBodyFragment -> icon
         is HarmonizeExtent -> icon
         is Sort -> icon
         is GridFillingOrder -> icon

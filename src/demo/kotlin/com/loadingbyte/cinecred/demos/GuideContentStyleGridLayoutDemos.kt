@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.parseCreditsCS
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
+import java.util.*
 
 
 private const val DIR = "guide/content-style/grid-layout"
@@ -22,7 +23,7 @@ val GUIDE_CONTENT_STYLE_GRID_LAYOUT_DEMOS
         GuideContentStyleGridLayoutHarmonizeColWidthsDemo,
         GuideContentStyleGridLayoutHarmonizeRowHeightDemo,
         GuideContentStyleGridLayoutCellHJustifyPerColDemo,
-        GuideContentStyleGridLayoutCellVJustifyDemo,
+        GuideContentStyleGridLayoutCellAndTextVJustifyDemo,
         GuideContentStyleGridLayoutRowAndColGapsDemo
     )
 
@@ -245,21 +246,31 @@ object GuideContentStyleGridLayoutCellHJustifyPerColDemo : StyleSettingsDemo<Con
 }
 
 
-object GuideContentStyleGridLayoutCellVJustifyDemo : StyleSettingsDemo<ContentStyle>(
-    ContentStyle::class.java, "$DIR/cell-vjustify", Format.STEP_GIF,
-    listOf(ContentStyle::gridCellVJustify.st()), pageGuides = true
+object GuideContentStyleGridLayoutCellAndTextVJustifyDemo : StyleSettingsDemo<ContentStyle>(
+    ContentStyle::class.java, "$DIR/cell-and-text-vjustify", Format.SLOW_STEP_GIF,
+    listOf(
+        ContentStyle::gridCellVJustify.st(),
+        ContentStyle::gridTextVJustifyFragments.st(), ContentStyle::gridTextVJustify.st()
+    ), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
-        for (vJustify in VJustify.entries)
-            this += tabularCS.copy(name = "Demo", gridCellVJustify = vJustify, gridRowGapPx = 32.0)
+        this += tabularCS.copy(
+            name = "Demo", gridCellVJustify = VJustify.TOP, gridTextVJustifyFragments = VTextFragment.ALL_LINES,
+            gridTextVJustify = VJustifyText.MIDDLE, gridRowGapPx = 32.0
+        )
+        this += last().copy(gridCellVJustify = VJustify.MIDDLE)
+        this += last().copy(gridTextVJustifyFragments = VTextFragment.FIRST_LINE)
+        this += last().copy(gridTextVJustifyFragments = VTextFragment.LAST_LINE)
+        this += last().copy(gridTextVJustify = VJustifyText.BASELINE)
     }
 
     override fun credits(style: ContentStyle) = """
 @Body,@Content Style
-Benjamin Backer,Demo
-{{Pic logo.svg x100}},
-Brady “Bar” Owner,
-Christoph Caterer,
+Amy Apricot,Demo
+{{Pic logo.svg x170}},
+"Brady “Bar” Owner
+Ben Broccoli
+{{Style ${l10n("project.template.letterStyleCardSmall", locale = Locale.ROOT)}}}Bella Brewer",
         """.parseCreditsCS(style)
 }
 

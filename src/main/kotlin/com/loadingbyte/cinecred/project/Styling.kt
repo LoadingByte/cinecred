@@ -136,10 +136,12 @@ data class ContentStyle(
     val gridHarmonizeRowHeightAcrossStyles: PersistentList<String>,
     val gridCellHJustifyPerCol: PersistentList<HJustify>,
     val gridCellVJustify: VJustify,
+    val gridTextVJustifyFragments: VTextFragment,
+    val gridTextVJustify: VJustifyText,
     val gridRowGapPx: Double,
     val gridColGapPx: Double,
     val flowDirection: FlowDirection,
-    val flowLineHJustify: LineHJustify,
+    val flowRowHJustify: HJustifyCrumbsStack,
     val flowSquareCells: Boolean,
     val flowForceCellWidthPx: Opt<Double>,
     val flowForceCellHeightPx: Opt<Double>,
@@ -149,13 +151,15 @@ data class ContentStyle(
     val flowHarmonizeCellHeightAcrossStyles: PersistentList<String>,
     val flowCellHJustify: HJustify,
     val flowCellVJustify: VJustify,
-    val flowLineWidthPx: Double,
-    val flowLineGapPx: Double,
+    val flowTextVJustifyFragments: VTextFragment,
+    val flowTextVJustify: VJustifyText,
+    val flowRowWidthPx: Double,
+    val flowRowGapPx: Double,
     val flowHGapPx: Double,
     val flowSeparator: String,
     val flowSeparatorLetterStyleName: Opt<String>,
-    val flowSeparatorVJustify: AppendageVJustify,
-    val paragraphsLineHJustify: LineHJustify,
+    val flowSeparatorVJustify: VJustifyText,
+    val paragraphsLineHJustify: HJustifyCrumbsStack,
     val paragraphsLineWidthPx: Double,
     val paragraphsParaGapPx: Double,
     val paragraphsLineGapPx: Double,
@@ -165,13 +169,14 @@ data class ContentStyle(
     val headHarmonizeWidth: HarmonizeExtent,
     val headHarmonizeWidthAcrossStyles: PersistentList<String>,
     val headHJustify: HJustify,
-    val headVShelve: AppendageVShelve,
-    val headVJustify: AppendageVJustify,
+    val headVJustifyBodyFragment: VBodyFragment,
+    val headVJustifyHeadFragment: VTextFragment,
+    val headVJustify: VJustifyText,
     val headGapPx: Double,
     val headLeader: String,
     val headLeaderLetterStyleName: Opt<String>,
-    val headLeaderHJustify: SingleLineHJustify,
-    val headLeaderVJustify: AppendageVJustify,
+    val headLeaderHJustify: HJustifyCrumbs,
+    val headLeaderVJustify: VJustifyText,
     val headLeaderMarginLeftPx: Double,
     val headLeaderMarginRightPx: Double,
     val headLeaderSpacingPx: Double,
@@ -181,13 +186,14 @@ data class ContentStyle(
     val tailHarmonizeWidth: HarmonizeExtent,
     val tailHarmonizeWidthAcrossStyles: PersistentList<String>,
     val tailHJustify: HJustify,
-    val tailVShelve: AppendageVShelve,
-    val tailVJustify: AppendageVJustify,
+    val tailVJustifyBodyFragment: VBodyFragment,
+    val tailVJustifyTailFragment: VTextFragment,
+    val tailVJustify: VJustifyText,
     val tailGapPx: Double,
     val tailLeader: String,
     val tailLeaderLetterStyleName: Opt<String>,
-    val tailLeaderHJustify: SingleLineHJustify,
-    val tailLeaderVJustify: AppendageVJustify,
+    val tailLeaderHJustify: HJustifyCrumbs,
+    val tailLeaderVJustify: VJustifyText,
     val tailLeaderMarginLeftPx: Double,
     val tailLeaderMarginRightPx: Double,
     val tailLeaderSpacingPx: Double
@@ -208,10 +214,11 @@ enum class SpineAttachment {
 enum class BodyLayout { GRID, FLOW, PARAGRAPHS }
 enum class HJustify { LEFT, CENTER, RIGHT }
 enum class VJustify { TOP, MIDDLE, BOTTOM }
-enum class SingleLineHJustify { LEFT, CENTER, RIGHT, FULL }
-enum class LineHJustify { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
-enum class AppendageVShelve { FIRST, OVERALL_MIDDLE, LAST }
-enum class AppendageVJustify { TOP, MIDDLE, BOTTOM, BASELINE }
+enum class HJustifyCrumbs { LEFT, CENTER, RIGHT, FULL }
+enum class HJustifyCrumbsStack { LEFT, CENTER, RIGHT, FULL_LAST_LEFT, FULL_LAST_CENTER, FULL_LAST_RIGHT, FULL_LAST_FULL }
+enum class VJustifyText { TOP, MIDDLE, BOTTOM, BASELINE }
+enum class VTextFragment { ALL_LINES, FIRST_LINE, LAST_LINE }
+enum class VBodyFragment { ALL_ROWS, FIRST_ROW, LAST_ROW, FIRST_ROW_FIRST_LINE, FIRST_ROW_LAST_LINE, LAST_ROW_FIRST_LINE, LAST_ROW_LAST_LINE }
 enum class HarmonizeExtent { OFF, WITHIN_BLOCK, ACROSS_BLOCKS }
 enum class Sort { OFF, ASCENDING, DESCENDING }
 enum class GridFillingOrder { L2R_T2B, R2L_T2B, T2B_L2R, T2B_R2L }
@@ -399,14 +406,22 @@ val Enum<*>.label: String
     get() = when (this) {
         TimecodeFormat.SMPTE_NON_DROP_FRAME -> "SMPTE Non-Drop Frame"
         TimecodeFormat.SMPTE_DROP_FRAME -> "SMPTE Drop Frame"
-        SingleLineHJustify.LEFT, LineHJustify.LEFT -> HJustify.LEFT.label
-        SingleLineHJustify.CENTER, LineHJustify.CENTER -> HJustify.CENTER.label
-        SingleLineHJustify.RIGHT, LineHJustify.RIGHT -> HJustify.RIGHT.label
-        AppendageVJustify.TOP -> VJustify.TOP.label
-        AppendageVJustify.MIDDLE -> VJustify.MIDDLE.label
-        AppendageVJustify.BOTTOM -> VJustify.BOTTOM.label
+        HJustifyCrumbs.LEFT, HJustifyCrumbsStack.LEFT -> HJustify.LEFT.label
+        HJustifyCrumbs.CENTER, HJustifyCrumbsStack.CENTER -> HJustify.CENTER.label
+        HJustifyCrumbs.RIGHT, HJustifyCrumbsStack.RIGHT -> HJustify.RIGHT.label
+        VJustifyText.TOP -> VJustify.TOP.label
+        VJustifyText.MIDDLE -> VJustify.MIDDLE.label
+        VJustifyText.BOTTOM -> VJustify.BOTTOM.label
         GridStructure.SQUARE_CELLS -> l10n("ui.styling.content.flowSquareCells")
         Sort.OFF, SmallCaps.OFF, Superscript.OFF -> l10n("off")
         Superscript.CUSTOM, StripePreset.CUSTOM -> l10n("custom")
         else -> l10n("project.${javaClass.simpleName}.${name}")
+    }
+
+
+val VBodyFragment.isLine: Boolean
+    get() = when (this) {
+        VBodyFragment.ALL_ROWS, VBodyFragment.FIRST_ROW, VBodyFragment.LAST_ROW -> false
+        VBodyFragment.FIRST_ROW_FIRST_LINE, VBodyFragment.FIRST_ROW_LAST_LINE,
+        VBodyFragment.LAST_ROW_FIRST_LINE, VBodyFragment.LAST_ROW_LAST_LINE -> true
     }

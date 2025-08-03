@@ -136,6 +136,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
         }
     ),
     DynSizeConstr(ERROR, ContentStyle::gridCellHJustifyPerCol.st(), size = { _, style -> style.gridCols }),
+    DynChoiceConstr(WARN, ContentStyle::gridTextVJustify.st()) { _, style ->
+        if (style.gridTextVJustifyFragments == VTextFragment.ALL_LINES)
+            EnumSet.complementOf(EnumSet.of(VJustifyText.BASELINE))
+        else EnumSet.allOf(VJustifyText::class.java)
+    },
     DoubleConstr(ERROR, ContentStyle::gridRowGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::gridColGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowForceCellWidthPx.st(), min = 0.0),
@@ -164,11 +169,22 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
-    DoubleConstr(ERROR, ContentStyle::flowLineWidthPx.st(), min = 0.0, minInclusive = false),
-    DoubleConstr(ERROR, ContentStyle::flowLineGapPx.st(), min = 0.0),
+    DynChoiceConstr(WARN, ContentStyle::flowTextVJustify.st()) { _, style ->
+        if (style.flowTextVJustifyFragments == VTextFragment.ALL_LINES)
+            EnumSet.complementOf(EnumSet.of(VJustifyText.BASELINE))
+        else EnumSet.allOf(VJustifyText::class.java)
+    },
+    DoubleConstr(ERROR, ContentStyle::flowRowWidthPx.st(), min = 0.0, minInclusive = false),
+    DoubleConstr(ERROR, ContentStyle::flowRowGapPx.st(), min = 0.0),
     DoubleConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0.0),
     StyledStringConstr(WARN, ContentStyle::flowSeparator.st()) { _, style ->
         style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
+    },
+    DynChoiceConstr(WARN, ContentStyle::flowSeparatorVJustify.st()) { _, style ->
+        if (style.flowTextVJustifyFragments == VTextFragment.ALL_LINES ||
+            style.flowTextVJustify != VJustifyText.BASELINE
+        ) EnumSet.complementOf(EnumSet.of(VJustifyText.BASELINE))
+        else EnumSet.allOf(VJustifyText::class.java)
     },
     DoubleConstr(ERROR, ContentStyle::paragraphsLineWidthPx.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, ContentStyle::paragraphsParaGapPx.st(), min = 0.0),
@@ -183,6 +199,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
+    DynChoiceConstr(WARN, ContentStyle::headVJustify.st()) { _, style ->
+        if (!style.headVJustifyBodyFragment.isLine || style.headVJustifyHeadFragment == VTextFragment.ALL_LINES)
+            EnumSet.complementOf(EnumSet.of(VJustifyText.BASELINE))
+        else EnumSet.allOf(VJustifyText::class.java)
+    },
     DoubleConstr(ERROR, ContentStyle::headGapPx.st(), min = 0.0),
     StyledStringConstr(WARN, ContentStyle::headLeader.st()) { _, style ->
         style.headLeaderLetterStyleName.orElse { style.headLetterStyleName }
@@ -200,6 +221,11 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
             }
         }
     ),
+    DynChoiceConstr(WARN, ContentStyle::tailVJustify.st()) { _, style ->
+        if (!style.tailVJustifyBodyFragment.isLine || style.tailVJustifyTailFragment == VTextFragment.ALL_LINES)
+            EnumSet.complementOf(EnumSet.of(VJustifyText.BASELINE))
+        else EnumSet.allOf(VJustifyText::class.java)
+    },
     DoubleConstr(ERROR, ContentStyle::tailGapPx.st(), min = 0.0),
     StyledStringConstr(WARN, ContentStyle::tailLeader.st()) { _, style ->
         style.tailLeaderLetterStyleName.orElse { style.tailLetterStyleName }

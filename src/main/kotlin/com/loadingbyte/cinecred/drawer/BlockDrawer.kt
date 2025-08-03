@@ -11,6 +11,8 @@ import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.HarmonizeExtent.ACROSS_BLOCKS
 import com.loadingbyte.cinecred.project.SpineAttachment.*
+import com.loadingbyte.cinecred.project.VBodyFragment.*
+import com.loadingbyte.cinecred.project.VTextFragment.*
 import kotlin.math.floor
 
 
@@ -62,12 +64,12 @@ private fun drawHorizontalBlocks(
     val sharedHeadWidths = harmonizeWidth(
         blocks, harmonizeHeadWidthPartitionIds, Block::harmonizeHeadPartitionId,
         sharedGroupWidth = { group ->
-            group.maxOf { block -> if (block.head == null) 0.0 else block.head.first().formatted(styling).width }
+            group.maxOf { block -> if (block.head == null) 0.0 else block.head.maxOf { it.formatted(styling).width } }
         })
     val sharedTailWidths = harmonizeWidth(
         blocks, harmonizeTailWidthPartitionIds, Block::harmonizeTailPartitionId,
         sharedGroupWidth = { group ->
-            group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.first().formatted(styling).width }
+            group.maxOf { block -> if (block.tail == null) 0.0 else block.tail.maxOf { it.formatted(styling).width } }
         })
 
     // Draw a deferred image for each block.
@@ -90,112 +92,151 @@ private fun drawHorizontalBlocks(
         val blockImageHeight = bodyImage.height
         val blockImage = DeferredImage(width = tailEndX - headStartX, height = blockImageHeight)
 
-        fun yBaselineForAppendage(fmtStr: FormattedString, vShelve: AppendageVShelve, vJustify: AppendageVJustify): Y =
-            when (vShelve) {
-                AppendageVShelve.FIRST ->
-                    drawnBody.lines.first().yBaselineForAppendage(vJustify, fmtStr).toY()
-                AppendageVShelve.LAST ->
-                    drawnBody.lines.last().yBaselineForAppendage(vJustify, fmtStr).toY() +
-                            blockImageHeight - drawnBody.lines.last().height
-                AppendageVShelve.OVERALL_MIDDLE ->
-                    (blockImageHeight - fmtStr.height) / 2.0 + fmtStr.heightAboveBaseline
-            }
-
-        fun drawHeadTail(
-            strLines: List<StyledString>, hJustify: HJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
-            areaX: Double, areaWidth: Double
-        ): DoubleArray {
-            val fmtStr = strLines.first().formatted(styling)
-            val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
-            val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
-            blockImage.drawString(fmtStr, x, yBaseline)
-            // Draw a guide that shows the edges of the head/tail space.
-            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, areaX, 0.0.toY(), areaWidth, blockImageHeight, layer = GUIDES)
-            // Draw an additional guide that shows the edge of the vertical head/tail alignment space.
-            val extraGuideY = when (vShelve) {
-                AppendageVShelve.FIRST -> drawnBody.lines.first().height.toY()
-                AppendageVShelve.LAST -> blockImageHeight - drawnBody.lines.last().height
-                AppendageVShelve.OVERALL_MIDDLE -> null
-            }
-            if (extraGuideY != null && drawnBody.lines.size != 1)
-                blockImage.drawLine(
-                    HEAD_TAIL_GUIDE_COLOR, areaX, extraGuideY, areaX + areaWidth, extraGuideY,
-                    dash = true, layer = GUIDES
-                )
-            return doubleArrayOf(x, x + fmtStr.width)
+        fun drawHGuide(x: Double, y: Y, width: Double) {
+            blockImage.drawLine(HEAD_TAIL_GUIDE_COLOR, x, y, x + width, y, dash = true, layer = GUIDES)
         }
 
         fun drawLeader(
-            str: String, letterStyleName: String,
-            hJustify: SingleLineHJustify, vShelve: AppendageVShelve, vJustify: AppendageVJustify,
-            leftMargin: Double, rightMargin: Double, spacing: Double,
-            leftX: Double, rightX: Double
+            fmtStr: FormattedString,
+            hJustify: HJustifyCrumbs,
+            leftMargin: Double,
+            rightMargin: Double,
+            spacing: Double,
+            leftX: Double,
+            rightX: Double,
+            yBaseline: Y
         ) {
-            val letterStyle = styling.letterStyles.find { it.name == letterStyleName } ?: PLACEHOLDER_LETTER_STYLE
-            val fmtStr = format(str, letterStyle, styling)
             val areaWidth = (rightX - leftX) - (leftMargin + rightMargin)
             val count = floor((areaWidth + spacing) / (fmtStr.width + spacing)).toInt()
             if (count <= 0)
                 return
             var x = leftX + leftMargin
             val advance: Double
-            if (hJustify == SingleLineHJustify.FULL)
+            if (hJustify == HJustifyCrumbs.FULL)
                 advance = (areaWidth - fmtStr.width) / (count - 1)
             else {
                 x += justify(hJustify.toHJustify(), areaWidth, count * fmtStr.width + (count - 1) * spacing)
                 advance = fmtStr.width + spacing
             }
-            val yBaseline = yBaselineForAppendage(fmtStr, vShelve, vJustify)
             repeat(count) {
                 blockImage.drawString(fmtStr, x, yBaseline)
                 x += advance
             }
         }
 
-        // Draw the block's head.
-        if (block.head != null) {
-            val (_, headContentEndX) = drawHeadTail(
-                block.head, style.headHJustify, style.headVShelve, style.headVJustify, headStartX, headWidth
-            )
-            // Draw the block's head leader.
-            if (style.headLeader.isNotBlank()) {
-                val bodyContentStartX = bodyStartX + when (style.headVShelve) {
-                    AppendageVShelve.FIRST -> drawnBody.lines.first().x
-                    AppendageVShelve.LAST -> drawnBody.lines.last().x
-                    AppendageVShelve.OVERALL_MIDDLE -> drawnBody.lines.minOf { line -> line.x }
+        fun drawHeadTailLines(
+            isHead: Boolean,
+            strLines: List<StyledString>,
+            hJustify: HJustify,
+            vJustifyBodyFrag: VBodyFragment,
+            vJustifyHeadTailFrag: VTextFragment,
+            vJustify: VJustifyText,
+            leader: String,
+            leaderLetterStyleName: String,
+            leaderHJustify: HJustifyCrumbs,
+            leaderVJustify: VJustifyText,
+            leaderLeftMargin: Double,
+            leaderRightMargin: Double,
+            leaderSpacing: Double,
+            areaX: Double,
+            areaWidth: Double
+        ) {
+            val fmtStrLines = strLines.map { str -> str.formatted(styling) }
+            var y = when (vJustifyHeadTailFrag) {
+                ALL_LINES -> drawnBody.yForHeadTail(fmtStrLines.sumOf { it.height }, vJustifyBodyFrag, vJustify, isHead)
+                FIRST_LINE -> drawnBody.yForHeadTail(fmtStrLines.first(), vJustifyBodyFrag, vJustify, isHead)
+                LAST_LINE -> drawnBody.yForHeadTail(fmtStrLines.last(), vJustifyBodyFrag, vJustify, isHead) -
+                        fmtStrLines.subList(0, fmtStrLines.size - 1).sumOf(FormattedString::height)
+            }
+            val leaderLineIdx = if (leader.isBlank() || !vJustifyBodyFrag.isLine) -1 else when (vJustifyHeadTailFrag) {
+                ALL_LINES -> -1
+                FIRST_LINE -> 0
+                LAST_LINE -> fmtStrLines.lastIndex
+            }
+            for ((lineIdx, fmtStr) in fmtStrLines.withIndex()) {
+                val x = areaX + justify(hJustify, areaWidth, fmtStr.width)
+                blockImage.drawString(fmtStr, x, y + fmtStr.heightAboveBaseline)
+                if (lineIdx == leaderLineIdx) {
+                    val drawnBodyLine = drawnBody.selectLine(vJustifyBodyFrag, isHead)
+                    val leaderLetterStyle = styling.letterStyles.find { it.name == leaderLetterStyleName }
+                        ?: PLACEHOLDER_LETTER_STYLE
+                    val leaderFmtStr = format(leader, leaderLetterStyle, styling)
+                    drawLeader(
+                        leaderFmtStr,
+                        leaderHJustify,
+                        leaderLeftMargin,
+                        leaderRightMargin,
+                        leaderSpacing,
+                        leftX = if (isHead) x + fmtStr.width else bodyStartX + drawnBodyLine.x + drawnBodyLine.width,
+                        rightX = if (isHead) bodyStartX + drawnBodyLine.x else x,
+                        yBaseline = drawnBodyLine.yForHeadTail(leaderFmtStr, leaderVJustify) +
+                                leaderFmtStr.heightAboveBaseline
+                    )
                 }
-                drawLeader(
-                    style.headLeader, style.headLeaderLetterStyleName.orElse { style.headLetterStyleName },
-                    style.headLeaderHJustify, style.headVShelve, style.headLeaderVJustify,
-                    style.headLeaderMarginLeftPx, style.headLeaderMarginRightPx, style.headLeaderSpacingPx,
-                    headContentEndX, bodyContentStartX
-                )
+                y += fmtStr.height
+            }
+            // Draw a guide that shows the edges of the head/tail space.
+            blockImage.drawRect(HEAD_TAIL_GUIDE_COLOR, areaX, 0.0.toY(), areaWidth, blockImageHeight, layer = GUIDES)
+            // Draw additional guides that show the edges of the vertical head/tail fragment justification space.
+            when (vJustifyBodyFrag) {
+                ALL_ROWS -> {}
+                FIRST_ROW -> if (drawnBody.rows.size > 1) drawHGuide(areaX, drawnBody.rows[0].height.toY(), areaWidth)
+                LAST_ROW -> if (drawnBody.rows.size > 1) drawHGuide(areaX, drawnBody.rows.last().y, areaWidth)
+                else -> {
+                    val drawnBodyLine = drawnBody.selectLine(vJustifyBodyFrag, isHead)
+                    val y1 = drawnBodyLine.y
+                    val y2 = drawnBodyLine.y + drawnBodyLine.height
+                    // Note: Resolving here is no big deal because we're essentially pretending that we're working with
+                    // traditional fixed, non-elastic floats for vertical coordinates, which is sufficient for
+                    // determining whether y1/y2 are at the very top or bottom of the block.
+                    if (y1.resolve() > 0.001) drawHGuide(areaX, y1, areaWidth)
+                    if (y2.resolve() < blockImageHeight.resolve() - 0.001) drawHGuide(areaX, y2, areaWidth)
+                }
             }
         }
+
+        // Draw the block's head.
+        if (block.head != null)
+            drawHeadTailLines(
+                isHead = true,
+                block.head,
+                style.headHJustify,
+                style.headVJustifyBodyFragment,
+                style.headVJustifyHeadFragment,
+                style.headVJustify,
+                style.headLeader,
+                style.headLeaderLetterStyleName.orElse { style.headLetterStyleName },
+                style.headLeaderHJustify,
+                style.headLeaderVJustify,
+                style.headLeaderMarginLeftPx,
+                style.headLeaderMarginRightPx,
+                style.headLeaderSpacingPx,
+                headStartX,
+                headWidth
+            )
 
         // Draw the block's body.
         blockImage.drawDeferredImage(bodyImage, bodyStartX, 0.0.toY())
 
         // Draw the block's tail.
-        if (block.tail != null) {
-            val (tailContentStartX, _) = drawHeadTail(
-                block.tail, style.tailHJustify, style.tailVShelve, style.tailVJustify, tailStartX, tailWidth
+        if (block.tail != null)
+            drawHeadTailLines(
+                isHead = false,
+                block.tail,
+                style.tailHJustify,
+                style.tailVJustifyBodyFragment,
+                style.tailVJustifyTailFragment,
+                style.tailVJustify,
+                style.tailLeader,
+                style.tailLeaderLetterStyleName.orElse { style.tailLetterStyleName },
+                style.tailLeaderHJustify,
+                style.tailLeaderVJustify,
+                style.tailLeaderMarginLeftPx,
+                style.tailLeaderMarginRightPx,
+                style.tailLeaderSpacingPx,
+                tailStartX,
+                tailWidth
             )
-            // Draw the block's tail leader.
-            if (style.tailLeader.isNotBlank()) {
-                val bodyContentEndX = bodyStartX + when (style.tailVShelve) {
-                    AppendageVShelve.FIRST -> drawnBody.lines.first().let { line -> line.x + line.width }
-                    AppendageVShelve.LAST -> drawnBody.lines.last().let { line -> line.x + line.width }
-                    AppendageVShelve.OVERALL_MIDDLE -> drawnBody.lines.maxOf { line -> line.x + line.width }
-                }
-                drawLeader(
-                    style.tailLeader, style.tailLeaderLetterStyleName.orElse { style.tailLetterStyleName },
-                    style.tailLeaderHJustify, style.tailVShelve, style.tailLeaderVJustify,
-                    style.tailLeaderMarginLeftPx, style.tailLeaderMarginRightPx, style.tailLeaderSpacingPx,
-                    bodyContentEndX, tailContentStartX
-                )
-            }
-        }
 
         // Find the x coordinate of the spine in the generated image for the current block.
         val spineXInImage = when (style.spineAttachment) {
@@ -253,9 +294,62 @@ private fun resolveWidth(
         return force.value
     shared[block]?.let { return it }
     if (strLines != null)
-        return strLines.first().formatted(styling).width
+        return strLines.maxOf { line -> line.formatted(styling).width }
     return 0.0
 }
+
+
+private fun DrawnBody.selectLine(vBodyFragment: VBodyFragment, left: Boolean): DrawnBodyLine =
+    when (vBodyFragment) {
+        ALL_ROWS, FIRST_ROW, LAST_ROW -> throw IllegalArgumentException()
+        FIRST_ROW_FIRST_LINE -> rows.first().run { if (left) topLeftLine else topRightLine }
+        FIRST_ROW_LAST_LINE -> rows.first().run { if (left) bottomLeftLine else bottomRightLine }
+        LAST_ROW_FIRST_LINE -> rows.last().run { if (left) topLeftLine else topRightLine }
+        LAST_ROW_LAST_LINE -> rows.last().run { if (left) bottomLeftLine else bottomRightLine }
+    }
+
+private fun DrawnBody.yForHeadTail(
+    objHeight: Double,
+    vJustifyBodyFragment: VBodyFragment,
+    vJustify: VJustifyText,
+    left: Boolean
+): Y =
+    when (vJustifyBodyFragment) {
+        ALL_ROWS -> justify(vJustify.toVJustify(), defImage.height, objHeight)
+        FIRST_ROW -> rows.first().yForHeadTail(objHeight, vJustify.toVJustify())
+        LAST_ROW -> rows.last().yForHeadTail(objHeight, vJustify.toVJustify())
+        else -> selectLine(vJustifyBodyFragment, left).yForHeadTail(objHeight, vJustify.toVJustify())
+    }
+
+private fun DrawnBody.yForHeadTail(
+    fmtStr: FormattedString,
+    vJustifyBodyFragment: VBodyFragment,
+    vJustify: VJustifyText,
+    left: Boolean
+): Y =
+    when (vJustifyBodyFragment) {
+        ALL_ROWS -> justify(vJustify.toVJustify(), defImage.height, fmtStr.height)
+        FIRST_ROW -> rows.first().yForHeadTail(fmtStr.height, vJustify.toVJustify())
+        LAST_ROW -> rows.last().yForHeadTail(fmtStr.height, vJustify.toVJustify())
+        else -> selectLine(vJustifyBodyFragment, left).yForHeadTail(fmtStr, vJustify)
+    }
+
+
+private fun DrawnBodyRow.yForHeadTail(objHeight: Double, vJustify: VJustify): Y =
+    y + justify(vJustify, height, objHeight)
+
+
+private fun DrawnBodyLine.yForHeadTail(objHeight: Double, vJustify: VJustify): Y =
+    y + justify(vJustify, height, objHeight)
+
+private fun DrawnBodyLine.yForHeadTail(fmtStr: FormattedString, vJustify: VJustifyText): Y =
+    when (vJustify) {
+        VJustifyText.BASELINE -> when (yBaseline) {
+            null -> yForHeadTail(fmtStr.height, VJustify.MIDDLE)
+            else -> yBaseline - fmtStr.heightAboveBaseline
+        }
+        else -> yForHeadTail(fmtStr.height, vJustify.toVJustify())
+    }
 
 
 private fun drawVerticalBlock(

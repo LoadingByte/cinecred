@@ -59,7 +59,7 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
     UnitWidgetSpec(
         ContentStyle::gridForceColWidthPx.st(), ContentStyle::gridForceRowHeightPx.st(),
         ContentStyle::gridRowGapPx.st(), ContentStyle::gridColGapPx.st(), ContentStyle::flowForceCellWidthPx.st(),
-        ContentStyle::flowForceCellHeightPx.st(), ContentStyle::flowLineWidthPx.st(), ContentStyle::flowLineGapPx.st(),
+        ContentStyle::flowForceCellHeightPx.st(), ContentStyle::flowRowWidthPx.st(), ContentStyle::flowRowGapPx.st(),
         ContentStyle::flowHGapPx.st(), ContentStyle::paragraphsLineWidthPx.st(), ContentStyle::paragraphsParaGapPx.st(),
         ContentStyle::paragraphsLineGapPx.st(),
         ContentStyle::headForceWidthPx.st(), ContentStyle::headGapPx.st(), ContentStyle::headLeaderSpacingPx.st(),
@@ -107,8 +107,14 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
         newElement = HJustify.CENTER, newElementIsLastElement = true, elementsPerRow = 3
     ),
     ToggleButtonGroupWidgetSpec(ContentStyle::gridCellVJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridTextVJustifyFragments.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::gridTextVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::gridTextVJustifyFragments.st(), ContentStyle::gridTextVJustify.st(),
+        unionName = "gridTextVJustify"
+    ),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowDirection.st(), ICON),
-    ToggleButtonGroupWidgetSpec(ContentStyle::flowLineHJustify.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowRowHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowSquareCells.st(), ICON, ::flowSquareCellsIcon),
     WidthWidgetSpec(ContentStyle::flowForceCellWidthPx.st(), WidthSpec.LITTLE),
     WidthWidgetSpec(ContentStyle::flowForceCellHeightPx.st(), WidthSpec.LITTLE),
@@ -124,7 +130,13 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
         ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(),
         unionName = "flowCellJustify"
     ),
-    NumberWidgetSpec(ContentStyle::flowLineWidthPx.st(), step = 10.0),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowTextVJustifyFragments.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::flowTextVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::flowTextVJustifyFragments.st(), ContentStyle::flowTextVJustify.st(),
+        unionName = "flowTextVJustify"
+    ),
+    NumberWidgetSpec(ContentStyle::flowRowWidthPx.st(), step = 10.0),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowSeparatorVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
@@ -135,9 +147,16 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
     WidthWidgetSpec(ContentStyle::headHarmonizeWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     UnionWidgetSpec(ContentStyle::headHarmonizeWidth.st(), ContentStyle::headHarmonizeWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::headHJustify.st(), ICON),
-    UnionWidgetSpec(ContentStyle::headVShelve.st(), ContentStyle::headVJustify.st(), unionName = "headVJustify"),
-    ToggleButtonGroupWidgetSpec(ContentStyle::headVShelve.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headVJustifyBodyFragment.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::headVJustifyHeadFragment.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::headVJustifyHeadFragment.st(), ContentStyle::headVJustifyBodyFragment.st(),
+        ContentStyle::headVJustify.st(),
+        unionName = "headVJustify",
+        settingIcons = listOf(null, ARROW_LEFT_RIGHT_ICON, null),
+        settingGaps = listOf("3", "unrel")
+    ),
     WidthWidgetSpec(ContentStyle::headLeader.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::headLeaderHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::headLeaderVJustify.st(), ICON),
@@ -160,9 +179,16 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
     WidthWidgetSpec(ContentStyle::tailHarmonizeWidthAcrossStyles.st(), WidthSpec.SQUEEZE),
     UnionWidgetSpec(ContentStyle::tailHarmonizeWidth.st(), ContentStyle::tailHarmonizeWidthAcrossStyles.st()),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailHJustify.st(), ICON),
-    UnionWidgetSpec(ContentStyle::tailVShelve.st(), ContentStyle::tailVJustify.st(), unionName = "tailVJustify"),
-    ToggleButtonGroupWidgetSpec(ContentStyle::tailVShelve.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustifyBodyFragment.st(), ICON),
+    ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustifyTailFragment.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailVJustify.st(), ICON),
+    UnionWidgetSpec(
+        ContentStyle::tailVJustifyBodyFragment.st(), ContentStyle::tailVJustifyTailFragment.st(),
+        ContentStyle::tailVJustify.st(),
+        unionName = "tailVJustify",
+        settingIcons = listOf(null, ARROW_LEFT_RIGHT_ICON, null),
+        settingGaps = listOf("3", "unrel")
+    ),
     WidthWidgetSpec(ContentStyle::tailLeader.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailLeaderHJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::tailLeaderVJustify.st(), ICON),

@@ -1,4 +1,5 @@
 [Desktop Entry]
+Keywords=video credits creator;film credits maker;movie title generator;desktop application for video credits;credit template editor;
 Name=Cinecred
 @LINUX_SHORTCUT_COMMENTS@
 Exec=cinecred %f

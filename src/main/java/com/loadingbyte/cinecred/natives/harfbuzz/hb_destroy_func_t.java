@@ -2,32 +2,68 @@
 
 package com.loadingbyte.cinecred.natives.harfbuzz;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
- * void (*hb_destroy_func_t)(void* user_data);
+ * {@snippet lang=c :
+ * typedef void (*hb_destroy_func_t)(void *)
  * }
  */
-public interface hb_destroy_func_t {
+public final class hb_destroy_func_t {
 
-    void apply(java.lang.foreign.MemorySegment user_data);
-    static MemorySegment allocate(hb_destroy_func_t fi, Arena scope) {
-        return RuntimeHelper.upcallStub(constants$0.const$3, fi, constants$0.const$2, scope);
+    private hb_destroy_func_t() {
+        // Should not be called directly
     }
-    static hb_destroy_func_t ofAddress(MemorySegment addr, Arena arena) {
-        MemorySegment symbol = addr.reinterpret(arena, null);
-        return (java.lang.foreign.MemorySegment _user_data) -> {
-            try {
-                constants$0.const$4.invokeExact(symbol, _user_data);
-            } catch (Throwable ex$) {
-                throw new AssertionError("should not reach here", ex$);
-            }
-        };
+
+    /**
+     * The function pointer signature, expressed as a functional interface
+     */
+    public interface Function {
+        void apply(MemorySegment user_data);
+    }
+
+    private static final FunctionDescriptor $DESC = FunctionDescriptor.ofVoid(
+        hb_h.C_POINTER
+    );
+
+    /**
+     * The descriptor of this function pointer
+     */
+    public static FunctionDescriptor descriptor() {
+        return $DESC;
+    }
+
+    private static final MethodHandle UP$MH = hb_h.upcallHandle(hb_destroy_func_t.Function.class, "apply", $DESC);
+
+    /**
+     * Allocates a new upcall stub, whose implementation is defined by {@code fi}.
+     * The lifetime of the returned segment is managed by {@code arena}
+     */
+    public static MemorySegment allocate(hb_destroy_func_t.Function fi, Arena arena) {
+        return Linker.nativeLinker().upcallStub(UP$MH.bindTo(fi), $DESC, arena);
+    }
+
+    private static final MethodHandle DOWN$MH = Linker.nativeLinker().downcallHandle($DESC);
+
+    /**
+     * Invoke the upcall stub {@code funcPtr}, with given parameters
+     */
+    public static void invoke(MemorySegment funcPtr, MemorySegment user_data) {
+        try {
+             DOWN$MH.invokeExact(funcPtr, user_data);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
     }
 }
-
 

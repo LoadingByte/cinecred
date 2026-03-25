@@ -868,7 +868,7 @@ class BitmapConverter(
                 srcProfileSeg = buildProfile(skcms_ICCProfile.allocate(arena), srcSpec.representation.colorSpace!!)
                 dstProfileSeg = buildProfile(skcms_ICCProfile.allocate(arena), dstSpec.representation.colorSpace!!)
                 if (srcFlip || dstFlip)
-                    bufSeg = arena.allocateArray(JAVA_INT, srcSpec.resolution.widthPx.toLong())
+                    bufSeg = arena.allocate(JAVA_INT, srcSpec.resolution.widthPx.toLong())
             }, ::close)
         }
 
@@ -944,18 +944,18 @@ class BitmapConverter(
 
             private fun buildProfile(profileSeg: MemorySegment, colorSpace: ColorSpace): MemorySegment {
                 profileSeg.fill(0)
-                skcms_ICCProfile.`data_color_space$set`(profileSeg, skcms_Signature_RGB())
-                skcms_ICCProfile.`pcs$set`(profileSeg, skcms_Signature_XYZ())
-                skcms_ICCProfile.`has_toXYZD50$set`(profileSeg, true)
+                skcms_ICCProfile.data_color_space(profileSeg, skcms_Signature_RGB())
+                skcms_ICCProfile.pcs(profileSeg, skcms_Signature_XYZ())
+                skcms_ICCProfile.has_toXYZD50(profileSeg, true)
 
                 val matrixArr = colorSpace.primaries.toXYZD50.values
-                MemorySegment.copy(matrixArr, 0, skcms_ICCProfile.`toXYZD50$slice`(profileSeg), JAVA_FLOAT, 0L, 9)
-                skcms_ICCProfile.`has_trc$set`(profileSeg, true)
+                MemorySegment.copy(matrixArr, 0, skcms_ICCProfile.toXYZD50(profileSeg), JAVA_FLOAT, 0L, 9)
+                skcms_ICCProfile.has_trc(profileSeg, true)
 
                 val curveArr = (if (colorSpace.transfer.hasCurve) colorSpace.transfer else LINEAR).toLinear.asArray()
-                val trcSeg = skcms_ICCProfile.`trc$slice`(profileSeg)
-                for (c in 0..<3) {
-                    val parametricSeg = skcms_Curve.`parametric$slice`(trcSeg.asSlice(c * skcms_Curve.sizeof()))
+                val trcSeg = skcms_ICCProfile.trc(profileSeg)
+                for (c in 0L..<3L) {
+                    val parametricSeg = skcms_Curve.parametric(skcms_Curve.asSlice(trcSeg, c))
                     MemorySegment.copy(curveArr, 0, parametricSeg, JAVA_FLOAT, 0L, 7)
                 }
 
@@ -1764,11 +1764,11 @@ class BitmapConverter(
                 // Populate the buffer structs.
                 srcSeg = zimg_image_buffer_const.allocate(arena)
                 dstSeg = zimg_image_buffer.allocate(arena)
-                zimg_image_buffer_const.`version$set`(srcSeg, ZIMG_API_VERSION())
-                zimg_image_buffer.`version$set`(dstSeg, ZIMG_API_VERSION())
+                zimg_image_buffer_const.version(srcSeg, ZIMG_API_VERSION())
+                zimg_image_buffer.version(dstSeg, ZIMG_API_VERSION())
                 for (plane in 0L..<4L) {
-                    ZIMG_BUF_CONST_MASK.set(srcSeg, plane, ZIMG_BUFFER_MAX())
-                    ZIMG_BUF_MASK.set(dstSeg, plane, ZIMG_BUFFER_MAX())
+                    ZIMG_BUF_CONST_MASK.set(srcSeg, 0L, plane, ZIMG_BUFFER_MAX())
+                    ZIMG_BUF_MASK.set(dstSeg, 0L, plane, ZIMG_BUFFER_MAX())
                 }
 
                 // Find how much temporary memory we need, and allocate it.
@@ -1785,11 +1785,11 @@ class BitmapConverter(
                 val params = zimg_graph_builder_params.allocate(arena)
                 zimg_graph_builder_params_default(params, ZIMG_API_VERSION())
                 val resampleFilter = if (nearestNeighbor) ZIMG_RESIZE_POINT() else ZIMG_RESIZE_LANCZOS()
-                zimg_graph_builder_params.`resample_filter$set`(params, resampleFilter)
-                zimg_graph_builder_params.`resample_filter_uv$set`(params, resampleFilter)
-                zimg_graph_builder_params.`cpu_type$set`(params, ZIMG_CPU_AUTO_64B())
-                zimg_graph_builder_params.`nominal_peak_luminance$set`(params, 203.0)
-                zimg_graph_builder_params.`allow_approximate_gamma$set`(params, if (approxTransfer) 1 else 0)
+                zimg_graph_builder_params.resample_filter(params, resampleFilter)
+                zimg_graph_builder_params.resample_filter_uv(params, resampleFilter)
+                zimg_graph_builder_params.cpu_type(params, ZIMG_CPU_AUTO_64B())
+                zimg_graph_builder_params.nominal_peak_luminance(params, 203.0)
+                zimg_graph_builder_params.allow_approximate_gamma(params, if (approxTransfer) 1 else 0)
                 // Build the zimg filter graph.
                 val handle = zimg_filter_graph_build(srcFmt, dstFmt, params)
                     .zimgThrowIfNull("Could not build zimg graph")
@@ -1834,22 +1834,22 @@ class BitmapConverter(
 
                 val fmt = zimg_image_format.allocate(arena)
                 zimg_image_format_default(fmt, ZIMG_API_VERSION())
-                zimg_image_format.`width$set`(fmt, width)
-                zimg_image_format.`height$set`(fmt, height)
-                zimg_image_format.`pixel_type$set`(fmt, pixelType)
+                zimg_image_format.width(fmt, width)
+                zimg_image_format.height(fmt, height)
+                zimg_image_format.pixel_type(fmt, pixelType)
                 if (desc.family == YUV) {
-                    zimg_image_format.`subsample_w$set`(fmt, desc.hChromaSub)
-                    zimg_image_format.`subsample_h$set`(fmt, desc.vChromaSub)
+                    zimg_image_format.subsample_w(fmt, desc.hChromaSub)
+                    zimg_image_format.subsample_h(fmt, desc.vChromaSub)
                 }
-                zimg_image_format.`color_family$set`(fmt, colorFam)
-                zimg_image_format.`matrix_coefficients$set`(fmt, matrix)
-                zimg_image_format.`transfer_characteristics$set`(fmt, zimgTransfer(desc.transfer))
-                zimg_image_format.`color_primaries$set`(fmt, prim)
-                zimg_image_format.`depth$set`(fmt, depth)
-                zimg_image_format.`pixel_range$set`(fmt, range)
-                zimg_image_format.`field_parity$set`(fmt, fieldParity)
-                zimg_image_format.`chroma_location$set`(fmt, zimgChroma(desc.chromaLocation))
-                zimg_image_format.`alpha$set`(fmt, ZIMG_ALPHA_NONE())
+                zimg_image_format.color_family(fmt, colorFam)
+                zimg_image_format.matrix_coefficients(fmt, matrix)
+                zimg_image_format.transfer_characteristics(fmt, zimgTransfer(desc.transfer))
+                zimg_image_format.color_primaries(fmt, prim)
+                zimg_image_format.depth(fmt, depth)
+                zimg_image_format.pixel_range(fmt, range)
+                zimg_image_format.field_parity(fmt, fieldParity)
+                zimg_image_format.chroma_location(fmt, zimgChroma(desc.chromaLocation))
+                zimg_image_format.alpha(fmt, ZIMG_ALPHA_NONE())
                 return fmt
             }
 
@@ -1872,16 +1872,16 @@ class BitmapConverter(
                         val srcPlane = srcComp.plane
                         val srcStride = src.linesize(srcPlane).toLong()
                         val srcData = src.memorySegment(srcPlane).asSlice(graph.srcOffset * srcStride)
-                        ZIMG_BUF_CONST_DATA.set(srcSeg, i.toLong(), srcData)
-                        ZIMG_BUF_CONST_STRIDE.set(srcSeg, i.toLong(), graph.step * srcStride)
+                        ZIMG_BUF_CONST_DATA.set(srcSeg, 0L, i.toLong(), srcData)
+                        ZIMG_BUF_CONST_STRIDE.set(srcSeg, 0L, i.toLong(), graph.step * srcStride)
                     }
 
                     for ((i, dstComp) in dstDesc.components.withIndex()) {
                         val dstPlane = dstComp.plane
                         val dstStride = dst.linesize(dstPlane).toLong()
                         val dstData = dst.memorySegment(dstPlane).asSlice(graph.dstOffset * dstStride)
-                        ZIMG_BUF_DATA.set(dstSeg, i.toLong(), dstData)
-                        ZIMG_BUF_STRIDE.set(dstSeg, i.toLong(), graph.step * dstStride)
+                        ZIMG_BUF_DATA.set(dstSeg, 0L, i.toLong(), dstData)
+                        ZIMG_BUF_STRIDE.set(dstSeg, 0L, i.toLong(), graph.step * dstStride)
                     }
 
                     zimg_filter_graph_process(graph.handle, srcSeg, dstSeg, tmpMem, NULL, NULL, NULL, NULL)
@@ -1902,7 +1902,7 @@ class BitmapConverter(
             private fun zimgExcStr(message: String): String {
                 val cStr = arena.allocate(1024)
                 val errnum = zimg_get_last_error(cStr, cStr.byteSize())
-                return "$message: ${cStr.getUtf8String(0)} (zimg error number $errnum)."
+                return "$message: ${cStr.getString(0)} (zimg error number $errnum)."
             }
 
             companion object {
@@ -1916,8 +1916,8 @@ class BitmapConverter(
 
                 init {
                     val planePath = arrayOf(groupElement("plane"), sequenceElement())
-                    val bufC = zimg_image_buffer_const.`$LAYOUT`()
-                    val buf = zimg_image_buffer.`$LAYOUT`()
+                    val bufC = zimg_image_buffer_const.layout()
+                    val buf = zimg_image_buffer.layout()
                     ZIMG_BUF_CONST_DATA = bufC.varHandle(*planePath, groupElement("data")).withInvokeExactBehavior()
                     ZIMG_BUF_CONST_STRIDE = bufC.varHandle(*planePath, groupElement("stride")).withInvokeExactBehavior()
                     ZIMG_BUF_CONST_MASK = bufC.varHandle(*planePath, groupElement("mask")).withInvokeExactBehavior()

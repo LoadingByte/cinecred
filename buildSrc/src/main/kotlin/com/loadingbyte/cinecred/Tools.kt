@@ -46,11 +46,11 @@ object Tools {
         return if (baseDir.isDirectory) baseDir else null
     }
 
-    fun jextractJava(): String {
+    fun jextract(): String {
         val dir = System.getProperty("jextract")
-        val java = dir?.let(::File)?.resolve("bin/java")
-        if (java != null && java.canExecute())
-            return java.absolutePath
+        val jextract = dir?.let(::File)?.resolve("bin/jextract")
+        if (jextract != null && jextract.canExecute())
+            return jextract.absolutePath
         throw InvalidUserDataException(
             "You must download the jextract distribution for our version of the JDK and point the VM property " +
                     "'jextract' to the distribution's home folder (which contains 'bin').\n" +

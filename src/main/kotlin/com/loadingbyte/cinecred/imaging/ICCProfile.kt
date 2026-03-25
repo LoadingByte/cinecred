@@ -42,9 +42,9 @@ class ICCProfile private constructor(
     private val skcmsHandle: MemorySegment? by lazy {
         val arena = Arena.ofShared()
         // Note: The skcms documentation says that this buffer must not be deallocated.
-        val bytesSeg = arena.allocateArray(bytes)
+        val bytesSeg = arena.allocateFrom(bytes)
         val profileSeg = skcms_ICCProfile.allocate(arena)
-        val prioSeg = arena.allocateArray(JAVA_INT, 1, 0 /* prefer relative colorimetric over perceptual */)
+        val prioSeg = arena.allocateFrom(JAVA_INT, 1, 0 /* prefer relative colorimetric over perceptual */)
         if (skcms_ParseWithA2BPriority(bytesSeg, bytesSeg.byteSize(), prioSeg, 2, profileSeg)) {
             CLEANER.register(this, CleanerAction(arena))
             profileSeg
@@ -68,11 +68,11 @@ class ICCProfile private constructor(
     val similarColorSpace: ColorSpace? by colorSpace?.let(::lazyOf) ?: lazy {
         val skcmsHandle = this.skcmsHandle ?: return@lazy null
         // If the profile has a CICP tag with well-known color space IDs, try reading that first.
-        if (skcms_ICCProfile.`has_CICP$get`(skcmsHandle)) {
-            val cicpSeg = skcms_ICCProfile.`CICP$slice`(skcmsHandle)
+        if (skcms_ICCProfile.has_CICP(skcmsHandle)) {
+            val cicpSeg = skcms_ICCProfile.CICP(skcmsHandle)
             try {
-                val pri = ColorSpace.Primaries.of(toUnsignedInt(skcms_CICP.`color_primaries$get`(cicpSeg)))
-                val trc = ColorSpace.Transfer.of(toUnsignedInt(skcms_CICP.`transfer_characteristics$get`(cicpSeg)))
+                val pri = ColorSpace.Primaries.of(toUnsignedInt(skcms_CICP.color_primaries(cicpSeg)))
+                val trc = ColorSpace.Transfer.of(toUnsignedInt(skcms_CICP.transfer_characteristics(cicpSeg)))
                 return@lazy ColorSpace.of(pri, trc)
             } catch (_: IllegalArgumentException) {
                 // Continue with the traditional non-CICP path.
@@ -84,18 +84,18 @@ class ICCProfile private constructor(
         // Return standard objects when we detect the sRGB color space.
         if (skcms_ApproximatelyEqualProfiles(skcmsHandle, skcms_sRGB_profile()))
             return@lazy ColorSpace.SRGB
-        val pri = when (skcms_ICCProfile.`data_color_space$get`(skcmsHandle)) {
+        val pri = when (skcms_ICCProfile.data_color_space(skcmsHandle)) {
             skcms_Signature_Gray() -> Arena.ofConfined().use { arena ->
-                val chadSeg = arena.allocateArray(JAVA_FLOAT, 9)
+                val chadSeg = arena.allocate(JAVA_FLOAT, 9)
                 if (!skcms_GetCHAD(skcmsHandle, chadSeg)) ColorSpace.Primaries.XYZD65 /* CHAD is often missing */ else
                     ColorSpace.Primaries.of(ColorSpace.Primaries.Matrix(chadSeg.toArray(JAVA_FLOAT)))
             }
             skcms_Signature_RGB() -> ColorSpace.Primaries.of(
-                ColorSpace.Primaries.Matrix(skcms_ICCProfile.`toXYZD50$slice`(skcmsHandle).toArray(JAVA_FLOAT))
+                ColorSpace.Primaries.Matrix(skcms_ICCProfile.toXYZD50(skcmsHandle).toArray(JAVA_FLOAT))
             )
             else -> return@lazy null
         }
-        val curveArr = skcms_Curve.`parametric$slice`(skcms_ICCProfile.`trc$slice`(skcmsHandle)).toArray(JAVA_FLOAT)
+        val curveArr = skcms_Curve.parametric(skcms_ICCProfile.trc(skcmsHandle)).toArray(JAVA_FLOAT)
         val trc = ColorSpace.Transfer.of(ColorSpace.Transfer.Curve(curveArr))
         ColorSpace.of(pri, trc)
     }
@@ -120,8 +120,8 @@ class ICCProfile private constructor(
             // Verify source array size beforehand to prevent segfault.
             require(src.size >= nPixels * 3) { "Source pixel array does not match destination pixel array." }
             Arena.ofConfined().use { arena ->
-                val srcSeg = arena.allocateArray(src)
-                val dstSeg = arena.allocateArray(JAVA_FLOAT, dst.size.toLong())
+                val srcSeg = arena.allocateFrom(src)
+                val dstSeg = arena.allocate(JAVA_FLOAT, dst.size.toLong())
                 if (skcms_Transform(
                         srcSeg, skcms_PixelFormat_RGB_fff(), skcms_AlphaFormat_Opaque(), skcmsHandle,
                         dstSeg, skcms_PixelFormat_RGBA_ffff(), skcms_AlphaFormat_Opaque(), skcms_XYZD50_profile(),
@@ -419,7 +419,7 @@ class ICCProfile private constructor(
         private val csCache = ConcurrentHashMap<ColorSpace, ICCProfile>()
 
         private fun componentCountOfSkcmsProfile(skcmsHandle: MemorySegment) =
-            when (skcms_ICCProfile.`data_color_space$get`(skcmsHandle)) {
+            when (skcms_ICCProfile.data_color_space(skcmsHandle)) {
                 skcms_Signature_Gray() -> 1
                 skcms_Signature_RGB(), skcms_Signature_Lab(), skcms_Signature_XYZ() -> 3
                 skcms_Signature_CMYK() -> 4

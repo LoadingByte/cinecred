@@ -2,1677 +2,6147 @@
 
 package com.loadingbyte.cinecred.natives.skiacapi;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
-import static java.lang.foreign.ValueLayout.*;
-public class skiacapi_h  {
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
 
-    public static final OfByte C_CHAR = JAVA_BYTE;
-    public static final OfShort C_SHORT = JAVA_SHORT;
-    public static final OfInt C_INT = JAVA_INT;
-    public static final OfLong C_LONG = JAVA_LONG;
-    public static final OfLong C_LONG_LONG = JAVA_LONG;
-    public static final OfFloat C_FLOAT = JAVA_FLOAT;
-    public static final OfDouble C_DOUBLE = JAVA_DOUBLE;
-    public static final AddressLayout C_POINTER = RuntimeHelper.POINTER;
+import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
+public class skiacapi_h extends skiacapi_h$shared {
+
+    skiacapi_h() {
+        // Should not be called directly
+    }
+
+    static final Arena LIBRARY_ARENA = Arena.ofAuto();
+
+    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup()
+            .or(Linker.nativeLinker().defaultLookup());
+
+    private static final int true_ = (int)1L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define true 1
      * }
      */
     public static int true_() {
-        return (int)1L;
+        return true_;
     }
+    private static final int false_ = (int)0L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define false 0
      * }
      */
     public static int false_() {
-        return (int)0L;
+        return false_;
     }
+    private static final int __bool_true_false_are_defined = (int)1L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define __bool_true_false_are_defined 1
      * }
      */
     public static int __bool_true_false_are_defined() {
-        return (int)1L;
+        return __bool_true_false_are_defined;
     }
-    public static MethodHandle SkColorType_RGBA_F32$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$1,"SkColorType_RGBA_F32");
+
+    private static class SkColorType_RGBA_F32 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkColorType_RGBA_F32");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkColorType_RGBA_F32();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_RGBA_F32()
+     * }
+     */
+    public static FunctionDescriptor SkColorType_RGBA_F32$descriptor() {
+        return SkColorType_RGBA_F32.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_RGBA_F32()
+     * }
+     */
+    public static MethodHandle SkColorType_RGBA_F32$handle() {
+        return SkColorType_RGBA_F32.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_RGBA_F32()
+     * }
+     */
+    public static MemorySegment SkColorType_RGBA_F32$address() {
+        return SkColorType_RGBA_F32.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkColorType_RGBA_F32()
      * }
      */
     public static byte SkColorType_RGBA_F32() {
-        var mh$ = SkColorType_RGBA_F32$MH();
+        var mh$ = SkColorType_RGBA_F32.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkColorType_RGBA_F32");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkColorType_A16_unorm$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$2,"SkColorType_A16_unorm");
+
+    private static class SkColorType_A16_unorm {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkColorType_A16_unorm");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkColorType_A16_unorm();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_A16_unorm()
+     * }
+     */
+    public static FunctionDescriptor SkColorType_A16_unorm$descriptor() {
+        return SkColorType_A16_unorm.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_A16_unorm()
+     * }
+     */
+    public static MethodHandle SkColorType_A16_unorm$handle() {
+        return SkColorType_A16_unorm.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkColorType_A16_unorm()
+     * }
+     */
+    public static MemorySegment SkColorType_A16_unorm$address() {
+        return SkColorType_A16_unorm.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkColorType_A16_unorm()
      * }
      */
     public static byte SkColorType_A16_unorm() {
-        var mh$ = SkColorType_A16_unorm$MH();
+        var mh$ = SkColorType_A16_unorm.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkColorType_A16_unorm");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkAlphaType_Opaque$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$3,"SkAlphaType_Opaque");
+
+    private static class SkAlphaType_Opaque {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkAlphaType_Opaque");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkAlphaType_Opaque();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Opaque()
+     * }
+     */
+    public static FunctionDescriptor SkAlphaType_Opaque$descriptor() {
+        return SkAlphaType_Opaque.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Opaque()
+     * }
+     */
+    public static MethodHandle SkAlphaType_Opaque$handle() {
+        return SkAlphaType_Opaque.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Opaque()
+     * }
+     */
+    public static MemorySegment SkAlphaType_Opaque$address() {
+        return SkAlphaType_Opaque.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Opaque()
      * }
      */
     public static byte SkAlphaType_Opaque() {
-        var mh$ = SkAlphaType_Opaque$MH();
+        var mh$ = SkAlphaType_Opaque.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkAlphaType_Opaque");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkAlphaType_Premul$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$4,"SkAlphaType_Premul");
+
+    private static class SkAlphaType_Premul {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkAlphaType_Premul");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkAlphaType_Premul();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Premul()
+     * }
+     */
+    public static FunctionDescriptor SkAlphaType_Premul$descriptor() {
+        return SkAlphaType_Premul.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Premul()
+     * }
+     */
+    public static MethodHandle SkAlphaType_Premul$handle() {
+        return SkAlphaType_Premul.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Premul()
+     * }
+     */
+    public static MemorySegment SkAlphaType_Premul$address() {
+        return SkAlphaType_Premul.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Premul()
      * }
      */
     public static byte SkAlphaType_Premul() {
-        var mh$ = SkAlphaType_Premul$MH();
+        var mh$ = SkAlphaType_Premul.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkAlphaType_Premul");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkAlphaType_Unpremul$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$5,"SkAlphaType_Unpremul");
+
+    private static class SkAlphaType_Unpremul {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkAlphaType_Unpremul");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkAlphaType_Unpremul();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Unpremul()
+     * }
+     */
+    public static FunctionDescriptor SkAlphaType_Unpremul$descriptor() {
+        return SkAlphaType_Unpremul.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Unpremul()
+     * }
+     */
+    public static MethodHandle SkAlphaType_Unpremul$handle() {
+        return SkAlphaType_Unpremul.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Unpremul()
+     * }
+     */
+    public static MemorySegment SkAlphaType_Unpremul$address() {
+        return SkAlphaType_Unpremul.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkAlphaType_Unpremul()
      * }
      */
     public static byte SkAlphaType_Unpremul() {
-        var mh$ = SkAlphaType_Unpremul$MH();
+        var mh$ = SkAlphaType_Unpremul.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkAlphaType_Unpremul");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkTileMode_Clamp$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$6,"SkTileMode_Clamp");
+
+    private static class SkTileMode_Clamp {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkTileMode_Clamp");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkTileMode_Clamp();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Clamp()
+     * }
+     */
+    public static FunctionDescriptor SkTileMode_Clamp$descriptor() {
+        return SkTileMode_Clamp.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Clamp()
+     * }
+     */
+    public static MethodHandle SkTileMode_Clamp$handle() {
+        return SkTileMode_Clamp.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Clamp()
+     * }
+     */
+    public static MemorySegment SkTileMode_Clamp$address() {
+        return SkTileMode_Clamp.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Clamp()
      * }
      */
     public static byte SkTileMode_Clamp() {
-        var mh$ = SkTileMode_Clamp$MH();
+        var mh$ = SkTileMode_Clamp.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkTileMode_Clamp");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkTileMode_Decal$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$7,"SkTileMode_Decal");
+
+    private static class SkTileMode_Decal {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkTileMode_Decal");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkTileMode_Decal();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Decal()
+     * }
+     */
+    public static FunctionDescriptor SkTileMode_Decal$descriptor() {
+        return SkTileMode_Decal.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Decal()
+     * }
+     */
+    public static MethodHandle SkTileMode_Decal$handle() {
+        return SkTileMode_Decal.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Decal()
+     * }
+     */
+    public static MemorySegment SkTileMode_Decal$address() {
+        return SkTileMode_Decal.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkTileMode_Decal()
      * }
      */
     public static byte SkTileMode_Decal() {
-        var mh$ = SkTileMode_Decal$MH();
+        var mh$ = SkTileMode_Decal.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkTileMode_Decal");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkFilterMode_Nearest$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$8,"SkFilterMode_Nearest");
+
+    private static class SkFilterMode_Nearest {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkFilterMode_Nearest");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkFilterMode_Nearest();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Nearest()
+     * }
+     */
+    public static FunctionDescriptor SkFilterMode_Nearest$descriptor() {
+        return SkFilterMode_Nearest.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Nearest()
+     * }
+     */
+    public static MethodHandle SkFilterMode_Nearest$handle() {
+        return SkFilterMode_Nearest.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Nearest()
+     * }
+     */
+    public static MemorySegment SkFilterMode_Nearest$address() {
+        return SkFilterMode_Nearest.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Nearest()
      * }
      */
     public static byte SkFilterMode_Nearest() {
-        var mh$ = SkFilterMode_Nearest$MH();
+        var mh$ = SkFilterMode_Nearest.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkFilterMode_Nearest");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkFilterMode_Linear$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$9,"SkFilterMode_Linear");
+
+    private static class SkFilterMode_Linear {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkFilterMode_Linear");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkFilterMode_Linear();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Linear()
+     * }
+     */
+    public static FunctionDescriptor SkFilterMode_Linear$descriptor() {
+        return SkFilterMode_Linear.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Linear()
+     * }
+     */
+    public static MethodHandle SkFilterMode_Linear$handle() {
+        return SkFilterMode_Linear.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Linear()
+     * }
+     */
+    public static MemorySegment SkFilterMode_Linear$address() {
+        return SkFilterMode_Linear.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkFilterMode_Linear()
      * }
      */
     public static byte SkFilterMode_Linear() {
-        var mh$ = SkFilterMode_Linear$MH();
+        var mh$ = SkFilterMode_Linear.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkFilterMode_Linear");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPathVerb_Move$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$10,"SkPathVerb_Move");
+
+    private static class SkPathVerb_Move {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPathVerb_Move");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPathVerb_Move();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Move()
+     * }
+     */
+    public static FunctionDescriptor SkPathVerb_Move$descriptor() {
+        return SkPathVerb_Move.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Move()
+     * }
+     */
+    public static MethodHandle SkPathVerb_Move$handle() {
+        return SkPathVerb_Move.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Move()
+     * }
+     */
+    public static MemorySegment SkPathVerb_Move$address() {
+        return SkPathVerb_Move.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Move()
      * }
      */
     public static byte SkPathVerb_Move() {
-        var mh$ = SkPathVerb_Move$MH();
+        var mh$ = SkPathVerb_Move.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPathVerb_Move");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPathVerb_Line$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$11,"SkPathVerb_Line");
+
+    private static class SkPathVerb_Line {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPathVerb_Line");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPathVerb_Line();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Line()
+     * }
+     */
+    public static FunctionDescriptor SkPathVerb_Line$descriptor() {
+        return SkPathVerb_Line.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Line()
+     * }
+     */
+    public static MethodHandle SkPathVerb_Line$handle() {
+        return SkPathVerb_Line.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Line()
+     * }
+     */
+    public static MemorySegment SkPathVerb_Line$address() {
+        return SkPathVerb_Line.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Line()
      * }
      */
     public static byte SkPathVerb_Line() {
-        var mh$ = SkPathVerb_Line$MH();
+        var mh$ = SkPathVerb_Line.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPathVerb_Line");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPathVerb_Quad$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$12,"SkPathVerb_Quad");
+
+    private static class SkPathVerb_Quad {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPathVerb_Quad");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPathVerb_Quad();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Quad()
+     * }
+     */
+    public static FunctionDescriptor SkPathVerb_Quad$descriptor() {
+        return SkPathVerb_Quad.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Quad()
+     * }
+     */
+    public static MethodHandle SkPathVerb_Quad$handle() {
+        return SkPathVerb_Quad.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Quad()
+     * }
+     */
+    public static MemorySegment SkPathVerb_Quad$address() {
+        return SkPathVerb_Quad.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Quad()
      * }
      */
     public static byte SkPathVerb_Quad() {
-        var mh$ = SkPathVerb_Quad$MH();
+        var mh$ = SkPathVerb_Quad.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPathVerb_Quad");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPathVerb_Cubic$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$13,"SkPathVerb_Cubic");
+
+    private static class SkPathVerb_Cubic {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPathVerb_Cubic");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPathVerb_Cubic();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Cubic()
+     * }
+     */
+    public static FunctionDescriptor SkPathVerb_Cubic$descriptor() {
+        return SkPathVerb_Cubic.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Cubic()
+     * }
+     */
+    public static MethodHandle SkPathVerb_Cubic$handle() {
+        return SkPathVerb_Cubic.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Cubic()
+     * }
+     */
+    public static MemorySegment SkPathVerb_Cubic$address() {
+        return SkPathVerb_Cubic.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Cubic()
      * }
      */
     public static byte SkPathVerb_Cubic() {
-        var mh$ = SkPathVerb_Cubic$MH();
+        var mh$ = SkPathVerb_Cubic.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPathVerb_Cubic");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPathVerb_Close$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$14,"SkPathVerb_Close");
+
+    private static class SkPathVerb_Close {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPathVerb_Close");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPathVerb_Close();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Close()
+     * }
+     */
+    public static FunctionDescriptor SkPathVerb_Close$descriptor() {
+        return SkPathVerb_Close.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Close()
+     * }
+     */
+    public static MethodHandle SkPathVerb_Close$handle() {
+        return SkPathVerb_Close.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Close()
+     * }
+     */
+    public static MemorySegment SkPathVerb_Close$address() {
+        return SkPathVerb_Close.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPathVerb_Close()
      * }
      */
     public static byte SkPathVerb_Close() {
-        var mh$ = SkPathVerb_Close$MH();
+        var mh$ = SkPathVerb_Close.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPathVerb_Close");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintCap_Butt$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$15,"SkPaintCap_Butt");
+
+    private static class SkPaintCap_Butt {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintCap_Butt");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintCap_Butt();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Butt()
+     * }
+     */
+    public static FunctionDescriptor SkPaintCap_Butt$descriptor() {
+        return SkPaintCap_Butt.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Butt()
+     * }
+     */
+    public static MethodHandle SkPaintCap_Butt$handle() {
+        return SkPaintCap_Butt.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Butt()
+     * }
+     */
+    public static MemorySegment SkPaintCap_Butt$address() {
+        return SkPaintCap_Butt.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Butt()
      * }
      */
     public static byte SkPaintCap_Butt() {
-        var mh$ = SkPaintCap_Butt$MH();
+        var mh$ = SkPaintCap_Butt.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintCap_Butt");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintCap_Round$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$16,"SkPaintCap_Round");
+
+    private static class SkPaintCap_Round {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintCap_Round");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintCap_Round();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Round()
+     * }
+     */
+    public static FunctionDescriptor SkPaintCap_Round$descriptor() {
+        return SkPaintCap_Round.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Round()
+     * }
+     */
+    public static MethodHandle SkPaintCap_Round$handle() {
+        return SkPaintCap_Round.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Round()
+     * }
+     */
+    public static MemorySegment SkPaintCap_Round$address() {
+        return SkPaintCap_Round.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Round()
      * }
      */
     public static byte SkPaintCap_Round() {
-        var mh$ = SkPaintCap_Round$MH();
+        var mh$ = SkPaintCap_Round.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintCap_Round");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintCap_Square$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$17,"SkPaintCap_Square");
+
+    private static class SkPaintCap_Square {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintCap_Square");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintCap_Square();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Square()
+     * }
+     */
+    public static FunctionDescriptor SkPaintCap_Square$descriptor() {
+        return SkPaintCap_Square.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Square()
+     * }
+     */
+    public static MethodHandle SkPaintCap_Square$handle() {
+        return SkPaintCap_Square.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Square()
+     * }
+     */
+    public static MemorySegment SkPaintCap_Square$address() {
+        return SkPaintCap_Square.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintCap_Square()
      * }
      */
     public static byte SkPaintCap_Square() {
-        var mh$ = SkPaintCap_Square$MH();
+        var mh$ = SkPaintCap_Square.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintCap_Square");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintJoin_Miter$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$18,"SkPaintJoin_Miter");
+
+    private static class SkPaintJoin_Miter {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintJoin_Miter");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintJoin_Miter();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Miter()
+     * }
+     */
+    public static FunctionDescriptor SkPaintJoin_Miter$descriptor() {
+        return SkPaintJoin_Miter.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Miter()
+     * }
+     */
+    public static MethodHandle SkPaintJoin_Miter$handle() {
+        return SkPaintJoin_Miter.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Miter()
+     * }
+     */
+    public static MemorySegment SkPaintJoin_Miter$address() {
+        return SkPaintJoin_Miter.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Miter()
      * }
      */
     public static byte SkPaintJoin_Miter() {
-        var mh$ = SkPaintJoin_Miter$MH();
+        var mh$ = SkPaintJoin_Miter.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintJoin_Miter");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintJoin_Round$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$19,"SkPaintJoin_Round");
+
+    private static class SkPaintJoin_Round {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintJoin_Round");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintJoin_Round();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Round()
+     * }
+     */
+    public static FunctionDescriptor SkPaintJoin_Round$descriptor() {
+        return SkPaintJoin_Round.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Round()
+     * }
+     */
+    public static MethodHandle SkPaintJoin_Round$handle() {
+        return SkPaintJoin_Round.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Round()
+     * }
+     */
+    public static MemorySegment SkPaintJoin_Round$address() {
+        return SkPaintJoin_Round.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Round()
      * }
      */
     public static byte SkPaintJoin_Round() {
-        var mh$ = SkPaintJoin_Round$MH();
+        var mh$ = SkPaintJoin_Round.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintJoin_Round");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaintJoin_Bevel$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$20,"SkPaintJoin_Bevel");
+
+    private static class SkPaintJoin_Bevel {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaintJoin_Bevel");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkPaintJoin_Bevel();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Bevel()
+     * }
+     */
+    public static FunctionDescriptor SkPaintJoin_Bevel$descriptor() {
+        return SkPaintJoin_Bevel.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Bevel()
+     * }
+     */
+    public static MethodHandle SkPaintJoin_Bevel$handle() {
+        return SkPaintJoin_Bevel.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Bevel()
+     * }
+     */
+    public static MemorySegment SkPaintJoin_Bevel$address() {
+        return SkPaintJoin_Bevel.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkPaintJoin_Bevel()
      * }
      */
     public static byte SkPaintJoin_Bevel() {
-        var mh$ = SkPaintJoin_Bevel$MH();
+        var mh$ = SkPaintJoin_Bevel.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaintJoin_Bevel");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Clear$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$21,"SkBlendMode_Clear");
+
+    private static class SkBlendMode_Clear {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Clear");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Clear();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Clear()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Clear$descriptor() {
+        return SkBlendMode_Clear.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Clear()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Clear$handle() {
+        return SkBlendMode_Clear.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Clear()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Clear$address() {
+        return SkBlendMode_Clear.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Clear()
      * }
      */
     public static byte SkBlendMode_Clear() {
-        var mh$ = SkBlendMode_Clear$MH();
+        var mh$ = SkBlendMode_Clear.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Clear");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Src$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$22,"SkBlendMode_Src");
+
+    private static class SkBlendMode_Src {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Src");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Src();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Src()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Src$descriptor() {
+        return SkBlendMode_Src.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Src()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Src$handle() {
+        return SkBlendMode_Src.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Src()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Src$address() {
+        return SkBlendMode_Src.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Src()
      * }
      */
     public static byte SkBlendMode_Src() {
-        var mh$ = SkBlendMode_Src$MH();
+        var mh$ = SkBlendMode_Src.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Src");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Dst$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$23,"SkBlendMode_Dst");
+
+    private static class SkBlendMode_Dst {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Dst");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Dst();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Dst()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Dst$descriptor() {
+        return SkBlendMode_Dst.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Dst()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Dst$handle() {
+        return SkBlendMode_Dst.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Dst()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Dst$address() {
+        return SkBlendMode_Dst.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Dst()
      * }
      */
     public static byte SkBlendMode_Dst() {
-        var mh$ = SkBlendMode_Dst$MH();
+        var mh$ = SkBlendMode_Dst.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Dst");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_SrcOver$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$24,"SkBlendMode_SrcOver");
+
+    private static class SkBlendMode_SrcOver {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_SrcOver");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_SrcOver();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOver()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_SrcOver$descriptor() {
+        return SkBlendMode_SrcOver.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOver()
+     * }
+     */
+    public static MethodHandle SkBlendMode_SrcOver$handle() {
+        return SkBlendMode_SrcOver.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOver()
+     * }
+     */
+    public static MemorySegment SkBlendMode_SrcOver$address() {
+        return SkBlendMode_SrcOver.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOver()
      * }
      */
     public static byte SkBlendMode_SrcOver() {
-        var mh$ = SkBlendMode_SrcOver$MH();
+        var mh$ = SkBlendMode_SrcOver.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_SrcOver");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_DstOver$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$25,"SkBlendMode_DstOver");
+
+    private static class SkBlendMode_DstOver {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_DstOver");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_DstOver();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOver()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_DstOver$descriptor() {
+        return SkBlendMode_DstOver.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOver()
+     * }
+     */
+    public static MethodHandle SkBlendMode_DstOver$handle() {
+        return SkBlendMode_DstOver.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOver()
+     * }
+     */
+    public static MemorySegment SkBlendMode_DstOver$address() {
+        return SkBlendMode_DstOver.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOver()
      * }
      */
     public static byte SkBlendMode_DstOver() {
-        var mh$ = SkBlendMode_DstOver$MH();
+        var mh$ = SkBlendMode_DstOver.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_DstOver");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_SrcIn$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$26,"SkBlendMode_SrcIn");
+
+    private static class SkBlendMode_SrcIn {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_SrcIn");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_SrcIn();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcIn()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_SrcIn$descriptor() {
+        return SkBlendMode_SrcIn.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcIn()
+     * }
+     */
+    public static MethodHandle SkBlendMode_SrcIn$handle() {
+        return SkBlendMode_SrcIn.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcIn()
+     * }
+     */
+    public static MemorySegment SkBlendMode_SrcIn$address() {
+        return SkBlendMode_SrcIn.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcIn()
      * }
      */
     public static byte SkBlendMode_SrcIn() {
-        var mh$ = SkBlendMode_SrcIn$MH();
+        var mh$ = SkBlendMode_SrcIn.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_SrcIn");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_DstIn$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$27,"SkBlendMode_DstIn");
+
+    private static class SkBlendMode_DstIn {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_DstIn");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_DstIn();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstIn()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_DstIn$descriptor() {
+        return SkBlendMode_DstIn.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstIn()
+     * }
+     */
+    public static MethodHandle SkBlendMode_DstIn$handle() {
+        return SkBlendMode_DstIn.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstIn()
+     * }
+     */
+    public static MemorySegment SkBlendMode_DstIn$address() {
+        return SkBlendMode_DstIn.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstIn()
      * }
      */
     public static byte SkBlendMode_DstIn() {
-        var mh$ = SkBlendMode_DstIn$MH();
+        var mh$ = SkBlendMode_DstIn.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_DstIn");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_SrcOut$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$28,"SkBlendMode_SrcOut");
+
+    private static class SkBlendMode_SrcOut {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_SrcOut");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_SrcOut();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOut()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_SrcOut$descriptor() {
+        return SkBlendMode_SrcOut.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOut()
+     * }
+     */
+    public static MethodHandle SkBlendMode_SrcOut$handle() {
+        return SkBlendMode_SrcOut.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOut()
+     * }
+     */
+    public static MemorySegment SkBlendMode_SrcOut$address() {
+        return SkBlendMode_SrcOut.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcOut()
      * }
      */
     public static byte SkBlendMode_SrcOut() {
-        var mh$ = SkBlendMode_SrcOut$MH();
+        var mh$ = SkBlendMode_SrcOut.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_SrcOut");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_DstOut$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$29,"SkBlendMode_DstOut");
+
+    private static class SkBlendMode_DstOut {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_DstOut");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_DstOut();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOut()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_DstOut$descriptor() {
+        return SkBlendMode_DstOut.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOut()
+     * }
+     */
+    public static MethodHandle SkBlendMode_DstOut$handle() {
+        return SkBlendMode_DstOut.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOut()
+     * }
+     */
+    public static MemorySegment SkBlendMode_DstOut$address() {
+        return SkBlendMode_DstOut.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstOut()
      * }
      */
     public static byte SkBlendMode_DstOut() {
-        var mh$ = SkBlendMode_DstOut$MH();
+        var mh$ = SkBlendMode_DstOut.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_DstOut");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_SrcATop$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$30,"SkBlendMode_SrcATop");
+
+    private static class SkBlendMode_SrcATop {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_SrcATop");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_SrcATop();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcATop()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_SrcATop$descriptor() {
+        return SkBlendMode_SrcATop.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcATop()
+     * }
+     */
+    public static MethodHandle SkBlendMode_SrcATop$handle() {
+        return SkBlendMode_SrcATop.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcATop()
+     * }
+     */
+    public static MemorySegment SkBlendMode_SrcATop$address() {
+        return SkBlendMode_SrcATop.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SrcATop()
      * }
      */
     public static byte SkBlendMode_SrcATop() {
-        var mh$ = SkBlendMode_SrcATop$MH();
+        var mh$ = SkBlendMode_SrcATop.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_SrcATop");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_DstATop$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$31,"SkBlendMode_DstATop");
+
+    private static class SkBlendMode_DstATop {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_DstATop");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_DstATop();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstATop()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_DstATop$descriptor() {
+        return SkBlendMode_DstATop.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstATop()
+     * }
+     */
+    public static MethodHandle SkBlendMode_DstATop$handle() {
+        return SkBlendMode_DstATop.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstATop()
+     * }
+     */
+    public static MemorySegment SkBlendMode_DstATop$address() {
+        return SkBlendMode_DstATop.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_DstATop()
      * }
      */
     public static byte SkBlendMode_DstATop() {
-        var mh$ = SkBlendMode_DstATop$MH();
+        var mh$ = SkBlendMode_DstATop.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_DstATop");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Xor$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$32,"SkBlendMode_Xor");
+
+    private static class SkBlendMode_Xor {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Xor");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Xor();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Xor()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Xor$descriptor() {
+        return SkBlendMode_Xor.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Xor()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Xor$handle() {
+        return SkBlendMode_Xor.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Xor()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Xor$address() {
+        return SkBlendMode_Xor.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Xor()
      * }
      */
     public static byte SkBlendMode_Xor() {
-        var mh$ = SkBlendMode_Xor$MH();
+        var mh$ = SkBlendMode_Xor.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Xor");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Plus$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$33,"SkBlendMode_Plus");
+
+    private static class SkBlendMode_Plus {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Plus");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Plus();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Plus()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Plus$descriptor() {
+        return SkBlendMode_Plus.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Plus()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Plus$handle() {
+        return SkBlendMode_Plus.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Plus()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Plus$address() {
+        return SkBlendMode_Plus.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Plus()
      * }
      */
     public static byte SkBlendMode_Plus() {
-        var mh$ = SkBlendMode_Plus$MH();
+        var mh$ = SkBlendMode_Plus.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Plus");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Modulate$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$34,"SkBlendMode_Modulate");
+
+    private static class SkBlendMode_Modulate {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Modulate");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Modulate();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Modulate()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Modulate$descriptor() {
+        return SkBlendMode_Modulate.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Modulate()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Modulate$handle() {
+        return SkBlendMode_Modulate.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Modulate()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Modulate$address() {
+        return SkBlendMode_Modulate.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Modulate()
      * }
      */
     public static byte SkBlendMode_Modulate() {
-        var mh$ = SkBlendMode_Modulate$MH();
+        var mh$ = SkBlendMode_Modulate.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Modulate");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Screen$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$35,"SkBlendMode_Screen");
+
+    private static class SkBlendMode_Screen {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Screen");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Screen();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Screen()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Screen$descriptor() {
+        return SkBlendMode_Screen.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Screen()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Screen$handle() {
+        return SkBlendMode_Screen.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Screen()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Screen$address() {
+        return SkBlendMode_Screen.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Screen()
      * }
      */
     public static byte SkBlendMode_Screen() {
-        var mh$ = SkBlendMode_Screen$MH();
+        var mh$ = SkBlendMode_Screen.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Screen");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Overlay$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$36,"SkBlendMode_Overlay");
+
+    private static class SkBlendMode_Overlay {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Overlay");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Overlay();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Overlay()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Overlay$descriptor() {
+        return SkBlendMode_Overlay.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Overlay()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Overlay$handle() {
+        return SkBlendMode_Overlay.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Overlay()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Overlay$address() {
+        return SkBlendMode_Overlay.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Overlay()
      * }
      */
     public static byte SkBlendMode_Overlay() {
-        var mh$ = SkBlendMode_Overlay$MH();
+        var mh$ = SkBlendMode_Overlay.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Overlay");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Darken$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$37,"SkBlendMode_Darken");
+
+    private static class SkBlendMode_Darken {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Darken");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Darken();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Darken()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Darken$descriptor() {
+        return SkBlendMode_Darken.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Darken()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Darken$handle() {
+        return SkBlendMode_Darken.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Darken()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Darken$address() {
+        return SkBlendMode_Darken.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Darken()
      * }
      */
     public static byte SkBlendMode_Darken() {
-        var mh$ = SkBlendMode_Darken$MH();
+        var mh$ = SkBlendMode_Darken.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Darken");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Lighten$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$38,"SkBlendMode_Lighten");
+
+    private static class SkBlendMode_Lighten {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Lighten");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Lighten();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Lighten()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Lighten$descriptor() {
+        return SkBlendMode_Lighten.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Lighten()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Lighten$handle() {
+        return SkBlendMode_Lighten.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Lighten()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Lighten$address() {
+        return SkBlendMode_Lighten.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Lighten()
      * }
      */
     public static byte SkBlendMode_Lighten() {
-        var mh$ = SkBlendMode_Lighten$MH();
+        var mh$ = SkBlendMode_Lighten.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Lighten");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_ColorDodge$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$39,"SkBlendMode_ColorDodge");
+
+    private static class SkBlendMode_ColorDodge {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_ColorDodge");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_ColorDodge();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorDodge()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_ColorDodge$descriptor() {
+        return SkBlendMode_ColorDodge.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorDodge()
+     * }
+     */
+    public static MethodHandle SkBlendMode_ColorDodge$handle() {
+        return SkBlendMode_ColorDodge.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorDodge()
+     * }
+     */
+    public static MemorySegment SkBlendMode_ColorDodge$address() {
+        return SkBlendMode_ColorDodge.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorDodge()
      * }
      */
     public static byte SkBlendMode_ColorDodge() {
-        var mh$ = SkBlendMode_ColorDodge$MH();
+        var mh$ = SkBlendMode_ColorDodge.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_ColorDodge");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_ColorBurn$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$40,"SkBlendMode_ColorBurn");
+
+    private static class SkBlendMode_ColorBurn {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_ColorBurn");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_ColorBurn();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorBurn()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_ColorBurn$descriptor() {
+        return SkBlendMode_ColorBurn.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorBurn()
+     * }
+     */
+    public static MethodHandle SkBlendMode_ColorBurn$handle() {
+        return SkBlendMode_ColorBurn.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorBurn()
+     * }
+     */
+    public static MemorySegment SkBlendMode_ColorBurn$address() {
+        return SkBlendMode_ColorBurn.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_ColorBurn()
      * }
      */
     public static byte SkBlendMode_ColorBurn() {
-        var mh$ = SkBlendMode_ColorBurn$MH();
+        var mh$ = SkBlendMode_ColorBurn.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_ColorBurn");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_HardLight$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$41,"SkBlendMode_HardLight");
+
+    private static class SkBlendMode_HardLight {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_HardLight");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_HardLight();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_HardLight()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_HardLight$descriptor() {
+        return SkBlendMode_HardLight.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_HardLight()
+     * }
+     */
+    public static MethodHandle SkBlendMode_HardLight$handle() {
+        return SkBlendMode_HardLight.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_HardLight()
+     * }
+     */
+    public static MemorySegment SkBlendMode_HardLight$address() {
+        return SkBlendMode_HardLight.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_HardLight()
      * }
      */
     public static byte SkBlendMode_HardLight() {
-        var mh$ = SkBlendMode_HardLight$MH();
+        var mh$ = SkBlendMode_HardLight.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_HardLight");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_SoftLight$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$42,"SkBlendMode_SoftLight");
+
+    private static class SkBlendMode_SoftLight {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_SoftLight");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_SoftLight();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SoftLight()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_SoftLight$descriptor() {
+        return SkBlendMode_SoftLight.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SoftLight()
+     * }
+     */
+    public static MethodHandle SkBlendMode_SoftLight$handle() {
+        return SkBlendMode_SoftLight.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SoftLight()
+     * }
+     */
+    public static MemorySegment SkBlendMode_SoftLight$address() {
+        return SkBlendMode_SoftLight.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_SoftLight()
      * }
      */
     public static byte SkBlendMode_SoftLight() {
-        var mh$ = SkBlendMode_SoftLight$MH();
+        var mh$ = SkBlendMode_SoftLight.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_SoftLight");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Difference$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$43,"SkBlendMode_Difference");
+
+    private static class SkBlendMode_Difference {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Difference");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Difference();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Difference()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Difference$descriptor() {
+        return SkBlendMode_Difference.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Difference()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Difference$handle() {
+        return SkBlendMode_Difference.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Difference()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Difference$address() {
+        return SkBlendMode_Difference.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Difference()
      * }
      */
     public static byte SkBlendMode_Difference() {
-        var mh$ = SkBlendMode_Difference$MH();
+        var mh$ = SkBlendMode_Difference.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Difference");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Exclusion$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$44,"SkBlendMode_Exclusion");
+
+    private static class SkBlendMode_Exclusion {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Exclusion");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Exclusion();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Exclusion()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Exclusion$descriptor() {
+        return SkBlendMode_Exclusion.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Exclusion()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Exclusion$handle() {
+        return SkBlendMode_Exclusion.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Exclusion()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Exclusion$address() {
+        return SkBlendMode_Exclusion.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Exclusion()
      * }
      */
     public static byte SkBlendMode_Exclusion() {
-        var mh$ = SkBlendMode_Exclusion$MH();
+        var mh$ = SkBlendMode_Exclusion.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Exclusion");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Multiply$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$45,"SkBlendMode_Multiply");
+
+    private static class SkBlendMode_Multiply {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Multiply");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Multiply();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Multiply()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Multiply$descriptor() {
+        return SkBlendMode_Multiply.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Multiply()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Multiply$handle() {
+        return SkBlendMode_Multiply.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Multiply()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Multiply$address() {
+        return SkBlendMode_Multiply.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Multiply()
      * }
      */
     public static byte SkBlendMode_Multiply() {
-        var mh$ = SkBlendMode_Multiply$MH();
+        var mh$ = SkBlendMode_Multiply.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Multiply");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Hue$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$46,"SkBlendMode_Hue");
+
+    private static class SkBlendMode_Hue {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Hue");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Hue();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Hue()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Hue$descriptor() {
+        return SkBlendMode_Hue.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Hue()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Hue$handle() {
+        return SkBlendMode_Hue.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Hue()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Hue$address() {
+        return SkBlendMode_Hue.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Hue()
      * }
      */
     public static byte SkBlendMode_Hue() {
-        var mh$ = SkBlendMode_Hue$MH();
+        var mh$ = SkBlendMode_Hue.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Hue");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Saturation$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$47,"SkBlendMode_Saturation");
+
+    private static class SkBlendMode_Saturation {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Saturation");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Saturation();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Saturation()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Saturation$descriptor() {
+        return SkBlendMode_Saturation.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Saturation()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Saturation$handle() {
+        return SkBlendMode_Saturation.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Saturation()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Saturation$address() {
+        return SkBlendMode_Saturation.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Saturation()
      * }
      */
     public static byte SkBlendMode_Saturation() {
-        var mh$ = SkBlendMode_Saturation$MH();
+        var mh$ = SkBlendMode_Saturation.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Saturation");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Color$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$48,"SkBlendMode_Color");
+
+    private static class SkBlendMode_Color {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Color");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Color();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Color()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Color$descriptor() {
+        return SkBlendMode_Color.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Color()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Color$handle() {
+        return SkBlendMode_Color.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Color()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Color$address() {
+        return SkBlendMode_Color.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Color()
      * }
      */
     public static byte SkBlendMode_Color() {
-        var mh$ = SkBlendMode_Color$MH();
+        var mh$ = SkBlendMode_Color.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Color");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkBlendMode_Luminosity$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$49,"SkBlendMode_Luminosity");
+
+    private static class SkBlendMode_Luminosity {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkBlendMode_Luminosity");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkBlendMode_Luminosity();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Luminosity()
+     * }
+     */
+    public static FunctionDescriptor SkBlendMode_Luminosity$descriptor() {
+        return SkBlendMode_Luminosity.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Luminosity()
+     * }
+     */
+    public static MethodHandle SkBlendMode_Luminosity$handle() {
+        return SkBlendMode_Luminosity.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Luminosity()
+     * }
+     */
+    public static MemorySegment SkBlendMode_Luminosity$address() {
+        return SkBlendMode_Luminosity.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkBlendMode_Luminosity()
      * }
      */
     public static byte SkBlendMode_Luminosity() {
-        var mh$ = SkBlendMode_Luminosity$MH();
+        var mh$ = SkBlendMode_Luminosity.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkBlendMode_Luminosity");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkGradientShaderInterpolationColorSpace_Destination$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$50,"SkGradientShaderInterpolationColorSpace_Destination");
+
+    private static class SkGradientShaderInterpolationColorSpace_Destination {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkGradientShaderInterpolationColorSpace_Destination");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkGradientShaderInterpolationColorSpace_Destination();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_Destination()
+     * }
+     */
+    public static FunctionDescriptor SkGradientShaderInterpolationColorSpace_Destination$descriptor() {
+        return SkGradientShaderInterpolationColorSpace_Destination.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_Destination()
+     * }
+     */
+    public static MethodHandle SkGradientShaderInterpolationColorSpace_Destination$handle() {
+        return SkGradientShaderInterpolationColorSpace_Destination.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_Destination()
+     * }
+     */
+    public static MemorySegment SkGradientShaderInterpolationColorSpace_Destination$address() {
+        return SkGradientShaderInterpolationColorSpace_Destination.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_Destination()
      * }
      */
     public static byte SkGradientShaderInterpolationColorSpace_Destination() {
-        var mh$ = SkGradientShaderInterpolationColorSpace_Destination$MH();
+        var mh$ = SkGradientShaderInterpolationColorSpace_Destination.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkGradientShaderInterpolationColorSpace_Destination");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkGradientShaderInterpolationColorSpace_OKLab$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$51,"SkGradientShaderInterpolationColorSpace_OKLab");
+
+    private static class SkGradientShaderInterpolationColorSpace_OKLab {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkGradientShaderInterpolationColorSpace_OKLab");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkGradientShaderInterpolationColorSpace_OKLab();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_OKLab()
+     * }
+     */
+    public static FunctionDescriptor SkGradientShaderInterpolationColorSpace_OKLab$descriptor() {
+        return SkGradientShaderInterpolationColorSpace_OKLab.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_OKLab()
+     * }
+     */
+    public static MethodHandle SkGradientShaderInterpolationColorSpace_OKLab$handle() {
+        return SkGradientShaderInterpolationColorSpace_OKLab.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_OKLab()
+     * }
+     */
+    public static MemorySegment SkGradientShaderInterpolationColorSpace_OKLab$address() {
+        return SkGradientShaderInterpolationColorSpace_OKLab.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_OKLab()
      * }
      */
     public static byte SkGradientShaderInterpolationColorSpace_OKLab() {
-        var mh$ = SkGradientShaderInterpolationColorSpace_OKLab$MH();
+        var mh$ = SkGradientShaderInterpolationColorSpace_OKLab.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkGradientShaderInterpolationColorSpace_OKLab");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkGradientShaderInterpolationColorSpace_SRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$52,"SkGradientShaderInterpolationColorSpace_SRGB");
+
+    private static class SkGradientShaderInterpolationColorSpace_SRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_CHAR    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkGradientShaderInterpolationColorSpace_SRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned char SkGradientShaderInterpolationColorSpace_SRGB();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_SRGB()
+     * }
+     */
+    public static FunctionDescriptor SkGradientShaderInterpolationColorSpace_SRGB$descriptor() {
+        return SkGradientShaderInterpolationColorSpace_SRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_SRGB()
+     * }
+     */
+    public static MethodHandle SkGradientShaderInterpolationColorSpace_SRGB$handle() {
+        return SkGradientShaderInterpolationColorSpace_SRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_SRGB()
+     * }
+     */
+    public static MemorySegment SkGradientShaderInterpolationColorSpace_SRGB$address() {
+        return SkGradientShaderInterpolationColorSpace_SRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * unsigned char SkGradientShaderInterpolationColorSpace_SRGB()
      * }
      */
     public static byte SkGradientShaderInterpolationColorSpace_SRGB() {
-        var mh$ = SkGradientShaderInterpolationColorSpace_SRGB$MH();
+        var mh$ = SkGradientShaderInterpolationColorSpace_SRGB.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkGradientShaderInterpolationColorSpace_SRGB");
+            }
             return (byte)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedTransferFn_SRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$54,"SkNamedTransferFn_SRGB");
+
+    private static class SkNamedTransferFn_SRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedTransferFn_SRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedTransferFn_SRGB();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_SRGB()
+     * }
+     */
+    public static FunctionDescriptor SkNamedTransferFn_SRGB$descriptor() {
+        return SkNamedTransferFn_SRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_SRGB()
+     * }
+     */
+    public static MethodHandle SkNamedTransferFn_SRGB$handle() {
+        return SkNamedTransferFn_SRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_SRGB()
+     * }
+     */
+    public static MemorySegment SkNamedTransferFn_SRGB$address() {
+        return SkNamedTransferFn_SRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_SRGB()
      * }
      */
     public static MemorySegment SkNamedTransferFn_SRGB() {
-        var mh$ = SkNamedTransferFn_SRGB$MH();
+        var mh$ = SkNamedTransferFn_SRGB.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedTransferFn_SRGB");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedTransferFn_Rec2020$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$55,"SkNamedTransferFn_Rec2020");
+
+    private static class SkNamedTransferFn_Rec2020 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedTransferFn_Rec2020");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedTransferFn_Rec2020();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_Rec2020()
+     * }
+     */
+    public static FunctionDescriptor SkNamedTransferFn_Rec2020$descriptor() {
+        return SkNamedTransferFn_Rec2020.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_Rec2020()
+     * }
+     */
+    public static MethodHandle SkNamedTransferFn_Rec2020$handle() {
+        return SkNamedTransferFn_Rec2020.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_Rec2020()
+     * }
+     */
+    public static MemorySegment SkNamedTransferFn_Rec2020$address() {
+        return SkNamedTransferFn_Rec2020.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_Rec2020()
      * }
      */
     public static MemorySegment SkNamedTransferFn_Rec2020() {
-        var mh$ = SkNamedTransferFn_Rec2020$MH();
+        var mh$ = SkNamedTransferFn_Rec2020.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedTransferFn_Rec2020");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedTransferFn_PQ$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$56,"SkNamedTransferFn_PQ");
+
+    private static class SkNamedTransferFn_PQ {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedTransferFn_PQ");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedTransferFn_PQ();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_PQ()
+     * }
+     */
+    public static FunctionDescriptor SkNamedTransferFn_PQ$descriptor() {
+        return SkNamedTransferFn_PQ.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_PQ()
+     * }
+     */
+    public static MethodHandle SkNamedTransferFn_PQ$handle() {
+        return SkNamedTransferFn_PQ.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_PQ()
+     * }
+     */
+    public static MemorySegment SkNamedTransferFn_PQ$address() {
+        return SkNamedTransferFn_PQ.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_PQ()
      * }
      */
     public static MemorySegment SkNamedTransferFn_PQ() {
-        var mh$ = SkNamedTransferFn_PQ$MH();
+        var mh$ = SkNamedTransferFn_PQ.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedTransferFn_PQ");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedTransferFn_HLG$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$57,"SkNamedTransferFn_HLG");
+
+    private static class SkNamedTransferFn_HLG {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedTransferFn_HLG");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedTransferFn_HLG();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_HLG()
+     * }
+     */
+    public static FunctionDescriptor SkNamedTransferFn_HLG$descriptor() {
+        return SkNamedTransferFn_HLG.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_HLG()
+     * }
+     */
+    public static MethodHandle SkNamedTransferFn_HLG$handle() {
+        return SkNamedTransferFn_HLG.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_HLG()
+     * }
+     */
+    public static MemorySegment SkNamedTransferFn_HLG$address() {
+        return SkNamedTransferFn_HLG.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedTransferFn_HLG()
      * }
      */
     public static MemorySegment SkNamedTransferFn_HLG() {
-        var mh$ = SkNamedTransferFn_HLG$MH();
+        var mh$ = SkNamedTransferFn_HLG.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedTransferFn_HLG");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedGamut_SRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$58,"SkNamedGamut_SRGB");
+
+    private static class SkNamedGamut_SRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedGamut_SRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedGamut_SRGB();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_SRGB()
+     * }
+     */
+    public static FunctionDescriptor SkNamedGamut_SRGB$descriptor() {
+        return SkNamedGamut_SRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_SRGB()
+     * }
+     */
+    public static MethodHandle SkNamedGamut_SRGB$handle() {
+        return SkNamedGamut_SRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_SRGB()
+     * }
+     */
+    public static MemorySegment SkNamedGamut_SRGB$address() {
+        return SkNamedGamut_SRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_SRGB()
      * }
      */
     public static MemorySegment SkNamedGamut_SRGB() {
-        var mh$ = SkNamedGamut_SRGB$MH();
+        var mh$ = SkNamedGamut_SRGB.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedGamut_SRGB");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedGamut_AdobeRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$59,"SkNamedGamut_AdobeRGB");
+
+    private static class SkNamedGamut_AdobeRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedGamut_AdobeRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedGamut_AdobeRGB();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_AdobeRGB()
+     * }
+     */
+    public static FunctionDescriptor SkNamedGamut_AdobeRGB$descriptor() {
+        return SkNamedGamut_AdobeRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_AdobeRGB()
+     * }
+     */
+    public static MethodHandle SkNamedGamut_AdobeRGB$handle() {
+        return SkNamedGamut_AdobeRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_AdobeRGB()
+     * }
+     */
+    public static MemorySegment SkNamedGamut_AdobeRGB$address() {
+        return SkNamedGamut_AdobeRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_AdobeRGB()
      * }
      */
     public static MemorySegment SkNamedGamut_AdobeRGB() {
-        var mh$ = SkNamedGamut_AdobeRGB$MH();
+        var mh$ = SkNamedGamut_AdobeRGB.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedGamut_AdobeRGB");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedGamut_DisplayP3$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$60,"SkNamedGamut_DisplayP3");
+
+    private static class SkNamedGamut_DisplayP3 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedGamut_DisplayP3");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedGamut_DisplayP3();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_DisplayP3()
+     * }
+     */
+    public static FunctionDescriptor SkNamedGamut_DisplayP3$descriptor() {
+        return SkNamedGamut_DisplayP3.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_DisplayP3()
+     * }
+     */
+    public static MethodHandle SkNamedGamut_DisplayP3$handle() {
+        return SkNamedGamut_DisplayP3.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_DisplayP3()
+     * }
+     */
+    public static MemorySegment SkNamedGamut_DisplayP3$address() {
+        return SkNamedGamut_DisplayP3.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_DisplayP3()
      * }
      */
     public static MemorySegment SkNamedGamut_DisplayP3() {
-        var mh$ = SkNamedGamut_DisplayP3$MH();
+        var mh$ = SkNamedGamut_DisplayP3.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedGamut_DisplayP3");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkNamedGamut_Rec2020$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$61,"SkNamedGamut_Rec2020");
+
+    private static class SkNamedGamut_Rec2020 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkNamedGamut_Rec2020");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * float* SkNamedGamut_Rec2020();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_Rec2020()
+     * }
+     */
+    public static FunctionDescriptor SkNamedGamut_Rec2020$descriptor() {
+        return SkNamedGamut_Rec2020.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_Rec2020()
+     * }
+     */
+    public static MethodHandle SkNamedGamut_Rec2020$handle() {
+        return SkNamedGamut_Rec2020.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_Rec2020()
+     * }
+     */
+    public static MemorySegment SkNamedGamut_Rec2020$address() {
+        return SkNamedGamut_Rec2020.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const float *SkNamedGamut_Rec2020()
      * }
      */
     public static MemorySegment SkNamedGamut_Rec2020() {
-        var mh$ = SkNamedGamut_Rec2020$MH();
+        var mh$ = SkNamedGamut_Rec2020.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkNamedGamut_Rec2020");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkRefCnt_unref$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$63,"SkRefCnt_unref");
+
+    private static class SkRefCnt_unref {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkRefCnt_unref");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkRefCnt_unref(SkRefCnt* object);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkRefCnt_unref(SkRefCnt *object)
+     * }
+     */
+    public static FunctionDescriptor SkRefCnt_unref$descriptor() {
+        return SkRefCnt_unref.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkRefCnt_unref(SkRefCnt *object)
+     * }
+     */
+    public static MethodHandle SkRefCnt_unref$handle() {
+        return SkRefCnt_unref.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkRefCnt_unref(SkRefCnt *object)
+     * }
+     */
+    public static MemorySegment SkRefCnt_unref$address() {
+        return SkRefCnt_unref.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkRefCnt_unref(SkRefCnt *object)
      * }
      */
     public static void SkRefCnt_unref(MemorySegment object) {
-        var mh$ = SkRefCnt_unref$MH();
+        var mh$ = SkRefCnt_unref.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkRefCnt_unref", object);
+            }
             mh$.invokeExact(object);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkData_unref$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$64,"SkData_unref");
+
+    private static class SkData_unref {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkData_unref");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkData_unref(SkData* data);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkData_unref(SkData *data)
+     * }
+     */
+    public static FunctionDescriptor SkData_unref$descriptor() {
+        return SkData_unref.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkData_unref(SkData *data)
+     * }
+     */
+    public static MethodHandle SkData_unref$handle() {
+        return SkData_unref.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkData_unref(SkData *data)
+     * }
+     */
+    public static MemorySegment SkData_unref$address() {
+        return SkData_unref.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkData_unref(SkData *data)
      * }
      */
     public static void SkData_unref(MemorySegment data) {
-        var mh$ = SkData_unref$MH();
+        var mh$ = SkData_unref.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkData_unref", data);
+            }
             mh$.invokeExact(data);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkData_size$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$66,"SkData_size");
+
+    private static class SkData_size {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_LONG_LONG,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkData_size");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * long long SkData_size(SkData* data);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * long long SkData_size(SkData *data)
+     * }
+     */
+    public static FunctionDescriptor SkData_size$descriptor() {
+        return SkData_size.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * long long SkData_size(SkData *data)
+     * }
+     */
+    public static MethodHandle SkData_size$handle() {
+        return SkData_size.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * long long SkData_size(SkData *data)
+     * }
+     */
+    public static MemorySegment SkData_size$address() {
+        return SkData_size.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * long long SkData_size(SkData *data)
      * }
      */
     public static long SkData_size(MemorySegment data) {
-        var mh$ = SkData_size$MH();
+        var mh$ = SkData_size.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkData_size", data);
+            }
             return (long)mh$.invokeExact(data);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkData_data$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$68,"SkData_data");
+
+    private static class SkData_data {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkData_data");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void* SkData_data(SkData* data);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const void *SkData_data(SkData *data)
+     * }
+     */
+    public static FunctionDescriptor SkData_data$descriptor() {
+        return SkData_data.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const void *SkData_data(SkData *data)
+     * }
+     */
+    public static MethodHandle SkData_data$handle() {
+        return SkData_data.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const void *SkData_data(SkData *data)
+     * }
+     */
+    public static MemorySegment SkData_data$address() {
+        return SkData_data.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const void *SkData_data(SkData *data)
      * }
      */
     public static MemorySegment SkData_data(MemorySegment data) {
-        var mh$ = SkData_data$MH();
+        var mh$ = SkData_data.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(data);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkData_data", data);
+            }
+            return (MemorySegment)mh$.invokeExact(data);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkDynamicMemoryWStream_New$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$69,"SkDynamicMemoryWStream_New");
+
+    private static class SkDynamicMemoryWStream_New {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkDynamicMemoryWStream_New");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkDynamicMemoryWStream* SkDynamicMemoryWStream_New();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkDynamicMemoryWStream *SkDynamicMemoryWStream_New()
+     * }
+     */
+    public static FunctionDescriptor SkDynamicMemoryWStream_New$descriptor() {
+        return SkDynamicMemoryWStream_New.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkDynamicMemoryWStream *SkDynamicMemoryWStream_New()
+     * }
+     */
+    public static MethodHandle SkDynamicMemoryWStream_New$handle() {
+        return SkDynamicMemoryWStream_New.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkDynamicMemoryWStream *SkDynamicMemoryWStream_New()
+     * }
+     */
+    public static MemorySegment SkDynamicMemoryWStream_New$address() {
+        return SkDynamicMemoryWStream_New.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkDynamicMemoryWStream *SkDynamicMemoryWStream_New()
      * }
      */
     public static MemorySegment SkDynamicMemoryWStream_New() {
-        var mh$ = SkDynamicMemoryWStream_New$MH();
+        var mh$ = SkDynamicMemoryWStream_New.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkDynamicMemoryWStream_New");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkDynamicMemoryWStream_delete$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$70,"SkDynamicMemoryWStream_delete");
+
+    private static class SkDynamicMemoryWStream_delete {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkDynamicMemoryWStream_delete");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream* stream);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static FunctionDescriptor SkDynamicMemoryWStream_delete$descriptor() {
+        return SkDynamicMemoryWStream_delete.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MethodHandle SkDynamicMemoryWStream_delete$handle() {
+        return SkDynamicMemoryWStream_delete.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MemorySegment SkDynamicMemoryWStream_delete$address() {
+        return SkDynamicMemoryWStream_delete.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream *stream)
      * }
      */
     public static void SkDynamicMemoryWStream_delete(MemorySegment stream) {
-        var mh$ = SkDynamicMemoryWStream_delete$MH();
+        var mh$ = SkDynamicMemoryWStream_delete.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkDynamicMemoryWStream_delete", stream);
+            }
             mh$.invokeExact(stream);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkDynamicMemoryWStream_detachAsData$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$71,"SkDynamicMemoryWStream_detachAsData");
+
+    private static class SkDynamicMemoryWStream_detachAsData {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkDynamicMemoryWStream_detachAsData");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkData* SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream* stream);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkData *SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static FunctionDescriptor SkDynamicMemoryWStream_detachAsData$descriptor() {
+        return SkDynamicMemoryWStream_detachAsData.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkData *SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MethodHandle SkDynamicMemoryWStream_detachAsData$handle() {
+        return SkDynamicMemoryWStream_detachAsData.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkData *SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MemorySegment SkDynamicMemoryWStream_detachAsData$address() {
+        return SkDynamicMemoryWStream_detachAsData.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkData *SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream *stream)
      * }
      */
     public static MemorySegment SkDynamicMemoryWStream_detachAsData(MemorySegment stream) {
-        var mh$ = SkDynamicMemoryWStream_detachAsData$MH();
+        var mh$ = SkDynamicMemoryWStream_detachAsData.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(stream);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkDynamicMemoryWStream_detachAsData", stream);
+            }
+            return (MemorySegment)mh$.invokeExact(stream);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkColorSpace_MakeRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$73,"SkColorSpace_MakeRGB");
+
+    private static class SkColorSpace_MakeRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkColorSpace_MakeRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkColorSpace* SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkColorSpace *SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static FunctionDescriptor SkColorSpace_MakeRGB$descriptor() {
+        return SkColorSpace_MakeRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkColorSpace *SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static MethodHandle SkColorSpace_MakeRGB$handle() {
+        return SkColorSpace_MakeRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkColorSpace *SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static MemorySegment SkColorSpace_MakeRGB$address() {
+        return SkColorSpace_MakeRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkColorSpace *SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
      * }
      */
     public static MemorySegment SkColorSpace_MakeRGB(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
-        var mh$ = SkColorSpace_MakeRGB$MH();
+        var mh$ = SkColorSpace_MakeRGB.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkColorSpace_MakeRGB", g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+            }
+            return (MemorySegment)mh$.invokeExact(g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkICC_SkWriteICCProfile$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$74,"SkICC_SkWriteICCProfile");
+
+    private static class SkICC_SkWriteICCProfile {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkICC_SkWriteICCProfile");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkData* SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static FunctionDescriptor SkICC_SkWriteICCProfile$descriptor() {
+        return SkICC_SkWriteICCProfile.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static MethodHandle SkICC_SkWriteICCProfile$handle() {
+        return SkICC_SkWriteICCProfile.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
+     * }
+     */
+    public static MemorySegment SkICC_SkWriteICCProfile$address() {
+        return SkICC_SkWriteICCProfile.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
      * }
      */
     public static MemorySegment SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
-        var mh$ = SkICC_SkWriteICCProfile$MH();
+        var mh$ = SkICC_SkWriteICCProfile.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkICC_SkWriteICCProfile", g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+            }
+            return (MemorySegment)mh$.invokeExact(g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGDOM_Make$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$79,"SkSVGDOM_Make");
+
+    private static class SkSVGDOM_Make {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_LONG_LONG,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGDOM_Make");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkSVGDOM* SkSVGDOM_Make(char* str, long long len, loadImage_t loadImage);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * }
+     */
+    public static FunctionDescriptor SkSVGDOM_Make$descriptor() {
+        return SkSVGDOM_Make.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * }
+     */
+    public static MethodHandle SkSVGDOM_Make$handle() {
+        return SkSVGDOM_Make.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * }
+     */
+    public static MemorySegment SkSVGDOM_Make$address() {
+        return SkSVGDOM_Make.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
      * }
      */
     public static MemorySegment SkSVGDOM_Make(MemorySegment str, long len, MemorySegment loadImage) {
-        var mh$ = SkSVGDOM_Make$MH();
+        var mh$ = SkSVGDOM_Make.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(str, len, loadImage);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGDOM_Make", str, len, loadImage);
+            }
+            return (MemorySegment)mh$.invokeExact(str, len, loadImage);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGDOM_containerSize$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$81,"SkSVGDOM_containerSize");
+
+    private static class SkSVGDOM_containerSize {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGDOM_containerSize");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkSVGDOM_containerSize(SkSVGDOM* dom, float wh[2]);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_containerSize(SkSVGDOM *dom, float wh[2])
+     * }
+     */
+    public static FunctionDescriptor SkSVGDOM_containerSize$descriptor() {
+        return SkSVGDOM_containerSize.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_containerSize(SkSVGDOM *dom, float wh[2])
+     * }
+     */
+    public static MethodHandle SkSVGDOM_containerSize$handle() {
+        return SkSVGDOM_containerSize.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_containerSize(SkSVGDOM *dom, float wh[2])
+     * }
+     */
+    public static MemorySegment SkSVGDOM_containerSize$address() {
+        return SkSVGDOM_containerSize.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkSVGDOM_containerSize(SkSVGDOM *dom, float wh[2])
      * }
      */
     public static void SkSVGDOM_containerSize(MemorySegment dom, MemorySegment wh) {
-        var mh$ = SkSVGDOM_containerSize$MH();
+        var mh$ = SkSVGDOM_containerSize.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGDOM_containerSize", dom, wh);
+            }
             mh$.invokeExact(dom, wh);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGDOM_setContainerSize$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$83,"SkSVGDOM_setContainerSize");
+
+    private static class SkSVGDOM_setContainerSize {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGDOM_setContainerSize");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkSVGDOM_setContainerSize(SkSVGDOM* dom, float w, float h);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_setContainerSize(SkSVGDOM *dom, float w, float h)
+     * }
+     */
+    public static FunctionDescriptor SkSVGDOM_setContainerSize$descriptor() {
+        return SkSVGDOM_setContainerSize.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_setContainerSize(SkSVGDOM *dom, float w, float h)
+     * }
+     */
+    public static MethodHandle SkSVGDOM_setContainerSize$handle() {
+        return SkSVGDOM_setContainerSize.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_setContainerSize(SkSVGDOM *dom, float w, float h)
+     * }
+     */
+    public static MemorySegment SkSVGDOM_setContainerSize$address() {
+        return SkSVGDOM_setContainerSize.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkSVGDOM_setContainerSize(SkSVGDOM *dom, float w, float h)
      * }
      */
     public static void SkSVGDOM_setContainerSize(MemorySegment dom, float w, float h) {
-        var mh$ = SkSVGDOM_setContainerSize$MH();
+        var mh$ = SkSVGDOM_setContainerSize.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGDOM_setContainerSize", dom, w, h);
+            }
             mh$.invokeExact(dom, w, h);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGDOM_getViewBox$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$85,"SkSVGDOM_getViewBox");
+
+    private static class SkSVGDOM_getViewBox {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_BOOL,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGDOM_getViewBox");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool SkSVGDOM_getViewBox(SkSVGDOM* dom, float box[4]);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool SkSVGDOM_getViewBox(SkSVGDOM *dom, float box[4])
+     * }
+     */
+    public static FunctionDescriptor SkSVGDOM_getViewBox$descriptor() {
+        return SkSVGDOM_getViewBox.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool SkSVGDOM_getViewBox(SkSVGDOM *dom, float box[4])
+     * }
+     */
+    public static MethodHandle SkSVGDOM_getViewBox$handle() {
+        return SkSVGDOM_getViewBox.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool SkSVGDOM_getViewBox(SkSVGDOM *dom, float box[4])
+     * }
+     */
+    public static MemorySegment SkSVGDOM_getViewBox$address() {
+        return SkSVGDOM_getViewBox.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool SkSVGDOM_getViewBox(SkSVGDOM *dom, float box[4])
      * }
      */
     public static boolean SkSVGDOM_getViewBox(MemorySegment dom, MemorySegment box) {
-        var mh$ = SkSVGDOM_getViewBox$MH();
+        var mh$ = SkSVGDOM_getViewBox.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGDOM_getViewBox", dom, box);
+            }
             return (boolean)mh$.invokeExact(dom, box);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGDOM_render$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$86,"SkSVGDOM_render");
+
+    private static class SkSVGDOM_render {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGDOM_render");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkSVGDOM_render(SkSVGDOM* dom, SkCanvas* canvas);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_render(SkSVGDOM *dom, SkCanvas *canvas)
+     * }
+     */
+    public static FunctionDescriptor SkSVGDOM_render$descriptor() {
+        return SkSVGDOM_render.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_render(SkSVGDOM *dom, SkCanvas *canvas)
+     * }
+     */
+    public static MethodHandle SkSVGDOM_render$handle() {
+        return SkSVGDOM_render.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkSVGDOM_render(SkSVGDOM *dom, SkCanvas *canvas)
+     * }
+     */
+    public static MemorySegment SkSVGDOM_render$address() {
+        return SkSVGDOM_render.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkSVGDOM_render(SkSVGDOM *dom, SkCanvas *canvas)
      * }
      */
     public static void SkSVGDOM_render(MemorySegment dom, MemorySegment canvas) {
-        var mh$ = SkSVGDOM_render$MH();
+        var mh$ = SkSVGDOM_render.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGDOM_render", dom, canvas);
+            }
             mh$.invokeExact(dom, canvas);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_MakeRasterDirect$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$94,"SkCanvas_MakeRasterDirect");
+
+    private static class SkCanvas_MakeRasterDirect {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_MakeRasterDirect");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkCanvas* SkCanvas_MakeRasterDirect(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace* colorSpace, void* pixels, long long rowBytes);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkCanvas *SkCanvas_MakeRasterDirect(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_MakeRasterDirect$descriptor() {
+        return SkCanvas_MakeRasterDirect.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkCanvas *SkCanvas_MakeRasterDirect(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes)
+     * }
+     */
+    public static MethodHandle SkCanvas_MakeRasterDirect$handle() {
+        return SkCanvas_MakeRasterDirect.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkCanvas *SkCanvas_MakeRasterDirect(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes)
+     * }
+     */
+    public static MemorySegment SkCanvas_MakeRasterDirect$address() {
+        return SkCanvas_MakeRasterDirect.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkCanvas *SkCanvas_MakeRasterDirect(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes)
      * }
      */
     public static MemorySegment SkCanvas_MakeRasterDirect(int w, int h, byte colorType, byte alphaType, MemorySegment colorSpace, MemorySegment pixels, long rowBytes) {
-        var mh$ = SkCanvas_MakeRasterDirect$MH();
+        var mh$ = SkCanvas_MakeRasterDirect.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(w, h, colorType, alphaType, colorSpace, pixels, rowBytes);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_MakeRasterDirect", w, h, colorType, alphaType, colorSpace, pixels, rowBytes);
+            }
+            return (MemorySegment)mh$.invokeExact(w, h, colorType, alphaType, colorSpace, pixels, rowBytes);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkSVGCanvas_Make$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$96,"SkSVGCanvas_Make");
+
+    private static class SkSVGCanvas_Make {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkSVGCanvas_Make");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkCanvas* SkSVGCanvas_Make(SkDynamicMemoryWStream* stream, float x, float y, float w, float h);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkCanvas *SkSVGCanvas_Make(SkDynamicMemoryWStream *stream, float x, float y, float w, float h)
+     * }
+     */
+    public static FunctionDescriptor SkSVGCanvas_Make$descriptor() {
+        return SkSVGCanvas_Make.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkCanvas *SkSVGCanvas_Make(SkDynamicMemoryWStream *stream, float x, float y, float w, float h)
+     * }
+     */
+    public static MethodHandle SkSVGCanvas_Make$handle() {
+        return SkSVGCanvas_Make.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkCanvas *SkSVGCanvas_Make(SkDynamicMemoryWStream *stream, float x, float y, float w, float h)
+     * }
+     */
+    public static MemorySegment SkSVGCanvas_Make$address() {
+        return SkSVGCanvas_Make.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkCanvas *SkSVGCanvas_Make(SkDynamicMemoryWStream *stream, float x, float y, float w, float h)
      * }
      */
     public static MemorySegment SkSVGCanvas_Make(MemorySegment stream, float x, float y, float w, float h) {
-        var mh$ = SkSVGCanvas_Make$MH();
+        var mh$ = SkSVGCanvas_Make.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(stream, x, y, w, h);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkSVGCanvas_Make", stream, x, y, w, h);
+            }
+            return (MemorySegment)mh$.invokeExact(stream, x, y, w, h);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_delete$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$97,"SkCanvas_delete");
+
+    private static class SkCanvas_delete {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_delete");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_delete(SkCanvas* canvas);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_delete(SkCanvas *canvas)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_delete$descriptor() {
+        return SkCanvas_delete.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_delete(SkCanvas *canvas)
+     * }
+     */
+    public static MethodHandle SkCanvas_delete$handle() {
+        return SkCanvas_delete.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_delete(SkCanvas *canvas)
+     * }
+     */
+    public static MemorySegment SkCanvas_delete$address() {
+        return SkCanvas_delete.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_delete(SkCanvas *canvas)
      * }
      */
     public static void SkCanvas_delete(MemorySegment canvas) {
-        var mh$ = SkCanvas_delete$MH();
+        var mh$ = SkCanvas_delete.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_delete", canvas);
+            }
             mh$.invokeExact(canvas);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPDF_MakeDocument$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$98,"SkPDF_MakeDocument");
+
+    private static class SkPDF_MakeDocument {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPDF_MakeDocument");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkDocument* SkPDF_MakeDocument(SkDynamicMemoryWStream* stream);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkDocument *SkPDF_MakeDocument(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static FunctionDescriptor SkPDF_MakeDocument$descriptor() {
+        return SkPDF_MakeDocument.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkDocument *SkPDF_MakeDocument(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MethodHandle SkPDF_MakeDocument$handle() {
+        return SkPDF_MakeDocument.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkDocument *SkPDF_MakeDocument(SkDynamicMemoryWStream *stream)
+     * }
+     */
+    public static MemorySegment SkPDF_MakeDocument$address() {
+        return SkPDF_MakeDocument.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkDocument *SkPDF_MakeDocument(SkDynamicMemoryWStream *stream)
      * }
      */
     public static MemorySegment SkPDF_MakeDocument(MemorySegment stream) {
-        var mh$ = SkPDF_MakeDocument$MH();
+        var mh$ = SkPDF_MakeDocument.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(stream);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPDF_MakeDocument", stream);
+            }
+            return (MemorySegment)mh$.invokeExact(stream);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkDocument_beginPage$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$100,"SkDocument_beginPage");
+
+    private static class SkDocument_beginPage {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkDocument_beginPage");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkCanvas* SkDocument_beginPage(SkDocument* document, float w, float h);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkCanvas *SkDocument_beginPage(SkDocument *document, float w, float h)
+     * }
+     */
+    public static FunctionDescriptor SkDocument_beginPage$descriptor() {
+        return SkDocument_beginPage.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkCanvas *SkDocument_beginPage(SkDocument *document, float w, float h)
+     * }
+     */
+    public static MethodHandle SkDocument_beginPage$handle() {
+        return SkDocument_beginPage.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkCanvas *SkDocument_beginPage(SkDocument *document, float w, float h)
+     * }
+     */
+    public static MemorySegment SkDocument_beginPage$address() {
+        return SkDocument_beginPage.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkCanvas *SkDocument_beginPage(SkDocument *document, float w, float h)
      * }
      */
     public static MemorySegment SkDocument_beginPage(MemorySegment document, float w, float h) {
-        var mh$ = SkDocument_beginPage$MH();
+        var mh$ = SkDocument_beginPage.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(document, w, h);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkDocument_beginPage", document, w, h);
+            }
+            return (MemorySegment)mh$.invokeExact(document, w, h);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkDocument_endPage$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$101,"SkDocument_endPage");
+
+    private static class SkDocument_endPage {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkDocument_endPage");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkDocument_endPage(SkDocument* document);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkDocument_endPage(SkDocument *document)
+     * }
+     */
+    public static FunctionDescriptor SkDocument_endPage$descriptor() {
+        return SkDocument_endPage.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkDocument_endPage(SkDocument *document)
+     * }
+     */
+    public static MethodHandle SkDocument_endPage$handle() {
+        return SkDocument_endPage.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkDocument_endPage(SkDocument *document)
+     * }
+     */
+    public static MemorySegment SkDocument_endPage$address() {
+        return SkDocument_endPage.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkDocument_endPage(SkDocument *document)
      * }
      */
     public static void SkDocument_endPage(MemorySegment document) {
-        var mh$ = SkDocument_endPage$MH();
+        var mh$ = SkDocument_endPage.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkDocument_endPage", document);
+            }
             mh$.invokeExact(document);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_save$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$102,"SkCanvas_save");
+
+    private static class SkCanvas_save {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_save");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_save(SkCanvas* canvas);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_save(SkCanvas *canvas)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_save$descriptor() {
+        return SkCanvas_save.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_save(SkCanvas *canvas)
+     * }
+     */
+    public static MethodHandle SkCanvas_save$handle() {
+        return SkCanvas_save.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_save(SkCanvas *canvas)
+     * }
+     */
+    public static MemorySegment SkCanvas_save$address() {
+        return SkCanvas_save.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_save(SkCanvas *canvas)
      * }
      */
     public static void SkCanvas_save(MemorySegment canvas) {
-        var mh$ = SkCanvas_save$MH();
+        var mh$ = SkCanvas_save.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_save", canvas);
+            }
             mh$.invokeExact(canvas);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_saveLayer$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$104,"SkCanvas_saveLayer");
+
+    private static class SkCanvas_saveLayer {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_BOOL,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_saveLayer");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_saveLayer(SkCanvas* canvas, _Bool passBounds, float x, float y, float w, float h, SkPaint* paint);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_saveLayer(SkCanvas *canvas, _Bool passBounds, float x, float y, float w, float h, SkPaint *paint)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_saveLayer$descriptor() {
+        return SkCanvas_saveLayer.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_saveLayer(SkCanvas *canvas, _Bool passBounds, float x, float y, float w, float h, SkPaint *paint)
+     * }
+     */
+    public static MethodHandle SkCanvas_saveLayer$handle() {
+        return SkCanvas_saveLayer.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_saveLayer(SkCanvas *canvas, _Bool passBounds, float x, float y, float w, float h, SkPaint *paint)
+     * }
+     */
+    public static MemorySegment SkCanvas_saveLayer$address() {
+        return SkCanvas_saveLayer.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_saveLayer(SkCanvas *canvas, _Bool passBounds, float x, float y, float w, float h, SkPaint *paint)
      * }
      */
     public static void SkCanvas_saveLayer(MemorySegment canvas, boolean passBounds, float x, float y, float w, float h, MemorySegment paint) {
-        var mh$ = SkCanvas_saveLayer$MH();
+        var mh$ = SkCanvas_saveLayer.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_saveLayer", canvas, passBounds, x, y, w, h, paint);
+            }
             mh$.invokeExact(canvas, passBounds, x, y, w, h, paint);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_restore$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$105,"SkCanvas_restore");
+
+    private static class SkCanvas_restore {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_restore");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_restore(SkCanvas* canvas);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_restore(SkCanvas *canvas)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_restore$descriptor() {
+        return SkCanvas_restore.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_restore(SkCanvas *canvas)
+     * }
+     */
+    public static MethodHandle SkCanvas_restore$handle() {
+        return SkCanvas_restore.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_restore(SkCanvas *canvas)
+     * }
+     */
+    public static MemorySegment SkCanvas_restore$address() {
+        return SkCanvas_restore.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_restore(SkCanvas *canvas)
      * }
      */
     public static void SkCanvas_restore(MemorySegment canvas) {
-        var mh$ = SkCanvas_restore$MH();
+        var mh$ = SkCanvas_restore.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_restore", canvas);
+            }
             mh$.invokeExact(canvas);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_setMatrix$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$107,"SkCanvas_setMatrix");
+
+    private static class SkCanvas_setMatrix {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_setMatrix");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_setMatrix(SkCanvas* canvas, float m00, float m10, float m01, float m11, float m02, float m12);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_setMatrix(SkCanvas *canvas, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_setMatrix$descriptor() {
+        return SkCanvas_setMatrix.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_setMatrix(SkCanvas *canvas, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static MethodHandle SkCanvas_setMatrix$handle() {
+        return SkCanvas_setMatrix.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_setMatrix(SkCanvas *canvas, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static MemorySegment SkCanvas_setMatrix$address() {
+        return SkCanvas_setMatrix.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_setMatrix(SkCanvas *canvas, float m00, float m10, float m01, float m11, float m02, float m12)
      * }
      */
     public static void SkCanvas_setMatrix(MemorySegment canvas, float m00, float m10, float m01, float m11, float m02, float m12) {
-        var mh$ = SkCanvas_setMatrix$MH();
+        var mh$ = SkCanvas_setMatrix.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_setMatrix", canvas, m00, m10, m01, m11, m02, m12);
+            }
             mh$.invokeExact(canvas, m00, m10, m01, m11, m02, m12);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_clipRect$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$109,"SkCanvas_clipRect");
+
+    private static class SkCanvas_clipRect {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_BOOL
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_clipRect");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_clipRect(SkCanvas* canvas, float x, float y, float w, float h, _Bool doAntiAlias);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipRect(SkCanvas *canvas, float x, float y, float w, float h, _Bool doAntiAlias)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_clipRect$descriptor() {
+        return SkCanvas_clipRect.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipRect(SkCanvas *canvas, float x, float y, float w, float h, _Bool doAntiAlias)
+     * }
+     */
+    public static MethodHandle SkCanvas_clipRect$handle() {
+        return SkCanvas_clipRect.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipRect(SkCanvas *canvas, float x, float y, float w, float h, _Bool doAntiAlias)
+     * }
+     */
+    public static MemorySegment SkCanvas_clipRect$address() {
+        return SkCanvas_clipRect.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_clipRect(SkCanvas *canvas, float x, float y, float w, float h, _Bool doAntiAlias)
      * }
      */
     public static void SkCanvas_clipRect(MemorySegment canvas, float x, float y, float w, float h, boolean doAntiAlias) {
-        var mh$ = SkCanvas_clipRect$MH();
+        var mh$ = SkCanvas_clipRect.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_clipRect", canvas, x, y, w, h, doAntiAlias);
+            }
             mh$.invokeExact(canvas, x, y, w, h, doAntiAlias);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_clipPath$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$111,"SkCanvas_clipPath");
+
+    private static class SkCanvas_clipPath {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_BOOL
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_clipPath");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_clipPath(SkCanvas* canvas, Path* path, _Bool doAntiAlias);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipPath(SkCanvas *canvas, Path *path, _Bool doAntiAlias)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_clipPath$descriptor() {
+        return SkCanvas_clipPath.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipPath(SkCanvas *canvas, Path *path, _Bool doAntiAlias)
+     * }
+     */
+    public static MethodHandle SkCanvas_clipPath$handle() {
+        return SkCanvas_clipPath.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_clipPath(SkCanvas *canvas, Path *path, _Bool doAntiAlias)
+     * }
+     */
+    public static MemorySegment SkCanvas_clipPath$address() {
+        return SkCanvas_clipPath.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_clipPath(SkCanvas *canvas, Path *path, _Bool doAntiAlias)
      * }
      */
     public static void SkCanvas_clipPath(MemorySegment canvas, MemorySegment path, boolean doAntiAlias) {
-        var mh$ = SkCanvas_clipPath$MH();
+        var mh$ = SkCanvas_clipPath.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_clipPath", canvas, path, doAntiAlias);
+            }
             mh$.invokeExact(canvas, path, doAntiAlias);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_drawPath$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$113,"SkCanvas_drawPath");
+
+    private static class SkCanvas_drawPath {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_drawPath");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_drawPath(SkCanvas* canvas, Path* path, SkPaint* paint);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawPath(SkCanvas *canvas, Path *path, SkPaint *paint)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_drawPath$descriptor() {
+        return SkCanvas_drawPath.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawPath(SkCanvas *canvas, Path *path, SkPaint *paint)
+     * }
+     */
+    public static MethodHandle SkCanvas_drawPath$handle() {
+        return SkCanvas_drawPath.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawPath(SkCanvas *canvas, Path *path, SkPaint *paint)
+     * }
+     */
+    public static MemorySegment SkCanvas_drawPath$address() {
+        return SkCanvas_drawPath.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_drawPath(SkCanvas *canvas, Path *path, SkPaint *paint)
      * }
      */
     public static void SkCanvas_drawPath(MemorySegment canvas, MemorySegment path, MemorySegment paint) {
-        var mh$ = SkCanvas_drawPath$MH();
+        var mh$ = SkCanvas_drawPath.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_drawPath", canvas, path, paint);
+            }
             mh$.invokeExact(canvas, path, paint);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkCanvas_drawImage$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$115,"SkCanvas_drawImage");
+
+    private static class SkCanvas_drawImage {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_LONG_LONG,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkCanvas_drawImage");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkCanvas_drawImage(SkCanvas* canvas, int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace* colorSpace, void* pixels, long long rowBytes, float x, float y, unsigned char filterMode, SkPaint* paint);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawImage(SkCanvas *canvas, int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, float x, float y, unsigned char filterMode, SkPaint *paint)
+     * }
+     */
+    public static FunctionDescriptor SkCanvas_drawImage$descriptor() {
+        return SkCanvas_drawImage.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawImage(SkCanvas *canvas, int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, float x, float y, unsigned char filterMode, SkPaint *paint)
+     * }
+     */
+    public static MethodHandle SkCanvas_drawImage$handle() {
+        return SkCanvas_drawImage.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkCanvas_drawImage(SkCanvas *canvas, int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, float x, float y, unsigned char filterMode, SkPaint *paint)
+     * }
+     */
+    public static MemorySegment SkCanvas_drawImage$address() {
+        return SkCanvas_drawImage.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkCanvas_drawImage(SkCanvas *canvas, int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, float x, float y, unsigned char filterMode, SkPaint *paint)
      * }
      */
     public static void SkCanvas_drawImage(MemorySegment canvas, int w, int h, byte colorType, byte alphaType, MemorySegment colorSpace, MemorySegment pixels, long rowBytes, float x, float y, byte filterMode, MemorySegment paint) {
-        var mh$ = SkCanvas_drawImage$MH();
+        var mh$ = SkCanvas_drawImage.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkCanvas_drawImage", canvas, w, h, colorType, alphaType, colorSpace, pixels, rowBytes, x, y, filterMode, paint);
+            }
             mh$.invokeExact(canvas, w, h, colorType, alphaType, colorSpace, pixels, rowBytes, x, y, filterMode, paint);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_New$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$116,"SkPaint_New");
+
+    private static class SkPaint_New {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_New");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkPaint* SkPaint_New();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkPaint *SkPaint_New()
+     * }
+     */
+    public static FunctionDescriptor SkPaint_New$descriptor() {
+        return SkPaint_New.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkPaint *SkPaint_New()
+     * }
+     */
+    public static MethodHandle SkPaint_New$handle() {
+        return SkPaint_New.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkPaint *SkPaint_New()
+     * }
+     */
+    public static MemorySegment SkPaint_New$address() {
+        return SkPaint_New.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkPaint *SkPaint_New()
      * }
      */
     public static MemorySegment SkPaint_New() {
-        var mh$ = SkPaint_New$MH();
+        var mh$ = SkPaint_New.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_New");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_delete$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$117,"SkPaint_delete");
+
+    private static class SkPaint_delete {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_delete");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_delete(SkPaint* paint);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_delete(SkPaint *paint)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_delete$descriptor() {
+        return SkPaint_delete.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_delete(SkPaint *paint)
+     * }
+     */
+    public static MethodHandle SkPaint_delete$handle() {
+        return SkPaint_delete.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_delete(SkPaint *paint)
+     * }
+     */
+    public static MemorySegment SkPaint_delete$address() {
+        return SkPaint_delete.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_delete(SkPaint *paint)
      * }
      */
     public static void SkPaint_delete(MemorySegment paint) {
-        var mh$ = SkPaint_delete$MH();
+        var mh$ = SkPaint_delete.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_delete", paint);
+            }
             mh$.invokeExact(paint);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setAntiAlias$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$119,"SkPaint_setAntiAlias");
+
+    private static class SkPaint_setAntiAlias {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_BOOL
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setAntiAlias");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setAntiAlias(SkPaint* paint, _Bool antiAlias);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setAntiAlias(SkPaint *paint, _Bool antiAlias)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setAntiAlias$descriptor() {
+        return SkPaint_setAntiAlias.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setAntiAlias(SkPaint *paint, _Bool antiAlias)
+     * }
+     */
+    public static MethodHandle SkPaint_setAntiAlias$handle() {
+        return SkPaint_setAntiAlias.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setAntiAlias(SkPaint *paint, _Bool antiAlias)
+     * }
+     */
+    public static MemorySegment SkPaint_setAntiAlias$address() {
+        return SkPaint_setAntiAlias.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setAntiAlias(SkPaint *paint, _Bool antiAlias)
      * }
      */
     public static void SkPaint_setAntiAlias(MemorySegment paint, boolean antiAlias) {
-        var mh$ = SkPaint_setAntiAlias$MH();
+        var mh$ = SkPaint_setAntiAlias.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setAntiAlias", paint, antiAlias);
+            }
             mh$.invokeExact(paint, antiAlias);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setStroke$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$120,"SkPaint_setStroke");
+
+    private static class SkPaint_setStroke {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_BOOL
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setStroke");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setStroke(SkPaint* paint, _Bool stroke);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setStroke(SkPaint *paint, _Bool stroke)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setStroke$descriptor() {
+        return SkPaint_setStroke.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setStroke(SkPaint *paint, _Bool stroke)
+     * }
+     */
+    public static MethodHandle SkPaint_setStroke$handle() {
+        return SkPaint_setStroke.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setStroke(SkPaint *paint, _Bool stroke)
+     * }
+     */
+    public static MemorySegment SkPaint_setStroke$address() {
+        return SkPaint_setStroke.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setStroke(SkPaint *paint, _Bool stroke)
      * }
      */
     public static void SkPaint_setStroke(MemorySegment paint, boolean stroke) {
-        var mh$ = SkPaint_setStroke$MH();
+        var mh$ = SkPaint_setStroke.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setStroke", paint, stroke);
+            }
             mh$.invokeExact(paint, stroke);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setStrokeProperties$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$122,"SkPaint_setStrokeProperties");
+
+    private static class SkPaint_setStrokeProperties {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setStrokeProperties");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setStrokeProperties(SkPaint* paint, float width, unsigned char cap, unsigned char join, float miterlimit);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setStrokeProperties(SkPaint *paint, float width, unsigned char cap, unsigned char join, float miterlimit)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setStrokeProperties$descriptor() {
+        return SkPaint_setStrokeProperties.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setStrokeProperties(SkPaint *paint, float width, unsigned char cap, unsigned char join, float miterlimit)
+     * }
+     */
+    public static MethodHandle SkPaint_setStrokeProperties$handle() {
+        return SkPaint_setStrokeProperties.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setStrokeProperties(SkPaint *paint, float width, unsigned char cap, unsigned char join, float miterlimit)
+     * }
+     */
+    public static MemorySegment SkPaint_setStrokeProperties$address() {
+        return SkPaint_setStrokeProperties.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setStrokeProperties(SkPaint *paint, float width, unsigned char cap, unsigned char join, float miterlimit)
      * }
      */
     public static void SkPaint_setStrokeProperties(MemorySegment paint, float width, byte cap, byte join, float miterlimit) {
-        var mh$ = SkPaint_setStrokeProperties$MH();
+        var mh$ = SkPaint_setStrokeProperties.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setStrokeProperties", paint, width, cap, join, miterlimit);
+            }
             mh$.invokeExact(paint, width, cap, join, miterlimit);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setColor$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$124,"SkPaint_setColor");
+
+    private static class SkPaint_setColor {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setColor");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setColor(SkPaint* paint, float c1, float c2, float c3, float a, SkColorSpace* colorSpace);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setColor(SkPaint *paint, float c1, float c2, float c3, float a, SkColorSpace *colorSpace)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setColor$descriptor() {
+        return SkPaint_setColor.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setColor(SkPaint *paint, float c1, float c2, float c3, float a, SkColorSpace *colorSpace)
+     * }
+     */
+    public static MethodHandle SkPaint_setColor$handle() {
+        return SkPaint_setColor.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setColor(SkPaint *paint, float c1, float c2, float c3, float a, SkColorSpace *colorSpace)
+     * }
+     */
+    public static MemorySegment SkPaint_setColor$address() {
+        return SkPaint_setColor.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setColor(SkPaint *paint, float c1, float c2, float c3, float a, SkColorSpace *colorSpace)
      * }
      */
     public static void SkPaint_setColor(MemorySegment paint, float c1, float c2, float c3, float a, MemorySegment colorSpace) {
-        var mh$ = SkPaint_setColor$MH();
+        var mh$ = SkPaint_setColor.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setColor", paint, c1, c2, c3, a, colorSpace);
+            }
             mh$.invokeExact(paint, c1, c2, c3, a, colorSpace);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setAlpha$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$126,"SkPaint_setAlpha");
+
+    private static class SkPaint_setAlpha {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setAlpha");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setAlpha(SkPaint* paint, float a);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setAlpha(SkPaint *paint, float a)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setAlpha$descriptor() {
+        return SkPaint_setAlpha.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setAlpha(SkPaint *paint, float a)
+     * }
+     */
+    public static MethodHandle SkPaint_setAlpha$handle() {
+        return SkPaint_setAlpha.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setAlpha(SkPaint *paint, float a)
+     * }
+     */
+    public static MemorySegment SkPaint_setAlpha$address() {
+        return SkPaint_setAlpha.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setAlpha(SkPaint *paint, float a)
      * }
      */
     public static void SkPaint_setAlpha(MemorySegment paint, float a) {
-        var mh$ = SkPaint_setAlpha$MH();
+        var mh$ = SkPaint_setAlpha.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setAlpha", paint, a);
+            }
             mh$.invokeExact(paint, a);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setBlendMode$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$128,"SkPaint_setBlendMode");
+
+    private static class SkPaint_setBlendMode {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_CHAR
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setBlendMode");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setBlendMode(SkPaint* paint, unsigned char blendMode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlendMode(SkPaint *paint, unsigned char blendMode)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setBlendMode$descriptor() {
+        return SkPaint_setBlendMode.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlendMode(SkPaint *paint, unsigned char blendMode)
+     * }
+     */
+    public static MethodHandle SkPaint_setBlendMode$handle() {
+        return SkPaint_setBlendMode.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlendMode(SkPaint *paint, unsigned char blendMode)
+     * }
+     */
+    public static MemorySegment SkPaint_setBlendMode$address() {
+        return SkPaint_setBlendMode.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setBlendMode(SkPaint *paint, unsigned char blendMode)
      * }
      */
     public static void SkPaint_setBlendMode(MemorySegment paint, byte blendMode) {
-        var mh$ = SkPaint_setBlendMode$MH();
+        var mh$ = SkPaint_setBlendMode.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setBlendMode", paint, blendMode);
+            }
             mh$.invokeExact(paint, blendMode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setDashPathEffect$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$130,"SkPaint_setDashPathEffect");
+
+    private static class SkPaint_setDashPathEffect {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setDashPathEffect");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setDashPathEffect(SkPaint* paint, float intervals[], int count, float phase);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setDashPathEffect(SkPaint *paint, float intervals[], int count, float phase)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setDashPathEffect$descriptor() {
+        return SkPaint_setDashPathEffect.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setDashPathEffect(SkPaint *paint, float intervals[], int count, float phase)
+     * }
+     */
+    public static MethodHandle SkPaint_setDashPathEffect$handle() {
+        return SkPaint_setDashPathEffect.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setDashPathEffect(SkPaint *paint, float intervals[], int count, float phase)
+     * }
+     */
+    public static MemorySegment SkPaint_setDashPathEffect$address() {
+        return SkPaint_setDashPathEffect.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setDashPathEffect(SkPaint *paint, float intervals[], int count, float phase)
      * }
      */
     public static void SkPaint_setDashPathEffect(MemorySegment paint, MemorySegment intervals, int count, float phase) {
-        var mh$ = SkPaint_setDashPathEffect$MH();
+        var mh$ = SkPaint_setDashPathEffect.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setDashPathEffect", paint, intervals, count, phase);
+            }
             mh$.invokeExact(paint, intervals, count, phase);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setShaderMaskFilter$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$131,"SkPaint_setShaderMaskFilter");
+
+    private static class SkPaint_setShaderMaskFilter {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setShaderMaskFilter");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setShaderMaskFilter(SkPaint* paint, SkShader* shader);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setShaderMaskFilter(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setShaderMaskFilter$descriptor() {
+        return SkPaint_setShaderMaskFilter.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setShaderMaskFilter(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static MethodHandle SkPaint_setShaderMaskFilter$handle() {
+        return SkPaint_setShaderMaskFilter.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setShaderMaskFilter(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static MemorySegment SkPaint_setShaderMaskFilter$address() {
+        return SkPaint_setShaderMaskFilter.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setShaderMaskFilter(SkPaint *paint, SkShader *shader)
      * }
      */
     public static void SkPaint_setShaderMaskFilter(MemorySegment paint, MemorySegment shader) {
-        var mh$ = SkPaint_setShaderMaskFilter$MH();
+        var mh$ = SkPaint_setShaderMaskFilter.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setShaderMaskFilter", paint, shader);
+            }
             mh$.invokeExact(paint, shader);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setShader$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$132,"SkPaint_setShader");
+
+    private static class SkPaint_setShader {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setShader");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setShader(SkPaint* paint, SkShader* shader);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setShader(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setShader$descriptor() {
+        return SkPaint_setShader.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setShader(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static MethodHandle SkPaint_setShader$handle() {
+        return SkPaint_setShader.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setShader(SkPaint *paint, SkShader *shader)
+     * }
+     */
+    public static MemorySegment SkPaint_setShader$address() {
+        return SkPaint_setShader.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setShader(SkPaint *paint, SkShader *shader)
      * }
      */
     public static void SkPaint_setShader(MemorySegment paint, MemorySegment shader) {
-        var mh$ = SkPaint_setShader$MH();
+        var mh$ = SkPaint_setShader.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setShader", paint, shader);
+            }
             mh$.invokeExact(paint, shader);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkPaint_setBlurImageFilter$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$133,"SkPaint_setBlurImageFilter");
+
+    private static class SkPaint_setBlurImageFilter {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkPaint_setBlurImageFilter");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void SkPaint_setBlurImageFilter(SkPaint* paint, float sigmaX, float sigmaY);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlurImageFilter(SkPaint *paint, float sigmaX, float sigmaY)
+     * }
+     */
+    public static FunctionDescriptor SkPaint_setBlurImageFilter$descriptor() {
+        return SkPaint_setBlurImageFilter.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlurImageFilter(SkPaint *paint, float sigmaX, float sigmaY)
+     * }
+     */
+    public static MethodHandle SkPaint_setBlurImageFilter$handle() {
+        return SkPaint_setBlurImageFilter.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void SkPaint_setBlurImageFilter(SkPaint *paint, float sigmaX, float sigmaY)
+     * }
+     */
+    public static MemorySegment SkPaint_setBlurImageFilter$address() {
+        return SkPaint_setBlurImageFilter.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void SkPaint_setBlurImageFilter(SkPaint *paint, float sigmaX, float sigmaY)
      * }
      */
     public static void SkPaint_setBlurImageFilter(MemorySegment paint, float sigmaX, float sigmaY) {
-        var mh$ = SkPaint_setBlurImageFilter$MH();
+        var mh$ = SkPaint_setBlurImageFilter.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkPaint_setBlurImageFilter", paint, sigmaX, sigmaY);
+            }
             mh$.invokeExact(paint, sigmaX, sigmaY);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkGradientShader_MakeLinear$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$135,"SkGradientShader_MakeLinear");
+
+    private static class SkGradientShader_MakeLinear {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkGradientShader_MakeLinear");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkShader* SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, float colors[], SkColorSpace* colorSpace, float pos[], int count, unsigned char tileMode, unsigned char interpolationColorSpace);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkShader *SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, float colors[], SkColorSpace *colorSpace, float pos[], int count, unsigned char tileMode, unsigned char interpolationColorSpace)
+     * }
+     */
+    public static FunctionDescriptor SkGradientShader_MakeLinear$descriptor() {
+        return SkGradientShader_MakeLinear.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkShader *SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, float colors[], SkColorSpace *colorSpace, float pos[], int count, unsigned char tileMode, unsigned char interpolationColorSpace)
+     * }
+     */
+    public static MethodHandle SkGradientShader_MakeLinear$handle() {
+        return SkGradientShader_MakeLinear.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkShader *SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, float colors[], SkColorSpace *colorSpace, float pos[], int count, unsigned char tileMode, unsigned char interpolationColorSpace)
+     * }
+     */
+    public static MemorySegment SkGradientShader_MakeLinear$address() {
+        return SkGradientShader_MakeLinear.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkShader *SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, float colors[], SkColorSpace *colorSpace, float pos[], int count, unsigned char tileMode, unsigned char interpolationColorSpace)
      * }
      */
     public static MemorySegment SkGradientShader_MakeLinear(float x1, float y1, float x2, float y2, MemorySegment colors, MemorySegment colorSpace, MemorySegment pos, int count, byte tileMode, byte interpolationColorSpace) {
-        var mh$ = SkGradientShader_MakeLinear$MH();
+        var mh$ = SkGradientShader_MakeLinear.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(x1, y1, x2, y2, colors, colorSpace, pos, count, tileMode, interpolationColorSpace);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkGradientShader_MakeLinear", x1, y1, x2, y2, colors, colorSpace, pos, count, tileMode, interpolationColorSpace);
+            }
+            return (MemorySegment)mh$.invokeExact(x1, y1, x2, y2, colors, colorSpace, pos, count, tileMode, interpolationColorSpace);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle SkImage_makeShader$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$137,"SkImage_makeShader");
+
+    private static class SkImage_makeShader {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_INT,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_POINTER,
+            skiacapi_h.C_LONG_LONG,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_CHAR,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT,
+            skiacapi_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkImage_makeShader");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * SkShader* SkImage_makeShader(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace* colorSpace, void* pixels, long long rowBytes, unsigned char tileModeX, unsigned char tileModeY, unsigned char filterMode, float m00, float m10, float m01, float m11, float m02, float m12);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * SkShader *SkImage_makeShader(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, unsigned char tileModeX, unsigned char tileModeY, unsigned char filterMode, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static FunctionDescriptor SkImage_makeShader$descriptor() {
+        return SkImage_makeShader.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * SkShader *SkImage_makeShader(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, unsigned char tileModeX, unsigned char tileModeY, unsigned char filterMode, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static MethodHandle SkImage_makeShader$handle() {
+        return SkImage_makeShader.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * SkShader *SkImage_makeShader(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, unsigned char tileModeX, unsigned char tileModeY, unsigned char filterMode, float m00, float m10, float m01, float m11, float m02, float m12)
+     * }
+     */
+    public static MemorySegment SkImage_makeShader$address() {
+        return SkImage_makeShader.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * SkShader *SkImage_makeShader(int w, int h, unsigned char colorType, unsigned char alphaType, SkColorSpace *colorSpace, void *pixels, long long rowBytes, unsigned char tileModeX, unsigned char tileModeY, unsigned char filterMode, float m00, float m10, float m01, float m11, float m02, float m12)
      * }
      */
     public static MemorySegment SkImage_makeShader(int w, int h, byte colorType, byte alphaType, MemorySegment colorSpace, MemorySegment pixels, long rowBytes, byte tileModeX, byte tileModeY, byte filterMode, float m00, float m10, float m01, float m11, float m02, float m12) {
-        var mh$ = SkImage_makeShader$MH();
+        var mh$ = SkImage_makeShader.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(w, h, colorType, alphaType, colorSpace, pixels, rowBytes, tileModeX, tileModeY, filterMode, m00, m10, m01, m11, m02, m12);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("SkImage_makeShader", w, h, colorType, alphaType, colorSpace, pixels, rowBytes, tileModeX, tileModeY, filterMode, m00, m10, m01, m11, m02, m12);
+            }
+            return (MemorySegment)mh$.invokeExact(w, h, colorType, alphaType, colorSpace, pixels, rowBytes, tileModeX, tileModeY, filterMode, m00, m10, m01, m11, m02, m12);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
 }
-
 

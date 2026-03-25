@@ -2,60 +2,450 @@
 
 package com.loadingbyte.cinecred.natives.zimg;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct zimg_image_buffer_const {
  *     unsigned int version;
- *     struct  plane[4];
- * };
+ *     struct {
+ *         const void *data;
+ *         ptrdiff_t stride;
+ *         unsigned int mask;
+ *     } plane[4];
+ * }
  * }
  */
 public class zimg_image_buffer_const {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$10;
+    zimg_image_buffer_const() {
+        // Should not be called directly
     }
-    public static VarHandle version$VH() {
-        return constants$0.const$11;
+
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        zimg_h.C_INT.withName("version"),
+        MemoryLayout.paddingLayout(4),
+        MemoryLayout.sequenceLayout(4, zimg_image_buffer_const.plane.layout()).withName("plane")
+    ).withName("zimg_image_buffer_const");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
     }
+
+    private static final OfInt version$LAYOUT = (OfInt)$LAYOUT.select(groupElement("version"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final OfInt version$layout() {
+        return version$LAYOUT;
+    }
+
+    private static final long version$OFFSET = $LAYOUT.byteOffset(groupElement("version"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final long version$offset() {
+        return version$OFFSET;
+    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int version;
+     * {@snippet lang=c :
+     * unsigned int version
      * }
      */
-    public static int version$get(MemorySegment seg) {
-        return (int)constants$0.const$11.get(seg);
+    public static int version(MemorySegment struct) {
+        return struct.get(version$LAYOUT, version$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int version;
+     * {@snippet lang=c :
+     * unsigned int version
      * }
      */
-    public static void version$set(MemorySegment seg, int x) {
-        constants$0.const$11.set(seg, x);
+    public static void version(MemorySegment struct, int fieldValue) {
+        struct.set(version$LAYOUT, version$OFFSET, fieldValue);
     }
-    public static int version$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$11.get(seg.asSlice(index*sizeof()));
-    }
-    public static void version$set(MemorySegment seg, long index, int x) {
-        constants$0.const$11.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment plane$slice(MemorySegment seg) {
-        return seg.asSlice(8, 96);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    /**
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * }
+     * }
+     */
+    public static class plane {
+
+        plane() {
+            // Should not be called directly
+        }
+
+        private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+            zimg_h.C_POINTER.withName("data"),
+            zimg_h.C_LONG.withName("stride"),
+            zimg_h.C_INT.withName("mask"),
+            MemoryLayout.paddingLayout(4)
+        ).withName("$anon$414:2");
+
+        /**
+         * The layout of this struct
+         */
+        public static final GroupLayout layout() {
+            return $LAYOUT;
+        }
+
+        private static final AddressLayout data$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("data"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * const void *data
+         * }
+         */
+        public static final AddressLayout data$layout() {
+            return data$LAYOUT;
+        }
+
+        private static final long data$OFFSET = $LAYOUT.byteOffset(groupElement("data"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * const void *data
+         * }
+         */
+        public static final long data$offset() {
+            return data$OFFSET;
+        }
+
+        /**
+         * Getter for field:
+         * {@snippet lang=c :
+         * const void *data
+         * }
+         */
+        public static MemorySegment data(MemorySegment struct) {
+            return struct.get(data$LAYOUT, data$OFFSET);
+        }
+
+        /**
+         * Setter for field:
+         * {@snippet lang=c :
+         * const void *data
+         * }
+         */
+        public static void data(MemorySegment struct, MemorySegment fieldValue) {
+            struct.set(data$LAYOUT, data$OFFSET, fieldValue);
+        }
+
+        private static final OfLong stride$LAYOUT = (OfLong)$LAYOUT.select(groupElement("stride"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * ptrdiff_t stride
+         * }
+         */
+        public static final OfLong stride$layout() {
+            return stride$LAYOUT;
+        }
+
+        private static final long stride$OFFSET = $LAYOUT.byteOffset(groupElement("stride"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * ptrdiff_t stride
+         * }
+         */
+        public static final long stride$offset() {
+            return stride$OFFSET;
+        }
+
+        /**
+         * Getter for field:
+         * {@snippet lang=c :
+         * ptrdiff_t stride
+         * }
+         */
+        public static long stride(MemorySegment struct) {
+            return struct.get(stride$LAYOUT, stride$OFFSET);
+        }
+
+        /**
+         * Setter for field:
+         * {@snippet lang=c :
+         * ptrdiff_t stride
+         * }
+         */
+        public static void stride(MemorySegment struct, long fieldValue) {
+            struct.set(stride$LAYOUT, stride$OFFSET, fieldValue);
+        }
+
+        private static final OfInt mask$LAYOUT = (OfInt)$LAYOUT.select(groupElement("mask"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * unsigned int mask
+         * }
+         */
+        public static final OfInt mask$layout() {
+            return mask$LAYOUT;
+        }
+
+        private static final long mask$OFFSET = $LAYOUT.byteOffset(groupElement("mask"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * unsigned int mask
+         * }
+         */
+        public static final long mask$offset() {
+            return mask$OFFSET;
+        }
+
+        /**
+         * Getter for field:
+         * {@snippet lang=c :
+         * unsigned int mask
+         * }
+         */
+        public static int mask(MemorySegment struct) {
+            return struct.get(mask$LAYOUT, mask$OFFSET);
+        }
+
+        /**
+         * Setter for field:
+         * {@snippet lang=c :
+         * unsigned int mask
+         * }
+         */
+        public static void mask(MemorySegment struct, int fieldValue) {
+            struct.set(mask$LAYOUT, mask$OFFSET, fieldValue);
+        }
+
+        /**
+         * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+         * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+         */
+        public static MemorySegment asSlice(MemorySegment array, long index) {
+            return array.asSlice(layout().byteSize() * index);
+        }
+
+        /**
+         * The size (in bytes) of this struct
+         */
+        public static long sizeof() { return layout().byteSize(); }
+
+        /**
+         * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+         */
+        public static MemorySegment allocate(SegmentAllocator allocator) {
+            return allocator.allocate(layout());
+        }
+
+        /**
+         * Allocate an array of size {@code elementCount} using {@code allocator}.
+         * The returned segment has size {@code elementCount * layout().byteSize()}.
+         */
+        public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+            return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+        }
+
+        /**
+         * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+         * The returned segment has size {@code layout().byteSize()}
+         */
+        public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+            return reinterpret(addr, 1, arena, cleanup);
+        }
+
+        /**
+         * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+         * The returned segment has size {@code elementCount * layout().byteSize()}
+         */
+        public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+            return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+        }
+    }
+
+    private static final SequenceLayout plane$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("plane"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static final SequenceLayout plane$layout() {
+        return plane$LAYOUT;
+    }
+
+    private static final long plane$OFFSET = $LAYOUT.byteOffset(groupElement("plane"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static final long plane$offset() {
+        return plane$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static MemorySegment plane(MemorySegment struct) {
+        return struct.asSlice(plane$OFFSET, plane$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static void plane(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, plane$OFFSET, plane$LAYOUT.byteSize());
+    }
+
+    private static long[] plane$DIMS = { 4 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static long[] plane$dimensions() {
+        return plane$DIMS;
+    }
+    private static final MethodHandle plane$ELEM_HANDLE = plane$LAYOUT.sliceHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static MemorySegment plane(MemorySegment struct, long index0) {
+        try {
+            return (MemorySegment)plane$ELEM_HANDLE.invokeExact(struct, plane$OFFSET, index0);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * struct {
+     *     const void *data;
+     *     ptrdiff_t stride;
+     *     unsigned int mask;
+     * } plane[4]
+     * }
+     */
+    public static void plane(MemorySegment struct, long index0, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, plane(struct, index0), 0L, zimg_image_buffer_const.plane.layout().byteSize());
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

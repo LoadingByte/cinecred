@@ -208,8 +208,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
 
             private fun invertAndMake(code: Int, name: String, chroma: Chromaticities?, toXYZD50: Matrix): Primaries {
                 val fromXYZD50 = Arena.ofConfined().use { arena ->
-                    val inSeg = arena.allocateArray(toXYZD50.values)
-                    val outSeg = arena.allocateArray(JAVA_FLOAT, 9)
+                    val inSeg = arena.allocateFrom(toXYZD50.values)
+                    val outSeg = arena.allocate(JAVA_FLOAT, 9)
                     require(skcms_Matrix3x3_invert(inSeg, outSeg)) { "Could not invert toXYZD50 matrix." }
                     Matrix(outSeg.toArray(JAVA_FLOAT))
                 }
@@ -271,14 +271,14 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
 
             private fun toXYZD50(c: Chromaticities): Matrix =
                 Arena.ofConfined().use { arena ->
-                    val seg = arena.allocateArray(JAVA_FLOAT, 9)
+                    val seg = arena.allocate(JAVA_FLOAT, 9)
                     require(skcms_PrimariesToXYZD50(c.rx, c.ry, c.gx, c.gy, c.bx, c.by, c.wx, c.wy, seg))
                     Matrix(seg.toArray(JAVA_FLOAT))
                 }
 
             private fun toXYZD50(wx: Float, wy: Float): Matrix =
                 Arena.ofConfined().use { arena ->
-                    val seg = arena.allocateArray(JAVA_FLOAT, 9)
+                    val seg = arena.allocate(JAVA_FLOAT, 9)
                     require(skcms_AdaptToXYZD50(wx, wy, seg))
                     Matrix(seg.toArray(JAVA_FLOAT))
                 }
@@ -346,7 +346,7 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
             val f: Float
         ) {
 
-            private val skiaHandle = Arena.ofAuto().allocateArray(asArray())
+            private val skiaHandle = Arena.ofAuto().allocateFrom(asArray())
 
             constructor(g: Float) : this(g, 1f, 0f, 0f, 0f, 0f, 0f)
             constructor(g: Float, a: Float) : this(g, a, 0f, 0f, 0f, 0f, 0f)
@@ -429,8 +429,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
 
             private fun invert(toLinear: Curve): Curve =
                 Arena.ofConfined().use { arena ->
-                    val inSeg = arena.allocateArray(toLinear.asArray())
-                    val outSeg = arena.allocateArray(JAVA_FLOAT, 7)
+                    val inSeg = arena.allocateFrom(toLinear.asArray())
+                    val outSeg = arena.allocate(JAVA_FLOAT, 7)
                     require(skcms_TransferFunction_invert(inSeg, outSeg)) { "Could not invert transfer curve." }
                     Curve(outSeg.toArray(JAVA_FLOAT))
                 }

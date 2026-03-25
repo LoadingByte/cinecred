@@ -51,7 +51,7 @@ class MacOSMenuLocalizer {
     // Handle for objc_getClass():
 
     private fun getClass(name: String): MemorySegment = Arena.ofConfined().use { arena ->
-        notNull(getClass.invokeExact(arena.allocateUtf8String(name)) as MemorySegment, "objc_getClass($name)")
+        notNull(getClass.invokeExact(arena.allocateFrom(name)) as MemorySegment, "objc_getClass($name)")
     }
 
     private val getClass = Linker.nativeLinker().downcallHandle(
@@ -95,7 +95,7 @@ class MacOSMenuLocalizer {
     // Handle for sel_registerName():
 
     private fun registerName(name: String): MemorySegment = Arena.ofConfined().use { arena ->
-        notNull(registerName.invokeExact(arena.allocateUtf8String(name)) as MemorySegment, "sel_regName($name)")
+        notNull(registerName.invokeExact(arena.allocateFrom(name)) as MemorySegment, "sel_regName($name)")
     }
 
     private val registerName = Linker.nativeLinker().downcallHandle(
@@ -162,7 +162,7 @@ class MacOSMenuLocalizer {
         val appMenuHandle = msgPtr(msgPtr(mainMenuHandle, "itemAtIndex:", 0), "submenu")
         for (i in 0..<msgLong(appMenuHandle, "numberOfItems")) {
             val itemHandle = msgPtr(appMenuHandle, "itemAtIndex:", i)
-            val title = msgPtr(msgPtr(itemHandle, "title"), "UTF8String").reinterpret(Long.MAX_VALUE).getUtf8String(0L)
+            val title = msgPtr(msgPtr(itemHandle, "title"), "UTF8String").reinterpret(Long.MAX_VALUE).getString(0L)
             menuItems.find { it.defaultTitleRegex.matches(title) }?.handle = itemHandle
         }
     }
@@ -176,7 +176,7 @@ class MacOSMenuLocalizer {
             menuItem.handle?.let { itemHandle ->
                 val title = l10n(menuItem.l10nKey)
                 val titleHandle = Arena.ofConfined().use { arena ->
-                    msgPtr(getClass("NSString"), "stringWithUTF8String:", arena.allocateUtf8String(title))
+                    msgPtr(getClass("NSString"), "stringWithUTF8String:", arena.allocateFrom(title))
                 }
                 msgVoid(itemHandle, "setTitle:", titleHandle)
             }

@@ -2,13 +2,18 @@
 
 package com.loadingbyte.cinecred.natives.zimg;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct zimg_image_format {
  *     unsigned int version;
  *     unsigned int width;
@@ -24,563 +29,1066 @@ import static java.lang.foreign.ValueLayout.*;
  *     zimg_pixel_range_e pixel_range;
  *     zimg_field_parity_e field_parity;
  *     zimg_chroma_location_e chroma_location;
- *     struct  active_region;
+ *     struct {
+ *         double left;
+ *         double top;
+ *         double width;
+ *         double height;
+ *     } active_region;
  *     zimg_alpha_type_e alpha;
- * };
+ * }
  * }
  */
 public class zimg_image_format {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$26;
+    zimg_image_format() {
+        // Should not be called directly
     }
-    public static VarHandle version$VH() {
-        return constants$0.const$27;
+
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        zimg_h.C_INT.withName("version"),
+        zimg_h.C_INT.withName("width"),
+        zimg_h.C_INT.withName("height"),
+        zimg_h.C_INT.withName("pixel_type"),
+        zimg_h.C_INT.withName("subsample_w"),
+        zimg_h.C_INT.withName("subsample_h"),
+        zimg_h.C_INT.withName("color_family"),
+        zimg_h.C_INT.withName("matrix_coefficients"),
+        zimg_h.C_INT.withName("transfer_characteristics"),
+        zimg_h.C_INT.withName("color_primaries"),
+        zimg_h.C_INT.withName("depth"),
+        zimg_h.C_INT.withName("pixel_range"),
+        zimg_h.C_INT.withName("field_parity"),
+        zimg_h.C_INT.withName("chroma_location"),
+        zimg_image_format.active_region.layout().withName("active_region"),
+        zimg_h.C_INT.withName("alpha"),
+        MemoryLayout.paddingLayout(4)
+    ).withName("zimg_image_format");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
     }
+
+    private static final OfInt version$LAYOUT = (OfInt)$LAYOUT.select(groupElement("version"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final OfInt version$layout() {
+        return version$LAYOUT;
+    }
+
+    private static final long version$OFFSET = $LAYOUT.byteOffset(groupElement("version"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final long version$offset() {
+        return version$OFFSET;
+    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int version;
+     * {@snippet lang=c :
+     * unsigned int version
      * }
      */
-    public static int version$get(MemorySegment seg) {
-        return (int)constants$0.const$27.get(seg);
+    public static int version(MemorySegment struct) {
+        return struct.get(version$LAYOUT, version$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int version;
+     * {@snippet lang=c :
+     * unsigned int version
      * }
      */
-    public static void version$set(MemorySegment seg, int x) {
-        constants$0.const$27.set(seg, x);
+    public static void version(MemorySegment struct, int fieldValue) {
+        struct.set(version$LAYOUT, version$OFFSET, fieldValue);
     }
-    public static int version$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$27.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt width$LAYOUT = (OfInt)$LAYOUT.select(groupElement("width"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int width
+     * }
+     */
+    public static final OfInt width$layout() {
+        return width$LAYOUT;
     }
-    public static void version$set(MemorySegment seg, long index, int x) {
-        constants$0.const$27.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long width$OFFSET = $LAYOUT.byteOffset(groupElement("width"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int width
+     * }
+     */
+    public static final long width$offset() {
+        return width$OFFSET;
     }
-    public static VarHandle width$VH() {
-        return constants$0.const$28;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int width;
+     * {@snippet lang=c :
+     * unsigned int width
      * }
      */
-    public static int width$get(MemorySegment seg) {
-        return (int)constants$0.const$28.get(seg);
+    public static int width(MemorySegment struct) {
+        return struct.get(width$LAYOUT, width$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int width;
+     * {@snippet lang=c :
+     * unsigned int width
      * }
      */
-    public static void width$set(MemorySegment seg, int x) {
-        constants$0.const$28.set(seg, x);
+    public static void width(MemorySegment struct, int fieldValue) {
+        struct.set(width$LAYOUT, width$OFFSET, fieldValue);
     }
-    public static int width$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$28.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt height$LAYOUT = (OfInt)$LAYOUT.select(groupElement("height"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int height
+     * }
+     */
+    public static final OfInt height$layout() {
+        return height$LAYOUT;
     }
-    public static void width$set(MemorySegment seg, long index, int x) {
-        constants$0.const$28.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long height$OFFSET = $LAYOUT.byteOffset(groupElement("height"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int height
+     * }
+     */
+    public static final long height$offset() {
+        return height$OFFSET;
     }
-    public static VarHandle height$VH() {
-        return constants$0.const$29;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int height;
+     * {@snippet lang=c :
+     * unsigned int height
      * }
      */
-    public static int height$get(MemorySegment seg) {
-        return (int)constants$0.const$29.get(seg);
+    public static int height(MemorySegment struct) {
+        return struct.get(height$LAYOUT, height$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int height;
+     * {@snippet lang=c :
+     * unsigned int height
      * }
      */
-    public static void height$set(MemorySegment seg, int x) {
-        constants$0.const$29.set(seg, x);
+    public static void height(MemorySegment struct, int fieldValue) {
+        struct.set(height$LAYOUT, height$OFFSET, fieldValue);
     }
-    public static int height$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$29.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt pixel_type$LAYOUT = (OfInt)$LAYOUT.select(groupElement("pixel_type"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_pixel_type_e pixel_type
+     * }
+     */
+    public static final OfInt pixel_type$layout() {
+        return pixel_type$LAYOUT;
     }
-    public static void height$set(MemorySegment seg, long index, int x) {
-        constants$0.const$29.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long pixel_type$OFFSET = $LAYOUT.byteOffset(groupElement("pixel_type"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_pixel_type_e pixel_type
+     * }
+     */
+    public static final long pixel_type$offset() {
+        return pixel_type$OFFSET;
     }
-    public static VarHandle pixel_type$VH() {
-        return constants$0.const$30;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_pixel_type_e pixel_type;
+     * {@snippet lang=c :
+     * zimg_pixel_type_e pixel_type
      * }
      */
-    public static int pixel_type$get(MemorySegment seg) {
-        return (int)constants$0.const$30.get(seg);
+    public static int pixel_type(MemorySegment struct) {
+        return struct.get(pixel_type$LAYOUT, pixel_type$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_pixel_type_e pixel_type;
+     * {@snippet lang=c :
+     * zimg_pixel_type_e pixel_type
      * }
      */
-    public static void pixel_type$set(MemorySegment seg, int x) {
-        constants$0.const$30.set(seg, x);
+    public static void pixel_type(MemorySegment struct, int fieldValue) {
+        struct.set(pixel_type$LAYOUT, pixel_type$OFFSET, fieldValue);
     }
-    public static int pixel_type$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$30.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt subsample_w$LAYOUT = (OfInt)$LAYOUT.select(groupElement("subsample_w"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int subsample_w
+     * }
+     */
+    public static final OfInt subsample_w$layout() {
+        return subsample_w$LAYOUT;
     }
-    public static void pixel_type$set(MemorySegment seg, long index, int x) {
-        constants$0.const$30.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long subsample_w$OFFSET = $LAYOUT.byteOffset(groupElement("subsample_w"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int subsample_w
+     * }
+     */
+    public static final long subsample_w$offset() {
+        return subsample_w$OFFSET;
     }
-    public static VarHandle subsample_w$VH() {
-        return constants$0.const$31;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int subsample_w;
+     * {@snippet lang=c :
+     * unsigned int subsample_w
      * }
      */
-    public static int subsample_w$get(MemorySegment seg) {
-        return (int)constants$0.const$31.get(seg);
+    public static int subsample_w(MemorySegment struct) {
+        return struct.get(subsample_w$LAYOUT, subsample_w$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int subsample_w;
+     * {@snippet lang=c :
+     * unsigned int subsample_w
      * }
      */
-    public static void subsample_w$set(MemorySegment seg, int x) {
-        constants$0.const$31.set(seg, x);
+    public static void subsample_w(MemorySegment struct, int fieldValue) {
+        struct.set(subsample_w$LAYOUT, subsample_w$OFFSET, fieldValue);
     }
-    public static int subsample_w$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$31.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt subsample_h$LAYOUT = (OfInt)$LAYOUT.select(groupElement("subsample_h"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int subsample_h
+     * }
+     */
+    public static final OfInt subsample_h$layout() {
+        return subsample_h$LAYOUT;
     }
-    public static void subsample_w$set(MemorySegment seg, long index, int x) {
-        constants$0.const$31.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long subsample_h$OFFSET = $LAYOUT.byteOffset(groupElement("subsample_h"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int subsample_h
+     * }
+     */
+    public static final long subsample_h$offset() {
+        return subsample_h$OFFSET;
     }
-    public static VarHandle subsample_h$VH() {
-        return constants$0.const$32;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int subsample_h;
+     * {@snippet lang=c :
+     * unsigned int subsample_h
      * }
      */
-    public static int subsample_h$get(MemorySegment seg) {
-        return (int)constants$0.const$32.get(seg);
+    public static int subsample_h(MemorySegment struct) {
+        return struct.get(subsample_h$LAYOUT, subsample_h$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int subsample_h;
+     * {@snippet lang=c :
+     * unsigned int subsample_h
      * }
      */
-    public static void subsample_h$set(MemorySegment seg, int x) {
-        constants$0.const$32.set(seg, x);
+    public static void subsample_h(MemorySegment struct, int fieldValue) {
+        struct.set(subsample_h$LAYOUT, subsample_h$OFFSET, fieldValue);
     }
-    public static int subsample_h$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$32.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt color_family$LAYOUT = (OfInt)$LAYOUT.select(groupElement("color_family"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_color_family_e color_family
+     * }
+     */
+    public static final OfInt color_family$layout() {
+        return color_family$LAYOUT;
     }
-    public static void subsample_h$set(MemorySegment seg, long index, int x) {
-        constants$0.const$32.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long color_family$OFFSET = $LAYOUT.byteOffset(groupElement("color_family"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_color_family_e color_family
+     * }
+     */
+    public static final long color_family$offset() {
+        return color_family$OFFSET;
     }
-    public static VarHandle color_family$VH() {
-        return constants$0.const$33;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_color_family_e color_family;
+     * {@snippet lang=c :
+     * zimg_color_family_e color_family
      * }
      */
-    public static int color_family$get(MemorySegment seg) {
-        return (int)constants$0.const$33.get(seg);
+    public static int color_family(MemorySegment struct) {
+        return struct.get(color_family$LAYOUT, color_family$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_color_family_e color_family;
+     * {@snippet lang=c :
+     * zimg_color_family_e color_family
      * }
      */
-    public static void color_family$set(MemorySegment seg, int x) {
-        constants$0.const$33.set(seg, x);
+    public static void color_family(MemorySegment struct, int fieldValue) {
+        struct.set(color_family$LAYOUT, color_family$OFFSET, fieldValue);
     }
-    public static int color_family$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$33.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt matrix_coefficients$LAYOUT = (OfInt)$LAYOUT.select(groupElement("matrix_coefficients"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_matrix_coefficients_e matrix_coefficients
+     * }
+     */
+    public static final OfInt matrix_coefficients$layout() {
+        return matrix_coefficients$LAYOUT;
     }
-    public static void color_family$set(MemorySegment seg, long index, int x) {
-        constants$0.const$33.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long matrix_coefficients$OFFSET = $LAYOUT.byteOffset(groupElement("matrix_coefficients"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_matrix_coefficients_e matrix_coefficients
+     * }
+     */
+    public static final long matrix_coefficients$offset() {
+        return matrix_coefficients$OFFSET;
     }
-    public static VarHandle matrix_coefficients$VH() {
-        return constants$0.const$34;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_matrix_coefficients_e matrix_coefficients;
+     * {@snippet lang=c :
+     * zimg_matrix_coefficients_e matrix_coefficients
      * }
      */
-    public static int matrix_coefficients$get(MemorySegment seg) {
-        return (int)constants$0.const$34.get(seg);
+    public static int matrix_coefficients(MemorySegment struct) {
+        return struct.get(matrix_coefficients$LAYOUT, matrix_coefficients$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_matrix_coefficients_e matrix_coefficients;
+     * {@snippet lang=c :
+     * zimg_matrix_coefficients_e matrix_coefficients
      * }
      */
-    public static void matrix_coefficients$set(MemorySegment seg, int x) {
-        constants$0.const$34.set(seg, x);
+    public static void matrix_coefficients(MemorySegment struct, int fieldValue) {
+        struct.set(matrix_coefficients$LAYOUT, matrix_coefficients$OFFSET, fieldValue);
     }
-    public static int matrix_coefficients$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$34.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt transfer_characteristics$LAYOUT = (OfInt)$LAYOUT.select(groupElement("transfer_characteristics"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_transfer_characteristics_e transfer_characteristics
+     * }
+     */
+    public static final OfInt transfer_characteristics$layout() {
+        return transfer_characteristics$LAYOUT;
     }
-    public static void matrix_coefficients$set(MemorySegment seg, long index, int x) {
-        constants$0.const$34.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long transfer_characteristics$OFFSET = $LAYOUT.byteOffset(groupElement("transfer_characteristics"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_transfer_characteristics_e transfer_characteristics
+     * }
+     */
+    public static final long transfer_characteristics$offset() {
+        return transfer_characteristics$OFFSET;
     }
-    public static VarHandle transfer_characteristics$VH() {
-        return constants$0.const$35;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_transfer_characteristics_e transfer_characteristics;
+     * {@snippet lang=c :
+     * zimg_transfer_characteristics_e transfer_characteristics
      * }
      */
-    public static int transfer_characteristics$get(MemorySegment seg) {
-        return (int)constants$0.const$35.get(seg);
+    public static int transfer_characteristics(MemorySegment struct) {
+        return struct.get(transfer_characteristics$LAYOUT, transfer_characteristics$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_transfer_characteristics_e transfer_characteristics;
+     * {@snippet lang=c :
+     * zimg_transfer_characteristics_e transfer_characteristics
      * }
      */
-    public static void transfer_characteristics$set(MemorySegment seg, int x) {
-        constants$0.const$35.set(seg, x);
+    public static void transfer_characteristics(MemorySegment struct, int fieldValue) {
+        struct.set(transfer_characteristics$LAYOUT, transfer_characteristics$OFFSET, fieldValue);
     }
-    public static int transfer_characteristics$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$35.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt color_primaries$LAYOUT = (OfInt)$LAYOUT.select(groupElement("color_primaries"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_color_primaries_e color_primaries
+     * }
+     */
+    public static final OfInt color_primaries$layout() {
+        return color_primaries$LAYOUT;
     }
-    public static void transfer_characteristics$set(MemorySegment seg, long index, int x) {
-        constants$0.const$35.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long color_primaries$OFFSET = $LAYOUT.byteOffset(groupElement("color_primaries"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_color_primaries_e color_primaries
+     * }
+     */
+    public static final long color_primaries$offset() {
+        return color_primaries$OFFSET;
     }
-    public static VarHandle color_primaries$VH() {
-        return constants$0.const$36;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_color_primaries_e color_primaries;
+     * {@snippet lang=c :
+     * zimg_color_primaries_e color_primaries
      * }
      */
-    public static int color_primaries$get(MemorySegment seg) {
-        return (int)constants$0.const$36.get(seg);
+    public static int color_primaries(MemorySegment struct) {
+        return struct.get(color_primaries$LAYOUT, color_primaries$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_color_primaries_e color_primaries;
+     * {@snippet lang=c :
+     * zimg_color_primaries_e color_primaries
      * }
      */
-    public static void color_primaries$set(MemorySegment seg, int x) {
-        constants$0.const$36.set(seg, x);
+    public static void color_primaries(MemorySegment struct, int fieldValue) {
+        struct.set(color_primaries$LAYOUT, color_primaries$OFFSET, fieldValue);
     }
-    public static int color_primaries$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$36.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt depth$LAYOUT = (OfInt)$LAYOUT.select(groupElement("depth"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int depth
+     * }
+     */
+    public static final OfInt depth$layout() {
+        return depth$LAYOUT;
     }
-    public static void color_primaries$set(MemorySegment seg, long index, int x) {
-        constants$0.const$36.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long depth$OFFSET = $LAYOUT.byteOffset(groupElement("depth"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int depth
+     * }
+     */
+    public static final long depth$offset() {
+        return depth$OFFSET;
     }
-    public static VarHandle depth$VH() {
-        return constants$0.const$37;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * unsigned int depth;
+     * {@snippet lang=c :
+     * unsigned int depth
      * }
      */
-    public static int depth$get(MemorySegment seg) {
-        return (int)constants$0.const$37.get(seg);
+    public static int depth(MemorySegment struct) {
+        return struct.get(depth$LAYOUT, depth$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * unsigned int depth;
+     * {@snippet lang=c :
+     * unsigned int depth
      * }
      */
-    public static void depth$set(MemorySegment seg, int x) {
-        constants$0.const$37.set(seg, x);
+    public static void depth(MemorySegment struct, int fieldValue) {
+        struct.set(depth$LAYOUT, depth$OFFSET, fieldValue);
     }
-    public static int depth$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$37.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt pixel_range$LAYOUT = (OfInt)$LAYOUT.select(groupElement("pixel_range"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_pixel_range_e pixel_range
+     * }
+     */
+    public static final OfInt pixel_range$layout() {
+        return pixel_range$LAYOUT;
     }
-    public static void depth$set(MemorySegment seg, long index, int x) {
-        constants$0.const$37.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long pixel_range$OFFSET = $LAYOUT.byteOffset(groupElement("pixel_range"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_pixel_range_e pixel_range
+     * }
+     */
+    public static final long pixel_range$offset() {
+        return pixel_range$OFFSET;
     }
-    public static VarHandle pixel_range$VH() {
-        return constants$0.const$38;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_pixel_range_e pixel_range;
+     * {@snippet lang=c :
+     * zimg_pixel_range_e pixel_range
      * }
      */
-    public static int pixel_range$get(MemorySegment seg) {
-        return (int)constants$0.const$38.get(seg);
+    public static int pixel_range(MemorySegment struct) {
+        return struct.get(pixel_range$LAYOUT, pixel_range$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_pixel_range_e pixel_range;
+     * {@snippet lang=c :
+     * zimg_pixel_range_e pixel_range
      * }
      */
-    public static void pixel_range$set(MemorySegment seg, int x) {
-        constants$0.const$38.set(seg, x);
+    public static void pixel_range(MemorySegment struct, int fieldValue) {
+        struct.set(pixel_range$LAYOUT, pixel_range$OFFSET, fieldValue);
     }
-    public static int pixel_range$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$38.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt field_parity$LAYOUT = (OfInt)$LAYOUT.select(groupElement("field_parity"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_field_parity_e field_parity
+     * }
+     */
+    public static final OfInt field_parity$layout() {
+        return field_parity$LAYOUT;
     }
-    public static void pixel_range$set(MemorySegment seg, long index, int x) {
-        constants$0.const$38.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long field_parity$OFFSET = $LAYOUT.byteOffset(groupElement("field_parity"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_field_parity_e field_parity
+     * }
+     */
+    public static final long field_parity$offset() {
+        return field_parity$OFFSET;
     }
-    public static VarHandle field_parity$VH() {
-        return constants$0.const$39;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_field_parity_e field_parity;
+     * {@snippet lang=c :
+     * zimg_field_parity_e field_parity
      * }
      */
-    public static int field_parity$get(MemorySegment seg) {
-        return (int)constants$0.const$39.get(seg);
+    public static int field_parity(MemorySegment struct) {
+        return struct.get(field_parity$LAYOUT, field_parity$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_field_parity_e field_parity;
+     * {@snippet lang=c :
+     * zimg_field_parity_e field_parity
      * }
      */
-    public static void field_parity$set(MemorySegment seg, int x) {
-        constants$0.const$39.set(seg, x);
+    public static void field_parity(MemorySegment struct, int fieldValue) {
+        struct.set(field_parity$LAYOUT, field_parity$OFFSET, fieldValue);
     }
-    public static int field_parity$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$39.get(seg.asSlice(index*sizeof()));
+
+    private static final OfInt chroma_location$LAYOUT = (OfInt)$LAYOUT.select(groupElement("chroma_location"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_chroma_location_e chroma_location
+     * }
+     */
+    public static final OfInt chroma_location$layout() {
+        return chroma_location$LAYOUT;
     }
-    public static void field_parity$set(MemorySegment seg, long index, int x) {
-        constants$0.const$39.set(seg.asSlice(index*sizeof()), x);
+
+    private static final long chroma_location$OFFSET = $LAYOUT.byteOffset(groupElement("chroma_location"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_chroma_location_e chroma_location
+     * }
+     */
+    public static final long chroma_location$offset() {
+        return chroma_location$OFFSET;
     }
-    public static VarHandle chroma_location$VH() {
-        return constants$0.const$40;
-    }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_chroma_location_e chroma_location;
+     * {@snippet lang=c :
+     * zimg_chroma_location_e chroma_location
      * }
      */
-    public static int chroma_location$get(MemorySegment seg) {
-        return (int)constants$0.const$40.get(seg);
+    public static int chroma_location(MemorySegment struct) {
+        return struct.get(chroma_location$LAYOUT, chroma_location$OFFSET);
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_chroma_location_e chroma_location;
+     * {@snippet lang=c :
+     * zimg_chroma_location_e chroma_location
      * }
      */
-    public static void chroma_location$set(MemorySegment seg, int x) {
-        constants$0.const$40.set(seg, x);
+    public static void chroma_location(MemorySegment struct, int fieldValue) {
+        struct.set(chroma_location$LAYOUT, chroma_location$OFFSET, fieldValue);
     }
-    public static int chroma_location$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$40.get(seg.asSlice(index*sizeof()));
-    }
-    public static void chroma_location$set(MemorySegment seg, long index, int x) {
-        constants$0.const$40.set(seg.asSlice(index*sizeof()), x);
-    }
+
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * struct {
      *     double left;
      *     double top;
      *     double width;
      *     double height;
-     * };
+     * }
      * }
      */
-    public static final class active_region {
+    public static class active_region {
 
-        // Suppresses default constructor, ensuring non-instantiability.
-        private active_region() {}
-        public static MemoryLayout $LAYOUT() {
-            return constants$0.const$41;
+        active_region() {
+            // Should not be called directly
         }
-        public static VarHandle left$VH() {
-            return constants$0.const$42;
+
+        private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+            zimg_h.C_DOUBLE.withName("left"),
+            zimg_h.C_DOUBLE.withName("top"),
+            zimg_h.C_DOUBLE.withName("width"),
+            zimg_h.C_DOUBLE.withName("height")
+        ).withName("$anon$581:2");
+
+        /**
+         * The layout of this struct
+         */
+        public static final GroupLayout layout() {
+            return $LAYOUT;
         }
+
+        private static final OfDouble left$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("left"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * double left
+         * }
+         */
+        public static final OfDouble left$layout() {
+            return left$LAYOUT;
+        }
+
+        private static final long left$OFFSET = $LAYOUT.byteOffset(groupElement("left"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * double left
+         * }
+         */
+        public static final long left$offset() {
+            return left$OFFSET;
+        }
+
         /**
          * Getter for field:
-         * {@snippet :
-         * double left;
+         * {@snippet lang=c :
+         * double left
          * }
          */
-        public static double left$get(MemorySegment seg) {
-            return (double)constants$0.const$42.get(seg);
+        public static double left(MemorySegment struct) {
+            return struct.get(left$LAYOUT, left$OFFSET);
         }
+
         /**
          * Setter for field:
-         * {@snippet :
-         * double left;
+         * {@snippet lang=c :
+         * double left
          * }
          */
-        public static void left$set(MemorySegment seg, double x) {
-            constants$0.const$42.set(seg, x);
+        public static void left(MemorySegment struct, double fieldValue) {
+            struct.set(left$LAYOUT, left$OFFSET, fieldValue);
         }
-        public static double left$get(MemorySegment seg, long index) {
-            return (double)constants$0.const$42.get(seg.asSlice(index*sizeof()));
+
+        private static final OfDouble top$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("top"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * double top
+         * }
+         */
+        public static final OfDouble top$layout() {
+            return top$LAYOUT;
         }
-        public static void left$set(MemorySegment seg, long index, double x) {
-            constants$0.const$42.set(seg.asSlice(index*sizeof()), x);
+
+        private static final long top$OFFSET = $LAYOUT.byteOffset(groupElement("top"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * double top
+         * }
+         */
+        public static final long top$offset() {
+            return top$OFFSET;
         }
-        public static VarHandle top$VH() {
-            return constants$0.const$43;
-        }
+
         /**
          * Getter for field:
-         * {@snippet :
-         * double top;
+         * {@snippet lang=c :
+         * double top
          * }
          */
-        public static double top$get(MemorySegment seg) {
-            return (double)constants$0.const$43.get(seg);
+        public static double top(MemorySegment struct) {
+            return struct.get(top$LAYOUT, top$OFFSET);
         }
+
         /**
          * Setter for field:
-         * {@snippet :
-         * double top;
+         * {@snippet lang=c :
+         * double top
          * }
          */
-        public static void top$set(MemorySegment seg, double x) {
-            constants$0.const$43.set(seg, x);
+        public static void top(MemorySegment struct, double fieldValue) {
+            struct.set(top$LAYOUT, top$OFFSET, fieldValue);
         }
-        public static double top$get(MemorySegment seg, long index) {
-            return (double)constants$0.const$43.get(seg.asSlice(index*sizeof()));
+
+        private static final OfDouble width$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("width"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * double width
+         * }
+         */
+        public static final OfDouble width$layout() {
+            return width$LAYOUT;
         }
-        public static void top$set(MemorySegment seg, long index, double x) {
-            constants$0.const$43.set(seg.asSlice(index*sizeof()), x);
+
+        private static final long width$OFFSET = $LAYOUT.byteOffset(groupElement("width"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * double width
+         * }
+         */
+        public static final long width$offset() {
+            return width$OFFSET;
         }
-        public static VarHandle width$VH() {
-            return constants$0.const$44;
-        }
+
         /**
          * Getter for field:
-         * {@snippet :
-         * double width;
+         * {@snippet lang=c :
+         * double width
          * }
          */
-        public static double width$get(MemorySegment seg) {
-            return (double)constants$0.const$44.get(seg);
+        public static double width(MemorySegment struct) {
+            return struct.get(width$LAYOUT, width$OFFSET);
         }
+
         /**
          * Setter for field:
-         * {@snippet :
-         * double width;
+         * {@snippet lang=c :
+         * double width
          * }
          */
-        public static void width$set(MemorySegment seg, double x) {
-            constants$0.const$44.set(seg, x);
+        public static void width(MemorySegment struct, double fieldValue) {
+            struct.set(width$LAYOUT, width$OFFSET, fieldValue);
         }
-        public static double width$get(MemorySegment seg, long index) {
-            return (double)constants$0.const$44.get(seg.asSlice(index*sizeof()));
+
+        private static final OfDouble height$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("height"));
+
+        /**
+         * Layout for field:
+         * {@snippet lang=c :
+         * double height
+         * }
+         */
+        public static final OfDouble height$layout() {
+            return height$LAYOUT;
         }
-        public static void width$set(MemorySegment seg, long index, double x) {
-            constants$0.const$44.set(seg.asSlice(index*sizeof()), x);
+
+        private static final long height$OFFSET = $LAYOUT.byteOffset(groupElement("height"));
+
+        /**
+         * Offset for field:
+         * {@snippet lang=c :
+         * double height
+         * }
+         */
+        public static final long height$offset() {
+            return height$OFFSET;
         }
-        public static VarHandle height$VH() {
-            return constants$0.const$45;
-        }
+
         /**
          * Getter for field:
-         * {@snippet :
-         * double height;
+         * {@snippet lang=c :
+         * double height
          * }
          */
-        public static double height$get(MemorySegment seg) {
-            return (double)constants$0.const$45.get(seg);
+        public static double height(MemorySegment struct) {
+            return struct.get(height$LAYOUT, height$OFFSET);
         }
+
         /**
          * Setter for field:
-         * {@snippet :
-         * double height;
+         * {@snippet lang=c :
+         * double height
          * }
          */
-        public static void height$set(MemorySegment seg, double x) {
-            constants$0.const$45.set(seg, x);
+        public static void height(MemorySegment struct, double fieldValue) {
+            struct.set(height$LAYOUT, height$OFFSET, fieldValue);
         }
-        public static double height$get(MemorySegment seg, long index) {
-            return (double)constants$0.const$45.get(seg.asSlice(index*sizeof()));
+
+        /**
+         * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+         * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+         */
+        public static MemorySegment asSlice(MemorySegment array, long index) {
+            return array.asSlice(layout().byteSize() * index);
         }
-        public static void height$set(MemorySegment seg, long index, double x) {
-            constants$0.const$45.set(seg.asSlice(index*sizeof()), x);
+
+        /**
+         * The size (in bytes) of this struct
+         */
+        public static long sizeof() { return layout().byteSize(); }
+
+        /**
+         * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+         */
+        public static MemorySegment allocate(SegmentAllocator allocator) {
+            return allocator.allocate(layout());
         }
-        public static long sizeof() { return $LAYOUT().byteSize(); }
-        public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-        public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-            return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
+
+        /**
+         * Allocate an array of size {@code elementCount} using {@code allocator}.
+         * The returned segment has size {@code elementCount * layout().byteSize()}.
+         */
+        public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+            return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
         }
-        public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
+
+        /**
+         * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+         * The returned segment has size {@code layout().byteSize()}
+         */
+        public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+            return reinterpret(addr, 1, arena, cleanup);
+        }
+
+        /**
+         * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+         * The returned segment has size {@code elementCount * layout().byteSize()}
+         */
+        public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+            return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+        }
     }
 
-    public static MemorySegment active_region$slice(MemorySegment seg) {
-        return seg.asSlice(56, 32);
+    private static final GroupLayout active_region$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("active_region"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * struct {
+     *     double left;
+     *     double top;
+     *     double width;
+     *     double height;
+     * } active_region
+     * }
+     */
+    public static final GroupLayout active_region$layout() {
+        return active_region$LAYOUT;
     }
-    public static VarHandle alpha$VH() {
-        return constants$0.const$46;
+
+    private static final long active_region$OFFSET = $LAYOUT.byteOffset(groupElement("active_region"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * struct {
+     *     double left;
+     *     double top;
+     *     double width;
+     *     double height;
+     * } active_region
+     * }
+     */
+    public static final long active_region$offset() {
+        return active_region$OFFSET;
     }
+
     /**
      * Getter for field:
-     * {@snippet :
-     * zimg_alpha_type_e alpha;
+     * {@snippet lang=c :
+     * struct {
+     *     double left;
+     *     double top;
+     *     double width;
+     *     double height;
+     * } active_region
      * }
      */
-    public static int alpha$get(MemorySegment seg) {
-        return (int)constants$0.const$46.get(seg);
+    public static MemorySegment active_region(MemorySegment struct) {
+        return struct.asSlice(active_region$OFFSET, active_region$LAYOUT.byteSize());
     }
+
     /**
      * Setter for field:
-     * {@snippet :
-     * zimg_alpha_type_e alpha;
+     * {@snippet lang=c :
+     * struct {
+     *     double left;
+     *     double top;
+     *     double width;
+     *     double height;
+     * } active_region
      * }
      */
-    public static void alpha$set(MemorySegment seg, int x) {
-        constants$0.const$46.set(seg, x);
+    public static void active_region(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, active_region$OFFSET, active_region$LAYOUT.byteSize());
     }
-    public static int alpha$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$46.get(seg.asSlice(index*sizeof()));
-    }
-    public static void alpha$set(MemorySegment seg, long index, int x) {
-        constants$0.const$46.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final OfInt alpha$LAYOUT = (OfInt)$LAYOUT.select(groupElement("alpha"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_alpha_type_e alpha
+     * }
+     */
+    public static final OfInt alpha$layout() {
+        return alpha$LAYOUT;
+    }
+
+    private static final long alpha$OFFSET = $LAYOUT.byteOffset(groupElement("alpha"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_alpha_type_e alpha
+     * }
+     */
+    public static final long alpha$offset() {
+        return alpha$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * zimg_alpha_type_e alpha
+     * }
+     */
+    public static int alpha(MemorySegment struct) {
+        return struct.get(alpha$LAYOUT, alpha$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * zimg_alpha_type_e alpha
+     * }
+     */
+    public static void alpha(MemorySegment struct, int fieldValue) {
+        struct.set(alpha$LAYOUT, alpha$OFFSET, fieldValue);
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

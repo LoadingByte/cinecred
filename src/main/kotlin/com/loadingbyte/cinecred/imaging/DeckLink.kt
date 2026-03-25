@@ -315,12 +315,12 @@ class DeckLink(
         private fun getDeviceId(attributesHandle: MemorySegment): String? = Arena.ofConfined().use { arena ->
             val cStr = arena.allocate(1024)
             if (IDeckLinkProfileAttributes_GetDeviceHandle(attributesHandle, cStr, cStr.byteSize()))
-                cStr.getUtf8String(0) else null
+                cStr.getString(0) else null
         }
 
         private fun getDeviceName(deviceHandle: MemorySegment): String = Arena.ofConfined().use { arena ->
             val cStr = arena.allocate(1024)
-            if (IDeckLink_GetDisplayName(deviceHandle, cStr, cStr.byteSize())) cStr.getUtf8String(0) else "???"
+            if (IDeckLink_GetDisplayName(deviceHandle, cStr, cStr.byteSize())) cStr.getString(0) else "???"
         }
 
         private fun getDeviceModes(outputHandle: MemorySegment): List<Mode> {
@@ -365,7 +365,7 @@ class DeckLink(
 
         private fun getModeName(modeHandle: MemorySegment): String? = Arena.ofConfined().use { arena ->
             val cStr = arena.allocate(1024)
-            if (IDeckLinkDisplayMode_GetName(modeHandle, cStr, cStr.byteSize())) cStr.getUtf8String(0) else null
+            if (IDeckLinkDisplayMode_GetName(modeHandle, cStr, cStr.byteSize())) cStr.getString(0) else null
         }
 
     }

@@ -2,84 +2,172 @@
 
 package com.loadingbyte.cinecred.natives.nfd;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct {
- *     const nfdu8char_t* name;
- *     const nfdu8char_t* spec;
- * };
+ *     const nfdu8char_t *name;
+ *     const nfdu8char_t *spec;
+ * }
  * }
  */
 public class nfdu8filteritem_t {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$4;
+    nfdu8filteritem_t() {
+        // Should not be called directly
     }
-    public static VarHandle name$VH() {
-        return constants$0.const$5;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const nfdu8char_t* name;
-     * }
-     */
-    public static MemorySegment name$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$5.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const nfdu8char_t* name;
-     * }
-     */
-    public static void name$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$5.set(seg, x);
-    }
-    public static MemorySegment name$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$5.get(seg.asSlice(index*sizeof()));
-    }
-    public static void name$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$5.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle spec$VH() {
-        return constants$0.const$6;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const nfdu8char_t* spec;
-     * }
-     */
-    public static MemorySegment spec$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$6.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const nfdu8char_t* spec;
-     * }
-     */
-    public static void spec$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$6.set(seg, x);
-    }
-    public static MemorySegment spec$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$6.get(seg.asSlice(index*sizeof()));
-    }
-    public static void spec$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$6.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        nfd_h.C_POINTER.withName("name"),
+        nfd_h.C_POINTER.withName("spec")
+    ).withName("$anon$80:9");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final AddressLayout name$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("name"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *name
+     * }
+     */
+    public static final AddressLayout name$layout() {
+        return name$LAYOUT;
+    }
+
+    private static final long name$OFFSET = $LAYOUT.byteOffset(groupElement("name"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *name
+     * }
+     */
+    public static final long name$offset() {
+        return name$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *name
+     * }
+     */
+    public static MemorySegment name(MemorySegment struct) {
+        return struct.get(name$LAYOUT, name$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *name
+     * }
+     */
+    public static void name(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(name$LAYOUT, name$OFFSET, fieldValue);
+    }
+
+    private static final AddressLayout spec$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("spec"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *spec
+     * }
+     */
+    public static final AddressLayout spec$layout() {
+        return spec$LAYOUT;
+    }
+
+    private static final long spec$OFFSET = $LAYOUT.byteOffset(groupElement("spec"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *spec
+     * }
+     */
+    public static final long spec$offset() {
+        return spec$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *spec
+     * }
+     */
+    public static MemorySegment spec(MemorySegment struct) {
+        return struct.get(spec$LAYOUT, spec$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const nfdu8char_t *spec
+     * }
+     */
+    public static void spec(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(spec$LAYOUT, spec$OFFSET, fieldValue);
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

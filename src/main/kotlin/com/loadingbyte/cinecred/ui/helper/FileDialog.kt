@@ -46,13 +46,13 @@ fun showFileDialog(
             if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
                 val filterHandle = nfdu8filteritem_t.allocate(arena)
-                nfdu8filteritem_t.`name$set`(filterHandle, arena.allocateUtf8String(filterName))
-                nfdu8filteritem_t.`spec$set`(filterHandle, arena.allocateUtf8String(filterExts.joinToString(",")))
-                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateUtf8String) ?: NULL
+                nfdu8filteritem_t.name(filterHandle, arena.allocateFrom(filterName))
+                nfdu8filteritem_t.spec(filterHandle, arena.allocateFrom(filterExts.joinToString(",")))
+                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
                 val result = if (open)
                     NFD_OpenDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle)
                 else {
-                    val defaultNameHandle = filename?.let(arena::allocateUtf8String) ?: NULL
+                    val defaultNameHandle = filename?.let(arena::allocateFrom) ?: NULL
                     NFD_SaveDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle, defaultNameHandle)
                 }
                 when (result) {
@@ -93,7 +93,7 @@ fun showFolderDialog(
         try {
             if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
                 val outPathPtr = arena.allocate(ADDRESS)
-                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateUtf8String) ?: NULL
+                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
                 when (NFD_PickFolderU8(outPathPtr, defaultPathHandle)) {
                     NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
                     NFD_CANCEL() -> ref.set(SENTINEL)
@@ -126,14 +126,14 @@ private fun findFirstExistingAncestorFolder(folder: Path?): Path? =
 
 private fun logCurrentError() {
     val msgHandle = NFD_GetError()
-    LOGGER.error(if (msgHandle == NULL) "Unknown native file dialog error occurred." else msgHandle.getUtf8String(0L))
+    LOGGER.error(if (msgHandle == NULL) "Unknown native file dialog error occurred." else msgHandle.getString(0L))
     NFD_ClearError()
 }
 
 
 private fun consumeOutPath(outPathPtr: MemorySegment): Path? {
     val outPathHandle = outPathPtr.get(ADDRESS, 0L).reinterpret(Long.MAX_VALUE)
-    val outPath = outPathHandle.getUtf8String(0L)
+    val outPath = outPathHandle.getString(0L)
     NFD_FreePathU8(outPathHandle)
     return outPath.toPathSafely()
 }

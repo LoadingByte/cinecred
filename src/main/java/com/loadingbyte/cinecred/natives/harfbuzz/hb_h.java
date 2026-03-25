@@ -2,749 +2,1655 @@
 
 package com.loadingbyte.cinecred.natives.harfbuzz;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
-import static java.lang.foreign.ValueLayout.*;
-public class hb_h  {
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
 
-    public static final OfByte C_CHAR = JAVA_BYTE;
-    public static final OfShort C_SHORT = JAVA_SHORT;
-    public static final OfInt C_INT = JAVA_INT;
-    public static final OfLong C_LONG = JAVA_LONG;
-    public static final OfLong C_LONG_LONG = JAVA_LONG;
-    public static final OfFloat C_FLOAT = JAVA_FLOAT;
-    public static final OfDouble C_DOUBLE = JAVA_DOUBLE;
-    public static final AddressLayout C_POINTER = RuntimeHelper.POINTER;
+import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
+public class hb_h extends hb_h$shared {
+
+    hb_h() {
+        // Should not be called directly
+    }
+
+    static final Arena LIBRARY_ARENA = Arena.ofAuto();
+
+    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup()
+            .or(Linker.nativeLinker().defaultLookup());
+
+    private static final int HB_FEATURE_GLOBAL_START = (int)0L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define HB_FEATURE_GLOBAL_START 0
      * }
      */
     public static int HB_FEATURE_GLOBAL_START() {
-        return (int)0L;
+        return HB_FEATURE_GLOBAL_START;
     }
+    private static final int HB_DIRECTION_LTR = (int)4L;
     /**
-     * {@snippet :
-     * enum .HB_DIRECTION_LTR = 4;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_DIRECTION_LTR = 4
      * }
      */
     public static int HB_DIRECTION_LTR() {
-        return (int)4L;
+        return HB_DIRECTION_LTR;
     }
+    private static final int HB_DIRECTION_RTL = (int)5L;
     /**
-     * {@snippet :
-     * enum .HB_DIRECTION_RTL = 5;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_DIRECTION_RTL = 5
      * }
      */
     public static int HB_DIRECTION_RTL() {
-        return (int)5L;
+        return HB_DIRECTION_RTL;
     }
-    public static MethodHandle hb_language_from_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$1,"hb_language_from_string");
+
+    private static class hb_language_from_string {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_language_from_string");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_language_t hb_language_from_string(char* str, int len);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_language_t hb_language_from_string(const char *str, int len)
+     * }
+     */
+    public static FunctionDescriptor hb_language_from_string$descriptor() {
+        return hb_language_from_string.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_language_t hb_language_from_string(const char *str, int len)
+     * }
+     */
+    public static MethodHandle hb_language_from_string$handle() {
+        return hb_language_from_string.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_language_t hb_language_from_string(const char *str, int len)
+     * }
+     */
+    public static MemorySegment hb_language_from_string$address() {
+        return hb_language_from_string.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_language_t hb_language_from_string(const char *str, int len)
      * }
      */
     public static MemorySegment hb_language_from_string(MemorySegment str, int len) {
-        var mh$ = hb_language_from_string$MH();
+        var mh$ = hb_language_from_string.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(str, len);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_language_from_string", str, len);
+            }
+            return (MemorySegment)mh$.invokeExact(str, len);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
+    private static final int HB_SCRIPT_COMMON = (int)1517910393L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_COMMON = 1517910393;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_COMMON = 1517910393
      * }
      */
     public static int HB_SCRIPT_COMMON() {
-        return (int)1517910393L;
+        return HB_SCRIPT_COMMON;
     }
+    private static final int HB_SCRIPT_INHERITED = (int)1516858984L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_INHERITED = 1516858984;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_INHERITED = 1516858984
      * }
      */
     public static int HB_SCRIPT_INHERITED() {
-        return (int)1516858984L;
+        return HB_SCRIPT_INHERITED;
     }
+    private static final int HB_SCRIPT_ARABIC = (int)1098015074L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_ARABIC = 1098015074;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_ARABIC = 1098015074
      * }
      */
     public static int HB_SCRIPT_ARABIC() {
-        return (int)1098015074L;
+        return HB_SCRIPT_ARABIC;
     }
+    private static final int HB_SCRIPT_ARMENIAN = (int)1098018158L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_ARMENIAN = 1098018158;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_ARMENIAN = 1098018158
      * }
      */
     public static int HB_SCRIPT_ARMENIAN() {
-        return (int)1098018158L;
+        return HB_SCRIPT_ARMENIAN;
     }
+    private static final int HB_SCRIPT_BENGALI = (int)1113943655L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_BENGALI = 1113943655;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_BENGALI = 1113943655
      * }
      */
     public static int HB_SCRIPT_BENGALI() {
-        return (int)1113943655L;
+        return HB_SCRIPT_BENGALI;
     }
+    private static final int HB_SCRIPT_CYRILLIC = (int)1132032620L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_CYRILLIC = 1132032620;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_CYRILLIC = 1132032620
      * }
      */
     public static int HB_SCRIPT_CYRILLIC() {
-        return (int)1132032620L;
+        return HB_SCRIPT_CYRILLIC;
     }
+    private static final int HB_SCRIPT_DEVANAGARI = (int)1147500129L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_DEVANAGARI = 1147500129;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_DEVANAGARI = 1147500129
      * }
      */
     public static int HB_SCRIPT_DEVANAGARI() {
-        return (int)1147500129L;
+        return HB_SCRIPT_DEVANAGARI;
     }
+    private static final int HB_SCRIPT_GEORGIAN = (int)1197830002L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_GEORGIAN = 1197830002;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_GEORGIAN = 1197830002
      * }
      */
     public static int HB_SCRIPT_GEORGIAN() {
-        return (int)1197830002L;
+        return HB_SCRIPT_GEORGIAN;
     }
+    private static final int HB_SCRIPT_GREEK = (int)1198679403L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_GREEK = 1198679403;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_GREEK = 1198679403
      * }
      */
     public static int HB_SCRIPT_GREEK() {
-        return (int)1198679403L;
+        return HB_SCRIPT_GREEK;
     }
+    private static final int HB_SCRIPT_GUJARATI = (int)1198877298L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_GUJARATI = 1198877298;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_GUJARATI = 1198877298
      * }
      */
     public static int HB_SCRIPT_GUJARATI() {
-        return (int)1198877298L;
+        return HB_SCRIPT_GUJARATI;
     }
+    private static final int HB_SCRIPT_GURMUKHI = (int)1198879349L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_GURMUKHI = 1198879349;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_GURMUKHI = 1198879349
      * }
      */
     public static int HB_SCRIPT_GURMUKHI() {
-        return (int)1198879349L;
+        return HB_SCRIPT_GURMUKHI;
     }
+    private static final int HB_SCRIPT_HANGUL = (int)1214344807L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_HANGUL = 1214344807;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_HANGUL = 1214344807
      * }
      */
     public static int HB_SCRIPT_HANGUL() {
-        return (int)1214344807L;
+        return HB_SCRIPT_HANGUL;
     }
+    private static final int HB_SCRIPT_HAN = (int)1214344809L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_HAN = 1214344809;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_HAN = 1214344809
      * }
      */
     public static int HB_SCRIPT_HAN() {
-        return (int)1214344809L;
+        return HB_SCRIPT_HAN;
     }
+    private static final int HB_SCRIPT_HEBREW = (int)1214603890L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_HEBREW = 1214603890;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_HEBREW = 1214603890
      * }
      */
     public static int HB_SCRIPT_HEBREW() {
-        return (int)1214603890L;
+        return HB_SCRIPT_HEBREW;
     }
+    private static final int HB_SCRIPT_HIRAGANA = (int)1214870113L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_HIRAGANA = 1214870113;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_HIRAGANA = 1214870113
      * }
      */
     public static int HB_SCRIPT_HIRAGANA() {
-        return (int)1214870113L;
+        return HB_SCRIPT_HIRAGANA;
     }
+    private static final int HB_SCRIPT_KANNADA = (int)1265525857L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_KANNADA = 1265525857;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_KANNADA = 1265525857
      * }
      */
     public static int HB_SCRIPT_KANNADA() {
-        return (int)1265525857L;
+        return HB_SCRIPT_KANNADA;
     }
+    private static final int HB_SCRIPT_KATAKANA = (int)1264676449L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_KATAKANA = 1264676449;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_KATAKANA = 1264676449
      * }
      */
     public static int HB_SCRIPT_KATAKANA() {
-        return (int)1264676449L;
+        return HB_SCRIPT_KATAKANA;
     }
+    private static final int HB_SCRIPT_LAO = (int)1281453935L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_LAO = 1281453935;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_LAO = 1281453935
      * }
      */
     public static int HB_SCRIPT_LAO() {
-        return (int)1281453935L;
+        return HB_SCRIPT_LAO;
     }
+    private static final int HB_SCRIPT_LATIN = (int)1281455214L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_LATIN = 1281455214;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_LATIN = 1281455214
      * }
      */
     public static int HB_SCRIPT_LATIN() {
-        return (int)1281455214L;
+        return HB_SCRIPT_LATIN;
     }
+    private static final int HB_SCRIPT_MALAYALAM = (int)1298954605L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_MALAYALAM = 1298954605;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_MALAYALAM = 1298954605
      * }
      */
     public static int HB_SCRIPT_MALAYALAM() {
-        return (int)1298954605L;
+        return HB_SCRIPT_MALAYALAM;
     }
+    private static final int HB_SCRIPT_ORIYA = (int)1332902241L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_ORIYA = 1332902241;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_ORIYA = 1332902241
      * }
      */
     public static int HB_SCRIPT_ORIYA() {
-        return (int)1332902241L;
+        return HB_SCRIPT_ORIYA;
     }
+    private static final int HB_SCRIPT_TAMIL = (int)1415671148L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_TAMIL = 1415671148;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_TAMIL = 1415671148
      * }
      */
     public static int HB_SCRIPT_TAMIL() {
-        return (int)1415671148L;
+        return HB_SCRIPT_TAMIL;
     }
+    private static final int HB_SCRIPT_TELUGU = (int)1415933045L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_TELUGU = 1415933045;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_TELUGU = 1415933045
      * }
      */
     public static int HB_SCRIPT_TELUGU() {
-        return (int)1415933045L;
+        return HB_SCRIPT_TELUGU;
     }
+    private static final int HB_SCRIPT_THAI = (int)1416126825L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_THAI = 1416126825;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_THAI = 1416126825
      * }
      */
     public static int HB_SCRIPT_THAI() {
-        return (int)1416126825L;
+        return HB_SCRIPT_THAI;
     }
+    private static final int HB_SCRIPT_TIBETAN = (int)1416192628L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_TIBETAN = 1416192628;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_TIBETAN = 1416192628
      * }
      */
     public static int HB_SCRIPT_TIBETAN() {
-        return (int)1416192628L;
+        return HB_SCRIPT_TIBETAN;
     }
+    private static final int HB_SCRIPT_BOPOMOFO = (int)1114599535L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_BOPOMOFO = 1114599535;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_BOPOMOFO = 1114599535
      * }
      */
     public static int HB_SCRIPT_BOPOMOFO() {
-        return (int)1114599535L;
+        return HB_SCRIPT_BOPOMOFO;
     }
+    private static final int HB_SCRIPT_CANADIAN_SYLLABICS = (int)1130458739L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_CANADIAN_SYLLABICS = 1130458739;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_CANADIAN_SYLLABICS = 1130458739
      * }
      */
     public static int HB_SCRIPT_CANADIAN_SYLLABICS() {
-        return (int)1130458739L;
+        return HB_SCRIPT_CANADIAN_SYLLABICS;
     }
+    private static final int HB_SCRIPT_CHEROKEE = (int)1130915186L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_CHEROKEE = 1130915186;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_CHEROKEE = 1130915186
      * }
      */
     public static int HB_SCRIPT_CHEROKEE() {
-        return (int)1130915186L;
+        return HB_SCRIPT_CHEROKEE;
     }
+    private static final int HB_SCRIPT_ETHIOPIC = (int)1165256809L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_ETHIOPIC = 1165256809;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_ETHIOPIC = 1165256809
      * }
      */
     public static int HB_SCRIPT_ETHIOPIC() {
-        return (int)1165256809L;
+        return HB_SCRIPT_ETHIOPIC;
     }
+    private static final int HB_SCRIPT_KHMER = (int)1265134962L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_KHMER = 1265134962;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_KHMER = 1265134962
      * }
      */
     public static int HB_SCRIPT_KHMER() {
-        return (int)1265134962L;
+        return HB_SCRIPT_KHMER;
     }
+    private static final int HB_SCRIPT_MONGOLIAN = (int)1299148391L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_MONGOLIAN = 1299148391;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_MONGOLIAN = 1299148391
      * }
      */
     public static int HB_SCRIPT_MONGOLIAN() {
-        return (int)1299148391L;
+        return HB_SCRIPT_MONGOLIAN;
     }
+    private static final int HB_SCRIPT_MYANMAR = (int)1299803506L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_MYANMAR = 1299803506;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_MYANMAR = 1299803506
      * }
      */
     public static int HB_SCRIPT_MYANMAR() {
-        return (int)1299803506L;
+        return HB_SCRIPT_MYANMAR;
     }
+    private static final int HB_SCRIPT_OGHAM = (int)1332175213L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_OGHAM = 1332175213;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_OGHAM = 1332175213
      * }
      */
     public static int HB_SCRIPT_OGHAM() {
-        return (int)1332175213L;
+        return HB_SCRIPT_OGHAM;
     }
+    private static final int HB_SCRIPT_RUNIC = (int)1383427698L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_RUNIC = 1383427698;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_RUNIC = 1383427698
      * }
      */
     public static int HB_SCRIPT_RUNIC() {
-        return (int)1383427698L;
+        return HB_SCRIPT_RUNIC;
     }
+    private static final int HB_SCRIPT_SINHALA = (int)1399418472L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_SINHALA = 1399418472;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_SINHALA = 1399418472
      * }
      */
     public static int HB_SCRIPT_SINHALA() {
-        return (int)1399418472L;
+        return HB_SCRIPT_SINHALA;
     }
+    private static final int HB_SCRIPT_SYRIAC = (int)1400468067L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_SYRIAC = 1400468067;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_SYRIAC = 1400468067
      * }
      */
     public static int HB_SCRIPT_SYRIAC() {
-        return (int)1400468067L;
+        return HB_SCRIPT_SYRIAC;
     }
+    private static final int HB_SCRIPT_THAANA = (int)1416126817L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_THAANA = 1416126817;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_THAANA = 1416126817
      * }
      */
     public static int HB_SCRIPT_THAANA() {
-        return (int)1416126817L;
+        return HB_SCRIPT_THAANA;
     }
+    private static final int HB_SCRIPT_YI = (int)1500080489L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_YI = 1500080489;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_YI = 1500080489
      * }
      */
     public static int HB_SCRIPT_YI() {
-        return (int)1500080489L;
+        return HB_SCRIPT_YI;
     }
+    private static final int HB_SCRIPT_DESERET = (int)1148416628L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_DESERET = 1148416628;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_DESERET = 1148416628
      * }
      */
     public static int HB_SCRIPT_DESERET() {
-        return (int)1148416628L;
+        return HB_SCRIPT_DESERET;
     }
+    private static final int HB_SCRIPT_GOTHIC = (int)1198486632L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_GOTHIC = 1198486632;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_GOTHIC = 1198486632
      * }
      */
     public static int HB_SCRIPT_GOTHIC() {
-        return (int)1198486632L;
+        return HB_SCRIPT_GOTHIC;
     }
+    private static final int HB_SCRIPT_OLD_ITALIC = (int)1232363884L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_OLD_ITALIC = 1232363884;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_OLD_ITALIC = 1232363884
      * }
      */
     public static int HB_SCRIPT_OLD_ITALIC() {
-        return (int)1232363884L;
+        return HB_SCRIPT_OLD_ITALIC;
     }
+    private static final int HB_SCRIPT_BUHID = (int)1114990692L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_BUHID = 1114990692;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_BUHID = 1114990692
      * }
      */
     public static int HB_SCRIPT_BUHID() {
-        return (int)1114990692L;
+        return HB_SCRIPT_BUHID;
     }
+    private static final int HB_SCRIPT_HANUNOO = (int)1214344815L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_HANUNOO = 1214344815;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_HANUNOO = 1214344815
      * }
      */
     public static int HB_SCRIPT_HANUNOO() {
-        return (int)1214344815L;
+        return HB_SCRIPT_HANUNOO;
     }
+    private static final int HB_SCRIPT_TAGALOG = (int)1416064103L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_TAGALOG = 1416064103;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_TAGALOG = 1416064103
      * }
      */
     public static int HB_SCRIPT_TAGALOG() {
-        return (int)1416064103L;
+        return HB_SCRIPT_TAGALOG;
     }
+    private static final int HB_SCRIPT_TAGBANWA = (int)1415669602L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_TAGBANWA = 1415669602;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_TAGBANWA = 1415669602
      * }
      */
     public static int HB_SCRIPT_TAGBANWA() {
-        return (int)1415669602L;
+        return HB_SCRIPT_TAGBANWA;
     }
+    private static final int HB_SCRIPT_COPTIC = (int)1131376756L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_COPTIC = 1131376756;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_COPTIC = 1131376756
      * }
      */
     public static int HB_SCRIPT_COPTIC() {
-        return (int)1131376756L;
+        return HB_SCRIPT_COPTIC;
     }
+    private static final int HB_SCRIPT_INVALID = (int)0L;
     /**
-     * {@snippet :
-     * enum .HB_SCRIPT_INVALID = 0;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_SCRIPT_INVALID = 0
      * }
      */
     public static int HB_SCRIPT_INVALID() {
-        return (int)0L;
+        return HB_SCRIPT_INVALID;
     }
-    public static MethodHandle hb_feature_from_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$11,"hb_feature_from_string");
+
+    private static class hb_feature_from_string {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_INT,
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_feature_from_string");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_bool_t hb_feature_from_string(char* str, int len, hb_feature_t* feature);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_feature_from_string(const char *str, int len, hb_feature_t *feature)
+     * }
+     */
+    public static FunctionDescriptor hb_feature_from_string$descriptor() {
+        return hb_feature_from_string.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_feature_from_string(const char *str, int len, hb_feature_t *feature)
+     * }
+     */
+    public static MethodHandle hb_feature_from_string$handle() {
+        return hb_feature_from_string.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_feature_from_string(const char *str, int len, hb_feature_t *feature)
+     * }
+     */
+    public static MemorySegment hb_feature_from_string$address() {
+        return hb_feature_from_string.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_feature_from_string(const char *str, int len, hb_feature_t *feature)
      * }
      */
     public static int hb_feature_from_string(MemorySegment str, int len, MemorySegment feature) {
-        var mh$ = hb_feature_from_string$MH();
+        var mh$ = hb_feature_from_string.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_feature_from_string", str, len, feature);
+            }
             return (int)mh$.invokeExact(str, len, feature);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
+    private static final int HB_MEMORY_MODE_WRITABLE = (int)2L;
     /**
-     * {@snippet :
-     * enum .HB_MEMORY_MODE_WRITABLE = 2;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_MEMORY_MODE_WRITABLE = 2
      * }
      */
     public static int HB_MEMORY_MODE_WRITABLE() {
-        return (int)2L;
+        return HB_MEMORY_MODE_WRITABLE;
     }
-    public static MethodHandle hb_blob_create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$13,"hb_blob_create");
+
+    private static class hb_blob_create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_INT,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_blob_create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_blob_t* hb_blob_create(char* data, unsigned int length, hb_memory_mode_t mode, void* user_data, hb_destroy_func_t destroy);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_blob_t *hb_blob_create(const char *data, unsigned int length, hb_memory_mode_t mode, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static FunctionDescriptor hb_blob_create$descriptor() {
+        return hb_blob_create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_blob_t *hb_blob_create(const char *data, unsigned int length, hb_memory_mode_t mode, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static MethodHandle hb_blob_create$handle() {
+        return hb_blob_create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_blob_t *hb_blob_create(const char *data, unsigned int length, hb_memory_mode_t mode, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static MemorySegment hb_blob_create$address() {
+        return hb_blob_create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_blob_t *hb_blob_create(const char *data, unsigned int length, hb_memory_mode_t mode, void *user_data, hb_destroy_func_t destroy)
      * }
      */
     public static MemorySegment hb_blob_create(MemorySegment data, int length, int mode, MemorySegment user_data, MemorySegment destroy) {
-        var mh$ = hb_blob_create$MH();
+        var mh$ = hb_blob_create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(data, length, mode, user_data, destroy);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_blob_create", data, length, mode, user_data, destroy);
+            }
+            return (MemorySegment)mh$.invokeExact(data, length, mode, user_data, destroy);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_face_create_for_tables$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$18,"hb_face_create_for_tables");
+
+    private static class hb_face_create_for_tables {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_face_create_for_tables");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_face_t* hb_face_create_for_tables(hb_reference_table_func_t reference_table_func, void* user_data, hb_destroy_func_t destroy);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_face_t *hb_face_create_for_tables(hb_reference_table_func_t reference_table_func, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static FunctionDescriptor hb_face_create_for_tables$descriptor() {
+        return hb_face_create_for_tables.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_face_t *hb_face_create_for_tables(hb_reference_table_func_t reference_table_func, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static MethodHandle hb_face_create_for_tables$handle() {
+        return hb_face_create_for_tables.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_face_t *hb_face_create_for_tables(hb_reference_table_func_t reference_table_func, void *user_data, hb_destroy_func_t destroy)
+     * }
+     */
+    public static MemorySegment hb_face_create_for_tables$address() {
+        return hb_face_create_for_tables.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_face_t *hb_face_create_for_tables(hb_reference_table_func_t reference_table_func, void *user_data, hb_destroy_func_t destroy)
      * }
      */
     public static MemorySegment hb_face_create_for_tables(MemorySegment reference_table_func, MemorySegment user_data, MemorySegment destroy) {
-        var mh$ = hb_face_create_for_tables$MH();
+        var mh$ = hb_face_create_for_tables.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(reference_table_func, user_data, destroy);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_face_create_for_tables", reference_table_func, user_data, destroy);
+            }
+            return (MemorySegment)mh$.invokeExact(reference_table_func, user_data, destroy);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_face_destroy$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$19,"hb_face_destroy");
+
+    private static class hb_face_destroy {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_face_destroy");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_face_destroy(hb_face_t* face);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_face_destroy(hb_face_t *face)
+     * }
+     */
+    public static FunctionDescriptor hb_face_destroy$descriptor() {
+        return hb_face_destroy.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_face_destroy(hb_face_t *face)
+     * }
+     */
+    public static MethodHandle hb_face_destroy$handle() {
+        return hb_face_destroy.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_face_destroy(hb_face_t *face)
+     * }
+     */
+    public static MemorySegment hb_face_destroy$address() {
+        return hb_face_destroy.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_face_destroy(hb_face_t *face)
      * }
      */
     public static void hb_face_destroy(MemorySegment face) {
-        var mh$ = hb_face_destroy$MH();
+        var mh$ = hb_face_destroy.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_face_destroy", face);
+            }
             mh$.invokeExact(face);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_font_create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$21,"hb_font_create");
+
+    private static class hb_font_create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_font_create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_font_t* hb_font_create(hb_face_t* face);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_font_t *hb_font_create(hb_face_t *face)
+     * }
+     */
+    public static FunctionDescriptor hb_font_create$descriptor() {
+        return hb_font_create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_font_t *hb_font_create(hb_face_t *face)
+     * }
+     */
+    public static MethodHandle hb_font_create$handle() {
+        return hb_font_create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_font_t *hb_font_create(hb_face_t *face)
+     * }
+     */
+    public static MemorySegment hb_font_create$address() {
+        return hb_font_create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_font_t *hb_font_create(hb_face_t *face)
      * }
      */
     public static MemorySegment hb_font_create(MemorySegment face) {
-        var mh$ = hb_font_create$MH();
+        var mh$ = hb_font_create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(face);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_font_create", face);
+            }
+            return (MemorySegment)mh$.invokeExact(face);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_font_destroy$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$22,"hb_font_destroy");
+
+    private static class hb_font_destroy {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_font_destroy");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_font_destroy(hb_font_t* font);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_font_destroy(hb_font_t *font)
+     * }
+     */
+    public static FunctionDescriptor hb_font_destroy$descriptor() {
+        return hb_font_destroy.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_font_destroy(hb_font_t *font)
+     * }
+     */
+    public static MethodHandle hb_font_destroy$handle() {
+        return hb_font_destroy.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_font_destroy(hb_font_t *font)
+     * }
+     */
+    public static MemorySegment hb_font_destroy$address() {
+        return hb_font_destroy.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_font_destroy(hb_font_t *font)
      * }
      */
     public static void hb_font_destroy(MemorySegment font) {
-        var mh$ = hb_font_destroy$MH();
+        var mh$ = hb_font_destroy.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_font_destroy", font);
+            }
             mh$.invokeExact(font);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_font_set_scale$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$24,"hb_font_set_scale");
+
+    private static class hb_font_set_scale {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_font_set_scale");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_font_set_scale(hb_font_t* font, int x_scale, int y_scale);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_scale(hb_font_t *font, int x_scale, int y_scale)
+     * }
+     */
+    public static FunctionDescriptor hb_font_set_scale$descriptor() {
+        return hb_font_set_scale.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_scale(hb_font_t *font, int x_scale, int y_scale)
+     * }
+     */
+    public static MethodHandle hb_font_set_scale$handle() {
+        return hb_font_set_scale.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_scale(hb_font_t *font, int x_scale, int y_scale)
+     * }
+     */
+    public static MemorySegment hb_font_set_scale$address() {
+        return hb_font_set_scale.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_font_set_scale(hb_font_t *font, int x_scale, int y_scale)
      * }
      */
     public static void hb_font_set_scale(MemorySegment font, int x_scale, int y_scale) {
-        var mh$ = hb_font_set_scale$MH();
+        var mh$ = hb_font_set_scale.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_font_set_scale", font, x_scale, y_scale);
+            }
             mh$.invokeExact(font, x_scale, y_scale);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$35,"hb_buffer_create");
+
+    private static class hb_buffer_create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_buffer_t* hb_buffer_create();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_buffer_t *hb_buffer_create()
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_create$descriptor() {
+        return hb_buffer_create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_buffer_t *hb_buffer_create()
+     * }
+     */
+    public static MethodHandle hb_buffer_create$handle() {
+        return hb_buffer_create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_buffer_t *hb_buffer_create()
+     * }
+     */
+    public static MemorySegment hb_buffer_create$address() {
+        return hb_buffer_create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_buffer_t *hb_buffer_create()
      * }
      */
     public static MemorySegment hb_buffer_create() {
-        var mh$ = hb_buffer_create$MH();
+        var mh$ = hb_buffer_create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_create");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_destroy$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$36,"hb_buffer_destroy");
+
+    private static class hb_buffer_destroy {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_destroy");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_destroy(hb_buffer_t* buffer);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_destroy(hb_buffer_t *buffer)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_destroy$descriptor() {
+        return hb_buffer_destroy.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_destroy(hb_buffer_t *buffer)
+     * }
+     */
+    public static MethodHandle hb_buffer_destroy$handle() {
+        return hb_buffer_destroy.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_destroy(hb_buffer_t *buffer)
+     * }
+     */
+    public static MemorySegment hb_buffer_destroy$address() {
+        return hb_buffer_destroy.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_destroy(hb_buffer_t *buffer)
      * }
      */
     public static void hb_buffer_destroy(MemorySegment buffer) {
-        var mh$ = hb_buffer_destroy$MH();
+        var mh$ = hb_buffer_destroy.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_destroy", buffer);
+            }
             mh$.invokeExact(buffer);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_set_direction$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$38,"hb_buffer_set_direction");
+
+    private static class hb_buffer_set_direction {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_set_direction");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_set_direction(hb_buffer_t* buffer, hb_direction_t direction);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_direction(hb_buffer_t *buffer, hb_direction_t direction)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_set_direction$descriptor() {
+        return hb_buffer_set_direction.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_direction(hb_buffer_t *buffer, hb_direction_t direction)
+     * }
+     */
+    public static MethodHandle hb_buffer_set_direction$handle() {
+        return hb_buffer_set_direction.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_direction(hb_buffer_t *buffer, hb_direction_t direction)
+     * }
+     */
+    public static MemorySegment hb_buffer_set_direction$address() {
+        return hb_buffer_set_direction.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_direction(hb_buffer_t *buffer, hb_direction_t direction)
      * }
      */
     public static void hb_buffer_set_direction(MemorySegment buffer, int direction) {
-        var mh$ = hb_buffer_set_direction$MH();
+        var mh$ = hb_buffer_set_direction.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_set_direction", buffer, direction);
+            }
             mh$.invokeExact(buffer, direction);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_set_script$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$39,"hb_buffer_set_script");
+
+    private static class hb_buffer_set_script {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_set_script");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_set_script(hb_buffer_t* buffer, hb_script_t script);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_script(hb_buffer_t *buffer, hb_script_t script)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_set_script$descriptor() {
+        return hb_buffer_set_script.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_script(hb_buffer_t *buffer, hb_script_t script)
+     * }
+     */
+    public static MethodHandle hb_buffer_set_script$handle() {
+        return hb_buffer_set_script.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_script(hb_buffer_t *buffer, hb_script_t script)
+     * }
+     */
+    public static MemorySegment hb_buffer_set_script$address() {
+        return hb_buffer_set_script.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_script(hb_buffer_t *buffer, hb_script_t script)
      * }
      */
     public static void hb_buffer_set_script(MemorySegment buffer, int script) {
-        var mh$ = hb_buffer_set_script$MH();
+        var mh$ = hb_buffer_set_script.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_set_script", buffer, script);
+            }
             mh$.invokeExact(buffer, script);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_set_language$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$41,"hb_buffer_set_language");
+
+    private static class hb_buffer_set_language {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_set_language");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_set_language(hb_buffer_t* buffer, hb_language_t language);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_language(hb_buffer_t *buffer, hb_language_t language)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_set_language$descriptor() {
+        return hb_buffer_set_language.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_language(hb_buffer_t *buffer, hb_language_t language)
+     * }
+     */
+    public static MethodHandle hb_buffer_set_language$handle() {
+        return hb_buffer_set_language.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_language(hb_buffer_t *buffer, hb_language_t language)
+     * }
+     */
+    public static MemorySegment hb_buffer_set_language$address() {
+        return hb_buffer_set_language.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_language(hb_buffer_t *buffer, hb_language_t language)
      * }
      */
     public static void hb_buffer_set_language(MemorySegment buffer, MemorySegment language) {
-        var mh$ = hb_buffer_set_language$MH();
+        var mh$ = hb_buffer_set_language.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_set_language", buffer, language);
+            }
             mh$.invokeExact(buffer, language);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
+    private static final int HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES = (int)0L;
     /**
-     * {@snippet :
-     * enum .HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES = 0;
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES = 0
      * }
      */
     public static int HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES() {
-        return (int)0L;
+        return HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES;
     }
-    public static MethodHandle hb_buffer_set_cluster_level$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$42,"hb_buffer_set_cluster_level");
+
+    private static class hb_buffer_set_cluster_level {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_set_cluster_level");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_set_cluster_level(hb_buffer_t* buffer, hb_buffer_cluster_level_t cluster_level);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_cluster_level(hb_buffer_t *buffer, hb_buffer_cluster_level_t cluster_level)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_set_cluster_level$descriptor() {
+        return hb_buffer_set_cluster_level.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_cluster_level(hb_buffer_t *buffer, hb_buffer_cluster_level_t cluster_level)
+     * }
+     */
+    public static MethodHandle hb_buffer_set_cluster_level$handle() {
+        return hb_buffer_set_cluster_level.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_cluster_level(hb_buffer_t *buffer, hb_buffer_cluster_level_t cluster_level)
+     * }
+     */
+    public static MemorySegment hb_buffer_set_cluster_level$address() {
+        return hb_buffer_set_cluster_level.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_set_cluster_level(hb_buffer_t *buffer, hb_buffer_cluster_level_t cluster_level)
      * }
      */
     public static void hb_buffer_set_cluster_level(MemorySegment buffer, int cluster_level) {
-        var mh$ = hb_buffer_set_cluster_level$MH();
+        var mh$ = hb_buffer_set_cluster_level.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_set_cluster_level", buffer, cluster_level);
+            }
             mh$.invokeExact(buffer, cluster_level);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_add_utf16$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$44,"hb_buffer_add_utf16");
+
+    private static class hb_buffer_add_utf16 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_INT,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_add_utf16");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_buffer_add_utf16(hb_buffer_t* buffer, const uint16_t* text, int text_length, unsigned int item_offset, int item_length);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_add_utf16(hb_buffer_t *buffer, const uint16_t *text, int text_length, unsigned int item_offset, int item_length)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_add_utf16$descriptor() {
+        return hb_buffer_add_utf16.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_add_utf16(hb_buffer_t *buffer, const uint16_t *text, int text_length, unsigned int item_offset, int item_length)
+     * }
+     */
+    public static MethodHandle hb_buffer_add_utf16$handle() {
+        return hb_buffer_add_utf16.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_buffer_add_utf16(hb_buffer_t *buffer, const uint16_t *text, int text_length, unsigned int item_offset, int item_length)
+     * }
+     */
+    public static MemorySegment hb_buffer_add_utf16$address() {
+        return hb_buffer_add_utf16.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_buffer_add_utf16(hb_buffer_t *buffer, const uint16_t *text, int text_length, unsigned int item_offset, int item_length)
      * }
      */
     public static void hb_buffer_add_utf16(MemorySegment buffer, MemorySegment text, int text_length, int item_offset, int item_length) {
-        var mh$ = hb_buffer_add_utf16$MH();
+        var mh$ = hb_buffer_add_utf16.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_add_utf16", buffer, text, text_length, item_offset, item_length);
+            }
             mh$.invokeExact(buffer, text, text_length, item_offset, item_length);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_get_length$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$46,"hb_buffer_get_length");
+
+    private static class hb_buffer_get_length {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_INT,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_get_length");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * unsigned int hb_buffer_get_length(const hb_buffer_t* buffer);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_buffer_get_length(const hb_buffer_t *buffer)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_get_length$descriptor() {
+        return hb_buffer_get_length.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_buffer_get_length(const hb_buffer_t *buffer)
+     * }
+     */
+    public static MethodHandle hb_buffer_get_length$handle() {
+        return hb_buffer_get_length.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_buffer_get_length(const hb_buffer_t *buffer)
+     * }
+     */
+    public static MemorySegment hb_buffer_get_length$address() {
+        return hb_buffer_get_length.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern unsigned int hb_buffer_get_length(const hb_buffer_t *buffer)
      * }
      */
     public static int hb_buffer_get_length(MemorySegment buffer) {
-        var mh$ = hb_buffer_get_length$MH();
+        var mh$ = hb_buffer_get_length.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_get_length", buffer);
+            }
             return (int)mh$.invokeExact(buffer);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_get_glyph_infos$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$48,"hb_buffer_get_glyph_infos");
+
+    private static class hb_buffer_get_glyph_infos {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_get_glyph_infos");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_glyph_info_t* hb_buffer_get_glyph_infos(hb_buffer_t* buffer, unsigned int* length);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_glyph_info_t *hb_buffer_get_glyph_infos(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_get_glyph_infos$descriptor() {
+        return hb_buffer_get_glyph_infos.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_glyph_info_t *hb_buffer_get_glyph_infos(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static MethodHandle hb_buffer_get_glyph_infos$handle() {
+        return hb_buffer_get_glyph_infos.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_glyph_info_t *hb_buffer_get_glyph_infos(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static MemorySegment hb_buffer_get_glyph_infos$address() {
+        return hb_buffer_get_glyph_infos.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_glyph_info_t *hb_buffer_get_glyph_infos(hb_buffer_t *buffer, unsigned int *length)
      * }
      */
     public static MemorySegment hb_buffer_get_glyph_infos(MemorySegment buffer, MemorySegment length) {
-        var mh$ = hb_buffer_get_glyph_infos$MH();
+        var mh$ = hb_buffer_get_glyph_infos.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(buffer, length);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_get_glyph_infos", buffer, length);
+            }
+            return (MemorySegment)mh$.invokeExact(buffer, length);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_buffer_get_glyph_positions$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$49,"hb_buffer_get_glyph_positions");
+
+    private static class hb_buffer_get_glyph_positions {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_buffer_get_glyph_positions");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * hb_glyph_position_t* hb_buffer_get_glyph_positions(hb_buffer_t* buffer, unsigned int* length);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_glyph_position_t *hb_buffer_get_glyph_positions(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static FunctionDescriptor hb_buffer_get_glyph_positions$descriptor() {
+        return hb_buffer_get_glyph_positions.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_glyph_position_t *hb_buffer_get_glyph_positions(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static MethodHandle hb_buffer_get_glyph_positions$handle() {
+        return hb_buffer_get_glyph_positions.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_glyph_position_t *hb_buffer_get_glyph_positions(hb_buffer_t *buffer, unsigned int *length)
+     * }
+     */
+    public static MemorySegment hb_buffer_get_glyph_positions$address() {
+        return hb_buffer_get_glyph_positions.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_glyph_position_t *hb_buffer_get_glyph_positions(hb_buffer_t *buffer, unsigned int *length)
      * }
      */
     public static MemorySegment hb_buffer_get_glyph_positions(MemorySegment buffer, MemorySegment length) {
-        var mh$ = hb_buffer_get_glyph_positions$MH();
+        var mh$ = hb_buffer_get_glyph_positions.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(buffer, length);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_buffer_get_glyph_positions", buffer, length);
+            }
+            return (MemorySegment)mh$.invokeExact(buffer, length);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle hb_shape$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$51,"hb_shape");
+
+    private static class hb_shape {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_shape");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void hb_shape(hb_font_t* font, hb_buffer_t* buffer, const hb_feature_t* features, unsigned int num_features);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_shape(hb_font_t *font, hb_buffer_t *buffer, const hb_feature_t *features, unsigned int num_features)
+     * }
+     */
+    public static FunctionDescriptor hb_shape$descriptor() {
+        return hb_shape.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_shape(hb_font_t *font, hb_buffer_t *buffer, const hb_feature_t *features, unsigned int num_features)
+     * }
+     */
+    public static MethodHandle hb_shape$handle() {
+        return hb_shape.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_shape(hb_font_t *font, hb_buffer_t *buffer, const hb_feature_t *features, unsigned int num_features)
+     * }
+     */
+    public static MemorySegment hb_shape$address() {
+        return hb_shape.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_shape(hb_font_t *font, hb_buffer_t *buffer, const hb_feature_t *features, unsigned int num_features)
      * }
      */
     public static void hb_shape(MemorySegment font, MemorySegment buffer, MemorySegment features, int num_features) {
-        var mh$ = hb_shape$MH();
+        var mh$ = hb_shape.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_shape", font, buffer, features, num_features);
+            }
             mh$.invokeExact(font, buffer, features, num_features);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
+    private static final int HB_FEATURE_GLOBAL_END = (int)4294967295L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define HB_FEATURE_GLOBAL_END 4294967295
      * }
      */
     public static int HB_FEATURE_GLOBAL_END() {
-        return (int)4294967295L;
+        return HB_FEATURE_GLOBAL_END;
     }
 }
-
 

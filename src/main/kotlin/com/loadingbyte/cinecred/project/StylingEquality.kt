@@ -89,7 +89,7 @@ fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boole
     val excludedSettings = findIneffectiveSettings(styling, this)
     if (excludedSettings.keys != findIneffectiveSettings(styling, other).keys)
         return false
-    for (setting in getStyleSettings(javaClass as Class<Style>))
+    for (setting in getStyleSettings(javaClass))
         if (setting !in excludedSettings)
             when (setting) {
                 is DirectStyleSetting, is OptStyleSetting ->

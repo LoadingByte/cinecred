@@ -2,32 +2,78 @@
 
 package com.loadingbyte.cinecred.natives.skiacapi;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
- * _Bool (*loadImage_t)(char* path,char* name,char* id,int* w,int* h,unsigned char* colorType,unsigned char* alphaType,void** colorSpace,void** pixels,long long* rowBytes);
+ * {@snippet lang=c :
+ * typedef _Bool (*loadImage_t)(const char *, const char *, const char *, int *, int *, unsigned char *, unsigned char *, SkColorSpace **, void **, long long *)
  * }
  */
-public interface loadImage_t {
+public final class loadImage_t {
 
-    boolean apply(java.lang.foreign.MemorySegment path, java.lang.foreign.MemorySegment name, java.lang.foreign.MemorySegment id, java.lang.foreign.MemorySegment w, java.lang.foreign.MemorySegment h, java.lang.foreign.MemorySegment colorType, java.lang.foreign.MemorySegment alphaType, java.lang.foreign.MemorySegment colorSpace, java.lang.foreign.MemorySegment pixels, java.lang.foreign.MemorySegment rowBytes);
-    static MemorySegment allocate(loadImage_t fi, Arena scope) {
-        return RuntimeHelper.upcallStub(constants$0.const$76, fi, constants$0.const$75, scope);
+    private loadImage_t() {
+        // Should not be called directly
     }
-    static loadImage_t ofAddress(MemorySegment addr, Arena arena) {
-        MemorySegment symbol = addr.reinterpret(arena, null);
-        return (java.lang.foreign.MemorySegment _path, java.lang.foreign.MemorySegment _name, java.lang.foreign.MemorySegment _id, java.lang.foreign.MemorySegment _w, java.lang.foreign.MemorySegment _h, java.lang.foreign.MemorySegment _colorType, java.lang.foreign.MemorySegment _alphaType, java.lang.foreign.MemorySegment _colorSpace, java.lang.foreign.MemorySegment _pixels, java.lang.foreign.MemorySegment _rowBytes) -> {
-            try {
-                return (boolean)constants$0.const$77.invokeExact(symbol, _path, _name, _id, _w, _h, _colorType, _alphaType, _colorSpace, _pixels, _rowBytes);
-            } catch (Throwable ex$) {
-                throw new AssertionError("should not reach here", ex$);
-            }
-        };
+
+    /**
+     * The function pointer signature, expressed as a functional interface
+     */
+    public interface Function {
+        boolean apply(MemorySegment path, MemorySegment name, MemorySegment id, MemorySegment w, MemorySegment h, MemorySegment colorType, MemorySegment alphaType, MemorySegment colorSpace, MemorySegment pixels, MemorySegment rowBytes);
+    }
+
+    private static final FunctionDescriptor $DESC = FunctionDescriptor.of(
+        skiacapi_h.C_BOOL,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER,
+        skiacapi_h.C_POINTER
+    );
+
+    /**
+     * The descriptor of this function pointer
+     */
+    public static FunctionDescriptor descriptor() {
+        return $DESC;
+    }
+
+    private static final MethodHandle UP$MH = skiacapi_h.upcallHandle(loadImage_t.Function.class, "apply", $DESC);
+
+    /**
+     * Allocates a new upcall stub, whose implementation is defined by {@code fi}.
+     * The lifetime of the returned segment is managed by {@code arena}
+     */
+    public static MemorySegment allocate(loadImage_t.Function fi, Arena arena) {
+        return Linker.nativeLinker().upcallStub(UP$MH.bindTo(fi), $DESC, arena);
+    }
+
+    private static final MethodHandle DOWN$MH = Linker.nativeLinker().downcallHandle($DESC);
+
+    /**
+     * Invoke the upcall stub {@code funcPtr}, with given parameters
+     */
+    public static boolean invoke(MemorySegment funcPtr, MemorySegment path, MemorySegment name, MemorySegment id, MemorySegment w, MemorySegment h, MemorySegment colorType, MemorySegment alphaType, MemorySegment colorSpace, MemorySegment pixels, MemorySegment rowBytes) {
+        try {
+            return (boolean) DOWN$MH.invokeExact(funcPtr, path, name, id, w, h, colorType, alphaType, colorSpace, pixels, rowBytes);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
     }
 }
-
 

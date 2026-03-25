@@ -210,7 +210,7 @@ class Canvas private constructor(
             val bmpSeg = bitmap.memorySegment(0)
             val ls = bitmap.linesize(0)
             Arena.ofConfined().use { arena ->
-                val rowSeg = arena.allocateArray(JAVA_FLOAT, w * 4L)
+                val rowSeg = arena.allocate(JAVA_FLOAT, w * 4L)
                 for (x in 0..<w)
                     MemorySegment.copy(color, 0, rowSeg, JAVA_FLOAT, x * 16L, 4)
                 for (y in 0..<h)
@@ -403,7 +403,7 @@ class Canvas private constructor(
                     // Repeat the array twice if it has odd length, because Skia only supports even-length patterns.
                     val size = dashPattern.size
                     val dup = size % 2 == 1
-                    val intervals = arena.allocateArray(JAVA_FLOAT, size * if (dup) 2L else 1L)
+                    val intervals = arena.allocate(JAVA_FLOAT, size * if (dup) 2L else 1L)
                     MemorySegment.copy(dashPattern, 0, intervals, JAVA_FLOAT, 0L, size)
                     if (dup)
                         MemorySegment.copy(dashPattern, 0, intervals, JAVA_FLOAT, size * 4L, size)
@@ -601,11 +601,11 @@ class Canvas private constructor(
             }
 
             val path = Path.allocate(arena)
-            Path.`verbs$set`(path, arena.allocateArray(verbs))
-            Path.`verbCount$set`(path, verbCount)
-            Path.`points$set`(path, arena.allocateArray(points))
-            Path.`pointCount$set`(path, pointCountX2 / 2)
-            Path.`isEvenOdd$set`(path, pi.windingRule == PathIterator.WIND_EVEN_ODD)
+            Path.verbs(path, arena.allocateFrom(verbs))
+            Path.verbCount(path, verbCount)
+            Path.points(path, arena.allocateFrom(points))
+            Path.pointCount(path, pointCountX2 / 2)
+            Path.isEvenOdd(path, pi.windingRule == PathIterator.WIND_EVEN_ODD)
             return path
         }
 
@@ -698,8 +698,8 @@ class Canvas private constructor(
                     colors[i++] = c.b
                     colors[i++] = c.a
                 }
-                val colorsSeg = arena.allocateArray(colors)
-                val posSeg = if (shader.pos == null) NULL else arena.allocateArray(shader.pos)
+                val colorsSeg = arena.allocateFrom(colors)
+                val posSeg = if (shader.pos == null) NULL else arena.allocateFrom(shader.pos)
                 return SkGradientShader_MakeLinear(
                     p[0].toFloat(), p[1].toFloat(), p[2].toFloat(), p[3].toFloat(),
                     colorsSeg, canvasCS.skiaHandle, posSeg, colors.size / 4,
@@ -1001,13 +1001,13 @@ class Canvas private constructor(
         init {
             Arena.ofConfined().use { arena ->
                 setNativeNumericLocaleToC()
-                val cStr = arena.allocateUtf8String(xml)
+                val cStr = arena.allocateFrom(xml)
                 handle = SkSVGDOM_Make(cStr, cStr.byteSize() - 1, LoadImageFromDataURI.UPCALL_STUB)
                     .also { require(it != NULL) { "Failed to allocate Skia SVGDOM." } }
                     .reinterpret(handleArena, ::SkRefCnt_unref)
 
                 try {
-                    val contSizeSeg = arena.allocateArray(JAVA_FLOAT, 2)
+                    val contSizeSeg = arena.allocate(JAVA_FLOAT, 2)
                     SkSVGDOM_containerSize(handle, contSizeSeg)
                     var w = contSizeSeg.getAtIndex(JAVA_FLOAT, 0)
                     var h = contSizeSeg.getAtIndex(JAVA_FLOAT, 1)
@@ -1017,7 +1017,7 @@ class Canvas private constructor(
                     // but we'd like a better default. So we read the viewBox attribute of the SVG (which must
                     // exist when width/height are missing) and set the SVG size to the viewBox size.
                     if (w <= 0f || h <= 0f) {
-                        val viewBoxSeg = arena.allocateArray(JAVA_FLOAT, 4)
+                        val viewBoxSeg = arena.allocate(JAVA_FLOAT, 4)
                         require(SkSVGDOM_getViewBox(handle, viewBoxSeg)) { "SVG has neither width/height nor viewBox." }
                         w = viewBoxSeg.getAtIndex(JAVA_FLOAT, 2)
                         h = viewBoxSeg.getAtIndex(JAVA_FLOAT, 3)
@@ -1039,7 +1039,7 @@ class Canvas private constructor(
 
         // We supply our own image-from-data-URI loader to widen the supported formats beyond whichever codecs happen to
         // have been compiled into Skia.
-        private class LoadImageFromDataURI : loadImage_t {
+        private class LoadImageFromDataURI : loadImage_t.Function {
 
             companion object {
                 val UPCALL_STUB: MemorySegment = loadImage_t.allocate(LoadImageFromDataURI(), Arena.global())
@@ -1061,7 +1061,7 @@ class Canvas private constructor(
                 rowBytes: MemorySegment
             ): Boolean {
                 try {
-                    val prepared = read(name.getUtf8String(0L)) ?: return false
+                    val prepared = read(name.getString(0L)) ?: return false
                     val bitmap = prepared.bitmap ?: return false
                     val (res, rep) = bitmap.spec
                     val (ct, at) = colorAndAlphaTypeFor(rep.pixelFormat, rep.alpha, prepared.promiseOpaque)

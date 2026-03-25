@@ -2,168 +2,312 @@
 
 package com.loadingbyte.cinecred.natives.skiacapi;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct Path {
- *     unsigned char* verbs;
+ *     unsigned char *verbs;
  *     int verbCount;
- *     float* points;
+ *     float *points;
  *     int pointCount;
  *     _Bool isEvenOdd;
- * };
+ * }
  * }
  */
 public class Path {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$87;
+    Path() {
+        // Should not be called directly
     }
-    public static VarHandle verbs$VH() {
-        return constants$0.const$88;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * unsigned char* verbs;
-     * }
-     */
-    public static MemorySegment verbs$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$88.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * unsigned char* verbs;
-     * }
-     */
-    public static void verbs$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$88.set(seg, x);
-    }
-    public static MemorySegment verbs$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$88.get(seg.asSlice(index*sizeof()));
-    }
-    public static void verbs$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$88.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle verbCount$VH() {
-        return constants$0.const$89;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * int verbCount;
-     * }
-     */
-    public static int verbCount$get(MemorySegment seg) {
-        return (int)constants$0.const$89.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * int verbCount;
-     * }
-     */
-    public static void verbCount$set(MemorySegment seg, int x) {
-        constants$0.const$89.set(seg, x);
-    }
-    public static int verbCount$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$89.get(seg.asSlice(index*sizeof()));
-    }
-    public static void verbCount$set(MemorySegment seg, long index, int x) {
-        constants$0.const$89.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle points$VH() {
-        return constants$0.const$90;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * float* points;
-     * }
-     */
-    public static MemorySegment points$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$90.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * float* points;
-     * }
-     */
-    public static void points$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$90.set(seg, x);
-    }
-    public static MemorySegment points$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$90.get(seg.asSlice(index*sizeof()));
-    }
-    public static void points$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$90.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle pointCount$VH() {
-        return constants$0.const$91;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * int pointCount;
-     * }
-     */
-    public static int pointCount$get(MemorySegment seg) {
-        return (int)constants$0.const$91.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * int pointCount;
-     * }
-     */
-    public static void pointCount$set(MemorySegment seg, int x) {
-        constants$0.const$91.set(seg, x);
-    }
-    public static int pointCount$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$91.get(seg.asSlice(index*sizeof()));
-    }
-    public static void pointCount$set(MemorySegment seg, long index, int x) {
-        constants$0.const$91.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle isEvenOdd$VH() {
-        return constants$0.const$92;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool isEvenOdd;
-     * }
-     */
-    public static boolean isEvenOdd$get(MemorySegment seg) {
-        return (boolean)constants$0.const$92.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool isEvenOdd;
-     * }
-     */
-    public static void isEvenOdd$set(MemorySegment seg, boolean x) {
-        constants$0.const$92.set(seg, x);
-    }
-    public static boolean isEvenOdd$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$92.get(seg.asSlice(index*sizeof()));
-    }
-    public static void isEvenOdd$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$92.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        skiacapi_h.C_POINTER.withName("verbs"),
+        skiacapi_h.C_INT.withName("verbCount"),
+        MemoryLayout.paddingLayout(4),
+        skiacapi_h.C_POINTER.withName("points"),
+        skiacapi_h.C_INT.withName("pointCount"),
+        skiacapi_h.C_BOOL.withName("isEvenOdd"),
+        MemoryLayout.paddingLayout(3)
+    ).withName("Path");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final AddressLayout verbs$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("verbs"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned char *verbs
+     * }
+     */
+    public static final AddressLayout verbs$layout() {
+        return verbs$LAYOUT;
+    }
+
+    private static final long verbs$OFFSET = $LAYOUT.byteOffset(groupElement("verbs"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned char *verbs
+     * }
+     */
+    public static final long verbs$offset() {
+        return verbs$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * unsigned char *verbs
+     * }
+     */
+    public static MemorySegment verbs(MemorySegment struct) {
+        return struct.get(verbs$LAYOUT, verbs$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * unsigned char *verbs
+     * }
+     */
+    public static void verbs(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(verbs$LAYOUT, verbs$OFFSET, fieldValue);
+    }
+
+    private static final OfInt verbCount$LAYOUT = (OfInt)$LAYOUT.select(groupElement("verbCount"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * int verbCount
+     * }
+     */
+    public static final OfInt verbCount$layout() {
+        return verbCount$LAYOUT;
+    }
+
+    private static final long verbCount$OFFSET = $LAYOUT.byteOffset(groupElement("verbCount"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * int verbCount
+     * }
+     */
+    public static final long verbCount$offset() {
+        return verbCount$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * int verbCount
+     * }
+     */
+    public static int verbCount(MemorySegment struct) {
+        return struct.get(verbCount$LAYOUT, verbCount$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * int verbCount
+     * }
+     */
+    public static void verbCount(MemorySegment struct, int fieldValue) {
+        struct.set(verbCount$LAYOUT, verbCount$OFFSET, fieldValue);
+    }
+
+    private static final AddressLayout points$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("points"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * float *points
+     * }
+     */
+    public static final AddressLayout points$layout() {
+        return points$LAYOUT;
+    }
+
+    private static final long points$OFFSET = $LAYOUT.byteOffset(groupElement("points"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * float *points
+     * }
+     */
+    public static final long points$offset() {
+        return points$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * float *points
+     * }
+     */
+    public static MemorySegment points(MemorySegment struct) {
+        return struct.get(points$LAYOUT, points$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * float *points
+     * }
+     */
+    public static void points(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(points$LAYOUT, points$OFFSET, fieldValue);
+    }
+
+    private static final OfInt pointCount$LAYOUT = (OfInt)$LAYOUT.select(groupElement("pointCount"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * int pointCount
+     * }
+     */
+    public static final OfInt pointCount$layout() {
+        return pointCount$LAYOUT;
+    }
+
+    private static final long pointCount$OFFSET = $LAYOUT.byteOffset(groupElement("pointCount"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * int pointCount
+     * }
+     */
+    public static final long pointCount$offset() {
+        return pointCount$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * int pointCount
+     * }
+     */
+    public static int pointCount(MemorySegment struct) {
+        return struct.get(pointCount$LAYOUT, pointCount$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * int pointCount
+     * }
+     */
+    public static void pointCount(MemorySegment struct, int fieldValue) {
+        struct.set(pointCount$LAYOUT, pointCount$OFFSET, fieldValue);
+    }
+
+    private static final OfBoolean isEvenOdd$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("isEvenOdd"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * _Bool isEvenOdd
+     * }
+     */
+    public static final OfBoolean isEvenOdd$layout() {
+        return isEvenOdd$LAYOUT;
+    }
+
+    private static final long isEvenOdd$OFFSET = $LAYOUT.byteOffset(groupElement("isEvenOdd"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * _Bool isEvenOdd
+     * }
+     */
+    public static final long isEvenOdd$offset() {
+        return isEvenOdd$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * _Bool isEvenOdd
+     * }
+     */
+    public static boolean isEvenOdd(MemorySegment struct) {
+        return struct.get(isEvenOdd$LAYOUT, isEvenOdd$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * _Bool isEvenOdd
+     * }
+     */
+    public static void isEvenOdd(MemorySegment struct, boolean fieldValue) {
+        struct.set(isEvenOdd$LAYOUT, isEvenOdd$OFFSET, fieldValue);
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

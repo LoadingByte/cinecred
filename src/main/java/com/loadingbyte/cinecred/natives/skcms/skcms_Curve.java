@@ -2,13 +2,18 @@
 
 package com.loadingbyte.cinecred.natives.skcms;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * union skcms_Curve {
  *     struct {
  *         uint32_t alias_of_table_entries;
@@ -16,134 +21,300 @@ import static java.lang.foreign.ValueLayout.*;
  *     };
  *     struct {
  *         uint32_t table_entries;
- *         const uint8_t* table_8;
- *         const uint8_t* table_16;
+ *         const uint8_t *table_8;
+ *         const uint8_t *table_16;
  *     };
- * };
+ * }
  * }
  */
 public class skcms_Curve {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$117;
+    skcms_Curve() {
+        // Should not be called directly
     }
-    public static VarHandle alias_of_table_entries$VH() {
-        return constants$0.const$118;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t alias_of_table_entries;
-     * }
-     */
-    public static int alias_of_table_entries$get(MemorySegment seg) {
-        return (int)constants$0.const$118.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t alias_of_table_entries;
-     * }
-     */
-    public static void alias_of_table_entries$set(MemorySegment seg, int x) {
-        constants$0.const$118.set(seg, x);
-    }
-    public static int alias_of_table_entries$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$118.get(seg.asSlice(index*sizeof()));
-    }
-    public static void alias_of_table_entries$set(MemorySegment seg, long index, int x) {
-        constants$0.const$118.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment parametric$slice(MemorySegment seg) {
-        return seg.asSlice(4, 28);
-    }
-    public static VarHandle table_entries$VH() {
-        return constants$0.const$119;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t table_entries;
-     * }
-     */
-    public static int table_entries$get(MemorySegment seg) {
-        return (int)constants$0.const$119.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t table_entries;
-     * }
-     */
-    public static void table_entries$set(MemorySegment seg, int x) {
-        constants$0.const$119.set(seg, x);
-    }
-    public static int table_entries$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$119.get(seg.asSlice(index*sizeof()));
-    }
-    public static void table_entries$set(MemorySegment seg, long index, int x) {
-        constants$0.const$119.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle table_8$VH() {
-        return constants$0.const$120;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const uint8_t* table_8;
-     * }
-     */
-    public static MemorySegment table_8$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$120.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const uint8_t* table_8;
-     * }
-     */
-    public static void table_8$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$120.set(seg, x);
-    }
-    public static MemorySegment table_8$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$120.get(seg.asSlice(index*sizeof()));
-    }
-    public static void table_8$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$120.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle table_16$VH() {
-        return constants$0.const$121;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const uint8_t* table_16;
-     * }
-     */
-    public static MemorySegment table_16$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$121.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const uint8_t* table_16;
-     * }
-     */
-    public static void table_16$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$121.set(seg, x);
-    }
-    public static MemorySegment table_16$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$121.get(seg.asSlice(index*sizeof()));
-    }
-    public static void table_16$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$121.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.unionLayout(
+        MemoryLayout.structLayout(
+            skcms_h.C_INT.withName("alias_of_table_entries"),
+            skcms_TransferFunction.layout().withName("parametric")
+        ).withName("$anon$107:5"),
+        MemoryLayout.structLayout(
+            skcms_h.C_INT.withName("table_entries"),
+            MemoryLayout.paddingLayout(4),
+            skcms_h.C_POINTER.withName("table_8"),
+            skcms_h.C_POINTER.withName("table_16")
+        ).withName("$anon$111:5")
+    ).withName("skcms_Curve");
+
+    /**
+     * The layout of this union
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final OfInt alias_of_table_entries$LAYOUT = (OfInt)$LAYOUT.select(groupElement("$anon$107:5"), groupElement("alias_of_table_entries"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t alias_of_table_entries
+     * }
+     */
+    public static final OfInt alias_of_table_entries$layout() {
+        return alias_of_table_entries$LAYOUT;
+    }
+
+    private static final long alias_of_table_entries$OFFSET = $LAYOUT.byteOffset(groupElement("$anon$107:5"), groupElement("alias_of_table_entries"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t alias_of_table_entries
+     * }
+     */
+    public static final long alias_of_table_entries$offset() {
+        return alias_of_table_entries$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t alias_of_table_entries
+     * }
+     */
+    public static int alias_of_table_entries(MemorySegment union) {
+        return union.get(alias_of_table_entries$LAYOUT, alias_of_table_entries$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t alias_of_table_entries
+     * }
+     */
+    public static void alias_of_table_entries(MemorySegment union, int fieldValue) {
+        union.set(alias_of_table_entries$LAYOUT, alias_of_table_entries$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout parametric$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("$anon$107:5"), groupElement("parametric"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_TransferFunction parametric
+     * }
+     */
+    public static final GroupLayout parametric$layout() {
+        return parametric$LAYOUT;
+    }
+
+    private static final long parametric$OFFSET = $LAYOUT.byteOffset(groupElement("$anon$107:5"), groupElement("parametric"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_TransferFunction parametric
+     * }
+     */
+    public static final long parametric$offset() {
+        return parametric$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_TransferFunction parametric
+     * }
+     */
+    public static MemorySegment parametric(MemorySegment union) {
+        return union.asSlice(parametric$OFFSET, parametric$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_TransferFunction parametric
+     * }
+     */
+    public static void parametric(MemorySegment union, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, union, parametric$OFFSET, parametric$LAYOUT.byteSize());
+    }
+
+    private static final OfInt table_entries$LAYOUT = (OfInt)$LAYOUT.select(groupElement("$anon$111:5"), groupElement("table_entries"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t table_entries
+     * }
+     */
+    public static final OfInt table_entries$layout() {
+        return table_entries$LAYOUT;
+    }
+
+    private static final long table_entries$OFFSET = $LAYOUT.byteOffset(groupElement("$anon$111:5"), groupElement("table_entries"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t table_entries
+     * }
+     */
+    public static final long table_entries$offset() {
+        return table_entries$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t table_entries
+     * }
+     */
+    public static int table_entries(MemorySegment union) {
+        return union.get(table_entries$LAYOUT, table_entries$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t table_entries
+     * }
+     */
+    public static void table_entries(MemorySegment union, int fieldValue) {
+        union.set(table_entries$LAYOUT, table_entries$OFFSET, fieldValue);
+    }
+
+    private static final AddressLayout table_8$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("$anon$111:5"), groupElement("table_8"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_8
+     * }
+     */
+    public static final AddressLayout table_8$layout() {
+        return table_8$LAYOUT;
+    }
+
+    private static final long table_8$OFFSET = $LAYOUT.byteOffset(groupElement("$anon$111:5"), groupElement("table_8"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_8
+     * }
+     */
+    public static final long table_8$offset() {
+        return table_8$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_8
+     * }
+     */
+    public static MemorySegment table_8(MemorySegment union) {
+        return union.get(table_8$LAYOUT, table_8$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_8
+     * }
+     */
+    public static void table_8(MemorySegment union, MemorySegment fieldValue) {
+        union.set(table_8$LAYOUT, table_8$OFFSET, fieldValue);
+    }
+
+    private static final AddressLayout table_16$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("$anon$111:5"), groupElement("table_16"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_16
+     * }
+     */
+    public static final AddressLayout table_16$layout() {
+        return table_16$LAYOUT;
+    }
+
+    private static final long table_16$OFFSET = $LAYOUT.byteOffset(groupElement("$anon$111:5"), groupElement("table_16"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_16
+     * }
+     */
+    public static final long table_16$offset() {
+        return table_16$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_16
+     * }
+     */
+    public static MemorySegment table_16(MemorySegment union) {
+        return union.get(table_16$LAYOUT, table_16$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const uint8_t *table_16
+     * }
+     */
+    public static void table_16(MemorySegment union, MemorySegment fieldValue) {
+        union.set(table_16$LAYOUT, table_16$OFFSET, fieldValue);
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this union
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

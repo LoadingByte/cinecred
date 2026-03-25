@@ -2,328 +2,814 @@
 
 package com.loadingbyte.cinecred.natives.skcms;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct skcms_ICCProfile {
- *     const uint8_t* buffer;
+ *     const uint8_t *buffer;
  *     uint32_t size;
  *     uint32_t data_color_space;
  *     uint32_t pcs;
  *     uint32_t tag_count;
- *     _Bool has_trc;
+ *     bool has_trc;
  *     skcms_Curve trc[3];
- *     _Bool has_toXYZD50;
+ *     bool has_toXYZD50;
  *     skcms_Matrix3x3 toXYZD50;
- *     _Bool has_A2B;
+ *     bool has_A2B;
  *     skcms_A2B A2B;
- *     _Bool has_B2A;
+ *     bool has_B2A;
  *     skcms_B2A B2A;
- *     _Bool has_CICP;
+ *     bool has_CICP;
  *     skcms_CICP CICP;
- * };
+ * }
  * }
  */
 public class skcms_ICCProfile {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$139;
+    skcms_ICCProfile() {
+        // Should not be called directly
     }
-    public static VarHandle buffer$VH() {
-        return constants$0.const$140;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const uint8_t* buffer;
-     * }
-     */
-    public static MemorySegment buffer$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$140.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const uint8_t* buffer;
-     * }
-     */
-    public static void buffer$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$140.set(seg, x);
-    }
-    public static MemorySegment buffer$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$140.get(seg.asSlice(index*sizeof()));
-    }
-    public static void buffer$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$140.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle size$VH() {
-        return constants$0.const$141;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t size;
-     * }
-     */
-    public static int size$get(MemorySegment seg) {
-        return (int)constants$0.const$141.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t size;
-     * }
-     */
-    public static void size$set(MemorySegment seg, int x) {
-        constants$0.const$141.set(seg, x);
-    }
-    public static int size$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$141.get(seg.asSlice(index*sizeof()));
-    }
-    public static void size$set(MemorySegment seg, long index, int x) {
-        constants$0.const$141.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle data_color_space$VH() {
-        return constants$0.const$142;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t data_color_space;
-     * }
-     */
-    public static int data_color_space$get(MemorySegment seg) {
-        return (int)constants$0.const$142.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t data_color_space;
-     * }
-     */
-    public static void data_color_space$set(MemorySegment seg, int x) {
-        constants$0.const$142.set(seg, x);
-    }
-    public static int data_color_space$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$142.get(seg.asSlice(index*sizeof()));
-    }
-    public static void data_color_space$set(MemorySegment seg, long index, int x) {
-        constants$0.const$142.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle pcs$VH() {
-        return constants$0.const$143;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t pcs;
-     * }
-     */
-    public static int pcs$get(MemorySegment seg) {
-        return (int)constants$0.const$143.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t pcs;
-     * }
-     */
-    public static void pcs$set(MemorySegment seg, int x) {
-        constants$0.const$143.set(seg, x);
-    }
-    public static int pcs$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$143.get(seg.asSlice(index*sizeof()));
-    }
-    public static void pcs$set(MemorySegment seg, long index, int x) {
-        constants$0.const$143.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle tag_count$VH() {
-        return constants$0.const$144;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t tag_count;
-     * }
-     */
-    public static int tag_count$get(MemorySegment seg) {
-        return (int)constants$0.const$144.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t tag_count;
-     * }
-     */
-    public static void tag_count$set(MemorySegment seg, int x) {
-        constants$0.const$144.set(seg, x);
-    }
-    public static int tag_count$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$144.get(seg.asSlice(index*sizeof()));
-    }
-    public static void tag_count$set(MemorySegment seg, long index, int x) {
-        constants$0.const$144.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle has_trc$VH() {
-        return constants$0.const$145;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool has_trc;
-     * }
-     */
-    public static boolean has_trc$get(MemorySegment seg) {
-        return (boolean)constants$0.const$145.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool has_trc;
-     * }
-     */
-    public static void has_trc$set(MemorySegment seg, boolean x) {
-        constants$0.const$145.set(seg, x);
-    }
-    public static boolean has_trc$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$145.get(seg.asSlice(index*sizeof()));
-    }
-    public static void has_trc$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$145.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment trc$slice(MemorySegment seg) {
-        return seg.asSlice(32, 96);
-    }
-    public static VarHandle has_toXYZD50$VH() {
-        return constants$0.const$146;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool has_toXYZD50;
-     * }
-     */
-    public static boolean has_toXYZD50$get(MemorySegment seg) {
-        return (boolean)constants$0.const$146.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool has_toXYZD50;
-     * }
-     */
-    public static void has_toXYZD50$set(MemorySegment seg, boolean x) {
-        constants$0.const$146.set(seg, x);
-    }
-    public static boolean has_toXYZD50$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$146.get(seg.asSlice(index*sizeof()));
-    }
-    public static void has_toXYZD50$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$146.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment toXYZD50$slice(MemorySegment seg) {
-        return seg.asSlice(132, 36);
-    }
-    public static VarHandle has_A2B$VH() {
-        return constants$0.const$147;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool has_A2B;
-     * }
-     */
-    public static boolean has_A2B$get(MemorySegment seg) {
-        return (boolean)constants$0.const$147.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool has_A2B;
-     * }
-     */
-    public static void has_A2B$set(MemorySegment seg, boolean x) {
-        constants$0.const$147.set(seg, x);
-    }
-    public static boolean has_A2B$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$147.get(seg.asSlice(index*sizeof()));
-    }
-    public static void has_A2B$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$147.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment A2B$slice(MemorySegment seg) {
-        return seg.asSlice(176, 416);
-    }
-    public static VarHandle has_B2A$VH() {
-        return constants$0.const$148;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool has_B2A;
-     * }
-     */
-    public static boolean has_B2A$get(MemorySegment seg) {
-        return (boolean)constants$0.const$148.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool has_B2A;
-     * }
-     */
-    public static void has_B2A$set(MemorySegment seg, boolean x) {
-        constants$0.const$148.set(seg, x);
-    }
-    public static boolean has_B2A$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$148.get(seg.asSlice(index*sizeof()));
-    }
-    public static void has_B2A$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$148.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment B2A$slice(MemorySegment seg) {
-        return seg.asSlice(600, 408);
-    }
-    public static VarHandle has_CICP$VH() {
-        return constants$0.const$149;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * _Bool has_CICP;
-     * }
-     */
-    public static boolean has_CICP$get(MemorySegment seg) {
-        return (boolean)constants$0.const$149.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * _Bool has_CICP;
-     * }
-     */
-    public static void has_CICP$set(MemorySegment seg, boolean x) {
-        constants$0.const$149.set(seg, x);
-    }
-    public static boolean has_CICP$get(MemorySegment seg, long index) {
-        return (boolean)constants$0.const$149.get(seg.asSlice(index*sizeof()));
-    }
-    public static void has_CICP$set(MemorySegment seg, long index, boolean x) {
-        constants$0.const$149.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment CICP$slice(MemorySegment seg) {
-        return seg.asSlice(1009, 4);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        skcms_h.C_POINTER.withName("buffer"),
+        skcms_h.C_INT.withName("size"),
+        skcms_h.C_INT.withName("data_color_space"),
+        skcms_h.C_INT.withName("pcs"),
+        skcms_h.C_INT.withName("tag_count"),
+        skcms_h.C_BOOL.withName("has_trc"),
+        MemoryLayout.paddingLayout(7),
+        MemoryLayout.sequenceLayout(3, skcms_Curve.layout()).withName("trc"),
+        skcms_h.C_BOOL.withName("has_toXYZD50"),
+        MemoryLayout.paddingLayout(3),
+        skcms_Matrix3x3.layout().withName("toXYZD50"),
+        skcms_h.C_BOOL.withName("has_A2B"),
+        MemoryLayout.paddingLayout(7),
+        skcms_A2B.layout().withName("A2B"),
+        skcms_h.C_BOOL.withName("has_B2A"),
+        MemoryLayout.paddingLayout(7),
+        skcms_B2A.layout().withName("B2A"),
+        skcms_h.C_BOOL.withName("has_CICP"),
+        skcms_CICP.layout().withName("CICP"),
+        MemoryLayout.paddingLayout(3)
+    ).withName("skcms_ICCProfile");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final AddressLayout buffer$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("buffer"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const uint8_t *buffer
+     * }
+     */
+    public static final AddressLayout buffer$layout() {
+        return buffer$LAYOUT;
+    }
+
+    private static final long buffer$OFFSET = $LAYOUT.byteOffset(groupElement("buffer"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const uint8_t *buffer
+     * }
+     */
+    public static final long buffer$offset() {
+        return buffer$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const uint8_t *buffer
+     * }
+     */
+    public static MemorySegment buffer(MemorySegment struct) {
+        return struct.get(buffer$LAYOUT, buffer$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const uint8_t *buffer
+     * }
+     */
+    public static void buffer(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(buffer$LAYOUT, buffer$OFFSET, fieldValue);
+    }
+
+    private static final OfInt size$LAYOUT = (OfInt)$LAYOUT.select(groupElement("size"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t size
+     * }
+     */
+    public static final OfInt size$layout() {
+        return size$LAYOUT;
+    }
+
+    private static final long size$OFFSET = $LAYOUT.byteOffset(groupElement("size"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t size
+     * }
+     */
+    public static final long size$offset() {
+        return size$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t size
+     * }
+     */
+    public static int size(MemorySegment struct) {
+        return struct.get(size$LAYOUT, size$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t size
+     * }
+     */
+    public static void size(MemorySegment struct, int fieldValue) {
+        struct.set(size$LAYOUT, size$OFFSET, fieldValue);
+    }
+
+    private static final OfInt data_color_space$LAYOUT = (OfInt)$LAYOUT.select(groupElement("data_color_space"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t data_color_space
+     * }
+     */
+    public static final OfInt data_color_space$layout() {
+        return data_color_space$LAYOUT;
+    }
+
+    private static final long data_color_space$OFFSET = $LAYOUT.byteOffset(groupElement("data_color_space"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t data_color_space
+     * }
+     */
+    public static final long data_color_space$offset() {
+        return data_color_space$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t data_color_space
+     * }
+     */
+    public static int data_color_space(MemorySegment struct) {
+        return struct.get(data_color_space$LAYOUT, data_color_space$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t data_color_space
+     * }
+     */
+    public static void data_color_space(MemorySegment struct, int fieldValue) {
+        struct.set(data_color_space$LAYOUT, data_color_space$OFFSET, fieldValue);
+    }
+
+    private static final OfInt pcs$LAYOUT = (OfInt)$LAYOUT.select(groupElement("pcs"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t pcs
+     * }
+     */
+    public static final OfInt pcs$layout() {
+        return pcs$LAYOUT;
+    }
+
+    private static final long pcs$OFFSET = $LAYOUT.byteOffset(groupElement("pcs"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t pcs
+     * }
+     */
+    public static final long pcs$offset() {
+        return pcs$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t pcs
+     * }
+     */
+    public static int pcs(MemorySegment struct) {
+        return struct.get(pcs$LAYOUT, pcs$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t pcs
+     * }
+     */
+    public static void pcs(MemorySegment struct, int fieldValue) {
+        struct.set(pcs$LAYOUT, pcs$OFFSET, fieldValue);
+    }
+
+    private static final OfInt tag_count$LAYOUT = (OfInt)$LAYOUT.select(groupElement("tag_count"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t tag_count
+     * }
+     */
+    public static final OfInt tag_count$layout() {
+        return tag_count$LAYOUT;
+    }
+
+    private static final long tag_count$OFFSET = $LAYOUT.byteOffset(groupElement("tag_count"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t tag_count
+     * }
+     */
+    public static final long tag_count$offset() {
+        return tag_count$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t tag_count
+     * }
+     */
+    public static int tag_count(MemorySegment struct) {
+        return struct.get(tag_count$LAYOUT, tag_count$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t tag_count
+     * }
+     */
+    public static void tag_count(MemorySegment struct, int fieldValue) {
+        struct.set(tag_count$LAYOUT, tag_count$OFFSET, fieldValue);
+    }
+
+    private static final OfBoolean has_trc$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("has_trc"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * bool has_trc
+     * }
+     */
+    public static final OfBoolean has_trc$layout() {
+        return has_trc$LAYOUT;
+    }
+
+    private static final long has_trc$OFFSET = $LAYOUT.byteOffset(groupElement("has_trc"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * bool has_trc
+     * }
+     */
+    public static final long has_trc$offset() {
+        return has_trc$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * bool has_trc
+     * }
+     */
+    public static boolean has_trc(MemorySegment struct) {
+        return struct.get(has_trc$LAYOUT, has_trc$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * bool has_trc
+     * }
+     */
+    public static void has_trc(MemorySegment struct, boolean fieldValue) {
+        struct.set(has_trc$LAYOUT, has_trc$OFFSET, fieldValue);
+    }
+
+    private static final SequenceLayout trc$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("trc"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static final SequenceLayout trc$layout() {
+        return trc$LAYOUT;
+    }
+
+    private static final long trc$OFFSET = $LAYOUT.byteOffset(groupElement("trc"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static final long trc$offset() {
+        return trc$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static MemorySegment trc(MemorySegment struct) {
+        return struct.asSlice(trc$OFFSET, trc$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static void trc(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, trc$OFFSET, trc$LAYOUT.byteSize());
+    }
+
+    private static long[] trc$DIMS = { 3 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static long[] trc$dimensions() {
+        return trc$DIMS;
+    }
+    private static final MethodHandle trc$ELEM_HANDLE = trc$LAYOUT.sliceHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static MemorySegment trc(MemorySegment struct, long index0) {
+        try {
+            return (MemorySegment)trc$ELEM_HANDLE.invokeExact(struct, trc$OFFSET, index0);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve trc[3]
+     * }
+     */
+    public static void trc(MemorySegment struct, long index0, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, trc(struct, index0), 0L, skcms_Curve.layout().byteSize());
+    }
+
+    private static final OfBoolean has_toXYZD50$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("has_toXYZD50"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * bool has_toXYZD50
+     * }
+     */
+    public static final OfBoolean has_toXYZD50$layout() {
+        return has_toXYZD50$LAYOUT;
+    }
+
+    private static final long has_toXYZD50$OFFSET = $LAYOUT.byteOffset(groupElement("has_toXYZD50"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * bool has_toXYZD50
+     * }
+     */
+    public static final long has_toXYZD50$offset() {
+        return has_toXYZD50$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * bool has_toXYZD50
+     * }
+     */
+    public static boolean has_toXYZD50(MemorySegment struct) {
+        return struct.get(has_toXYZD50$LAYOUT, has_toXYZD50$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * bool has_toXYZD50
+     * }
+     */
+    public static void has_toXYZD50(MemorySegment struct, boolean fieldValue) {
+        struct.set(has_toXYZD50$LAYOUT, has_toXYZD50$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout toXYZD50$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("toXYZD50"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x3 toXYZD50
+     * }
+     */
+    public static final GroupLayout toXYZD50$layout() {
+        return toXYZD50$LAYOUT;
+    }
+
+    private static final long toXYZD50$OFFSET = $LAYOUT.byteOffset(groupElement("toXYZD50"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x3 toXYZD50
+     * }
+     */
+    public static final long toXYZD50$offset() {
+        return toXYZD50$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x3 toXYZD50
+     * }
+     */
+    public static MemorySegment toXYZD50(MemorySegment struct) {
+        return struct.asSlice(toXYZD50$OFFSET, toXYZD50$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x3 toXYZD50
+     * }
+     */
+    public static void toXYZD50(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, toXYZD50$OFFSET, toXYZD50$LAYOUT.byteSize());
+    }
+
+    private static final OfBoolean has_A2B$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("has_A2B"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * bool has_A2B
+     * }
+     */
+    public static final OfBoolean has_A2B$layout() {
+        return has_A2B$LAYOUT;
+    }
+
+    private static final long has_A2B$OFFSET = $LAYOUT.byteOffset(groupElement("has_A2B"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * bool has_A2B
+     * }
+     */
+    public static final long has_A2B$offset() {
+        return has_A2B$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * bool has_A2B
+     * }
+     */
+    public static boolean has_A2B(MemorySegment struct) {
+        return struct.get(has_A2B$LAYOUT, has_A2B$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * bool has_A2B
+     * }
+     */
+    public static void has_A2B(MemorySegment struct, boolean fieldValue) {
+        struct.set(has_A2B$LAYOUT, has_A2B$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout A2B$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("A2B"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_A2B A2B
+     * }
+     */
+    public static final GroupLayout A2B$layout() {
+        return A2B$LAYOUT;
+    }
+
+    private static final long A2B$OFFSET = $LAYOUT.byteOffset(groupElement("A2B"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_A2B A2B
+     * }
+     */
+    public static final long A2B$offset() {
+        return A2B$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_A2B A2B
+     * }
+     */
+    public static MemorySegment A2B(MemorySegment struct) {
+        return struct.asSlice(A2B$OFFSET, A2B$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_A2B A2B
+     * }
+     */
+    public static void A2B(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, A2B$OFFSET, A2B$LAYOUT.byteSize());
+    }
+
+    private static final OfBoolean has_B2A$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("has_B2A"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * bool has_B2A
+     * }
+     */
+    public static final OfBoolean has_B2A$layout() {
+        return has_B2A$LAYOUT;
+    }
+
+    private static final long has_B2A$OFFSET = $LAYOUT.byteOffset(groupElement("has_B2A"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * bool has_B2A
+     * }
+     */
+    public static final long has_B2A$offset() {
+        return has_B2A$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * bool has_B2A
+     * }
+     */
+    public static boolean has_B2A(MemorySegment struct) {
+        return struct.get(has_B2A$LAYOUT, has_B2A$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * bool has_B2A
+     * }
+     */
+    public static void has_B2A(MemorySegment struct, boolean fieldValue) {
+        struct.set(has_B2A$LAYOUT, has_B2A$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout B2A$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("B2A"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_B2A B2A
+     * }
+     */
+    public static final GroupLayout B2A$layout() {
+        return B2A$LAYOUT;
+    }
+
+    private static final long B2A$OFFSET = $LAYOUT.byteOffset(groupElement("B2A"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_B2A B2A
+     * }
+     */
+    public static final long B2A$offset() {
+        return B2A$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_B2A B2A
+     * }
+     */
+    public static MemorySegment B2A(MemorySegment struct) {
+        return struct.asSlice(B2A$OFFSET, B2A$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_B2A B2A
+     * }
+     */
+    public static void B2A(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, B2A$OFFSET, B2A$LAYOUT.byteSize());
+    }
+
+    private static final OfBoolean has_CICP$LAYOUT = (OfBoolean)$LAYOUT.select(groupElement("has_CICP"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * bool has_CICP
+     * }
+     */
+    public static final OfBoolean has_CICP$layout() {
+        return has_CICP$LAYOUT;
+    }
+
+    private static final long has_CICP$OFFSET = $LAYOUT.byteOffset(groupElement("has_CICP"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * bool has_CICP
+     * }
+     */
+    public static final long has_CICP$offset() {
+        return has_CICP$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * bool has_CICP
+     * }
+     */
+    public static boolean has_CICP(MemorySegment struct) {
+        return struct.get(has_CICP$LAYOUT, has_CICP$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * bool has_CICP
+     * }
+     */
+    public static void has_CICP(MemorySegment struct, boolean fieldValue) {
+        struct.set(has_CICP$LAYOUT, has_CICP$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout CICP$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("CICP"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_CICP CICP
+     * }
+     */
+    public static final GroupLayout CICP$layout() {
+        return CICP$LAYOUT;
+    }
+
+    private static final long CICP$OFFSET = $LAYOUT.byteOffset(groupElement("CICP"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_CICP CICP
+     * }
+     */
+    public static final long CICP$offset() {
+        return CICP$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_CICP CICP
+     * }
+     */
+    public static MemorySegment CICP(MemorySegment struct) {
+        return struct.asSlice(CICP$OFFSET, CICP$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_CICP CICP
+     * }
+     */
+    public static void CICP(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, CICP$OFFSET, CICP$LAYOUT.byteSize());
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

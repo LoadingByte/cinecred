@@ -2,13 +2,18 @@
 
 package com.loadingbyte.cinecred.natives.zimg;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct zimg_graph_builder_params {
  *     unsigned int version;
  *     zimg_resample_filter_e resample_filter;
@@ -21,317 +26,564 @@ import static java.lang.foreign.ValueLayout.*;
  *     zimg_cpu_type_e cpu_type;
  *     double nominal_peak_luminance;
  *     char allow_approximate_gamma;
- * };
+ * }
  * }
  */
 public class zimg_graph_builder_params {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$47;
+    zimg_graph_builder_params() {
+        // Should not be called directly
     }
-    public static VarHandle version$VH() {
-        return constants$0.const$48;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * unsigned int version;
-     * }
-     */
-    public static int version$get(MemorySegment seg) {
-        return (int)constants$0.const$48.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * unsigned int version;
-     * }
-     */
-    public static void version$set(MemorySegment seg, int x) {
-        constants$0.const$48.set(seg, x);
-    }
-    public static int version$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$48.get(seg.asSlice(index*sizeof()));
-    }
-    public static void version$set(MemorySegment seg, long index, int x) {
-        constants$0.const$48.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle resample_filter$VH() {
-        return constants$0.const$49;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * zimg_resample_filter_e resample_filter;
-     * }
-     */
-    public static int resample_filter$get(MemorySegment seg) {
-        return (int)constants$0.const$49.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * zimg_resample_filter_e resample_filter;
-     * }
-     */
-    public static void resample_filter$set(MemorySegment seg, int x) {
-        constants$0.const$49.set(seg, x);
-    }
-    public static int resample_filter$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$49.get(seg.asSlice(index*sizeof()));
-    }
-    public static void resample_filter$set(MemorySegment seg, long index, int x) {
-        constants$0.const$49.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle filter_param_a$VH() {
-        return constants$0.const$50;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * double filter_param_a;
-     * }
-     */
-    public static double filter_param_a$get(MemorySegment seg) {
-        return (double)constants$0.const$50.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * double filter_param_a;
-     * }
-     */
-    public static void filter_param_a$set(MemorySegment seg, double x) {
-        constants$0.const$50.set(seg, x);
-    }
-    public static double filter_param_a$get(MemorySegment seg, long index) {
-        return (double)constants$0.const$50.get(seg.asSlice(index*sizeof()));
-    }
-    public static void filter_param_a$set(MemorySegment seg, long index, double x) {
-        constants$0.const$50.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle filter_param_b$VH() {
-        return constants$0.const$51;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * double filter_param_b;
-     * }
-     */
-    public static double filter_param_b$get(MemorySegment seg) {
-        return (double)constants$0.const$51.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * double filter_param_b;
-     * }
-     */
-    public static void filter_param_b$set(MemorySegment seg, double x) {
-        constants$0.const$51.set(seg, x);
-    }
-    public static double filter_param_b$get(MemorySegment seg, long index) {
-        return (double)constants$0.const$51.get(seg.asSlice(index*sizeof()));
-    }
-    public static void filter_param_b$set(MemorySegment seg, long index, double x) {
-        constants$0.const$51.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle resample_filter_uv$VH() {
-        return constants$0.const$52;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * zimg_resample_filter_e resample_filter_uv;
-     * }
-     */
-    public static int resample_filter_uv$get(MemorySegment seg) {
-        return (int)constants$0.const$52.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * zimg_resample_filter_e resample_filter_uv;
-     * }
-     */
-    public static void resample_filter_uv$set(MemorySegment seg, int x) {
-        constants$0.const$52.set(seg, x);
-    }
-    public static int resample_filter_uv$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$52.get(seg.asSlice(index*sizeof()));
-    }
-    public static void resample_filter_uv$set(MemorySegment seg, long index, int x) {
-        constants$0.const$52.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle filter_param_a_uv$VH() {
-        return constants$0.const$53;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * double filter_param_a_uv;
-     * }
-     */
-    public static double filter_param_a_uv$get(MemorySegment seg) {
-        return (double)constants$0.const$53.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * double filter_param_a_uv;
-     * }
-     */
-    public static void filter_param_a_uv$set(MemorySegment seg, double x) {
-        constants$0.const$53.set(seg, x);
-    }
-    public static double filter_param_a_uv$get(MemorySegment seg, long index) {
-        return (double)constants$0.const$53.get(seg.asSlice(index*sizeof()));
-    }
-    public static void filter_param_a_uv$set(MemorySegment seg, long index, double x) {
-        constants$0.const$53.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle filter_param_b_uv$VH() {
-        return constants$0.const$54;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * double filter_param_b_uv;
-     * }
-     */
-    public static double filter_param_b_uv$get(MemorySegment seg) {
-        return (double)constants$0.const$54.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * double filter_param_b_uv;
-     * }
-     */
-    public static void filter_param_b_uv$set(MemorySegment seg, double x) {
-        constants$0.const$54.set(seg, x);
-    }
-    public static double filter_param_b_uv$get(MemorySegment seg, long index) {
-        return (double)constants$0.const$54.get(seg.asSlice(index*sizeof()));
-    }
-    public static void filter_param_b_uv$set(MemorySegment seg, long index, double x) {
-        constants$0.const$54.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle dither_type$VH() {
-        return constants$0.const$55;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * zimg_dither_type_e dither_type;
-     * }
-     */
-    public static int dither_type$get(MemorySegment seg) {
-        return (int)constants$0.const$55.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * zimg_dither_type_e dither_type;
-     * }
-     */
-    public static void dither_type$set(MemorySegment seg, int x) {
-        constants$0.const$55.set(seg, x);
-    }
-    public static int dither_type$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$55.get(seg.asSlice(index*sizeof()));
-    }
-    public static void dither_type$set(MemorySegment seg, long index, int x) {
-        constants$0.const$55.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle cpu_type$VH() {
-        return constants$0.const$56;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * zimg_cpu_type_e cpu_type;
-     * }
-     */
-    public static int cpu_type$get(MemorySegment seg) {
-        return (int)constants$0.const$56.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * zimg_cpu_type_e cpu_type;
-     * }
-     */
-    public static void cpu_type$set(MemorySegment seg, int x) {
-        constants$0.const$56.set(seg, x);
-    }
-    public static int cpu_type$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$56.get(seg.asSlice(index*sizeof()));
-    }
-    public static void cpu_type$set(MemorySegment seg, long index, int x) {
-        constants$0.const$56.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle nominal_peak_luminance$VH() {
-        return constants$0.const$57;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * double nominal_peak_luminance;
-     * }
-     */
-    public static double nominal_peak_luminance$get(MemorySegment seg) {
-        return (double)constants$0.const$57.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * double nominal_peak_luminance;
-     * }
-     */
-    public static void nominal_peak_luminance$set(MemorySegment seg, double x) {
-        constants$0.const$57.set(seg, x);
-    }
-    public static double nominal_peak_luminance$get(MemorySegment seg, long index) {
-        return (double)constants$0.const$57.get(seg.asSlice(index*sizeof()));
-    }
-    public static void nominal_peak_luminance$set(MemorySegment seg, long index, double x) {
-        constants$0.const$57.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle allow_approximate_gamma$VH() {
-        return constants$0.const$58;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * char allow_approximate_gamma;
-     * }
-     */
-    public static byte allow_approximate_gamma$get(MemorySegment seg) {
-        return (byte)constants$0.const$58.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * char allow_approximate_gamma;
-     * }
-     */
-    public static void allow_approximate_gamma$set(MemorySegment seg, byte x) {
-        constants$0.const$58.set(seg, x);
-    }
-    public static byte allow_approximate_gamma$get(MemorySegment seg, long index) {
-        return (byte)constants$0.const$58.get(seg.asSlice(index*sizeof()));
-    }
-    public static void allow_approximate_gamma$set(MemorySegment seg, long index, byte x) {
-        constants$0.const$58.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        zimg_h.C_INT.withName("version"),
+        zimg_h.C_INT.withName("resample_filter"),
+        zimg_h.C_DOUBLE.withName("filter_param_a"),
+        zimg_h.C_DOUBLE.withName("filter_param_b"),
+        zimg_h.C_INT.withName("resample_filter_uv"),
+        MemoryLayout.paddingLayout(4),
+        zimg_h.C_DOUBLE.withName("filter_param_a_uv"),
+        zimg_h.C_DOUBLE.withName("filter_param_b_uv"),
+        zimg_h.C_INT.withName("dither_type"),
+        zimg_h.C_INT.withName("cpu_type"),
+        zimg_h.C_DOUBLE.withName("nominal_peak_luminance"),
+        zimg_h.C_CHAR.withName("allow_approximate_gamma"),
+        MemoryLayout.paddingLayout(7)
+    ).withName("zimg_graph_builder_params");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final OfInt version$LAYOUT = (OfInt)$LAYOUT.select(groupElement("version"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final OfInt version$layout() {
+        return version$LAYOUT;
+    }
+
+    private static final long version$OFFSET = $LAYOUT.byteOffset(groupElement("version"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static final long version$offset() {
+        return version$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static int version(MemorySegment struct) {
+        return struct.get(version$LAYOUT, version$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * unsigned int version
+     * }
+     */
+    public static void version(MemorySegment struct, int fieldValue) {
+        struct.set(version$LAYOUT, version$OFFSET, fieldValue);
+    }
+
+    private static final OfInt resample_filter$LAYOUT = (OfInt)$LAYOUT.select(groupElement("resample_filter"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter
+     * }
+     */
+    public static final OfInt resample_filter$layout() {
+        return resample_filter$LAYOUT;
+    }
+
+    private static final long resample_filter$OFFSET = $LAYOUT.byteOffset(groupElement("resample_filter"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter
+     * }
+     */
+    public static final long resample_filter$offset() {
+        return resample_filter$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter
+     * }
+     */
+    public static int resample_filter(MemorySegment struct) {
+        return struct.get(resample_filter$LAYOUT, resample_filter$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter
+     * }
+     */
+    public static void resample_filter(MemorySegment struct, int fieldValue) {
+        struct.set(resample_filter$LAYOUT, resample_filter$OFFSET, fieldValue);
+    }
+
+    private static final OfDouble filter_param_a$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("filter_param_a"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * double filter_param_a
+     * }
+     */
+    public static final OfDouble filter_param_a$layout() {
+        return filter_param_a$LAYOUT;
+    }
+
+    private static final long filter_param_a$OFFSET = $LAYOUT.byteOffset(groupElement("filter_param_a"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * double filter_param_a
+     * }
+     */
+    public static final long filter_param_a$offset() {
+        return filter_param_a$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * double filter_param_a
+     * }
+     */
+    public static double filter_param_a(MemorySegment struct) {
+        return struct.get(filter_param_a$LAYOUT, filter_param_a$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * double filter_param_a
+     * }
+     */
+    public static void filter_param_a(MemorySegment struct, double fieldValue) {
+        struct.set(filter_param_a$LAYOUT, filter_param_a$OFFSET, fieldValue);
+    }
+
+    private static final OfDouble filter_param_b$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("filter_param_b"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * double filter_param_b
+     * }
+     */
+    public static final OfDouble filter_param_b$layout() {
+        return filter_param_b$LAYOUT;
+    }
+
+    private static final long filter_param_b$OFFSET = $LAYOUT.byteOffset(groupElement("filter_param_b"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * double filter_param_b
+     * }
+     */
+    public static final long filter_param_b$offset() {
+        return filter_param_b$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * double filter_param_b
+     * }
+     */
+    public static double filter_param_b(MemorySegment struct) {
+        return struct.get(filter_param_b$LAYOUT, filter_param_b$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * double filter_param_b
+     * }
+     */
+    public static void filter_param_b(MemorySegment struct, double fieldValue) {
+        struct.set(filter_param_b$LAYOUT, filter_param_b$OFFSET, fieldValue);
+    }
+
+    private static final OfInt resample_filter_uv$LAYOUT = (OfInt)$LAYOUT.select(groupElement("resample_filter_uv"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter_uv
+     * }
+     */
+    public static final OfInt resample_filter_uv$layout() {
+        return resample_filter_uv$LAYOUT;
+    }
+
+    private static final long resample_filter_uv$OFFSET = $LAYOUT.byteOffset(groupElement("resample_filter_uv"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter_uv
+     * }
+     */
+    public static final long resample_filter_uv$offset() {
+        return resample_filter_uv$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter_uv
+     * }
+     */
+    public static int resample_filter_uv(MemorySegment struct) {
+        return struct.get(resample_filter_uv$LAYOUT, resample_filter_uv$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * zimg_resample_filter_e resample_filter_uv
+     * }
+     */
+    public static void resample_filter_uv(MemorySegment struct, int fieldValue) {
+        struct.set(resample_filter_uv$LAYOUT, resample_filter_uv$OFFSET, fieldValue);
+    }
+
+    private static final OfDouble filter_param_a_uv$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("filter_param_a_uv"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * double filter_param_a_uv
+     * }
+     */
+    public static final OfDouble filter_param_a_uv$layout() {
+        return filter_param_a_uv$LAYOUT;
+    }
+
+    private static final long filter_param_a_uv$OFFSET = $LAYOUT.byteOffset(groupElement("filter_param_a_uv"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * double filter_param_a_uv
+     * }
+     */
+    public static final long filter_param_a_uv$offset() {
+        return filter_param_a_uv$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * double filter_param_a_uv
+     * }
+     */
+    public static double filter_param_a_uv(MemorySegment struct) {
+        return struct.get(filter_param_a_uv$LAYOUT, filter_param_a_uv$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * double filter_param_a_uv
+     * }
+     */
+    public static void filter_param_a_uv(MemorySegment struct, double fieldValue) {
+        struct.set(filter_param_a_uv$LAYOUT, filter_param_a_uv$OFFSET, fieldValue);
+    }
+
+    private static final OfDouble filter_param_b_uv$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("filter_param_b_uv"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * double filter_param_b_uv
+     * }
+     */
+    public static final OfDouble filter_param_b_uv$layout() {
+        return filter_param_b_uv$LAYOUT;
+    }
+
+    private static final long filter_param_b_uv$OFFSET = $LAYOUT.byteOffset(groupElement("filter_param_b_uv"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * double filter_param_b_uv
+     * }
+     */
+    public static final long filter_param_b_uv$offset() {
+        return filter_param_b_uv$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * double filter_param_b_uv
+     * }
+     */
+    public static double filter_param_b_uv(MemorySegment struct) {
+        return struct.get(filter_param_b_uv$LAYOUT, filter_param_b_uv$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * double filter_param_b_uv
+     * }
+     */
+    public static void filter_param_b_uv(MemorySegment struct, double fieldValue) {
+        struct.set(filter_param_b_uv$LAYOUT, filter_param_b_uv$OFFSET, fieldValue);
+    }
+
+    private static final OfInt dither_type$LAYOUT = (OfInt)$LAYOUT.select(groupElement("dither_type"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_dither_type_e dither_type
+     * }
+     */
+    public static final OfInt dither_type$layout() {
+        return dither_type$LAYOUT;
+    }
+
+    private static final long dither_type$OFFSET = $LAYOUT.byteOffset(groupElement("dither_type"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_dither_type_e dither_type
+     * }
+     */
+    public static final long dither_type$offset() {
+        return dither_type$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * zimg_dither_type_e dither_type
+     * }
+     */
+    public static int dither_type(MemorySegment struct) {
+        return struct.get(dither_type$LAYOUT, dither_type$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * zimg_dither_type_e dither_type
+     * }
+     */
+    public static void dither_type(MemorySegment struct, int fieldValue) {
+        struct.set(dither_type$LAYOUT, dither_type$OFFSET, fieldValue);
+    }
+
+    private static final OfInt cpu_type$LAYOUT = (OfInt)$LAYOUT.select(groupElement("cpu_type"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * zimg_cpu_type_e cpu_type
+     * }
+     */
+    public static final OfInt cpu_type$layout() {
+        return cpu_type$LAYOUT;
+    }
+
+    private static final long cpu_type$OFFSET = $LAYOUT.byteOffset(groupElement("cpu_type"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * zimg_cpu_type_e cpu_type
+     * }
+     */
+    public static final long cpu_type$offset() {
+        return cpu_type$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * zimg_cpu_type_e cpu_type
+     * }
+     */
+    public static int cpu_type(MemorySegment struct) {
+        return struct.get(cpu_type$LAYOUT, cpu_type$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * zimg_cpu_type_e cpu_type
+     * }
+     */
+    public static void cpu_type(MemorySegment struct, int fieldValue) {
+        struct.set(cpu_type$LAYOUT, cpu_type$OFFSET, fieldValue);
+    }
+
+    private static final OfDouble nominal_peak_luminance$LAYOUT = (OfDouble)$LAYOUT.select(groupElement("nominal_peak_luminance"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * double nominal_peak_luminance
+     * }
+     */
+    public static final OfDouble nominal_peak_luminance$layout() {
+        return nominal_peak_luminance$LAYOUT;
+    }
+
+    private static final long nominal_peak_luminance$OFFSET = $LAYOUT.byteOffset(groupElement("nominal_peak_luminance"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * double nominal_peak_luminance
+     * }
+     */
+    public static final long nominal_peak_luminance$offset() {
+        return nominal_peak_luminance$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * double nominal_peak_luminance
+     * }
+     */
+    public static double nominal_peak_luminance(MemorySegment struct) {
+        return struct.get(nominal_peak_luminance$LAYOUT, nominal_peak_luminance$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * double nominal_peak_luminance
+     * }
+     */
+    public static void nominal_peak_luminance(MemorySegment struct, double fieldValue) {
+        struct.set(nominal_peak_luminance$LAYOUT, nominal_peak_luminance$OFFSET, fieldValue);
+    }
+
+    private static final OfByte allow_approximate_gamma$LAYOUT = (OfByte)$LAYOUT.select(groupElement("allow_approximate_gamma"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * char allow_approximate_gamma
+     * }
+     */
+    public static final OfByte allow_approximate_gamma$layout() {
+        return allow_approximate_gamma$LAYOUT;
+    }
+
+    private static final long allow_approximate_gamma$OFFSET = $LAYOUT.byteOffset(groupElement("allow_approximate_gamma"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * char allow_approximate_gamma
+     * }
+     */
+    public static final long allow_approximate_gamma$offset() {
+        return allow_approximate_gamma$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * char allow_approximate_gamma
+     * }
+     */
+    public static byte allow_approximate_gamma(MemorySegment struct) {
+        return struct.get(allow_approximate_gamma$LAYOUT, allow_approximate_gamma$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * char allow_approximate_gamma
+     * }
+     */
+    public static void allow_approximate_gamma(MemorySegment struct, byte fieldValue) {
+        struct.set(allow_approximate_gamma$LAYOUT, allow_approximate_gamma$OFFSET, fieldValue);
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

@@ -8,7 +8,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.create
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.Serializable
@@ -46,7 +45,7 @@ abstract class CollectPOMLicenses : DefaultTask() {
         }
 
     private fun resolveLicenseElements(groupId: String, artifactId: String, version: String): NodeList? {
-        val pomDep = project.dependencies.create(groupId, artifactId, version, ext = "pom")
+        val pomDep = project.dependencyFactory.create(groupId, artifactId, version, null, "pom")
         val pomFile = project.configurations.detachedConfiguration(pomDep).singleFile
         val pomDoc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(pomFile)
         val licenseElems = XPathFactory.newInstance().newXPath().compile("/project/licenses/license")

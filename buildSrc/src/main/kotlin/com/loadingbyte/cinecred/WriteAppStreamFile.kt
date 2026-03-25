@@ -24,15 +24,15 @@ abstract class WriteAppStreamFile : DefaultTask() {
     @get:Input
     abstract val version: Property<String>
     @get:Input
-    abstract val slogans: MapProperty<Locale, String>
+    abstract val summaries: MapProperty<Locale, String>
     @get:Input
-    abstract val teasers: MapProperty<Locale, String>
+    abstract val descriptions: MapProperty<Locale, String>
     @get:Input
-    abstract val url: Property<String>
+    abstract val homepage: Property<String>
     @get:Input
-    abstract val vendor: Property<String>
+    abstract val developer: Property<String>
     @get:Input
-    abstract val email: Property<String>
+    abstract val updateContact: Property<String>
     @get:Input
     abstract val categories: ListProperty<String>
     @get:OutputFile
@@ -48,19 +48,19 @@ abstract class WriteAppStreamFile : DefaultTask() {
         comp.appendChild(doc.createElement("id", "com.cinecred.cinecred"))
         comp.appendChild(doc.createElement("metadata_license", "CC0-1.0"))
         comp.appendChild(doc.createElement("name", "Cinecred"))
-        for ((locale, slogan) in slogans.get().entries)
-            comp.appendChild(makeLocalized(doc, "summary", locale, slogan))
+        for ((locale, summary) in summaries.get().entries)
+            comp.appendChild(makeLocalized(doc, "summary", locale, summary))
         comp.appendChild(doc.createElement("description").also { desc ->
-            val splitTeasers = teasers.get().mapValues { (_, teaser) -> teaser.split("\n\n") }
-            for (p in splitTeasers.getValue(Locale.ENGLISH).indices)
-                for ((locale, splitTeaser) in splitTeasers)
-                    desc.appendChild(makeLocalized(doc, "p", locale, splitTeaser[p]))
+            val splitDescs = descriptions.get().mapValues { (_, teaser) -> teaser.split("\n\n") }
+            for (p in splitDescs.getValue(Locale.ENGLISH).indices)
+                for ((locale, splitDesc) in splitDescs)
+                    desc.appendChild(makeLocalized(doc, "p", locale, splitDesc[p]))
         })
         comp.appendChild(doc.createElement("categories").apply {
             for (category in categories.get())
                 appendChild(doc.createElement("category", category))
         })
-        comp.appendChild(makeURL(doc, "homepage", url.get()))
+        comp.appendChild(makeURL(doc, "homepage", homepage.get()))
         comp.appendChild(makeURL(doc, "bugtracker", "https://github.com/LoadingByte/cinecred/issues"))
         comp.appendChild(makeURL(doc, "help", "https://cinecred.com/guide/"))
         comp.appendChild(makeURL(doc, "donation", "https://cinecred.com/donate/"))
@@ -79,7 +79,7 @@ abstract class WriteAppStreamFile : DefaultTask() {
         comp.appendChild(doc.createElement("project_license", "GPL-3.0-or-later"))
         comp.appendChild(doc.createElement("developer").apply {
             setAttribute("id", "com.cinecred")
-            appendChild(doc.createElement("name", vendor.get()))
+            appendChild(doc.createElement("name", developer.get()))
         })
         comp.appendChild(doc.createElement("screenshots").apply {
             appendChild(makeLocalizedScreenshot(doc, "screenshot-live-vis-guides-on").apply {
@@ -95,7 +95,7 @@ abstract class WriteAppStreamFile : DefaultTask() {
         comp.appendChild(doc.createElement("content_rating").apply {
             setAttribute("type", "oars-1.1")
         })
-        comp.appendChild(doc.createElement("update_contact", email.get().replace("@", "_at_")))
+        comp.appendChild(doc.createElement("update_contact", updateContact.get().replace("@", "_at_")))
 
         outputFile.get().asFile.bufferedWriter().use { writer ->
             TransformerFactory.newInstance().newTransformer().apply {
@@ -110,7 +110,7 @@ abstract class WriteAppStreamFile : DefaultTask() {
 
     private fun makeLocalizedScreenshot(doc: Document, name: String): Element {
         val elem = doc.createElement("screenshot")
-        for (locale in slogans.get().keys) {
+        for (locale in summaries.get().keys) {
             val url = "https://cinecred.com/assets/$name.${locale.toLanguageTag()}.png"
             elem.appendChild(makeLocalized(doc, "image", locale, url))
         }

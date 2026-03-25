@@ -9,13 +9,13 @@ import java.util.*
 
 
 plugins {
-    kotlin("jvm") version "2.2.0"
+    kotlin("jvm") version "2.3.20"
 }
 
 group = "com.loadingbyte"
 version = "1.9.0-SNAPSHOT"
 
-val jdkVersion = 21
+val jdkVersion = 25
 val slf4jVersion = "2.0.17"
 val twelveMonkeysVersion = "3.12.0"
 val javacppVersion = "1.5.12"
@@ -55,7 +55,7 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(jdkVersion)
 }
 
-val natives = Platform.values().associateWith { platform ->
+val natives = Platform.entries.associateWith { platform ->
     configurations.create("${platform.label}Natives") { isTransitive = false }
 }
 
@@ -67,55 +67,58 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-collections-immutable", "0.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.4.0")
 
     // Log to java.util.logging
-    implementation("org.slf4j", "slf4j-jdk14", slf4jVersion)
+    implementation(dependencyFactory.create("org.slf4j", "slf4j-jdk14", slf4jVersion))
     // Redirect other logging frameworks to slf4j.
     // JExcelAPI uses log4j. PDFBox uses Jakarta Commons Logging.
-    implementation("org.slf4j", "log4j-over-slf4j", slf4jVersion)
-    implementation("org.slf4j", "jcl-over-slf4j", slf4jVersion)
+    implementation(dependencyFactory.create("org.slf4j", "log4j-over-slf4j", slf4jVersion))
+    implementation(dependencyFactory.create("org.slf4j", "jcl-over-slf4j", slf4jVersion))
 
     // Spreadsheet IO
-    implementation("ch.rabanti", "nanoxlsx4j", "2.5.3")
-    implementation("net.sourceforge.jexcelapi", "jxl", "2.6.12")
-    implementation("com.github.miachm.sods", "SODS", "1.6.8")
-    implementation("de.siegmar", "fastcsv", "3.6.0")
+    implementation("ch.rabanti:nanoxlsx4j:2.5.3")
+    implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
+    implementation("com.github.miachm.sods:SODS:1.6.8")
+    implementation("de.siegmar:fastcsv:3.6.0")
 
     // Spreadsheet Services
-    implementation("com.googlecode.plist", "dd-plist", "1.28")
-    implementation("com.google.oauth-client", "google-oauth-client-jetty", "1.39.0")
-    implementation("com.google.apis", "google-api-services-sheets", "v4-rev20250415-2.0.0")
+    implementation("com.googlecode.plist:dd-plist:1.28")
+    implementation("com.google.oauth-client:google-oauth-client-jetty:1.39.0")
+    implementation("com.google.apis:google-api-services-sheets:v4-rev20250415-2.0.0")
 
     // Raster Image IO
-    implementation("com.twelvemonkeys.imageio", "imageio-psd", twelveMonkeysVersion)
-    implementation("com.twelvemonkeys.imageio", "imageio-tga", twelveMonkeysVersion)
+    implementation(dependencyFactory.create("com.twelvemonkeys.imageio", "imageio-psd", twelveMonkeysVersion))
+    implementation(dependencyFactory.create("com.twelvemonkeys.imageio", "imageio-tga", twelveMonkeysVersion))
     // JBIG2 and JPEG2000 are commonly found in PDF files.
-    implementation("org.apache.pdfbox", "jbig2-imageio", "3.0.4")
-    implementation("com.github.jai-imageio", "jai-imageio-jpeg2000", "1.4.0")
+    implementation("org.apache.pdfbox:jbig2-imageio:3.0.4")
+    implementation("com.github.jai-imageio:jai-imageio-jpeg2000:1.4.0")
 
     // PDF IO
-    implementation("org.apache.pdfbox", "pdfbox", "3.0.5")
+    implementation("org.apache.pdfbox:pdfbox:3.0.5")
 
     // Video IO
-    implementation("org.bytedeco", "javacpp", javacppVersion)
-    implementation("org.bytedeco", "ffmpeg", ffmpegVersion)
-    for (platform in Platform.values()) {
-        natives.getValue(platform)("org.bytedeco", "javacpp", javacppVersion, classifier = platform.slugJavacpp)
-        natives.getValue(platform)("org.bytedeco", "ffmpeg", ffmpegVersion, classifier = "${platform.slugJavacpp}-gpl")
+    implementation(dependencyFactory.create("org.bytedeco", "javacpp", javacppVersion))
+    implementation(dependencyFactory.create("org.bytedeco", "ffmpeg", ffmpegVersion))
+    for (platform in Platform.entries) {
+        val nat = natives.getValue(platform)
+        nat(dependencyFactory.create("org.bytedeco", "javacpp", javacppVersion, platform.slugJavacpp, null))
+        nat(dependencyFactory.create("org.bytedeco", "ffmpeg", ffmpegVersion, "${platform.slugJavacpp}-gpl", null))
     }
 
     // UI
-    implementation("com.miglayout", "miglayout-swing", "11.4.2")
-    implementation("com.formdev", "flatlaf", flatlafVersion, classifier = "no-natives")
-    for (p in Platform.values())
-        natives.getValue(p)("com.formdev", "flatlaf", flatlafVersion, classifier = p.slugFlatLaf, ext = p.os.codeLibExt)
-    implementation("com.github.weisj", "jsvg", "2.0.0")
-    implementation("org.commonmark", "commonmark", "0.25.0")
+    implementation("com.miglayout:miglayout-swing:11.4.2")
+    implementation(dependencyFactory.create("com.formdev", "flatlaf", flatlafVersion, "no-natives", null))
+    for (p in Platform.entries) {
+        val nat = natives.getValue(p)
+        nat(dependencyFactory.create("com.formdev", "flatlaf", flatlafVersion, p.slugFlatLaf, p.os.codeLibExt))
+    }
+    implementation("com.github.weisj:jsvg:2.0.0")
+    implementation("org.commonmark:commonmark:0.25.0")
 
     // Testing
-    testImplementation("org.junit.jupiter", "junit-jupiter", "5.13.3")
-    testRuntimeOnly("org.junit.platform", "junit-platform-launcher")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.13.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 configurations.configureEach {
@@ -133,7 +136,7 @@ configurations.configureEach {
 
 tasks.withType<JavaCompile>().configureEach {
     options.release = jdkVersion
-    options.compilerArgs = listOf("--enable-preview", "--add-modules", addModules.joinToString(","))
+    options.compilerArgs = listOf("--add-modules", addModules.joinToString(","))
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -202,7 +205,7 @@ tasks.processResources {
 }
 
 
-val platformNativesTasks = Platform.values().associateWith { platform ->
+val platformNativesTasks = Platform.entries.associateWith { platform ->
     tasks.register<Sync>("${platform.label}Natives") {
         // Collect all natives for the platform in a single directory.
         from(srcMainNatives(platform)) {
@@ -225,7 +228,7 @@ val platformNativesTasks = Platform.values().associateWith { platform ->
 }
 
 
-for (platform in Platform.values()) {
+for (platform in Platform.entries) {
     val platformNatives = platformNativesTasks.getValue(platform)
     val mainClass_ = mainClass
     val jvmArgs_ = listOf(
@@ -252,7 +255,7 @@ for (platform in Platform.values()) {
 }
 
 
-val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
+val drawOSImagesTasks = Platform.OS.entries.associateWith { os ->
     // Draw the images that are needed for the OS.
     tasks.register<DrawImages>("draw${os.slug.capitalized()}Images") {
         version = project.version.toString()
@@ -266,16 +269,16 @@ val drawOSImagesTasks = Platform.OS.values().associateWith { os ->
 
 val writeAppStreamFile by tasks.registering(WriteAppStreamFile::class) {
     version = project.version.toString()
-    slogans = mainBundles.mapValues { it.getString("slogan") }
-    teasers = mainBundles.mapValues { it.getString("teaser") }
-    url = this@Build_gradle.url
-    vendor = this@Build_gradle.vendor
-    email = this@Build_gradle.email
+    summaries = mainBundles.mapValues { it.getString("slogan") }
+    descriptions = mainBundles.mapValues { it.getString("teaser") }
+    homepage = url
+    developer = vendor
+    updateContact = email
     categories = linuxCategories
     outputFile = layout.buildDirectory.file("generated/appStreamFile/cinecred.metainfo.xml")
 }
 
-val preparePlatformPackagingTasks = Platform.values().map { platform ->
+val preparePlatformPackagingTasks = Platform.entries.map { platform ->
     // Collect all files needed for packaging in a folder.
     tasks.register<Sync>("prepare${platform.label.capitalized()}Packaging") {
         doFirst {
@@ -405,7 +408,7 @@ val checkoutNFD by tasks.registering(CheckoutGitRef::class) {
     repositoryDir = layout.buildDirectory.dir("repositories/nfd")
 }
 
-for (platform in Platform.values()) {
+for (platform in Platform.entries) {
     tasks.register<BuildSkia>("buildSkiaFor${platform.label.capitalized()}") {
         group = "Native"
         description = "Builds the Skia native library for ${platform.label.capitalized()}."
@@ -469,6 +472,7 @@ tasks.register<Jextract>("jextractSkcms") {
     group = "Native"
     description = "Extracts Java bindings for skcms, which is part of the Skia native library."
     targetPackage = "com.loadingbyte.cinecred.natives.skcms"
+    addSkcmsIncludes()
     headerFile = checkoutSkia.flatMap { it.repositoryDir.file("modules/skcms/skcms.h") }
     outputDir = srcMainJava
 }
@@ -487,6 +491,7 @@ tasks.register<Jextract>("jextractZimg") {
     group = "Native"
     description = "Extracts Java bindings for the zimg native library."
     targetPackage = "com.loadingbyte.cinecred.natives.zimg"
+    addZimgIncludes()
     headerFile = checkoutZimg.flatMap { it.repositoryDir.file("src/zimg/api/zimg.h") }
     outputDir = srcMainJava
 }
@@ -495,6 +500,7 @@ tasks.register<Jextract>("jextractNFD") {
     group = "Native"
     description = "Extracts Java bindings for the NFD native library."
     targetPackage = "com.loadingbyte.cinecred.natives.nfd"
+    addNFDIncludes()
     headerFile = checkoutNFD.flatMap { it.repositoryDir.file("src/include/nfd.h") }
     outputDir = srcMainJava
 }

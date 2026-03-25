@@ -2,13 +2,18 @@
 
 package com.loadingbyte.cinecred.natives.skcms;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
+ * {@snippet lang=c :
  * struct skcms_B2A {
  *     uint32_t input_channels;
  *     skcms_Curve input_curves[3];
@@ -17,173 +22,672 @@ import static java.lang.foreign.ValueLayout.*;
  *     skcms_Curve matrix_curves[3];
  *     uint32_t output_channels;
  *     uint8_t grid_points[4];
- *     const uint8_t* grid_8;
- *     const uint8_t* grid_16;
+ *     const uint8_t *grid_8;
+ *     const uint8_t *grid_16;
  *     skcms_Curve output_curves[4];
- * };
+ * }
  * }
  */
 public class skcms_B2A {
 
-    public static MemoryLayout $LAYOUT() {
-        return constants$0.const$128;
+    skcms_B2A() {
+        // Should not be called directly
     }
-    public static VarHandle input_channels$VH() {
-        return constants$0.const$129;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t input_channels;
-     * }
-     */
-    public static int input_channels$get(MemorySegment seg) {
-        return (int)constants$0.const$129.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t input_channels;
-     * }
-     */
-    public static void input_channels$set(MemorySegment seg, int x) {
-        constants$0.const$129.set(seg, x);
-    }
-    public static int input_channels$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$129.get(seg.asSlice(index*sizeof()));
-    }
-    public static void input_channels$set(MemorySegment seg, long index, int x) {
-        constants$0.const$129.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment input_curves$slice(MemorySegment seg) {
-        return seg.asSlice(8, 96);
-    }
-    public static VarHandle matrix_channels$VH() {
-        return constants$0.const$130;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t matrix_channels;
-     * }
-     */
-    public static int matrix_channels$get(MemorySegment seg) {
-        return (int)constants$0.const$130.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t matrix_channels;
-     * }
-     */
-    public static void matrix_channels$set(MemorySegment seg, int x) {
-        constants$0.const$130.set(seg, x);
-    }
-    public static int matrix_channels$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$130.get(seg.asSlice(index*sizeof()));
-    }
-    public static void matrix_channels$set(MemorySegment seg, long index, int x) {
-        constants$0.const$130.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment matrix$slice(MemorySegment seg) {
-        return seg.asSlice(108, 48);
-    }
-    public static MemorySegment matrix_curves$slice(MemorySegment seg) {
-        return seg.asSlice(160, 96);
-    }
-    public static VarHandle output_channels$VH() {
-        return constants$0.const$131;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * uint32_t output_channels;
-     * }
-     */
-    public static int output_channels$get(MemorySegment seg) {
-        return (int)constants$0.const$131.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * uint32_t output_channels;
-     * }
-     */
-    public static void output_channels$set(MemorySegment seg, int x) {
-        constants$0.const$131.set(seg, x);
-    }
-    public static int output_channels$get(MemorySegment seg, long index) {
-        return (int)constants$0.const$131.get(seg.asSlice(index*sizeof()));
-    }
-    public static void output_channels$set(MemorySegment seg, long index, int x) {
-        constants$0.const$131.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment grid_points$slice(MemorySegment seg) {
-        return seg.asSlice(260, 4);
-    }
-    public static VarHandle grid_8$VH() {
-        return constants$0.const$132;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const uint8_t* grid_8;
-     * }
-     */
-    public static MemorySegment grid_8$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$132.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const uint8_t* grid_8;
-     * }
-     */
-    public static void grid_8$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$132.set(seg, x);
-    }
-    public static MemorySegment grid_8$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$132.get(seg.asSlice(index*sizeof()));
-    }
-    public static void grid_8$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$132.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static VarHandle grid_16$VH() {
-        return constants$0.const$133;
-    }
-    /**
-     * Getter for field:
-     * {@snippet :
-     * const uint8_t* grid_16;
-     * }
-     */
-    public static MemorySegment grid_16$get(MemorySegment seg) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$133.get(seg);
-    }
-    /**
-     * Setter for field:
-     * {@snippet :
-     * const uint8_t* grid_16;
-     * }
-     */
-    public static void grid_16$set(MemorySegment seg, MemorySegment x) {
-        constants$0.const$133.set(seg, x);
-    }
-    public static MemorySegment grid_16$get(MemorySegment seg, long index) {
-        return (java.lang.foreign.MemorySegment)constants$0.const$133.get(seg.asSlice(index*sizeof()));
-    }
-    public static void grid_16$set(MemorySegment seg, long index, MemorySegment x) {
-        constants$0.const$133.set(seg.asSlice(index*sizeof()), x);
-    }
-    public static MemorySegment output_curves$slice(MemorySegment seg) {
-        return seg.asSlice(280, 128);
-    }
-    public static long sizeof() { return $LAYOUT().byteSize(); }
-    public static MemorySegment allocate(SegmentAllocator allocator) { return allocator.allocate($LAYOUT()); }
-    public static MemorySegment allocateArray(long len, SegmentAllocator allocator) {
-        return allocator.allocate(MemoryLayout.sequenceLayout(len, $LAYOUT()));
-    }
-    public static MemorySegment ofAddress(MemorySegment addr, Arena arena) { return RuntimeHelper.asArray(addr, $LAYOUT(), 1, arena); }
-}
 
+    private static final GroupLayout $LAYOUT = MemoryLayout.structLayout(
+        skcms_h.C_INT.withName("input_channels"),
+        MemoryLayout.paddingLayout(4),
+        MemoryLayout.sequenceLayout(3, skcms_Curve.layout()).withName("input_curves"),
+        skcms_h.C_INT.withName("matrix_channels"),
+        skcms_Matrix3x4.layout().withName("matrix"),
+        MemoryLayout.paddingLayout(4),
+        MemoryLayout.sequenceLayout(3, skcms_Curve.layout()).withName("matrix_curves"),
+        skcms_h.C_INT.withName("output_channels"),
+        MemoryLayout.sequenceLayout(4, skcms_h.C_CHAR).withName("grid_points"),
+        skcms_h.C_POINTER.withName("grid_8"),
+        skcms_h.C_POINTER.withName("grid_16"),
+        MemoryLayout.sequenceLayout(4, skcms_Curve.layout()).withName("output_curves")
+    ).withName("skcms_B2A");
+
+    /**
+     * The layout of this struct
+     */
+    public static final GroupLayout layout() {
+        return $LAYOUT;
+    }
+
+    private static final OfInt input_channels$LAYOUT = (OfInt)$LAYOUT.select(groupElement("input_channels"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t input_channels
+     * }
+     */
+    public static final OfInt input_channels$layout() {
+        return input_channels$LAYOUT;
+    }
+
+    private static final long input_channels$OFFSET = $LAYOUT.byteOffset(groupElement("input_channels"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t input_channels
+     * }
+     */
+    public static final long input_channels$offset() {
+        return input_channels$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t input_channels
+     * }
+     */
+    public static int input_channels(MemorySegment struct) {
+        return struct.get(input_channels$LAYOUT, input_channels$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t input_channels
+     * }
+     */
+    public static void input_channels(MemorySegment struct, int fieldValue) {
+        struct.set(input_channels$LAYOUT, input_channels$OFFSET, fieldValue);
+    }
+
+    private static final SequenceLayout input_curves$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("input_curves"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static final SequenceLayout input_curves$layout() {
+        return input_curves$LAYOUT;
+    }
+
+    private static final long input_curves$OFFSET = $LAYOUT.byteOffset(groupElement("input_curves"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static final long input_curves$offset() {
+        return input_curves$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static MemorySegment input_curves(MemorySegment struct) {
+        return struct.asSlice(input_curves$OFFSET, input_curves$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static void input_curves(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, input_curves$OFFSET, input_curves$LAYOUT.byteSize());
+    }
+
+    private static long[] input_curves$DIMS = { 3 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static long[] input_curves$dimensions() {
+        return input_curves$DIMS;
+    }
+    private static final MethodHandle input_curves$ELEM_HANDLE = input_curves$LAYOUT.sliceHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static MemorySegment input_curves(MemorySegment struct, long index0) {
+        try {
+            return (MemorySegment)input_curves$ELEM_HANDLE.invokeExact(struct, input_curves$OFFSET, index0);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve input_curves[3]
+     * }
+     */
+    public static void input_curves(MemorySegment struct, long index0, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, input_curves(struct, index0), 0L, skcms_Curve.layout().byteSize());
+    }
+
+    private static final OfInt matrix_channels$LAYOUT = (OfInt)$LAYOUT.select(groupElement("matrix_channels"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t matrix_channels
+     * }
+     */
+    public static final OfInt matrix_channels$layout() {
+        return matrix_channels$LAYOUT;
+    }
+
+    private static final long matrix_channels$OFFSET = $LAYOUT.byteOffset(groupElement("matrix_channels"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t matrix_channels
+     * }
+     */
+    public static final long matrix_channels$offset() {
+        return matrix_channels$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t matrix_channels
+     * }
+     */
+    public static int matrix_channels(MemorySegment struct) {
+        return struct.get(matrix_channels$LAYOUT, matrix_channels$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t matrix_channels
+     * }
+     */
+    public static void matrix_channels(MemorySegment struct, int fieldValue) {
+        struct.set(matrix_channels$LAYOUT, matrix_channels$OFFSET, fieldValue);
+    }
+
+    private static final GroupLayout matrix$LAYOUT = (GroupLayout)$LAYOUT.select(groupElement("matrix"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x4 matrix
+     * }
+     */
+    public static final GroupLayout matrix$layout() {
+        return matrix$LAYOUT;
+    }
+
+    private static final long matrix$OFFSET = $LAYOUT.byteOffset(groupElement("matrix"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x4 matrix
+     * }
+     */
+    public static final long matrix$offset() {
+        return matrix$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x4 matrix
+     * }
+     */
+    public static MemorySegment matrix(MemorySegment struct) {
+        return struct.asSlice(matrix$OFFSET, matrix$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Matrix3x4 matrix
+     * }
+     */
+    public static void matrix(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, matrix$OFFSET, matrix$LAYOUT.byteSize());
+    }
+
+    private static final SequenceLayout matrix_curves$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("matrix_curves"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static final SequenceLayout matrix_curves$layout() {
+        return matrix_curves$LAYOUT;
+    }
+
+    private static final long matrix_curves$OFFSET = $LAYOUT.byteOffset(groupElement("matrix_curves"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static final long matrix_curves$offset() {
+        return matrix_curves$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static MemorySegment matrix_curves(MemorySegment struct) {
+        return struct.asSlice(matrix_curves$OFFSET, matrix_curves$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static void matrix_curves(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, matrix_curves$OFFSET, matrix_curves$LAYOUT.byteSize());
+    }
+
+    private static long[] matrix_curves$DIMS = { 3 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static long[] matrix_curves$dimensions() {
+        return matrix_curves$DIMS;
+    }
+    private static final MethodHandle matrix_curves$ELEM_HANDLE = matrix_curves$LAYOUT.sliceHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static MemorySegment matrix_curves(MemorySegment struct, long index0) {
+        try {
+            return (MemorySegment)matrix_curves$ELEM_HANDLE.invokeExact(struct, matrix_curves$OFFSET, index0);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve matrix_curves[3]
+     * }
+     */
+    public static void matrix_curves(MemorySegment struct, long index0, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, matrix_curves(struct, index0), 0L, skcms_Curve.layout().byteSize());
+    }
+
+    private static final OfInt output_channels$LAYOUT = (OfInt)$LAYOUT.select(groupElement("output_channels"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint32_t output_channels
+     * }
+     */
+    public static final OfInt output_channels$layout() {
+        return output_channels$LAYOUT;
+    }
+
+    private static final long output_channels$OFFSET = $LAYOUT.byteOffset(groupElement("output_channels"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint32_t output_channels
+     * }
+     */
+    public static final long output_channels$offset() {
+        return output_channels$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint32_t output_channels
+     * }
+     */
+    public static int output_channels(MemorySegment struct) {
+        return struct.get(output_channels$LAYOUT, output_channels$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint32_t output_channels
+     * }
+     */
+    public static void output_channels(MemorySegment struct, int fieldValue) {
+        struct.set(output_channels$LAYOUT, output_channels$OFFSET, fieldValue);
+    }
+
+    private static final SequenceLayout grid_points$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("grid_points"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static final SequenceLayout grid_points$layout() {
+        return grid_points$LAYOUT;
+    }
+
+    private static final long grid_points$OFFSET = $LAYOUT.byteOffset(groupElement("grid_points"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static final long grid_points$offset() {
+        return grid_points$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static MemorySegment grid_points(MemorySegment struct) {
+        return struct.asSlice(grid_points$OFFSET, grid_points$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static void grid_points(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, grid_points$OFFSET, grid_points$LAYOUT.byteSize());
+    }
+
+    private static long[] grid_points$DIMS = { 4 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static long[] grid_points$dimensions() {
+        return grid_points$DIMS;
+    }
+    private static final VarHandle grid_points$ELEM_HANDLE = grid_points$LAYOUT.varHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static byte grid_points(MemorySegment struct, long index0) {
+        return (byte)grid_points$ELEM_HANDLE.get(struct, grid_points$OFFSET, index0);
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * uint8_t grid_points[4]
+     * }
+     */
+    public static void grid_points(MemorySegment struct, long index0, byte fieldValue) {
+        grid_points$ELEM_HANDLE.set(struct, grid_points$OFFSET, index0, fieldValue);
+    }
+
+    private static final AddressLayout grid_8$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("grid_8"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_8
+     * }
+     */
+    public static final AddressLayout grid_8$layout() {
+        return grid_8$LAYOUT;
+    }
+
+    private static final long grid_8$OFFSET = $LAYOUT.byteOffset(groupElement("grid_8"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_8
+     * }
+     */
+    public static final long grid_8$offset() {
+        return grid_8$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_8
+     * }
+     */
+    public static MemorySegment grid_8(MemorySegment struct) {
+        return struct.get(grid_8$LAYOUT, grid_8$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_8
+     * }
+     */
+    public static void grid_8(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(grid_8$LAYOUT, grid_8$OFFSET, fieldValue);
+    }
+
+    private static final AddressLayout grid_16$LAYOUT = (AddressLayout)$LAYOUT.select(groupElement("grid_16"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_16
+     * }
+     */
+    public static final AddressLayout grid_16$layout() {
+        return grid_16$LAYOUT;
+    }
+
+    private static final long grid_16$OFFSET = $LAYOUT.byteOffset(groupElement("grid_16"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_16
+     * }
+     */
+    public static final long grid_16$offset() {
+        return grid_16$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_16
+     * }
+     */
+    public static MemorySegment grid_16(MemorySegment struct) {
+        return struct.get(grid_16$LAYOUT, grid_16$OFFSET);
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * const uint8_t *grid_16
+     * }
+     */
+    public static void grid_16(MemorySegment struct, MemorySegment fieldValue) {
+        struct.set(grid_16$LAYOUT, grid_16$OFFSET, fieldValue);
+    }
+
+    private static final SequenceLayout output_curves$LAYOUT = (SequenceLayout)$LAYOUT.select(groupElement("output_curves"));
+
+    /**
+     * Layout for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static final SequenceLayout output_curves$layout() {
+        return output_curves$LAYOUT;
+    }
+
+    private static final long output_curves$OFFSET = $LAYOUT.byteOffset(groupElement("output_curves"));
+
+    /**
+     * Offset for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static final long output_curves$offset() {
+        return output_curves$OFFSET;
+    }
+
+    /**
+     * Getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static MemorySegment output_curves(MemorySegment struct) {
+        return struct.asSlice(output_curves$OFFSET, output_curves$LAYOUT.byteSize());
+    }
+
+    /**
+     * Setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static void output_curves(MemorySegment struct, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, struct, output_curves$OFFSET, output_curves$LAYOUT.byteSize());
+    }
+
+    private static long[] output_curves$DIMS = { 4 };
+
+    /**
+     * Dimensions for array field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static long[] output_curves$dimensions() {
+        return output_curves$DIMS;
+    }
+    private static final MethodHandle output_curves$ELEM_HANDLE = output_curves$LAYOUT.sliceHandle(sequenceElement());
+
+    /**
+     * Indexed getter for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static MemorySegment output_curves(MemorySegment struct, long index0) {
+        try {
+            return (MemorySegment)output_curves$ELEM_HANDLE.invokeExact(struct, output_curves$OFFSET, index0);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    /**
+     * Indexed setter for field:
+     * {@snippet lang=c :
+     * skcms_Curve output_curves[4]
+     * }
+     */
+    public static void output_curves(MemorySegment struct, long index0, MemorySegment fieldValue) {
+        MemorySegment.copy(fieldValue, 0L, output_curves(struct, index0), 0L, skcms_Curve.layout().byteSize());
+    }
+
+    /**
+     * Obtains a slice of {@code arrayParam} which selects the array element at {@code index}.
+     * The returned segment has address {@code arrayParam.address() + index * layout().byteSize()}
+     */
+    public static MemorySegment asSlice(MemorySegment array, long index) {
+        return array.asSlice(layout().byteSize() * index);
+    }
+
+    /**
+     * The size (in bytes) of this struct
+     */
+    public static long sizeof() { return layout().byteSize(); }
+
+    /**
+     * Allocate a segment of size {@code layout().byteSize()} using {@code allocator}
+     */
+    public static MemorySegment allocate(SegmentAllocator allocator) {
+        return allocator.allocate(layout());
+    }
+
+    /**
+     * Allocate an array of size {@code elementCount} using {@code allocator}.
+     * The returned segment has size {@code elementCount * layout().byteSize()}.
+     */
+    public static MemorySegment allocateArray(long elementCount, SegmentAllocator allocator) {
+        return allocator.allocate(MemoryLayout.sequenceLayout(elementCount, layout()));
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, Arena arena, Consumer<MemorySegment> cleanup) {
+        return reinterpret(addr, 1, arena, cleanup);
+    }
+
+    /**
+     * Reinterprets {@code addr} using target {@code arena} and {@code cleanupAction} (if any).
+     * The returned segment has size {@code elementCount * layout().byteSize()}
+     */
+    public static MemorySegment reinterpret(MemorySegment addr, long elementCount, Arena arena, Consumer<MemorySegment> cleanup) {
+        return addr.reinterpret(layout().byteSize() * elementCount, arena, cleanup);
+    }
+}
 

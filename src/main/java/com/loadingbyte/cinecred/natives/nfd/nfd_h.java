@@ -2,485 +2,530 @@
 
 package com.loadingbyte.cinecred.natives.nfd;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
-import static java.lang.foreign.ValueLayout.*;
-public class nfd_h  {
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
 
-    public static final OfByte C_CHAR = JAVA_BYTE;
-    public static final OfShort C_SHORT = JAVA_SHORT;
-    public static final OfInt C_INT = JAVA_INT;
-    public static final OfLong C_LONG = JAVA_LONG;
-    public static final OfLong C_LONG_LONG = JAVA_LONG;
-    public static final OfFloat C_FLOAT = JAVA_FLOAT;
-    public static final OfDouble C_DOUBLE = JAVA_DOUBLE;
-    public static final AddressLayout C_POINTER = RuntimeHelper.POINTER;
+import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
+public class nfd_h extends nfd_h$shared {
+
+    nfd_h() {
+        // Should not be called directly
+    }
+
+    static final Arena LIBRARY_ARENA = Arena.ofAuto();
+
+    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup()
+            .or(Linker.nativeLinker().defaultLookup());
+
+    private static final int NFD_ERROR = (int)0L;
     /**
-     * {@snippet :
-     * typedef long ptrdiff_t;
-     * }
-     */
-    public static final OfLong ptrdiff_t = JAVA_LONG;
-    /**
-     * {@snippet :
-     * typedef unsigned long size_t;
-     * }
-     */
-    public static final OfLong size_t = JAVA_LONG;
-    /**
-     * {@snippet :
-     * typedef int wchar_t;
-     * }
-     */
-    public static final OfInt wchar_t = JAVA_INT;
-    /**
-     * {@snippet :
-     * typedef char nfdu8char_t;
-     * }
-     */
-    public static final OfByte nfdu8char_t = JAVA_BYTE;
-    /**
-     * {@snippet :
-     * typedef char nfdnchar_t;
-     * }
-     */
-    public static final OfByte nfdnchar_t = JAVA_BYTE;
-    /**
-     * {@snippet :
-     * typedef unsigned int nfdfiltersize_t;
-     * }
-     */
-    public static final OfInt nfdfiltersize_t = JAVA_INT;
-    /**
-     * {@snippet :
-     * enum .NFD_ERROR = 0;
+     * {@snippet lang=c :
+     * enum <anonymous>.NFD_ERROR = 0
      * }
      */
     public static int NFD_ERROR() {
-        return (int)0L;
+        return NFD_ERROR;
     }
+    private static final int NFD_OKAY = (int)1L;
     /**
-     * {@snippet :
-     * enum .NFD_OKAY = 1;
+     * {@snippet lang=c :
+     * enum <anonymous>.NFD_OKAY = 1
      * }
      */
     public static int NFD_OKAY() {
-        return (int)1L;
+        return NFD_OKAY;
     }
+    private static final int NFD_CANCEL = (int)2L;
     /**
-     * {@snippet :
-     * enum .NFD_CANCEL = 2;
+     * {@snippet lang=c :
+     * enum <anonymous>.NFD_CANCEL = 2
      * }
      */
     public static int NFD_CANCEL() {
-        return (int)2L;
+        return NFD_CANCEL;
     }
-    public static MethodHandle NFD_FreePathN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$8,"NFD_FreePathN");
+
+    private static class NFD_FreePathU8 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            nfd_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_FreePathU8");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void NFD_FreePathN(nfdnchar_t* filePath);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void NFD_FreePathU8(nfdu8char_t *filePath)
      * }
      */
-    public static void NFD_FreePathN(MemorySegment filePath) {
-        var mh$ = NFD_FreePathN$MH();
-        try {
-            mh$.invokeExact(filePath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static FunctionDescriptor NFD_FreePathU8$descriptor() {
+        return NFD_FreePathU8.DESC;
     }
-    public static MethodHandle NFD_FreePathU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$9,"NFD_FreePathU8");
-    }
+
     /**
-     * {@snippet :
-     * void NFD_FreePathU8(nfdu8char_t* filePath);
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void NFD_FreePathU8(nfdu8char_t *filePath)
+     * }
+     */
+    public static MethodHandle NFD_FreePathU8$handle() {
+        return NFD_FreePathU8.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void NFD_FreePathU8(nfdu8char_t *filePath)
+     * }
+     */
+    public static MemorySegment NFD_FreePathU8$address() {
+        return NFD_FreePathU8.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void NFD_FreePathU8(nfdu8char_t *filePath)
      * }
      */
     public static void NFD_FreePathU8(MemorySegment filePath) {
-        var mh$ = NFD_FreePathU8$MH();
+        var mh$ = NFD_FreePathU8.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_FreePathU8", filePath);
+            }
             mh$.invokeExact(filePath);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_Init$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$11,"NFD_Init");
+
+    private static class NFD_Init {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            nfd_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_Init");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_Init();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_Init()
+     * }
+     */
+    public static FunctionDescriptor NFD_Init$descriptor() {
+        return NFD_Init.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_Init()
+     * }
+     */
+    public static MethodHandle NFD_Init$handle() {
+        return NFD_Init.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_Init()
+     * }
+     */
+    public static MemorySegment NFD_Init$address() {
+        return NFD_Init.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * nfdresult_t NFD_Init()
      * }
      */
     public static int NFD_Init() {
-        var mh$ = NFD_Init$MH();
+        var mh$ = NFD_Init.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_Init");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_Quit$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$13,"NFD_Quit");
+
+    private static class NFD_Quit {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_Quit");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void NFD_Quit();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void NFD_Quit()
+     * }
+     */
+    public static FunctionDescriptor NFD_Quit$descriptor() {
+        return NFD_Quit.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void NFD_Quit()
+     * }
+     */
+    public static MethodHandle NFD_Quit$handle() {
+        return NFD_Quit.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void NFD_Quit()
+     * }
+     */
+    public static MemorySegment NFD_Quit$address() {
+        return NFD_Quit.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void NFD_Quit()
      * }
      */
     public static void NFD_Quit() {
-        var mh$ = NFD_Quit$MH();
+        var mh$ = NFD_Quit.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_Quit");
+            }
             mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_OpenDialogN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$15,"NFD_OpenDialogN");
+
+    private static class NFD_OpenDialogU8 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            nfd_h.C_INT,
+            nfd_h.C_POINTER,
+            nfd_h.C_POINTER,
+            nfd_h.C_INT,
+            nfd_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_OpenDialogU8");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_OpenDialogN(nfdnchar_t** outPath, const nfdnfilteritem_t* filterList, nfdfiltersize_t filterCount, const nfdnchar_t* defaultPath);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_OpenDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath)
      * }
      */
-    public static int NFD_OpenDialogN(MemorySegment outPath, MemorySegment filterList, int filterCount, MemorySegment defaultPath) {
-        var mh$ = NFD_OpenDialogN$MH();
-        try {
-            return (int)mh$.invokeExact(outPath, filterList, filterCount, defaultPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static FunctionDescriptor NFD_OpenDialogU8$descriptor() {
+        return NFD_OpenDialogU8.DESC;
     }
-    public static MethodHandle NFD_OpenDialogU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$16,"NFD_OpenDialogU8");
-    }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_OpenDialogU8(nfdu8char_t** outPath, const nfdu8filteritem_t* filterList, nfdfiltersize_t filterCount, const nfdu8char_t* defaultPath);
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_OpenDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath)
+     * }
+     */
+    public static MethodHandle NFD_OpenDialogU8$handle() {
+        return NFD_OpenDialogU8.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_OpenDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath)
+     * }
+     */
+    public static MemorySegment NFD_OpenDialogU8$address() {
+        return NFD_OpenDialogU8.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * nfdresult_t NFD_OpenDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath)
      * }
      */
     public static int NFD_OpenDialogU8(MemorySegment outPath, MemorySegment filterList, int filterCount, MemorySegment defaultPath) {
-        var mh$ = NFD_OpenDialogU8$MH();
+        var mh$ = NFD_OpenDialogU8.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_OpenDialogU8", outPath, filterList, filterCount, defaultPath);
+            }
             return (int)mh$.invokeExact(outPath, filterList, filterCount, defaultPath);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_OpenDialogMultipleN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$17,"NFD_OpenDialogMultipleN");
+
+    private static class NFD_SaveDialogU8 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            nfd_h.C_INT,
+            nfd_h.C_POINTER,
+            nfd_h.C_POINTER,
+            nfd_h.C_INT,
+            nfd_h.C_POINTER,
+            nfd_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_SaveDialogU8");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_OpenDialogMultipleN(const nfdpathset_t** outPaths, const nfdnfilteritem_t* filterList, nfdfiltersize_t filterCount, const nfdnchar_t* defaultPath);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_SaveDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath, const nfdu8char_t *defaultName)
      * }
      */
-    public static int NFD_OpenDialogMultipleN(MemorySegment outPaths, MemorySegment filterList, int filterCount, MemorySegment defaultPath) {
-        var mh$ = NFD_OpenDialogMultipleN$MH();
-        try {
-            return (int)mh$.invokeExact(outPaths, filterList, filterCount, defaultPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static FunctionDescriptor NFD_SaveDialogU8$descriptor() {
+        return NFD_SaveDialogU8.DESC;
     }
-    public static MethodHandle NFD_OpenDialogMultipleU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$18,"NFD_OpenDialogMultipleU8");
-    }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_OpenDialogMultipleU8(const nfdpathset_t** outPaths, const nfdu8filteritem_t* filterList, nfdfiltersize_t filterCount, const nfdu8char_t* defaultPath);
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_SaveDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath, const nfdu8char_t *defaultName)
      * }
      */
-    public static int NFD_OpenDialogMultipleU8(MemorySegment outPaths, MemorySegment filterList, int filterCount, MemorySegment defaultPath) {
-        var mh$ = NFD_OpenDialogMultipleU8$MH();
-        try {
-            return (int)mh$.invokeExact(outPaths, filterList, filterCount, defaultPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static MethodHandle NFD_SaveDialogU8$handle() {
+        return NFD_SaveDialogU8.HANDLE;
     }
-    public static MethodHandle NFD_SaveDialogN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$20,"NFD_SaveDialogN");
-    }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_SaveDialogN(nfdnchar_t** outPath, const nfdnfilteritem_t* filterList, nfdfiltersize_t filterCount, const nfdnchar_t* defaultPath, const nfdnchar_t* defaultName);
+     * Address for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_SaveDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath, const nfdu8char_t *defaultName)
      * }
      */
-    public static int NFD_SaveDialogN(MemorySegment outPath, MemorySegment filterList, int filterCount, MemorySegment defaultPath, MemorySegment defaultName) {
-        var mh$ = NFD_SaveDialogN$MH();
-        try {
-            return (int)mh$.invokeExact(outPath, filterList, filterCount, defaultPath, defaultName);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static MemorySegment NFD_SaveDialogU8$address() {
+        return NFD_SaveDialogU8.ADDR;
     }
-    public static MethodHandle NFD_SaveDialogU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$21,"NFD_SaveDialogU8");
-    }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_SaveDialogU8(nfdu8char_t** outPath, const nfdu8filteritem_t* filterList, nfdfiltersize_t filterCount, const nfdu8char_t* defaultPath, const nfdu8char_t* defaultName);
+     * {@snippet lang=c :
+     * nfdresult_t NFD_SaveDialogU8(nfdu8char_t **outPath, const nfdu8filteritem_t *filterList, nfdfiltersize_t filterCount, const nfdu8char_t *defaultPath, const nfdu8char_t *defaultName)
      * }
      */
     public static int NFD_SaveDialogU8(MemorySegment outPath, MemorySegment filterList, int filterCount, MemorySegment defaultPath, MemorySegment defaultName) {
-        var mh$ = NFD_SaveDialogU8$MH();
+        var mh$ = NFD_SaveDialogU8.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_SaveDialogU8", outPath, filterList, filterCount, defaultPath, defaultName);
+            }
             return (int)mh$.invokeExact(outPath, filterList, filterCount, defaultPath, defaultName);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_PickFolderN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$23,"NFD_PickFolderN");
+
+    private static class NFD_PickFolderU8 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            nfd_h.C_INT,
+            nfd_h.C_POINTER,
+            nfd_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_PickFolderU8");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_PickFolderN(nfdnchar_t** outPath, const nfdnchar_t* defaultPath);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_PickFolderU8(nfdu8char_t **outPath, const nfdu8char_t *defaultPath)
      * }
      */
-    public static int NFD_PickFolderN(MemorySegment outPath, MemorySegment defaultPath) {
-        var mh$ = NFD_PickFolderN$MH();
-        try {
-            return (int)mh$.invokeExact(outPath, defaultPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
+    public static FunctionDescriptor NFD_PickFolderU8$descriptor() {
+        return NFD_PickFolderU8.DESC;
     }
-    public static MethodHandle NFD_PickFolderU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$24,"NFD_PickFolderU8");
-    }
+
     /**
-     * {@snippet :
-     * nfdresult_t NFD_PickFolderU8(nfdu8char_t** outPath, const nfdu8char_t* defaultPath);
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_PickFolderU8(nfdu8char_t **outPath, const nfdu8char_t *defaultPath)
+     * }
+     */
+    public static MethodHandle NFD_PickFolderU8$handle() {
+        return NFD_PickFolderU8.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * nfdresult_t NFD_PickFolderU8(nfdu8char_t **outPath, const nfdu8char_t *defaultPath)
+     * }
+     */
+    public static MemorySegment NFD_PickFolderU8$address() {
+        return NFD_PickFolderU8.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * nfdresult_t NFD_PickFolderU8(nfdu8char_t **outPath, const nfdu8char_t *defaultPath)
      * }
      */
     public static int NFD_PickFolderU8(MemorySegment outPath, MemorySegment defaultPath) {
-        var mh$ = NFD_PickFolderU8$MH();
+        var mh$ = NFD_PickFolderU8.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_PickFolderU8", outPath, defaultPath);
+            }
             return (int)mh$.invokeExact(outPath, defaultPath);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_GetError$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$26,"NFD_GetError");
+
+    private static class NFD_GetError {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            nfd_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_GetError");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * char* NFD_GetError();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * const char *NFD_GetError()
+     * }
+     */
+    public static FunctionDescriptor NFD_GetError$descriptor() {
+        return NFD_GetError.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * const char *NFD_GetError()
+     * }
+     */
+    public static MethodHandle NFD_GetError$handle() {
+        return NFD_GetError.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * const char *NFD_GetError()
+     * }
+     */
+    public static MemorySegment NFD_GetError$address() {
+        return NFD_GetError.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * const char *NFD_GetError()
      * }
      */
     public static MemorySegment NFD_GetError() {
-        var mh$ = NFD_GetError$MH();
+        var mh$ = NFD_GetError.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_GetError");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle NFD_ClearError$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$27,"NFD_ClearError");
+
+    private static class NFD_ClearError {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("NFD_ClearError");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void NFD_ClearError();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void NFD_ClearError()
+     * }
+     */
+    public static FunctionDescriptor NFD_ClearError$descriptor() {
+        return NFD_ClearError.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void NFD_ClearError()
+     * }
+     */
+    public static MethodHandle NFD_ClearError$handle() {
+        return NFD_ClearError.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void NFD_ClearError()
+     * }
+     */
+    public static MemorySegment NFD_ClearError$address() {
+        return NFD_ClearError.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void NFD_ClearError()
      * }
      */
     public static void NFD_ClearError() {
-        var mh$ = NFD_ClearError$MH();
+        var mh$ = NFD_ClearError.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("NFD_ClearError");
+            }
             mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
-    }
-    /**
-     * {@snippet :
-     * typedef unsigned int nfdpathsetsize_t;
-     * }
-     */
-    public static final OfInt nfdpathsetsize_t = JAVA_INT;
-    public static MethodHandle NFD_PathSet_GetCount$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$28,"NFD_PathSet_GetCount");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_GetCount(const nfdpathset_t* pathSet, nfdpathsetsize_t* count);
-     * }
-     */
-    public static int NFD_PathSet_GetCount(MemorySegment pathSet, MemorySegment count) {
-        var mh$ = NFD_PathSet_GetCount$MH();
-        try {
-            return (int)mh$.invokeExact(pathSet, count);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_GetPathN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$30,"NFD_PathSet_GetPathN");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_GetPathN(const nfdpathset_t* pathSet, nfdpathsetsize_t index, nfdnchar_t** outPath);
-     * }
-     */
-    public static int NFD_PathSet_GetPathN(MemorySegment pathSet, int index, MemorySegment outPath) {
-        var mh$ = NFD_PathSet_GetPathN$MH();
-        try {
-            return (int)mh$.invokeExact(pathSet, index, outPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_GetPathU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$31,"NFD_PathSet_GetPathU8");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_GetPathU8(const nfdpathset_t* pathSet, nfdpathsetsize_t index, nfdu8char_t** outPath);
-     * }
-     */
-    public static int NFD_PathSet_GetPathU8(MemorySegment pathSet, int index, MemorySegment outPath) {
-        var mh$ = NFD_PathSet_GetPathU8$MH();
-        try {
-            return (int)mh$.invokeExact(pathSet, index, outPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_FreePathN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$32,"NFD_PathSet_FreePathN");
-    }
-    /**
-     * {@snippet :
-     * void NFD_PathSet_FreePathN(const nfdnchar_t* filePath);
-     * }
-     */
-    public static void NFD_PathSet_FreePathN(MemorySegment filePath) {
-        var mh$ = NFD_PathSet_FreePathN$MH();
-        try {
-            mh$.invokeExact(filePath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_FreePathU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$33,"NFD_PathSet_FreePathU8");
-    }
-    /**
-     * {@snippet :
-     * void NFD_PathSet_FreePathU8(const nfdu8char_t* filePath);
-     * }
-     */
-    public static void NFD_PathSet_FreePathU8(MemorySegment filePath) {
-        var mh$ = NFD_PathSet_FreePathU8$MH();
-        try {
-            mh$.invokeExact(filePath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_GetEnum$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$34,"NFD_PathSet_GetEnum");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_GetEnum(const nfdpathset_t* pathSet, nfdpathsetenum_t* outEnumerator);
-     * }
-     */
-    public static int NFD_PathSet_GetEnum(MemorySegment pathSet, MemorySegment outEnumerator) {
-        var mh$ = NFD_PathSet_GetEnum$MH();
-        try {
-            return (int)mh$.invokeExact(pathSet, outEnumerator);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_FreeEnum$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$35,"NFD_PathSet_FreeEnum");
-    }
-    /**
-     * {@snippet :
-     * void NFD_PathSet_FreeEnum(nfdpathsetenum_t* enumerator);
-     * }
-     */
-    public static void NFD_PathSet_FreeEnum(MemorySegment enumerator) {
-        var mh$ = NFD_PathSet_FreeEnum$MH();
-        try {
-            mh$.invokeExact(enumerator);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_EnumNextN$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$36,"NFD_PathSet_EnumNextN");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_EnumNextN(nfdpathsetenum_t* enumerator, nfdnchar_t** outPath);
-     * }
-     */
-    public static int NFD_PathSet_EnumNextN(MemorySegment enumerator, MemorySegment outPath) {
-        var mh$ = NFD_PathSet_EnumNextN$MH();
-        try {
-            return (int)mh$.invokeExact(enumerator, outPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_EnumNextU8$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$37,"NFD_PathSet_EnumNextU8");
-    }
-    /**
-     * {@snippet :
-     * nfdresult_t NFD_PathSet_EnumNextU8(nfdpathsetenum_t* enumerator, nfdu8char_t** outPath);
-     * }
-     */
-    public static int NFD_PathSet_EnumNextU8(MemorySegment enumerator, MemorySegment outPath) {
-        var mh$ = NFD_PathSet_EnumNextU8$MH();
-        try {
-            return (int)mh$.invokeExact(enumerator, outPath);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    public static MethodHandle NFD_PathSet_Free$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$38,"NFD_PathSet_Free");
-    }
-    /**
-     * {@snippet :
-     * void NFD_PathSet_Free(const nfdpathset_t* pathSet);
-     * }
-     */
-    public static void NFD_PathSet_Free(MemorySegment pathSet) {
-        var mh$ = NFD_PathSet_Free$MH();
-        try {
-            mh$.invokeExact(pathSet);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
-    /**
-     * {@snippet :
-     * typedef char nfdchar_t;
-     * }
-     */
-    public static final OfByte nfdchar_t = JAVA_BYTE;
-    /**
-     * {@snippet :
-     * #define NULL 0
-     * }
-     */
-    public static MemorySegment NULL() {
-        return constants$0.const$39;
     }
 }
-
 

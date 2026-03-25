@@ -601,7 +601,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
             val bodyElemHeight = bodyElem.getHeight(styling)
             val x = justify(hJustify, bodyImageWidth, bodyElemWidth)
             when (bodyElem) {
-                is BodyElement.Nil, is BodyElement.Str -> {}
+                is BodyElement.Nil -> {}
                 is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { bodyImage.drawEmbeddedPicture(it, x, y) }
                 is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { bodyImage.drawEmbeddedTape(it, x, y) }
                 is BodyElement.Mis -> null
@@ -896,7 +896,6 @@ private class RowGauge(
                     is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { defImage.drawEmbeddedPicture(it, x, y) }
                     is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { defImage.drawEmbeddedTape(it, x, y) }
                     is BodyElement.Mis -> null
-                    else -> {}
                 } ?: defImage.drawMissing(x, y)
                 // Record the area in this row that is actually drawn to.
                 if (!hasStrs) {

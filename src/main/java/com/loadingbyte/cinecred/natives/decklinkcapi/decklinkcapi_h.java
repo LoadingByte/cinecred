@@ -2,765 +2,2764 @@
 
 package com.loadingbyte.cinecred.natives.decklinkcapi;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
-import static java.lang.foreign.ValueLayout.*;
-public class decklinkcapi_h  {
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
 
-    public static final OfByte C_CHAR = JAVA_BYTE;
-    public static final OfShort C_SHORT = JAVA_SHORT;
-    public static final OfInt C_INT = JAVA_INT;
-    public static final OfLong C_LONG = JAVA_LONG;
-    public static final OfLong C_LONG_LONG = JAVA_LONG;
-    public static final OfFloat C_FLOAT = JAVA_FLOAT;
-    public static final OfDouble C_DOUBLE = JAVA_DOUBLE;
-    public static final AddressLayout C_POINTER = RuntimeHelper.POINTER;
+import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
+public class decklinkcapi_h extends decklinkcapi_h$shared {
+
+    decklinkcapi_h() {
+        // Should not be called directly
+    }
+
+    static final Arena LIBRARY_ARENA = Arena.ofAuto();
+
+    static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup()
+            .or(Linker.nativeLinker().defaultLookup());
+
+    private static final int true_ = (int)1L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define true 1
      * }
      */
     public static int true_() {
-        return (int)1L;
+        return true_;
     }
+    private static final int false_ = (int)0L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define false 0
      * }
      */
     public static int false_() {
-        return (int)0L;
+        return false_;
     }
+    private static final int __bool_true_false_are_defined = (int)1L;
     /**
-     * {@snippet :
+     * {@snippet lang=c :
      * #define __bool_true_false_are_defined 1
      * }
      */
     public static int __bool_true_false_are_defined() {
-        return (int)1L;
+        return __bool_true_false_are_defined;
     }
-    public static MethodHandle PixelFormat_8BitBGRA$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$7,"PixelFormat_8BitBGRA");
+
+    private static class PixelFormat_8BitBGRA {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("PixelFormat_8BitBGRA");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int PixelFormat_8BitBGRA();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int PixelFormat_8BitBGRA()
+     * }
+     */
+    public static FunctionDescriptor PixelFormat_8BitBGRA$descriptor() {
+        return PixelFormat_8BitBGRA.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int PixelFormat_8BitBGRA()
+     * }
+     */
+    public static MethodHandle PixelFormat_8BitBGRA$handle() {
+        return PixelFormat_8BitBGRA.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int PixelFormat_8BitBGRA()
+     * }
+     */
+    public static MemorySegment PixelFormat_8BitBGRA$address() {
+        return PixelFormat_8BitBGRA.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int PixelFormat_8BitBGRA()
      * }
      */
     public static int PixelFormat_8BitBGRA() {
-        var mh$ = PixelFormat_8BitBGRA$MH();
+        var mh$ = PixelFormat_8BitBGRA.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("PixelFormat_8BitBGRA");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle PixelFormat_10BitRGB$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$8,"PixelFormat_10BitRGB");
+
+    private static class PixelFormat_10BitRGB {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("PixelFormat_10BitRGB");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int PixelFormat_10BitRGB();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int PixelFormat_10BitRGB()
+     * }
+     */
+    public static FunctionDescriptor PixelFormat_10BitRGB$descriptor() {
+        return PixelFormat_10BitRGB.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int PixelFormat_10BitRGB()
+     * }
+     */
+    public static MethodHandle PixelFormat_10BitRGB$handle() {
+        return PixelFormat_10BitRGB.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int PixelFormat_10BitRGB()
+     * }
+     */
+    public static MemorySegment PixelFormat_10BitRGB$address() {
+        return PixelFormat_10BitRGB.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int PixelFormat_10BitRGB()
      * }
      */
     public static int PixelFormat_10BitRGB() {
-        var mh$ = PixelFormat_10BitRGB$MH();
+        var mh$ = PixelFormat_10BitRGB.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("PixelFormat_10BitRGB");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle FieldDominance_LowerFieldFirst$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$9,"FieldDominance_LowerFieldFirst");
+
+    private static class FieldDominance_LowerFieldFirst {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("FieldDominance_LowerFieldFirst");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int FieldDominance_LowerFieldFirst();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int FieldDominance_LowerFieldFirst()
+     * }
+     */
+    public static FunctionDescriptor FieldDominance_LowerFieldFirst$descriptor() {
+        return FieldDominance_LowerFieldFirst.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int FieldDominance_LowerFieldFirst()
+     * }
+     */
+    public static MethodHandle FieldDominance_LowerFieldFirst$handle() {
+        return FieldDominance_LowerFieldFirst.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int FieldDominance_LowerFieldFirst()
+     * }
+     */
+    public static MemorySegment FieldDominance_LowerFieldFirst$address() {
+        return FieldDominance_LowerFieldFirst.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int FieldDominance_LowerFieldFirst()
      * }
      */
     public static int FieldDominance_LowerFieldFirst() {
-        var mh$ = FieldDominance_LowerFieldFirst$MH();
+        var mh$ = FieldDominance_LowerFieldFirst.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("FieldDominance_LowerFieldFirst");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle FieldDominance_UpperFieldFirst$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$10,"FieldDominance_UpperFieldFirst");
+
+    private static class FieldDominance_UpperFieldFirst {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("FieldDominance_UpperFieldFirst");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int FieldDominance_UpperFieldFirst();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int FieldDominance_UpperFieldFirst()
+     * }
+     */
+    public static FunctionDescriptor FieldDominance_UpperFieldFirst$descriptor() {
+        return FieldDominance_UpperFieldFirst.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int FieldDominance_UpperFieldFirst()
+     * }
+     */
+    public static MethodHandle FieldDominance_UpperFieldFirst$handle() {
+        return FieldDominance_UpperFieldFirst.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int FieldDominance_UpperFieldFirst()
+     * }
+     */
+    public static MemorySegment FieldDominance_UpperFieldFirst$address() {
+        return FieldDominance_UpperFieldFirst.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int FieldDominance_UpperFieldFirst()
      * }
      */
     public static int FieldDominance_UpperFieldFirst() {
-        var mh$ = FieldDominance_UpperFieldFirst$MH();
+        var mh$ = FieldDominance_UpperFieldFirst.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("FieldDominance_UpperFieldFirst");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle FieldDominance_ProgressiveFrame$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$11,"FieldDominance_ProgressiveFrame");
+
+    private static class FieldDominance_ProgressiveFrame {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("FieldDominance_ProgressiveFrame");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int FieldDominance_ProgressiveFrame();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveFrame()
+     * }
+     */
+    public static FunctionDescriptor FieldDominance_ProgressiveFrame$descriptor() {
+        return FieldDominance_ProgressiveFrame.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveFrame()
+     * }
+     */
+    public static MethodHandle FieldDominance_ProgressiveFrame$handle() {
+        return FieldDominance_ProgressiveFrame.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveFrame()
+     * }
+     */
+    public static MemorySegment FieldDominance_ProgressiveFrame$address() {
+        return FieldDominance_ProgressiveFrame.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveFrame()
      * }
      */
     public static int FieldDominance_ProgressiveFrame() {
-        var mh$ = FieldDominance_ProgressiveFrame$MH();
+        var mh$ = FieldDominance_ProgressiveFrame.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("FieldDominance_ProgressiveFrame");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle FieldDominance_ProgressiveSegmentedFrame$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$12,"FieldDominance_ProgressiveSegmentedFrame");
+
+    private static class FieldDominance_ProgressiveSegmentedFrame {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("FieldDominance_ProgressiveSegmentedFrame");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int FieldDominance_ProgressiveSegmentedFrame();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveSegmentedFrame()
+     * }
+     */
+    public static FunctionDescriptor FieldDominance_ProgressiveSegmentedFrame$descriptor() {
+        return FieldDominance_ProgressiveSegmentedFrame.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveSegmentedFrame()
+     * }
+     */
+    public static MethodHandle FieldDominance_ProgressiveSegmentedFrame$handle() {
+        return FieldDominance_ProgressiveSegmentedFrame.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveSegmentedFrame()
+     * }
+     */
+    public static MemorySegment FieldDominance_ProgressiveSegmentedFrame$address() {
+        return FieldDominance_ProgressiveSegmentedFrame.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int FieldDominance_ProgressiveSegmentedFrame()
      * }
      */
     public static int FieldDominance_ProgressiveSegmentedFrame() {
-        var mh$ = FieldDominance_ProgressiveSegmentedFrame$MH();
+        var mh$ = FieldDominance_ProgressiveSegmentedFrame.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("FieldDominance_ProgressiveSegmentedFrame");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle DisplayModeFlag_ColorspaceRec601$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$13,"DisplayModeFlag_ColorspaceRec601");
+
+    private static class DisplayModeFlag_ColorspaceRec601 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("DisplayModeFlag_ColorspaceRec601");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int DisplayModeFlag_ColorspaceRec601();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec601()
+     * }
+     */
+    public static FunctionDescriptor DisplayModeFlag_ColorspaceRec601$descriptor() {
+        return DisplayModeFlag_ColorspaceRec601.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec601()
+     * }
+     */
+    public static MethodHandle DisplayModeFlag_ColorspaceRec601$handle() {
+        return DisplayModeFlag_ColorspaceRec601.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec601()
+     * }
+     */
+    public static MemorySegment DisplayModeFlag_ColorspaceRec601$address() {
+        return DisplayModeFlag_ColorspaceRec601.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec601()
      * }
      */
     public static int DisplayModeFlag_ColorspaceRec601() {
-        var mh$ = DisplayModeFlag_ColorspaceRec601$MH();
+        var mh$ = DisplayModeFlag_ColorspaceRec601.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("DisplayModeFlag_ColorspaceRec601");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle DisplayModeFlag_ColorspaceRec709$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$14,"DisplayModeFlag_ColorspaceRec709");
+
+    private static class DisplayModeFlag_ColorspaceRec709 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("DisplayModeFlag_ColorspaceRec709");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int DisplayModeFlag_ColorspaceRec709();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec709()
+     * }
+     */
+    public static FunctionDescriptor DisplayModeFlag_ColorspaceRec709$descriptor() {
+        return DisplayModeFlag_ColorspaceRec709.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec709()
+     * }
+     */
+    public static MethodHandle DisplayModeFlag_ColorspaceRec709$handle() {
+        return DisplayModeFlag_ColorspaceRec709.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec709()
+     * }
+     */
+    public static MemorySegment DisplayModeFlag_ColorspaceRec709$address() {
+        return DisplayModeFlag_ColorspaceRec709.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec709()
      * }
      */
     public static int DisplayModeFlag_ColorspaceRec709() {
-        var mh$ = DisplayModeFlag_ColorspaceRec709$MH();
+        var mh$ = DisplayModeFlag_ColorspaceRec709.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("DisplayModeFlag_ColorspaceRec709");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle DisplayModeFlag_ColorspaceRec2020$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$15,"DisplayModeFlag_ColorspaceRec2020");
+
+    private static class DisplayModeFlag_ColorspaceRec2020 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("DisplayModeFlag_ColorspaceRec2020");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int DisplayModeFlag_ColorspaceRec2020();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec2020()
+     * }
+     */
+    public static FunctionDescriptor DisplayModeFlag_ColorspaceRec2020$descriptor() {
+        return DisplayModeFlag_ColorspaceRec2020.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec2020()
+     * }
+     */
+    public static MethodHandle DisplayModeFlag_ColorspaceRec2020$handle() {
+        return DisplayModeFlag_ColorspaceRec2020.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec2020()
+     * }
+     */
+    public static MemorySegment DisplayModeFlag_ColorspaceRec2020$address() {
+        return DisplayModeFlag_ColorspaceRec2020.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int DisplayModeFlag_ColorspaceRec2020()
      * }
      */
     public static int DisplayModeFlag_ColorspaceRec2020() {
-        var mh$ = DisplayModeFlag_ColorspaceRec2020$MH();
+        var mh$ = DisplayModeFlag_ColorspaceRec2020.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("DisplayModeFlag_ColorspaceRec2020");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle Colorspace_Rec601$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$16,"Colorspace_Rec601");
+
+    private static class Colorspace_Rec601 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("Colorspace_Rec601");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int Colorspace_Rec601();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec601()
+     * }
+     */
+    public static FunctionDescriptor Colorspace_Rec601$descriptor() {
+        return Colorspace_Rec601.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec601()
+     * }
+     */
+    public static MethodHandle Colorspace_Rec601$handle() {
+        return Colorspace_Rec601.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec601()
+     * }
+     */
+    public static MemorySegment Colorspace_Rec601$address() {
+        return Colorspace_Rec601.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int Colorspace_Rec601()
      * }
      */
     public static int Colorspace_Rec601() {
-        var mh$ = Colorspace_Rec601$MH();
+        var mh$ = Colorspace_Rec601.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("Colorspace_Rec601");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle Colorspace_Rec709$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$17,"Colorspace_Rec709");
+
+    private static class Colorspace_Rec709 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("Colorspace_Rec709");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int Colorspace_Rec709();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec709()
+     * }
+     */
+    public static FunctionDescriptor Colorspace_Rec709$descriptor() {
+        return Colorspace_Rec709.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec709()
+     * }
+     */
+    public static MethodHandle Colorspace_Rec709$handle() {
+        return Colorspace_Rec709.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec709()
+     * }
+     */
+    public static MemorySegment Colorspace_Rec709$address() {
+        return Colorspace_Rec709.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int Colorspace_Rec709()
      * }
      */
     public static int Colorspace_Rec709() {
-        var mh$ = Colorspace_Rec709$MH();
+        var mh$ = Colorspace_Rec709.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("Colorspace_Rec709");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle Colorspace_Rec2020$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$18,"Colorspace_Rec2020");
+
+    private static class Colorspace_Rec2020 {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("Colorspace_Rec2020");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int Colorspace_Rec2020();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec2020()
+     * }
+     */
+    public static FunctionDescriptor Colorspace_Rec2020$descriptor() {
+        return Colorspace_Rec2020.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec2020()
+     * }
+     */
+    public static MethodHandle Colorspace_Rec2020$handle() {
+        return Colorspace_Rec2020.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int Colorspace_Rec2020()
+     * }
+     */
+    public static MemorySegment Colorspace_Rec2020$address() {
+        return Colorspace_Rec2020.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int Colorspace_Rec2020()
      * }
      */
     public static int Colorspace_Rec2020() {
-        var mh$ = Colorspace_Rec2020$MH();
+        var mh$ = Colorspace_Rec2020.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("Colorspace_Rec2020");
+            }
             return (int)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle initDeckLinkAPI$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$20,"initDeckLinkAPI");
+
+    private static class initDeckLinkAPI {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("initDeckLinkAPI");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool initDeckLinkAPI();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool initDeckLinkAPI()
+     * }
+     */
+    public static FunctionDescriptor initDeckLinkAPI$descriptor() {
+        return initDeckLinkAPI.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool initDeckLinkAPI()
+     * }
+     */
+    public static MethodHandle initDeckLinkAPI$handle() {
+        return initDeckLinkAPI.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool initDeckLinkAPI()
+     * }
+     */
+    public static MemorySegment initDeckLinkAPI$address() {
+        return initDeckLinkAPI.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool initDeckLinkAPI()
      * }
      */
     public static boolean initDeckLinkAPI() {
-        var mh$ = initDeckLinkAPI$MH();
+        var mh$ = initDeckLinkAPI.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("initDeckLinkAPI");
+            }
             return (boolean)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDeviceNotificationCallback_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$22,"IDeckLinkDeviceNotificationCallback_Create");
+
+    private static class IDeckLinkDeviceNotificationCallback_Create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDeviceNotificationCallback_Create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkDeviceNotificationCallback* IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkDeviceNotificationCallback *IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDeviceNotificationCallback_Create$descriptor() {
+        return IDeckLinkDeviceNotificationCallback_Create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkDeviceNotificationCallback *IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback)
+     * }
+     */
+    public static MethodHandle IDeckLinkDeviceNotificationCallback_Create$handle() {
+        return IDeckLinkDeviceNotificationCallback_Create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkDeviceNotificationCallback *IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback)
+     * }
+     */
+    public static MemorySegment IDeckLinkDeviceNotificationCallback_Create$address() {
+        return IDeckLinkDeviceNotificationCallback_Create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkDeviceNotificationCallback *IDeckLinkDeviceNotificationCallback_Create(deviceNotificationCallback_t arrivedCallback, deviceNotificationCallback_t removedCallback)
      * }
      */
     public static MemorySegment IDeckLinkDeviceNotificationCallback_Create(MemorySegment arrivedCallback, MemorySegment removedCallback) {
-        var mh$ = IDeckLinkDeviceNotificationCallback_Create$MH();
+        var mh$ = IDeckLinkDeviceNotificationCallback_Create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(arrivedCallback, removedCallback);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDeviceNotificationCallback_Create", arrivedCallback, removedCallback);
+            }
+            return (MemorySegment)mh$.invokeExact(arrivedCallback, removedCallback);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkVideoOutputCallback_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$24,"IDeckLinkVideoOutputCallback_Create");
+
+    private static class IDeckLinkVideoOutputCallback_Create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkVideoOutputCallback_Create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkVideoOutputCallback* IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoOutputCallback *IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkVideoOutputCallback_Create$descriptor() {
+        return IDeckLinkVideoOutputCallback_Create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoOutputCallback *IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback)
+     * }
+     */
+    public static MethodHandle IDeckLinkVideoOutputCallback_Create$handle() {
+        return IDeckLinkVideoOutputCallback_Create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoOutputCallback *IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback)
+     * }
+     */
+    public static MemorySegment IDeckLinkVideoOutputCallback_Create$address() {
+        return IDeckLinkVideoOutputCallback_Create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkVideoOutputCallback *IDeckLinkVideoOutputCallback_Create(scheduledFrameCompletionCallback_t callback)
      * }
      */
     public static MemorySegment IDeckLinkVideoOutputCallback_Create(MemorySegment callback) {
-        var mh$ = IDeckLinkVideoOutputCallback_Create$MH();
+        var mh$ = IDeckLinkVideoOutputCallback_Create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(callback);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkVideoOutputCallback_Create", callback);
+            }
+            return (MemorySegment)mh$.invokeExact(callback);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkVideoBuffer_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$25,"IDeckLinkVideoBuffer_Create");
+
+    private static class IDeckLinkVideoBuffer_Create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkVideoBuffer_Create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkVideoBuffer* IDeckLinkVideoBuffer_Create(void* bytes);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoBuffer *IDeckLinkVideoBuffer_Create(void *bytes)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkVideoBuffer_Create$descriptor() {
+        return IDeckLinkVideoBuffer_Create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoBuffer *IDeckLinkVideoBuffer_Create(void *bytes)
+     * }
+     */
+    public static MethodHandle IDeckLinkVideoBuffer_Create$handle() {
+        return IDeckLinkVideoBuffer_Create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoBuffer *IDeckLinkVideoBuffer_Create(void *bytes)
+     * }
+     */
+    public static MemorySegment IDeckLinkVideoBuffer_Create$address() {
+        return IDeckLinkVideoBuffer_Create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkVideoBuffer *IDeckLinkVideoBuffer_Create(void *bytes)
      * }
      */
     public static MemorySegment IDeckLinkVideoBuffer_Create(MemorySegment bytes) {
-        var mh$ = IDeckLinkVideoBuffer_Create$MH();
+        var mh$ = IDeckLinkVideoBuffer_Create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(bytes);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkVideoBuffer_Create", bytes);
+            }
+            return (MemorySegment)mh$.invokeExact(bytes);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IUnknown_AddRef$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$26,"IUnknown_AddRef");
+
+    private static class IUnknown_AddRef {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IUnknown_AddRef");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void IUnknown_AddRef(IUnknown* object);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void IUnknown_AddRef(IUnknown *object)
+     * }
+     */
+    public static FunctionDescriptor IUnknown_AddRef$descriptor() {
+        return IUnknown_AddRef.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void IUnknown_AddRef(IUnknown *object)
+     * }
+     */
+    public static MethodHandle IUnknown_AddRef$handle() {
+        return IUnknown_AddRef.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void IUnknown_AddRef(IUnknown *object)
+     * }
+     */
+    public static MemorySegment IUnknown_AddRef$address() {
+        return IUnknown_AddRef.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void IUnknown_AddRef(IUnknown *object)
      * }
      */
     public static void IUnknown_AddRef(MemorySegment object) {
-        var mh$ = IUnknown_AddRef$MH();
+        var mh$ = IUnknown_AddRef.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IUnknown_AddRef", object);
+            }
             mh$.invokeExact(object);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IUnknown_Release$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$27,"IUnknown_Release");
+
+    private static class IUnknown_Release {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IUnknown_Release");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * void IUnknown_Release(IUnknown* object);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * void IUnknown_Release(IUnknown *object)
+     * }
+     */
+    public static FunctionDescriptor IUnknown_Release$descriptor() {
+        return IUnknown_Release.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * void IUnknown_Release(IUnknown *object)
+     * }
+     */
+    public static MethodHandle IUnknown_Release$handle() {
+        return IUnknown_Release.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * void IUnknown_Release(IUnknown *object)
+     * }
+     */
+    public static MemorySegment IUnknown_Release$address() {
+        return IUnknown_Release.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * void IUnknown_Release(IUnknown *object)
      * }
      */
     public static void IUnknown_Release(MemorySegment object) {
-        var mh$ = IUnknown_Release$MH();
+        var mh$ = IUnknown_Release.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IUnknown_Release", object);
+            }
             mh$.invokeExact(object);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDiscovery_Create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$29,"IDeckLinkDiscovery_Create");
+
+    private static class IDeckLinkDiscovery_Create {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER    );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDiscovery_Create");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkDiscovery* IDeckLinkDiscovery_Create();
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkDiscovery *IDeckLinkDiscovery_Create()
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDiscovery_Create$descriptor() {
+        return IDeckLinkDiscovery_Create.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkDiscovery *IDeckLinkDiscovery_Create()
+     * }
+     */
+    public static MethodHandle IDeckLinkDiscovery_Create$handle() {
+        return IDeckLinkDiscovery_Create.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkDiscovery *IDeckLinkDiscovery_Create()
+     * }
+     */
+    public static MemorySegment IDeckLinkDiscovery_Create$address() {
+        return IDeckLinkDiscovery_Create.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkDiscovery *IDeckLinkDiscovery_Create()
      * }
      */
     public static MemorySegment IDeckLinkDiscovery_Create() {
-        var mh$ = IDeckLinkDiscovery_Create$MH();
+        var mh$ = IDeckLinkDiscovery_Create.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact();
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDiscovery_Create");
+            }
+            return (MemorySegment)mh$.invokeExact();
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDiscovery_InstallDeviceNotifications$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$31,"IDeckLinkDiscovery_InstallDeviceNotifications");
+
+    private static class IDeckLinkDiscovery_InstallDeviceNotifications {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDiscovery_InstallDeviceNotifications");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkDiscovery_InstallDeviceNotifications(IDeckLinkDiscovery* discovery, IDeckLinkDeviceNotificationCallback* callback);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDiscovery_InstallDeviceNotifications(IDeckLinkDiscovery *discovery, IDeckLinkDeviceNotificationCallback *callback)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDiscovery_InstallDeviceNotifications$descriptor() {
+        return IDeckLinkDiscovery_InstallDeviceNotifications.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDiscovery_InstallDeviceNotifications(IDeckLinkDiscovery *discovery, IDeckLinkDeviceNotificationCallback *callback)
+     * }
+     */
+    public static MethodHandle IDeckLinkDiscovery_InstallDeviceNotifications$handle() {
+        return IDeckLinkDiscovery_InstallDeviceNotifications.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDiscovery_InstallDeviceNotifications(IDeckLinkDiscovery *discovery, IDeckLinkDeviceNotificationCallback *callback)
+     * }
+     */
+    public static MemorySegment IDeckLinkDiscovery_InstallDeviceNotifications$address() {
+        return IDeckLinkDiscovery_InstallDeviceNotifications.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDiscovery_InstallDeviceNotifications(IDeckLinkDiscovery *discovery, IDeckLinkDeviceNotificationCallback *callback)
      * }
      */
     public static boolean IDeckLinkDiscovery_InstallDeviceNotifications(MemorySegment discovery, MemorySegment callback) {
-        var mh$ = IDeckLinkDiscovery_InstallDeviceNotifications$MH();
+        var mh$ = IDeckLinkDiscovery_InstallDeviceNotifications.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDiscovery_InstallDeviceNotifications", discovery, callback);
+            }
             return (boolean)mh$.invokeExact(discovery, callback);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLink_GetDisplayName$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$33,"IDeckLink_GetDisplayName");
+
+    private static class IDeckLink_GetDisplayName {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLink_GetDisplayName");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLink_GetDisplayName(IDeckLink* deckLink, char* str, long long len);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLink_GetDisplayName(IDeckLink *deckLink, char *str, long long len)
+     * }
+     */
+    public static FunctionDescriptor IDeckLink_GetDisplayName$descriptor() {
+        return IDeckLink_GetDisplayName.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLink_GetDisplayName(IDeckLink *deckLink, char *str, long long len)
+     * }
+     */
+    public static MethodHandle IDeckLink_GetDisplayName$handle() {
+        return IDeckLink_GetDisplayName.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLink_GetDisplayName(IDeckLink *deckLink, char *str, long long len)
+     * }
+     */
+    public static MemorySegment IDeckLink_GetDisplayName$address() {
+        return IDeckLink_GetDisplayName.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLink_GetDisplayName(IDeckLink *deckLink, char *str, long long len)
      * }
      */
     public static boolean IDeckLink_GetDisplayName(MemorySegment deckLink, MemorySegment str, long len) {
-        var mh$ = IDeckLink_GetDisplayName$MH();
+        var mh$ = IDeckLink_GetDisplayName.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLink_GetDisplayName", deckLink, str, len);
+            }
             return (boolean)mh$.invokeExact(deckLink, str, len);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLink_QueryIDeckLinkProfileAttributes$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$34,"IDeckLink_QueryIDeckLinkProfileAttributes");
+
+    private static class IDeckLink_QueryIDeckLinkProfileAttributes {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLink_QueryIDeckLinkProfileAttributes");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkProfileAttributes* IDeckLink_QueryIDeckLinkProfileAttributes(IDeckLink* deckLink);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkProfileAttributes *IDeckLink_QueryIDeckLinkProfileAttributes(IDeckLink *deckLink)
+     * }
+     */
+    public static FunctionDescriptor IDeckLink_QueryIDeckLinkProfileAttributes$descriptor() {
+        return IDeckLink_QueryIDeckLinkProfileAttributes.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkProfileAttributes *IDeckLink_QueryIDeckLinkProfileAttributes(IDeckLink *deckLink)
+     * }
+     */
+    public static MethodHandle IDeckLink_QueryIDeckLinkProfileAttributes$handle() {
+        return IDeckLink_QueryIDeckLinkProfileAttributes.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkProfileAttributes *IDeckLink_QueryIDeckLinkProfileAttributes(IDeckLink *deckLink)
+     * }
+     */
+    public static MemorySegment IDeckLink_QueryIDeckLinkProfileAttributes$address() {
+        return IDeckLink_QueryIDeckLinkProfileAttributes.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkProfileAttributes *IDeckLink_QueryIDeckLinkProfileAttributes(IDeckLink *deckLink)
      * }
      */
     public static MemorySegment IDeckLink_QueryIDeckLinkProfileAttributes(MemorySegment deckLink) {
-        var mh$ = IDeckLink_QueryIDeckLinkProfileAttributes$MH();
+        var mh$ = IDeckLink_QueryIDeckLinkProfileAttributes.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(deckLink);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLink_QueryIDeckLinkProfileAttributes", deckLink);
+            }
+            return (MemorySegment)mh$.invokeExact(deckLink);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLink_QueryIDeckLinkOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$35,"IDeckLink_QueryIDeckLinkOutput");
+
+    private static class IDeckLink_QueryIDeckLinkOutput {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLink_QueryIDeckLinkOutput");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkOutput* IDeckLink_QueryIDeckLinkOutput(IDeckLink* deckLink);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkOutput *IDeckLink_QueryIDeckLinkOutput(IDeckLink *deckLink)
+     * }
+     */
+    public static FunctionDescriptor IDeckLink_QueryIDeckLinkOutput$descriptor() {
+        return IDeckLink_QueryIDeckLinkOutput.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkOutput *IDeckLink_QueryIDeckLinkOutput(IDeckLink *deckLink)
+     * }
+     */
+    public static MethodHandle IDeckLink_QueryIDeckLinkOutput$handle() {
+        return IDeckLink_QueryIDeckLinkOutput.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkOutput *IDeckLink_QueryIDeckLinkOutput(IDeckLink *deckLink)
+     * }
+     */
+    public static MemorySegment IDeckLink_QueryIDeckLinkOutput$address() {
+        return IDeckLink_QueryIDeckLinkOutput.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkOutput *IDeckLink_QueryIDeckLinkOutput(IDeckLink *deckLink)
      * }
      */
     public static MemorySegment IDeckLink_QueryIDeckLinkOutput(MemorySegment deckLink) {
-        var mh$ = IDeckLink_QueryIDeckLinkOutput$MH();
+        var mh$ = IDeckLink_QueryIDeckLinkOutput.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(deckLink);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLink_QueryIDeckLinkOutput", deckLink);
+            }
+            return (MemorySegment)mh$.invokeExact(deckLink);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkProfileAttributes_GetDeviceHandle$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$36,"IDeckLinkProfileAttributes_GetDeviceHandle");
+
+    private static class IDeckLinkProfileAttributes_GetDeviceHandle {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkProfileAttributes_GetDeviceHandle");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkProfileAttributes_GetDeviceHandle(IDeckLinkProfileAttributes* attributes, char* str, long long len);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_GetDeviceHandle(IDeckLinkProfileAttributes *attributes, char *str, long long len)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkProfileAttributes_GetDeviceHandle$descriptor() {
+        return IDeckLinkProfileAttributes_GetDeviceHandle.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_GetDeviceHandle(IDeckLinkProfileAttributes *attributes, char *str, long long len)
+     * }
+     */
+    public static MethodHandle IDeckLinkProfileAttributes_GetDeviceHandle$handle() {
+        return IDeckLinkProfileAttributes_GetDeviceHandle.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_GetDeviceHandle(IDeckLinkProfileAttributes *attributes, char *str, long long len)
+     * }
+     */
+    public static MemorySegment IDeckLinkProfileAttributes_GetDeviceHandle$address() {
+        return IDeckLinkProfileAttributes_GetDeviceHandle.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_GetDeviceHandle(IDeckLinkProfileAttributes *attributes, char *str, long long len)
      * }
      */
     public static boolean IDeckLinkProfileAttributes_GetDeviceHandle(MemorySegment attributes, MemorySegment str, long len) {
-        var mh$ = IDeckLinkProfileAttributes_GetDeviceHandle$MH();
+        var mh$ = IDeckLinkProfileAttributes_GetDeviceHandle.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkProfileAttributes_GetDeviceHandle", attributes, str, len);
+            }
             return (boolean)mh$.invokeExact(attributes, str, len);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkProfileAttributes_IsActive$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$38,"IDeckLinkProfileAttributes_IsActive");
+
+    private static class IDeckLinkProfileAttributes_IsActive {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkProfileAttributes_IsActive");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkProfileAttributes_IsActive(IDeckLinkProfileAttributes* attributes);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_IsActive(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkProfileAttributes_IsActive$descriptor() {
+        return IDeckLinkProfileAttributes_IsActive.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_IsActive(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static MethodHandle IDeckLinkProfileAttributes_IsActive$handle() {
+        return IDeckLinkProfileAttributes_IsActive.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_IsActive(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static MemorySegment IDeckLinkProfileAttributes_IsActive$address() {
+        return IDeckLinkProfileAttributes_IsActive.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_IsActive(IDeckLinkProfileAttributes *attributes)
      * }
      */
     public static boolean IDeckLinkProfileAttributes_IsActive(MemorySegment attributes) {
-        var mh$ = IDeckLinkProfileAttributes_IsActive$MH();
+        var mh$ = IDeckLinkProfileAttributes_IsActive.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkProfileAttributes_IsActive", attributes);
+            }
             return (boolean)mh$.invokeExact(attributes);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkProfileAttributes_SupportsPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$39,"IDeckLinkProfileAttributes_SupportsPlayback");
+
+    private static class IDeckLinkProfileAttributes_SupportsPlayback {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkProfileAttributes_SupportsPlayback");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkProfileAttributes_SupportsPlayback(IDeckLinkProfileAttributes* attributes);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_SupportsPlayback(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkProfileAttributes_SupportsPlayback$descriptor() {
+        return IDeckLinkProfileAttributes_SupportsPlayback.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_SupportsPlayback(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static MethodHandle IDeckLinkProfileAttributes_SupportsPlayback$handle() {
+        return IDeckLinkProfileAttributes_SupportsPlayback.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_SupportsPlayback(IDeckLinkProfileAttributes *attributes)
+     * }
+     */
+    public static MemorySegment IDeckLinkProfileAttributes_SupportsPlayback$address() {
+        return IDeckLinkProfileAttributes_SupportsPlayback.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkProfileAttributes_SupportsPlayback(IDeckLinkProfileAttributes *attributes)
      * }
      */
     public static boolean IDeckLinkProfileAttributes_SupportsPlayback(MemorySegment attributes) {
-        var mh$ = IDeckLinkProfileAttributes_SupportsPlayback$MH();
+        var mh$ = IDeckLinkProfileAttributes_SupportsPlayback.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkProfileAttributes_SupportsPlayback", attributes);
+            }
             return (boolean)mh$.invokeExact(attributes);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_GetDisplayModeIterator$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$40,"IDeckLinkOutput_GetDisplayModeIterator");
+
+    private static class IDeckLinkOutput_GetDisplayModeIterator {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_GetDisplayModeIterator");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkDisplayModeIterator* IDeckLinkOutput_GetDisplayModeIterator(IDeckLinkOutput* output);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayModeIterator *IDeckLinkOutput_GetDisplayModeIterator(IDeckLinkOutput *output)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_GetDisplayModeIterator$descriptor() {
+        return IDeckLinkOutput_GetDisplayModeIterator.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayModeIterator *IDeckLinkOutput_GetDisplayModeIterator(IDeckLinkOutput *output)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_GetDisplayModeIterator$handle() {
+        return IDeckLinkOutput_GetDisplayModeIterator.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayModeIterator *IDeckLinkOutput_GetDisplayModeIterator(IDeckLinkOutput *output)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_GetDisplayModeIterator$address() {
+        return IDeckLinkOutput_GetDisplayModeIterator.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkDisplayModeIterator *IDeckLinkOutput_GetDisplayModeIterator(IDeckLinkOutput *output)
      * }
      */
     public static MemorySegment IDeckLinkOutput_GetDisplayModeIterator(MemorySegment output) {
-        var mh$ = IDeckLinkOutput_GetDisplayModeIterator$MH();
+        var mh$ = IDeckLinkOutput_GetDisplayModeIterator.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(output);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_GetDisplayModeIterator", output);
+            }
+            return (MemorySegment)mh$.invokeExact(output);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_DoesSupportVideoMode$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$42,"IDeckLinkOutput_DoesSupportVideoMode");
+
+    private static class IDeckLinkOutput_DoesSupportVideoMode {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_DoesSupportVideoMode");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_DoesSupportVideoMode(IDeckLinkOutput* output, int mode, int pixelFormat);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DoesSupportVideoMode(IDeckLinkOutput *output, int mode, int pixelFormat)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_DoesSupportVideoMode$descriptor() {
+        return IDeckLinkOutput_DoesSupportVideoMode.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DoesSupportVideoMode(IDeckLinkOutput *output, int mode, int pixelFormat)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_DoesSupportVideoMode$handle() {
+        return IDeckLinkOutput_DoesSupportVideoMode.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DoesSupportVideoMode(IDeckLinkOutput *output, int mode, int pixelFormat)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_DoesSupportVideoMode$address() {
+        return IDeckLinkOutput_DoesSupportVideoMode.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DoesSupportVideoMode(IDeckLinkOutput *output, int mode, int pixelFormat)
      * }
      */
     public static boolean IDeckLinkOutput_DoesSupportVideoMode(MemorySegment output, int mode, int pixelFormat) {
-        var mh$ = IDeckLinkOutput_DoesSupportVideoMode$MH();
+        var mh$ = IDeckLinkOutput_DoesSupportVideoMode.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_DoesSupportVideoMode", output, mode, pixelFormat);
+            }
             return (boolean)mh$.invokeExact(output, mode, pixelFormat);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_EnableVideoOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$44,"IDeckLinkOutput_EnableVideoOutput");
+
+    private static class IDeckLinkOutput_EnableVideoOutput {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_EnableVideoOutput");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_EnableVideoOutput(IDeckLinkOutput* output, int mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_EnableVideoOutput(IDeckLinkOutput *output, int mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_EnableVideoOutput$descriptor() {
+        return IDeckLinkOutput_EnableVideoOutput.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_EnableVideoOutput(IDeckLinkOutput *output, int mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_EnableVideoOutput$handle() {
+        return IDeckLinkOutput_EnableVideoOutput.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_EnableVideoOutput(IDeckLinkOutput *output, int mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_EnableVideoOutput$address() {
+        return IDeckLinkOutput_EnableVideoOutput.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_EnableVideoOutput(IDeckLinkOutput *output, int mode)
      * }
      */
     public static boolean IDeckLinkOutput_EnableVideoOutput(MemorySegment output, int mode) {
-        var mh$ = IDeckLinkOutput_EnableVideoOutput$MH();
+        var mh$ = IDeckLinkOutput_EnableVideoOutput.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_EnableVideoOutput", output, mode);
+            }
             return (boolean)mh$.invokeExact(output, mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_DisableVideoOutput$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$45,"IDeckLinkOutput_DisableVideoOutput");
+
+    private static class IDeckLinkOutput_DisableVideoOutput {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_DisableVideoOutput");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput* output);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput *output)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_DisableVideoOutput$descriptor() {
+        return IDeckLinkOutput_DisableVideoOutput.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput *output)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_DisableVideoOutput$handle() {
+        return IDeckLinkOutput_DisableVideoOutput.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput *output)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_DisableVideoOutput$address() {
+        return IDeckLinkOutput_DisableVideoOutput.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisableVideoOutput(IDeckLinkOutput *output)
      * }
      */
     public static boolean IDeckLinkOutput_DisableVideoOutput(MemorySegment output) {
-        var mh$ = IDeckLinkOutput_DisableVideoOutput$MH();
+        var mh$ = IDeckLinkOutput_DisableVideoOutput.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_DisableVideoOutput", output);
+            }
             return (boolean)mh$.invokeExact(output);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_StartScheduledPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$47,"IDeckLinkOutput_StartScheduledPlayback");
+
+    private static class IDeckLinkOutput_StartScheduledPlayback {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_DOUBLE
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_StartScheduledPlayback");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput* output, long long startTime, long long timeScale, double speed);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput *output, long long startTime, long long timeScale, double speed)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_StartScheduledPlayback$descriptor() {
+        return IDeckLinkOutput_StartScheduledPlayback.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput *output, long long startTime, long long timeScale, double speed)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_StartScheduledPlayback$handle() {
+        return IDeckLinkOutput_StartScheduledPlayback.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput *output, long long startTime, long long timeScale, double speed)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_StartScheduledPlayback$address() {
+        return IDeckLinkOutput_StartScheduledPlayback.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StartScheduledPlayback(IDeckLinkOutput *output, long long startTime, long long timeScale, double speed)
      * }
      */
     public static boolean IDeckLinkOutput_StartScheduledPlayback(MemorySegment output, long startTime, long timeScale, double speed) {
-        var mh$ = IDeckLinkOutput_StartScheduledPlayback$MH();
+        var mh$ = IDeckLinkOutput_StartScheduledPlayback.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_StartScheduledPlayback", output, startTime, timeScale, speed);
+            }
             return (boolean)mh$.invokeExact(output, startTime, timeScale, speed);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_StopScheduledPlayback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$49,"IDeckLinkOutput_StopScheduledPlayback");
+
+    private static class IDeckLinkOutput_StopScheduledPlayback {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_StopScheduledPlayback");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput* output, long long stopTime, long long timeScale);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput *output, long long stopTime, long long timeScale)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_StopScheduledPlayback$descriptor() {
+        return IDeckLinkOutput_StopScheduledPlayback.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput *output, long long stopTime, long long timeScale)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_StopScheduledPlayback$handle() {
+        return IDeckLinkOutput_StopScheduledPlayback.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput *output, long long stopTime, long long timeScale)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_StopScheduledPlayback$address() {
+        return IDeckLinkOutput_StopScheduledPlayback.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_StopScheduledPlayback(IDeckLinkOutput *output, long long stopTime, long long timeScale)
      * }
      */
     public static boolean IDeckLinkOutput_StopScheduledPlayback(MemorySegment output, long stopTime, long timeScale) {
-        var mh$ = IDeckLinkOutput_StopScheduledPlayback$MH();
+        var mh$ = IDeckLinkOutput_StopScheduledPlayback.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_StopScheduledPlayback", output, stopTime, timeScale);
+            }
             return (boolean)mh$.invokeExact(output, stopTime, timeScale);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_SetScheduledFrameCompletionCallback$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$50,"IDeckLinkOutput_SetScheduledFrameCompletionCallback");
+
+    private static class IDeckLinkOutput_SetScheduledFrameCompletionCallback {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_SetScheduledFrameCompletionCallback");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput* output, IDeckLinkVideoOutputCallback* callback);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput *output, IDeckLinkVideoOutputCallback *callback)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_SetScheduledFrameCompletionCallback$descriptor() {
+        return IDeckLinkOutput_SetScheduledFrameCompletionCallback.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput *output, IDeckLinkVideoOutputCallback *callback)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_SetScheduledFrameCompletionCallback$handle() {
+        return IDeckLinkOutput_SetScheduledFrameCompletionCallback.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput *output, IDeckLinkVideoOutputCallback *callback)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_SetScheduledFrameCompletionCallback$address() {
+        return IDeckLinkOutput_SetScheduledFrameCompletionCallback.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_SetScheduledFrameCompletionCallback(IDeckLinkOutput *output, IDeckLinkVideoOutputCallback *callback)
      * }
      */
     public static boolean IDeckLinkOutput_SetScheduledFrameCompletionCallback(MemorySegment output, MemorySegment callback) {
-        var mh$ = IDeckLinkOutput_SetScheduledFrameCompletionCallback$MH();
+        var mh$ = IDeckLinkOutput_SetScheduledFrameCompletionCallback.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_SetScheduledFrameCompletionCallback", output, callback);
+            }
             return (boolean)mh$.invokeExact(output, callback);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_CreateVideoFrameWithBuffer$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$52,"IDeckLinkOutput_CreateVideoFrameWithBuffer");
+
+    private static class IDeckLinkOutput_CreateVideoFrameWithBuffer {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_CreateVideoFrameWithBuffer");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkVideoFrame* IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput* output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer* buffer);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoFrame *IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput *output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer *buffer)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_CreateVideoFrameWithBuffer$descriptor() {
+        return IDeckLinkOutput_CreateVideoFrameWithBuffer.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoFrame *IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput *output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer *buffer)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_CreateVideoFrameWithBuffer$handle() {
+        return IDeckLinkOutput_CreateVideoFrameWithBuffer.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkVideoFrame *IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput *output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer *buffer)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_CreateVideoFrameWithBuffer$address() {
+        return IDeckLinkOutput_CreateVideoFrameWithBuffer.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkVideoFrame *IDeckLinkOutput_CreateVideoFrameWithBuffer(IDeckLinkOutput *output, int width, int height, int rowBytes, int pixelFormat, IDeckLinkVideoBuffer *buffer)
      * }
      */
     public static MemorySegment IDeckLinkOutput_CreateVideoFrameWithBuffer(MemorySegment output, int width, int height, int rowBytes, int pixelFormat, MemorySegment buffer) {
-        var mh$ = IDeckLinkOutput_CreateVideoFrameWithBuffer$MH();
+        var mh$ = IDeckLinkOutput_CreateVideoFrameWithBuffer.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(output, width, height, rowBytes, pixelFormat, buffer);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_CreateVideoFrameWithBuffer", output, width, height, rowBytes, pixelFormat, buffer);
+            }
+            return (MemorySegment)mh$.invokeExact(output, width, height, rowBytes, pixelFormat, buffer);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_DisplayVideoFrameSync$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$53,"IDeckLinkOutput_DisplayVideoFrameSync");
+
+    private static class IDeckLinkOutput_DisplayVideoFrameSync {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_DisplayVideoFrameSync");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput* output, IDeckLinkVideoFrame* frame);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_DisplayVideoFrameSync$descriptor() {
+        return IDeckLinkOutput_DisplayVideoFrameSync.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_DisplayVideoFrameSync$handle() {
+        return IDeckLinkOutput_DisplayVideoFrameSync.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_DisplayVideoFrameSync$address() {
+        return IDeckLinkOutput_DisplayVideoFrameSync.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_DisplayVideoFrameSync(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame)
      * }
      */
     public static boolean IDeckLinkOutput_DisplayVideoFrameSync(MemorySegment output, MemorySegment frame) {
-        var mh$ = IDeckLinkOutput_DisplayVideoFrameSync$MH();
+        var mh$ = IDeckLinkOutput_DisplayVideoFrameSync.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_DisplayVideoFrameSync", output, frame);
+            }
             return (boolean)mh$.invokeExact(output, frame);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkOutput_ScheduleVideoFrame$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$55,"IDeckLinkOutput_ScheduleVideoFrame");
+
+    private static class IDeckLinkOutput_ScheduleVideoFrame {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkOutput_ScheduleVideoFrame");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput* output, IDeckLinkVideoFrame* frame, long long displayTime, long long displayDuration, long long timeScale);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame, long long displayTime, long long displayDuration, long long timeScale)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkOutput_ScheduleVideoFrame$descriptor() {
+        return IDeckLinkOutput_ScheduleVideoFrame.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame, long long displayTime, long long displayDuration, long long timeScale)
+     * }
+     */
+    public static MethodHandle IDeckLinkOutput_ScheduleVideoFrame$handle() {
+        return IDeckLinkOutput_ScheduleVideoFrame.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame, long long displayTime, long long displayDuration, long long timeScale)
+     * }
+     */
+    public static MemorySegment IDeckLinkOutput_ScheduleVideoFrame$address() {
+        return IDeckLinkOutput_ScheduleVideoFrame.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkOutput_ScheduleVideoFrame(IDeckLinkOutput *output, IDeckLinkVideoFrame *frame, long long displayTime, long long displayDuration, long long timeScale)
      * }
      */
     public static boolean IDeckLinkOutput_ScheduleVideoFrame(MemorySegment output, MemorySegment frame, long displayTime, long displayDuration, long timeScale) {
-        var mh$ = IDeckLinkOutput_ScheduleVideoFrame$MH();
+        var mh$ = IDeckLinkOutput_ScheduleVideoFrame.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkOutput_ScheduleVideoFrame", output, frame, displayTime, displayDuration, timeScale);
+            }
             return (boolean)mh$.invokeExact(output, frame, displayTime, displayDuration, timeScale);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayModeIterator_Next$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$56,"IDeckLinkDisplayModeIterator_Next");
+
+    private static class IDeckLinkDisplayModeIterator_Next {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayModeIterator_Next");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * IDeckLinkDisplayMode* IDeckLinkDisplayModeIterator_Next(IDeckLinkDisplayModeIterator* iterator);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayMode *IDeckLinkDisplayModeIterator_Next(IDeckLinkDisplayModeIterator *iterator)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayModeIterator_Next$descriptor() {
+        return IDeckLinkDisplayModeIterator_Next.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayMode *IDeckLinkDisplayModeIterator_Next(IDeckLinkDisplayModeIterator *iterator)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayModeIterator_Next$handle() {
+        return IDeckLinkDisplayModeIterator_Next.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * IDeckLinkDisplayMode *IDeckLinkDisplayModeIterator_Next(IDeckLinkDisplayModeIterator *iterator)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayModeIterator_Next$address() {
+        return IDeckLinkDisplayModeIterator_Next.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * IDeckLinkDisplayMode *IDeckLinkDisplayModeIterator_Next(IDeckLinkDisplayModeIterator *iterator)
      * }
      */
     public static MemorySegment IDeckLinkDisplayModeIterator_Next(MemorySegment iterator) {
-        var mh$ = IDeckLinkDisplayModeIterator_Next$MH();
+        var mh$ = IDeckLinkDisplayModeIterator_Next.HANDLE;
         try {
-            return (java.lang.foreign.MemorySegment)mh$.invokeExact(iterator);
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayModeIterator_Next", iterator);
+            }
+            return (MemorySegment)mh$.invokeExact(iterator);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetName$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$57,"IDeckLinkDisplayMode_GetName");
+
+    private static class IDeckLinkDisplayMode_GetName {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_LONG_LONG
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetName");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkDisplayMode_GetName(IDeckLinkDisplayMode* mode, char* str, long long len);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDisplayMode_GetName(IDeckLinkDisplayMode *mode, char *str, long long len)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetName$descriptor() {
+        return IDeckLinkDisplayMode_GetName.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDisplayMode_GetName(IDeckLinkDisplayMode *mode, char *str, long long len)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetName$handle() {
+        return IDeckLinkDisplayMode_GetName.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDisplayMode_GetName(IDeckLinkDisplayMode *mode, char *str, long long len)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetName$address() {
+        return IDeckLinkDisplayMode_GetName.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkDisplayMode_GetName(IDeckLinkDisplayMode *mode, char *str, long long len)
      * }
      */
     public static boolean IDeckLinkDisplayMode_GetName(MemorySegment mode, MemorySegment str, long len) {
-        var mh$ = IDeckLinkDisplayMode_GetName$MH();
+        var mh$ = IDeckLinkDisplayMode_GetName.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetName", mode, str, len);
+            }
             return (boolean)mh$.invokeExact(mode, str, len);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetDisplayMode$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$59,"IDeckLinkDisplayMode_GetDisplayMode");
+
+    private static class IDeckLinkDisplayMode_GetDisplayMode {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetDisplayMode");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int IDeckLinkDisplayMode_GetDisplayMode(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetDisplayMode(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetDisplayMode$descriptor() {
+        return IDeckLinkDisplayMode_GetDisplayMode.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetDisplayMode(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetDisplayMode$handle() {
+        return IDeckLinkDisplayMode_GetDisplayMode.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetDisplayMode(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetDisplayMode$address() {
+        return IDeckLinkDisplayMode_GetDisplayMode.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetDisplayMode(IDeckLinkDisplayMode *mode)
      * }
      */
     public static int IDeckLinkDisplayMode_GetDisplayMode(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetDisplayMode$MH();
+        var mh$ = IDeckLinkDisplayMode_GetDisplayMode.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetDisplayMode", mode);
+            }
             return (int)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetWidth$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$60,"IDeckLinkDisplayMode_GetWidth");
+
+    private static class IDeckLinkDisplayMode_GetWidth {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetWidth");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int IDeckLinkDisplayMode_GetWidth(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetWidth(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetWidth$descriptor() {
+        return IDeckLinkDisplayMode_GetWidth.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetWidth(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetWidth$handle() {
+        return IDeckLinkDisplayMode_GetWidth.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetWidth(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetWidth$address() {
+        return IDeckLinkDisplayMode_GetWidth.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetWidth(IDeckLinkDisplayMode *mode)
      * }
      */
     public static int IDeckLinkDisplayMode_GetWidth(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetWidth$MH();
+        var mh$ = IDeckLinkDisplayMode_GetWidth.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetWidth", mode);
+            }
             return (int)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetHeight$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$61,"IDeckLinkDisplayMode_GetHeight");
+
+    private static class IDeckLinkDisplayMode_GetHeight {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetHeight");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetHeight$descriptor() {
+        return IDeckLinkDisplayMode_GetHeight.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetHeight$handle() {
+        return IDeckLinkDisplayMode_GetHeight.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetHeight$address() {
+        return IDeckLinkDisplayMode_GetHeight.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetHeight(IDeckLinkDisplayMode *mode)
      * }
      */
     public static int IDeckLinkDisplayMode_GetHeight(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetHeight$MH();
+        var mh$ = IDeckLinkDisplayMode_GetHeight.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetHeight", mode);
+            }
             return (int)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetFrameRate$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$63,"IDeckLinkDisplayMode_GetFrameRate");
+
+    private static class IDeckLinkDisplayMode_GetFrameRate {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_LONG_LONG,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetFrameRate");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetFrameRate$descriptor() {
+        return IDeckLinkDisplayMode_GetFrameRate.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetFrameRate$handle() {
+        return IDeckLinkDisplayMode_GetFrameRate.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetFrameRate$address() {
+        return IDeckLinkDisplayMode_GetFrameRate.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * long long IDeckLinkDisplayMode_GetFrameRate(IDeckLinkDisplayMode *mode)
      * }
      */
     public static long IDeckLinkDisplayMode_GetFrameRate(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetFrameRate$MH();
+        var mh$ = IDeckLinkDisplayMode_GetFrameRate.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetFrameRate", mode);
+            }
             return (long)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetFieldDominance$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$64,"IDeckLinkDisplayMode_GetFieldDominance");
+
+    private static class IDeckLinkDisplayMode_GetFieldDominance {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetFieldDominance");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetFieldDominance$descriptor() {
+        return IDeckLinkDisplayMode_GetFieldDominance.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetFieldDominance$handle() {
+        return IDeckLinkDisplayMode_GetFieldDominance.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetFieldDominance$address() {
+        return IDeckLinkDisplayMode_GetFieldDominance.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFieldDominance(IDeckLinkDisplayMode *mode)
      * }
      */
     public static int IDeckLinkDisplayMode_GetFieldDominance(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetFieldDominance$MH();
+        var mh$ = IDeckLinkDisplayMode_GetFieldDominance.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetFieldDominance", mode);
+            }
             return (int)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkDisplayMode_GetFlags$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$65,"IDeckLinkDisplayMode_GetFlags");
+
+    private static class IDeckLinkDisplayMode_GetFlags {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkDisplayMode_GetFlags");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode* mode);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkDisplayMode_GetFlags$descriptor() {
+        return IDeckLinkDisplayMode_GetFlags.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MethodHandle IDeckLinkDisplayMode_GetFlags$handle() {
+        return IDeckLinkDisplayMode_GetFlags.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode *mode)
+     * }
+     */
+    public static MemorySegment IDeckLinkDisplayMode_GetFlags$address() {
+        return IDeckLinkDisplayMode_GetFlags.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * int IDeckLinkDisplayMode_GetFlags(IDeckLinkDisplayMode *mode)
      * }
      */
     public static int IDeckLinkDisplayMode_GetFlags(MemorySegment mode) {
-        var mh$ = IDeckLinkDisplayMode_GetFlags$MH();
+        var mh$ = IDeckLinkDisplayMode_GetFlags.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkDisplayMode_GetFlags", mode);
+            }
             return (int)mh$.invokeExact(mode);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
-    public static MethodHandle IDeckLinkVideoFrame_SetMetadata$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.const$67,"IDeckLinkVideoFrame_SetMetadata");
+
+    private static class IDeckLinkVideoFrame_SetMetadata {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            decklinkcapi_h.C_BOOL,
+            decklinkcapi_h.C_POINTER,
+            decklinkcapi_h.C_INT,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_DOUBLE,
+            decklinkcapi_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("IDeckLinkVideoFrame_SetMetadata");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
     }
+
     /**
-     * {@snippet :
-     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame* frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs);
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame *frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs)
+     * }
+     */
+    public static FunctionDescriptor IDeckLinkVideoFrame_SetMetadata$descriptor() {
+        return IDeckLinkVideoFrame_SetMetadata.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame *frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs)
+     * }
+     */
+    public static MethodHandle IDeckLinkVideoFrame_SetMetadata$handle() {
+        return IDeckLinkVideoFrame_SetMetadata.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame *frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs)
+     * }
+     */
+    public static MemorySegment IDeckLinkVideoFrame_SetMetadata$address() {
+        return IDeckLinkVideoFrame_SetMetadata.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * _Bool IDeckLinkVideoFrame_SetMetadata(IDeckLinkVideoFrame *frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs)
      * }
      */
     public static boolean IDeckLinkVideoFrame_SetMetadata(MemorySegment frame, int eotf, double rx, double ry, double gx, double gy, double bx, double by, double wx, double wy, double maxDML, double minDML, double maxCLL, double maxFALL, int cs) {
-        var mh$ = IDeckLinkVideoFrame_SetMetadata$MH();
+        var mh$ = IDeckLinkVideoFrame_SetMetadata.HANDLE;
         try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("IDeckLinkVideoFrame_SetMetadata", frame, eotf, rx, ry, gx, gy, bx, by, wx, wy, maxDML, minDML, maxCLL, maxFALL, cs);
+            }
             return (boolean)mh$.invokeExact(frame, eotf, rx, ry, gx, gy, bx, by, wx, wy, maxDML, minDML, maxCLL, maxFALL, cs);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
         } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
+           throw new AssertionError("should not reach here", ex$);
         }
     }
 }
-
 

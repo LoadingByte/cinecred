@@ -2,32 +2,69 @@
 
 package com.loadingbyte.cinecred.natives.decklinkcapi;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
-import java.nio.ByteOrder;
+import java.lang.invoke.*;
 import java.lang.foreign.*;
+import java.nio.ByteOrder;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+
 import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.MemoryLayout.PathElement.*;
+
 /**
- * {@snippet :
- * void (*scheduledFrameCompletionCallback_t)(void* frame,int result);
+ * {@snippet lang=c :
+ * typedef void (*scheduledFrameCompletionCallback_t)(IDeckLinkVideoFrame *, int)
  * }
  */
-public interface scheduledFrameCompletionCallback_t {
+public final class scheduledFrameCompletionCallback_t {
 
-    void apply(java.lang.foreign.MemorySegment frame, int result);
-    static MemorySegment allocate(scheduledFrameCompletionCallback_t fi, Arena scope) {
-        return RuntimeHelper.upcallStub(constants$0.const$4, fi, constants$0.const$3, scope);
+    private scheduledFrameCompletionCallback_t() {
+        // Should not be called directly
     }
-    static scheduledFrameCompletionCallback_t ofAddress(MemorySegment addr, Arena arena) {
-        MemorySegment symbol = addr.reinterpret(arena, null);
-        return (java.lang.foreign.MemorySegment _frame, int _result) -> {
-            try {
-                constants$0.const$5.invokeExact(symbol, _frame, _result);
-            } catch (Throwable ex$) {
-                throw new AssertionError("should not reach here", ex$);
-            }
-        };
+
+    /**
+     * The function pointer signature, expressed as a functional interface
+     */
+    public interface Function {
+        void apply(MemorySegment frame, int result);
+    }
+
+    private static final FunctionDescriptor $DESC = FunctionDescriptor.ofVoid(
+        decklinkcapi_h.C_POINTER,
+        decklinkcapi_h.C_INT
+    );
+
+    /**
+     * The descriptor of this function pointer
+     */
+    public static FunctionDescriptor descriptor() {
+        return $DESC;
+    }
+
+    private static final MethodHandle UP$MH = decklinkcapi_h.upcallHandle(scheduledFrameCompletionCallback_t.Function.class, "apply", $DESC);
+
+    /**
+     * Allocates a new upcall stub, whose implementation is defined by {@code fi}.
+     * The lifetime of the returned segment is managed by {@code arena}
+     */
+    public static MemorySegment allocate(scheduledFrameCompletionCallback_t.Function fi, Arena arena) {
+        return Linker.nativeLinker().upcallStub(UP$MH.bindTo(fi), $DESC, arena);
+    }
+
+    private static final MethodHandle DOWN$MH = Linker.nativeLinker().downcallHandle($DESC);
+
+    /**
+     * Invoke the upcall stub {@code funcPtr}, with given parameters
+     */
+    public static void invoke(MemorySegment funcPtr, MemorySegment frame, int result) {
+        try {
+             DOWN$MH.invokeExact(funcPtr, frame, result);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
     }
 }
-
 

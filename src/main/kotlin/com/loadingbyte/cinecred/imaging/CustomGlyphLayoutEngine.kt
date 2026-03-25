@@ -53,11 +53,11 @@ class CustomGlyphLayoutEngine private constructor(
             // Create an HB buffer, configure it and fill it with the text.
             val hbBuffer = hb_buffer_create()
             hb_buffer_set_script(hbBuffer, icuToHBScriptCode(script))
-            hb_buffer_set_language(hbBuffer, hb_language_from_string(arena.allocateUtf8String(lang), -1))
+            hb_buffer_set_language(hbBuffer, hb_language_from_string(arena.allocateFrom(lang), -1))
             hb_buffer_set_direction(hbBuffer, if (rtl) HB_DIRECTION_RTL() else HB_DIRECTION_LTR())
             // Note: We need this cluster level for correctly identifying graphemes, which tracking shouldn't break.
             hb_buffer_set_cluster_level(hbBuffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES())
-            val chars = arena.allocateArray(tr.text)
+            val chars = arena.allocateFrom(tr.text)
             hb_buffer_add_utf16(hbBuffer, chars, tr.text.size, tr.start, tr.limit - tr.start)
 
             // Create an HB feature array and fill it.
@@ -91,16 +91,18 @@ class CustomGlyphLayoutEngine private constructor(
             // Transfer the shaping result into those arrays.
             var x = startPt.x + config.bearingLeftPx
             var y = startPt.y
-            for (getIdx in 0L..<glyphCount.toLong()) {
+            for (glyphIdx in 0L..<glyphCount.toLong()) {
+                val curGlyphInfo = hb_glyph_info_t.asSlice(glyphInfo, glyphIdx)
+                val curGlyphPos = hb_glyph_position_t.asSlice(glyphPos, glyphIdx)
                 val setIdx = gvData._count++
-                glyphs[setIdx] = hb_glyph_info_t.`codepoint$get`(glyphInfo, getIdx) or gmask
-                indices[setIdx] = baseIndex + hb_glyph_info_t.`cluster$get`(glyphInfo, getIdx) - tr.start
+                glyphs[setIdx] = hb_glyph_info_t.codepoint(curGlyphInfo) or gmask
+                indices[setIdx] = baseIndex + hb_glyph_info_t.cluster(curGlyphInfo) - tr.start
                 if (setIdx != 0 && indices[setIdx] != indices[setIdx - 1])
                     x += config.trackingPx
-                positions[setIdx * 2] = x + s * hb_glyph_position_t.`x_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
-                positions[setIdx * 2 + 1] = y - hb_glyph_position_t.`y_offset$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
-                x += s * hb_glyph_position_t.`x_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
-                y += hb_glyph_position_t.`y_advance$get`(glyphPos, getIdx) / FLOAT_TO_HB_FIXED
+                positions[setIdx * 2] = x + s * hb_glyph_position_t.x_offset(curGlyphPos) / FLOAT_TO_HB_FIXED
+                positions[setIdx * 2 + 1] = y - hb_glyph_position_t.y_offset(curGlyphPos) / FLOAT_TO_HB_FIXED
+                x += s * hb_glyph_position_t.x_advance(curGlyphPos) / FLOAT_TO_HB_FIXED
+                y += hb_glyph_position_t.y_advance(curGlyphPos) / FLOAT_TO_HB_FIXED
             }
 
             // Now, x respectively y hold the start point plus the advance of the string. Move the start point there
@@ -158,7 +160,7 @@ class CustomGlyphLayoutEngine private constructor(
                         try {
                             val javaArr = font.getTableBytes(tag) ?: return@allocate NULL
                             val blobArena = Arena.ofShared()
-                            val cArr = blobArena.allocateArray(javaArr)
+                            val cArr = blobArena.allocateFrom(javaArr)
                             hb_blob_create(cArr, javaArr.size, HB_MEMORY_MODE_WRITABLE(), NULL, destroyFunc(blobArena))
                         } catch (t: Throwable) {
                             // We have to catch all exceptions because if one escapes, a segfault happens.
@@ -248,14 +250,15 @@ class CustomGlyphLayoutEngine private constructor(
 
 
         private fun configureFeature(seg: MemorySegment, idx: Long, tag: String, value: Int) {
+            val feature = hb_feature_t.asSlice(seg, idx)
             if (tag.length == 4 && tag.all { it.code in 0..255 }) {
                 val tagCode = (tag[0].code shl 24) or (tag[1].code shl 16) or (tag[2].code shl 8) or tag[3].code
-                hb_feature_t.`tag$set`(seg, idx, tagCode)
+                hb_feature_t.tag(feature, tagCode)
             }
             if (value > 0)
-                hb_feature_t.`value$set`(seg, idx, value)
-            hb_feature_t.`start$set`(seg, idx, HB_FEATURE_GLOBAL_START())
-            hb_feature_t.`end$set`(seg, idx, HB_FEATURE_GLOBAL_END())
+                hb_feature_t.value(feature, value)
+            hb_feature_t.start(feature, HB_FEATURE_GLOBAL_START())
+            hb_feature_t.end(feature, HB_FEATURE_GLOBAL_END())
         }
 
     }

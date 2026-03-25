@@ -11,7 +11,6 @@ import org.bytedeco.javacpp.Pointer
 import java.awt.image.BufferedImage
 import java.lang.foreign.*
 import java.lang.foreign.ValueLayout.*
-import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicInteger
@@ -74,16 +73,16 @@ private val MEM_SEG_FLOAT_LE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOr
 private val MEM_SEG_FLOAT_BE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOrder.BIG_ENDIAN)
 
 private fun makeVarHandle(layout: ValueLayout, order: ByteOrder): VarHandle =
-    MethodHandles.memorySegmentViewVarHandle(layout.withOrder(order)).withInvokeExactBehavior()
+    layout.withOrder(order).varHandle().withInvokeExactBehavior()
 
 
-fun SegmentAllocator.allocateArray(elems: ByteArray): MemorySegment = allocateArray(JAVA_BYTE, elems.size.toLong())
+fun SegmentAllocator.allocateFrom(elems: ByteArray): MemorySegment = allocate(JAVA_BYTE, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_BYTE, 0L, elems.size) }
 
-fun SegmentAllocator.allocateArray(elems: CharArray): MemorySegment = allocateArray(JAVA_CHAR, elems.size.toLong())
+fun SegmentAllocator.allocateFrom(elems: CharArray): MemorySegment = allocate(JAVA_CHAR, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_CHAR, 0L, elems.size) }
 
-fun SegmentAllocator.allocateArray(elems: FloatArray): MemorySegment = allocateArray(JAVA_FLOAT, elems.size.toLong())
+fun SegmentAllocator.allocateFrom(elems: FloatArray): MemorySegment = allocate(JAVA_FLOAT, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_FLOAT, 0L, elems.size) }
 
 
@@ -94,7 +93,7 @@ fun SegmentAllocator.allocateArray(elems: FloatArray): MemorySegment = allocateA
  */
 fun setNativeNumericLocaleToC() {
     val lcNumeric = if (SystemInfo.isWindows || SystemInfo.isMacOS) 4 else 1
-    Arena.ofConfined().use { arena -> SETLOCALE.invokeExact(lcNumeric, arena.allocateUtf8String("C")) as MemorySegment }
+    Arena.ofConfined().use { arena -> SETLOCALE.invokeExact(lcNumeric, arena.allocateFrom("C")) as MemorySegment }
 }
 
 private val SETLOCALE = Linker.nativeLinker().downcallHandle(

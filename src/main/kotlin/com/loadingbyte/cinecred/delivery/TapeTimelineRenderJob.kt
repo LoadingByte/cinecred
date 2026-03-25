@@ -61,7 +61,7 @@ class TapeTimelineRenderJob private constructor(
 
     private fun writeCSV(tapeSpans: List<TapeSpan>) {
         val csv = StringBuilder()
-        csv.appendLine("Record In,Record Out,Source In,Source In Clock,Source")
+        csv.appendLine("\"Record In\",\"Record Out\",\"Source In\",\"Source In Clock/Frames\",\"Source\"")
 
         val scan = config[SCAN]
         val global = styling.global
@@ -82,8 +82,8 @@ class TapeTimelineRenderJob private constructor(
                 recOut += if ((stopField % 2 == 0) == tff) " \u25D3" else " \u25D2"
             }
             val srcIn = tapeStartRounded.toString(tapeFPS)
-            val srcInClock = tapeStartExact.toString(tapeFPS)
-            csv.append("\"$recIn\",\"$recOut\",\"$srcIn\",\"$srcInClock\",")
+            val srcInCF = tapeStartExact.toString(tapeFPS)
+            csv.append("\"$recIn\",\"$recOut\",\"$srcIn\",\"$srcInCF\",")
                 .append("\"${tapeSpan.embeddedTape.tape.name}\"")
                 .appendLine()
         }

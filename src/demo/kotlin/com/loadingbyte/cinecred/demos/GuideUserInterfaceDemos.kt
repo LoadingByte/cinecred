@@ -184,8 +184,7 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
             sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayTypeWidget.components[0].getComponent(idx)))
             sc.click(4 * hold)
         }
-        val name = "Demo"
-        sc.type(welcomeWin, prefsPanel.leakedCfgOverlayNameWidget.components[0] as JTextField, name)
+        sc.type(welcomeWin, prefsPanel.leakedCfgOverlayNameWidget.components[0] as JTextField, "Demo")
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayLinesHWidget.components[0]))
         sc.click()
         val linesHSpinner = prefsPanel.leakedCfgOverlayLinesHWidget.components[1].getComponent(1) as JSpinner
@@ -340,7 +339,7 @@ object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.V
         sleep(500)
         sc.hold(4 * hold)
         sc.mouseTo(prjWin.desktopPosOf(prjCtl.leakedDeckLinkConfigButton), 0)
-        sc.click(0)
+        sc.click()
         sc.mouseTo(prjWin.desktopPosOf(prjCtl.leakedDeckLinkConnectedButton))
         sc.hold(4 * hold)
     }

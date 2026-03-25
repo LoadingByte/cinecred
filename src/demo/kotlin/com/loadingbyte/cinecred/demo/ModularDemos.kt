@@ -128,7 +128,7 @@ abstract class StyleSettingsVideoDemo<S : Style>(
     private fun generateTimeline(style: TapeStyle, video: DeferredVideo): Sequence<BufferedImage> {
         val timeframe = video.numFrames - (style.leftTemporalMarginFrames + style.rightTemporalMarginFrames)
         val avail = style.tape.tape!!.availableRange
-        var slice = (style.slice.outPoint.orElse { avail.endExclusive }.toFrames(video.fps).frames -
+        val slice = (style.slice.outPoint.orElse { avail.endExclusive }.toFrames(video.fps).frames -
                 style.slice.inPoint.orElse { avail.start }.toFrames(video.fps).frames).coerceAtMost(timeframe)
         var leftMargin = style.leftTemporalMarginFrames
         if (style.temporallyJustify == HJustify.CENTER) leftMargin += (timeframe - slice) / 2

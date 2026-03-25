@@ -74,11 +74,8 @@ class Y private constructor(private val ss: DoubleArray, private val ls: DoubleA
     override fun equals(other: Any?) =
         this === other || other is Y && ss.contentEquals(other.ss) && ls.contentEquals(other.ls)
 
-    override fun hashCode(): Int {
-        var result = ss.contentHashCode()
-        result = 31 * result + ls.contentHashCode()
-        return result
-    }
+    override fun hashCode() =
+        31 * ss.contentHashCode() + ls.contentHashCode()
 
 
     companion object {

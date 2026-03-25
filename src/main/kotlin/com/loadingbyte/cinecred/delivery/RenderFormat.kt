@@ -35,7 +35,9 @@ abstract class RenderFormat(
     val defaultConfig: Config = configAssortment.defaultConfig
 
     init {
-        require(defaultFileExt in fileExts)
+        require(defaultFileExt in fileExts) {
+            "Render format $label: default file ext $defaultFileExt not in available file exts $fileExts."
+        }
     }
 
     fun <T> options(property: Property<T>, baseConfig: Config, baseDiscard: Collection<Property<*>>): SequencedSet<T> {

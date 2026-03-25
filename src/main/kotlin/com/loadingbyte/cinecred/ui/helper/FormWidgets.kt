@@ -573,10 +573,8 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
     }
 
 
-    private class FormatWrapper(override val item: TimecodeFormat) : ComboBoxWrapper {
+    private data class FormatWrapper(override val item: TimecodeFormat) : ComboBoxWrapper {
         override fun toString() = item.label
-        override fun hashCode() = item.hashCode()
-        override fun equals(other: Any?) = this === other || other is FormatWrapper && item == other.item
     }
 
 
@@ -1689,7 +1687,7 @@ class TransitionWidget : Form.AbstractWidget<Transition>() {
         private val disabledBorderColor = UIManager.getColor("Component.disabledBorderColor")
         private val normalForeground = UIManager.getColor("textText")
         private val disabledForeground = UIManager.getColor("textInactiveText")
-        private val borderWidth = (UIManager.get("Component.borderWidth") as Number).toInt()
+        private val borderWidth = UIManager.getInt("Component.borderWidth")
 
         private val timeLabel = l10n("ui.form.transitionTime")
         private val valueLabel = l10n("ui.form.transitionValue")
@@ -1701,7 +1699,7 @@ class TransitionWidget : Form.AbstractWidget<Transition>() {
                 private var dragging = 0
 
                 override fun mousePressed(e: MouseEvent) {
-                    if (e.button == MouseEvent.BUTTON1) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
                         val p = e.point
                         val d1 = p.distance(x1, y1)
                         val d2 = p.distance(x2, y2)
@@ -1711,7 +1709,7 @@ class TransitionWidget : Form.AbstractWidget<Transition>() {
                 }
 
                 override fun mouseReleased(e: MouseEvent) {
-                    if (e.button == MouseEvent.BUTTON1)
+                    if (SwingUtilities.isLeftMouseButton(e))
                         dragging = 0
                 }
 

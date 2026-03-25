@@ -139,6 +139,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         if (blockOpening || !projectDir.isAbsolute)
             return false
 
+        // Normalize mainly to prevent duplicate entries in the recent project dirs list, but it's a good idea anyway.
+        val projectDir = projectDir.normalize()
+
         if (!projectDir.isDirectory()) {
             welcomeView.display()
             SwingUtilities.invokeLater { welcomeView.showNotADirMessage(projectDir) }
@@ -385,8 +388,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 return
         }
         newBrowseSelection = projectDir
+        val creditsFilename = "${projectDir.name} ${l10n("project.template.spreadsheetName")}"
         welcomeView.projects_createConfigure_setProjectDir(projectDir)
-        welcomeView.projects_createConfigure_setCreditsFilename("${projectDir.name} Credits")
+        welcomeView.projects_createConfigure_setCreditsFilename(creditsFilename)
         welcomeView.projects_setCard(ProjectsCard.CREATE_CONFIGURE)
     }
 

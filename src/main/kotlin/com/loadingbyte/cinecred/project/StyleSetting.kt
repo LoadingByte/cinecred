@@ -98,11 +98,8 @@ sealed class StyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, val name:
     override fun equals(other: Any?) =
         this === other || other is StyleSetting<*, *> && declaringClass == other.declaringClass && name == other.name
 
-    override fun hashCode(): Int {
-        var result = declaringClass.hashCode()
-        result = 31 * result + name.hashCode()
-        return result
-    }
+    override fun hashCode() =
+        31 * declaringClass.hashCode() + name.hashCode()
 
     override fun toString() =
         "StyleSetting(${declaringClass.simpleName}.$name: ${type.simpleName})"

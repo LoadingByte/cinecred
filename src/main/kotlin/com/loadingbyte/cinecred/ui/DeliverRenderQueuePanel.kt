@@ -258,12 +258,15 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
                 model.value = MAX_RENDER_PROGRESS
                 putClientProperty(STYLE, "foreground: $PALETTE_GREEN")
                 setTableCellBackground(table, rowIdx)
-                isStringPainted = true
-                val d = Duration.between(row.startTime, row.updatedTime)
-                string = l10n(
-                    "ui.deliverRenderQueue.timeTaken",
-                    "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
-                )
+                if (row.startTime != null) {
+                    isStringPainted = true
+                    val d = Duration.between(row.startTime, row.updatedTime)
+                    string = l10n(
+                        "ui.deliverRenderQueue.timeTaken",
+                        "%02d:%02d:%02d".format(d.toHours(), d.toMinutesPart(), d.toSecondsPart())
+                    )
+                } else
+                    isStringPainted = false
             }
             is Exception -> wordWrapCellRenderer.getTableCellRendererComponent(
                 table, "${progress.javaClass.simpleName}: ${progress.localizedMessage ?: ""}",

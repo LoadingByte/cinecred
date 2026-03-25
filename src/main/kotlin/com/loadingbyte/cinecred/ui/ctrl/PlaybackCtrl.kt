@@ -589,7 +589,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
             val baseBitmap = videoBackendLock.withLock { videoBackend?.materializeFrame(frameIdx) } ?: return null
             if (baseBitmap.spec.resolution == resolution)
                 return frameConverter(baseBitmap)
-            val paddedBitmap = Bitmap.allocate(Bitmap.Spec(resolution, baseBitmap.spec.representation)).zero()
+            val paddedBitmap = Bitmap.allocate(baseBitmap.spec.copy(resolution = resolution)).zero()
             val (w, h) = resolution
             val (bw, bh) = baseBitmap.spec.resolution
             paddedBitmap.blitLeniently(baseBitmap, 0, 0, bw, bh, (w - bw) / 2, (h - bh) / 2)

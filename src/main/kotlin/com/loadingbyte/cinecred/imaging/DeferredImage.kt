@@ -1337,7 +1337,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         // Adapted from PDFBox's LosslessFactory.PredictorEncoder.
-        // Note that we've measure that encoder to be superior to the PDFBox's package-private PNGConverter.
+        // Note that we've measured that encoder to be superior to the PDFBox's package-private PNGConverter.
         private fun encodeRGB24Losslessly(bitmap: Bitmap, os: OutputStream) {
             val (w, h) = bitmap.spec.resolution
             val seg = bitmap.memorySegment(0)
@@ -1356,7 +1356,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val rawSub = ByteArray(rawLen).also { it[0] = 1 }
             val rawUp = ByteArray(rawLen).also { it[0] = 2 }
             val rawAvg = ByteArray(rawLen).also { it[0] = 3 }
-            val rawPaeth = ByteArray(rawLen).also { it[0] = 4 }
+            val rawPath = ByteArray(rawLen).also { it[0] = 4 }
 
             for (y in 0..<h) {
                 aRGB.fill(0)
@@ -1378,7 +1378,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         rawUp[r] = ((x and 0xFF) - (b and 0xFF)).toByte()
                         rawAvg[r] = (x - ((b + a) / 2)).toByte()
                         val p = a + b - c
-                        rawPaeth[r] = (x - minBy(abs(p - a), a, abs(p - b), b, abs(p - c), c)).toByte()
+                        rawPath[r] = (x - minBy(abs(p - a), a, abs(p - b), b, abs(p - c), c)).toByte()
                         r++
                     }
                     System.arraycopy(xRGB, 0, aRGB, 0, 3)
@@ -1386,7 +1386,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 }
                 val raw = minBy(
                     est(rawNone), rawNone, est(rawSub), rawSub, est(rawUp), rawUp, est(rawAvg), rawAvg,
-                    est(rawPaeth), rawPaeth
+                    est(rawPath), rawPath
                 )
                 os.write(raw)
             }

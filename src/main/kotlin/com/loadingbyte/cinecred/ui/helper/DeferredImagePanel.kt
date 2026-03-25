@@ -35,8 +35,7 @@ class DeferredImagePanel(
     private val zoomIncrement: Double,
     private val highResCache: DeferredImage.CanvasMaterializationCache,
     private val lowResCache: DeferredImage.CanvasMaterializationCache
-) :
-    JPanel(MigLayout("gap 0, insets 0")) {
+) : JPanel(MigLayout("gap 0, insets 0")) {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK")
@@ -161,7 +160,7 @@ class DeferredImagePanel(
         }
 
         // Hovering over the canvas should always display a move cursor.
-        canvas.cursor = Cursor(Cursor.MOVE_CURSOR)
+        canvas.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
 
         // When the user scrolls inside the canvas, scroll the viewport or adjust the zoom.
         canvas.addMouseWheelListener { e ->
@@ -192,7 +191,7 @@ class DeferredImagePanel(
             private var startViewportCenterY = 0.0
 
             override fun mousePressed(e: MouseEvent) {
-                if (e.button == BUTTON1) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
                     startPoint = e.point
                     startViewportCenterX = viewportCenterX
                     startViewportCenterY = viewportCenterY
@@ -200,7 +199,7 @@ class DeferredImagePanel(
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                if (e.button == BUTTON1)
+                if (SwingUtilities.isLeftMouseButton(e))
                     startPoint = null
             }
 

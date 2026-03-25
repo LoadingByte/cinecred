@@ -127,8 +127,7 @@ class LinesOverlay(
     val color: Color4f?,
     val hLines: List<Int>,
     val vLines: List<Int>
-) :
-    ConfigurableOverlay {
+) : ConfigurableOverlay {
 
     override val label get() = name
 

@@ -567,6 +567,12 @@ fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
 val GraphicsConfiguration.usableBounds: Rectangle
     get() {
         val bounds = bounds
+        // Note: On X11, we've observed that these screen insets can be wrong when, e.g., there's a 16:10 screen on
+        // the left and a 16:9 screen with a taskbar at the bottom on the right. This is because Java only uses the
+        // _NET_WORKAREA property to determine screen insets, which is just the biggest rectangular area spanning all
+        // screens without including docks or taskbars, plus some heuristics (see XToolkit.getScreenInsetsImpl()).
+        // On Windows and macOS, the screen insets are obtained via a native function call for each screen individually,
+        // hence these OSes don't suffer from X11's issues.
         val insets = Toolkit.getDefaultToolkit().getScreenInsets(this)
         return Rectangle(
             bounds.x + insets.left,

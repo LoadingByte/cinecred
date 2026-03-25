@@ -5,7 +5,7 @@ import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.ceilDiv
 import jdk.incubator.vector.FloatVector
 import org.bytedeco.ffmpeg.avutil.AVFrame
-import org.bytedeco.ffmpeg.avutil.AVFrame.AV_NUM_DATA_POINTERS
+import org.bytedeco.ffmpeg.avutil.AVFrame.*
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.bytedeco.javacpp.BytePointer
 import java.lang.Byte.toUnsignedInt
@@ -65,7 +65,8 @@ class Bitmap private constructor(
     }
     private val planeSegments = Array(spec.representation.pixelFormat.planes) { plane ->
         val addr = frame.data(plane).address()
-        val size = frame.linesize(plane) * spec.resolution.heightPx.toLong()
+        val planeHeight = spec.resolution.heightPx shr spec.representation.pixelFormat.vChromaSubOfPlane(plane)
+        val size = frame.linesize(plane) * planeHeight.toLong()
         MemorySegment.ofAddress(addr).reinterpret(size, arena, null)
     }
     private val linesizes = IntArray(planeSegments.size, frame::linesize)
@@ -169,8 +170,8 @@ class Bitmap private constructor(
             for (plane in 0..<pixelFormat.planes) {
                 val ls = linesize(plane)
                 val step = pixelFormat.stepOfPlane(plane)
-                val realX = if (pixelFormat.hChromaSub != 0 && plane in 1..2) x shr pixelFormat.hChromaSub else x
-                val realY = if (pixelFormat.vChromaSub != 0 && plane in 1..2) y shr pixelFormat.vChromaSub else y
+                val realX = x shr pixelFormat.hChromaSubOfPlane(plane)
+                val realY = y shr pixelFormat.vChromaSubOfPlane(plane)
                 val offset = realY * ls + realX * step
                 viewFrame.data(plane, BytePointer().position(memorySegment(plane).address() + offset))
                 viewFrame.linesize(plane, ls * yStep)
@@ -343,8 +344,8 @@ class Bitmap private constructor(
             val srcLs = src.linesize(plane)
             val dstLs = linesize(plane)
             val step = pixelFormat.stepOfPlane(plane).toLong()
-            val hChromaSub = if (plane in 1..2) pixelFormat.hChromaSub else 0
-            val vChromaSub = if (plane in 1..2) pixelFormat.vChromaSub else 0
+            val hChromaSub = pixelFormat.hChromaSubOfPlane(plane)
+            val vChromaSub = pixelFormat.vChromaSubOfPlane(plane)
             var l = 0
             while (l < srcHeight shr vChromaSub) {
                 val srcOffset = ((srcY shr vChromaSub) + l) * srcLs + (srcX shr hChromaSub) * step
@@ -576,8 +577,10 @@ class Bitmap private constructor(
                 // If the field order is bff, but we don't specify that for every single frame, the resulting file would
                 // have an additional (and wrong) metadata entry showing "original scan order = tff".
                 if (spec.scan != Scan.PROGRESSIVE) {
-                    interlaced_frame(1)
-                    top_field_first(if (spec.scan == Scan.INTERLACED_TOP_FIELD_FIRST) 1 else 0)
+                    var flags = AV_FRAME_FLAG_INTERLACED
+                    if (spec.scan == Scan.INTERLACED_TOP_FIELD_FIRST)
+                        flags = flags or AV_FRAME_FLAG_TOP_FIELD_FIRST
+                    flags(flags)
                 }
             }
         }
@@ -601,9 +604,10 @@ class Bitmap private constructor(
     data class Spec(
         val resolution: Resolution,
         val representation: Representation,
-        val scan: Scan = Scan.PROGRESSIVE,
-        val content: Content = Content.PROGRESSIVE_FRAME
+        val scan: Scan,
+        val content: Content
     ) {
+
         init {
             require(resolution.widthPx > 0 && resolution.heightPx > 0)
             require((scan == Scan.PROGRESSIVE) == (content == Content.PROGRESSIVE_FRAME))
@@ -612,6 +616,10 @@ class Bitmap private constructor(
                 "Interlacing can't be used together with vertical subsampling."
             }
         }
+
+        constructor(resolution: Resolution, representation: Representation) :
+                this(resolution, representation, Scan.PROGRESSIVE, Content.PROGRESSIVE_FRAME)
+
     }
 
 
@@ -721,6 +729,9 @@ class Bitmap private constructor(
 
         fun stepOfPlane(plane: Int): Int =
             _planeSteps.getOrElse(plane) { throw IllegalArgumentException("Unknown plane: $plane") }
+
+        fun hChromaSubOfPlane(plane: Int): Int = if (plane in 1..2) hChromaSub else 0
+        fun vChromaSubOfPlane(plane: Int): Int = if (plane in 1..2) vChromaSub else 0
 
         fun isReinterpretableTo(other: PixelFormat): Boolean {
             if (planes < other.planes) return false

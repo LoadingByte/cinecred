@@ -15,6 +15,7 @@ import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.text.NumberFormat
+import javax.swing.ToolTipManager
 import kotlin.io.path.*
 
 
@@ -29,8 +30,17 @@ val SCREENCAST_DEMOS
 object ScreencastScreencastDemo : ScreencastDemo(
     "$DIR/screencast", Format.MP4, 1920, 1080, hold = 250, captions = true
 ) {
-    @Suppress("DEPRECATION")
     override fun generate() {
+        ToolTipManager.sharedInstance().isEnabled = false
+        try {
+            generate2()
+        } finally {
+            ToolTipManager.sharedInstance().isEnabled = true
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun generate2() {
         addWelcomeWindow()
 
         sc.caption("screencast.caption.create.welcome")
@@ -52,10 +62,12 @@ object ScreencastScreencastDemo : ScreencastDemo(
         removeWelcomeWindow()
 
         sc.hold(4 * hold)
+        sleep(5000)
 
+        addProjectWindows(setupVidWin = true, setupDlvWin = true, styWinSplitRatio = 0.225)
         val creditsFile = projectDir.resolve("Credits.csv")
-        var picLineIdx = 0
-        addProjectWindows(setupVidWin = true, setupDlvWin = true, styWinSplitRatio = 0.225, prepareProjectDir = {
+        val picLineIdx: Int
+        run {
             val lines = creditsFile.readLines().toMutableList()
             lines.subList(0, lines.indexOfFirst { it.startsWith("@") }).clear()
             val kw = l10n("projectIO.credits.table.pic")
@@ -66,7 +78,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
             lines[picLineIdx] = lines[picLineIdx].replace(Regex("\\{\\{$kw.*}}"), "TODO: LOGO")
             lines.subList(picLineIdx + 1, indices.last() + 1).clear()
             creditsFile.writeLines(lines)
-        })
+        }
         edt {
             val newStyling = projectCtrl.stylingHistory.current.copy(pictureStyles = persistentListOf())
             projectCtrl.stylingHistory.loadAndRedraw(newStyling)
@@ -226,7 +238,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.mouseTo(styWin.desktopPosOfSetting(styGlobForm, Global::runtimeFrames.st(), 0))
         sc.click()
         sc.mouseTo(styWin.desktopPosOf(styDecRuntime))
-        repeat(47) { sc.click(10) }
+        repeat(47) { sc.click(10, 1) }
         sc.click()
         styRuntime.transferFocusBackward()  // Avoid that the moving mouse selects text in the spinner text field.
         sc.caption("screencast.caption.styling.reset")
@@ -275,9 +287,9 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.demonstrateSetting(styWin, styContForm, ContentStyle::gridCellHJustifyPerCol.st(), 2, 0)
         sc.caption("screencast.caption.gutter.columns")
         sc.mouseTo(styWin.desktopPosOf(styIncGridCols))
-        sc.click()
+        sc.click(4 * hold, 1)
         sc.mouseTo(styWin.desktopPosOf(styDecGridCols))
-        sc.click()
+        sc.click(hold, 1)
         styGridCols.transferFocusBackward()  // Avoid that the moving mouse selects text in the spinner text field.
         sc.caption("screencast.caption.gutter.head")
         sc.demonstrateSetting(styWin, styContForm, ContentStyle::hasHead.st(), 0, 0)

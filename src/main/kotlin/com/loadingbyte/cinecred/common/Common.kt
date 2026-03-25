@@ -35,9 +35,8 @@ import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.io.path.*
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.min
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 
 val VERSION = useResourceStream("/version") { it.bufferedReader().readText().trim() }
@@ -330,12 +329,11 @@ val FALLBACK_TRANSLATED_LOCALE: Locale = Locale.ENGLISH
  * This is the translated locale which is closest to the system's default locale. It necessarily has to be computed
  * before the default locale is changed for the first time, which is fulfilled by a read prior to that action.
  */
-val SYSTEM_LOCALE: Locale = run {
-    val def = Locale.getDefault()
-    TRANSLATED_LOCALES.find { it.language == def.language && it.country == def.country }
-        ?: TRANSLATED_LOCALES.find { it.language == def.language }
-        ?: FALLBACK_TRANSLATED_LOCALE
-}
+val SYSTEM_LOCALE: Locale = closestLocale(Locale.getDefault(), TRANSLATED_LOCALES) ?: FALLBACK_TRANSLATED_LOCALE
+
+fun closestLocale(target: Locale, options: Collection<Locale>): Locale? =
+    options.find { it.language == target.language && it.country == target.country }
+        ?: options.find { it.language == target.language }
 
 private val BUNDLE_CONTROL = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
 private fun getL10nBundle(locale: Locale) = ResourceBundle.getBundle("l10n.strings", locale, BUNDLE_CONTROL)
@@ -429,8 +427,8 @@ fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
 fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
 
 // See PDFBox's Matrix.getScalingFactorX/Y() for the derivation.
-val AffineTransform.scalingFactorX: Double get() = sqrt(scaleX.pow(2) + shearY.pow(2))
-val AffineTransform.scalingFactorY: Double get() = sqrt(scaleY.pow(2) + shearX.pow(2))
+val AffineTransform.scalingFactorX: Double get() = hypot(scaleX, shearY)
+val AffineTransform.scalingFactorY: Double get() = hypot(scaleY, shearX)
 
 
 fun Shape.transformedBy(transform: AffineTransform?): Shape = when {

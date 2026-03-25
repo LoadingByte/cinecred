@@ -83,9 +83,9 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
             add(startCreateButton, "split 2, center")
             add(startOpenButton)
-            add(JSeparator(), "growx, shrink 0 0")
+            add(JSeparator(), "growx, hmin pref")
             add(startMemorizedScrollPane, "grow, push")
-            add(startDropLabel, "center, gaptop 20, gapbottom 20")
+            add(startDropLabel, "center, gapy 20 20")
             // Add the drag-and-drop handler.
             transferHandler = OpenTransferHandler()
             // Highlight the area when the user hovers over it during drag-and-drop.

@@ -177,7 +177,7 @@ private fun showHint(track: HintTrack, idx: Int, onPass: () -> Unit) {
 
     // The 0 index is important. If we leave it out, other components can for some reason overlap the popups when
     // they repaint (e.g., because of a hover event).
-    layeredPane.add(popup, JLayeredPane.POPUP_LAYER, 0)
+    layeredPane.add(popup, JLayeredPane.POPUP_LAYER, -1)
 }
 
 

@@ -701,10 +701,9 @@ class PDFDrawer(
 
     private fun applyCurrentTransferFunction(bitmap: Bitmap): Bitmap {
         val transfers = try {
-            val value = graphicsState.transfer
-            when {
-                value is COSArray && value.size() >= 3 -> (0..2).map { PDFunction.create(value.getObject(it)) }
-                value is COSDictionary -> PDFunction.create(value).let { listOf(it, it, it) }
+            when (val value = graphicsState.transfer) {
+                is COSArray if value.size() >= 3 -> (0..2).map { PDFunction.create(value.getObject(it)) }
+                is COSDictionary -> PDFunction.create(value).let { listOf(it, it, it) }
                 else -> null
             }
         } catch (_: IOException) {

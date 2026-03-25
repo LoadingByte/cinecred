@@ -614,7 +614,7 @@ class DeferredVideo private constructor(
             // Alpha compositing can only be done using a canvas.
             if (tapeResponses.any { it.alpha != 1.0 || it.embeddedTape.tape.spec.representation.pixelFormat.hasAlpha })
                 return true
-            // Overlaying onto a chroma-subsampled bitmap is only possible if the overlay coincides with the subsampling
+            // Blitting onto a chroma-subsampled bitmap is only possible if the overlay coincides with the subsampling
             // grid. Otherwise, resort to overlaying onto the non-subsampled canvas bitmap, and then converting the
             // whole thing to the final subsampled representation.
             if (tapeResponses.isEmpty() || !userPixelFormat.hasChromaSub)

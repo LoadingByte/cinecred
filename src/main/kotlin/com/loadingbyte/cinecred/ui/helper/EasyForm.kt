@@ -18,7 +18,7 @@ open class EasyForm(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boole
     private val extFormRows = mutableListOf<ExtFormRow>()
     private var submitButton: JButton? = null
 
-    fun <W : Widget<V>, V> addWidget(
+    fun <W : Widget<V>, V : Any> addWidget(
         label: String,
         widget: W,
         description: String? = null,

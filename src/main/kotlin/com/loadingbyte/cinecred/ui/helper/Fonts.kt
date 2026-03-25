@@ -37,13 +37,7 @@ class FontFamily(
 
     private fun accessCache(localizations: Map<Locale, String>, cache: MutableMap<Locale, String?>, locale: Locale) =
         cache.computeIfAbsent(locale) {
-            // This algorithm does not consider anything beyond the country, however, neither do fonts most of the time,
-            // nor do we with our limited set of translated locales.
-            val closestLocale =
-                localizations.keys.find { it.language == locale.language && it.country == locale.country }
-                    ?: localizations.keys.find { it.language == locale.language }
-                    ?: Locale.ROOT
-            localizations[closestLocale]
+            localizations[closestLocale(locale, localizations.keys) ?: Locale.ROOT]
         }
 
     fun getFont(fontName: String): Font? = fontNameToFont[fontName]

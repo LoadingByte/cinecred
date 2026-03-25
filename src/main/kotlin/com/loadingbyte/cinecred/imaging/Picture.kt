@@ -429,7 +429,7 @@ sealed interface Picture : AutoCloseable {
                     throw IOException("PDF has 0 pages.")
                 }
                 val size = PDFDrawer.sizeOfRotatedCropBox(doc.getPage(0))
-                if (size.width < 0.001 || size.height < 0.001f) {
+                if (size.width < 0.001 || size.height < 0.001) {
                     doc.close()
                     throw IOException("PDF's crop box is vanishingly small.")
                 }

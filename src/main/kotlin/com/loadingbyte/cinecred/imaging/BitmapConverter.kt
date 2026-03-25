@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.imaging.Bitmap.Alpha.*
 import com.loadingbyte.cinecred.imaging.Bitmap.PixelFormat.Family.*
 import com.loadingbyte.cinecred.imaging.Bitmap.Range.FULL
 import com.loadingbyte.cinecred.imaging.Bitmap.Range.LIMITED
-import com.loadingbyte.cinecred.imaging.BitmapConverter.Companion.convert
 import com.loadingbyte.cinecred.imaging.BitmapConverter.StageType.*
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.natives.skcms.skcms_Curve
@@ -346,7 +345,7 @@ class BitmapConverter(
         fun run(): Pair<MutableList<StageType>, MutableList<Bitmap.Spec>> {
             if (srcState == dstState)
                 return Pair(mutableListOf(BLIT), mutableListOf(srcSpec, dstSpec))
-            table = IntArray(2 * 8 * 2 * 4 * 2 * 2 * 2)
+            table = IntArray(2 /*ali*/ * 8 /*fmt*/ * 2 /*pri*/ * 4 /*trc*/ * 2 /*pmu*/ * 2 /*con*/ * 2 /*res*/)
             if (!fillTable())
                 throw IllegalArgumentException("Cannot find conversion pipeline between $srcSpec and $dstSpec.")
             return backtrackThroughTable()

@@ -290,7 +290,7 @@ public abstract class SimpleRenderedImage implements RenderedImage {
 
         prefix = prefix.toLowerCase();
 
-        Vector names = new Vector();
+        Vector<String> names = new Vector<>();
         for (int i = 0; i < propertyNames.length; i++) {
             if (propertyNames[i].startsWith(prefix)) {
                 names.addElement(propertyNames[i]);
@@ -405,7 +405,7 @@ public abstract class SimpleRenderedImage implements RenderedImage {
         return ty*tileHeight + tileGridYOffset;
     }
 
-    public Vector getSources() {
+    public Vector<RenderedImage> getSources() {
         return null;
     }
 

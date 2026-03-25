@@ -306,7 +306,7 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
 
 private fun supportsNot(style: LetterStyle, feat: String): Boolean {
     val font = style.font.font
-    return if (font == null) true else feat !in font.getSupportedFeatures()
+    return if (font == null) false else feat !in font.getSupportedFeatures()
 }
 
 

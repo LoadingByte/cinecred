@@ -403,6 +403,7 @@ class Tape private constructor(
             while (behind == null || ahead.let { it != null && it.timecode <= timecode }) {
                 behind?.run { bitmap.close() }
                 behind = ahead
+                ahead = null  // Prevent double close if the following read throws and close is called as a consequence.
                 ahead = videoReader.read()
             }
             return behind!!

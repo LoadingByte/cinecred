@@ -115,7 +115,7 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         add(deckLinkLabel, "split 5")
         add(deckLinkConfigButton, "gapright 2")
         add(deckLinkConnectedButton)
-        add(deckLinkSeparator, "growy, shrink 0 0, gapright unrel")
+        add(deckLinkSeparator, "growy, wmin pref, gapright unrel")
         add(spreadsheetNameComboBox)
         add(rewindButton)
         add(pauseButton)

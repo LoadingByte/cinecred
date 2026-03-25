@@ -109,8 +109,7 @@ object XlsxFormat : SpreadsheetFormat {
     override fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook) {
         val numCols = spreadsheet.numColumns
 
-        val workbook = ch.rabanti.nanoxlsx4j.Workbook(false)
-        workbook.addWorksheet(spreadsheet.name)
+        val workbook = ch.rabanti.nanoxlsx4j.Workbook(spreadsheet.name)
         val sheet = workbook.worksheets[0]
 
         // Add the sheet content.
@@ -380,7 +379,7 @@ object CsvFormat : SpreadsheetFormat {
 
     fun read(text: String, name: String): Spreadsheet {
         // Trim the character which results from the byte order mark (BOM) added by Excel.
-        val trimmed = text.trimStart(0xFEFF.toChar())
+        val trimmed = text.removePrefix(0xFEFF.toChar().toString())
 
         // Parse the CSV file into a string matrix.
         val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler.of(), trimmed)

@@ -26,7 +26,7 @@ import java.text.AttributedString
 import java.util.*
 import javax.swing.*
 import javax.swing.text.JTextComponent
-import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 
 @Suppress("DEPRECATION")
@@ -269,7 +269,7 @@ class Screencast(
     }
 
     fun hold(millis: Int = hold, action: (() -> Unit)? = null) {
-        repeat((fps.frac * millis / 1000.0).roundToInt()) { frame(action) }
+        repeat(ceil(fps.frac * millis / 1000.0).toInt()) { frame(action) }
     }
 
     fun mouseTo(point: Point, holdMillis: Int = hold) {
@@ -279,11 +279,11 @@ class Screencast(
         hold(holdMillis)
     }
 
-    fun click(holdMillis: Int = hold, holdAction: (() -> Unit)? = null) {
+    fun click(holdAfterMillis: Int = hold, holdDuringMillis: Int = 100, holdAction: (() -> Unit)? = null) {
         desktop.mouseDown()
-        hold(100, holdAction)
+        hold(holdDuringMillis, holdAction)
         desktop.mouseUp()
-        hold(holdMillis, holdAction)
+        hold(holdAfterMillis, holdAction)
     }
 
     fun <S : Style> demonstrateSetting(

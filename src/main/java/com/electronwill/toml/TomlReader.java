@@ -146,6 +146,7 @@ public final class TomlReader {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	public Map<String, Object> read() {
 		Map<String, Object> map = nextTableContent();
 		

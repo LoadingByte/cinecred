@@ -74,7 +74,7 @@ private val MEM_SEG_FLOAT_LE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOr
 private val MEM_SEG_FLOAT_BE_HANDLE = makeVarHandle(JAVA_FLOAT_UNALIGNED, ByteOrder.BIG_ENDIAN)
 
 private fun makeVarHandle(layout: ValueLayout, order: ByteOrder): VarHandle =
-    MethodHandles.memorySegmentViewVarHandle(layout.withOrder(order)).withInvokeBehavior()
+    MethodHandles.memorySegmentViewVarHandle(layout.withOrder(order)).withInvokeExactBehavior()
 
 
 fun SegmentAllocator.allocateArray(elems: ByteArray): MemorySegment = allocateArray(JAVA_BYTE, elems.size.toLong())

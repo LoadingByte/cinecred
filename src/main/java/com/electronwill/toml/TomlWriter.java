@@ -128,6 +128,7 @@ public final class TomlWriter {
 	 * the tables
 	 * (and the arrays of tables).
 	 */
+	@SuppressWarnings("unchecked")
 	private void writeTableContent(Map<String, Object> table, boolean simpleValues) throws IOException {
 		for (Map.Entry<String, Object> entry : table.entrySet()) {
 			String name = entry.getKey();

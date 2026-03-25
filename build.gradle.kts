@@ -115,6 +115,7 @@ dependencies {
 
     // Testing
     testImplementation("org.junit.jupiter", "junit-jupiter", "5.13.3")
+    testRuntimeOnly("org.junit.platform", "junit-platform-launcher")
 }
 
 configurations.configureEach {
@@ -168,8 +169,9 @@ val drawSplash by tasks.registering(DrawSplash::class) {
 }
 
 val collectPOMLicenses by tasks.registering(CollectPOMLicenses::class) {
-    artifactIds =
-        configurations.runtimeClasspath.flatMap { it.incoming.artifacts.resolvedArtifacts }.map { it.map { a -> a.id } }
+    moduleComponentIds = configurations.runtimeClasspath
+        .flatMap { it.incoming.artifacts.resolvedArtifacts }
+        .map { it.mapNotNull { artifact -> artifact.id.componentIdentifier as? ModuleComponentIdentifier } }
     outputDir = layout.buildDirectory.dir("generated/licenses")
 }
 

@@ -129,7 +129,7 @@ abstract class Jextract : DefaultTask() {
         val headerFile = headerFile.get().asFile
         val outputDir = outputDir.get().asFile
 
-        val cmd = mutableListOf(Tools.jextractJava(project), "-Djextract.constants.per.class=1000")
+        val cmd = mutableListOf(Tools.jextractJava(), "-Djextract.constants.per.class=1000")
         cmd += listOf("-m", "org.openjdk.jextract/org.openjdk.jextract.JextractTool")
         cmd += listOf("--source", "--target-package", targetPackage)
         cmd += includeFunctions.get().flatMap { listOf("--include-function", it) }

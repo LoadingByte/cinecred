@@ -19,6 +19,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- JPEG pictures with an EXIF orientation tag are now properly rotated.
 - Timeline export no longer fails upon encountering an image sequence.
 
 ### Compatibility Notes

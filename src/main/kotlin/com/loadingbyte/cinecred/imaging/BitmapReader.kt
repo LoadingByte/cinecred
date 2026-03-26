@@ -1,6 +1,10 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.Resolution
+import com.twelvemonkeys.imageio.metadata.CompoundDirectory
+import com.twelvemonkeys.imageio.metadata.jpeg.JPEG
+import com.twelvemonkeys.imageio.metadata.jpeg.JPEGSegmentUtil
+import com.twelvemonkeys.imageio.metadata.tiff.TIFFReader
 import org.bytedeco.ffmpeg.global.avutil.*
 import org.w3c.dom.Node
 import java.awt.color.ICC_ColorSpace
@@ -35,20 +39,47 @@ object BitmapReader {
         read(FileImageInputStream(file.toFile()), planar)
 
     private fun read(iis: ImageInputStream, planar: Boolean): Bitmap {
-        // Read a BufferredImage with an arbitrary color space.
-        var (img, iccProfile) = iis.use {
+        // Read a BufferedImage with an arbitrary color space.
+        val (img, iccProfile, orientation: Orientation) = iis.use {
             val reader = ImageIO.getImageReaders(iis).next()
             try {
                 reader.setInput(iis, true, false /* needed by our PNG logic */)
                 when (reader.formatName.lowercase()) {
-                    "jpeg" -> Pair(readJPEG(reader), null)
+                    "jpeg" -> readJPEG(reader)
                     "png" -> readPNG(reader)
-                    else -> Pair(reader.read(0), null)
+                    else -> Triple(reader.read(0), null, Orientation.TOP_LEFT)
                 }
             } finally {
                 reader.dispose()
             }
         }
+
+        val bitmap = toBitmap(img, iccProfile, planar)
+
+        // Reorder the pixels if there's an orientation EXIF tag.
+        if (orientation == Orientation.TOP_LEFT)
+            return bitmap
+        val orientSpec = when (orientation) {
+            Orientation.TOP_RIGHT, Orientation.BOT_RIGHT, Orientation.BOT_LEFT -> bitmap.spec
+            else -> bitmap.spec.copy(resolution = bitmap.spec.resolution.run { Resolution(heightPx, widthPx) })
+        }
+        val orientBitmap = Bitmap.allocate(orientSpec)
+        when (orientation) {
+            Orientation.TOP_RIGHT -> orientBitmap.blitReordered(bitmap, flipH = true, flipV = false, transpose = false)
+            Orientation.BOT_RIGHT -> orientBitmap.blitReordered(bitmap, flipH = true, flipV = true, transpose = false)
+            Orientation.BOT_LEFT -> orientBitmap.blitReordered(bitmap, flipH = false, flipV = true, transpose = false)
+            Orientation.LEFT_TOP -> orientBitmap.blitReordered(bitmap, flipH = false, flipV = false, transpose = true)
+            Orientation.RIGHT_TOP -> orientBitmap.blitReordered(bitmap, flipH = true, flipV = false, transpose = true)
+            Orientation.RIGHT_BOT -> orientBitmap.blitReordered(bitmap, flipH = true, flipV = true, transpose = true)
+            Orientation.LEFT_BOT -> orientBitmap.blitReordered(bitmap, flipH = false, flipV = true, transpose = true)
+        }
+        bitmap.close()
+        return orientBitmap
+    }
+
+    private fun toBitmap(img: BufferedImage, iccProfile: ICCProfile?, planar: Boolean): Bitmap {
+        var img = img
+        var iccProfile = iccProfile
 
         // If the image is indexed, explode it.
         img.colorModel.let { cm -> if (cm is IndexColorModel) img = cm.convertToIntDiscrete(img.raster, true) }
@@ -187,7 +218,7 @@ object BitmapReader {
         )
     }
 
-    private fun readJPEG(reader: ImageReader): BufferedImage {
+    private fun readJPEG(reader: ImageReader): Triple<BufferedImage, ICCProfile?, Orientation> {
         // Tricky hack: for JPEG images encoded as YUV (which applies to most JPEGs), JPEGImageReader prefers
         // converting to sRGB over keeping the JPEG's ICC profile. We don't want this as the conversion to sRGB
         // could clip colors. Hence, we explicitly direct the reader to generate an image with the ICC profile.
@@ -195,10 +226,22 @@ object BitmapReader {
         val imageTypes = reader.getImageTypes(0).asSequence().toList()
         if (imageTypes.size == 3)
             param.destinationType = imageTypes[1]
-        return reader.read(0, param)
+        val img = reader.read(0, param)
+
+        // Note: Instead of reading the image file a second time, we could maybe also extract the raw EXIF bytes from
+        // the ExifMarkerSegment inside Java's JPEGMetadata, but all of that is internal, so we'd need reflection.
+        val iis = (reader.input as ImageInputStream)
+        iis.seek(0)
+        val orientation = JPEGSegmentUtil.readSegments(iis, JPEG.APP1, "Exif").firstOrNull()?.data()?.let { exifData ->
+            exifData.read()  // skip 0-pad for EXIF in JFIF
+            val exif = TIFFReader().read(ImageIO.createImageInputStream(exifData)) as CompoundDirectory
+            exif.getEntryByFieldName("Orientation")?.let { Orientation.entries[it.value as Int - 1] }
+        } ?: Orientation.TOP_LEFT
+
+        return Triple(img, null, orientation)
     }
 
-    private fun readPNG(reader: ImageReader): Pair<BufferedImage, ICCProfile?> {
+    private fun readPNG(reader: ImageReader): Triple<BufferedImage, ICCProfile?, Orientation> {
         val iioImage = reader.readAll(0, null)
         val img = iioImage.renderedImage as BufferedImage
 
@@ -215,7 +258,7 @@ object BitmapReader {
                             // Note: We ignore the full range flag.
                             val primaries = ColorSpace.Primaries.of(toUnsignedInt(tags[0]))
                             val transfer = ColorSpace.Transfer.of(toUnsignedInt(tags[1]))
-                            return Pair(img, ICCProfile.of(ColorSpace.of(primaries, transfer)))
+                            return Triple(img, ICCProfile.of(ColorSpace.of(primaries, transfer)), Orientation.TOP_LEFT)
                         } catch (_: IllegalArgumentException) {
                         }
                 }
@@ -226,7 +269,7 @@ object BitmapReader {
             val compressedBytes = iccNode.userObject as ByteArray
             try {
                 val bytes = InflaterInputStream(ByteArrayInputStream(compressedBytes)).use { it.readAllBytes() }
-                return Pair(img, ICCProfile.of(bytes))
+                return Triple(img, ICCProfile.of(bytes), Orientation.TOP_LEFT)
             } catch (_: ZipException) {
             }
         }
@@ -262,10 +305,10 @@ object BitmapReader {
                 } ?: ColorSpace.Primaries.BT709
                 val transfer = if (gamma != null) ColorSpace.Transfer.of(ColorSpace.Transfer.Curve(gamma)) else
                     ColorSpace.Transfer.SRGB
-                return Pair(img, ICCProfile.of(ColorSpace.of(primaries, transfer)))
+                return Triple(img, ICCProfile.of(ColorSpace.of(primaries, transfer)), Orientation.TOP_LEFT)
             }
         }
-        return Pair(img, ICCProfile.of(ColorSpace.SRGB))
+        return Triple(img, ICCProfile.of(ColorSpace.SRGB), Orientation.TOP_LEFT)
     }
 
     private fun Node.getChild(name: String): IIOMetadataNode? {
@@ -276,6 +319,11 @@ object BitmapReader {
             child = child.nextSibling
         }
         return null
+    }
+
+
+    private enum class Orientation {
+        TOP_LEFT, TOP_RIGHT, BOT_RIGHT, BOT_LEFT, LEFT_TOP, RIGHT_TOP, RIGHT_BOT, LEFT_BOT
     }
 
 }

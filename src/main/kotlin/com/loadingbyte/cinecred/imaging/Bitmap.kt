@@ -412,6 +412,50 @@ class Bitmap private constructor(
         )
     }
 
+    /** Order of operation: first transpose, then flip. */
+    fun blitReordered(src: Bitmap, flipH: Boolean, flipV: Boolean, transpose: Boolean) {
+        if (!flipH && !flipV && !transpose) {
+            blit(src)
+            return
+        }
+        require(spec.representation == src.spec.representation) { "Source and dest bitmap representations differ." }
+        if (transpose) {
+            require(spec.resolution.heightPx == src.spec.resolution.widthPx) { "Source width and dest height differ." }
+            require(spec.resolution.widthPx == src.spec.resolution.heightPx) { "Source height and dest width differ." }
+        } else
+            require(spec.resolution == src.spec.resolution) { "Source and dest resolutions differ." }
+        val (srcWidth, srcHeight) = src.spec.resolution
+        val pixelFormat = spec.representation.pixelFormat
+        for (plane in 0..<pixelFormat.planes) {
+            val srcSeg = src.memorySegment(plane)
+            val dstSeg = memorySegment(plane)
+            val srcLs = src.linesize(plane)
+            val dstLs = linesize(plane)
+            val step = pixelFormat.stepOfPlane(plane).toLong()
+            val srcPlWidth = srcWidth shr pixelFormat.hChromaSubOfPlane(plane)
+            val srcPlHeight = srcHeight shr pixelFormat.vChromaSubOfPlane(plane)
+            if (!flipH && flipV && !transpose)
+                for (y in 0L..<srcPlHeight)
+                    MemorySegment.copy(srcSeg, y * srcLs, dstSeg, (srcPlHeight - y - 1) * dstLs, srcPlWidth * step)
+            else
+                for (srcY in 0L..<srcPlHeight) {
+                    var s = srcY * srcLs
+                    var d = 0L
+                    if (!transpose)
+                        d = (if (flipV) srcPlHeight - srcY - 1 else srcY) * dstLs + (srcPlWidth - 1) * step
+                    for (srcX in 0..<srcPlWidth) {
+                        if (transpose)
+                            d = (if (flipV) srcPlWidth - srcX - 1 else srcX) * dstLs +
+                                    if (flipH) (srcPlHeight - srcY - 1) * step else srcY * step
+                        MemorySegment.copy(srcSeg, s, dstSeg, d, step)
+                        s += step
+                        if (!transpose)
+                            d -= step
+                    }
+                }
+        }
+    }
+
     // Be aware that the following bulk get/put functions don't care about the actual pixel format, and hence can,
     // for example, read a 32bpp bitmap into an int array.
     // Implementation note: We've benchmarked MemorySegment.copy against ByteBuffer access, and on JDK 21, MemSeg wins.

@@ -17,6 +17,10 @@ Cinecred Changelog
   being baseline-aligned.
 - Embedded videos can now loop.
 
+### Fixes
+
+- Timeline export no longer fails upon encountering an image sequence.
+
 ### Compatibility Notes
 
 - Dropped support for dot leaders when the head or tail is vertically justified

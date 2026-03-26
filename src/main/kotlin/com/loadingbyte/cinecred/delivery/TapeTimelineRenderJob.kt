@@ -110,7 +110,7 @@ class TapeTimelineRenderJob private constructor(
             val clipLength = Timecode.Frames(stopFrame - startFrame)
             if (clipLength.frames > 0) {
                 val tapeStart = tapeSpan.firstReadTimecode
-                val tapeLength = clipLength.toClock(projFPS)
+                val tapeLength = if (tapeStart is Timecode.Frames) clipLength else clipLength.toClock(projFPS)
                 // In a well-behaved project, the tape FPS equals the project FPS, and only in those cases, we can
                 // actually produce and in-spec EDL. Otherwise, importing software usually assumes that the frame
                 // counter is just "rescaled" from the tape FPS to the project FPS (e.g., when rescaling from tape FPS
@@ -160,7 +160,7 @@ class TapeTimelineRenderJob private constructor(
                     "OTIO_SCHEMA" to "Clip.1",
                     "name" to tape.name,
                     "source_range" to makeOTIOTimeRange(
-                        tapeSpan.firstReadTimecode as Timecode.Clock,
+                        tapeSpan.firstReadTimecode.toClock(projFPS),
                         Timecode.Frames(tapeSpan.durationFrames).toClock(projFPS) / extraFPSMul,
                         tapeFPS
                     ),
@@ -168,7 +168,11 @@ class TapeTimelineRenderJob private constructor(
                         "OTIO_SCHEMA" to "ExternalReference.1",
                         "name" to tape.name,
                         "target_url" to tape.name,
-                        "available_range" to makeOTIOTimeRange(tape.availableStart, tape.availableDuration, tapeFPS)
+                        "available_range" to makeOTIOTimeRange(
+                            tape.availableStart.toClock(projFPS),
+                            tape.availableDuration.toClock(projFPS),
+                            tapeFPS
+                        )
                     )
                 )
             }
@@ -247,8 +251,8 @@ class TapeTimelineRenderJob private constructor(
                 setAttribute("id", id)
                 setAttribute("name", tape.name)
                 setAttribute("format", formatIds[Pair(tape.spec.resolution, tape.fps ?: global.fps)])
-                setAttribute("start", makeFCPXMLTime(tape.availableStart))
-                setAttribute("duration", makeFCPXMLTime(tape.availableDuration))
+                setAttribute("start", makeFCPXMLTime(tape.availableStart.toClock(global.fps)))
+                setAttribute("duration", makeFCPXMLTime(tape.availableDuration.toClock(global.fps)))
                 setAttribute("hasAudio", "1")
                 appendChild(doc.createElement("media-rep").apply {
                     setAttribute("kind", "original-media")
@@ -285,7 +289,7 @@ class TapeTimelineRenderJob private constructor(
                     setAttribute("name", tape.name)
                     setAttribute("ref", tapeIds[tape])
                     setAttribute("offset", makeFCPXMLTime(offset))
-                    setAttribute("start", makeFCPXMLTime(tapeSpan.firstReadTimecode as Timecode.Clock))
+                    setAttribute("start", makeFCPXMLTime(tapeSpan.firstReadTimecode.toClock(global.fps)))
                     setAttribute("duration", makeFCPXMLTime(duration))
                     setAttribute("lane", (trackIdx + 1).toString())
                 })
@@ -349,7 +353,9 @@ class TapeTimelineRenderJob private constructor(
                 if (tape !in tapeIds) {
                     tapeIds[tape] = "f" + tapeIds.size
                     val tapeFPS = tape.fps ?: global.fps
-                    file.appendChild(doc.createElement("duration", tape.availableDuration.toFramesCeil(tapeFPS).frames))
+                    val duration = tape.availableDuration
+                        .let { it as? Timecode.Frames ?: (it as Timecode.Clock).toFramesCeil(tapeFPS) }.frames
+                    file.appendChild(doc.createElement("duration", duration))
                     file.appendChild(makeXMLRate(doc, tapeFPS))
                     file.appendChild(doc.createElement("name", tape.name))
                     file.appendChild(doc.createElement("pathurl", tape.name))
@@ -403,8 +409,8 @@ class TapeTimelineRenderJob private constructor(
     }
 
     private val Tape.name get() = fileOrDir.name
-    private val Tape.availableStart get() = availableRange.start as Timecode.Clock
-    private val Tape.availableDuration get() = availableRange.let { it.endExclusive - it.start } as Timecode.Clock
+    private val Tape.availableStart get() = availableRange.start
+    private val Tape.availableDuration get() = availableRange.let { it.endExclusive - it.start }
     private val TapeSpan.durationFrames get() = lastFrameIdx - firstFrameIdx + 1
 
 

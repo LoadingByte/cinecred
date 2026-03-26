@@ -426,6 +426,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val fadeOutFrames: Int = 0,
         val fadeOutTransition: Transition = Transition.LINEAR,
         val range: OpenEndRange<Timecode> = tape.availableRange,
+        val loop: Boolean = false,
         val align: Align = Align.START
     ) {
 

@@ -28,6 +28,7 @@ val GUIDE_PICTURE_VIDEO_DEMOS
         GuidePictureVideoVideoMovingDemo,
         GuidePictureVideoVideoPreviewDemo,
         GuidePictureVideoVideoSliceDemo,
+        GuidePictureVideoVideoLoopDemo,
         GuidePictureVideoVideoTemporallyJustifyDemo,
         GuidePictureVideoVideoTemporalMarginDemo,
         GuidePictureVideoVideoFadeDemo
@@ -202,6 +203,18 @@ object GuidePictureVideoVideoSliceDemo : StyleSettingsVideoDemo<TapeStyle>(
         this += TAPE_STYLE
         this += last().copy(slice = TapeSlice(Opt(true, Timecode.SMPTENonDropFrame(3, 10)), last().slice.outPoint))
         this += last().copy(slice = TapeSlice(last().slice.inPoint, Opt(true, Timecode.SMPTENonDropFrame(5, 20))))
+    }
+
+    override fun credits(style: TapeStyle) = TAPE_SPREADSHEET.parseCreditsTS(style)
+}
+
+
+object GuidePictureVideoVideoLoopDemo : StyleSettingsVideoDemo<TapeStyle>(
+    "$DIR/video-loop", Format.VIDEO_GIF,
+    listOf(TapeStyle::loop.st())
+) {
+    override fun styles() = buildList<TapeStyle> {
+        this += TAPE_STYLE.copy(slice = TapeSlice(SMPTE_NON_DROP_FRAME, null, SMPTENonDropFrame(1, 0)), loop = true)
     }
 
     override fun credits(style: TapeStyle) = TAPE_SPREADSHEET.parseCreditsTS(style)

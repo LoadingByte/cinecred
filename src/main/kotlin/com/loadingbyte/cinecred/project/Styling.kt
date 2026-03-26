@@ -365,6 +365,7 @@ data class TapeStyle(
     val widthPx: Opt<Int>,
     val heightPx: Opt<Int>,
     val slice: TapeSlice,
+    val loop: Boolean,
     val temporallyJustify: HJustify,
     val leftTemporalMarginFrames: Int,
     val rightTemporalMarginFrames: Int,

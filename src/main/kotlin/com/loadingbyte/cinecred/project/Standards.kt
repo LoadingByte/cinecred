@@ -234,6 +234,7 @@ val PRESET_TAPE_STYLE = TapeStyle(
     widthPx = Opt(false, 0),
     heightPx = Opt(false, 0),
     slice = TapeSlice(Opt(false, Timecode.SMPTENonDropFrame(0, 0)), Opt(false, Timecode.SMPTENonDropFrame(0, 0))),
+    loop = false,
     temporallyJustify = HJustify.LEFT,
     leftTemporalMarginFrames = 0,
     rightTemporalMarginFrames = 0,

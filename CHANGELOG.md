@@ -15,6 +15,7 @@ Cinecred Changelog
 - When different fonts are used within the same grid or flow row, the text may
   now be vertically justified in an arbitrary way, while previously it was just
   being baseline-aligned.
+- Embedded videos can now loop.
 
 ### Compatibility Notes
 

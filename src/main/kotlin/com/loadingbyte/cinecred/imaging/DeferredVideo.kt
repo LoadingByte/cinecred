@@ -1069,10 +1069,12 @@ class DeferredVideo private constructor(
                         is Timecode.Clock -> rangeDiff.toFramesCeil(video.fps).frames
                         else -> throw IllegalStateException("Wrong timecode format: ${rangeDiff.javaClass.simpleName}")
                     }
-                    var firstFrameIdx =
+                    val firstPotFrameIdx =
                         insn.firstFrameIdx + relFirstFrameIdx + placed.embeddedTape.leftMarginFrames * video.fpsScaling
-                    var lastFrameIdx =
+                    val lastPotFrameIdx =
                         insn.firstFrameIdx + relLastFrameIdx - placed.embeddedTape.rightMarginFrames * video.fpsScaling
+                    var firstFrameIdx = firstPotFrameIdx
+                    var lastFrameIdx = lastPotFrameIdx
                     val extraneousFrames = (lastFrameIdx - firstFrameIdx + 1) - rangeFrames
                     if (extraneousFrames > 0)
                         when (placed.embeddedTape.align) {
@@ -1087,6 +1089,20 @@ class DeferredVideo private constructor(
                     if (firstFrameIdx > lastFrameIdx)
                         continue
                     add(Span(insn, placed, firstFrameIdx, lastFrameIdx))
+                    // If the video is looping, fill up the remaining potential time with copies of the tape.
+                    if (placed.embeddedTape.loop && extraneousFrames > 0) {
+                        val spanFrames = lastFrameIdx - firstFrameIdx + 1
+                        val pS = DeferredImage.PlacedTape(placed.embeddedTape.copy(align = START), placed.x, placed.y)
+                        val pE = DeferredImage.PlacedTape(placed.embeddedTape.copy(align = END), placed.x, placed.y)
+                        while (firstFrameIdx > firstPotFrameIdx) {
+                            firstFrameIdx -= spanFrames
+                            add(Span(insn, pE, max(firstFrameIdx, firstPotFrameIdx), firstFrameIdx + (spanFrames - 1)))
+                        }
+                        while (lastFrameIdx < lastPotFrameIdx) {
+                            lastFrameIdx += spanFrames
+                            add(Span(insn, pS, lastFrameIdx - (spanFrames - 1), min(lastFrameIdx, lastPotFrameIdx)))
+                        }
+                    }
                 }
         }
 

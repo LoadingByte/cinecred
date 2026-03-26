@@ -1000,6 +1000,7 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
         fadeInFrames, fadeInTransition,
         fadeOutFrames, fadeOutTransition,
         inPoint..<outPoint,
+        loop,
         when (temporallyJustify) {
             HJustify.LEFT -> DeferredImage.EmbeddedTape.Align.START
             HJustify.CENTER -> DeferredImage.EmbeddedTape.Align.MIDDLE

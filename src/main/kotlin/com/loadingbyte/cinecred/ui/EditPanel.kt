@@ -19,8 +19,13 @@ import com.loadingbyte.cinecred.ui.view.playback.PlaybackControlsPanel
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Cursor
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.net.URI
 import java.nio.file.FileSystemNotFoundException
 import javax.swing.*
@@ -140,7 +145,13 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         .apply { addMouseListenerTo(overlaysButton) }
 
     private val runtimeLabel = JLabel("\u2014").apply {
+        cursor = Cursor(Cursor.HAND_CURSOR)
         putClientProperty(STYLE_CLASS, "monospaced")
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
+            }
+        })
     }
 
     private val stylingDialogToggleButton = newToolbarToggleButtonWithKeyListener(

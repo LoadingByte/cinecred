@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nEnum
 import com.loadingbyte.cinecred.drawer.DrawnCredits
+import com.loadingbyte.cinecred.drawer.DrawnCreditsBook
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.imaging.DeferredImage
@@ -26,7 +27,6 @@ import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.net.URI
 import java.nio.file.FileSystemNotFoundException
 import javax.swing.*
 import javax.swing.JOptionPane.*
@@ -56,9 +56,10 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDialogButton get() = deliveryDialogToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPlaybackControls get() = playbackControls
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
-    @Deprecated("ENCAPSULATION LEAK") val leakedCreditsTabs get() = creditsTabs
-    @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs get() = creditsTabs.getComponentAt(0) as JTabbedPane
-    @Deprecated("ENCAPSULATION LEAK") val leakedImagePanels get() = imagePanels
+    @Deprecated("ENCAPSULATION LEAK") val leakedPreviewTabs: JTabbedPane get() = previewTabs
+    @Deprecated("ENCAPSULATION LEAK") val leakedPageTabs
+        get() = (previewTabs.getComponentAt(0) as JTabbedPane).getComponentAt(0) as JTabbedPane
+    @Deprecated("ENCAPSULATION LEAK") val leakedImagePanels get() = previewTabs.imagePanels
     @Deprecated("ENCAPSULATION LEAK") val leakedCreditsLog: JTable
     // =========================================
 
@@ -115,15 +116,9 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         putClientProperty(STYLE_CLASS, "small")
     }
 
-    private val zoomSlider = object : JSlider(0, MAX_ZOOM * 100, 0) {
-        var zoom: Double
-            get() = 1.0 + value * (MAX_ZOOM - 1.0) / maximum
-            set(newZoom) {
-                value = ((newZoom - 1.0) * maximum / (MAX_ZOOM - 1.0)).roundToInt()
-            }
-    }.apply {
+    private val zoomSlider: ZoomSlider = ZoomSlider().apply {
         isFocusable = false
-        addChangeListener { imagePanels.forEach { it.zoom = zoom } }
+        addChangeListener { previewTabs.imagePanels.forEach { it.zoom = zoom } }
     }
 
     private val guidesToggleButton = newToolbarToggleButtonWithKeyListener(
@@ -182,7 +177,7 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         TABLE_ICON, l10n("ui.edit.openCreditsFile"),
         VK_T, CTRL_DOWN_MASK
     ) {
-        creditsURI?.let { uri ->
+        previewTabs.selectedDrawnCreditsBook?.creditsBook?.uri?.let { uri ->
             try {
                 tryEdit(uri.toPath())
             } catch (_: FileSystemNotFoundException) {
@@ -202,37 +197,18 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         isVisible = false
     }
 
-    private val creditsTabs = newPreviewTabbedPane().apply {
-        addChangeListener {
-            displayRuntimeOfSelectedCredits()
-            updateDeferredImagePanelPresentationStatuses()
-        }
-    }
+    private val previewTabs = PreviewTabs(zoomSlider, ::getVisibleLayers, ::displayRuntimeOfSelectedCredits)
 
     private val previewPanelCards = CardLayout()
     private val previewPanel = JPanel(previewPanelCards).apply {
         val loadingLabel = JLabel(l10n("ui.edit.loading")).apply { putClientProperty(STYLE, "font: bold \$h0.font") }
         add(JPanel(MigLayout()).apply { add(loadingLabel, "push, center") }, "Loading")
         add(JPanel(MigLayout()).apply { add(JLabel(ERROR_ICON.getScaledIcon(4.0)), "push, center") }, "Error")
-        add(creditsTabs, "Preview")
+        add(previewTabs, "Preview")
     }
 
     private val logTableModel = LogTableModel()
 
-    // Utility to quickly get all DeferredImagePanels of all credits spreadsheets.
-    private val imagePanels: List<DeferredImagePanel>
-        get() = buildList(256) {
-            for (creditsIdx in 0..<creditsTabs.tabCount) {
-                val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
-                for (pageIdx in 0..<pageTabs.tabCount)
-                    add(pageTabs.getComponentAt(pageIdx) as DeferredImagePanel)
-            }
-        }
-
-    private val highResCache = DeferredImage.CanvasMaterializationCache()
-    private val lowResCache = DeferredImage.CanvasMaterializationCache()
-
-    private var creditsURI: URI? = null
     private var drawnProject: DrawnProject? = null
 
     private fun newToolbarButtonWithKeyListener(
@@ -258,13 +234,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         val btn = newToolbarToggleButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, isSelected, listener)
         keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers) { btn.isSelected = !btn.isSelected })
         return btn
-    }
-
-    private fun newPreviewTabbedPane() = JTabbedPane().apply {
-        isFocusable = false
-        tabLayoutPolicy = JTabbedPane.SCROLL_TAB_LAYOUT
-        putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
-        putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
     }
 
     init {
@@ -338,21 +307,22 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             cellSelectionEnabled = false
             // Prevent the user from dragging the columns around.
             tableHeader.reorderingAllowed = false
-            // Lock the widths of the severity and row columns, initialize the widths of the spreadsheet name,
+            // Lock the widths of the severity and row columns, initialize the widths of the filename, spreadsheet name,
             // column name, and cell columns with a small minimum width, and initially distribute all remaining width
             // to the message column.
             columnModel.getColumn(0).apply { minWidth = 24; maxWidth = 24 }
             columnModel.getColumn(1).apply { minWidth = 64; width = 64 }
-            columnModel.getColumn(2).apply { minWidth = 48; maxWidth = 48 }
-            columnModel.getColumn(3).apply { minWidth = 96; width = 96 }
+            columnModel.getColumn(2).apply { minWidth = 64; width = 64 }
+            columnModel.getColumn(3).apply { minWidth = 48; maxWidth = 48 }
             columnModel.getColumn(4).apply { minWidth = 96; width = 96 }
-            tableHeader.resizingColumn = columnModel.getColumn(5)
-            // Center the spreadsheet name, record number, column name, and cell value columns.
-            for (colIdx in 1..4)
+            columnModel.getColumn(5).apply { minWidth = 96; width = 96 }
+            tableHeader.resizingColumn = columnModel.getColumn(6)
+            // Center the filename, spreadsheet name, record number, column name, and cell value columns.
+            for (colIdx in 1..5)
                 columnModel.getColumn(colIdx).cellRenderer =
                     DefaultTableCellRenderer().apply { horizontalAlignment = JLabel.CENTER }
             // Allow for word wrapping and HTML display in the message column.
-            columnModel.getColumn(5).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
+            columnModel.getColumn(6).cellRenderer = WordWrapCellRenderer(allowHtml = true, shrink = true)
         }
         val logTablePanel = JPanel(MigLayout()).apply {
             add(JScrollPane(logTable), "grow, push")
@@ -381,19 +351,16 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         keyListeners.add(KeyListener(VK_0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
         keyListeners.add(KeyListener(VK_NUMPAD0, CTRL_DOWN_MASK) { zoomSlider.zoom = 1.0 })
         keyListeners.add(KeyListener(VK_O, CTRL_DOWN_MASK) { overlaysMenu.toggle() })
-        keyListeners.add(KeyListener(VK_PAGE_UP, CTRL_DOWN_MASK) { selectedPageTabs.switch(-1) })
-        keyListeners.add(KeyListener(VK_PAGE_DOWN, CTRL_DOWN_MASK) { selectedPageTabs.switch(1) })
-        keyListeners.add(KeyListener(VK_PAGE_UP, SHIFT_DOWN_MASK) { creditsTabs.switch(-1) })
-        keyListeners.add(KeyListener(VK_PAGE_DOWN, SHIFT_DOWN_MASK) { creditsTabs.switch(1) })
+        keyListeners.add(KeyListener(VK_PAGE_UP, ALT_DOWN_MASK) { previewTabs.switchCreditsBookTab(-1) })
+        keyListeners.add(KeyListener(VK_PAGE_DOWN, ALT_DOWN_MASK) { previewTabs.switchCreditsBookTab(1) })
+        keyListeners.add(KeyListener(VK_PAGE_UP, SHIFT_DOWN_MASK) { previewTabs.switchCreditsTab(-1) })
+        keyListeners.add(KeyListener(VK_PAGE_DOWN, SHIFT_DOWN_MASK) { previewTabs.switchCreditsTab(1) })
+        keyListeners.add(KeyListener(VK_PAGE_UP, CTRL_DOWN_MASK) { previewTabs.switchPageTab(-1) })
+        keyListeners.add(KeyListener(VK_PAGE_DOWN, CTRL_DOWN_MASK) { previewTabs.switchPageTab(1) })
     }
 
-    private val selectedPageTabs get() = creditsTabs.selectedComponent as JTabbedPane
-    private fun JTabbedPane.switch(offset: Int) {
-        selectedIndex = (selectedIndex + offset).coerceIn(0, tabCount - 1)
-    }
-
-    val selectedSpreadsheetName: String?
-        get() = creditsTabs.selectedIndex.let { if (it < 0) null else creditsTabs.getTitleAt(it) }
+    val selectedFileName: String? get() = previewTabs.selectedDrawnCreditsBook?.creditsBook?.fileName
+    val selectedSpreadsheetName: String? get() = previewTabs.selectedDrawnCredits?.credits?.spreadsheetName
 
     fun onSetDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
         when (type) {
@@ -447,11 +414,6 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         pollCreditsButton.isEnabled = possible
     }
 
-    fun updateCreditsURI(uri: URI?) {
-        creditsURI = uri
-        openCreditsFileButton.isEnabled = uri != null
-    }
-
     fun updateLog(log: List<ParserMsg>) {
         // Put the new parser log messages into the log table.
         logTableModel.log = log
@@ -465,82 +427,19 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
         this.drawnProject = drawnProject
         // Update the pages tabs.
         previewPanelCards.show(previewPanel, "Preview")
-        refreshCreditsTabs()
-        // Adjust the total runtime label.
-        displayRuntimeOfSelectedCredits()
-        updateDeferredImagePanelPresentationStatuses()
+        previewTabs.drawnProject = drawnProject
+        openCreditsFileButton.isEnabled = drawnProject.drawnCreditsBooks.isNotEmpty()
     }
 
     private fun displayRuntimeOfSelectedCredits() {
-        val drawnProject = this.drawnProject ?: return
-        val drawnCredits = drawnProject.drawnCredits.getOrNull(creditsTabs.selectedIndex) ?: return
-        val global = drawnProject.project.styling.global
+        val drawnCredits = previewTabs.selectedDrawnCredits ?: return
+        val global = (drawnProject ?: return).project.styling.global
         val runtime = drawnCredits.video.numFrames
         val tc = formatTimecode(global.fps, global.timecodeFormat, runtime)
         val tooltip = l10n("ui.edit.runtimeTooltip", runtime)
         runtimeLabel.text = tc
         runtimeLabel.toolTipText = tooltip
     }
-
-    private fun updateDeferredImagePanelPresentationStatuses() {
-        for (creditsIdx in 0..<creditsTabs.tabCount) {
-            val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
-            for (pageIdx in 0..<pageTabs.tabCount)
-                (pageTabs.getComponentAt(pageIdx) as DeferredImagePanel).isPresented =
-                    creditsTabs.selectedIndex == creditsIdx && pageTabs.selectedIndex == pageIdx
-        }
-    }
-
-    private fun refreshCreditsTabs() {
-        val drawnProject = this.drawnProject ?: return
-        // First adjust the number of tabs to the number of credits spreadsheets.
-        val numCredits = drawnProject.drawnCredits.size
-        while (creditsTabs.tabCount > numCredits)
-            creditsTabs.removeTabAt(creditsTabs.tabCount - 1)
-        while (creditsTabs.tabCount < numCredits) {
-            val pageTabs = newPreviewTabbedPane().apply {
-                putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
-                addChangeListener { updateDeferredImagePanelPresentationStatuses() }
-            }
-            creditsTabs.addTab("", TABLE_ICON, pageTabs, tabTooltip(SHIFT_DOWN_MASK))
-        }
-        // Then fill each tab with its corresponding credits.
-        for ((idx, drawnCredits) in drawnProject.drawnCredits.withIndex()) {
-            creditsTabs.setTitleAt(idx, drawnCredits.credits.spreadsheetName)
-            refreshPageTabs(creditsTabs.getComponentAt(idx) as JTabbedPane, drawnProject, drawnCredits)
-        }
-    }
-
-    private fun refreshPageTabs(pageTabs: JTabbedPane, drawnProject: DrawnProject, drawnCredits: DrawnCredits) {
-        // First adjust the number of tabs to the number of pages.
-        val numPages = drawnCredits.drawnPages.size
-        while (pageTabs.tabCount > numPages)
-            pageTabs.removeTabAt(pageTabs.tabCount - 1)
-        while (pageTabs.tabCount < numPages) {
-            val pageNumber = pageTabs.tabCount + 1
-            val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
-            val imagePanel = DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT, highResCache, lowResCache).apply {
-                zoom = zoomSlider.zoom
-                layers = getVisibleLayers()
-                zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
-            }
-            pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel, tabTooltip(CTRL_DOWN_MASK))
-        }
-        // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
-        // Also make the currently selected layers and overlays visible.
-        val layers = getVisibleLayers()
-        for ((idx, drawnPage) in drawnCredits.drawnPages.withIndex()) {
-            val image = drawnPage.defImage.copy()
-            for (overlay in availableOverlays)
-                overlay.draw(drawnProject.project.styling.global.resolution, drawnPage.stageInfo, image)
-            val imagePanel = pageTabs.getComponentAt(idx) as DeferredImagePanel
-            imagePanel.setImageAndGroundingAndLayers(image, drawnProject.project.styling.global.grounding, layers)
-        }
-    }
-
-    private fun tabTooltip(switchMod: Int) = l10n(
-        "ui.edit.switchTabs", l10nEnum(shortcutHint(VK_PAGE_UP, switchMod)!!, shortcutHint(VK_PAGE_DOWN, switchMod)!!)
-    )
 
     var availableOverlays: List<Overlay> = emptyList()
         set(overlays) {
@@ -565,12 +464,12 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             })
             overlaysMenu.pack()
             // Re-draw the overlays onto the page images.
-            refreshCreditsTabs()
+            previewTabs.availableOverlays = overlays
         }
 
     private fun refreshVisibleLayers() {
         val visibleLayers = getVisibleLayers()
-        for (imagePanel in imagePanels)
+        for (imagePanel in previewTabs.imagePanels)
             imagePanel.layers = visibleLayers
     }
 
@@ -596,6 +495,176 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
     }
 
 
+    private class ZoomSlider : JSlider(0, MAX_ZOOM * 100, 0) {
+
+        var zoom: Double
+            get() = 1.0 + value * (MAX_ZOOM - 1.0) / maximum
+            set(newZoom) {
+                value = ((newZoom - 1.0) * maximum / (MAX_ZOOM - 1.0)).roundToInt()
+            }
+
+    }
+
+
+    private class PreviewTabs(
+        private val zoomSlider: ZoomSlider,
+        private val getVisibleLayers: () -> List<DeferredImage.Layer>,
+        private val displayRuntimeOfSelectedCredits: () -> Unit
+    ) : JTabbedPane() {
+
+        init {
+            configure(this)
+            addChangeListener {
+                displayRuntimeOfSelectedCredits()
+                updateDeferredImagePanelPresentationStatuses()
+            }
+        }
+
+        private val highResCache = DeferredImage.CanvasMaterializationCache()
+        private val lowResCache = DeferredImage.CanvasMaterializationCache()
+
+        var drawnProject: DrawnProject? = null
+            set(drawnProject) {
+                field = drawnProject
+                refreshCreditsBookTabs()
+            }
+
+        var availableOverlays: List<Overlay> = emptyList()
+            set(overlays) {
+                field = overlays
+                if (drawnProject != null)
+                    refreshCreditsBookTabs()
+            }
+
+        // Utility to quickly get all DeferredImagePanels of all credits spreadsheets.
+        val imagePanels: List<DeferredImagePanel>
+            get() = buildList(256) {
+                for (creditsBookIdx in 0..<tabCount) {
+                    val creditsTabs = getComponentAt(creditsBookIdx) as JTabbedPane
+                    for (creditsIdx in 0..<creditsTabs.tabCount) {
+                        val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
+                        for (pageIdx in 0..<pageTabs.tabCount)
+                            add(pageTabs.getComponentAt(pageIdx) as DeferredImagePanel)
+                    }
+                }
+            }
+
+        val selectedDrawnCreditsBook: DrawnCreditsBook?
+            get() = drawnProject?.drawnCreditsBooks?.getOrNull(selectedIndex)
+
+        val selectedDrawnCredits: DrawnCredits?
+            get() = selectedDrawnCreditsBook?.drawnCredits?.getOrNull(selectedCreditsTabs.selectedIndex)
+
+        private val selectedCreditsTabs get() = selectedComponent as JTabbedPane
+        private val selectedPageTabs get() = selectedCreditsTabs.selectedComponent as JTabbedPane
+
+        fun switchCreditsBookTab(offset: Int) = switch(this, offset)
+        fun switchCreditsTab(offset: Int) = switch(selectedCreditsTabs, offset)
+        fun switchPageTab(offset: Int) = switch(selectedPageTabs, offset)
+
+        private fun updateDeferredImagePanelPresentationStatuses() {
+            for (creditsBookIdx in 0..<tabCount) {
+                val creditsTabs = getComponentAt(creditsBookIdx) as JTabbedPane
+                for (creditsIdx in 0..<creditsTabs.tabCount) {
+                    val pageTabs = creditsTabs.getComponentAt(creditsIdx) as JTabbedPane
+                    for (pageIdx in 0..<pageTabs.tabCount)
+                        (pageTabs.getComponentAt(pageIdx) as DeferredImagePanel).isPresented =
+                            selectedIndex == creditsBookIdx &&
+                                    creditsTabs.selectedIndex == creditsIdx &&
+                                    pageTabs.selectedIndex == pageIdx
+                }
+            }
+        }
+
+        private fun refreshCreditsBookTabs() {
+            val drawnProject = this.drawnProject ?: return
+            adjustParentTabCount(this, drawnProject.drawnCreditsBooks.size, SPREADSHEET_FILE_ICON, ALT_DOWN_MASK, false)
+            for ((idx, drawnCreditsBook) in drawnProject.drawnCreditsBooks.withIndex()) {
+                setTitleAt(idx, drawnCreditsBook.creditsBook.fileName)
+                refreshCreditsTabs(getComponentAt(idx) as JTabbedPane, drawnCreditsBook)
+            }
+            displayRuntimeOfSelectedCredits()
+            updateDeferredImagePanelPresentationStatuses()
+        }
+
+        private fun refreshCreditsTabs(creditsTabs: JTabbedPane, drawnCreditsBook: DrawnCreditsBook) {
+            adjustParentTabCount(creditsTabs, drawnCreditsBook.drawnCredits.size, TABLE_ICON, SHIFT_DOWN_MASK, true)
+            for ((idx, drawnCredits) in drawnCreditsBook.drawnCredits.withIndex()) {
+                creditsTabs.setTitleAt(idx, drawnCredits.credits.spreadsheetName)
+                refreshPageTabs(creditsTabs.getComponentAt(idx) as JTabbedPane, drawnCredits)
+            }
+        }
+
+        private fun adjustParentTabCount(
+            parentTabs: JTabbedPane, tabCount: Int, icon: Icon, switchMod: Int, childTabsArePageTabs: Boolean
+        ) {
+            while (parentTabs.tabCount > tabCount)
+                parentTabs.removeTabAt(parentTabs.tabCount - 1)
+            while (parentTabs.tabCount < tabCount) {
+                val childTabs = JTabbedPane()
+                configure(childTabs)
+                if (childTabsArePageTabs)
+                    childTabs.putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
+                childTabs.addChangeListener {
+                    if (!childTabsArePageTabs)
+                        displayRuntimeOfSelectedCredits()
+                    updateDeferredImagePanelPresentationStatuses()
+                }
+                parentTabs.addTab("", icon, childTabs, tabTooltip(switchMod))
+            }
+        }
+
+        private fun refreshPageTabs(pageTabs: JTabbedPane, drawnCredits: DrawnCredits) {
+            val drawnProject = this.drawnProject ?: return
+            // First adjust the number of tabs to the number of pages.
+            val numPages = drawnCredits.drawnPages.size
+            while (pageTabs.tabCount > numPages)
+                pageTabs.removeTabAt(pageTabs.tabCount - 1)
+            while (pageTabs.tabCount < numPages) {
+                val pageNumber = pageTabs.tabCount + 1
+                val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
+                val imagePanel =
+                    DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT, highResCache, lowResCache).apply {
+                        zoom = zoomSlider.zoom
+                        zoomListeners.add { zoom -> zoomSlider.zoom = zoom }
+                    }
+                pageTabs.addTab(tabTitle, PAGE_ICON, imagePanel, tabTooltip(CTRL_DOWN_MASK))
+            }
+            // Then fill each tab with its corresponding page, which also now has the overlays drawn onto it.
+            // Also make the currently selected layers and overlays visible.
+            val layers = getVisibleLayers()
+            for ((idx, drawnPage) in drawnCredits.drawnPages.withIndex()) {
+                val image = drawnPage.defImage.copy()
+                for (overlay in availableOverlays)
+                    overlay.draw(drawnProject.project.styling.global.resolution, drawnPage.stageInfo, image)
+                val imagePanel = pageTabs.getComponentAt(idx) as DeferredImagePanel
+                imagePanel.setImageAndGroundingAndLayers(image, drawnProject.project.styling.global.grounding, layers)
+            }
+        }
+
+        companion object {
+
+            private fun configure(tabs: JTabbedPane) {
+                tabs.isFocusable = false
+                tabs.tabLayoutPolicy = SCROLL_TAB_LAYOUT
+                tabs.putClientProperty(TABBED_PANE_TAB_TYPE, TABBED_PANE_TAB_TYPE_CARD)
+                tabs.putClientProperty(TABBED_PANE_SCROLL_BUTTONS_POLICY, TABBED_PANE_POLICY_AS_NEEDED)
+            }
+
+            private fun switch(tabs: JTabbedPane, offset: Int) {
+                tabs.selectedIndex = (tabs.selectedIndex + offset).coerceIn(0, tabs.tabCount - 1)
+            }
+
+            private fun tabTooltip(switchMod: Int) = l10n(
+                "ui.edit.switchTabs",
+                l10nEnum(shortcutHint(VK_PAGE_UP, switchMod)!!, shortcutHint(VK_PAGE_DOWN, switchMod)!!)
+            )
+
+        }
+
+    }
+
+
     private class LogTableModel : AbstractTableModel() {
 
         var log: List<ParserMsg> = emptyList()
@@ -611,15 +680,16 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
             }
 
         override fun getRowCount() = log.size
-        override fun getColumnCount() = 6
+        override fun getColumnCount() = 7
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
             0 -> ""
-            1 -> l10n("ui.edit.sheet")
-            2 -> l10n("ui.edit.record")
-            3 -> l10n("ui.edit.column")
-            4 -> l10n("ui.edit.value")
-            5 -> l10n("ui.edit.message")
+            1 -> l10n("file")
+            2 -> l10n("ui.edit.sheet")
+            3 -> l10n("ui.edit.record")
+            4 -> l10n("ui.edit.column")
+            5 -> l10n("ui.edit.value")
+            6 -> l10n("ui.edit.message")
             else -> throw IllegalArgumentException()
         }
 
@@ -628,11 +698,12 @@ class EditPanel(private val ctrl: ProjectController) : JPanel() {
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
             0 -> log[rowIdx].severity.icon
-            1 -> log[rowIdx].spreadsheetName ?: ""
-            2 -> log[rowIdx].recordNo?.plus(1) ?: ""
-            3 -> log[rowIdx].colHeader ?: ""
-            4 -> log[rowIdx].cellValue ?: ""
-            5 -> log[rowIdx].msg
+            1 -> log[rowIdx].fileName ?: ""
+            2 -> log[rowIdx].spreadsheetName ?: ""
+            3 -> log[rowIdx].recordNo?.plus(1) ?: ""
+            4 -> log[rowIdx].colHeader ?: ""
+            5 -> log[rowIdx].cellValue ?: ""
+            6 -> log[rowIdx].msg
             else -> throw IllegalArgumentException()
         }
 

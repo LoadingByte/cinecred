@@ -6,6 +6,7 @@ import com.loadingbyte.cinecred.common.roundingDiv
 import com.loadingbyte.cinecred.delivery.MAX_RENDER_PROGRESS
 import com.loadingbyte.cinecred.delivery.RenderJob
 import com.loadingbyte.cinecred.delivery.RenderQueue
+import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.helper.*
 import java.text.DecimalFormat
 import java.time.Duration
@@ -45,20 +46,21 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
             rowHeight = 40
             columnModel.apply {
                 // These cells will be rendered using special components.
-                getColumn(4).cellRenderer = WordWrapCellRenderer()
-                getColumn(5).cellRenderer = ProgressCellRenderer()
-                getColumn(6).apply {
+                getColumn(5).cellRenderer = WordWrapCellRenderer()
+                getColumn(6).cellRenderer = ProgressCellRenderer()
+                getColumn(7).apply {
                     cellRenderer = CancelButtonCell()
                     cellEditor = CancelButtonCell(::removeRowFromQueue)
                 }
                 // Set some sensible default col widths that define which ratio of the available space each col gets.
                 getColumn(0).preferredWidth = 120
-                getColumn(1).preferredWidth = 80
+                getColumn(1).preferredWidth = 120
                 getColumn(2).preferredWidth = 80
-                getColumn(3).preferredWidth = 150
-                getColumn(4).preferredWidth = 450
-                getColumn(5).preferredWidth = 230
-                getColumn(6).apply { minWidth = 24; maxWidth = 24 }
+                getColumn(3).preferredWidth = 80
+                getColumn(4).preferredWidth = 180
+                getColumn(5).preferredWidth = 450
+                getColumn(6).preferredWidth = 230
+                getColumn(7).apply { minWidth = 24; maxWidth = 24 }
             }
         }
 
@@ -157,7 +159,7 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
 
 
     class RenderJobInfo(
-        val spreadsheet: String,
+        val creditsId: CreditsId,
         val pages: String,
         formatCategory: String,
         format: String,
@@ -193,32 +195,34 @@ class DeliverRenderQueuePanel(private val ctrl: ProjectController) : JScrollPane
         val rows = mutableListOf<Row>()
 
         override fun getRowCount() = rows.size
-        override fun getColumnCount() = 7
+        override fun getColumnCount() = 8
 
         override fun getColumnName(colIdx: Int) = when (colIdx) {
-            0 -> l10n("ui.deliverConfig.spreadsheet")
-            1 -> l10n("ui.deliverConfig.pages")
-            2 -> l10n("ui.deliverRenderQueue.format")
-            3 -> l10n("ui.deliverRenderQueue.specs")
-            4 -> l10n("ui.deliverRenderQueue.destination")
-            5 -> l10n("ui.deliverRenderQueue.progress")
-            6 -> ""
+            0 -> l10n("file")
+            1 -> l10n("ui.edit.sheet")
+            2 -> l10n("ui.deliverConfig.pages")
+            3 -> l10n("ui.deliverRenderQueue.format")
+            4 -> l10n("ui.deliverRenderQueue.specs")
+            5 -> l10n("ui.deliverRenderQueue.destination")
+            6 -> l10n("ui.deliverRenderQueue.progress")
+            7 -> ""
             else -> throw IllegalArgumentException()
         }
 
         override fun getValueAt(rowIdx: Int, colIdx: Int): Any = when (colIdx) {
-            0 -> rows[rowIdx].info.spreadsheet
-            1 -> rows[rowIdx].info.pages
-            2 -> rows[rowIdx].info.assembledFormat
-            3 -> rows[rowIdx].info.assembledSpecs
-            4 -> rows[rowIdx].info.destination
-            5 -> rows[rowIdx]
-            6 -> ""
+            0 -> rows[rowIdx].info.creditsId.fileName
+            1 -> rows[rowIdx].info.creditsId.spreadsheetName
+            2 -> rows[rowIdx].info.pages
+            3 -> rows[rowIdx].info.assembledFormat
+            4 -> rows[rowIdx].info.assembledSpecs
+            5 -> rows[rowIdx].info.destination
+            6 -> rows[rowIdx]
+            7 -> ""
             else -> throw IllegalArgumentException()
         }
 
         // Only the cancel button column should be editable, making the cancel buttons clickable.
-        override fun isCellEditable(rowIndex: Int, colIndex: Int) = colIndex == 6
+        override fun isCellEditable(rowIndex: Int, colIndex: Int) = colIndex == 7
 
     }
 

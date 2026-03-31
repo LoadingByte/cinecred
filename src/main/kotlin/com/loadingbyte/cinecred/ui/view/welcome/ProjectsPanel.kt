@@ -280,7 +280,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             l10n("ui.projects.create.creditsFormat"),
             ComboBoxWidget(
                 SpreadsheetFormat::class.java, SPREADSHEET_FORMATS.filter { it.available }, widthSpec = WidthSpec.WIDE,
-                toString = { "${it.label} (Credits.${it.fileExt})" }
+                toString = { "${it.label} (.${it.fileExt})" }
             ),
             isVisible = { creditsLocationWidget.value == CreditsLocation.LOCAL }
         )

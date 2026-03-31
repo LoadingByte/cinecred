@@ -419,12 +419,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             val usedStyles = findUsedStyles(drawnProject.project)
             stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
         }
-        drawnProject.drawnCredits.firstOrNull()?.let { mostRecentRuntime = it.video.numFrames }
-        for (drawnCredits in drawnProject.drawnCredits)
-            for (drawnPage in drawnCredits.drawnPages)
-                for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
-                    if (stageInfo is DrawnStageInfo.Scroll)
-                        mostRecentScrollRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
+        drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()
+            ?.let { mostRecentRuntime = it.video.numFrames }
+        for (drawnCreditsBook in drawnProject.drawnCreditsBooks)
+            for (drawnCredits in drawnCreditsBook.drawnCredits)
+                for (drawnPage in drawnCredits.drawnPages)
+                    for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
+                        if (stageInfo is DrawnStageInfo.Scroll)
+                            mostRecentScrollRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
     }
 
     private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {

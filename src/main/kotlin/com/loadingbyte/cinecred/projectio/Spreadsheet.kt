@@ -27,9 +27,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 
 
-class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Spreadsheet.Record> {
-
-    private val records: List<Record> = matrix.mapIndexed(::Record)
+class Spreadsheet private constructor(val name: String, val records: List<Record>) : Iterable<Spreadsheet.Record> {
 
     val numRecords: Int get() = records.size
     val numColumns: Int get() = records.maxOf { it.cells.size }
@@ -37,9 +35,15 @@ class Spreadsheet(val name: String, matrix: List<List<String>>) : Iterable<Sprea
     operator fun get(recordNo: Int): Record = records[recordNo]
     operator fun get(recordNo: Int, columnNo: Int): String = records[recordNo].cells[columnNo]
 
-    fun map(transform: (String) -> String): Spreadsheet = Spreadsheet(name, records.map { it.cells.map(transform) })
+    fun withName(name: String): Spreadsheet = Spreadsheet(name, records)
+    fun map(transform: (String) -> String): Spreadsheet =
+        Spreadsheet(name, records.map { Record(it.recordNo, it.cells.map(transform)) })
 
     override fun iterator(): Iterator<Record> = records.iterator()
+
+    companion object {
+        operator fun invoke(name: String, matrix: List<List<String>>) = Spreadsheet(name, matrix.mapIndexed(::Record))
+    }
 
     class Record(val recordNo: Int, val cells: List<String>) {
         fun isNotEmpty() = cells.any { it.isNotEmpty() }
@@ -418,7 +422,7 @@ private inline fun <W> readOfficeDocument(
 
         if (numSheets == 0) {
             val msg = l10n("projectIO.spreadsheet.noSheet", l10nQuoted(file.name))
-            log.add(ParserMsg(null, null, null, null, ERROR, msg))
+            log.add(ParserMsg(file.name, null, null, null, null, ERROR, msg))
         }
 
         return Pair(if (numSheets == 0) emptyList() else List(numSheets) { read(workbook, it) }, log)

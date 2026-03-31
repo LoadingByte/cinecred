@@ -21,7 +21,7 @@ interface PlaybackCtrlComms {
     fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer)
     fun setDeckLinkConnected(connected: Boolean)
     fun toggleDeckLinkConnected()
-    fun setSelectedSpreadsheetName(spreadsheetName: String)
+    fun setSelectedCreditsId(creditsId: CreditsId)
     fun startScrubbing()
     fun stopScrubbing()
     fun scrub(frameIdx: Int)
@@ -53,8 +53,8 @@ interface PlaybackViewComms {
     fun setSelectedDeckLinkPrimaries(primaries: ColorSpace.Primaries) {}
     fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer) {}
     fun setDeckLinkConnected(connected: Boolean) {}
-    fun setSpreadsheetNames(spreadsheetNames: List<String>) {}
-    fun setSelectedSpreadsheetName(spreadsheetName: String) {}
+    fun setCreditsIds(creditsIds: List<CreditsId>) {}
+    fun setSelectedCreditsId(creditsId: CreditsId) {}
     fun setNumFrames(numFrames: Int, timecodeString: String) {}
     fun setPlayheadPosition(frameIdx: Int, timecodeString: String) {}
     fun setPlaybackDirection(direction: Int) {}

@@ -27,6 +27,7 @@ import java.lang.Thread.sleep
 import java.lang.foreign.MemorySegment.NULL
 import javax.swing.*
 import javax.swing.JSpinner.NumberEditor
+import kotlin.io.path.name
 
 
 private const val DIR = "guide/user-interface"
@@ -273,7 +274,7 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
         addProjectWindows(hideStyWin = true)
 
         edt { styTree.selectedRow = 8 }
-        val creditsFile = projectDir.resolve("Credits.csv")
+        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
             size = Dimension(600, 350)
             colWidths = intArrayOf(100, 100, 50, 100, 100, 50, 50, 50, 50, 50)
@@ -418,7 +419,7 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 500))
         edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
 
-        for (idx in intArrayOf(3, 4)) {
+        for (idx in intArrayOf(3, 5)) {
             sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
             sc.click(0)
             sleep(500)
@@ -432,7 +433,7 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         sc.click(0)
         sleep(500)
         sc.hold()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 6))
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 7))
         sc.click(0)
         sleep(1000)
 
@@ -469,7 +470,7 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         sc.hold(2 * hold)
         sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 6))
+        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 7))
         sc.click(8 * hold)
         sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
         sc.click()

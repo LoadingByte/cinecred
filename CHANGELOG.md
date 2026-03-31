@@ -7,6 +7,9 @@ Cinecred Changelog
 
 ### Additions
 
+- Any spreadsheet file in the project folder is now considered a credits file.
+  All of them are read in simultaneously and have their sheets presented as
+  isolated credits sequences.
 - Manual newlines are now also supported in grid and flow body cells, as well as
   in horizontal heads and tails. As such, they are now supported everywhere.
     - When employing manual newlines, one can control in detail which body lines
@@ -20,6 +23,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Duplicate spreadsheet names in credits files are now suffixed with, e.g., (2).
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - Timeline export no longer fails upon encountering an image sequence.
 

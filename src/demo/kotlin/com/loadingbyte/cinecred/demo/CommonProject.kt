@@ -5,11 +5,13 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
+import com.loadingbyte.cinecred.projectio.ProjectIntake.Companion.hasCreditsFilename
 import com.loadingbyte.cinecred.ui.helper.withG2
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
 import java.awt.image.BufferedImage
+import java.net.URI
 import java.nio.file.Path
 import java.util.*
 import javax.imageio.ImageIO
@@ -34,7 +36,7 @@ fun template(locale: Locale) =
 val TEMPLATE_SPREADSHEET: Spreadsheet by lazy {
     withDemoProjectDir { projectDir ->
         tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
-        CsvFormat.read(ProjectIntake.locateCreditsFile(projectDir).first!!, "").first.single()
+        CsvFormat.read(projectDir.listDirectoryEntries().first(::hasCreditsFilename), "").first.single()
     }
 }
 
@@ -48,13 +50,13 @@ val TEMPLATE_SCROLL_PAGE_FROM_DOP: Page by lazy {
         lines[headerLineNo + 1] = ",,,,Gutter,,,Scroll,\n"
         (dopLineNo - 1 downTo headerLineNo + 2).forEach(lines::removeAt)
         creditsFile.writeLines(lines)
-    }.credits.single().pages.single()
+    }.creditsBooks.single().credits.single().pages.single()
 }
 
 private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
     withDemoProjectDir { projectDir ->
         tryCopyTemplate(projectDir, template(FALLBACK_TRANSLATED_LOCALE), CsvFormat)
-        val creditsFile = ProjectIntake.locateCreditsFile(projectDir).first!!
+        val creditsFile = projectDir.listDirectoryEntries().first(::hasCreditsFilename)
         modifyCsv(creditsFile)
         val spreadsheet = CsvFormat.read(creditsFile, "").first.single()
         val pictureLoaders = buildMap {
@@ -63,10 +65,10 @@ private fun loadTemplateProject(modifyCsv: (Path) -> Unit = {}): Project =
                     Picture.Loader.recognize(file)?.let { put(file.name, it) }
         }
         val styling = readStyling(projectDir.resolve(STYLING_FILE_NAME), emptyMap(), pictureLoaders, emptyMap())
-        val credits = readCredits(spreadsheet, styling, pictureLoaders, emptyMap()).first
+        val credits = readCredits("", spreadsheet, styling, pictureLoaders, emptyMap()).first
         for (pictureLoader in pictureLoaders.values)
             pictureLoader.close()
-        Project(styling, persistentListOf(credits))
+        Project(styling, persistentListOf(CreditsBook("", URI(""), persistentListOf(credits))))
     }
 
 
@@ -131,6 +133,6 @@ private fun String.parseCredits(styling: Styling): Pair<Global, List<Page>> {
     val spreadsheet = CsvFormat.read(this, "")
     val picLoaders = if ("logo.svg" in this) mapOf(LOGO_PIC.file.name to LOGO_PIC) else emptyMap()
     val tapes = if ("rainbow" in this) mapOf(RAINBOW_TAPE.fileOrDir.name to RAINBOW_TAPE) else emptyMap()
-    val pages = readCredits(spreadsheet, styling, picLoaders, tapes).first.pages
+    val pages = readCredits("", spreadsheet, styling, picLoaders, tapes).first.pages
     return Pair(styling.global, pages)
 }

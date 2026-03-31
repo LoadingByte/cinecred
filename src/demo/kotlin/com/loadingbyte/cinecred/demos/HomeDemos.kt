@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.DeliverRenderQueuePanel
 import com.loadingbyte.cinecred.ui.ProjectDialogType
+import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
@@ -18,6 +19,7 @@ import java.nio.file.Path
 import javax.swing.JTextField
 import javax.swing.JTree
 import kotlin.io.path.Path
+import kotlin.io.path.name
 import kotlin.io.path.readLines
 import kotlin.io.path.writeLines
 
@@ -37,7 +39,7 @@ val HOME_DEMOS
 object HomeScreenshotLiveVisDemo : ProjectDemo("$DIR/screenshot-live-vis", Format.PNG) {
     override fun prepare(projectDir: Path) {
         // Inject an error into the credits file.
-        val creditsFile = projectDir.resolve("Credits.csv")
+        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
         val lines = creditsFile.readLines().toMutableList()
         lines[lines.indexOfFirst { "Dirc Director" in it } + 1] = ",,,-1,,,,,,"
         creditsFile.writeLines(lines)
@@ -134,7 +136,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         if (format.fileSeq) dest += "/Render.#######"
         dest += "." + format.defaultFileExt
         val info = DeliverRenderQueuePanel.RenderJobInfo(
-            l10n("project.template.spreadsheetName"),
+            CreditsId("Credits.xlsx", l10n("project.template.spreadsheetName")),
             l10n("ui.deliverConfig.pagesAll"),
             l10n(if (videoOrStills) "ui.deliverConfig.videoFormat" else "ui.deliverConfig.wholePageFormat.short"),
             format.label,

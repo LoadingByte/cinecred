@@ -20,6 +20,7 @@ import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.*
 import java.lang.Thread.sleep
+import java.net.URI
 import javax.swing.JFrame
 import javax.swing.UIManager
 import kotlin.math.max
@@ -93,8 +94,9 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
 
     final override fun doGenerate() {
         val project = buildProject(credits())
-        val video = drawVideo(project, drawPages(project, project.credits.single()))
-        renderDefVideo(video, project.styling.global.grounding).forEach(::write)
+        val styling = project.styling
+        val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()))
+        renderDefVideo(video, styling.global.grounding).forEach(::write)
     }
 
 }
@@ -116,11 +118,12 @@ abstract class StyleSettingsVideoDemo<S : Style>(
         settImgs = stackImages(listOf(settImgs.toList()), extendX = listOf(20), extendY = listOf(10))
         styles.zip(settImgs.asIterable()) { style, settImg ->
             val project = buildProject(credits(style))
-            val video = drawVideo(project, drawPages(project, project.credits.single()))
+            val styling = project.styling
+            val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()))
             stackImages(buildList {
                 add(List(video.numFrames) { settImg })
                 if (timeline && style is TapeStyle) add(generateTimeline(style, video).asIterable())
-                add(renderDefVideo(video, project.styling.global.grounding).asIterable())
+                add(renderDefVideo(video, styling.global.grounding).asIterable())
             }).forEach(::write)
         }
     }
@@ -194,7 +197,7 @@ private fun buildProject(
     if (augmentStyling != null)
         styling = augmentStyling(styling)
     val credits = Credits("", globalAndPages.second.toPersistentList(), pl())
-    return Project(styling, pl(credits))
+    return Project(styling, pl(CreditsBook("", URI(""), pl(credits))))
 }
 
 
@@ -202,7 +205,8 @@ private fun buildPageDefImgAndGrounding(
     globalAndPages: Pair<Global, List<Page>>, augmentStyling: ((Styling) -> Styling)? = null, scaling: Double = 1.0
 ): Pair<DeferredImage, Color4f> {
     val project = buildProject(globalAndPages, augmentStyling)
-    val pageDefImg = drawPages(project, project.credits.single()).single().defImage.copy(universeScaling = scaling)
+    val pageDefImg = drawPages(project.styling, project.creditsBooks.single().credits.single())
+        .single().defImage.copy(universeScaling = scaling)
     return Pair(pageDefImg, project.styling.global.grounding)
 }
 

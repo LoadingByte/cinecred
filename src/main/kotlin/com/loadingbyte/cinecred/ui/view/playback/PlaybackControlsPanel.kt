@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
+import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.*
@@ -34,7 +35,7 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
 
     private val deckLinkConnectedButton: JToggleButton
     private val deckLinkSeparator = JSeparator(JSeparator.VERTICAL)
-    private val spreadsheetNameComboBox: JComboBox<String>
+    private val creditsIdComboBox: JComboBox<CreditsIdWrapper>
     private val rewindButton: JToggleButton
     private val pauseButton: JToggleButton
     private val playButton: JToggleButton
@@ -80,11 +81,11 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
                 playbackCtrl.setDeckLinkConnected(isSelected)
             }
 
-        spreadsheetNameComboBox = JComboBox<String>().apply {
+        creditsIdComboBox = JComboBox<CreditsIdWrapper>().apply {
             isFocusable = false
             addItemListener { e ->
                 if (e.stateChange == ItemEvent.SELECTED)
-                    playbackCtrl.setSelectedSpreadsheetName(e.item as String)
+                    playbackCtrl.setSelectedCreditsId((e.item as CreditsIdWrapper).item)
             }
         }
 
@@ -116,7 +117,7 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         add(deckLinkConfigButton, "gapright 2")
         add(deckLinkConnectedButton)
         add(deckLinkSeparator, "growy, wmin pref, gapright unrel")
-        add(spreadsheetNameComboBox)
+        add(creditsIdComboBox, "wmin 80, wmax 15%")
         add(rewindButton)
         add(pauseButton)
         add(playButton)
@@ -161,12 +162,12 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         deckLinkConnectedButton.isSelected = connected
     }
 
-    override fun setSpreadsheetNames(spreadsheetNames: List<String>) {
-        spreadsheetNameComboBox.model = DefaultComboBoxModel(spreadsheetNames.toTypedArray())
+    override fun setCreditsIds(creditsIds: List<CreditsId>) {
+        creditsIdComboBox.model = DefaultComboBoxModel(creditsIds.map(::CreditsIdWrapper).toTypedArray())
     }
 
-    override fun setSelectedSpreadsheetName(spreadsheetName: String) {
-        spreadsheetNameComboBox.selectedItem = spreadsheetName
+    override fun setSelectedCreditsId(creditsId: CreditsId) {
+        creditsIdComboBox.selectedItem = CreditsIdWrapper(creditsId)
     }
 
     override fun setNumFrames(numFrames: Int, timecodeString: String) {
@@ -185,6 +186,11 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         rewindButton.isSelected = direction == -1
         pauseButton.isSelected = direction == 0
         playButton.isSelected = direction == 1
+    }
+
+
+    private data class CreditsIdWrapper(override val item: CreditsId) : ComboBoxWrapper {
+        override fun toString() = "${item.fileName} \u2192 ${item.spreadsheetName}"
     }
 
 

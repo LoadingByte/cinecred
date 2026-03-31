@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.project.StyleSetting
 
 
 data class ParserMsg(
+    val fileName: String?,
     val spreadsheetName: String?,
     val recordNo: Int?,
     val colHeader: String?,
@@ -25,6 +26,7 @@ data class MigrationDataSource<S : Style>(
 
 
 class Table(
+    val fileName: String,
     val spreadsheet: Spreadsheet,
     private val l10nPrefix: String,
     l10nColNames: List<String>,
@@ -48,7 +50,7 @@ class Table(
             headerRecord = emptyList()
             bodyRecords = emptyList()
             colMap = emptyMap()
-            log += ParserMsg(spreadsheet.name, null, null, null, WARN, l10n("projectIO.table.noHeader"))
+            log += ParserMsg(fileName, spreadsheet.name, null, null, null, WARN, l10n("projectIO.table.noHeader"))
         } else {
             headerRecord = spreadsheet[headerRecordNo].cells.map { it.trim() }
 
@@ -84,20 +86,20 @@ class Table(
                     if (col != -1) {
                         colMap[l10nColName] = col
                         val msg = l10n("projectIO.table.migration.renameColumn", "<i>$colName</i>")
-                        log += ParserMsg(spreadsheet.name, headerRecordNo, legacyColName, null, MIGRATE, msg)
+                        log += ParserMsg(fileName, spreadsheet.name, headerRecordNo, legacyColName, null, MIGRATE, msg)
                         continue@outer
                     }
                 }
                 // The column is missing. Emit a warning.
                 val msg = l10n("projectIO.table.migration.addColumn")
-                log += ParserMsg(spreadsheet.name, headerRecordNo, colName, null, MIGRATE, msg)
+                log += ParserMsg(fileName, spreadsheet.name, headerRecordNo, colName, null, MIGRATE, msg)
             }
 
             // 2. Emit a warning for each unexpected column name.
             for ((col, colName) in headerRecord.withIndex())
                 if (colName.isNotEmpty() && col !in colMap.values) {
                     val msg = l10n("projectIO.table.unexpectedColumn")
-                    log += ParserMsg(spreadsheet.name, headerRecordNo, colName, null, WARN, msg)
+                    log += ParserMsg(fileName, spreadsheet.name, headerRecordNo, colName, null, WARN, msg)
                 }
         }
     }
@@ -105,7 +107,7 @@ class Table(
     fun log(row: Int?, l10nColName: String?, severity: Severity, msg: String, mds: MigrationDataSource<*>? = null) {
         val colName = l10nColName?.let { getColHeader(it) ?: ("@" + l10n(l10nPrefix + l10nColName)) }
         val cellValue = if (row != null && l10nColName != null) getString(row, l10nColName) else null
-        log += ParserMsg(spreadsheet.name, row?.let(::getRecordNo), colName, cellValue, severity, msg, mds)
+        log += ParserMsg(fileName, spreadsheet.name, row?.let(::getRecordNo), colName, cellValue, severity, msg, mds)
     }
 
     fun logMigrationPut(row: Int?, l10nColName: String?, value: String, mds: MigrationDataSource<*>? = null) {

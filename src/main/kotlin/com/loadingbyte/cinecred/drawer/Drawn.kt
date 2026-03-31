@@ -4,12 +4,14 @@ import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.Y
 import com.loadingbyte.cinecred.project.Credits
+import com.loadingbyte.cinecred.project.CreditsBook
 import com.loadingbyte.cinecred.project.Page
 import com.loadingbyte.cinecred.project.Project
 import kotlinx.collections.immutable.PersistentList
 
 
-class DrawnProject(val project: Project, val drawnCredits: PersistentList<DrawnCredits>)
+class DrawnProject(val project: Project, val drawnCreditsBooks: PersistentList<DrawnCreditsBook>)
+class DrawnCreditsBook(val creditsBook: CreditsBook, val drawnCredits: PersistentList<DrawnCredits>)
 class DrawnCredits(val credits: Credits, val drawnPages: PersistentList<DrawnPage>, val video: DeferredVideo)
 class DrawnPage(val page: Page, val defImage: DeferredImage, val stageInfo: PersistentList<DrawnStageInfo>)
 

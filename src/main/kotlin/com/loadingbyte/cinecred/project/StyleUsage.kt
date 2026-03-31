@@ -7,7 +7,7 @@ import java.util.*
 fun findUsedStyles(project: Project): Set<ListedStyle> {
     val usedStyles = Collections.newSetFromMap(IdentityHashMap<ListedStyle, Boolean>())
     findUsedStyles(project.styling, usedStyles)
-    findUsedStyles(project.credits, usedStyles)
+    findUsedStyles(project.creditsBooks.flatMap(CreditsBook::credits), usedStyles)
     return usedStyles
 }
 

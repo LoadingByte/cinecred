@@ -21,11 +21,9 @@ import kotlin.math.*
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
 
 
-fun drawPages(project: Project, credits: Credits): List<DrawnPage> {
-    val styling = project.styling
+fun drawPages(styling: Styling, credits: Credits): List<DrawnPage> {
     val global = styling.global
 
-    require(credits in project.credits)
     val pages = credits.pages
     val runtimeGroups = credits.runtimeGroups
 

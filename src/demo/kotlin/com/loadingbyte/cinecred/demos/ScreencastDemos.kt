@@ -65,7 +65,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sleep(5000)
 
         addProjectWindows(setupVidWin = true, setupDlvWin = true, styWinSplitRatio = 0.225)
-        val creditsFile = projectDir.resolve("Credits.csv")
+        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
         val picLineIdx: Int
         run {
             val lines = creditsFile.readLines().toMutableList()
@@ -146,8 +146,8 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.files.list1")
         sc.caption("screencast.caption.files.list2")
         sc.caption("screencast.caption.files.credits")
-        sc.mouseTo(fileBrowserWin.desktopPosOfFile("Credits.csv"))
-        fileBrowserWin.selectedFileName = "Credits.csv"
+        sc.mouseTo(fileBrowserWin.desktopPosOfFile("${projectDir.name}.csv"))
+        fileBrowserWin.selectedFileName = "${projectDir.name}.csv"
         sc.hold()
 
         val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile).apply {

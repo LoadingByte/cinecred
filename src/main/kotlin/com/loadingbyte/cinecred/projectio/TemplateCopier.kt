@@ -8,6 +8,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.name
 import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 import kotlin.math.max
@@ -71,6 +72,7 @@ private fun tryCopyCreditsTemplate(
     // If desired, cut off the sample credits and only keep the table header.
     if (!template.sample)
         csv = csv.subList(0, 2)
+    val fileName = destDir.name
     val spreadsheetName = l10n("project.template.spreadsheetName", template.locale)
     val spreadsheet = CsvFormat.read(csv.joinToString("\n"), spreadsheetName).map { fillIn(it, template) }
     val look = SpreadsheetLook(
@@ -82,14 +84,14 @@ private fun tryCopyCreditsTemplate(
     )
     when {
         creditsFormat != null -> {
-            val destFile = destDir.resolve("Credits.${creditsFormat.fileExt}")
+            val destFile = destDir.resolve("$fileName.${creditsFormat.fileExt}")
             if (!destFile.notExists())
                 return
             destDir.createDirectoriesSafely()
             creditsFormat.write(destFile, spreadsheet, look)
         }
         creditsAccount != null -> {
-            val destFile = destDir.resolve("Credits.$WRITTEN_SERVICE_LINK_EXT")
+            val destFile = destDir.resolve("$fileName.$WRITTEN_SERVICE_LINK_EXT")
             if (!destFile.notExists())
                 return
             val name = if (creditsAccount.service.uploadNeedsFilename) requireNotNull(creditsFilename) else null

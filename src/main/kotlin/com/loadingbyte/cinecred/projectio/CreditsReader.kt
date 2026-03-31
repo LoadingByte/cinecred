@@ -15,6 +15,7 @@ import java.util.*
 
 
 fun readCredits(
+    fileName: String,
     spreadsheet: Spreadsheet,
     styling: Styling,
     pictureLoaders: Map<String, Picture.Loader>,
@@ -22,7 +23,7 @@ fun readCredits(
 ): Pair<Credits, List<ParserMsg>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
-        spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
+        fileName, spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
             "head", "body", "tail", "vGap", "contentStyle", "breakHarmonization", "spinePos",
             "pageStyle", "pageRuntime", "pageGap"
         ), legacyColNames = mapOf(

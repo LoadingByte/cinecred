@@ -40,7 +40,7 @@ object GuidePictureVideoAutoAddDemo : ScreencastDemo(
     "$DIR/auto-add", Format.VIDEO_GIF, 1100, 600
 ) {
     override fun generate() {
-        val creditsFile = projectDir.resolve("Credits.csv")
+        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
         addProjectWindows(hideStyWin = true, prepareProjectDir = {
             val lines = creditsFile.readLines().toMutableList()
             val idx = lines.indexOfFirst { "Dirc Director" in it }

@@ -29,7 +29,9 @@ import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.project.PageBehavior
+import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder
+import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.Dimension
 import java.io.File
@@ -83,8 +85,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private var drawnProject: DrawnProject? = null
     private var specs = DeliverySpecs.UNKNOWN
 
-    private val spreadsheetNameWidget =
-        OptionalComboBoxWidget(String::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE)
+    private val creditsIdWidget =
+        OptionalComboBoxWidget(
+            CreditsId::class.java, emptyList(), widthSpec = WidthSpec.FIT,
+            toString = { creditsId -> "${creditsId.fileName} \u2192 ${creditsId.spreadsheetName}" }
+        )
 
     private val pageIndicesWidget =
         MultiComboBoxWidget<Int>(
@@ -100,7 +105,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private val spreadsheetAndPagesFormRow = FormRow(
         l10n("ui.deliverConfig.spreadsheet"),
         UnionWidget(
-            listOf(spreadsheetNameWidget, pageIndicesWidget, firstPageIdxWidget, lastPageIdxWidget),
+            listOf(creditsIdWidget, pageIndicesWidget, firstPageIdxWidget, lastPageIdxWidget),
             labels = listOf(null, l10n("ui.deliverConfig.pages"), l10n("ui.deliverConfig.pages"), "\u2013"),
             gaps = listOf(null, null, "rel")
         )
@@ -293,11 +298,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             return
 
         disableOnChange = true
-        if (widget == spreadsheetNameWidget) {
+        if (widget == creditsIdWidget) {
             // Populate the page number options.
             pushPageIdxOptions(reset = true)
             // Notify the destination widget.
-            destinationWidget.spreadsheetName = spreadsheetNameWidget.value.getOrNull()
+            destinationWidget.creditsId = creditsIdWidget.value.getOrNull()
         } else if (widget == formatWidget) {
             val format = formatWidget.value
             val wholePage = format in WHOLE_PAGE_FORMATS
@@ -598,7 +603,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             )
 
             val info = DeliverRenderQueuePanel.RenderJobInfo(
-                spreadsheet = spreadsheetNameWidget.value.get(),
+                creditsId = creditsIdWidget.value.get(),
                 pages = when {
                     pageIndices.size == drawnPages.size -> l10n("ui.deliverConfig.pagesAll")
                     wholePage -> pageIndices.joinToString { "${it + 1}" }
@@ -614,8 +619,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     }
 
     private val selectedDrawnCredits: DrawnCredits?
-        get() = spreadsheetNameWidget.value.getOrNull()?.let { selName ->
-            drawnProject?.drawnCredits?.find { it.credits.spreadsheetName == selName }
+        get() = creditsIdWidget.value.getOrNull()?.let { selId ->
+            drawnProject?.drawnCreditsBooks?.find { it.creditsBook.fileName == selId.fileName }
+                ?.drawnCredits?.find { it.credits.spreadsheetName == selId.spreadsheetName }
         }
 
     private fun currentConfig(ignoreVolatile: Boolean = false): Config? {
@@ -660,9 +666,12 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
 
-        // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
-        spreadsheetNameWidget.items =
-            drawnProject.drawnCredits.filter { it.video.numFrames > 0 }.map { it.credits.spreadsheetName }
+        creditsIdWidget.items = drawnProject.drawnCreditsBooks.flatMap { drCreditsBook ->
+            drCreditsBook.drawnCredits
+                // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
+                .filter { drCredits -> drCredits.video.numFrames > 0 }
+                .map { drCredits -> CreditsId(drCreditsBook.creditsBook.fileName, drCredits.credits.spreadsheetName) }
+        }
 
         // Update the page number options.
         pushPageIdxOptions(reset = false)
@@ -671,8 +680,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         onChange(spatialScalingWidget)
     }
 
-    fun setSelectedSpreadsheetName(spreadsheetName: String) {
-        spreadsheetNameWidget.value = Optional.of(spreadsheetName)
+    fun setSelectedCreditsId(creditsId: CreditsId) {
+        creditsIdWidget.value = Optional.of(creditsId)
     }
 
     fun updateDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
@@ -704,18 +713,17 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         class Value(val fileOrDir: Path, val filenameHashPattern: String?)
 
         private val bundledTemplates = listOf(
+            listOf(Placeholder.PROJECT),
+            listOf(Placeholder.PROJECT, Placeholder.SPREADSHEET),
+            listOf(Placeholder.PROJECT, Placeholder.CREDITS_FILENAME),
+            listOf(Placeholder.PROJECT, Placeholder.CREDITS_FILENAME, Placeholder.SPREADSHEET),
+        ).map { placeholders ->
             DeliveryDestTemplate(
                 UUID.randomUUID(),
-                "${Placeholder.PROJECT.l10nTag()} + ${Placeholder.SPREADSHEET.l10nTag()}",
-                "${Placeholder.PROJECT.enumTagBraces} ${Placeholder.SPREADSHEET.enumTagBraces}"
-            ),
-            DeliveryDestTemplate(
-                UUID.randomUUID(), Placeholder.PROJECT.l10nTag(), Placeholder.PROJECT.enumTagBraces
-            ),
-            DeliveryDestTemplate(
-                UUID.randomUUID(), Placeholder.SPREADSHEET.l10nTag(), Placeholder.SPREADSHEET.enumTagBraces
+                placeholders.joinToString(" + ", transform = Placeholder::l10nTag),
+                placeholders.joinToString(" ", transform = Placeholder::enumTagBraces)
             )
-        )
+        }
 
         private val templateBtn = JButton(TEMPLATE_ICON).apply { toolTipText = l10n("template") }
         val templateMenu = DropdownPopupMenu(templateBtn).apply {
@@ -838,9 +846,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             templateMenu.pack()
         }
 
-        var spreadsheetName: String? = null
-            set(spreadsheetName) {
-                field = spreadsheetName
+        var creditsId: CreditsId? = null
+            set(creditsId) {
+                field = creditsId
                 refreshLabels()
             }
 
@@ -913,7 +921,9 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             return template.fill { placeholder ->
                 when (placeholder) {
                     Placeholder.PROJECT -> ctrl.projectName
-                    Placeholder.SPREADSHEET -> spreadsheetName ?: ""
+                    Placeholder.CREDITS_FILENAME ->
+                        SPREADSHEET_FORMATS.fold(creditsId?.fileName ?: "") { f, s -> f.removeSuffix("." + s.fileExt) }
+                    Placeholder.SPREADSHEET -> creditsId?.spreadsheetName ?: ""
                     Placeholder.FIRST_PAGE -> "%02d".format(extremePageIndices.first + 1)
                     Placeholder.LAST_PAGE -> "%02d".format(extremePageIndices.second + 1)
                     Placeholder.FORMAT_CATEGORY -> format.categoryLabel

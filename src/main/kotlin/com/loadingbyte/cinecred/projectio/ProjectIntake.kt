@@ -2,7 +2,6 @@ package com.loadingbyte.cinecred.projectio
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
-import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
@@ -31,7 +30,7 @@ import kotlin.io.path.*
  * Upon creation of a new instance of this class, the callbacks [Callbacks.pushProjectFonts],
  * [Callbacks.pushPictureLoaders], and [Callbacks.pushTapes] are immediately called from the same thread before the
  * constructor returns.
- * In contrast, the callback [Callbacks.pushCreditsSpreadsheets] will be called later from a separate thread.
+ * In contrast, the callback [Callbacks.pushCreditsWorkbooks] will be called later from a separate thread.
  *
  * Neither the constructor nor any method in this class throws exceptions. Instead, errors are gracefully handled and,
  * if reasonable, the user is notified via the log.
@@ -39,20 +38,25 @@ import kotlin.io.path.*
 class ProjectIntake(private val projectDir: Path, private val callbacks: Callbacks) {
 
     interface Callbacks {
-        fun creditsPolling(possible: Boolean)
-        fun pushCreditsSpreadsheets(creditsSpreadsheets: List<Spreadsheet>, uri: URI?, log: List<ParserMsg>)
-        fun pushCreditsSpreadsheetsLog(log: List<ParserMsg>)
+        fun pushCreditsWorkbooks(creditsWorkbooks: List<CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean)
         fun pushProjectFonts(projectFonts: SortedMap<String, Font>)
         fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>)
         fun pushTapes(tapes: SortedMap<String, Tape>)
+    }
+
+    class CreditsWorkbook(val fileName: String, val uri: URI, spreadsheets: List<Spreadsheet>) {
+        val spreadsheets = spreadsheets.toMutableList().also {
+            dedupNames(it, Spreadsheet::name, Spreadsheet::withName)
+        }
     }
 
     private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
         Thread(runnable, "ProjectIntake").apply { isDaemon = true }
     }
 
-    private var currentCreditsFile: Path? = null
-    private var linkedCreditsWatcher: ServiceWatcher? = null
+    private val creditsWorkbooks = HashMap<Path, CreditsWorkbook>()
+    private val creditsLogs = HashMap<Path, List<ParserMsg>>()
+    private val linkedCreditsWatchers = HashMap<Path, ServiceWatcher>()
 
     private var auxFileEventBatch = HashMap<Path, RecursiveFileWatcher.Event>()
     private val auxFileEventBatchLock = ReentrantLock()
@@ -75,15 +79,22 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             reloadAuxFileOrDir(projectFileOrDir)
         pushAuxiliaryFileChanges()
 
-        // Load the initially present credits file in the executor thread.
-        executor.submit(throwableAwareTask { reloadCreditsFile(Path("")) })
+        // Load the initially present credits files in the executor thread.
+        val creditsFiles = try {
+            projectDir.listDirectoryEntries()
+        } catch (e: IOException) {
+            if (e !is NoSuchFileException)
+                LOGGER.error("Cannot list files in project dir '{}'.", projectDir, e)
+            emptyList()
+        }.filter { file -> file.isRegularFile() && hasCreditsFilename(file) }
+        executor.submit(throwableAwareTask { reloadCreditsFiles(creditsFiles) })
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
             if (hasCreditsFilename(file)) {
                 // Process changes to the credits file in the executor thread.
                 // Also wait a moment so that the file has been fully written.
-                executor.schedule(throwableAwareTask { reloadCreditsFile(file) }, 100, TimeUnit.MILLISECONDS)
+                executor.schedule(throwableAwareTask { reloadCreditsFiles(listOf(file)) }, 100, TimeUnit.MILLISECONDS)
             } else {
                 // Changes to auxiliary files are batched to reduce the number of pushes when, e.g., a long image
                 // sequence is copied into the project dir.
@@ -114,7 +125,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     }
 
     fun pollCredits() {
-        linkedCreditsWatcher?.poll()
+        for (watcher in linkedCreditsWatchers.values)
+            watcher.poll()
     }
 
     fun close() {
@@ -134,36 +146,39 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 tape.close()
 
             // Stop watching for online changes.
-            linkedCreditsWatcher?.cancel()
-            linkedCreditsWatcher = null
+            for (watcher in linkedCreditsWatchers.values)
+                watcher.cancel()
+            linkedCreditsWatchers.clear()
         })
 
         executor.shutdown()
     }
 
-    private fun reloadCreditsFile(changedFile: Path) {
-        val (activeFile, locatingLog) = locateCreditsFile(projectDir)
-        if (activeFile == null)
-            callbacks.pushCreditsSpreadsheets(emptyList(), null, locatingLog)
-        else if (
-            changedFile == activeFile || currentCreditsFile.let { it == null || !it.isSameFileAsSafely(activeFile) }
-        ) {
-            linkedCreditsWatcher?.cancel()
-            linkedCreditsWatcher = null
-            callbacks.creditsPolling(false)
-            val fileExt = activeFile.extension
+    private fun reloadCreditsFiles(changedFiles: List<Path>) {
+        var push = false
+        for (changedFile in changedFiles) if (!changedFile.isRegularFile()) {
+            creditsWorkbooks.remove(changedFile)
+            creditsLogs.remove(changedFile)
+            linkedCreditsWatchers.remove(changedFile)?.cancel()
+            push = true
+        } else {
+            val fileExt = changedFile.extension
             try {
                 if (fileExt in SERVICE_LINK_EXTS) {
-                    val link = readServiceLink(activeFile)
+                    val link = readServiceLink(changedFile)
                     val service = SERVICES.find { it.canWatch(link) }
                     if (service == null) {
                         val msg = l10n("projectIO.credits.unsupportedServiceLink", l10nQuoted(link))
-                        val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
-                        callbacks.pushCreditsSpreadsheets(emptyList(), link, locatingLog + msgObj)
+                        val msgObj = ParserMsg(changedFile.name, null, null, null, null, ERROR, msg)
+                        creditsWorkbooks.remove(changedFile)
+                        creditsLogs[changedFile] = listOf(msgObj)
+                        linkedCreditsWatchers.remove(changedFile)?.cancel()
                     } else {
-                        linkedCreditsWatcher = service.watch(link, object : ServiceWatcher.Callbacks {
+                        linkedCreditsWatchers.put(changedFile, service.watch(link, object : ServiceWatcher.Callbacks {
                             override fun content(spreadsheets: List<Spreadsheet>) {
-                                callbacks.pushCreditsSpreadsheets(spreadsheets, link, locatingLog)
+                                creditsWorkbooks[changedFile] = CreditsWorkbook(changedFile.name, link, spreadsheets)
+                                creditsLogs.remove(changedFile)
+                                pushCreditsWorkbooks()
                             }
 
                             override fun problem(problem: ServiceWatcher.Problem) {
@@ -171,30 +186,54 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                                     ServiceWatcher.Problem.INACCESSIBLE -> "projectIO.credits.noAccountGrantsAccess"
                                     ServiceWatcher.Problem.DOWN -> "projectIO.credits.serviceUnresponsive"
                                 }
-                                val msg = ParserMsg(null, null, null, null, ERROR, l10n(key))
-                                callbacks.pushCreditsSpreadsheets(emptyList(), link, locatingLog + msg)
+                                val msg = ParserMsg(changedFile.name, null, null, null, null, ERROR, l10n(key))
+                                creditsWorkbooks[changedFile] = CreditsWorkbook(changedFile.name, link, emptyList())
+                                creditsLogs[changedFile] = listOf(msg)
+                                pushCreditsWorkbooks()
                             }
-                        })
-                        callbacks.creditsPolling(true)
+                        }))?.cancel()
                     }
                 } else {
                     val fmt = SPREADSHEET_FORMATS.first { fmt -> fmt.fileExt.equals(fileExt, ignoreCase = true) }
-                    val (spreadsheets, loadingLog) = fmt.read(activeFile, l10n("project.template.spreadsheetName"))
-                    callbacks.pushCreditsSpreadsheets(spreadsheets, activeFile.toUri(), locatingLog + loadingLog)
+                    val (spreadsheets, loadingLog) = fmt.read(changedFile, l10n("project.template.spreadsheetName"))
+                    creditsWorkbooks[changedFile] = CreditsWorkbook(changedFile.name, changedFile.toUri(), spreadsheets)
+                    creditsLogs[changedFile] = loadingLog
+                    push = true
                 }
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
                 // An IO exception can occur if the credits file has disappeared in the meantime. If that happens,
                 // the file watcher should quickly trigger a call to this method again. Still, we push an
                 // error message in case something else goes wrong too.
-                val note = e.message ?: e.toString()
-                val msg = l10n("projectIO.credits.cannotReadCreditsFile", l10nQuoted(activeFile.name), note)
-                val msgObj = ParserMsg(null, null, null, null, ERROR, msg)
-                callbacks.pushCreditsSpreadsheets(emptyList(), activeFile.toUri(), locatingLog + msgObj)
+                val msg = l10n("projectIO.credits.cannotReadCreditsFile", e.message ?: e.toString())
+                creditsLogs[changedFile] = listOf(ParserMsg(changedFile.name, null, null, null, null, ERROR, msg))
+                push = true
             }
-        } else
-            callbacks.pushCreditsSpreadsheetsLog(locatingLog)
-        currentCreditsFile = activeFile
+        }
+        if (push)
+            pushCreditsWorkbooks()
+    }
+
+    private fun pushCreditsWorkbooks() {
+        val creditsWorkbooks = this.creditsWorkbooks.values
+            // An ad-hoc solution to ignore CSV tape timeline exports.
+            .filterNotTo(mutableListOf()) { wb ->
+                wb.fileName.endsWith(".csv") && wb.spreadsheets.size == 1 &&
+                        wb.spreadsheets[0].run { numRecords != 0 && numColumns != 0 && get(0, 0) == "Record In" }
+            }
+        dedupNames(creditsWorkbooks, CreditsWorkbook::fileName) { w, n -> CreditsWorkbook(n, w.uri, w.spreadsheets) }
+
+        val log = creditsLogs.values.flatMapTo(mutableListOf()) { it }
+        if (creditsWorkbooks.isEmpty() && creditsLogs.isEmpty() && linkedCreditsWatchers.isEmpty()) {
+            val msg = l10n("projectIO.credits.noCreditsFile", "<i>${l10nEnum(CREDITS_EXTS)}</i>")
+            log += ParserMsg(null, null, null, null, null, ERROR, msg)
+        }
+
+        callbacks.pushCreditsWorkbooks(
+            creditsWorkbooks = creditsWorkbooks.sortedBy(CreditsWorkbook::fileName),
+            log = log,
+            pollable = linkedCreditsWatchers.isNotEmpty()
+        )
     }
 
     private fun reloadAuxFileOrDir(fileOrDir: Path) {
@@ -302,48 +341,9 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + SERVICE_LINK_EXTS
         private val FONT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ttf", "ttc", "otf", "otc")
 
-        fun locateCreditsFile(projectDir: Path): Pair<Path?, List<ParserMsg>> {
-            fun availExtsStr() = "<i>${l10nEnum(CREDITS_EXTS)}</i>"
-
-            var creditsFile: Path? = null
-            val log = mutableListOf<ParserMsg>()
-
-            val candidates = getCreditsFileCandidates(projectDir)
-            if (candidates.isEmpty()) {
-                val msg = l10n("projectIO.credits.noCreditsFile", "<i>${availExtsStr()}</i>")
-                log.add(ParserMsg(null, null, null, null, ERROR, msg))
-            } else {
-                creditsFile = candidates.first()
-                if (candidates.size > 1) {
-                    val chosen = l10nQuoted(creditsFile.name)
-                    val msg = l10n("projectIO.credits.multipleCreditsFiles", "<i>${availExtsStr()}</i>", chosen)
-                    log.add(ParserMsg(null, null, null, null, WARN, msg))
-                }
-            }
-
-            return Pair(creditsFile, log)
-        }
-
-        private fun getCreditsFileCandidates(projectDir: Path): List<Path> {
-            val files = try {
-                projectDir.listDirectoryEntries()
-            } catch (e: IOException) {
-                if (e !is NoSuchFileException)
-                    LOGGER.error("Cannot list files in project dir '{}'.", projectDir, e)
-                return emptyList()
-            }
-            return files
-                .filter { file -> file.isRegularFile() && hasCreditsFilename(file) }
-                .sortedBy { file ->
-                    val fileExt = file.extension
-                    CREDITS_EXTS.indexOfFirst { ext -> ext.equals(fileExt, ignoreCase = true) }
-                }
-        }
-
-        private fun hasCreditsFilename(file: Path): Boolean {
+        fun hasCreditsFilename(file: Path): Boolean {
             val fileExt = file.extension
-            return file.nameWithoutExtension.equals("Credits", ignoreCase = true) &&
-                    CREDITS_EXTS.any { ext -> ext.equals(fileExt, ignoreCase = true) }
+            return CREDITS_EXTS.any { ext -> ext.equals(fileExt, ignoreCase = true) }
         }
 
         private fun tryReadFonts(file: Path): List<Font> {
@@ -354,6 +354,18 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     LOGGER.error("Font '{}' cannot be read.", file.name, e)
                 }
             return emptyList()
+        }
+
+        private inline fun <T> dedupNames(list: MutableList<T>, getName: (T) -> String, changeName: (T, String) -> T) {
+            for (idx in list.indices) {
+                val elem = list[idx]
+                var name = getName(elem)
+                var counter = 1
+                while (list.subList(0, idx).any { getName(it) == name })
+                    name = "${getName(elem)} (${++counter})"
+                if (name != getName(elem))
+                    list[idx] = changeName(elem, name)
+            }
         }
 
     }

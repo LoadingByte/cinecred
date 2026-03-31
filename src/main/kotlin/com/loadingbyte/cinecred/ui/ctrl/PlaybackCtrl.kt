@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.ui.*
+import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.JobSlot
@@ -103,7 +104,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     private var selectedDeckLinkPrimaries = ColorSpace.Primaries.BT709
     private var selectedDeckLinkTransfer = ColorSpace.Transfer.BT1886
     private var deckLinkConnected = false
-    private var spreadsheetName: String? = null
+    private var creditsId: CreditsId? = null
     private var videoCanvasSize: Dimension? = null
     private var videoCanvasGCfg: GraphicsConfiguration? = null
     private var actualSize = false
@@ -337,7 +338,9 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
             val drawnProject = this.drawnProject ?: return null
             return Pair(
                 drawnProject.project.styling.global,
-                drawnProject.drawnCredits.find { it.credits.spreadsheetName == spreadsheetName }?.video ?: return null
+                drawnProject.drawnCreditsBooks.find { it.creditsBook.fileName == creditsId?.fileName }
+                    ?.drawnCredits?.find { it.credits.spreadsheetName == creditsId?.spreadsheetName }
+                    ?.video ?: return null
             )
         }
 
@@ -354,13 +357,17 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         val oldGlobal = this.drawnProject?.project?.styling?.global
         val newGlobal = drawnProject.project.styling.global
         this.drawnProject = drawnProject
-        // Just to be sure, filter out spreadsheets which have 0 runtime.
-        val avail = drawnProject.drawnCredits.filter { it.video.numFrames > 0 }.map { it.credits.spreadsheetName }
-        if (spreadsheetName !in avail)
-            spreadsheetName = avail.firstOrNull()
+        val avail = drawnProject.drawnCreditsBooks.flatMap { drCreditsBook ->
+            drCreditsBook.drawnCredits
+                // Just to be sure, filter out spreadsheets which have 0 runtime.
+                .filter { drCredits -> drCredits.video.numFrames > 0 }
+                .map { drCredits -> CreditsId(drCreditsBook.creditsBook.fileName, drCredits.credits.spreadsheetName) }
+        }
+        if (creditsId !in avail)
+            creditsId = avail.firstOrNull()
         for (view in views) {
-            view.setSpreadsheetNames(avail)
-            spreadsheetName?.let(view::setSelectedSpreadsheetName)
+            view.setCreditsIds(avail)
+            creditsId?.let(view::setSelectedCreditsId)
         }
         if (avail.isEmpty()) {
             playRate = 0
@@ -404,8 +411,11 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
             return
         dialogVisible = visible
         projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, visible)
-        if (visible)
-            projectCtrl.projectFrame.panel.selectedSpreadsheetName?.let(::setSelectedSpreadsheetName)
+        if (visible) {
+            val panel = projectCtrl.projectFrame.panel
+            panel.selectedFileName?.let { f -> panel.selectedSpreadsheetName?.let { s -> CreditsId(f, s) } }
+                ?.let(::setSelectedCreditsId)
+        }
         setupAWTFrameSource()
         stopPlayingIfNecessary()
     }
@@ -471,12 +481,12 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
 
     override fun toggleDeckLinkConnected() = setDeckLinkConnected(!deckLinkConnected)
 
-    override fun setSelectedSpreadsheetName(spreadsheetName: String) {
-        if (this.spreadsheetName == spreadsheetName)
+    override fun setSelectedCreditsId(creditsId: CreditsId) {
+        if (this.creditsId == creditsId)
             return
         playRate = 0
-        this.spreadsheetName = spreadsheetName
-        for (view in views) view.setSelectedSpreadsheetName(spreadsheetName)
+        this.creditsId = creditsId
+        for (view in views) view.setSelectedCreditsId(creditsId)
         setupAWTFrameSource()
         setupDeckLinkFrameSource()
     }

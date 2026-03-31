@@ -2,13 +2,13 @@ package com.loadingbyte.cinecred.drawer
 
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.Transition
-import com.loadingbyte.cinecred.project.Project
+import com.loadingbyte.cinecred.project.Styling
 
 
-fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
-    val video = DeferredVideo(project.styling.global.resolution, project.styling.global.fps)
+fun drawVideo(styling: Styling, drawnPages: List<DrawnPage>): DeferredVideo {
+    val video = DeferredVideo(styling.global.resolution, styling.global.fps)
 
-    if (project.styling.global.blankFirstFrame && drawnPages.isNotEmpty())
+    if (styling.global.blankFirstFrame && drawnPages.isNotEmpty())
         video.playBlank(1)
 
     // Write frames for each page as has been configured.
@@ -36,13 +36,13 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
                         lastStage -> fadeOutFrames += opaqueFrames
                     }
                     if (firstStage) {
-                        val transition = project.styling.transitionStyles
+                        val transition = styling.transitionStyles
                             .find { it.name == stage.style.cardFadeInTransitionStyleName }?.graph ?: Transition.LINEAR
                         video.playFade(drawnPage.defImage, fadeInFrames, shift, transition, fadeIn = true)
                     }
                     video.playStatic(drawnPage.defImage, opaqueFrames, shift, 1.0)
                     if (lastStage) {
-                        val transition = project.styling.transitionStyles
+                        val transition = styling.transitionStyles
                             .find { it.name == stage.style.cardFadeOutTransitionStyleName }?.graph ?: Transition.LINEAR
                         video.playFade(drawnPage.defImage, fadeOutFrames, shift, transition, fadeIn = false)
                     }
@@ -77,7 +77,7 @@ fun drawVideo(project: Project, drawnPages: List<DrawnPage>): DeferredVideo {
             video.playBlank(page.gapAfterFrames)
     }
 
-    if (project.styling.global.blankLastFrame && drawnPages.isNotEmpty())
+    if (styling.global.blankLastFrame && drawnPages.isNotEmpty())
         video.playBlank(1)
 
     return video

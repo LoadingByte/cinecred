@@ -55,6 +55,9 @@ class Spreadsheet private constructor(val name: String, val records: List<Record
 // The formats are ordered according to decreasing preference.
 val SPREADSHEET_FORMATS = listOf(XlsxFormat, XlsFormat, OdsFormat, NumbersFormat, CsvFormat)
 
+private const val MAX_ROWS = 1_000_000
+private const val MAX_COLS = 100
+
 
 interface SpreadsheetFormat {
 
@@ -100,11 +103,12 @@ object XlsxFormat : SpreadsheetFormat {
         getNumSheets = { workbook -> workbook.worksheets.size },
         read = { workbook, sheetIdx ->
             val sheet = workbook.worksheets[sheetIdx]
-            val numRows = sheet.lastRowNumber + 1
-            val numCols = sheet.lastColumnNumber + 1
+            val numRows = (sheet.lastRowNumber + 1).coerceAtMost(MAX_ROWS)
+            val numCols = (sheet.lastColumnNumber + 1).coerceAtMost(MAX_COLS)
             val matrix = List(numRows) { MutableList(numCols) { "" } }
             for (cell in sheet.cells.values)
-                cell.value?.let { matrix[cell.rowNumber][cell.columnNumber] = it.toString() }
+                if (cell.rowNumber < MAX_ROWS && cell.columnNumber < MAX_COLS)
+                    cell.value?.let { matrix[cell.rowNumber][cell.columnNumber] = it.toString() }
             Spreadsheet(sheet.sheetName, matrix)
         },
         close = {}
@@ -170,7 +174,9 @@ object XlsFormat : SpreadsheetFormat {
         getNumSheets = { workbook -> workbook.numberOfSheets },
         read = { workbook, sheetIdx ->
             val sheet = workbook.getSheet(sheetIdx)
-            val matrix = List(sheet.rows) { row -> List(sheet.columns) { col -> sheet.getCell(col, row).contents } }
+            val numRows = sheet.rows.coerceAtMost(MAX_ROWS)
+            val numCols = sheet.columns.coerceAtMost(MAX_COLS)
+            val matrix = List(numRows) { row -> List(numCols) { col -> sheet.getCell(col, row).contents } }
             Spreadsheet(sheet.name, matrix)
         },
         close = { workbook -> workbook.close() }
@@ -236,7 +242,9 @@ object OdsFormat : SpreadsheetFormat {
         getNumSheets = { workbook -> workbook.numSheets },
         read = { workbook, sheetIdx ->
             val sheet = workbook.getSheet(sheetIdx)
-            val matrix = sheet.dataRange.values.map { cells -> cells.map { it?.toString() ?: "" } }
+            val numRows = sheet.maxRows.coerceAtMost(MAX_ROWS)
+            val numCols = sheet.maxColumns.coerceAtMost(MAX_COLS)
+            val matrix = List(numRows) { r -> List(numCols) { c -> sheet.getRange(r, c).value?.toString() ?: "" } }
             Spreadsheet(sheet.name, matrix)
         },
         close = {}
@@ -386,8 +394,16 @@ object CsvFormat : SpreadsheetFormat {
         val trimmed = text.removePrefix(0xFEFF.toChar().toString())
 
         // Parse the CSV file into a string matrix.
-        val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler.of(), trimmed)
-            .map(Array<String>::asList)
+        val matrix = CsvReader.builder().skipEmptyLines(false).build(StringArrayHandler.of(), trimmed).use { reader ->
+            buildList {
+                var row = 0
+                for (line in reader) {
+                    add(if (line.size <= MAX_ROWS) line.asList() else line.copyOf(MAX_ROWS).asList())
+                    if (++row == MAX_ROWS)
+                        break
+                }
+            }
+        }
 
         // Create a spreadsheet.
         return Spreadsheet(name, matrix)

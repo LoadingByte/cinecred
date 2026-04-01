@@ -23,6 +23,7 @@ Cinecred Changelog
 
 ### Fixes
 
+- Credits files with ungodly many rows or columns no longer cause a crash.
 - Duplicate spreadsheet names in credits files are now suffixed with, e.g., (2).
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - Timeline export no longer fails upon encountering an image sequence.

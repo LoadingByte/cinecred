@@ -9,12 +9,14 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
-import com.loadingbyte.cinecred.ui.comms.CreditsId
+import com.loadingbyte.cinecred.ui.comms.DeliveryCtrlComms
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
+import com.loadingbyte.cinecred.ui.ctrl.DeliveryCtrl
 import com.loadingbyte.cinecred.ui.ctrl.PlaybackCtrl
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
+import com.loadingbyte.cinecred.ui.view.delivery.DeliveryDialog
 import com.loadingbyte.cinecred.ui.view.playback.PlaybackDialog
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
@@ -63,10 +65,11 @@ class ProjectController(
     // Create and open the project UI.
 
     val playbackCtrl: PlaybackCtrlComms = PlaybackCtrl(this)
+    val deliveryCtrl: DeliveryCtrlComms = DeliveryCtrl(this)
     val projectFrame = ProjectFrame(this)
     val stylingDialog = StylingDialog(this)
     val playbackDialog = PlaybackDialog(this, playbackCtrl)
-    val deliveryDialog = DeliveryDialog(this)
+    val deliveryDialog = DeliveryDialog(this, deliveryCtrl)
 
     init {
         projectFrame.isVisible = true
@@ -143,7 +146,7 @@ class ProjectController(
     }
 
     private val deliveryDestTemplatesListener = { templates: List<DeliveryDestTemplate> ->
-        deliveryDialog.panel.configurationForm.updateDeliveryDestTemplates(templates)
+        deliveryCtrl.setDeliveryDestTemplates(templates)
     }
 
     init {
@@ -351,15 +354,18 @@ class ProjectController(
                 projectFrame.panel.updateProject(drawnProject)
                 stylingDialog.panel.updateProject(drawnProject)
                 playbackCtrl.updateProject(drawnProject)
-                deliveryDialog.panel.configurationForm.updateProject(drawnProject)
+                deliveryCtrl.updateProject(drawnProject)
             }
         }
     }
 
+    fun isCreditsFile(file: Path): Boolean {
+        val uri = file.toUri()
+        return currentInput.get().creditsWorkbooks.any { it.uri == uri }
+    }
+
     fun tryCloseProject(force: Boolean = false): Boolean {
-        if (!projectFrame.panel.onTryCloseProject(force) ||
-            !deliveryDialog.panel.renderQueuePanel.onTryCloseProject(force)
-        )
+        if (!projectFrame.panel.onTryCloseProject(force) || !deliveryCtrl.onTryCloseProject(force))
             return false
 
         playbackCtrl.closeProject()
@@ -387,12 +393,10 @@ class ProjectController(
     fun setDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
         getDialog(type).isVisible = isVisible
         projectFrame.panel.onSetDialogVisible(type, isVisible)
-        if (type == ProjectDialogType.VIDEO)
-            playbackCtrl.setDialogVisibility(isVisible)
-        if (type == ProjectDialogType.DELIVERY && isVisible) {
-            val panel = projectFrame.panel
-            panel.selectedFileName?.let { f -> panel.selectedSpreadsheetName?.let { s -> CreditsId(f, s) } }
-                ?.let(deliveryDialog.panel.configurationForm::setSelectedCreditsId)
+        when (type) {
+            ProjectDialogType.STYLING -> {}
+            ProjectDialogType.VIDEO -> playbackCtrl.setDialogVisibility(isVisible)
+            ProjectDialogType.DELIVERY -> deliveryCtrl.setDialogVisibility(isVisible)
         }
     }
 
@@ -432,7 +436,7 @@ class ProjectController(
                 VK_Q -> tryCloseProject()
                 VK_W -> if (window == projectFrame) tryCloseProject() else
                     setDialogVisible(ProjectDialogType.entries.first { getDialog(it) == window }, false)
-                VK_B if deliveryDialog.isVisible -> deliveryDialog.panel.configurationForm.addRenderJobToQueue()
+                VK_B -> deliveryCtrl.onClickAddRenderJobToQueue()
                 VK_L -> playbackCtrl.toggleDeckLinkConnected()
                 VK_1 -> playbackCtrl.toggleActualSize()
                 else -> return false

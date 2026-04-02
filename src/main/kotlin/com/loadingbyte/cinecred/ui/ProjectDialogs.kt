@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.ui.helper.center
 import com.loadingbyte.cinecred.ui.helper.setup
 import com.loadingbyte.cinecred.ui.helper.snapToSide
 import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
@@ -33,19 +32,6 @@ class StylingDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
         setupProjectDialog(ctrl, ProjectDialogType.STYLING)
         // Make the window fill the right half of the screen.
         snapToSide(ctrl.openOnScreen, rightSide = true)
-        contentPane.add(panel)
-    }
-
-}
-
-
-class DeliveryDialog(ctrl: ProjectController) : JDialog(ctrl.projectFrame) {
-
-    val panel = DeliveryPanel(ctrl)
-
-    init {
-        setupProjectDialog(ctrl, ProjectDialogType.DELIVERY)
-        center(ctrl.openOnScreen, 0.45, 0.7)
         contentPane.add(panel)
     }
 

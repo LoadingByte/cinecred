@@ -210,14 +210,14 @@ abstract class ScreencastDemo(
     protected fun styLayrAdvancedBtn(i: Int) = styLayrPnl(i).getComponent(3) as JToggleButton
     protected fun styLayrDelBtn(i: Int) = styLayrPnl(i).getComponent(4) as JButton
 
-    protected val dlvFormats get() = dlvPnl.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
-    protected val dlvProfiles get() = dlvPnl.configurationForm.leakedProfileWidget.components[0] as JComboBox<*>
-    protected val dlvDestTempl get() = dlvPnl.configurationForm.leakedDestinationWidget.components[0] as JButton
-    protected val dlvTranspar get() = dlvPnl.configurationForm.leakedTransparencyWidget.components[0] as JComboBox<*>
-    protected val dlvSpaceScal get() = dlvPnl.configurationForm.leakedSpatialScalingWidget.components[0] as JComboBox<*>
-    protected val dlvScan get() = dlvPnl.configurationForm.leakedScanWidget.components[0] as JComboBox<*>
-    protected val dlvPrimaries get() = dlvPnl.configurationForm.leakedPrimariesWidget.components[0] as JComboBox<*>
-    protected val dlvTransfer get() = dlvPnl.configurationForm.leakedTransferWidget.components[0] as JComboBox<*>
+    protected val dlvFormats get() = dlvPnl.leakedConfigForm.leakedFormatWidget.components[0] as JComboBox<*>
+    protected val dlvProfiles get() = dlvPnl.leakedConfigForm.leakedProfileWidget.components[0] as JComboBox<*>
+    protected val dlvDestTempl get() = dlvPnl.leakedConfigForm.leakedDestinationWidget.components[0] as JButton
+    protected val dlvTranspar get() = dlvPnl.leakedConfigForm.leakedTransparencyWidget.components[0] as JComboBox<*>
+    protected val dlvSpaceScal get() = dlvPnl.leakedConfigForm.leakedSpatialScalingWidget.components[0] as JComboBox<*>
+    protected val dlvScan get() = dlvPnl.leakedConfigForm.leakedScanWidget.components[0] as JComboBox<*>
+    protected val dlvPrimaries get() = dlvPnl.leakedConfigForm.leakedPrimariesWidget.components[0] as JComboBox<*>
+    protected val dlvTransfer get() = dlvPnl.leakedConfigForm.leakedTransferWidget.components[0] as JComboBox<*>
 
     protected lateinit var optionPaneWin: BackedVirtualWindow; private set
     protected lateinit var optionPaneDialog: JDialog; private set

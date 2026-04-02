@@ -392,7 +392,7 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click()
         sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ColorSpace.Transfer.PQ))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvPnl.addButton))
+        sc.mouseTo(dlvWin.desktopPosOf(dlvPnl.leakedAddButton))
         sc.click(8 * hold)
 
         RenderQueue.cancelAllJobs()

@@ -98,6 +98,11 @@ object RenderQueue {
         }
     }
 
+    fun hasUnfinishedJobs(category: Any): Boolean =
+        pollJobLock.withLock {
+            runningJob?.category == category || !queuedJobs[category].isNullOrEmpty()
+        }
+
     fun getNumberOfRemainingJobs(): Int =
         pollJobLock.withLock {
             var n = 0

@@ -48,6 +48,6 @@ abstract class ProjectDemo(filename: String, format: Format) : Demo(filename, fo
     protected val plyControls get() = plyPanel.leakedControlsPanel
     protected val dlvDialog get() = projectCtrl.deliveryDialog
     protected val dlvPanel get() = dlvDialog.panel
-    protected val dlvFormatCB get() = dlvPanel.configurationForm.leakedFormatWidget.components[0] as JComboBox<*>
+    protected val dlvFormatCB get() = dlvPanel.leakedConfigForm.leakedFormatWidget.components[0] as JComboBox<*>
 
 }

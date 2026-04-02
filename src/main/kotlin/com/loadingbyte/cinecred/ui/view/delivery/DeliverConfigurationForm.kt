@@ -1,8 +1,12 @@
-package com.loadingbyte.cinecred.ui
+package com.loadingbyte.cinecred.ui.view.delivery
 
 import com.formdev.flatlaf.FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT
-import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.delivery.*
+import com.loadingbyte.cinecred.common.Severity
+import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nQuoted
+import com.loadingbyte.cinecred.common.toPathSafely
+import com.loadingbyte.cinecred.delivery.ImageSequenceRenderJob
+import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.RenderFormat.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.CINEFORM_PROFILE
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.DEPTH
@@ -21,51 +25,41 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TIFF_CO
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSFER
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPARENCY
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
-import com.loadingbyte.cinecred.drawer.DrawnCredits
-import com.loadingbyte.cinecred.drawer.DrawnPage
-import com.loadingbyte.cinecred.drawer.DrawnProject
+import com.loadingbyte.cinecred.delivery.VideoContainerRenderJob
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
-import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
+import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder
-import com.loadingbyte.cinecred.ui.comms.CreditsId
+import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.*
 import java.awt.Dimension
 import java.io.File
-import java.nio.file.Path
-import java.text.DecimalFormat
 import java.time.ZonedDateTime
 import java.time.format.TextStyle
 import java.util.*
 import javax.swing.*
-import javax.swing.JOptionPane.*
-import kotlin.io.path.*
+import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 import kotlin.jvm.optionals.getOrNull
-import kotlin.math.floor
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 
-class DeliverConfigurationForm(private val ctrl: ProjectController) :
-    EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
+    EasyForm(insets = false, noticeArea = true, constLabelWidth = false), DeliveryViewComms {
 
     companion object {
 
-        private val WHOLE_PAGE_FORMATS = WholePageSequenceRenderJob.FORMATS + WholePagePDFRenderJob.FORMATS
-        private val VIDEO_FORMATS = VideoContainerRenderJob.FORMATS + ImageSequenceRenderJob.FORMATS
-        private val ALL_FORMATS = WHOLE_PAGE_FORMATS + VIDEO_FORMATS + TapeTimelineRenderJob.FORMATS
-
         private val VOLATILE_PROPERTIES: Set<Property<*>> = hashSetOf(DEPTH, YUV)
 
-        val RenderFormat.categoryLabel
+        val RenderFormatCategory.label
             get() = when (this) {
-                in WHOLE_PAGE_FORMATS -> l10n("ui.deliverConfig.wholePageFormat.short")
-                in VIDEO_FORMATS -> l10n("ui.deliverConfig.videoFormat")
-                in TapeTimelineRenderJob.FORMATS -> l10n("ui.deliverConfig.timelineFormat.short")
-                else -> throw IllegalArgumentException()
+                RenderFormatCategory.WHOLE_PAGE -> l10n("ui.deliverConfig.wholePageFormat.short")
+                RenderFormatCategory.VIDEO -> l10n("ui.deliverConfig.videoFormat")
+                RenderFormatCategory.TAPE_TIMELINE -> l10n("ui.deliverConfig.timelineFormat.short")
             }
 
     }
@@ -81,9 +75,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     @Deprecated("ENCAPSULATION LEAK") val leakedPrimariesWidget get() = primariesWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedTransferWidget get() = transferWidget
     // =========================================
-
-    private var drawnProject: DrawnProject? = null
-    private var specs = DeliverySpecs.UNKNOWN
 
     private val creditsIdWidget =
         OptionalComboBoxWidget(
@@ -114,7 +105,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private val formatWidget = addWidget(
         l10n("ui.deliverConfig.format"),
         ComboBoxWidget(
-            RenderFormat::class.java, ALL_FORMATS, widthSpec = WidthSpec.WIDER, scrollbar = false,
+            RenderFormat::class.java,
+            items = RenderFormatCategory.WHOLE_PAGE.formats +
+                    RenderFormatCategory.VIDEO.formats +
+                    RenderFormatCategory.TAPE_TIMELINE.formats,
+            widthSpec = WidthSpec.WIDER, scrollbar = false,
             toString = { format ->
                 var fullLabel = format.label
                 format.auxLabel?.let { fullLabel += " ($it)" }
@@ -122,15 +117,16 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     in ImageSequenceRenderJob.FORMATS -> l10n("ui.deliverConfig.imageSequenceFormat", fullLabel)
                     else -> fullLabel
                 }
-                "${format.categoryLabel}  \u2013  $label"
+                "${RenderFormatCategory.of(format).label}  \u2013  $label"
             },
             // Use a custom render that shows category headers.
             rendererDecorator = object : AbstractComboBoxWidget.RendererDecorator {
                 override fun <I> decorate(renderer: ListCellRenderer<I>) = LabeledListCellRenderer(renderer) { index ->
                     when (index) {
                         0 -> listOf(l10n("ui.deliverConfig.wholePageFormat"))
-                        WHOLE_PAGE_FORMATS.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
-                        WHOLE_PAGE_FORMATS.size + VIDEO_FORMATS.size -> listOf(l10n("ui.deliverConfig.timelineFormat"))
+                        RenderFormatCategory.WHOLE_PAGE.formats.size -> listOf(l10n("ui.deliverConfig.videoFormat"))
+                        RenderFormatCategory.WHOLE_PAGE.formats.size + RenderFormatCategory.VIDEO.formats.size ->
+                            listOf(l10n("ui.deliverConfig.timelineFormat"))
                         else -> emptyList()
                     }
                 }
@@ -207,7 +203,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         )
     )
 
-    private val destinationWidget = DestinationWidget(ctrl)
+    private val destinationWidget = DestinationWidget(deliveryCtrl)
     private val destinationFormRow = FormRow(l10n("ui.deliverRenderQueue.destination"), destinationWidget)
         .also(::addFormRow)
 
@@ -289,6 +285,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
     private var disableOnChange = false
 
     init {
+        deliveryCtrl.registerView(this)
+
         // Get the form into a reasonable state even before the drawn project arrives.
         onChange(formatWidget)
     }
@@ -299,13 +297,11 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
 
         disableOnChange = true
         if (widget == creditsIdWidget) {
-            // Populate the page number options.
-            pushPageIdxOptions(reset = true)
             // Notify the destination widget.
             destinationWidget.creditsId = creditsIdWidget.value.getOrNull()
         } else if (widget == formatWidget) {
             val format = formatWidget.value
-            val wholePage = format in WHOLE_PAGE_FORMATS
+            val wholePage = format in RenderFormatCategory.WHOLE_PAGE.formats
             pageIndicesWidget.isVisible = wholePage
             firstPageIdxWidget.isVisible = !wholePage
             lastPageIdxWidget.isVisible = !wholePage
@@ -313,8 +309,8 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             pushFormatPropertyOptions(format.defaultConfig, formatChanged = true)
         } else if (widget == pageIndicesWidget || widget == firstPageIdxWidget || widget == lastPageIdxWidget) {
             destinationWidget.extremePageIndices = when {
-                formatWidget.value in WHOLE_PAGE_FORMATS -> pageIndicesWidget.value.let {
-                    if (it.isEmpty()) Pair(0, selectedDrawnCredits?.drawnPages?.ifEmpty { null }?.lastIndex ?: 0)
+                formatWidget.value in RenderFormatCategory.WHOLE_PAGE.formats -> pageIndicesWidget.value.let {
+                    if (it.isEmpty()) Pair(0, pageIndicesWidget.items.lastOrNull() ?: 0)
                     else Pair(it.first(), it.last())
                 }
                 else -> Pair(firstPageIdxWidget.value, lastPageIdxWidget.value)
@@ -362,139 +358,23 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             destinationFormRow.noticeOverride = notice
         }
 
-        // Update the specs labels and determine whether the specs are valid.
-        // Then disable the add button if there are errors in the form or the specs are invalid.
-        // We need the null-safe access because this method might be called before everything is initialized.
-        val dialog = ctrl.deliveryDialog as DeliveryDialog?
-        if (dialog != null)
-            dialog.panel.addButton.isEnabled = updateAndVerifySpecs(dialog.panel) && isErrorFree
-    }
-
-    private fun updateAndVerifySpecs(panel: DeliveryPanel): Boolean {
-        val project = (drawnProject ?: return false).project
-        val credits = (selectedDrawnCredits ?: return false).credits
-
-        val format = formatWidget.value
-        val config = currentConfig() ?: return false
-        val sliders = currentSliders()
-        val spatialScaling = 2.0.pow(config.getOrDefault(SPATIAL_SCALING_LOG2))
-        val fpsScaling = config.getOrDefault(FPS_SCALING)
-        val scan = config.getOrDefault(SCAN)
-        val primaries = config.getOrDefault(PRIMARIES)
-        val transfer = config.getOrDefault(TRANSFER)
-
-        // Determine the scaled specs.
-        val resolution = project.styling.global.resolution
-        val scaledWidth = sliders.resolution?.widthPx ?: (spatialScaling * resolution.widthPx).roundToInt()
-        val scaledHeight = sliders.resolution?.heightPx ?: (spatialScaling * resolution.heightPx).roundToInt()
-        val scaledFPS = project.styling.global.fps.frac * fpsScaling
-        val scrollSpeeds = credits.pages.asSequence()
-            .flatMap { page -> page.stages }
-            .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
-            .map { stage -> stage.style.scrollPxPerFrame }
-            .associateWith { speed -> speed * spatialScaling / fpsScaling }
-
-        // Format the scaled specs.
-        val decFmt = DecimalFormat("0.##")
-        val specsFPS = decFmt.format(scaledFPS)
-        val specsScan = if (scan == Scan.PROGRESSIVE) "p" else "i"
-        val specsChannels = when (config.getOrDefault(TRANSPARENCY)) {
-            Transparency.GROUNDED -> "RGB"
-            Transparency.TRANSPARENT -> "RGBA"
-            Transparency.MATTE -> "A"
-        }
-        specs = DeliverySpecs(
-            depth = config.getOrDefault(DEPTH),
-            width = scaledWidth,
-            height = scaledHeight,
-            fps = specsFPS,
-            scan = specsScan,
-            channels = specsChannels,
-            primaries = primaries.name,
-            transfer = transfer.name,
-            optResolution = if (SPATIAL_SCALING_LOG2 !in config) null else "$scaledWidth \u00D7 $scaledHeight",
-            optFPSAndScan = if (FPS_SCALING !in config) null else specsFPS + specsScan,
-            optColorSpace = if (PRIMARIES !in config) null else "$primaries / $transfer"
+        disableOnChange = true
+        deliveryCtrl.onChangeForm(
+            creditsIdWidget.value.getOrNull(),
+            widget == creditsIdWidget,
+            formatWidget.value,
+            currentConfig(),
+            currentSliders(),
+            isErrorFree
         )
-
-        // Display the scaled specs in the specs labels.
-        panel.specsLabels[0].text = specs.optResolution ?: "\u2014"
-        panel.specsLabels[1].text = specs.optFPSAndScan ?: "\u2014"
-        panel.specsLabels[2].text = specs.optColorSpace ?: "\u2014"
-        panel.specsLabels[3].text =
-            if (FPS_SCALING !in config || scrollSpeeds.isEmpty()) "\u2014" else {
-                val speedsDesc = when (scan) {
-                    Scan.PROGRESSIVE -> l10n("ui.delivery.scrollPxPerFrame")
-                    else -> l10n("ui.delivery.scrollPxPerFrameAndField")
-                }
-                val speedsCont = scrollSpeeds.entries.joinToString("   ") { (s1, s2) ->
-                    buildString {
-                        if (s1 != s2)
-                            append(decFmt.format(s1)).append(" \u2192 ")
-                        append(decFmt.format(s2))
-                        if (scan != Scan.PROGRESSIVE)
-                            append("/").append(decFmt.format(s2 / 2.0))
-                    }
-                }
-                "$speedsDesc   $speedsCont"
-            }
-
-        // Clear all previous issues and create new ones if applicable.
-        panel.clearIssues()
-        var err = false
-        fun warn(msg: String) = panel.addIssue(WARN_ICON, msg)
-        fun error(msg: String) = panel.addIssue(ERROR_ICON, msg).also { err = true }
-        // Check for violated restrictions of the currently selected format.
-        val forLabel = format.label
-        if (SPATIAL_SCALING_LOG2 in config) {
-            if (scaledWidth % format.widthMod != 0)
-                error(l10n("ui.delivery.issues.widthMod", forLabel, format.widthMod))
-            if (scaledHeight % format.heightMod != 0)
-                error(l10n("ui.delivery.issues.heightMod", forLabel, format.heightMod))
-            if (format.minWidth != null && scaledWidth < format.minWidth)
-                error(l10n("ui.delivery.issues.minWidth", forLabel, format.minWidth))
-            if (format.minHeight != null && scaledHeight < format.minHeight)
-                error(l10n("ui.delivery.issues.minHeight", forLabel, format.minHeight))
-        }
-        // Check for fractional scroll speeds.
-        if (FPS_SCALING in config) {
-            if (scrollSpeeds.values.any { s2 -> floor(s2) != s2 })
-                warn(l10n("ui.delivery.issues.fractionalFrameShift"))
-            if (scan != Scan.PROGRESSIVE && scrollSpeeds.values.any { s2 -> floor(s2 / 2.0) != s2 / 2.0 })
-                warn(l10n("ui.delivery.issues.fractionalFieldShift"))
-        }
-        // Check for popping extremal scroll stages due to an enlarged vertical resolution.
-        if (sliders.resolution != null && scaledHeight > (spatialScaling * resolution.heightPx).roundToInt() &&
-            credits.pages
-                .flatMap { page -> listOf(page.stages.first(), page.stages.last()) }
-                .any { stage -> stage.style.behavior == PageBehavior.SCROLL }
-        )
-            warn(l10n("ui.delivery.issues.poppingScrollPages"))
-
-        // Notify the destination widget about the new specs.
-        destinationWidget.specs = specs
-
-        return !err
-    }
-
-    private fun pushPageIdxOptions(reset: Boolean) {
-        val pageIndices = selectedDrawnCredits?.drawnPages?.indices?.toList() ?: emptyList()
-        val pageCountChanged = pageIndices.size != lastPageIdxWidget.items.size
-        pageIndicesWidget.items = pageIndices
-        firstPageIdxWidget.items = pageIndices
-        lastPageIdxWidget.items = pageIndices
-        if (pageIndices.isNotEmpty() && (reset || pageCountChanged)) {
-            pageIndicesWidget.value = emptyList()
-            firstPageIdxWidget.value = pageIndices.first()
-            lastPageIdxWidget.value = pageIndices.last()
-        }
+        disableOnChange = false
     }
 
     private fun pushFormatPropertyOptions(config: Config, formatChanged: Boolean) {
         pushFormatPropertyOptions(profilePropertyFor(config), profileWidget, config, formatChanged)
         pushFormatPropertyOptions(TRANSPARENCY, transparencyWidget, config, formatChanged)
         pushFormatPropertyOptions(SPATIAL_SCALING_LOG2, spatialScalingWidget, config, formatChanged)
-        resolutionWidget.isEnabled = formatWidget.value in VIDEO_FORMATS
+        resolutionWidget.isEnabled = formatWidget.value in RenderFormatCategory.VIDEO.formats
         pushFormatPropertyOptions(FPS_SCALING, fpsScalingWidget, config, formatChanged)
         pushFormatPropertyOptions(SCAN, scanWidget, config, formatChanged)
         pushFormatPropertyOptions(DEPTH, depthWidget, config, formatChanged)
@@ -526,103 +406,6 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         PDF_PROFILE in config -> PDF_PROFILE
         else -> null
     }
-
-    fun addRenderJobToQueue() {
-        val drawnProject = this.drawnProject
-        val drawnCredits = selectedDrawnCredits
-        if (drawnProject == null || drawnCredits == null)
-            showMessageDialog(
-                ctrl.deliveryDialog, l10n("ui.deliverConfig.noPages.msg"),
-                l10n("ui.deliverConfig.noPages.title"), ERROR_MESSAGE
-            )
-        else {
-            val format = formatWidget.value
-            val config = currentConfig() ?: return
-            val sliders = currentSliders()
-            val styling = drawnProject.project.styling
-
-            val wholePage = format in WHOLE_PAGE_FORMATS
-            val drawnPages = drawnCredits.drawnPages
-            val pageIndices =
-                if (wholePage) pageIndicesWidget.value.ifEmpty { drawnPages.indices.toList() }
-                else (firstPageIdxWidget.value..lastPageIdxWidget.value).toList()
-            val pageDefImages = drawnPages.filterIndexed { idx, _ -> idx in pageIndices }.map(DrawnPage::defImage)
-            val video = if (wholePage) null else drawnCredits.video.sub(
-                // Special cases for the first and large image ensure that surrounding black frames are retained.
-                if (0 in pageIndices) null else pageDefImages.first(),
-                if (drawnPages.lastIndex in pageIndices) null else pageDefImages.last()
-            )
-
-            val destinationValue = destinationWidget.value
-            val fileOrDir = destinationValue.fileOrDir
-
-            fun wrongFileTypeDialog(msg: String) = showMessageDialog(
-                ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.wrongFileType.title"), ERROR_MESSAGE
-            )
-
-            fun overwriteDialog(msg: String) = showConfirmDialog(
-                ctrl.deliveryDialog, msg, l10n("ui.deliverConfig.overwrite.title"), OK_CANCEL_OPTION
-            ) == OK_OPTION
-
-            fun overwriteProjectDirDialog() = showMessageDialog(
-                ctrl.deliveryDialog, l10n("ui.deliverConfig.overwriteProjectDir.msg"),
-                l10n("ui.deliverConfig.overwriteProjectDir.title"), ERROR_MESSAGE
-            )
-
-            // If there is any issue with the output file or folder, inform the user and abort if necessary.
-            if (format.fileSeq) {
-                if (fileOrDir.exists() && !fileOrDir.isAccessibleDirectory()) {
-                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.file", l10nQuoted(fileOrDir)))
-                    return
-                } else if (fileOrDir == ctrl.projectDir) {
-                    overwriteProjectDirDialog()
-                    return
-                } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirReused", l10nQuoted(fileOrDir))))
-                        return
-                } else if (fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true))
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.seqDirNonEmpty", l10nQuoted(fileOrDir))))
-                        return
-            } else {
-                if (fileOrDir.isDirectory()) {
-                    wrongFileTypeDialog(l10n("ui.deliverConfig.wrongFileType.dir", l10nQuoted(fileOrDir)))
-                    return
-                } else if (RenderQueue.isRenderedFileOfRemainingJob(fileOrDir)) {
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileReused", l10nQuoted(fileOrDir))))
-                        return
-                } else if (fileOrDir.exists())
-                    if (!overwriteDialog(l10n("ui.deliverConfig.overwrite.singleFileExists", l10nQuoted(fileOrDir))))
-                        return
-            }
-
-            val filenameHashPattern = destinationValue.filenameHashPattern ?: ""
-            val filenamePattern = filenameHashPattern.replace(Regex("#+")) { match -> "%0${match.value.length}d" }
-
-            val renderJob = format.createRenderJob(
-                config, sliders, styling, pageDefImages, video, fileOrDir, filenamePattern
-            )
-
-            val info = DeliverRenderQueuePanel.RenderJobInfo(
-                creditsId = creditsIdWidget.value.get(),
-                pages = when {
-                    pageIndices.size == drawnPages.size -> l10n("ui.deliverConfig.pagesAll")
-                    wholePage -> pageIndices.joinToString { "${it + 1}" }
-                    else -> "${pageIndices.first() + 1} \u2013 ${pageIndices.last() + 1}"
-                },
-                format.categoryLabel, format.label, specs.optResolution, specs.optFPSAndScan, specs.optColorSpace,
-                destination = if (!format.fileSeq) fileOrDir.pathString else
-                    fileOrDir.resolve(filenameHashPattern).pathString
-            )
-
-            ctrl.deliveryDialog.panel.renderQueuePanel.addRenderJobToQueue(renderJob, info)
-        }
-    }
-
-    private val selectedDrawnCredits: DrawnCredits?
-        get() = creditsIdWidget.value.getOrNull()?.let { selId ->
-            drawnProject?.drawnCreditsBooks?.find { it.creditsBook.fileName == selId.fileName }
-                ?.drawnCredits?.find { it.credits.spreadsheetName == selId.spreadsheetName }
-        }
 
     private fun currentConfig(ignoreVolatile: Boolean = false): Config? {
         val format = formatWidget.value
@@ -660,57 +443,66 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         return lookup.findConfig(format)
     }
 
-    private fun currentSliders(): Sliders =
-        Sliders(if (formatWidget.value in VIDEO_FORMATS) resolutionWidget.value.getOrNull() else null)
+    private fun currentSliders() = Sliders(
+        if (formatWidget.value in RenderFormatCategory.VIDEO.formats) resolutionWidget.value.getOrNull() else null
+    )
 
-    fun updateProject(drawnProject: DrawnProject) {
-        this.drawnProject = drawnProject
 
-        creditsIdWidget.items = drawnProject.drawnCreditsBooks.flatMap { drCreditsBook ->
-            drCreditsBook.drawnCredits
-                // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
-                .filter { drCredits -> drCredits.video.numFrames > 0 }
-                .map { drCredits -> CreditsId(drCreditsBook.creditsBook.fileName, drCredits.credits.spreadsheetName) }
-        }
+    /* ***************************
+       ********** COMMS **********
+       *************************** */
 
-        // Update the page number options.
-        pushPageIdxOptions(reset = false)
-
-        // Re-verify the spatial scaling because with the update, the page scroll speeds might have changed.
-        onChange(spatialScalingWidget)
+    override fun setSpecs(specs: DeliverySpecs) {
+        destinationWidget.specs = specs
     }
 
-    fun setSelectedCreditsId(creditsId: CreditsId) {
+    override fun setCreditsIds(creditsIds: List<CreditsId>): CreditsId? {
+        creditsIdWidget.items = creditsIds
+        return creditsIdWidget.value.getOrNull()
+    }
+
+    override fun setSelectedCreditsId(creditsId: CreditsId) {
         creditsIdWidget.value = Optional.of(creditsId)
     }
 
-    fun updateDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
-        destinationWidget.updateTemplates(templates)
-    }
-
-
-    private class DeliverySpecs(
-        val depth: Int,
-        val width: Int,
-        val height: Int,
-        val fps: String,
-        val scan: String,
-        val channels: String,
-        val primaries: String,
-        val transfer: String,
-        val optResolution: String?,
-        val optFPSAndScan: String?,
-        val optColorSpace: String?
-    ) {
-        companion object {
-            val UNKNOWN = DeliverySpecs(0, 0, 0, "?", "?", "?", "?", "?", "?", "?", "?")
+    override fun setPageIdxOptions(pageIndices: List<Int>, reset: Boolean) {
+        val pageCountChanged = pageIndices.size != lastPageIdxWidget.items.size
+        pageIndicesWidget.items = pageIndices
+        firstPageIdxWidget.items = pageIndices
+        lastPageIdxWidget.items = pageIndices
+        if (pageIndices.isNotEmpty() && (reset || pageCountChanged)) {
+            pageIndicesWidget.value = emptyList()
+            firstPageIdxWidget.value = pageIndices.first()
+            lastPageIdxWidget.value = pageIndices.last()
         }
     }
 
+    override fun refreshScrollSpeeds() {
+        onChange(spatialScalingWidget)
+    }
 
-    private class DestinationWidget(private val ctrl: ProjectController) : AbstractWidget<DestinationWidget.Value>() {
+    override fun setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
+        destinationWidget.updateTemplates(templates)
+    }
 
-        class Value(val fileOrDir: Path, val filenameHashPattern: String?)
+    override fun triggerAddRenderJobToQueue() {
+        val format = formatWidget.value
+        val wholePage = format in RenderFormatCategory.WHOLE_PAGE.formats
+        deliveryCtrl.addRenderJobToQueue(
+            creditsIdWidget.value.getOrNull() ?: return,
+            format,
+            currentConfig() ?: return,
+            currentSliders(),
+            pageIndices =
+                if (wholePage) pageIndicesWidget.value.ifEmpty { pageIndicesWidget.items }
+                else (firstPageIdxWidget.value..lastPageIdxWidget.value).toList(),
+            destinationWidget.value
+        )
+    }
+
+
+    private class DestinationWidget(private val deliveryCtrl: DeliveryCtrlComms) :
+        AbstractWidget<RenderJobDestination>() {
 
         private val bundledTemplates = listOf(
             listOf(Placeholder.PROJECT),
@@ -732,7 +524,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
         }
 
         private val pathWidget = TextWidget(widthSpec = WidthSpec.NONE).apply {
-            value = ctrl.projectDir.absolutePathString()
+            value = deliveryCtrl.getProjectDir().absolutePathString()
         }
 
         private val browseBtn = JButton(FOLDER_ICON).apply { toolTipText = l10n("ui.form.browse") }
@@ -841,7 +633,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             }
             templateMenu.add(JSeparator())
             templateMenu.add(JMenuItem(l10n("ui.deliverConfig.destinationTemplate.add"), ARROW_RIGHT_ICON).apply {
-                addActionListener { ctrl.masterCtrl.showDeliveryDestTemplateCreation() }
+                addActionListener { deliveryCtrl.showDeliveryDestTemplateCreation() }
             })
             templateMenu.pack()
         }
@@ -858,7 +650,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                 refreshLabels()
             }
 
-        var format = ALL_FORMATS.first()
+        var format = RenderFormatCategory.WHOLE_PAGE.formats.first()
             set(format) {
                 field = format
                 suffixWidget.isVisible = format.fileSeq
@@ -879,7 +671,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             updateTemplates(emptyList())
         }
 
-        override var value: Value
+        override var value: RenderJobDestination
             get() {
                 val template = selectedTemplate
                 val ext = extWidget.value
@@ -890,7 +682,7 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
                     path = path.resolveSibling("${path.name}.$ext")
                 path = path.normalize()
                 val filenameHashPattern = if (format.fileSeq) "${path.name}${suffixWidget.value}.$ext" else null
-                return Value(path, filenameHashPattern)
+                return RenderJobDestination(path, filenameHashPattern)
             }
             set(_) = throw UnsupportedOperationException()
 
@@ -920,13 +712,13 @@ class DeliverConfigurationForm(private val ctrl: ProjectController) :
             val dt = ZonedDateTime.now()
             return template.fill { placeholder ->
                 when (placeholder) {
-                    Placeholder.PROJECT -> ctrl.projectName
+                    Placeholder.PROJECT -> deliveryCtrl.getProjectName()
                     Placeholder.CREDITS_FILENAME ->
                         SPREADSHEET_FORMATS.fold(creditsId?.fileName ?: "") { f, s -> f.removeSuffix("." + s.fileExt) }
                     Placeholder.SPREADSHEET -> creditsId?.spreadsheetName ?: ""
                     Placeholder.FIRST_PAGE -> "%02d".format(extremePageIndices.first + 1)
                     Placeholder.LAST_PAGE -> "%02d".format(extremePageIndices.second + 1)
-                    Placeholder.FORMAT_CATEGORY -> format.categoryLabel
+                    Placeholder.FORMAT_CATEGORY -> RenderFormatCategory.of(format).label
                     Placeholder.FORMAT -> format.label
                     Placeholder.BIT_DEPTH -> specs.depth.toString()
                     Placeholder.WIDTH -> specs.width.toString()

@@ -9,9 +9,11 @@ import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.project.st
-import com.loadingbyte.cinecred.ui.DeliverRenderQueuePanel
 import com.loadingbyte.cinecred.ui.ProjectDialogType
 import com.loadingbyte.cinecred.ui.comms.CreditsId
+import com.loadingbyte.cinecred.ui.comms.RenderFormatCategory
+import com.loadingbyte.cinecred.ui.comms.RenderJobInfo
+import com.loadingbyte.cinecred.ui.comms.RenderJobStatus
 import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
@@ -109,14 +111,14 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
-            dlvPanel.configurationForm.leakedDestinationWidgetTemplateMenu.components
+            dlvPanel.leakedConfigForm.leakedDestinationWidgetTemplateMenu.components
                 .filterIsInstance<DropdownPopupMenuCheckBoxItem<*>>().single { it.item == null }.doClick()
-            (dlvPanel.configurationForm.leakedDestinationWidget.components[1] as JTextField).text = "/Render.mp4"
+            (dlvPanel.leakedConfigForm.leakedDestinationWidget.components[1] as JTextField).text = "/Render.mp4"
             addDummyRenderJob(false, WholePagePDFRenderJob.FORMATS[0])
             addDummyRenderJob(true, VideoContainerRenderJob.H264)
             addDummyRenderJob(true, VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
             addDummyRenderJob(true, ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" })
-            dlvPanel.renderQueuePanel.apply {
+            dlvPanel.leakedRenderQueuePanel.apply {
                 leakedProgressSetter(0, isFinished = true)
                 leakedProgressSetter(1, isFinished = true)
                 leakedProgressSetter(2, progress = 800)
@@ -135,23 +137,23 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
         var dest = "Render"
         if (format.fileSeq) dest += "/Render.#######"
         dest += "." + format.defaultFileExt
-        val info = DeliverRenderQueuePanel.RenderJobInfo(
+        val jobInfo = RenderJobInfo(
+            object : RenderJob {
+                override val prefix get() = Path("")
+                override fun render(progressCallback: (Int) -> Unit) = throw UnsupportedOperationException()
+            },
             CreditsId("Credits.xlsx", l10n("project.template.spreadsheetName")),
             l10n("ui.deliverConfig.pagesAll"),
-            l10n(if (videoOrStills) "ui.deliverConfig.videoFormat" else "ui.deliverConfig.wholePageFormat.short"),
+            if (videoOrStills) RenderFormatCategory.VIDEO else RenderFormatCategory.WHOLE_PAGE,
             format.label,
             PRESET_GLOBAL.resolution.run { "$widthPx \u00D7 $heightPx" },
             "${PRESET_GLOBAL.fps}p",
             "${RenderFormat.Property.PRIMARIES.standardDefault} / ${RenderFormat.Property.TRANSFER.standardDefault}",
             dest
         )
-        dlvPanel.renderQueuePanel.addRenderJobToQueue(DummyRenderJob(), info)
+        dlvPanel.leakedRenderQueuePanel.addRenderJobToQueue(jobInfo, RenderJobStatus.Queued)
     }
 
-    private class DummyRenderJob : RenderJob {
-        override val prefix get() = Path("")
-        override fun render(progressCallback: (Int) -> Unit) = throw UnsupportedOperationException()
-    }
 }
 
 

@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.projectio.service.*
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
+import com.loadingbyte.cinecred.ui.helper.useAppleScriptFileChooser
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
@@ -58,6 +59,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     }
     private val projectHintTrackPendingListener = { pending: Boolean ->
         welcomeView.preferences_start_setProjectHintTrackPending(pending)
+    }
+    private val appleScriptFileChooserListener = { use: Boolean ->
+        welcomeView.preferences_start_setAppleScriptFileChooser(use)
+        useAppleScriptFileChooser = use
     }
     private val accountListListener = {
         SwingUtilities.invokeLater {
@@ -110,6 +115,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
+        appleScriptFileChooserListener(APPLE_SCRIPT_FILE_CHOOSER.get())
         accountListListener()
         overlaysListener(OVERLAYS_PREFERENCE.get())
         deliveryDestTemplatesListener(DELIVERY_DEST_TEMPLATES_PREFERENCE.get())
@@ -301,6 +307,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             CHECK_FOR_UPDATES_PREFERENCE.addListener(checkForUpdatesListener)
             WELCOME_HINT_TRACK_PENDING_PREFERENCE.addListener(welcomeHintTrackPendingListener)
             PROJECT_HINT_TRACK_PENDING_PREFERENCE.addListener(projectHintTrackPendingListener)
+            APPLE_SCRIPT_FILE_CHOOSER.addListener(appleScriptFileChooserListener)
             // If enabled, check for updates and run the welcome hint track.
             tryCheckForUpdates()
             if (WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
@@ -336,6 +343,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         CHECK_FOR_UPDATES_PREFERENCE.removeListener(checkForUpdatesListener)
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.removeListener(welcomeHintTrackPendingListener)
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
+        APPLE_SCRIPT_FILE_CHOOSER.removeListener(appleScriptFileChooserListener)
         removeAccountListListener(accountListListener)
         OVERLAYS_PREFERENCE.removeListener(overlaysListener)
         DELIVERY_DEST_TEMPLATES_PREFERENCE.removeListener(deliveryDestTemplatesListener)

@@ -24,6 +24,7 @@ val UI_LOCALE_PREFERENCE: Preference<LocaleWish> = LocaleWishPreference("uiLocal
 val CHECK_FOR_UPDATES_PREFERENCE: Preference<Boolean> = BooleanPreference("checkForUpdates", true)
 val WELCOME_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("welcomeHintTrackPending", true)
 val PROJECT_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("projectHintTrackPending", true)
+val APPLE_SCRIPT_FILE_CHOOSER: Preference<Boolean> = BooleanPreference("appleScriptFileChooser", false)
 val DECK_LINK_ID_PREFERENCE: Preference<String> = StringPreference("deckLinkId", "null")
 val DECK_LINK_MODE_PREFERENCE: Preference<String> = StringPreference("deckLinkMode", "null")
 val DECK_LINK_DEPTH_PREFERENCE: Preference<Int> = IntPreference("deckLinkDepth", 8)

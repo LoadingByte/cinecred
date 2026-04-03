@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.toPathSafely
@@ -21,6 +22,8 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.name
 
 
+var useAppleScriptFileChooser = false
+
 /** @param initialFolderOrFile A folder when [open] is true, and a file otherwise. */
 fun showFileDialog(
     parent: Window?,
@@ -37,6 +40,22 @@ fun showFileDialog(
     } else {
         folder = findFirstExistingAncestorFolder(initialFolderOrFile?.parent)
         filename = initialFolderOrFile?.name
+    }
+
+    if (SystemInfo.isMacOS && useAppleScriptFileChooser) {
+        val method: String
+        val args = mutableListOf<String>()
+        if (open) {
+            method = "choose file"
+            args += "of type {${filterExts.joinToString { "\"$it\"" }}}"
+        } else {
+            method = "choose file name"
+            if (filename != null)
+                args += "default name \"$filename\""
+        }
+        if (folder != null)
+            args += "default location \"${folder.absolutePathString()}\""
+        return showFileOrFolderDialogViaAppleScript("POSIX path of($method ${args.joinToString(" ")})")
     }
 
     // Don't block the AWT thread with native calls to avoid rare hangs.
@@ -87,6 +106,13 @@ fun showFolderDialog(
 ): Path? {
     val folder = findFirstExistingAncestorFolder(initialFolder)
 
+    if (SystemInfo.isMacOS && useAppleScriptFileChooser) {
+        val args = mutableListOf<String>()
+        if (folder != null)
+            args += "default location \"${folder.absolutePathString()}\""
+        return showFileOrFolderDialogViaAppleScript("POSIX path of (choose folder ${args.joinToString(" ")})")
+    }
+
     // Don't block the AWT thread with native calls to avoid rare hangs.
     val ref = AtomicReference<Path?>()
     Thread({
@@ -136,6 +162,13 @@ private fun consumeOutPath(outPathPtr: MemorySegment): Path? {
     val outPath = outPathHandle.getString(0L)
     NFD_FreePathU8(outPathHandle)
     return outPath.toPathSafely()
+}
+
+
+private fun showFileOrFolderDialogViaAppleScript(script: String): Path? {
+    val process = ProcessBuilder(listOf("osascript", "-")).start()
+    process.outputWriter().use { it.write(script) }
+    return if (process.waitFor() != 0) null else Path(process.inputReader().readText().removeSuffix("\n"))
 }
 
 

@@ -28,6 +28,11 @@ Cinecred Changelog
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - Timeline export no longer fails upon encountering an image sequence.
 
+### UI Fixes
+
+- If the macOS file chooser freezes the entire program, another way of opening
+  the chooser, which hopefully doesn't, can now be selected in the preferences.
+
 ### Compatibility Notes
 
 - Dropped support for dot leaders when the head or tail is vertically justified

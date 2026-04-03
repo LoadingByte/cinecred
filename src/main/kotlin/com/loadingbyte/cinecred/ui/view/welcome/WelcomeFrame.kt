@@ -105,6 +105,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.startPreferencesForm.preferences_start_setWelcomeHintTrackPending(pending)
     override fun preferences_start_setProjectHintTrackPending(pending: Boolean) =
         panel.preferencesPanel.startPreferencesForm.preferences_start_setProjectHintTrackPending(pending)
+    override fun preferences_start_setAppleScriptFileChooser(use: Boolean) =
+        panel.preferencesPanel.startPreferencesForm.preferences_start_setAppleScriptFileChooser(use)
     override fun preferences_start_setAccounts(accounts: List<Account>) =
         panel.preferencesPanel.preferences_start_setAccounts(accounts)
     override fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) =

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
@@ -47,6 +48,11 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
         CheckBoxWidget()
     )
 
+    private val appleScriptFileChooserWidget = if (!SystemInfo.isMacOS) null else addWidget(
+        l10n("ui.preferences.appleScriptFileChooser"),
+        CheckBoxWidget()
+    )
+
     private var disableOnChange = false
 
     private fun <V : Any> load(widget: Widget<V>, value: V) {
@@ -74,6 +80,8 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
                 forward(WELCOME_HINT_TRACK_PENDING_PREFERENCE, welcomeHintTrckPendingWidget.value)
             projectHintTrckPendingWidget ->
                 forward(PROJECT_HINT_TRACK_PENDING_PREFERENCE, projectHintTrckPendingWidget.value)
+            appleScriptFileChooserWidget ->
+                forward(APPLE_SCRIPT_FILE_CHOOSER, appleScriptFileChooserWidget.value)
             else -> throw IllegalStateException("Unknown widget, should never happen.")
         }
         super.onChange(widget)
@@ -94,5 +102,8 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
     fun preferences_start_setCheckForUpdates(check: Boolean) = load(checkForUpdatesWidget, check)
     fun preferences_start_setWelcomeHintTrackPending(pending: Boolean) = load(welcomeHintTrckPendingWidget, pending)
     fun preferences_start_setProjectHintTrackPending(pending: Boolean) = load(projectHintTrckPendingWidget, pending)
+    fun preferences_start_setAppleScriptFileChooser(use: Boolean) {
+        appleScriptFileChooserWidget?.let { load(it, use) }
+    }
 
 }

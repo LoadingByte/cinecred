@@ -20,7 +20,7 @@ val slf4jVersion = "2.0.17"
 val twelveMonkeysVersion = "3.12.0"
 val javacppVersion = "1.5.12"
 val ffmpegVersion = "7.1.1-$javacppVersion"
-val flatlafVersion = "3.6.1"
+val flatlafVersion = "3.7.1"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
@@ -404,7 +404,6 @@ val checkoutZimg by tasks.registering(CheckoutGitRef::class) {
 val checkoutNFD by tasks.registering(CheckoutGitRef::class) {
     uri = "https://github.com/btzy/nativefiledialog-extended.git"
     ref = nfdVersion
-    patch = "/nfd.patch"
     repositoryDir = layout.buildDirectory.dir("repositories/nfd")
 }
 
@@ -443,13 +442,13 @@ for (platform in Platform.entries) {
         outputFile = srcMainNatives(platform).file(platform.os.codeLib("zimg"))
     }
 
-    tasks.register<BuildNFD>("buildNFDFor${platform.label.capitalized()}") {
-        group = "Native"
-        description = "Builds the NFD native library for ${platform.label.capitalized()}."
-        forPlatform = platform
-        repositoryDir = checkoutNFD.flatMap { it.repositoryDir }
-        outputFile = srcMainNatives(platform).file(platform.os.codeLib("nfd"))
-    }
+    if (platform == Platform.LINUX)
+        tasks.register<BuildNFD>("buildNFDFor${platform.label.capitalized()}") {
+            group = "Native"
+            description = "Builds the NFD native library for ${platform.label.capitalized()}."
+            repositoryDir = checkoutNFD.flatMap { it.repositoryDir }
+            outputFile = srcMainNatives(platform).file(platform.os.codeLib("nfd"))
+        }
 
     tasks.register<BuildDeckLinkCAPI>("buildDeckLinkCAPIFor${platform.label.capitalized()}") {
         group = "Native"

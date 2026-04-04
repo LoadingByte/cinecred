@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
+import com.formdev.flatlaf.util.SystemFileChooser
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.l10n
@@ -13,9 +14,6 @@ import java.lang.foreign.MemorySegment.NULL
 import java.lang.foreign.ValueLayout.ADDRESS
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
-import javax.swing.JFileChooser
-import javax.swing.JPanel
-import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.isDirectory
@@ -58,37 +56,41 @@ fun showFileDialog(
         return showFileOrFolderDialogViaAppleScript("POSIX path of($method ${args.joinToString(" ")})")
     }
 
-    // Don't block the AWT thread with native calls to avoid rare hangs.
-    val ref = AtomicReference<Path?>()
-    Thread({
-        try {
-            if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
-                val outPathPtr = arena.allocate(ADDRESS)
-                val filterHandle = nfdu8filteritem_t.allocate(arena)
-                nfdu8filteritem_t.name(filterHandle, arena.allocateFrom(filterName))
-                nfdu8filteritem_t.spec(filterHandle, arena.allocateFrom(filterExts.joinToString(",")))
-                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
-                val result = if (open)
-                    NFD_OpenDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle)
-                else {
-                    val defaultNameHandle = filename?.let(arena::allocateFrom) ?: NULL
-                    NFD_SaveDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle, defaultNameHandle)
+    // FlatLaf uses GTK on Linux, but we want to use our own portals-based library instead.
+    if (SystemInfo.isLinux) {
+        // Don't block the AWT thread with native calls to avoid rare hangs.
+        val ref = AtomicReference<Path?>()
+        Thread({
+            try {
+                if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
+                    val outPathPtr = arena.allocate(ADDRESS)
+                    val filterHandle = nfdu8filteritem_t.allocate(arena)
+                    nfdu8filteritem_t.name(filterHandle, arena.allocateFrom(filterName))
+                    nfdu8filteritem_t.spec(filterHandle, arena.allocateFrom(filterExts.joinToString(",")))
+                    val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
+                    val result = if (open)
+                        NFD_OpenDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle)
+                    else {
+                        val defaultNameHandle = filename?.let(arena::allocateFrom) ?: NULL
+                        NFD_SaveDialogU8(outPathPtr, filterHandle, 1, defaultPathHandle, defaultNameHandle)
+                    }
+                    when (result) {
+                        NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
+                        NFD_CANCEL() -> ref.set(SENTINEL)
+                        NFD_ERROR() -> logCurrentError()
+                    }
                 }
-                when (result) {
-                    NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
-                    NFD_CANCEL() -> ref.set(SENTINEL)
-                    NFD_ERROR() -> logCurrentError()
-                }
+            } finally {
+                NFD_Quit()
             }
-        } finally {
-            NFD_Quit()
-        }
-    }, "FileDialog").apply { start(); join() }
-    ref.get()?.let { return if (it === SENTINEL) null else it }
+        }, "FileDialog").apply { start(); join() }
+        ref.get()?.let { return if (it === SENTINEL) null else it }
+    }
 
-    val fc = JFileChooser()
+    val fc = SystemFileChooser()
     val desc = "$filterName (${filterExts.joinToString()})"
-    fc.addChoosableFileFilter(FileNameExtensionFilter(desc, *filterExts.toTypedArray()))
+    fc.addChoosableFileFilter(SystemFileChooser.FileNameExtensionFilter(desc, *filterExts.toTypedArray()))
+    fc.isAcceptAllFileFilterUsed = false
     val option = if (open) {
         fc.currentDirectory = folder?.toFile()
         fc.showOpenDialog(parent)
@@ -96,7 +98,7 @@ fun showFileDialog(
         fc.selectedFile = folder?.resolve(filename!!)?.toFile()
         fc.showSaveDialog(parent)
     }
-    return if (option == JFileChooser.APPROVE_OPTION) fc.selectedFile.toPathSafely() else null
+    return if (option == SystemFileChooser.APPROVE_OPTION) fc.selectedFile.toPathSafely() else null
 }
 
 
@@ -113,33 +115,32 @@ fun showFolderDialog(
         return showFileOrFolderDialogViaAppleScript("POSIX path of (choose folder ${args.joinToString(" ")})")
     }
 
-    // Don't block the AWT thread with native calls to avoid rare hangs.
-    val ref = AtomicReference<Path?>()
-    Thread({
-        try {
-            if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
-                val outPathPtr = arena.allocate(ADDRESS)
-                val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
-                when (NFD_PickFolderU8(outPathPtr, defaultPathHandle)) {
-                    NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
-                    NFD_CANCEL() -> ref.set(SENTINEL)
-                    NFD_ERROR() -> logCurrentError()
+    // FlatLaf uses GTK on Linux, but we want to use our own portals-based library instead.
+    if (SystemInfo.isLinux) {
+        // Don't block the AWT thread with native calls to avoid rare hangs.
+        val ref = AtomicReference<Path?>()
+        Thread({
+            try {
+                if (NFD_Init() == NFD_ERROR()) logCurrentError() else Arena.ofConfined().use { arena ->
+                    val outPathPtr = arena.allocate(ADDRESS)
+                    val defaultPathHandle = folder?.absolutePathString()?.let(arena::allocateFrom) ?: NULL
+                    when (NFD_PickFolderU8(outPathPtr, defaultPathHandle)) {
+                        NFD_OKAY() -> ref.set(consumeOutPath(outPathPtr))
+                        NFD_CANCEL() -> ref.set(SENTINEL)
+                        NFD_ERROR() -> logCurrentError()
+                    }
                 }
+            } finally {
+                NFD_Quit()
             }
-        } finally {
-            NFD_Quit()
-        }
-    }, "FileDialog").apply { start(); join() }
-    ref.get()?.let { return if (it === SENTINEL) null else it }
+        }, "FileDialog").apply { start(); join() }
+        ref.get()?.let { return if (it === SENTINEL) null else it }
+    }
 
-    val fc = JFileChooser(folder?.toFile())
-    fc.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-    // Remove the file type selection.
-    val bottomPanel = (fc.getComponent(0) as JPanel).getComponent(3) as JPanel
-    bottomPanel.remove(2)  // Remove the file type panel.
-    bottomPanel.remove(1)  // Remove the vertical strut.
+    val fc = SystemFileChooser(folder?.toFile())
+    fc.fileSelectionMode = SystemFileChooser.DIRECTORIES_ONLY
     val option = fc.showDialog(parent, l10n("ok"))
-    return if (option == JFileChooser.APPROVE_OPTION) fc.selectedFile.toPathSafely() else null
+    return if (option == SystemFileChooser.APPROVE_OPTION) fc.selectedFile.toPathSafely() else null
 }
 
 

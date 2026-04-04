@@ -73,7 +73,8 @@ fun main(args: Array<String>) {
     System.loadLibrary("skiacapi")
     System.loadLibrary("harfbuzz")
     System.loadLibrary("zimg")
-    System.loadLibrary("nfd")
+    if (SystemInfo.isLinux)
+        System.loadLibrary("nfd")
     System.loadLibrary("decklinkcapi")
 
     // Make JavaCPP and FlatLaf load their native libraries from java.library.path.

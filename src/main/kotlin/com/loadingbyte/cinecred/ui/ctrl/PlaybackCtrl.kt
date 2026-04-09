@@ -487,6 +487,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         playRate = 0
         this.creditsId = creditsId
         for (view in views) view.setSelectedCreditsId(creditsId)
+        numFrames = globalAndVideo!!.second.numFrames
         setupAWTFrameSource()
         setupDeckLinkFrameSource()
     }

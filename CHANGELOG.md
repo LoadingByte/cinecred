@@ -30,6 +30,7 @@ Cinecred Changelog
 
 ### UI Fixes
 
+- The video preview now updates the duration when switching between sheets.
 - If the macOS file chooser freezes the entire program, another way of opening
   the chooser, which hopefully doesn't, can now be selected in the preferences.
 

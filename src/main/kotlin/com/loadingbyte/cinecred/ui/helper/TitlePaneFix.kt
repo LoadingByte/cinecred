@@ -57,7 +57,7 @@ private class CcTitlePane(rootPane: JRootPane) : FlatTitlePane(rootPane) {
         override fun componentResized(e: ComponentEvent) {
             super.componentResized(e)
             // Mark the window as no longer maximized when the user or another function in this class resizes it.
-            if (isDialog() && restoreBounds != null && window.bounds != maximizedBounds) {
+            if (isDialog() && restoreBounds != null && window.boundsExclMargin != maximizedBounds) {
                 restoreBounds = null
                 maximizedBounds = null
                 maximizeButton.isVisible = true
@@ -88,9 +88,9 @@ private class CcTitlePane(rootPane: JRootPane) : FlatTitlePane(rootPane) {
     override fun maximize() {
         super.maximize()
         if (isDialog()) {
-            restoreBounds = window.bounds
+            restoreBounds = window.boundsExclMargin
             maximizedBounds = window.graphicsConfiguration.usableBounds
-            window.bounds = maximizedBounds!!
+            window.boundsExclMargin = maximizedBounds!!
             maximizeButton.isVisible = false
             restoreButton.isVisible = true
         }
@@ -99,7 +99,7 @@ private class CcTitlePane(rootPane: JRootPane) : FlatTitlePane(rootPane) {
     override fun restore() {
         super.restore()
         if (isDialog())
-            restoreBounds?.let { window.bounds = it }
+            restoreBounds?.let { window.boundsExclMargin = it }
     }
 
     private fun isDialog() =

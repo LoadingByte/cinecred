@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.ui.comms.DockableId.LOG
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.lang.Thread.sleep
@@ -35,9 +36,12 @@ val GUIDE_LETTER_STYLE_LAYER_DEMOS
 
 
 @Suppress("DEPRECATION")
-object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Format.VIDEO_GIF, 1100, 600) {
+object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Format.VIDEO_GIF, 1100, 700) {
     override fun generate() {
-        addProjectWindows(snapRatio = 0.33, styWinSplitRatio = 0.17)
+        addProjectWindows(
+            dockedTrees.apply { single().root.ratio = 0.33; leaf(LOG).collapsed = true },
+            styWinSplitRatio = 0.17
+        )
 
         val oldStyling = projectCtrl.stylingHistory.current
         val oldStyle = oldStyling.letterStyles.first { it.name == l10n("project.template.letterStyleCardName") }
@@ -48,8 +52,8 @@ object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Forma
             letterStyles = oldStyling.letterStyles.map { if (it === oldStyle) newStyle else it }.toPersistentList(),
         )
         edt {
-            prjPnl.leakedGuidesButton.isSelected = false
-            prjImagePnl(0).apply { zoom = 2.0; leakedViewportCenterSetter(x = 1200.0) }
+            tolDok.leakedGuidesButton.isSelected = false
+            prjImagePnl(0).apply { zoom = 3.0; leakedViewportCenterSetter(x = 1030.0) }
             projectCtrl.stylingHistory.loadAndRedraw(newStyling)
         }
         sleep(500)
@@ -59,25 +63,25 @@ object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Forma
         sleep(500)
 
         sc.hold(hold)
-        sc.mouseTo(styWin.desktopPosOf(styLayrAddBtn(1)))
+        sc.mouseTo(prjWin.desktopPosOf(styLayrAddBtn(1)))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOf(styLetrFormScrollBar))
+        sc.mouseTo(prjWin.desktopPosOf(styLetrFormScrollBar))
         dt.mouseDown()
-        sc.mouseTo(styWin.desktopPosOf(styLetrFormScrollBar).apply { y += 140 })
+        sc.mouseTo(prjWin.desktopPosOf(styLetrFormScrollBar).apply { y += 140 })
         dt.mouseUp()
         sc.hold(4 * hold)
-        sc.demonstrateSetting(styWin, styLayrForm(1), Layer::stripePreset.st(), 2)
-        sc.type(styWin, styLayrNameField(1), l10n("project.StripePreset.STRIKETHROUGH"), 4 * hold)
-        sc.mouseTo(styWin.desktopPosOf(styLayrAdvancedBtn(1)))
+        sc.demonstrateSetting(prjWin, styLayrForm(1), Layer::stripePreset.st(), 2)
+        sc.type(prjWin, styLayrNameField(1), l10n("project.StripePreset.STRIKETHROUGH"), 4 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(styLayrAdvancedBtn(1)))
         sc.click(4 * hold)
         sc.click()
-        sc.mouseTo(styWin.desktopPosOf(styLayrGrip(1)))
+        sc.mouseTo(prjWin.desktopPosOf(styLayrGrip(1)))
         dt.mouseDownAndDrag()
         sc.hold()
-        sc.mouseTo(styWin.desktopPosOf(styLayrAddBtn(0)), 2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(styLayrAddBtn(0)), 2 * hold)
         dt.mouseUp()
         sc.hold(4 * hold)
-        sc.mouseTo(styWin.desktopPosOf(styLayrDelBtn(0)))
+        sc.mouseTo(prjWin.desktopPosOf(styLayrDelBtn(0)))
         sc.click(4 * hold)
     }
 }

@@ -4,13 +4,14 @@ import com.formdev.flatlaf.FlatClientProperties.STYLE_CLASS
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
+import com.loadingbyte.cinecred.ui.Shortcut
+import com.loadingbyte.cinecred.ui.Shortcut.*
 import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.event.ItemEvent
-import java.awt.event.KeyEvent.*
 import javax.swing.*
 
 
@@ -49,7 +50,7 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
     init {
         playbackCtrl.registerView(this)
 
-        deckLinkConfigButton = newToolbarButton(GEAR_ICON, l10n("ui.video.configureDeckLink"), 0, 0)
+        deckLinkConfigButton = newToolbarButton(GEAR_ICON, l10n("ui.video.configureDeckLink"))
         deckLinkConfigMenu = DropdownPopupMenu(deckLinkConfigButton)
         deckLinkConfigMenu.addMouseListenerTo(deckLinkConfigButton)
         deckLinkConfigMenu.addKeyListenerTo(deckLinkConfigButton)
@@ -76,10 +77,10 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         deckLinkConfigMenu.add(deckLinkPrimariesSubmenu)
         deckLinkConfigMenu.add(deckLinkTransferSubmenu)
 
-        deckLinkConnectedButton =
-            newToolbarToggleButton(PLUG_ICON, l10n("ui.video.connectToDeckLink"), VK_L, CTRL_DOWN_MASK) { isSelected ->
-                playbackCtrl.setDeckLinkConnected(isSelected)
-            }
+        deckLinkConnectedButton = newToolbarToggleButton(
+            PLUG_ICON, l10n("ui.video.connectToDeckLink"), PLAYBACK_TOGGLE_DECK_LINK_CONNECTED,
+            listener = playbackCtrl::setDeckLinkConnected
+        )
 
         creditsIdComboBox = JComboBox<CreditsIdWrapper>().apply {
             isFocusable = false
@@ -90,9 +91,9 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         }
 
         val rewindIcon = PLAY_ICON.getScaledIcon(-1.0, 1.0)
-        rewindButton = newToolbarPlayButton(rewindIcon, l10n("ui.video.rewind"), VK_J, playbackCtrl::rewind)
-        pauseButton = newToolbarPlayButton(PAUSE_ICON, l10n("ui.video.pause"), VK_K, playbackCtrl::pause)
-        playButton = newToolbarPlayButton(PLAY_ICON, l10n("ui.video.play"), VK_L, playbackCtrl::play)
+        rewindButton = newToolbarPlayButton(rewindIcon, l10n("ui.video.rewind"), PLAYBACK_REWIND, playbackCtrl::rewind)
+        pauseButton = newToolbarPlayButton(PAUSE_ICON, l10n("ui.video.pause"), PLAYBACK_PAUSE, playbackCtrl::pause)
+        playButton = newToolbarPlayButton(PLAY_ICON, l10n("ui.video.play"), PLAYBACK_PLAY, playbackCtrl::play)
 
         frameSlider = JSlider().also { frameSlider ->
             frameSlider.value = 0
@@ -122,11 +123,11 @@ class PlaybackControlsPanel(private val playbackCtrl: PlaybackCtrlComms) : JPane
         add(pauseButton)
         add(playButton)
         add(frameSlider, "wmin 120, growx, pushx")
-        add(timecodeLabel)
+        add(timecodeLabel, "wmin 120")
     }
 
-    private fun newToolbarPlayButton(icon: Icon, ttip: String, kc: Int, listener: () -> Unit) =
-        newToolbarToggleButton(icon, ttip, kc, 0).also { btn ->
+    private fun newToolbarPlayButton(icon: Icon, ttip: String, shortcut: Shortcut, listener: () -> Unit) =
+        newToolbarToggleButton(icon, ttip, shortcut).also { btn ->
             // Register an ActionListener (and not an ItemListener) to prevent feedback loops.
             btn.addActionListener { listener() }
         }

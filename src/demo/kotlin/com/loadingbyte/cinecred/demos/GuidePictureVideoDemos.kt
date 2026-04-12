@@ -7,6 +7,8 @@ import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.ui.comms.DockableId.LOG
+import com.loadingbyte.cinecred.ui.comms.DockableId.STYLING
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Dimension
@@ -37,11 +39,11 @@ val GUIDE_PICTURE_VIDEO_DEMOS
 
 @Suppress("DEPRECATION")
 object GuidePictureVideoAutoAddDemo : ScreencastDemo(
-    "$DIR/auto-add", Format.VIDEO_GIF, 1100, 600
+    "$DIR/auto-add", Format.VIDEO_GIF, 1100, 650
 ) {
     override fun generate() {
         val creditsFile = projectDir.resolve("${projectDir.name}.csv")
-        addProjectWindows(hideStyWin = true, prepareProjectDir = {
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true }, prepareProjectDir = {
             val lines = creditsFile.readLines().toMutableList()
             val idx = lines.indexOfFirst { "Dirc Director" in it }
             lines[idx] = lines[idx].replace("A,", ",").replace(",Film,", ",,")
@@ -52,6 +54,7 @@ object GuidePictureVideoAutoAddDemo : ScreencastDemo(
             val logosDir = projectDir.resolve("Logos")
             logosDir.resolve("Cinecred H.svg").moveTo(logosDir.resolve("Cinecred.svg"))
         })
+        edt { projectCtrl.setDockableCollapsed(STYLING, true) }
 
         val oldStyling = projectCtrl.stylingHistory.current
         val newStyling = oldStyling.copy(
@@ -82,22 +85,22 @@ object GuidePictureVideoAutoAddDemo : ScreencastDemo(
 
         sc.hold(2 * hold)
         sc.type(spreadsheetEditorWin, 6, 1, "{{${l10n("projectIO.credits.table.pic")} Cinecred}}", 8 * hold)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
         sc.click(4 * hold)
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, "Cinecred"))
+        sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, "Cinecred"))
         sc.click(12 * hold)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
         sc.click()
         sc.type(spreadsheetEditorWin, 6, 1, "{{${l10n("projectIO.credits.table.pic")} Cinecred.svg}}")
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
         sc.click(8 * hold)
         sc.click()
         sc.type(spreadsheetEditorWin, 6, 1, "{{${l10n("projectIO.credits.table.pic")} Cinecred Cropped}}")
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, "Cinecred Cropped"))
+        sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, "Cinecred Cropped"))
         sc.click()
-        sc.demonstrateSetting(styWin, styPictForm, PictureStyle::cropBlankSpace.st(), 0)
+        sc.demonstrateSetting(prjWin, styPictForm, PictureStyle::cropBlankSpace.st(), 0)
         sc.hold(4 * hold)
     }
 }

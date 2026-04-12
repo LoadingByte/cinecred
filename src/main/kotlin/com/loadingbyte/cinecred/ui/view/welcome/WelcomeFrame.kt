@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.*
+import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -16,18 +17,17 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.nio.file.Path
 import java.util.*
-import javax.swing.JFrame
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 
-class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.welcome.title")), WelcomeViewComms {
+class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : CcFrame(l10n("ui.welcome.title")), WelcomeViewComms {
 
     val panel = WelcomePanel(welcomeCtrl)
 
     init {
-        setup(welcomeFrame = true)
-        iconImages = WINDOW_ICON_IMAGES
+        minimumSize = minimumFrameSize
+        defaultCloseOperation = DO_NOTHING_ON_CLOSE
 
         addWindowListener(object : WindowAdapter() {
             override fun windowOpened(e: WindowEvent) {
@@ -41,10 +41,9 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
             }
         })
 
-        rememberedBounds?.also(::setBounds) ?: center(
-            onScreen = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration,
-            0.4, 0.55
-        )
+        bounds = rememberedBounds
+            ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+                .usableBounds.centered(0.4, 0.55, minimumSize)
 
         contentPane.add(panel)
     }
@@ -60,16 +59,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
     override fun isFromWelcomeWindow(event: KeyEvent): Boolean = SwingUtilities.getRoot(event.component) == this
     // @formatter:on
 
-    override fun getMostOccupiedScreen() =
-        if (isVisible)
-            graphicsConfiguration!!
-        else {
-            // This branch is used when opening a project without actually showing the welcome frame, i.e., when
-            // dragging a project folder onto the program.
-            GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
-                .map { dev -> dev.defaultConfiguration }
-                .maxByOrNull { cfg -> cfg.bounds.intersection(bounds).run { if (isEmpty) 0 else width * height } }!!
-        }
+    override fun getMostOccupiedScreen() = mostOccupiedGraphicsConfiguration
 
     override fun playHintTrack() {
         makeWelcomeHintTrack(this).play(onPass = welcomeCtrl::onPassHintTrack)
@@ -111,6 +101,8 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
         panel.preferencesPanel.preferences_start_setAccounts(accounts)
     override fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean) =
         panel.preferencesPanel.preferences_start_setAccountRemovalLocked(account, locked)
+    override fun preferences_start_setWindowLayouts(layouts: List<WindowLayout>, defaultLayout: WindowLayout) =
+        panel.preferencesPanel.preferences_start_setWindowLayouts(layouts, defaultLayout)
     override fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>) =
         panel.preferencesPanel.preferences_start_setOverlays(overlays)
     override fun preferences_start_setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) =
@@ -213,6 +205,7 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : JFrame(l10n("ui.
 
 
     companion object {
+        var minimumFrameSize = Dimension(700, 500)
         private var rememberedBounds: Rectangle? = null
     }
 

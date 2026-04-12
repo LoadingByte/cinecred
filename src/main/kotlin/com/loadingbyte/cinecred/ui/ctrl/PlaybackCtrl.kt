@@ -18,6 +18,7 @@ import com.loadingbyte.cinecred.ui.helper.JobSlot
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.Transparency
+import java.awt.Window
 import java.awt.image.BufferedImage
 import java.lang.invoke.MethodHandles
 import java.util.concurrent.CancellationException
@@ -31,7 +32,7 @@ import kotlin.concurrent.withLock
 import kotlin.math.*
 
 
-class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlComms {
+class PlaybackCtrl : PlaybackCtrlComms {
 
     private val views = mutableListOf<PlaybackViewComms>()
 
@@ -97,13 +98,14 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
 
     // Supplied by other controllers or the UI.
     private var drawnProject: DrawnProject? = null
-    private var dialogVisible = false
+    private var visible = false
     private var selectedDeckLink: DeckLink? = null
     private var selectedDeckLinkMode: DeckLink.Mode? = null
     private var selectedDeckLinkDepth = DeckLink.Depth.D8
     private var selectedDeckLinkPrimaries = ColorSpace.Primaries.BT709
     private var selectedDeckLinkTransfer = ColorSpace.Transfer.BT1886
     private var deckLinkConnected = false
+    private var previewCreditsId: CreditsId? = null
     private var creditsId: CreditsId? = null
     private var videoCanvasSize: Dimension? = null
     private var videoCanvasGCfg: GraphicsConfiguration? = null
@@ -141,7 +143,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     private var playRate = 0
         set(value) {
             val playRate =
-                if (drawnProject == null || !dialogVisible && activeDeckLink == null) 0 else value.coerceIn(-8, 8)
+                if (drawnProject == null || !visible && activeDeckLink == null) 0 else value.coerceIn(-8, 8)
             for (view in views) view.setPlaybackDirection(playRate.sign)
             if (field != playRate) {
                 field = playRate
@@ -155,14 +157,14 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     }
 
     private fun stopPlayingIfNecessary() {
-        if (!dialogVisible && activeDeckLink == null)
+        if (!visible && activeDeckLink == null)
             playRate = 0
     }
 
     private fun setupAWTFrameSource() {
         val (global, video) = globalAndVideo ?: return
 
-        // Abort if the dialog has never been shown on the screen yet, which would have it in a pre-initialized state
+        // Abort if the dockable has never been shown on the screen yet, which would have it in a pre-initialized state
         // that this method can't cope with. As soon as it is shown for the first time, the resize listener will be
         // notified and call this method again.
         val gCfg = videoCanvasGCfg ?: return
@@ -178,10 +180,10 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         viewScaling = 1.0 / systemScaling
 
         val frameIdx = this.frameIdx
-        val dialogVisible = this.dialogVisible
+        val visible = this.visible
         setupAWTJobSlot.submit {
             // Protect against too small canvas sizes.
-            val newAWTFrameSource = if (!dialogVisible || awtFrameSourceScaling < 0.001) null else {
+            val newAWTFrameSource = if (!visible || awtFrameSourceScaling < 0.001) null else {
                 val scaledVideo = video.copy(resolutionScaling = awtFrameSourceScaling)
                 val bitmapJ2DBridge = BitmapJ2DBridge(nativeCM)
                 FrameSource(
@@ -353,6 +355,8 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         views += view
     }
 
+    override fun isFullScreenWindow(window: Window) = views.any { view -> view.isFullScreenWindow(window) }
+
     override fun updateProject(drawnProject: DrawnProject) {
         val oldGlobal = this.drawnProject?.project?.styling?.global
         val newGlobal = drawnProject.project.styling.global
@@ -404,18 +408,15 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
         DECK_LINK_PRI_PREFERENCE.set(selectedDeckLinkPrimaries.code)
         DECK_LINK_TRC_PREFERENCE.set(selectedDeckLinkTransfer.canonCode)
         DECK_LINK_CONNECTED_PREFERENCE.set(deckLinkConnected)
+        for (view in views) view.disposeResources()
     }
 
-    override fun setDialogVisibility(visible: Boolean) {
-        if (dialogVisible == visible)
+    override fun onShowOrHide(visible: Boolean) {
+        if (this.visible == visible)
             return
-        dialogVisible = visible
-        projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, visible)
-        if (visible) {
-            val panel = projectCtrl.projectFrame.panel
-            panel.selectedFileName?.let { f -> panel.selectedSpreadsheetName?.let { s -> CreditsId(f, s) } }
-                ?.let(::setSelectedCreditsId)
-        }
+        this.visible = visible
+        if (visible)
+            previewCreditsId?.let(::setSelectedCreditsId)
         setupAWTFrameSource()
         stopPlayingIfNecessary()
     }
@@ -481,6 +482,10 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
 
     override fun toggleDeckLinkConnected() = setDeckLinkConnected(!deckLinkConnected)
 
+    override fun setPreviewCreditsId(creditsId: CreditsId?) {
+        previewCreditsId = creditsId
+    }
+
     override fun setSelectedCreditsId(creditsId: CreditsId) {
         if (this.creditsId == creditsId)
             return
@@ -503,7 +508,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     }
 
     override fun scrub(frameIdx: Int) {
-        if (!dialogVisible && selectedDeckLink == null)
+        if (!visible && selectedDeckLink == null)
             return
         this.frameIdx = frameIdx
         if (playRate == 0) {
@@ -549,7 +554,7 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
     }
 
     override fun setActualSize(actualSize: Boolean) {
-        if (!dialogVisible)
+        if (!visible)
             return
         this.actualSize = actualSize
         for (view in views) view.setActualSize(actualSize)
@@ -558,12 +563,11 @@ class PlaybackCtrl(private val projectCtrl: ProjectController) : PlaybackCtrlCom
 
     override fun toggleActualSize() = setActualSize(!actualSize)
 
-    override fun setFullScreen(fullScreen: Boolean) {
-        if (dialogVisible) for (view in views) view.setFullScreen(fullScreen)
-    }
+    override fun setFullScreen(fullScreen: Boolean): Boolean =
+        if (visible) views.any { view -> view.setFullScreen(fullScreen) } else false
 
     override fun toggleFullScreen() {
-        if (dialogVisible) for (view in views) view.toggleFullScreen()
+        if (visible) for (view in views) view.toggleFullScreen()
     }
 
 

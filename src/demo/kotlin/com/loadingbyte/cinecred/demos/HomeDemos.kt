@@ -9,21 +9,17 @@ import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.Opt
 import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.project.st
-import com.loadingbyte.cinecred.ui.ProjectDialogType
 import com.loadingbyte.cinecred.ui.comms.CreditsId
+import com.loadingbyte.cinecred.ui.comms.DockableId.*
 import com.loadingbyte.cinecred.ui.comms.RenderFormatCategory
 import com.loadingbyte.cinecred.ui.comms.RenderJobInfo
 import com.loadingbyte.cinecred.ui.comms.RenderJobStatus
 import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
-import java.nio.file.Path
 import javax.swing.JTextField
 import javax.swing.JTree
 import kotlin.io.path.Path
-import kotlin.io.path.name
-import kotlin.io.path.readLines
-import kotlin.io.path.writeLines
 
 
 private const val DIR = "home"
@@ -39,42 +35,32 @@ val HOME_DEMOS
 
 
 object HomeScreenshotLiveVisDemo : ProjectDemo("$DIR/screenshot-live-vis", Format.PNG) {
-    override fun prepare(projectDir: Path) {
-        // Inject an error into the credits file.
-        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
-        val lines = creditsFile.readLines().toMutableList()
-        lines[lines.indexOfFirst { "Dirc Director" in it } + 1] = ",,,-1,,,,,,"
-        creditsFile.writeLines(lines)
-    }
+    override fun trees() = trees(tree(920, 630, vSplit(0.0, TOOLBAR, PREVIEW)))
 
     override fun generate() {
-        reposition(prjFrame, 920, 610)
         sleep(500)
         edt {
-            prjPanel.leakedSplitPane.setDividerLocation(0.87)
-            prjPanel.leakedPageTabs.selectedIndex = 2
-            prjImagePanel(2).leakedViewportCenterSetter(y = 980.0)
+            preDok.leakedPageTabs.selectedIndex = 2
+            prjImagePanel(2).leakedViewportCenterSetter(y = 982.0)
         }
         sleep(500)
-        write(printWithPopups(prjPanel), "-guides-on")
-        edt { prjPanel.leakedGuidesButton.doClick() }
+        write(printWithPopups(prjFrame.contentPane), "-guides-on")
+        edt { tolDok.leakedGuidesButton.doClick() }
         sleep(500)
-        write(printWithPopups(prjPanel), "-guides-off")
+        write(printWithPopups(prjFrame.contentPane), "-guides-off")
     }
 }
 
 
 object HomeScreenshotStylingDemo : ProjectDemo("$DIR/screenshot-styling", Format.PNG) {
+    override fun trees() = trees(tree(760, 636, STYLING))
+
     override fun generate() {
-        edt { projectCtrl.setDialogVisible(ProjectDialogType.STYLING, true) }
+        edt { styDok.leakedSplitPane.setDividerLocation(0.26) }
         sleep(500)
-        reposition(styDialog, 760, 570)
+        selectLastRowWithLabel(styDok.leakedStylingTree, l10n("project.template.contentStyleGutter", locale))
         sleep(500)
-        edt { styPanel.leakedSplitPane.setDividerLocation(0.26) }
-        sleep(500)
-        selectLastRowWithLabel(styPanel.leakedStylingTree, l10n("project.template.contentStyleGutter", locale))
-        sleep(500)
-        write(printWithPopups(styPanel))
+        write(printWithPopups(prjFrame.contentPane))
     }
 
     private fun selectLastRowWithLabel(tree: JTree, label: String) {
@@ -87,48 +73,44 @@ object HomeScreenshotStylingDemo : ProjectDemo("$DIR/screenshot-styling", Format
 
 
 object HomeScreenshotVideoPreviewDemo : ProjectDemo("$DIR/screenshot-video-preview", Format.PNG) {
+    override fun trees() = trees(tree(900, 460, PLAYBACK))
+
     override fun generate() {
-        edt { projectCtrl.setDialogVisible(ProjectDialogType.VIDEO, true) }
-        sleep(500)
-        reposition(plyDialog, 900, 430)
-        sleep(500)
         edt {
             plyControls.leakedFrameSlider.valueIsAdjusting = true
             plyControls.leakedFrameSlider.value = 520
             plyControls.setPlaybackDirection(1)
         }
         sleep(500)
-        write(printWithPopups(plyPanel))
+        write(printWithPopups(prjFrame.contentPane))
     }
 }
 
 
 object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Format.PNG) {
+    override fun trees() = trees(tree(820, 610, DELIVERY))
+
     override fun generate() {
-        edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
-        sleep(500)
-        reposition(dlvDialog, 820, 600)
-        sleep(500)
         edt {
             KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
-            dlvPanel.leakedConfigForm.leakedDestinationWidgetTemplateMenu.components
+            dlvDok.leakedConfigForm.leakedDestinationWidgetTemplateMenu.components
                 .filterIsInstance<DropdownPopupMenuCheckBoxItem<*>>().single { it.item == null }.doClick()
-            (dlvPanel.leakedConfigForm.leakedDestinationWidget.components[1] as JTextField).text = "/Render.mp4"
+            (dlvDok.leakedConfigForm.leakedDestinationWidget.components[1] as JTextField).text = "/Render.mp4"
             addDummyRenderJob(false, WholePagePDFRenderJob.FORMATS[0])
             addDummyRenderJob(true, VideoContainerRenderJob.H264)
             addDummyRenderJob(true, VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" })
             addDummyRenderJob(true, ImageSequenceRenderJob.FORMATS.first { it.defaultFileExt == "png" })
-            dlvPanel.leakedRenderQueuePanel.apply {
+            dlvDok.leakedRenderQueuePanel.apply {
                 leakedProgressSetter(0, isFinished = true)
                 leakedProgressSetter(1, isFinished = true)
                 leakedProgressSetter(2, progress = 800)
             }
         }
         sleep(500)
-        write(printWithPopups(dlvPanel), "-options")
+        write(printWithPopups(prjFrame.contentPane), "-options")
         edt { dlvFormatCB.apply { isPopupVisible = true } }
         sleep(500)
-        write(printWithPopups(dlvPanel), "-formats")
+        write(printWithPopups(prjFrame.contentPane), "-formats")
 
         RenderQueue.cancelAllJobs()
     }
@@ -151,7 +133,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
             "${RenderFormat.Property.PRIMARIES.standardDefault} / ${RenderFormat.Property.TRANSFER.standardDefault}",
             dest
         )
-        dlvPanel.leakedRenderQueuePanel.addRenderJobToQueue(jobInfo, RenderJobStatus.Queued)
+        dlvDok.leakedRenderQueuePanel.addRenderJobToQueue(jobInfo, RenderJobStatus.Queued)
     }
 
 }

@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties.STYLE
 import com.formdev.flatlaf.ui.FlatEmptyBorder
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nQuoted
+import com.loadingbyte.cinecred.ui.comms.DockableId
 import com.loadingbyte.cinecred.ui.comms.ProjectsCard
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.withNewG2
@@ -45,28 +46,30 @@ fun makeWelcomeHintTrack(welcomeFrame: WelcomeFrame): HintTrack {
     )
 }
 
+@Suppress("DEPRECATION")
 fun makeProjectHintTrack(ctrl: ProjectController): HintTrack {
-    val editPanel = ctrl.projectFrame.panel
-    val stylingPanel = ctrl.stylingDialog.panel
+    val toolbarDockable = ctrl.leakedToolbarDockable
+    val previewDockable = ctrl.leakedPreviewDockable
+    val logDockable = ctrl.leakedLogDockable
+    val stylingDockable = ctrl.stylingDockable
     val stylingTreeHint = l10n(
         "ui.hints.projectTrack.stylingTree",
         l10nQuoted("{{${l10n("projectIO.credits.table.style")} [${l10n("ui.styling.letter.name")}]}}"),
         l10nQuoted("{{${l10n("projectIO.credits.table.pic")} [${l10n("filename")}]}}"),
         l10nQuoted("{{${l10n("projectIO.credits.table.video")} [${l10n("filename")}]}}"),
     )
-    @Suppress("DEPRECATION")
     return listOf(
-        Hint(l10n("ui.hints.projectTrack.pageTabs"), editPanel.leakedPreviewTabs, Side.NONE),
-        Hint(l10n("ui.hints.projectTrack.creditsLog"), editPanel.leakedCreditsLog, Side.TOP),
-        Hint(l10n("ui.hints.projectTrack.toggleStyling"), editPanel.leakedStylingDialogButton, Side.BOTTOM),
-        Hint(stylingTreeHint, stylingPanel.leakedStylingTree, Side.RIGHT) {
-            ctrl.setDialogVisible(ProjectDialogType.STYLING, true)
+        Hint(l10n("ui.hints.projectTrack.pageTabs"), previewDockable.leakedPreviewTabs, Side.NONE),
+        Hint(l10n("ui.hints.projectTrack.creditsLog"), logDockable.leakedLogTable, Side.TOP),
+        Hint(l10n("ui.hints.projectTrack.toggleStyling"), toolbarDockable.leakedStylingButton, Side.BOTTOM),
+        Hint(stylingTreeHint, stylingDockable.leakedStylingTree, Side.RIGHT) {
+            ctrl.setDockableCollapsed(DockableId.STYLING, false)
         },
-        Hint(l10n("ui.hints.projectTrack.resetStyling"), editPanel.leakedResetStylingButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.guides"), editPanel.leakedGuidesButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.video"), editPanel.leakedVideoDialogButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.delivery"), editPanel.leakedDeliveryDialogButton, Side.BOTTOM),
-        Hint(l10n("ui.hints.projectTrack.finished", "<i>cinecred.com</i>"), editPanel, Side.NONE)
+        Hint(l10n("ui.hints.projectTrack.resetStyling"), toolbarDockable.leakedResetStylingButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.guides"), toolbarDockable.leakedGuidesButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.video"), toolbarDockable.leakedPlaybackButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.delivery"), toolbarDockable.leakedDeliveryButton, Side.BOTTOM),
+        Hint(l10n("ui.hints.projectTrack.finished", "<i>cinecred.com</i>"), ctrl.projectFrame, Side.NONE)
     )
 }
 

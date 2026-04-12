@@ -7,10 +7,7 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.Service
-import com.loadingbyte.cinecred.ui.ConfigurableOverlay
-import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
-import com.loadingbyte.cinecred.ui.LocaleWish
-import com.loadingbyte.cinecred.ui.Preference
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.helper.FileExtAssortment
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
@@ -59,6 +56,8 @@ interface WelcomeCtrlComms {
     fun <P : Any> preferences_start_onChangeTopPreference(preference: Preference<P>, value: P)
     fun preferences_start_onClickAddAccount()
     fun preferences_start_onClickRemoveAccount(account: Account)
+    fun preferences_start_onClickSetWindowLayoutAsDefault(layout: WindowLayout)
+    fun preferences_start_onClickRemoveWindowLayout(layout: WindowLayout)
     fun preferences_start_onClickAddOverlay()
     fun preferences_start_onClickEditOverlay(overlay: ConfigurableOverlay)
     fun preferences_start_onClickRemoveOverlay(overlay: ConfigurableOverlay)
@@ -130,6 +129,7 @@ interface WelcomeViewComms {
     fun preferences_start_setAppleScriptFileChooser(use: Boolean)
     fun preferences_start_setAccounts(accounts: List<Account>)
     fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean)
+    fun preferences_start_setWindowLayouts(layouts: List<WindowLayout>, defaultLayout: WindowLayout)
     fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>)
     fun preferences_start_setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>)
 

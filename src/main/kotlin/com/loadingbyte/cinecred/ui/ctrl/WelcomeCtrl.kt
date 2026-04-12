@@ -12,9 +12,7 @@ import com.loadingbyte.cinecred.ui.helper.useAppleScriptFileChooser
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.AttributeProvider
 import org.commonmark.renderer.html.HtmlRenderer
-import java.awt.event.InputEvent.CTRL_DOWN_MASK
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.*
 import java.io.IOException
 import java.io.StringReader
 import java.net.URI
@@ -71,6 +69,12 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             welcomeView.preferences_start_setAccounts(accounts)
         }
     }
+    private val windowLayoutsListener = { layouts: List<ConfigurableWindowLayout> ->
+        val allLayouts = PresetWindowLayout.ALL + layouts
+        val defaultName = DEFAULT_WINDOW_LAYOUT_PREFERENCE.get()
+        val defaultLayout = allLayouts.find { it.name == defaultName } ?: allLayouts[0]
+        welcomeView.preferences_start_setWindowLayouts(allLayouts, defaultLayout)
+    }
     private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
         welcomeView.preferences_start_setOverlays(overlays)
     }
@@ -105,18 +109,20 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         check(!::welcomeView.isInitialized)
         this.welcomeView = welcomeView
 
-        // Register the accounts, overlays, and delivery location templates listeners.
+        // Register the accounts, window layouts, overlays, and delivery location templates listeners.
         addAccountListListener(accountListListener)
+        WINDOW_LAYOUTS_PREFERENCE.addListener(windowLayoutsListener)
         OVERLAYS_PREFERENCE.addListener(overlaysListener)
         DELIVERY_DEST_TEMPLATES_PREFERENCE.addListener(deliveryDestTemplatesListener)
 
-        // Retrieve the current preferences, accounts, overlays, and delivery location templates.
+        // Retrieve the current preferences, window layouts, accounts, overlays, and delivery location templates.
         welcomeView.preferences_start_setUILocaleWish(UI_LOCALE_PREFERENCE.get())
         welcomeView.preferences_start_setCheckForUpdates(CHECK_FOR_UPDATES_PREFERENCE.get())
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
         appleScriptFileChooserListener(APPLE_SCRIPT_FILE_CHOOSER.get())
         accountListListener()
+        windowLayoutsListener(WINDOW_LAYOUTS_PREFERENCE.get())
         overlaysListener(OVERLAYS_PREFERENCE.get())
         deliveryDestTemplatesListener(DELIVERY_DEST_TEMPLATES_PREFERENCE.get())
 
@@ -263,7 +269,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun onGlobalKeyEvent(event: KeyEvent): Boolean {
         if (!welcomeView.isFromWelcomeWindow(event))
             return false
-        if (event.modifiersEx == 0 && event.keyCode == VK_ESCAPE) {
+        if (Shortcut.ESCAPE.matches(event)) {
             val tab = welcomeView.getTab()
             if (tab == WelcomeTab.PROJECTS) {
                 projects_createWait_onClickCancel()
@@ -273,8 +279,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 preferences_configureOverlay_onClickCancel()
                 return true
             }
-        }
-        if (event.modifiersEx == CTRL_DOWN_MASK && (event.keyCode.let { it == VK_Q || it == VK_W })) {
+        } else if (Shortcut.CLOSE_WINDOW.matches(event) || Shortcut.QUIT.matches(event)) {
             close()
             return true
         }
@@ -345,6 +350,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
         APPLE_SCRIPT_FILE_CHOOSER.removeListener(appleScriptFileChooserListener)
         removeAccountListListener(accountListListener)
+        WINDOW_LAYOUTS_PREFERENCE.removeListener(windowLayoutsListener)
         OVERLAYS_PREFERENCE.removeListener(overlaysListener)
         DELIVERY_DEST_TEMPLATES_PREFERENCE.removeListener(deliveryDestTemplatesListener)
 
@@ -514,6 +520,14 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
     override fun preferences_establishAccount_onClickCancel() {
         addAccountThread.getAndSet(null)?.interrupt()
         welcomeView.preferences_setCard(PreferencesCard.START)
+    }
+
+    override fun preferences_start_onClickSetWindowLayoutAsDefault(layout: WindowLayout) {
+        DEFAULT_WINDOW_LAYOUT_PREFERENCE.set(layout.name)
+    }
+
+    override fun preferences_start_onClickRemoveWindowLayout(layout: WindowLayout) {
+        WINDOW_LAYOUTS_PREFERENCE.set(WINDOW_LAYOUTS_PREFERENCE.get().filter { it != layout })
     }
 
     override fun preferences_start_onClickAddOverlay() {

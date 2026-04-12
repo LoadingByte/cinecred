@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.ui.comms.RenderJobInfo
 import com.loadingbyte.cinecred.ui.comms.RenderJobStatus
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.view.delivery.DeliverConfigurationForm.Companion.label
+import java.awt.Dimension
 import java.text.DecimalFormat
 import java.util.*
 import javax.swing.*
@@ -66,6 +67,9 @@ class DeliverRenderQueuePanel(deliveryCtrl: DeliveryCtrlComms) : JScrollPane(), 
         }
 
         setViewportView(jobTable)
+        val bw = UIManager.getInt("Component.borderWidth")
+        border = BorderFactory.createMatteBorder(bw, 0, 0, 0, UIManager.getColor("Component.borderColor"))
+        minimumSize = Dimension(0, 50)
     }
 
 

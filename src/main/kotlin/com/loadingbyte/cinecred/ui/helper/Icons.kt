@@ -11,6 +11,7 @@ import com.loadingbyte.cinecred.project.SpineAttachment.*
 import com.loadingbyte.cinecred.projectio.service.EtherCalcService
 import com.loadingbyte.cinecred.projectio.service.GoogleService
 import com.loadingbyte.cinecred.projectio.service.Service
+import com.loadingbyte.cinecred.ui.comms.DockableId
 import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics2D
@@ -81,6 +82,7 @@ val TRASH_ICON = SVGIcon.load("/icons/trash.svg")
 val UNDO_ICON = SVGIcon.load("/icons/undo.svg")
 val UPDATE_ICON = SVGIcon.load("/icons/update.svg")
 val WARN_ICON = SVGIcon.load("/icons/warn.svg")
+val WINDOW_LAYOUT_ICON = SVGIcon.load("/icons/windowLayout.svg")
 val ZOOM_ICON = SVGIcon.load("/icons/zoom.svg")
 
 val ARROW_LEFT_ICON = SVGIcon.load("/icons/arrow/left.svg")
@@ -118,10 +120,6 @@ val OVERLAY_SAFE_AREAS_ICON = SVGIcon.load("/icons/overlay/safeAreas.svg")
 val OVERLAY_ASPECT_RATIO_ICON = SVGIcon.load("/icons/overlay/aspectRatio.svg")
 val OVERLAY_LINES_ICON = SVGIcon.load("/icons/overlay/lines.svg")
 
-val PROJECT_DIALOG_STYLING_ICON = SVGIcon.load("/icons/projectDialog/styling.svg")
-val PROJECT_DIALOG_VIDEO_ICON = SVGIcon.load("/icons/projectDialog/video.svg")
-val PROJECT_DIALOG_DELIVERY_ICON = SVGIcon.load("/icons/projectDialog/delivery.svg")
-
 val SHEARING_HORIZONTAL_ICON = SVGIcon.load("/icons/shearing/horizontal.svg")
 val SHEARING_VERTICAL_ICON = SVGIcon.load("/icons/shearing/vertical.svg")
 
@@ -135,6 +133,24 @@ val Severity.icon
         Severity.WARN -> WARN_ICON
         Severity.MIGRATE -> UPDATE_ICON
         Severity.ERROR -> ERROR_ICON
+    }
+
+
+private val DOCKABLE_TOOLBAR_ICON = SVGIcon.load("/icons/dockable/toolbar.svg")
+private val DOCKABLE_PREVIEW_ICON = SVGIcon.load("/icons/dockable/preview.svg")
+private val DOCKABLE_LOG_ICON = SVGIcon.load("/icons/dockable/log.svg")
+private val DOCKABLE_STYLING_ICON = SVGIcon.load("/icons/dockable/styling.svg")
+private val DOCKABLE_PLAYBACK_ICON = SVGIcon.load("/icons/dockable/playback.svg")
+private val DOCKABLE_DELIVERY_ICON = SVGIcon.load("/icons/dockable/delivery.svg")
+
+val DockableId.icon
+    get() = when (this) {
+        DockableId.TOOLBAR -> DOCKABLE_TOOLBAR_ICON
+        DockableId.PREVIEW -> DOCKABLE_PREVIEW_ICON
+        DockableId.LOG -> DOCKABLE_LOG_ICON
+        DockableId.STYLING -> DOCKABLE_STYLING_ICON
+        DockableId.PLAYBACK -> DOCKABLE_PLAYBACK_ICON
+        DockableId.DELIVERY -> DOCKABLE_DELIVERY_ICON
     }
 
 
@@ -427,6 +443,7 @@ val CoordinateSystem.icon
 val Enum<*>.icon
     get() = when (this) {
         is Severity -> icon
+        is DockableId -> icon
         is BlockOrientation -> icon
         is BodyLayout -> icon
         is HJustify -> icon

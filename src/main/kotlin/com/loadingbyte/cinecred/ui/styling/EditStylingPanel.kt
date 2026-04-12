@@ -8,19 +8,31 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.ProjectController
+import com.loadingbyte.cinecred.ui.Shortcut
+import com.loadingbyte.cinecred.ui.Shortcut.*
+import com.loadingbyte.cinecred.ui.comms.DockableId
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
+import net.miginfocom.layout.PlatformDefaults
+import net.miginfocom.layout.UnitValue
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ActionEvent
+import java.awt.event.HierarchyEvent
+import java.awt.event.HierarchyListener
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.*
 import java.util.*
 import javax.swing.*
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 
-class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
+class EditStylingPanel(private val ctrl: ProjectController) :
+    DockingFrame.Dockable(
+        dockableId = DockableId.STYLING.name,
+        title = l10n("ui.styling.title"),
+        icon = DockableId.STYLING.icon
+    ) {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedSplitPane: JSplitPane
@@ -51,14 +63,16 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
     // Create a panel with the four style editing forms.
     private val rightPanelCards = CardLayout()
     private val rightPanel = JPanel(rightPanelCards).apply {
-        add(JScrollPane() /* use a full-blown JScrollPane to match the look of the non-blank cards */, "Blank")
-        add(JScrollPane(globalForm), "Global")
-        add(JScrollPane(pageStyleForm), "PageStyle")
-        add(JScrollPane(contentStyleForm), "ContentStyle")
-        add(JScrollPane(letterStyleForm), "LetterStyle")
-        add(JScrollPane(transitionStyleForm), "TransitionStyle")
-        add(JScrollPane(pictureStyleForm), "PictureStyle")
-        add(JScrollPane(tapeStyleForm), "TapeStyle")
+        val bw = UIManager.getInt("Component.borderWidth")
+        border = BorderFactory.createMatteBorder(0, bw, 0, 0, UIManager.getColor("Component.borderColor"))
+        add(JPanel(), "Blank")
+        add(newStyleFormScrollPane(globalForm), "Global")
+        add(newStyleFormScrollPane(pageStyleForm), "PageStyle")
+        add(newStyleFormScrollPane(contentStyleForm), "ContentStyle")
+        add(newStyleFormScrollPane(letterStyleForm), "LetterStyle")
+        add(newStyleFormScrollPane(transitionStyleForm), "TransitionStyle")
+        add(newStyleFormScrollPane(pictureStyleForm), "PictureStyle")
+        add(newStyleFormScrollPane(tapeStyleForm), "TapeStyle")
     }
 
     private val stylingTree = StylingTree()
@@ -129,52 +143,46 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         // Add buttons for adding and removing style nodes.
         val addPageStyleButton = newToolbarButtonWithKeyListener(
-            PAGE_ICON, l10n("ui.styling.addPageStyleTooltip"),
-            VK_P, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            PAGE_ICON, l10n("ui.styling.addPageStyleTooltip"), STYLING_ADD_PAGE_STYLE
         ) {
             addAndSelectStyle(PRESET_PAGE_STYLE.copy(name = l10n("ui.styling.newPageStyleName")))
         }
         val addContentStyleButton = newToolbarButtonWithKeyListener(
-            LAYOUT_ICON, l10n("ui.styling.addContentStyleTooltip"),
-            VK_C, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            LAYOUT_ICON, l10n("ui.styling.addContentStyleTooltip"), STYLING_ADD_CONTENT_STYLE
         ) {
             addAndSelectStyle(PRESET_CONTENT_STYLE.copy(name = l10n("ui.styling.newContentStyleName")))
         }
         val addLetterStyleButton = newToolbarButtonWithKeyListener(
-            LETTERS_ICON, l10n("ui.styling.addLetterStyleTooltip"),
-            VK_L, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            LETTERS_ICON, l10n("ui.styling.addLetterStyleTooltip"), STYLING_ADD_LETTER_STYLE
         ) {
             addAndSelectStyle(PRESET_LETTER_STYLE.copy(name = l10n("ui.styling.newLetterStyleName")))
         }
         val addTransitionStyleButton = newToolbarButtonWithKeyListener(
-            TRANSITION_ICON, l10n("ui.styling.addTransitionStyleTooltip"),
-            VK_T, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            TRANSITION_ICON, l10n("ui.styling.addTransitionStyleTooltip"), STYLING_ADD_TRANSITION_STYLE
         ) {
             addAndSelectStyle(PRESET_TRANSITION_STYLE.copy(name = l10n("ui.styling.newTransitionStyleName")))
         }
         val addPictureStyleButton = newToolbarButtonWithKeyListener(
-            PICTURE_ICON, l10n("ui.styling.addPictureStyleTooltip"),
-            VK_I, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            PICTURE_ICON, l10n("ui.styling.addPictureStyleTooltip"), STYLING_ADD_PICTURE_STYLE
         ) {
             addAndSelectStyle(PRESET_PICTURE_STYLE.copy(name = l10n("ui.styling.newPictureStyleName")))
         }
         val addTapeStyleButton = newToolbarButtonWithKeyListener(
-            FILMSTRIP_ICON, l10n("ui.styling.addTapeStyleTooltip"),
-            VK_V, CTRL_DOWN_MASK or SHIFT_DOWN_MASK
+            FILMSTRIP_ICON, l10n("ui.styling.addTapeStyleTooltip"), STYLING_ADD_TAPE_STYLE
         ) {
             addAndSelectStyle(PRESET_TAPE_STYLE.copy(name = l10n("ui.styling.newTapeStyleName")))
         }
         val duplicateStyleButton = newToolbarButton(
-            DUPLICATE_ICON, l10n("ui.styling.duplicateStyleTooltip"), VK_D, CTRL_DOWN_MASK, ::duplicateStyle
+            DUPLICATE_ICON, l10n("ui.styling.duplicateStyleTooltip"), STYLING_DUPLICATE_STYLE, ::duplicateStyle
         )
         val removeStyleButton = newToolbarButton(
-            TRASH_ICON, l10n("ui.styling.removeStyleTooltip"), VK_DELETE, 0, ::removeStyle
+            TRASH_ICON, l10n("ui.styling.removeStyleTooltip"), STYLING_REMOVE_STYLE, ::removeStyle
         )
 
         // Add contextual keyboard shortcuts for the style duplication and removal buttons.
         stylingTree.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).apply {
-            put(KeyStroke.getKeyStroke(VK_D, CTRL_DOWN_MASK), "duplicate")
-            put(KeyStroke.getKeyStroke(VK_DELETE, 0), "remove")
+            put(STYLING_DUPLICATE_STYLE.run { KeyStroke.getKeyStroke(keyCode, modifiers) }, "duplicate")
+            put(STYLING_REMOVE_STYLE.run { KeyStroke.getKeyStroke(keyCode, modifiers) }, "remove")
         }
         stylingTree.actionMap.put("duplicate", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent) {
@@ -189,6 +197,10 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
 
         // Layout the buttons.
         val buttonPanel = JPanel(WrappingToolbarLayout(gap = 6)).apply {
+            border = BorderFactory.createEmptyBorder(
+                panelInsets(0), panelInsets(1), panelInsets(2),
+                panelInsets(3) - UIManager.getInt("SplitPane.dividerSize")
+            )
             add(addPageStyleButton)
             add(addContentStyleButton)
             add(addLetterStyleButton)
@@ -199,22 +211,36 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             add(removeStyleButton)
         }
 
+        val stylingTreeScrollPane = JScrollPane(stylingTree).apply {
+            val bw = UIManager.getInt("Component.borderWidth")
+            border = BorderFactory.createMatteBorder(bw, 0, 0, bw, UIManager.getColor("Component.borderColor"))
+        }
+
         // Layout the tree and the button panel.
-        val leftPanel = JPanel(BorderLayout(0, 6)).apply {
+        val leftPanel = JPanel(BorderLayout()).apply {
             add(buttonPanel, BorderLayout.NORTH)
-            add(JScrollPane(stylingTree), BorderLayout.CENTER)
+            add(stylingTreeScrollPane, BorderLayout.CENTER)
             minimumSize = Dimension(100, 0)
         }
 
         // Put everything together in a split pane.
         val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true, leftPanel, rightPanel)
-        // Slightly postpone moving the dividers so that the panes know their height when the dividers are moved.
-        SwingUtilities.invokeLater {
-            splitPane.setDividerLocation(0.225)
-            SwingUtilities.invokeLater { splitPane.setDividerLocation(0.225) }
-        }
+        // Postpone moving the dividers so that the panes know their height when the dividers are moved.
+        addHierarchyListener(object : HierarchyListener {
+            override fun hierarchyChanged(e: HierarchyEvent) {
+                if (e.id == HierarchyEvent.HIERARCHY_CHANGED &&
+                    e.changeFlags.toInt() and HierarchyEvent.SHOWING_CHANGED != 0
+                ) {
+                    removeHierarchyListener(this)
+                    SwingUtilities.invokeLater {
+                        splitPane.setDividerLocation(0.225)
+                        SwingUtilities.invokeLater { splitPane.setDividerLocation(0.225) }
+                    }
+                }
+            }
+        })
 
-        layout = MigLayout()
+        layout = MigLayout("insets 0")
         add(splitPane, "grow, push")
 
         @Suppress("DEPRECATION")
@@ -227,15 +253,23 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         leakedRemoveStyleButton = removeStyleButton
     }
 
+    private fun newStyleFormScrollPane(styleForm: StyleForm<*>) =
+        JScrollPane(styleForm).apply { border = null }
+
     private fun newToolbarButtonWithKeyListener(
         icon: Icon,
         tooltip: String,
-        shortcutKeyCode: Int,
-        shortcutModifiers: Int,
+        shortcut: Shortcut,
         listener: () -> Unit
     ): JButton {
-        keyListeners.add(KeyListener(shortcutKeyCode, shortcutModifiers, listener))
-        return newToolbarButton(icon, tooltip, shortcutKeyCode, shortcutModifiers, listener)
+        keyListeners.add(KeyListener(shortcut, listener))
+        return newToolbarButton(icon, tooltip, shortcut, listener)
+    }
+
+    private fun panelInsets(side: Int): Int {
+        val v = PlatformDefaults.getPanelInsets(side)
+        require((v.unit == UnitValue.LPX || v.unit == UnitValue.LPY) && v.operation == UnitValue.STATIC)
+        return v.value.roundToInt()
     }
 
     private fun addAndSelectStyle(style: Style) {
@@ -441,6 +475,9 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         })
     }
 
+    override fun getMinimumSize(): Dimension =
+        if (isMinimumSizeSet) super.getMinimumSize() else Dimension(400, 150)
+
 
     /**
      * A wrapping LayoutManager similar to FlowLayout. In contrast to FlowLayout, this implementation increases the
@@ -455,15 +492,14 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
         override fun preferredLayoutSize(parent: Container): Dimension {
             val rows = flowIntoRows(parent)
             val height = rows.sumOf(Row::height) + gap * (rows.size - 1)
-            val insets = parent.insets
-            return Dimension(parent.width + insets.left + insets.right, height + insets.top + insets.bottom)
+            return Dimension(parent.width, height + parent.insets.run { top + bottom })
         }
 
         override fun layoutContainer(parent: Container) {
             val insets = parent.insets
             var y = insets.top
             for (row in flowIntoRows(parent)) {
-                var x = insets.left + (parent.width - row.width) / 2
+                var x = insets.left + (parent.width - insets.run { left + right } - row.width) / 2
                 for (comp in row.comps) {
                     val pref = comp.preferredSize
                     comp.setBounds(x, y, pref.width, pref.height)
@@ -479,10 +515,11 @@ class EditStylingPanel(private val ctrl: ProjectController) : JPanel() {
             var rowComps = mutableListOf<Component>()
             var rowWidth = 0
             var rowHeight = 0
+            val availWidth = parent.width - parent.insets.run { left + right }
             for (idx in 0..<parent.componentCount) {
                 val comp = parent.getComponent(idx)
                 val pref = comp.preferredSize
-                if (rowWidth == 0 || rowWidth + gap + pref.width <= parent.width) {
+                if (rowWidth == 0 || rowWidth + gap + pref.width <= availWidth) {
                     rowComps.add(comp)
                     if (rowWidth != 0) rowWidth += gap
                     rowWidth += pref.width

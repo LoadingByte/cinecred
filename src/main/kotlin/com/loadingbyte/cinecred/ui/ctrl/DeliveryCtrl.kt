@@ -21,7 +21,6 @@ import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.project.PageBehavior
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
-import com.loadingbyte.cinecred.ui.ProjectDialogType
 import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.helper.tryRequestUserAttentionInTaskbar
 import com.loadingbyte.cinecred.ui.helper.trySetTaskbarIconBadge
@@ -46,7 +45,8 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
 
     // Supplied by other controllers or the UI.
     private var drawnProject: DrawnProject? = null
-    private var dialogVisible = false
+    private var previewCreditsId: CreditsId? = null
+    private var visible = false
     private var rendering = false
 
     private var specs = DeliverySpecs.UNKNOWN
@@ -96,16 +96,16 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
     override fun getProjectName() = projectCtrl.projectName
     override fun getProjectDir() = projectCtrl.projectDir
 
-    override fun setDialogVisibility(visible: Boolean) {
-        if (dialogVisible == visible)
+    override fun setPreviewCreditsId(creditsId: CreditsId?) {
+        previewCreditsId = creditsId
+    }
+
+    override fun onShowOrHide(visible: Boolean) {
+        if (this.visible == visible)
             return
-        dialogVisible = visible
-        projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, visible)
-        if (visible) {
-            val panel = projectCtrl.projectFrame.panel
-            panel.selectedFileName?.let { f -> panel.selectedSpreadsheetName?.let { s -> CreditsId(f, s) } }
-                ?.let { creditsId -> for (view in views) view.setSelectedCreditsId(creditsId) }
-        }
+        this.visible = visible
+        if (visible)
+            previewCreditsId?.let { creditsId -> for (view in views) view.setSelectedCreditsId(creditsId) }
     }
 
     override fun setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>) {
@@ -245,7 +245,7 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         pageIndices: List<Int>,
         destination: RenderJobDestination
     ) {
-        if (!dialogVisible)
+        if (!visible)
             return
 
         val drawnProject = drawnProject

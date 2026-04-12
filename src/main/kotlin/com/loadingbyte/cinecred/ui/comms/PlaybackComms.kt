@@ -5,15 +5,17 @@ import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
+import java.awt.Window
 import java.awt.image.BufferedImage
 
 
 interface PlaybackCtrlComms {
 
     fun registerView(view: PlaybackViewComms)
+    fun isFullScreenWindow(window: Window): Boolean
     fun updateProject(drawnProject: DrawnProject)
     fun closeProject()
-    fun setDialogVisibility(visible: Boolean)
+    fun onShowOrHide(visible: Boolean)
     fun setSelectedDeckLink(deckLink: DeckLink)
     fun setSelectedDeckLinkMode(mode: DeckLink.Mode)
     fun setSelectedDeckLinkDepth(depth: DeckLink.Depth)
@@ -21,6 +23,7 @@ interface PlaybackCtrlComms {
     fun setSelectedDeckLinkTransfer(transfer: ColorSpace.Transfer)
     fun setDeckLinkConnected(connected: Boolean)
     fun toggleDeckLinkConnected()
+    fun setPreviewCreditsId(creditsId: CreditsId?)
     fun setSelectedCreditsId(creditsId: CreditsId)
     fun startScrubbing()
     fun stopScrubbing()
@@ -34,7 +37,7 @@ interface PlaybackCtrlComms {
     fun setVideoCanvasSize(size: Dimension, gCfg: GraphicsConfiguration)
     fun setActualSize(actualSize: Boolean)
     fun toggleActualSize()
-    fun setFullScreen(fullScreen: Boolean)
+    fun setFullScreen(fullScreen: Boolean): Boolean
     fun toggleFullScreen()
 
 }
@@ -42,6 +45,8 @@ interface PlaybackCtrlComms {
 
 interface PlaybackViewComms {
 
+    fun isFullScreenWindow(window: Window): Boolean = false
+    fun disposeResources() {}
     fun setDeckLinks(deckLinks: List<DeckLink>) {}
     fun setDeckLinkModes(modes: List<DeckLink.Mode>) {}
     fun setDeckLinkDepths(depths: List<DeckLink.Depth>) {}
@@ -59,7 +64,7 @@ interface PlaybackViewComms {
     fun setPlayheadPosition(frameIdx: Int, timecodeString: String) {}
     fun setPlaybackDirection(direction: Int) {}
     fun setActualSize(actualSize: Boolean) {}
-    fun setFullScreen(fullScreen: Boolean) {}
+    fun setFullScreen(fullScreen: Boolean): Boolean = false
     fun toggleFullScreen() {}
     fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double, clear: Boolean) {}
 

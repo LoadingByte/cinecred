@@ -50,6 +50,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     private val startLowerPanel: JPanel
     private val startAccountsPanel: JPanel
     private val startAccountsRemovalButtons = HashMap<Account, JButton>()
+    private val startWindowLayoutsPanel: JPanel
     private val startOverlaysPanel: JPanel
     private val startDeliveryDestTemplatesPanel: JPanel
 
@@ -80,6 +81,10 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             background = null
         }
 
+        startWindowLayoutsPanel = JPanel(MigLayout("insets 0, wrap 2, fillx", "[sg, fill][sg, fill]")).apply {
+            background = null
+        }
+
         val startAddOverlayButton = JButton(l10n("ui.preferences.overlays.add"), ADD_ICON).apply {
             addActionListener { welcomeCtrl.preferences_start_onClickAddOverlay() }
         }
@@ -100,6 +105,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             add(JSeparator(), "growx, pushx, gapy unrel unrel")
             add(startAddAccountButton)
             add(startAccountsPanel, "growx, pushx, gaptop rel")
+            add(JSeparator(), "growx, pushx, gapy unrel unrel")
+            add(startWindowLayoutsPanel, "growx, pushx")
             add(JSeparator(), "growx, pushx, gapy unrel unrel")
             add(startAddOverlayButton)
             add(startOverlaysPanel, "growx, pushx, gaptop rel")
@@ -288,6 +295,32 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         startAccountsRemovalButtons[account]?.isEnabled = !locked
     }
 
+    fun preferences_start_setWindowLayouts(layouts: List<WindowLayout>, defaultLayout: WindowLayout) {
+        startWindowLayoutsPanel.removeAll()
+        val defaultButtonGroup = ButtonGroup()
+        for (layout in layouts) {
+            val removeButton = if (layout !is ConfigurableWindowLayout) null else JButton(TRASH_ICON).apply {
+                addActionListener { welcomeCtrl.preferences_start_onClickRemoveWindowLayout(layout) }
+            }
+            val defaultButton = JToggleButton(CHECK_ICON, layout == defaultLayout).apply {
+                toolTipText = l10n("ui.preferences.windowLayouts.setAsDefault")
+                addActionListener { welcomeCtrl.preferences_start_onClickSetWindowLayoutAsDefault(layout) }
+            }
+            val layoutPanel = JPanel(MigLayout("", "[]push[]" + if (removeButton != null) "[]" else "")).apply {
+                border = FlatRoundBorder()
+                add(JLabel(layout.label, WINDOW_LAYOUT_ICON, JLabel.LEADING).apply {
+                    toolTipText = text
+                }, "wmax 230")
+                removeButton?.let(::add)
+                add(defaultButton)
+            }
+            startWindowLayoutsPanel.add(layoutPanel)
+            defaultButtonGroup.add(defaultButton)
+        }
+        // Without this, when there are two layouts and the user removes one, an afterimage of the removed one remains.
+        startWindowLayoutsPanel.repaint()
+    }
+
     fun preferences_start_setOverlays(overlays: List<ConfigurableOverlay>) {
         startOverlaysPanel.removeAll()
         for (overlay in overlays) {
@@ -402,7 +435,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    private inner class ConfigureAccountForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+    private inner class ConfigureAccountForm : EasyForm(insets = "0", noticeArea = true, constLabelWidth = false) {
 
         val labelWidget = addWidget(
             l10n("ui.preferences.accounts.configure.label"),
@@ -459,7 +492,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    private inner class ConfigureOverlayForm : EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+    private inner class ConfigureOverlayForm : EasyForm(insets = "0", noticeArea = true, constLabelWidth = false) {
 
         val typeWidget = addWidget(
             l10n("ui.preferences.overlays.configure.type"),
@@ -552,7 +585,7 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
 
     private inner class ConfigureDeliveryDestTemplateForm :
-        EasyForm(insets = false, noticeArea = true, constLabelWidth = false) {
+        EasyForm(insets = "0", noticeArea = true, constLabelWidth = false) {
 
         val nameWidget = addWidget(
             l10n("ui.preferences.deliveryDestTemplates.configure.name"),

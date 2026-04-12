@@ -67,6 +67,16 @@ class VirtualDesktop(val width: Int, val height: Int) {
         window.size = Dimension(width, height)
     }
 
+    val fullscreen: Rectangle
+        get() {
+            val insets = windowMarginPlusPadding
+            return Rectangle(
+                0, 0,
+                width + insets.left + insets.right - VirtualWindow.INSET_L - VirtualWindow.INSET_R,
+                height + insets.top + insets.bottom - VirtualWindow.INSET_T - VirtualWindow.INSET_B
+            )
+        }
+
     fun snapToSide(window: VirtualWindow, rightSide: Boolean, ratio: Double = 0.5) {
         val windowWidth = (width * ratio).roundToInt()
         window.pos = Point(if (rightSide) width - windowWidth else 0, 0)
@@ -274,14 +284,14 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
 
     override var size: Dimension
         get() {
-            val insets = backingWin.insetsInclTitlePane
+            val insets = windowMarginPlusPadding
             return Dimension(
                 backingWin.width - insets.left - insets.right + INSET_L + INSET_R,
                 backingWin.height - insets.top - insets.bottom + INSET_T + INSET_B
             )
         }
         set(size) {
-            val insets = backingWin.insetsInclTitlePane
+            val insets = windowMarginPlusPadding
             edt {
                 backingWin.setSize(
                     size.width + insets.left + insets.right - INSET_L - INSET_R,
@@ -378,7 +388,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
                 return WinAndRelMouse(popup, mouse.x.toInt() - vWinPos.x, mouse.y.toInt() - vWinPos.y)
         }
         if (backingWin.isVisible) {
-            val winInsets = backingWin.insetsInclTitlePane
+            val winInsets = windowMarginPlusPadding
             if (mouse.x.toInt() - pos.x - INSET_L in 0..backingWin.width - winInsets.left - winInsets.right &&
                 mouse.y.toInt() - pos.y - INSET_T in 0..backingWin.height - winInsets.top - winInsets.bottom
             ) {
@@ -392,7 +402,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
 
     /** Obtains virtual desktop coordinates for the given component, assuming that it is inside this window. */
     fun desktopPosOf(comp: Component, center: Boolean = true): Point {
-        val insets = backingWin.insetsInclTitlePane
+        val insets = windowMarginPlusPadding
         val rel = SwingUtilities.convertPoint(comp, 0, 0, backingWin)
         return Point(
             pos.x + (rel.x - insets.left) + INSET_L + if (center) comp.width / 2 else 0,

@@ -15,7 +15,8 @@ interface DeliveryCtrlComms {
     fun onTryCloseProject(force: Boolean): Boolean
     fun getProjectName(): String
     fun getProjectDir(): Path
-    fun setDialogVisibility(visible: Boolean)
+    fun setPreviewCreditsId(creditsId: CreditsId?)
+    fun onShowOrHide(visible: Boolean)
 
     fun setDeliveryDestTemplates(templates: List<DeliveryDestTemplate>)
     fun showDeliveryDestTemplateCreation()

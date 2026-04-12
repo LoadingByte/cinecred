@@ -7,8 +7,11 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.ui.Shortcut
 import java.awt.*
+import java.awt.Frame.MAXIMIZED_BOTH
 import java.awt.RenderingHints.*
+import java.awt.dnd.DragSource
 import java.awt.event.*
 import java.awt.event.KeyEvent.*
 import java.awt.geom.Path2D
@@ -26,6 +29,7 @@ import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
 import javax.swing.table.TableCellRenderer
 import javax.swing.text.Document
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 
@@ -83,6 +87,17 @@ fun Graphics2D.setHighQuality() {
 }
 
 fun Graphics2D.scale(s: Double) = scale(s, s)
+
+
+fun Rectangle.centered(widthFrac: Double, heightFrac: Double, minSize: Dimension? = null): Rectangle {
+    val newWidth = (width * widthFrac).roundToInt().coerceAtLeast(minSize?.width ?: 0)
+    val newHeight = (height * heightFrac).roundToInt().coerceAtLeast(minSize?.height ?: 0)
+    return Rectangle(
+        x + (width - newWidth) / 2,
+        y + (height - newHeight) / 2,
+        newWidth, newHeight
+    )
+}
 
 
 /**
@@ -144,11 +159,10 @@ fun newLabelEditorPane(type: String, text: String? = null, insets: Boolean = fal
 fun newToolbarButton(
     icon: Icon,
     tooltip: String,
-    shortcutKeyCode: Int,
-    shortcutModifiers: Int,
+    shortcut: Shortcut? = null,
     listener: (() -> Unit)? = null
 ) = JButton(icon).also { btn ->
-    cfgForToolbar(btn, tooltip, shortcutKeyCode, shortcutModifiers)
+    cfgForToolbar(btn, tooltip, shortcut)
     if (listener != null)
         btn.addActionListener { listener() }
 }
@@ -156,25 +170,23 @@ fun newToolbarButton(
 fun newToolbarToggleButton(
     icon: Icon,
     tooltip: String,
-    shortcutKeyCode: Int,
-    shortcutModifiers: Int,
-    isSelected: Boolean = false,
+    shortcut: Shortcut? = null,
     listener: ((Boolean) -> Unit)? = null
-) = JToggleButton(icon, isSelected).also { btn ->
-    cfgForToolbar(btn, tooltip, shortcutKeyCode, shortcutModifiers)
+) = JToggleButton(icon).also { btn ->
+    cfgForToolbar(btn, tooltip, shortcut)
     if (listener != null)
         btn.addItemListener { listener(it.stateChange == ItemEvent.SELECTED) }
 }
 
-private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcutKeyCode: Int, shortcutModifiers: Int) {
+private fun cfgForToolbar(btn: AbstractButton, tooltip: String, shortcut: Shortcut?) {
     btn.putClientProperty(BUTTON_TYPE, BUTTON_TYPE_TOOLBAR_BUTTON)
     btn.isFocusable = false
 
-    val shortcutHint = shortcutHint(shortcutKeyCode, shortcutModifiers)
-    if (shortcutHint == null) {
+    if (shortcut == null) {
         btn.toolTipText = tooltip
         return
     }
+    val shortcutHint = shortcut.hint
     btn.toolTipText = if ("<br>" !in tooltip) "$tooltip ($shortcutHint)" else {
         val idx = tooltip.indexOf("<br>")
         tooltip.substring(0, idx) + " ($shortcutHint)" + tooltip.substring(idx)
@@ -193,6 +205,36 @@ fun Document.addDocumentListener(listener: (DocumentEvent) -> Unit) {
         override fun removeUpdate(e: DocumentEvent) = listener(e)
         override fun changedUpdate(e: DocumentEvent) = listener(e)
     })
+}
+
+
+fun Component.addThresholdedStartDragListener(startDragging: (MouseEvent) -> Unit) {
+    val mouseListener = object : MouseAdapter() {
+        private val thresh = DragSource.getDragThreshold()
+        private var startPoint: Point? = null
+
+        override fun mousePressed(e: MouseEvent) {
+            if (SwingUtilities.isLeftMouseButton(e))
+                startPoint = e.point
+        }
+
+        override fun mouseReleased(e: MouseEvent) {
+            if (SwingUtilities.isLeftMouseButton(e))
+                startPoint = null
+        }
+
+        override fun mouseDragged(e: MouseEvent) {
+            startPoint?.let { s ->
+                if (abs(e.x - s.x) > thresh || abs(e.y - s.y) > thresh) {
+                    startPoint = null
+                    startDragging(e)
+                }
+            }
+        }
+    }
+
+    addMouseListener(mouseListener)
+    addMouseMotionListener(mouseListener)
 }
 
 
@@ -343,7 +385,7 @@ open class DropdownPopupMenuSubmenu(label: String) : JMenu(label) {
     }
 }
 
-open class DropdownPopupMenuItem(label: String, icon: Icon? = null) : JMenuItem(label, icon) {
+open class DropdownPopupMenuItem(label: String) : JMenuItem(label) {
     init {
         iconTextGap = 0
         putClientProperty(STYLE, "minimumIconSize: 0, 0")
@@ -482,87 +524,141 @@ class LabeledListCellRenderer<E>(
 }
 
 
-var minimumWindowSize = Dimension(600, 450)
-var minimumWelcomeFrameSize = Dimension(700, 500)
+open class CcFrame(title: String = "") : JFrame(title) {
 
-fun JFrame.setup(welcomeFrame: Boolean = false) {
-    minimumSize = if (welcomeFrame) minimumWelcomeFrameSize else minimumWindowSize
-    defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
+    init {
+        iconImages = WINDOW_ICON_IMAGES
+    }
+
+    @Deprecated("")
+    @Suppress("DEPRECATION")
+    override fun show() = showPreventingPartialMaximizationFlag(this) { super.show() }
+
 }
 
-fun JDialog.setup() {
-    minimumSize = minimumWindowSize
-    defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE
-    // On macOS, enable the system-native full-screen buttons also for dialogs.
-    if (SystemInfo.isMacOS)
-        setWindowCanFullScreenMacOS(this, true)
+open class CcDialog(owner: Frame) : JDialog(owner) {
+
+    init {
+        iconImages = WINDOW_ICON_IMAGES
+        // On macOS, enable the system-native full-screen buttons also for dialogs.
+        if (SystemInfo.isMacOS)
+            setWindowCanFullScreenMacOS(this, true)
+    }
+
+    @Deprecated("")
+    @Suppress("DEPRECATION")
+    override fun show() = showPreventingPartialMaximizationFlag(this) { super.show() }
+
 }
 
-fun Window.center(onScreen: GraphicsConfiguration, widthFrac: Double, heightFrac: Double) {
-    val winBounds = onScreen.usableBounds
-    val width = (winBounds.width * widthFrac).roundToInt().coerceAtLeast(minimumSize.width)
-    val height = (winBounds.height * heightFrac).roundToInt().coerceAtLeast(minimumSize.height)
-    setBounds(
-        winBounds.x + (winBounds.width - width) / 2,
-        winBounds.y + (winBounds.height - height) / 2,
-        width, height
-    )
-}
-
-var disableSnapToSide = false
-
-fun Window.snapToSide(onScreen: GraphicsConfiguration, rightSide: Boolean) {
-    if (disableSnapToSide)
-        return
-
-    val winBounds = onScreen.usableBounds
-    winBounds.width /= 2
-
-    // If the window should snap to the right side, move its x coordinate.
-    if (rightSide)
-        winBounds.x += winBounds.width
-
-    // Apply the computed window bounds.
-    bounds = winBounds
-
-    // On Windows 10, windows have a thick invisible border which resides inside the window bounds.
-    // If we do nothing about it, the window is not flush with the sides of the screen, but there's a thick strip
-    // of empty space between the window and the left, right, and bottom sides of the screen.
-    // To fix this, we find the exact thickness of the border by querying the window's insets (which we can only do
-    // after the window has been opened, hence the listener) and add those insets to the window bounds on the left,
-    // right, and bottom sides.
-    if (SystemInfo.isWindows_10_orLater)
-        addWindowListener(object : WindowAdapter() {
-            override fun windowOpened(e: WindowEvent?) {
-                val winInsets = insets
-                setBounds(
-                    winBounds.x - winInsets.left,
-                    winBounds.y,
-                    winBounds.width + winInsets.left + winInsets.right,
-                    winBounds.height + winInsets.bottom
-                )
-            }
-        })
-
-    // On Linux, when a window that vertically covers the entire screen is made visible for the first time, AWT sets its
-    // extendedState property to MAXIMIZED_VERT. Unfortunately, that state has a couple of problems:
-    //   - When the user drags the window, it will get "minimized", i.e. it shrinks vertically. This is different from
-    //     the behavior on other OS, and quite inconvenient as it could mess up the window's vertical layout.
+private fun showPreventingPartialMaximizationFlag(window: Window, superShow: () -> Unit) {
+    // On Linux, when a window that horizontally OR vertically covers the entire screen is made visible, AWT sets its
+    // extendedState property to MAXIMIZED_HORIZ OR MAXIMIZED_VERT. Unfortunately, that state has a couple of problems:
+    //   - When the user drags the window, it will get "minimized", i.e. it shrinks in the maximized direction. This is
+    //     different from other OSes' behavior, and quite inconvenient as it could mess up the window's layout.
     //   - FlatLaf's custom window decorations disallow resizing the window by dragging its boundaries.
     //   - When clicking on the "maximize" button in the window's title bar, a special Linux condition in FlatLaf's
-    //     FlatTitlePane.maximize() method actually minimizes the window vertically, but maximizes it horizontally,
-    //     i.e. it shrinks vertically and expands horizontally.
-    // Our fix is to avoid the extendedState ever being set to MAXIMIZED_VERT. To trick AWT into this, we shrink the
-    // window by 1 pixel vertically, then make it visible, and finally add the pixel back.
-    if (SystemInfo.isLinux) {
-        setSize(winBounds.width, winBounds.height - 1)
-        addWindowListener(object : WindowAdapter() {
-            override fun windowOpened(e: WindowEvent?) {
-                size = winBounds.size
-            }
-        })
-    }
+    //     FlatTitlePane.maximize() method actually minimizes the window in one direction, but maximizes it in the
+    //     other, i.e., it shrinks in one direction and expands in the other.
+    // Our fix is to avoid the extendedState ever being set to MAXIMIZED_*. To trick AWT into this, we shrink the window
+    // by 1 pixel, then make it visible, and finally add the pixel back.
+    // Note a couple of things:
+    //   - Dialogs are also affected, though they don't expose their extendedState in Java. This fix works for them too.
+    //   - We also prevent MAXIMIZED_BOTH from being automatically set, thereby also matching the behavior of other OS.
+    //   - We check for isVisible instead of isDisplayable, because we've observed cases where making a previously
+    //     visible window visible again triggered the bug.
+    if (!window.isVisible && SystemInfo.isLinux) {
+        val winBounds = window.bounds
+        window.setSize(winBounds.width - 1, winBounds.height - 1)
+        superShow()
+        window.setSize(winBounds.width, winBounds.height)
+    } else
+        superShow()
 }
+
+
+var Frame.maximized: Boolean
+    get() = extendedState and MAXIMIZED_BOTH == MAXIMIZED_BOTH
+    set(maximized) {
+        val oldExtState = extendedState
+        val newExtState = if (maximized) oldExtState or MAXIMIZED_BOTH else oldExtState and MAXIMIZED_BOTH.inv()
+        if (oldExtState != newExtState) {
+            // On Linux, making a window non-maximized again actually changes its size. We prevent that by setting
+            // isResizable to false.
+            // However, the window sometimes ends up in a strange state and then exhibits buggy behavior. We've tried
+            // LOTS of things to avoid it, but all of them had other buggy side effects. The only fix that works
+            // somewhat reliably is setting the extendedState a second time inside an invokeLater().
+            if (!maximized && SystemInfo.isLinux) {
+                val actuallyResizable = isResizable
+                isResizable = false
+                extendedState = newExtState
+                isResizable = actuallyResizable
+                SwingUtilities.invokeLater { extendedState = newExtState }
+            } else
+                extendedState = newExtState
+        }
+    }
+
+
+val windowMargin: Insets get() = windowMeasurements.first.clone() as Insets
+val windowMarginMaximized: Insets get() = windowMeasurements.second.clone() as Insets
+val windowPadding: Insets get() = windowMeasurements.third.clone() as Insets
+val windowMarginPlusPadding: Insets
+    get() {
+        val m = windowMargin
+        val p = windowPadding
+        return Insets(m.top + p.top, m.left + p.left, m.bottom + p.bottom, m.right + p.right)
+    }
+
+private val windowMeasurements by lazy {
+    val frame = JFrame()
+    // We've tried addNotify() instead of setVisible(true), but that wasn't sufficient to get FlatLaf's custom window
+    // decorations to be considered in the measurements.
+    frame.isVisible = true
+    // On Windows 10+, windows have a thick invisible border which resides inside the window bounds.
+    val windowMargin = if (!SystemInfo.isWindows_10_orLater) Insets(0, 0, 0, 0) else frame.insets
+    val windowPadding = frame.rootPane.insets.apply { top += frame.contentPane.y }
+    val windowMarginMaximized = if (!SystemInfo.isWindows_10_orLater) Insets(0, 0, 0, 0) else {
+        frame.maximized = true
+        frame.insets.apply {
+            // On Windows 10+, maximized windows have a shrunken title bar. Even though this is reported as an enlarged
+            // top inset, the actual y coordinate of a maximized window is the same as that of a non-maximized window,
+            // but the window is taller. We just add the extra top inset amount to the bottom margin. When subtracting
+            // the resulting margin on all sides from a maximized window, one obtains exactly the usable screen bounds.
+            bottom += top - windowMargin.top
+            top = windowMargin.top
+        }
+    }
+    frame.dispose()
+    Triple(windowMargin, windowMarginMaximized, windowPadding)
+}
+
+
+var Window.boundsExclMargin: Rectangle
+    get() {
+        val m = if (this is Frame && maximized) windowMarginMaximized else windowMargin
+        val b = bounds
+        b.x += m.left
+        b.y += m.top
+        b.width -= m.left + m.right
+        b.height -= m.top + m.bottom
+        return b
+    }
+    set(b) {
+        val m = if (this is Frame && maximized) windowMarginMaximized else windowMargin
+        setBounds(b.x - m.left, b.y - m.top, b.width + m.left + m.right, b.height + m.top + m.bottom)
+    }
+
+
+val Window.mostOccupiedGraphicsConfiguration: GraphicsConfiguration
+    get() =
+        if (isVisible)
+            graphicsConfiguration
+        else
+            GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
+                .map { dev -> dev.defaultConfiguration }
+                .maxBy { gCfg -> gCfg.bounds.intersection(bounds).run { if (isEmpty) 0 else width * height } }
+
 
 val GraphicsConfiguration.usableBounds: Rectangle
     get() {
@@ -584,24 +680,16 @@ val GraphicsConfiguration.usableBounds: Rectangle
 
 
 class KeyListener(
-    private val shortcutKeyCode: Int,
-    private val shortcutModifiers: Int,
+    private val shortcut: Shortcut,
     private val listener: () -> Unit
 ) {
     fun onKeyEvent(e: KeyEvent): Boolean {
-        val match = e.keyCode == shortcutKeyCode && e.modifiersEx == shortcutModifiers
+        val match = shortcut.matches(e)
         if (match)
             listener()
         return match
     }
 }
-
-fun shortcutHint(shortcutKeyCode: Int, shortcutModifiers: Int): String? =
-    if (shortcutKeyCode == 0) null else buildString {
-        if (shortcutModifiers != 0)
-            append(getModifiersExText(shortcutModifiers)).append("+")
-        append(getKeyText(shortcutKeyCode))
-    }
 
 
 fun tryOpen(file: Path) = openCascade(Desktop.Action.OPEN, Desktop::open, file.toFile(), file.toUri())

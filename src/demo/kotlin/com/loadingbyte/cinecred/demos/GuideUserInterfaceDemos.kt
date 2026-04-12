@@ -9,19 +9,22 @@ import com.loadingbyte.cinecred.delivery.ImageSequenceRenderJob
 import com.loadingbyte.cinecred.delivery.RenderFormat
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.delivery.VideoContainerRenderJob
-import com.loadingbyte.cinecred.demo.ScreencastDemo
-import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
-import com.loadingbyte.cinecred.demo.edt
+import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.st
-import com.loadingbyte.cinecred.ui.*
+import com.loadingbyte.cinecred.ui.DELIVERY_DEST_TEMPLATES_PREFERENCE
+import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder.*
+import com.loadingbyte.cinecred.ui.LocaleWish
+import com.loadingbyte.cinecred.ui.OVERLAYS_PREFERENCE
+import com.loadingbyte.cinecred.ui.comms.DockableId.*
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
+import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.lang.foreign.MemorySegment.NULL
@@ -34,7 +37,7 @@ private const val DIR = "guide/user-interface"
 
 val GUIDE_USER_INTERFACE_DEMOS
     get() = listOf(
-        GuideUserInterfaceToggleDialogsDemo,
+        GuideUserInterfaceTogglePanelsDemo,
         GuideUserInterfacePagesDemo,
         GuideUserInterfaceLayoutGuidesDemo,
         GuideUserInterfaceOverlaysStandardDemo,
@@ -50,59 +53,72 @@ val GUIDE_USER_INTERFACE_DEMOS
     )
 
 
-object GuideUserInterfaceToggleDialogsDemo : ScreencastDemo("$DIR/toggle-dialogs", Format.VIDEO_GIF, 1100, 600) {
+object GuideUserInterfaceTogglePanelsDemo : ScreencastDemo("$DIR/toggle-panels", Format.VIDEO_GIF, 1100, 650) {
     override fun generate() {
-        addProjectWindows(hideStyWin = true, setupVidWin = true, setupDlvWin = true)
+        addProjectWindows(dockedTrees)
 
         edt {
-            prjPnl.leakedGuidesButton.isSelected = false
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
+            tolDok.leakedGuidesButton.isSelected = false
             styTree.selectedRow = 8
         }
         sleep(500)
 
-        dt.mouseTo(prjWin.desktopPosOf(prjPnl.leakedDeliveryDialogButton), jump = true)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
-        sc.click(8 * hold)
-        sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
-        sc.click(8 * hold)
-        sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedDeliveryDialogButton))
-        sc.click(8 * hold)
-        sc.click()
+        val sequence = listOf(
+            tolDok.leakedLogButton,
+            tolDok.leakedPreviewButton,
+            tolDok.leakedStylingButton,
+            tolDok.leakedPlaybackButton,
+            tolDok.leakedDeliveryButton
+        )
+
+        dt.mouseTo(prjWin.desktopPosOf(sequence[0]), jump = true)
+        sc.hold(4 * hold)
+        for (button in sequence) {
+            sc.mouseTo(prjWin.desktopPosOf(button))
+            sc.click(0)
+            if (button == tolDok.leakedPlaybackButton)
+                sleep(500)
+            sc.hold(4 * hold)
+        }
+        sc.hold(4 * hold)
+        for (button in sequence.asReversed()) {
+            sc.mouseTo(prjWin.desktopPosOf(button))
+            sc.click()
+        }
     }
 }
 
 
-object GuideUserInterfacePagesDemo : ScreencastDemo("$DIR/pages", Format.VIDEO_GIF, 600, 480) {
+object GuideUserInterfacePagesDemo : ScreencastDemo("$DIR/pages", Format.VIDEO_GIF, 850, 650) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true)
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
-        edt { prjPnl.leakedGuidesButton.isSelected = false }
+        edt { tolDok.leakedGuidesButton.isSelected = false }
         sleep(500)
 
-        dt.mouseTo(prjWin.desktopPosOfTab(prjPnl.leakedPageTabs, 0), jump = true)
+        dt.mouseTo(prjWin.desktopPosOfTab(preDok.leakedPageTabs, 0), jump = true)
         sc.click(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOfTab(prjPnl.leakedPageTabs, 1))
+        sc.mouseTo(prjWin.desktopPosOfTab(preDok.leakedPageTabs, 1))
         sc.click(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOfTab(prjPnl.leakedPageTabs, 2))
+        sc.mouseTo(prjWin.desktopPosOfTab(preDok.leakedPageTabs, 2))
         sc.click(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOfTab(prjPnl.leakedPageTabs, 0))
+        sc.mouseTo(prjWin.desktopPosOfTab(preDok.leakedPageTabs, 0))
     }
 }
 
 
-object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides", Format.VIDEO_GIF, 600, 480) {
+object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides", Format.VIDEO_GIF, 850, 600) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true)
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
         edt {
-            prjPnl.leakedPageTabs.selectedIndex = 2
-            prjPnl.leakedGuidesButton.isSelected = false
+            preDok.leakedPageTabs.selectedIndex = 2
+            tolDok.leakedGuidesButton.isSelected = false
         }
         sleep(500)
 
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedGuidesButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedGuidesButton))
         sc.click(0)
         sleep(500)
         sc.hold(4 * hold)
@@ -113,7 +129,7 @@ object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides",
 }
 
 
-object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 700, 520) {
+object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 850, 600) {
     override fun generate() {
         val backedUpOverlays = OVERLAYS_PREFERENCE.get()
         OVERLAYS_PREFERENCE.set(emptyList())
@@ -125,11 +141,12 @@ object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-st
     }
 
     private fun generate2() {
-        addProjectWindows(fullscreenPrjWin = true)
-        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
-        OVERLAYS_PREFERENCE.set(emptyList())
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
+        edt { tolDok.leakedGuidesButton.isSelected = false }
+        sleep(500)
+
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedOverlaysButton))
         sc.click()
         sleep(500)
         for (idx in 0..3) {
@@ -142,8 +159,6 @@ object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-st
             sleep(1000)
             sc.hold(hold)
         }
-
-        OVERLAYS_PREFERENCE.set(backedUpOverlays)
     }
 }
 
@@ -162,9 +177,12 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
     }
 
     private fun generate2() {
-        addProjectWindows(fullscreenPrjWin = true)
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
+        edt { tolDok.leakedGuidesButton.isSelected = false }
+        sleep(500)
+
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedOverlaysButton))
         sc.click()
         sleep(500)
         sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 5))
@@ -198,7 +216,7 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         removeWelcomeWindow()
 
         sc.hold(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedOverlaysButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedOverlaysButton))
         sc.click()
         sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 4))
         sleep(500)
@@ -210,52 +228,50 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
 
 
 object GuideUserInterfaceEditDemo : ScreencastDemo(
-    "$DIR/edit", Format.VIDEO_GIF, 1100, 600
+    "$DIR/edit", Format.VIDEO_GIF, 1100, 650
 ) {
     override fun generate() {
-        addProjectWindows(hideStyWin = true)
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
 
         sc.hold(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
-        sc.click(2 * hold)
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("ui.styling.globalStyling")))
+        sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, l10n("ui.styling.globalStyling")))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfSetting(styGlobForm, Global::resolution.st()))
+        sc.mouseTo(prjWin.desktopPosOfSetting(styGlobForm, Global::resolution.st()))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfDropdownItem(idx = 2))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 2))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
+        sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::font.st(), 0))
+        sc.mouseTo(prjWin.desktopPosOfSetting(styLetrForm, LetterStyle::font.st(), 0))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfDropdownItem(BUNDLED_FAMILIES.getFamily("Raleway Regular")))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(BUNDLED_FAMILIES.getFamily("Raleway Regular")))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOf(prjPnl.leakedUndoStylingButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedUndoStylingButton))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOf(prjPnl.leakedRedoStylingButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedRedoStylingButton))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOf(prjPnl.leakedSaveStylingButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedSaveStylingButton))
         sc.click(4 * hold)
-        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedAddContentStyleButton))
+        sc.mouseTo(prjWin.desktopPosOf(styDok.leakedAddContentStyleButton))
         sc.click(4 * hold)
-        sc.mouseTo(styWin.desktopPosOf(styPnl.leakedRemoveStyleButton))
+        sc.mouseTo(prjWin.desktopPosOf(styDok.leakedRemoveStyleButton))
         sc.click(4 * hold)
     }
 }
 
 
 object GuideUserInterfaceResetDemo : ScreencastDemo(
-    "$DIR/reset", Format.VIDEO_GIF, 1100, 600
+    "$DIR/reset", Format.VIDEO_GIF, 1100, 650
 ) {
     override fun generate() {
-        addProjectWindows()
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
 
         sc.hold(2 * hold)
-        sc.mouseTo(styWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
+        sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
         sc.click()
-        sc.mouseTo(styWin.desktopPosOfSetting(styLetrForm, LetterStyle::uppercase.st()))
+        sc.mouseTo(prjWin.desktopPosOfSetting(styLetrForm, LetterStyle::uppercase.st()))
         sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedResetStylingButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedResetStylingButton))
         sc.click()
         addOptionPaneDialog()
         sc.hold(2 * hold)
@@ -268,10 +284,10 @@ object GuideUserInterfaceResetDemo : ScreencastDemo(
 
 
 object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
-    "$DIR/snap-spreadsheet-editor", Format.VIDEO_GIF, 1100, 600
+    "$DIR/snap-spreadsheet-editor", Format.VIDEO_GIF, 1100, 650
 ) {
     override fun generate() {
-        addProjectWindows(hideStyWin = true)
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
 
         edt { styTree.selectedRow = 8 }
         val creditsFile = projectDir.resolve("${projectDir.name}.csv")
@@ -283,6 +299,8 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
         dt.center(spreadsheetEditorWin)
 
         sc.hold(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
+        sc.click(2 * hold)
         sc.mouseTo(spreadsheetEditorWin.desktopPosOfTitleBar())
         dt.dragWindow(spreadsheetEditorWin)
         sc.mouseTo(Point(dt.width - 2, dt.height / 4))
@@ -290,20 +308,22 @@ object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
         dt.dropWindow()
         dt.toBack(spreadsheetEditorWin)
         sc.hold(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedStylingDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
         repeat(4) { sc.click(2 * hold) }
     }
 }
 
 
-object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview", Format.VIDEO_GIF, 800, 500) {
+object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview", Format.VIDEO_GIF, 850, 540) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true, setupVidWin = true, vidWinSize = Dimension(700, 380))
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, collapsed(PLAYBACK)))))
 
         sc.hold()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedVideoDialogButton))
-        sc.click(2 * hold)
-        sc.mouseTo(plyWin.desktopPosOf(plyCtl.leakedPlayButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedPlaybackButton))
+        sc.click(0)
+        sleep(500)
+        sc.hold(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(plyCtl.leakedPlayButton))
         edt { plyCtl.leakedFrameSlider.valueIsAdjusting = true }
         sc.click { edt { plyCtl.leakedFrameSlider.value += 1; plyCtl.setPlaybackDirection(1) } }
         while (plyCtl.leakedFrameSlider.run { value < maximum / 3 })
@@ -312,9 +332,9 @@ object GuideUserInterfaceVideoPreviewDemo : ScreencastDemo("$DIR/video-preview",
 }
 
 
-object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.VIDEO_GIF, 800, 600) {
+object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.VIDEO_GIF, 850, 380) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true)
+        addProjectWindows(trees(tree(TOOLBAR)))
 
         edt {
             prjCtl.setDeckLinks(DECK_LINKS)
@@ -357,42 +377,42 @@ object GuideUserInterfaceDeckLinkDemo : ScreencastDemo("$DIR/decklink", Format.V
 }
 
 
-object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.VIDEO_GIF, 800, 695) {
+object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.VIDEO_GIF, 850, 710) {
     override fun generate() {
-        addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 570))
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, collapsed(DELIVERY)))))
 
         sc.hold()
-        sc.mouseTo(prjWin.desktopPosOf(prjPnl.leakedDeliveryDialogButton))
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedDeliveryButton))
         sc.click(12 * hold)
-        sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
+        sc.mouseTo(prjWin.desktopPosOf(dlvFormats))
         sc.click(8 * hold)
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvProfiles))
+        sc.mouseTo(prjWin.desktopPosOf(dlvProfiles))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(RenderFormat.ProResProfile.PRORES_4444))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(RenderFormat.ProResProfile.PRORES_4444))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvTranspar))
+        sc.mouseTo(prjWin.desktopPosOf(dlvTranspar))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(RenderFormat.Transparency.TRANSPARENT))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(RenderFormat.Transparency.TRANSPARENT))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvSpaceScal))
+        sc.mouseTo(prjWin.desktopPosOf(dlvSpaceScal))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(1))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(1))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvScan))
+        sc.mouseTo(prjWin.desktopPosOf(dlvScan))
         sc.click(2 * hold)
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvPrimaries))
+        sc.mouseTo(prjWin.desktopPosOf(dlvPrimaries))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ColorSpace.Primaries.BT2020))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(ColorSpace.Primaries.BT2020))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvTransfer))
+        sc.mouseTo(prjWin.desktopPosOf(dlvTransfer))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ColorSpace.Transfer.PQ))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(ColorSpace.Transfer.PQ))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOf(dlvPnl.leakedAddButton))
+        sc.mouseTo(prjWin.desktopPosOf(dlvDok.leakedAddButton))
         sc.click(8 * hold)
 
         RenderQueue.cancelAllJobs()
@@ -401,7 +421,7 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
 
 
 object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
-    "$DIR/delivery-dest-template", Format.VIDEO_GIF, 800, 600
+    "$DIR/delivery-dest-template", Format.VIDEO_GIF, 850, 620
 ) {
     override fun generate() {
         ToolTipManager.sharedInstance().isEnabled = false
@@ -416,24 +436,23 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
     }
 
     private fun generate2() {
-        addProjectWindows(fullscreenPrjWin = true, setupDlvWin = true, dlvWinSize = Dimension(700, 500))
-        edt { projectCtrl.setDialogVisible(ProjectDialogType.DELIVERY, true) }
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, DELIVERY))))
 
         for (idx in intArrayOf(3, 5)) {
-            sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+            sc.mouseTo(prjWin.desktopPosOf(dlvDestTempl))
             sc.click(0)
             sleep(500)
             sc.hold()
-            sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = idx))
+            sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = idx))
             sc.click(0)
             sleep(500)
             sc.hold(4 * hold)
         }
-        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.mouseTo(prjWin.desktopPosOf(dlvDestTempl))
         sc.click(0)
         sleep(500)
         sc.hold()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 7))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 7))
         sc.click(0)
         sleep(1000)
 
@@ -468,24 +487,25 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         welcomeFrame.close()
 
         sc.hold(2 * hold)
-        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.mouseTo(prjWin.desktopPosOf(dlvDestTempl))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 7))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 7))
+        sleep(500)
         sc.click(8 * hold)
-        sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
+        sc.mouseTo(prjWin.desktopPosOf(dlvFormats))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(VideoContainerRenderJob.FORMATS.first { it.label == "ProRes" }))
         sc.click(8 * hold)
-        sc.mouseTo(dlvWin.desktopPosOf(dlvFormats))
+        sc.mouseTo(prjWin.desktopPosOf(dlvFormats))
         sc.click()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(ImageSequenceRenderJob.FORMATS.find { it.label == "PNG" }))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(ImageSequenceRenderJob.FORMATS.find { it.label == "PNG" }))
         sc.click(8 * hold)
         sc.hold(8 * hold)
-        sc.mouseTo(dlvWin.desktopPosOf(dlvDestTempl))
+        sc.mouseTo(prjWin.desktopPosOf(dlvDestTempl))
         sc.click(0)
         sleep(500)
         sc.hold()
-        sc.mouseTo(dlvWin.desktopPosOfDropdownItem(idx = 0))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = 0))
         sc.click(0)
         sleep(500)
         sc.hold(8 * hold)
@@ -493,11 +513,17 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
 }
 
 
-object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.PNG, 1100, 600) {
+object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.PNG, 1100, 650) {
     override fun generate() {
-        addProjectWindows(prjWinSplitRatio = 0.8)
+        addProjectWindows(dockedTrees.apply { parent(LOG).ratio = 0.83 })
 
-        edt { prjPnl.leakedGuidesButton.isSelected = false }
+        edt {
+            tolDok.leakedGuidesButton.isSelected = false
+            logDok.leakedLogTable.columnModel.apply {
+                getColumn(4).apply { minWidth = 64; width = 64 }
+                getColumn(5).apply { minWidth = 64; width = 64 }
+            }
+        }
         val oldStyling = projectCtrl.stylingHistory.current
         val oldCardStyle = oldStyling.contentStyles.first { it.name == l10n("project.PageBehavior.CARD") }
         val newCardStyle = oldCardStyle.copy(hasTail = false)

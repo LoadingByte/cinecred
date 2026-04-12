@@ -14,7 +14,7 @@ import javax.swing.SpinnerNumberModel
 class StyleForm<S : Style>(
     val styleClass: Class<S>,
     latent: Set<StyleSetting<in S, *>> = emptySet(),
-    insets: Boolean = true,
+    insets: String = "18",
     noticeArea: Boolean = true,
     constLabelWidth: Boolean = true
 ) : Form.Storable<S>(insets, noticeArea, constLabelWidth) {
@@ -177,7 +177,7 @@ class StyleForm<S : Style>(
                     // the style form.
                     latent = setOf(LayerStyle::name.st(), LayerStyle::collapsed.st()),
                     // Horizontal space in nested forms is scarce, so save where we can.
-                    insets = false, noticeArea = false, constLabelWidth = false
+                    insets = "0", noticeArea = false, constLabelWidth = false
                 )
                 NestedFormWidget(nestedForm)
             },

@@ -2179,31 +2179,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
             // Add a transfer handler for dragging.
             transferHandler = LayerPanelTransferHandler(idx)
             // Add a mouse listener that notifies the transfer handler when dragging should start.
-            val mouseListener = object : MouseAdapter() {
-                private val thresh = DragSource.getDragThreshold()
-                private var startPoint: Point? = null
-
-                override fun mousePressed(e: MouseEvent) {
-                    if (e.button == MouseEvent.BUTTON1)
-                        startPoint = e.point
-                }
-
-                override fun mouseReleased(e: MouseEvent) {
-                    if (e.button == MouseEvent.BUTTON1)
-                        startPoint = null
-                }
-
-                override fun mouseDragged(e: MouseEvent) {
-                    startPoint?.let { s ->
-                        if (abs(e.x - s.x) > thresh || abs(e.y - s.y) > thresh) {
-                            startPoint = null
-                            startDrag(e)
-                        }
-                    }
-                }
-            }
-            addMouseListener(mouseListener)
-            addMouseMotionListener(mouseListener)
+            addThresholdedStartDragListener(::startDrag)
             // Prevent dragging when the user clicks inside the widget panel.
             widgetPanel.addMouseListener(object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {

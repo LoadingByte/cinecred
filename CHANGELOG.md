@@ -7,6 +7,11 @@ Cinecred Changelog
 
 ### Additions
 
+- The GUI is now made up of freely (un)dockable and rearrangeable panels.
+    - The new default layout packs all panels in a single big window, but the
+      old floating window layout is still available and can be again set as
+      default to restore the old behavior.
+    - Custom window layouts can be saved and later restored, or set as default.
 - Any spreadsheet file in the project folder is now considered a credits file.
   All of them are read in simultaneously and have their sheets presented as
   isolated credits sequences.
@@ -31,6 +36,8 @@ Cinecred Changelog
 ### UI Fixes
 
 - The video preview now updates the duration when switching between sheets.
+- On Windows, maximizing a dialog or opening the full screen video preview no
+  longer leaves an area around it blank.
 - If the macOS file chooser freezes the entire program, another way of opening
   the chooser, which hopefully doesn't, can now be selected in the preferences.
 

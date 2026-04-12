@@ -8,15 +8,15 @@ import java.awt.Rectangle
 import javax.swing.*
 
 
-open class Form(insets: Boolean, noticeArea: Boolean, private val constLabelWidth: Boolean) : JPanel(
+open class Form(insets: String, noticeArea: Boolean, private val constLabelWidth: Boolean) : JPanel(
     MigLayout(
-        "hidemode 3, insets " + if (insets) "dialog" else "0",
+        "hidemode 3, insets $insets",
         "[" + (if (constLabelWidth) "$LABEL_WIDTH_CONSTRAINT!, " else "") + "align right][grow]" +
                 if (noticeArea) "150[]" else ""
     )
 ), Scrollable {
 
-    abstract class Storable<O : Any /* non-null */>(insets: Boolean, noticeArea: Boolean, constLabelWidth: Boolean) :
+    abstract class Storable<O : Any /* non-null */>(insets: String, noticeArea: Boolean, constLabelWidth: Boolean) :
         Form(insets, noticeArea, constLabelWidth) {
         abstract fun open(stored: O)
         abstract fun save(): O

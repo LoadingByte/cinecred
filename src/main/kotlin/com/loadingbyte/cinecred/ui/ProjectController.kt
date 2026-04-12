@@ -9,27 +9,31 @@ import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.*
-import com.loadingbyte.cinecred.ui.comms.DeliveryCtrlComms
-import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
-import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
-import com.loadingbyte.cinecred.ui.ctrl.DeliveryCtrl
-import com.loadingbyte.cinecred.ui.ctrl.PlaybackCtrl
+import com.loadingbyte.cinecred.ui.Shortcut.*
+import com.loadingbyte.cinecred.ui.comms.*
+import com.loadingbyte.cinecred.ui.ctrl.*
+import com.loadingbyte.cinecred.ui.helper.DockingFrame
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
 import com.loadingbyte.cinecred.ui.helper.JobSlot
-import com.loadingbyte.cinecred.ui.view.delivery.DeliveryDialog
-import com.loadingbyte.cinecred.ui.view.playback.PlaybackDialog
+import com.loadingbyte.cinecred.ui.helper.usableBounds
+import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
+import com.loadingbyte.cinecred.ui.view.delivery.DeliveryDockable
+import com.loadingbyte.cinecred.ui.view.log.LogDockable
+import com.loadingbyte.cinecred.ui.view.playback.PlaybackDockable
+import com.loadingbyte.cinecred.ui.view.preview.PreviewDockable
+import com.loadingbyte.cinecred.ui.view.toolbar.ToolbarDockable
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Font
-import java.awt.GraphicsConfiguration
-import java.awt.Window
+import java.awt.*
 import java.awt.event.KeyEvent
-import java.awt.event.KeyEvent.*
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
+import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
 import kotlin.io.path.name
 
@@ -38,9 +42,19 @@ import kotlin.io.path.name
 class ProjectController(
     val masterCtrl: MasterCtrlComms,
     val projectDir: Path,
-    val openOnScreen: GraphicsConfiguration,
+    openOnScreen: GraphicsConfiguration?,
+    trees: List<DockingFrame.Tree>?,
     private val onClose: () -> Unit
 ) {
+
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedToolbarDockable get() = getDockable<ToolbarDockable>()
+    @Deprecated("ENCAPSULATION LEAK") val leakedPreviewDockable get() = getDockable<PreviewDockable>()
+    @Deprecated("ENCAPSULATION LEAK") val leakedLogDockable get() = getDockable<LogDockable>()
+    @Deprecated("ENCAPSULATION LEAK") val leakedPlaybackDockable get() = getDockable<PlaybackDockable>()
+    @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryDockable get() = getDockable<DeliveryDockable>()
+    private inline fun <reified D> getDockable(): D = projectFrame.dockables.first { it is D } as D
+    // =========================================
 
     class ProjectInitializationAbortedException : Exception()
 
@@ -64,16 +78,47 @@ class ProjectController(
     // STEP 1:
     // Create and open the project UI.
 
-    val playbackCtrl: PlaybackCtrlComms = PlaybackCtrl(this)
+    val toolbarCtrl: ToolbarCtrlComms = ToolbarCtrl(this)
+    val previewCtrl: PreviewCtrlComms = PreviewCtrl(this)
+    val logCtrl: LogCtrlComms = LogCtrl()
+    val playbackCtrl: PlaybackCtrlComms = PlaybackCtrl()
     val deliveryCtrl: DeliveryCtrlComms = DeliveryCtrl(this)
-    val projectFrame = ProjectFrame(this)
-    val stylingDialog = StylingDialog(this)
-    val playbackDialog = PlaybackDialog(this, playbackCtrl)
-    val deliveryDialog = DeliveryDialog(this, deliveryCtrl)
+
+    val stylingDockable = EditStylingPanel(this)
+    val projectFrame: DockingFrame
 
     init {
-        projectFrame.isVisible = true
-        stylingDialog.isVisible = true
+        val toolbarDockable = ToolbarDockable(toolbarCtrl, playbackCtrl)
+        val previewDockable = PreviewDockable(previewCtrl)
+        val logDockable = LogDockable(logCtrl)
+        val playbackDockable = PlaybackDockable(playbackCtrl)
+        val deliveryDockable = DeliveryDockable(deliveryCtrl)
+
+        toolbarCtrl.ready()
+
+        projectFrame = DockingFrame(
+            listOf(toolbarDockable, previewDockable, logDockable, stylingDockable, playbackDockable, deliveryDockable),
+            configureWindow = { window ->
+                val title = "$projectName \u2013 Cinecred"
+                if (window is Frame) window.title = title
+                if (window is Dialog) window.title = title
+                // On macOS, show the opened project folder in the window title bar.
+                (window as RootPaneContainer).rootPane.putClientProperty("Window.documentFile", projectDir.toFile())
+            }, onChangeCollapsed = { dockableId, collapsed ->
+                setDockableCollapsed(DockableId.valueOf(dockableId), collapsed)
+            })
+        projectFrame.addWindowListener(object : WindowAdapter() {
+            override fun windowClosing(e: WindowEvent) {
+                tryCloseProject()
+            }
+        })
+        projectFrame.setTrees(trees ?: run {
+            val availableLayouts = PresetWindowLayout.ALL + WINDOW_LAYOUTS_PREFERENCE.get()
+            val defaultLayoutName = DEFAULT_WINDOW_LAYOUT_PREFERENCE.get()
+            val bounds = openOnScreen!!.usableBounds
+            (availableLayouts.find { it.name == defaultLayoutName } ?: availableLayouts[0]).trees(bounds)
+        })
+        onChangeWindowLayout()
 
         if (PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
             makeProjectHintTrack(this).play(onPass = { PROJECT_HINT_TRACK_PENDING_PREFERENCE.set(false) })
@@ -90,23 +135,23 @@ class ProjectController(
             creditsWorkbooks: List<ProjectIntake.CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean
         ) {
             process(currentInput.updateAndGet { it.copy(creditsWorkbooks = creditsWorkbooks, ioLog = log) })
-            SwingUtilities.invokeLater { projectFrame.panel.updateCreditsPolling(pollable) }
+            SwingUtilities.invokeLater { toolbarCtrl.setCreditsPollable(pollable) }
         }
 
         override fun pushProjectFonts(projectFonts: SortedMap<String, Font>) {
             val projectFamilies = FontFamilies(projectFonts.values)
             process(currentInput.updateAndGet { it.copy(projectFonts = projectFonts) })
-            SwingUtilities.invokeLater { stylingDialog.panel.updateProjectFontFamilies(projectFamilies) }
+            SwingUtilities.invokeLater { stylingDockable.updateProjectFontFamilies(projectFamilies) }
         }
 
         override fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>) {
             process(currentInput.updateAndGet { it.copy(pictureLoaders = pictureLoaders) })
-            SwingUtilities.invokeLater { stylingDialog.panel.updatePictureLoaders(pictureLoaders.values) }
+            SwingUtilities.invokeLater { stylingDockable.updatePictureLoaders(pictureLoaders.values) }
         }
 
         override fun pushTapes(tapes: SortedMap<String, Tape>) {
             process(currentInput.updateAndGet { it.copy(tapes = tapes) })
-            SwingUtilities.invokeLater { stylingDialog.panel.updateTapes(tapes.values) }
+            SwingUtilities.invokeLater { stylingDockable.updateTapes(tapes.values) }
         }
 
     })
@@ -138,11 +183,19 @@ class ProjectController(
     }
 
     // STEP 4:
-    // Now that the creation of the ProjectController can no longer fail, we can add listeners to the overlays and
-    // delivery location templates preferences, and be sure that they will be removed when the project is closed again.
+    // Now that the creation of the ProjectController can no longer fail, we can add listeners to the window layouts,
+    // overlays and delivery location templates preferences, and be sure that they will be removed when the project is
+    // closed again.
+
+    private val windowLayoutsListener = { layouts: List<ConfigurableWindowLayout> ->
+        val availableLayouts = PresetWindowLayout.ALL + layouts
+        toolbarCtrl.setAvailableWindowLayouts(availableLayouts)
+    }
 
     private val overlaysListener = { overlays: List<ConfigurableOverlay> ->
-        projectFrame.panel.availableOverlays = (Overlay.BUNDLED + overlays).sorted()
+        val availableOverlays = (Overlay.BUNDLED + overlays).sorted()
+        toolbarCtrl.setAvailableOverlays(availableOverlays)
+        previewCtrl.setAvailableOverlays(availableOverlays)
     }
 
     private val deliveryDestTemplatesListener = { templates: List<DeliveryDestTemplate> ->
@@ -150,9 +203,11 @@ class ProjectController(
     }
 
     init {
+        WINDOW_LAYOUTS_PREFERENCE.addListener(windowLayoutsListener)
         OVERLAYS_PREFERENCE.addListener(overlaysListener)
-        overlaysListener(OVERLAYS_PREFERENCE.get())
         DELIVERY_DEST_TEMPLATES_PREFERENCE.addListener(deliveryDestTemplatesListener)
+        windowLayoutsListener(WINDOW_LAYOUTS_PREFERENCE.get())
+        overlaysListener(OVERLAYS_PREFERENCE.get())
         deliveryDestTemplatesListener(DELIVERY_DEST_TEMPLATES_PREFERENCE.get())
     }
 
@@ -349,10 +404,13 @@ class ProjectController(
                 }
                 .thenBy(ParserMsg::spreadsheetName)
                 .thenBy(ParserMsg::recordNo)
-            projectFrame.panel.updateLog((input.ioLog + processingLog).sortedWith(logCmp))
+            val log = (input.ioLog + processingLog).sortedWith(logCmp)
+            previewCtrl.updateLog(log)
+            logCtrl.updateLog(log)
             if (drawnProject != null) {
-                projectFrame.panel.updateProject(drawnProject)
-                stylingDialog.panel.updateProject(drawnProject)
+                toolbarCtrl.updateProject(drawnProject)
+                previewCtrl.updateProject(drawnProject)
+                stylingDockable.updateProject(drawnProject)
                 playbackCtrl.updateProject(drawnProject)
                 deliveryCtrl.updateProject(drawnProject)
             }
@@ -365,39 +423,45 @@ class ProjectController(
     }
 
     fun tryCloseProject(force: Boolean = false): Boolean {
-        if (!projectFrame.panel.onTryCloseProject(force) || !deliveryCtrl.onTryCloseProject(force))
+        if (!toolbarCtrl.onTryCloseProject(force) || !deliveryCtrl.onTryCloseProject(force))
             return false
 
         playbackCtrl.closeProject()
         // The listeners might still be null if this method is called during initialization.
+        windowLayoutsListener?.let(WINDOW_LAYOUTS_PREFERENCE::removeListener)
         overlaysListener?.let(OVERLAYS_PREFERENCE::removeListener)
         deliveryDestTemplatesListener?.let(DELIVERY_DEST_TEMPLATES_PREFERENCE::removeListener)
 
         onClose()
-
         projectFrame.dispose()
-        for (type in ProjectDialogType.entries)
-            getDialog(type).dispose()
-
         projectIntake.close()
 
         return true
     }
 
-    private fun getDialog(type: ProjectDialogType) = when (type) {
-        ProjectDialogType.STYLING -> stylingDialog
-        ProjectDialogType.VIDEO -> playbackDialog
-        ProjectDialogType.DELIVERY -> deliveryDialog
+    var windowLayoutTrees: List<DockingFrame.Tree>
+        get() = projectFrame.getTrees()
+        set(trees) {
+            projectFrame.setTrees(trees)
+            onChangeWindowLayout()
+        }
+
+    fun setDockableCollapsed(dockableId: DockableId, collapsed: Boolean) {
+        projectFrame.setCollapsed(dockableId.name, collapsed)
+        toolbarCtrl.setDockableCollapsed(dockableId, collapsed)
+        when (dockableId) {
+            DockableId.TOOLBAR, DockableId.PREVIEW, DockableId.LOG, DockableId.STYLING -> {}
+            DockableId.PLAYBACK -> playbackCtrl.onShowOrHide(!collapsed)
+            DockableId.DELIVERY -> deliveryCtrl.onShowOrHide(!collapsed)
+        }
     }
 
-    fun setDialogVisible(type: ProjectDialogType, isVisible: Boolean) {
-        getDialog(type).isVisible = isVisible
-        projectFrame.panel.onSetDialogVisible(type, isVisible)
-        when (type) {
-            ProjectDialogType.STYLING -> {}
-            ProjectDialogType.VIDEO -> playbackCtrl.setDialogVisibility(isVisible)
-            ProjectDialogType.DELIVERY -> deliveryCtrl.setDialogVisibility(isVisible)
-        }
+    private fun toggleDockableCollapsed(dockableId: DockableId) =
+        setDockableCollapsed(dockableId, !projectFrame.isCollapsed(dockableId.name))
+
+    private fun onChangeWindowLayout() {
+        for (dockableId in DockableId.entries)
+            setDockableCollapsed(dockableId, projectFrame.isCollapsed(dockableId.name))
     }
 
     fun onGlobalKeyEvent(event: KeyEvent): Boolean {
@@ -408,40 +472,58 @@ class ProjectController(
         // process key events even inside the color picker popup.
         while (window is Window && window.type == Window.Type.POPUP)
             window = window.owner
-        if (window != projectFrame && window != stylingDialog && window != playbackDialog && window != deliveryDialog)
+        if (window !is Window || !projectFrame.isDockingWindow(window) && !playbackCtrl.isFullScreenWindow(window))
             return false
-        if (projectFrame.panel.onKeyEvent(event) || stylingDialog.isVisible && stylingDialog.panel.onKeyEvent(event))
+        if (!projectFrame.isCollapsed(DockableId.STYLING.name) && stylingDockable.onKeyEvent(event))
             return true
-        when (event.modifiersEx) {
-            0 -> when (event.keyCode) {
-                VK_J -> playbackCtrl.rewind()
-                VK_K -> playbackCtrl.pause()
-                VK_L -> playbackCtrl.play()
-                VK_SPACE -> playbackCtrl.togglePlay()
-                VK_LEFT, VK_KP_LEFT -> playbackCtrl.scrubRelativeFrames(-1)
-                VK_RIGHT, VK_KP_RIGHT -> playbackCtrl.scrubRelativeFrames(1)
-                VK_HOME -> playbackCtrl.scrub(0)
-                VK_END -> playbackCtrl.scrub(Int.MAX_VALUE)
-                VK_F11 -> playbackCtrl.toggleFullScreen()
-                VK_ESCAPE -> playbackCtrl.setFullScreen(false)
-                else -> return false
-            }
-            SHIFT_DOWN_MASK -> when (event.keyCode) {
-                // Don't listen for the regular left/right keys here as those are reserved for text fields.
-                VK_KP_LEFT -> playbackCtrl.scrubRelativeSeconds(-1)
-                VK_KP_RIGHT -> playbackCtrl.scrubRelativeSeconds(1)
-                else -> return false
-            }
-            CTRL_DOWN_MASK -> when (event.keyCode) {
-                VK_Q -> tryCloseProject()
-                VK_W -> if (window == projectFrame) tryCloseProject() else
-                    setDialogVisible(ProjectDialogType.entries.first { getDialog(it) == window }, false)
-                VK_B -> deliveryCtrl.onClickAddRenderJobToQueue()
-                VK_L -> playbackCtrl.toggleDeckLinkConnected()
-                VK_1 -> playbackCtrl.toggleActualSize()
-                else -> return false
-            }
-            else -> return false
+        when (Shortcut.match(event)) {
+            ESCAPE -> if (!playbackCtrl.setFullScreen(false)) return false
+            CLOSE_WINDOW -> window.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
+            QUIT -> tryCloseProject()
+
+            TOOLBAR_POLL_CREDITS -> toolbarCtrl.pollCredits()
+            TOOLBAR_OPEN_CREDITS -> toolbarCtrl.openCredits()
+            TOOLBAR_BROWSE_PROJECT_DIR -> toolbarCtrl.browseProjectDir()
+            TOOLBAR_UNDO_STYLING -> toolbarCtrl.undoStyling()
+            TOOLBAR_REDO_STYLING -> toolbarCtrl.redoStyling()
+            TOOLBAR_SAVE_STYLING -> toolbarCtrl.saveStyling()
+            TOOLBAR_RESET_STYLING -> toolbarCtrl.resetStyling()
+            TOOLBAR_ZOOM_IN -> toolbarCtrl.zoom(zoomIn = true)
+            TOOLBAR_ZOOM_OUT -> toolbarCtrl.zoom(zoomIn = false)
+            TOOLBAR_ZOOM_RESET -> toolbarCtrl.setZoom(1.0)
+            TOOLBAR_TOGGLE_GUIDES -> toolbarCtrl.toggleGuides()
+            TOOLBAR_OVERLAY_MENU -> toolbarCtrl.toggleOverlaysMenu()
+            TOOLBAR_TOGGLE_STYLING_DOCKABLE -> toggleDockableCollapsed(DockableId.STYLING)
+            TOOLBAR_TOGGLE_PLAYBACK_DOCKABLE -> toggleDockableCollapsed(DockableId.PLAYBACK)
+            TOOLBAR_TOGGLE_DELIVERY_DOCKABLE -> toggleDockableCollapsed(DockableId.DELIVERY)
+            TOOLBAR_HOME -> toolbarCtrl.showWelcomeFrame()
+
+            PREVIEW_SWITCH_CREDITS_BOOK_TAB_LEFT -> previewCtrl.switchCreditsBookTab(false)
+            PREVIEW_SWITCH_CREDITS_BOOK_TAB_RIGHT -> previewCtrl.switchCreditsBookTab(true)
+            PREVIEW_SWITCH_CREDITS_TAB_LEFT -> previewCtrl.switchCreditsTab(false)
+            PREVIEW_SWITCH_CREDITS_TAB_RIGHT -> previewCtrl.switchCreditsTab(true)
+            PREVIEW_SWITCH_PAGE_TAB_LEFT -> previewCtrl.switchPageTab(false)
+            PREVIEW_SWITCH_PAGE_TAB_RIGHT -> previewCtrl.switchPageTab(true)
+
+            PLAYBACK_REWIND -> playbackCtrl.rewind()
+            PLAYBACK_PAUSE -> playbackCtrl.pause()
+            PLAYBACK_PLAY -> playbackCtrl.play()
+            PLAYBACK_TOGGLE_PLAY -> playbackCtrl.togglePlay()
+            PLAYBACK_ONE_FRAME_BACK -> playbackCtrl.scrubRelativeFrames(-1)
+            PLAYBACK_ONE_FRAME_FORWARD -> playbackCtrl.scrubRelativeFrames(1)
+            PLAYBACK_JUMP_TO_START -> playbackCtrl.scrub(0)
+            PLAYBACK_JUMP_TO_END -> playbackCtrl.scrub(Int.MAX_VALUE)
+            PLAYBACK_TOGGLE_FULL_SCREEN -> playbackCtrl.toggleFullScreen()
+            PLAYBACK_ONE_SECOND_BACK -> playbackCtrl.scrubRelativeSeconds(-1)
+            PLAYBACK_ONE_SECOND_FORWARD -> playbackCtrl.scrubRelativeSeconds(1)
+            PLAYBACK_TOGGLE_DECK_LINK_CONNECTED -> playbackCtrl.toggleDeckLinkConnected()
+            PLAYBACK_TOGGLE_ACTUAL_SIZE -> playbackCtrl.toggleActualSize()
+
+            DELIVERY_ADD_RENDER_JOB -> deliveryCtrl.onClickAddRenderJobToQueue()
+
+            STYLING_ADD_PAGE_STYLE, STYLING_ADD_CONTENT_STYLE, STYLING_ADD_LETTER_STYLE, STYLING_ADD_TRANSITION_STYLE,
+            STYLING_ADD_PICTURE_STYLE, STYLING_ADD_TAPE_STYLE, STYLING_DUPLICATE_STYLE, STYLING_REMOVE_STYLE,
+            HIDDEN_SHOW_LOG, null -> return false
         }
         return true
     }
@@ -463,8 +545,9 @@ class ProjectController(
         private var lastEditedMillis = 0L
 
         init {
-            projectFrame.panel.onStylingChange(isUnsaved = false, isUndoable = false, isRedoable = false)
-            stylingDialog.panel.setStyling(saved)
+            toolbarCtrl.setStylingUnsaved(false)
+            toolbarCtrl.setStylingUnReDoable(isUndoable = false, isRedoable = false)
+            stylingDockable.setStyling(saved)
         }
 
         /** Returns false when the new styling is semantically equal to the current one. */
@@ -511,7 +594,7 @@ class ProjectController(
                 lastEditedId = null
                 process(currentInput.updateAndGet { it.copy(styling = current) })
                 updateHistoryIndicators()
-                stylingDialog.panel.setStyling(current)
+                stylingDockable.setStyling(current)
             }
         }
 
@@ -521,7 +604,7 @@ class ProjectController(
                 lastEditedId = null
                 process(currentInput.updateAndGet { it.copy(styling = current) })
                 updateHistoryIndicators()
-                stylingDialog.panel.setStyling(current)
+                stylingDockable.setStyling(current)
             }
         }
 
@@ -531,7 +614,7 @@ class ProjectController(
 
         fun loadAndRedraw(new: Styling) {
             if (editedAndRedraw(new, null))
-                stylingDialog.panel.setStyling(new)
+                stylingDockable.setStyling(new)
         }
 
         /** Replaces the current styling with [new], and also refreshes the UI. Doesn't trigger a redraw. */
@@ -540,7 +623,7 @@ class ProjectController(
                 history[currentIdx] = new
                 currentInput.updateAndGet { it.copy(styling = new) }
                 updateHistoryIndicators()
-                stylingDialog.panel.setStyling(new)
+                stylingDockable.setStyling(new)
             }
         }
 
@@ -555,15 +638,12 @@ class ProjectController(
             }
             saved = current
             lastEditedId = null  // Saving should always create a new undo state.
-            projectFrame.panel.onStylingSave()
+            toolbarCtrl.setStylingUnsaved(false)
         }
 
         private fun updateHistoryIndicators() {
-            projectFrame.panel.onStylingChange(
-                isUnsaved = !semanticallyEqual(current, saved),
-                isUndoable = currentIdx != 0,
-                isRedoable = currentIdx != history.lastIndex
-            )
+            toolbarCtrl.setStylingUnsaved(!semanticallyEqual(current, saved))
+            toolbarCtrl.setStylingUnReDoable(isUndoable = currentIdx != 0, isRedoable = currentIdx != history.lastIndex)
         }
 
         private fun semanticallyEqual(a: Styling, b: Styling) =

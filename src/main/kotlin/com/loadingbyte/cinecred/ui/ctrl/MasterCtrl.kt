@@ -2,14 +2,12 @@ package com.loadingbyte.cinecred.ui.ctrl
 
 import com.loadingbyte.cinecred.common.isSameFileAsSafely
 import com.loadingbyte.cinecred.showLog
-import com.loadingbyte.cinecred.ui.PROJECT_HINT_TRACK_PENDING_PREFERENCE
-import com.loadingbyte.cinecred.ui.ProjectController
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.MasterCtrlComms
 import com.loadingbyte.cinecred.ui.comms.UIFactoryComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
-import com.loadingbyte.cinecred.ui.makeProjectHintTrack
-import com.loadingbyte.cinecred.ui.play
+import com.loadingbyte.cinecred.ui.helper.DockingFrame
 import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
@@ -52,13 +50,15 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
             // unconsumed key event. Hence, in addition to the component correctly handling the event, our shortcut
             // would accidentally trigger. As a workaround, we just don't key events to our handler when any component
             // that is susceptible to this behavior is focused.
-            event.component.let { it !is JTextComponent && it !is JComboBox<*> && it !is JTree }
+            (event.component.let { it !is JTextComponent && it !is JComboBox<*> && it !is JTree } ||
+                    // Then again, a couple of keys are processed by us but not by these components, so let them pass.
+                    event.keyCode in VK_F1..VK_F12 || event.keyCode == VK_ESCAPE)
         ) onGlobalKeyEvent(event) else false
 
     private fun onGlobalKeyEvent(event: KeyEvent): Boolean {
         if (event.isConsumed || event.id != KEY_PRESSED)
             return false
-        if (event.modifiersEx == SHIFT_DOWN_MASK or CTRL_DOWN_MASK or ALT_DOWN_MASK && event.keyCode == VK_L) {
+        if (Shortcut.HIDDEN_SHOW_LOG.matches(event)) {
             showLog()
             return true
         }
@@ -101,10 +101,10 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         welcomeCtrl = null
     }
 
-    override fun openProject(projectDir: Path, openOnScreen: GraphicsConfiguration) {
+    override fun openProject(projectDir: Path, openOnScreen: GraphicsConfiguration?, trees: List<DockingFrame.Tree>?) {
         var projectCtrl: ProjectController? = null
         projectCtrl = ProjectController(
-            this, projectDir, openOnScreen, onClose = { projectCtrl?.let(::onCloseProject) }
+            this, projectDir, openOnScreen, trees, onClose = { projectCtrl?.let(::onCloseProject) }
         )
         projectCtrls.add(projectCtrl)
     }

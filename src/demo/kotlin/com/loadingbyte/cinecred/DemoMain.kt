@@ -7,9 +7,8 @@ import com.loadingbyte.cinecred.common.TRANSLATED_LOCALES
 import com.loadingbyte.cinecred.common.comprehensivelyApplyLocale
 import com.loadingbyte.cinecred.demo.Demo
 import com.loadingbyte.cinecred.demos.*
-import com.loadingbyte.cinecred.ui.helper.disableSnapToSide
-import com.loadingbyte.cinecred.ui.helper.minimumWelcomeFrameSize
-import com.loadingbyte.cinecred.ui.helper.minimumWindowSize
+import com.loadingbyte.cinecred.ui.helper.DockingFrame
+import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
 import java.awt.Dimension
 import kotlin.system.exitProcess
 
@@ -41,10 +40,10 @@ fun main() {
 
 private fun generateDemos() {
     // We want to shrink windows to smaller sizes than what would usually be sensible.
-    minimumWindowSize = Dimension(300, 200)
-    minimumWelcomeFrameSize = minimumWindowSize
-    // If we were to leave this enabled, we would sometimes not be able to shrink the project and styling windows.
-    disableSnapToSide = true
+    WelcomeFrame.minimumFrameSize = Dimension(300, 200)
+    DockingFrame.applyMinimumSizes = false
+    // If we were to leave this enabled, we would sometimes not be able to shrink windows.
+    DockingFrame.autoMaximize = false
 
     Thread({
         for (locale in TRANSLATED_LOCALES) {

@@ -2,20 +2,16 @@ package com.loadingbyte.cinecred.ui.view.playback
 
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.ui.Shortcut.PLAYBACK_TOGGLE_ACTUAL_SIZE
+import com.loadingbyte.cinecred.ui.Shortcut.PLAYBACK_TOGGLE_FULL_SCREEN
+import com.loadingbyte.cinecred.ui.comms.DockableId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
-import com.loadingbyte.cinecred.ui.helper.SCREEN_ICON
-import com.loadingbyte.cinecred.ui.helper.WARN_ICON
-import com.loadingbyte.cinecred.ui.helper.X_1_TO_1_ICON
-import com.loadingbyte.cinecred.ui.helper.newToolbarToggleButton
+import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
-import java.awt.Canvas
-import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.Toolkit
+import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
 import javax.swing.JDialog
 import javax.swing.JLabel
@@ -24,18 +20,27 @@ import javax.swing.JSeparator
 import kotlin.math.roundToInt
 
 
-class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : JPanel(), PlaybackViewComms {
+class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
+    DockingFrame.Dockable(
+        dockableId = DockableId.PLAYBACK.name,
+        title = l10n("ui.video.title"),
+        icon = DockableId.PLAYBACK.icon
+    ),
+    PlaybackViewComms {
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK") val leakedControlsPanel get() = controlsPanel
     @Deprecated("ENCAPSULATION LEAK") val leakedVideoCanvas: Canvas get() = videoCanvas
     // =========================================
 
+    private val playbackPanel = JPanel()
+    private val fullScreenDialog = JDialog().apply { isUndecorated = true }
+
     private val controlsPanel = PlaybackControlsPanel(playbackCtrl)
     private val videoCanvas = VideoCanvas()
 
     private val actualSizeButton = newToolbarToggleButton(
-        X_1_TO_1_ICON, l10n("ui.video.actualSize"), VK_1, CTRL_DOWN_MASK, listener = playbackCtrl::setActualSize
+        X_1_TO_1_ICON, l10n("ui.video.actualSize"), PLAYBACK_TOGGLE_ACTUAL_SIZE, listener = playbackCtrl::setActualSize
     )
 
     // Do not add the full-screen button on macOS, as full screen is supported though native window buttons there.
@@ -43,29 +48,44 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
     // the dock (presumably) blocks mouse click events in the lower part of the window, where our buttons are.
     private val fullScreenButton = if (SystemInfo.isMacOS) null else
         newToolbarToggleButton(
-            SCREEN_ICON, l10n("ui.video.fullScreen"), VK_F11, 0
-        ) { isSelected -> graphicsConfiguration.device.fullScreenWindow = if (isSelected) playbackDialog else null }
+            SCREEN_ICON, l10n("ui.video.fullScreen"), PLAYBACK_TOGGLE_FULL_SCREEN
+        ) { isSelected ->
+            if (isSelected) {
+                remove(playbackPanel)
+                fullScreenDialog.contentPane.add(playbackPanel)
+                fullScreenDialog.isVisible = true
+                graphicsConfiguration.device.fullScreenWindow = fullScreenDialog
+            } else {
+                fullScreenDialog.graphicsConfiguration.device.fullScreenWindow = null
+                fullScreenDialog.isVisible = false
+                fullScreenDialog.contentPane.remove(playbackPanel)
+                add(playbackPanel, BorderLayout.CENTER)
+                revalidate()
+            }
+        }
 
     init {
         playbackCtrl.registerView(this)
 
         val stutterLabel = JLabel(l10n("ui.video.stutter"), WARN_ICON, JLabel.LEADING).apply { toolTipText = text }
 
-        layout = MigLayout(
-            "insets 0",
-            "[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]11[]10[]",
-            "[]0[]8[]8"
-        )
-        add(videoCanvas, "span, grow, pushy")
-        add(JSeparator(), "newline, span, growx, shrink 0 0")
-        add(actualSizeButton, "newline, gapleft 8")
-        fullScreenButton?.let(::add)
-        add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
-        add(controlsPanel, "growx, pushx")
-        add(JSeparator(JSeparator.VERTICAL), "growy, shrink 0 0")
-        add(stutterLabel, "wmin 0, gapright 14")
+        playbackPanel.apply {
+            layout = MigLayout(
+                "insets 0",
+                "[]" + (if (fullScreenButton != null) "0[]" else "") + "rel[]unrel[]11[]10[]",
+                "[]0[]8[]8"
+            )
+            add(videoCanvas, "span, grow, pushy")
+            add(JSeparator(), "newline, span, growx, hmin pref")
+            add(actualSizeButton, "newline, gapleft 8")
+            fullScreenButton?.let(::add)
+            add(JSeparator(JSeparator.VERTICAL), "growy, wmin pref")
+            add(controlsPanel, "growx, pushx")
+            add(JSeparator(JSeparator.VERTICAL), "growy, wmin pref")
+            add(stutterLabel, "wmin 0, gapright 14")
+        }
 
-        addComponentListener(object : ComponentAdapter() {
+        playbackPanel.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
                 playbackCtrl.setVideoCanvasSize(videoCanvas.size, videoCanvas.graphicsConfiguration)
                 // Without this explicit revalidation, the stutter label's width oscillates when shrinking the window.
@@ -73,19 +93,30 @@ class PlaybackPanel(playbackCtrl: PlaybackCtrlComms, playbackDialog: JDialog) : 
                 stutterLabel.revalidate()
             }
         })
+
+        layout = BorderLayout()
+        add(playbackPanel, BorderLayout.CENTER)
     }
+
+    override fun getMinimumSize(): Dimension =
+        if (isMinimumSizeSet) super.getMinimumSize() else Dimension(super.getMinimumSize().width, 200)
 
 
     /* ***************************
        ********** COMMS **********
        *************************** */
 
+    override fun isFullScreenWindow(window: Window) = window == fullScreenDialog
+    override fun disposeResources() = fullScreenDialog.dispose()
+
     override fun setActualSize(actualSize: Boolean) {
         actualSizeButton.isSelected = actualSize
     }
 
-    override fun setFullScreen(fullScreen: Boolean) {
+    override fun setFullScreen(fullScreen: Boolean): Boolean {
+        val changing = fullScreenButton != null && fullScreenButton.isSelected != fullScreen
         fullScreenButton?.isSelected = fullScreen
+        return changing
     }
 
     override fun toggleFullScreen() {

@@ -228,7 +228,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     }
 
 
-    private inner class CreateConfigureForm : EasyForm(insets = false, noticeArea = false, constLabelWidth = true) {
+    private inner class CreateConfigureForm : EasyForm(insets = "0", noticeArea = false, constLabelWidth = true) {
 
         val localeWidget = addWidget(
             l10n("ui.styling.global.locale"),

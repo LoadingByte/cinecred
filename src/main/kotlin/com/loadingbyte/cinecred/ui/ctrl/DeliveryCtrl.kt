@@ -200,8 +200,12 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         // Clear all previous issues and create new ones if applicable.
         for (view in views) view.clearIssues()
         var err = false
+        fun info(msg: String) = views.forEach { view -> view.addIssue(Severity.INFO, msg) }
         fun warn(msg: String) = views.forEach { view -> view.addIssue(Severity.WARN, msg) }
         fun error(msg: String) = views.forEach { view -> view.addIssue(Severity.ERROR, msg) }.also { err = true }
+        // Reassure the user that scaling means natively rendering in the new resolution.
+        if (format.isRaster && spatialScaling != 1.0)
+            info(l10n("ui.delivery.issues.nativeScaling", specs.optResolution!!))
         // Check for violated restrictions of the currently selected format.
         val forLabel = format.label
         if (SPATIAL_SCALING_LOG2 in config) {

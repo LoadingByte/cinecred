@@ -25,6 +25,7 @@ abstract class RenderFormat(
     val fileExts: Set<String>,
     val defaultFileExt: String,
     configAssortment: Config.Assortment,
+    val isRaster: Boolean = false,
     val widthMod: Int = 1,
     val heightMod: Int = 1,
     val minWidth: Int? = null,

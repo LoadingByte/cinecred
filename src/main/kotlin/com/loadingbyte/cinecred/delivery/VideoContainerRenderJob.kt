@@ -239,7 +239,7 @@ class VideoContainerRenderJob private constructor(
             .flatMapTo(HashSet()) { it.extensions },
         defaultFileExt,
         configAssortment * choice(SPATIAL_SCALING_LOG2) * choice(FPS_SCALING),
-        widthMod, heightMod, minWidth, minHeight
+        isRaster = true, widthMod, heightMod, minWidth, minHeight
     ) {
 
         abstract fun videoWriterSettings(config: Config): List<VideoWriterSettings>

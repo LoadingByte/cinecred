@@ -175,7 +175,8 @@ class ImageSequenceRenderJob private constructor(
 
     private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
         fileExt.uppercase(), auxLabel = null, fileSeq = true, setOf(fileExt), fileExt,
-        configAssortment * choice(SPATIAL_SCALING_LOG2) * choice(FPS_SCALING) * choice(SCAN)
+        configAssortment * choice(SPATIAL_SCALING_LOG2) * choice(FPS_SCALING) * choice(SCAN),
+        isRaster = true
     ) {
         override fun createRenderJob(
             config: Config,

@@ -156,20 +156,20 @@ class WholePageSequenceRenderJob private constructor(
     companion object {
 
         private val PNG = Format(
-            "png",
+            "png", isRaster = true,
             transparencyTimesColorSpace(default = SRGB) * choice(DEPTH, 8, 16)
         )
         private val TIFF = Format(
-            "tiff",
+            "tiff", isRaster = true,
             transparencyTimesColorSpace(default = SRGB) * choice(DEPTH, 8, 16) * choice(TIFF_COMPRESSION)
         )
         private val DPX = Format(
-            "dpx",
+            "dpx", isRaster = true,
             transparencyTimesColorSpace() * choice(DEPTH, 8, 10, 12, 16) * choice(DPX_COMPRESSION) -
                     fixed(DEPTH, 10) * fixed(TRANSPARENCY, TRANSPARENT)
         )
         private val EXR = Format(
-            "exr",
+            "exr", isRaster = true,
             choice(DEPTH, 16, 32, default = 32) * choice(EXR_COMPRESSION) * (
                     choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * choice(PRIMARIES) * fixed(TRANSFER, LINEAR)
                             * choice(HDR)
@@ -177,7 +177,7 @@ class WholePageSequenceRenderJob private constructor(
                     )
         )
         private val SVG = Format(
-            "svg",
+            "svg", isRaster = false,
             choice(TRANSPARENCY, GROUNDED, TRANSPARENT) * fixed(PRIMARIES, BT709) * fixed(TRANSFER, SRGB)
         )
 
@@ -190,9 +190,9 @@ class WholePageSequenceRenderJob private constructor(
     }
 
 
-    private class Format(fileExt: String, configAssortment: Config.Assortment) : RenderFormat(
+    private class Format(fileExt: String, isRaster: Boolean, configAssortment: Config.Assortment) : RenderFormat(
         fileExt.uppercase(), auxLabel = null, fileSeq = true, setOf(fileExt), fileExt,
-        configAssortment * choice(SPATIAL_SCALING_LOG2)
+        configAssortment * choice(SPATIAL_SCALING_LOG2), isRaster
     ) {
         override fun createRenderJob(
             config: Config,

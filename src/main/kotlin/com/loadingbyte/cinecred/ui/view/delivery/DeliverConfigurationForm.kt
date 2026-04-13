@@ -365,6 +365,7 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
             formatWidget.value,
             currentConfig(),
             currentSliders(),
+            currentPageIndices(),
             isErrorFree
         )
         disableOnChange = false
@@ -447,6 +448,15 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
         if (formatWidget.value in RenderFormatCategory.VIDEO.formats) resolutionWidget.value.getOrNull() else null
     )
 
+    private fun currentPageIndices() = when {
+        formatWidget.value in RenderFormatCategory.WHOLE_PAGE.formats ->
+            pageIndicesWidget.value.ifEmpty { pageIndicesWidget.items }
+        firstPageIdxWidget.items.isEmpty() ->
+            pageIndicesWidget.items
+        else ->
+            (firstPageIdxWidget.value..lastPageIdxWidget.value).toList()
+    }
+
 
     /* ***************************
        ********** COMMS **********
@@ -487,15 +497,12 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
 
     override fun triggerAddRenderJobToQueue() {
         val format = formatWidget.value
-        val wholePage = format in RenderFormatCategory.WHOLE_PAGE.formats
         deliveryCtrl.addRenderJobToQueue(
             creditsIdWidget.value.getOrNull() ?: return,
             format,
             currentConfig() ?: return,
             currentSliders(),
-            pageIndices =
-                if (wholePage) pageIndicesWidget.value.ifEmpty { pageIndicesWidget.items }
-                else (firstPageIdxWidget.value..lastPageIdxWidget.value).toList(),
+            currentPageIndices(),
             destinationWidget.value
         )
     }

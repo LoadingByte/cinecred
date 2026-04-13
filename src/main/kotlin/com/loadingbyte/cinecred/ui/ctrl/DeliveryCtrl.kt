@@ -124,6 +124,7 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         format: RenderFormat,
         config: RenderFormat.Config?,
         sliders: RenderFormat.Sliders,
+        pageIndices: List<Int>,
         isErrorFree: Boolean
     ) {
         val project = drawnProject?.project
@@ -152,6 +153,7 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         val scaledHeight = sliders.resolution?.heightPx ?: (spatialScaling * resolution.heightPx).roundToInt()
         val scaledFPS = project.styling.global.fps.frac * fpsScaling
         val scrollSpeeds = credits.pages.asSequence()
+            .filterIndexed { idx, _ -> idx in pageIndices }
             .flatMap { page -> page.stages }
             .filter { stage -> stage.style.behavior == PageBehavior.SCROLL }
             .map { stage -> stage.style.scrollPxPerFrame }
@@ -227,7 +229,8 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         }
         // Check for popping extremal scroll stages due to an enlarged vertical resolution.
         if (sliders.resolution != null && scaledHeight > (spatialScaling * resolution.heightPx).roundToInt() &&
-            credits.pages
+            credits.pages.asSequence()
+                .filterIndexed { idx, _ -> idx in pageIndices }
                 .flatMap { page -> listOf(page.stages.first(), page.stages.last()) }
                 .any { stage -> stage.style.behavior == PageBehavior.SCROLL }
         )

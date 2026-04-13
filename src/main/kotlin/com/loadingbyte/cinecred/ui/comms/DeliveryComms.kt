@@ -26,6 +26,7 @@ interface DeliveryCtrlComms {
         format: RenderFormat,
         config: RenderFormat.Config?,
         sliders: RenderFormat.Sliders,
+        pageIndices: List<Int>,
         isErrorFree: Boolean
     )
 

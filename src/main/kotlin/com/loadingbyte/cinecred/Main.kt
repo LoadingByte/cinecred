@@ -27,6 +27,7 @@ import org.bytedeco.ffmpeg.global.swscale
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
+import sun.misc.Signal
 import java.awt.*
 import java.net.URI
 import java.net.URLEncoder
@@ -188,9 +189,12 @@ private fun mainSwing(args: Array<String>) {
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES))
         Desktop.getDesktop().setPreferencesHandler { masterCtrl.showWelcomeFrame(tab = WelcomeTab.PREFERENCES) }
 
-    // On macOS, don't suddenly terminate the application when the user quits it or logs off, but instead try to close
-    // all windows, which in turn triggers all "unsaved changes" dialogs.
-    if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
+    // On Windows and macOS, don't suddenly terminate the application when the user logs off (or quits the application
+    // using the system-provided menu on macOS), but instead try to close all windows, which in turn triggers all
+    // "unsaved changes" dialogs.
+    if (SystemInfo.isWindows)
+        Signal.handle(Signal("TERM")) { masterCtrl.tryCloseProjectsAndDisposeAllFrames() }
+    else if (Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER))
         Desktop.getDesktop().setQuitHandler { _, response ->
             if (masterCtrl.tryCloseProjectsAndDisposeAllFrames())
                 response.performQuit()

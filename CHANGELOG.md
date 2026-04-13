@@ -38,6 +38,9 @@ Cinecred Changelog
 - The video preview now updates the duration when switching between sheets.
 - On Windows, maximizing a dialog or opening the full screen video preview no
   longer leaves an area around it blank.
+- If Windows shuts down or the user logs off while there are unsaved changes or
+  running render jobs, the user is offered to cancel the shutdown. macOS already
+  had this feature.
 - If the macOS file chooser freezes the entire program, another way of opening
   the chooser, which hopefully doesn't, can now be selected in the preferences.
 

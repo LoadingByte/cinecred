@@ -1,9 +1,11 @@
 package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
+import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.common.getSystemFont
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.l10nEnumQuoted
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
@@ -219,7 +221,7 @@ class ProjectController(
         if (creditsWorkbooks.isEmpty() ||
             projectFonts == null || pictureLoaders == null || tapes == null || origStyling == null
         )
-            return doneProcessing(input, emptyList(), null)
+            return doneProcessing(input, emptyList(), null, emptyList())
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
@@ -250,18 +252,20 @@ class ProjectController(
             // If the styling is erroneous, abort and notify the UI about the error.
             if (verifyConstraints(styling).any { it.severity == ERROR }) {
                 val error = ParserMsg(null, null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
-                return@submit doneProcessing(input, listOf(error), null)
+                return@submit doneProcessing(input, listOf(error), null, emptyList())
             }
 
             // Parse each credits workbook.
             val log = mutableListOf<ParserMsg>()
+            val runtimeGroupSources = HashMap<RuntimeGroup, RuntimeGroupSource>()
             val creditsBooks = creditsWorkbooks.map { creditsWorkbook ->
                 val credits = mutableListOf<Credits>()  // retains insertion order
                 for (spreadsheet in creditsWorkbook.spreadsheets) {
-                    val (curCredits, curLog) =
+                    val (curCredits, curLog, curRuntimeGroupSources) =
                         readCredits(creditsWorkbook.fileName, spreadsheet, styling, pictureLoaders, tapes)
                     credits += curCredits
                     log += curLog
+                    runtimeGroupSources += curCredits.runtimeGroups.zip(curRuntimeGroupSources)
                 }
                 CreditsBook(creditsWorkbook.fileName, creditsWorkbook.uri, credits.toPersistentList())
             }
@@ -297,9 +301,25 @@ class ProjectController(
                 }
 
             // Draw pages and video for each credits spreadsheet.
+            val crushingStyles = HashMap<Style, MutableList<CreditsId>>()
             val drawnCreditsBooks = creditsBooks.map { creditsBook ->
                 val drawnCredits = creditsBook.credits.map { curCredits ->
-                    val drawnPages = drawPages(styling, curCredits)
+                    val (drawnPages, crushedRuntimeGroups) = drawPages(styling, curCredits)
+
+                    // For each crushed runtime group:
+                    //   - If the group is defined in a sheet, either emit a log message,
+                    //   - If the group stems from a style, record it so that we can show a warning in the styling UI.
+                    for (crushedRuntimeGroup in crushedRuntimeGroups)
+                        when (val source = crushedRuntimeGroup?.let(runtimeGroupSources::get)) {
+                            is RuntimeGroupSource.Style, null ->
+                                crushingStyles.computeIfAbsent(source?.style ?: styling.global) { mutableListOf() } +=
+                                    CreditsId(creditsBook.fileName, curCredits.spreadsheetName)
+                            is RuntimeGroupSource.Sheet ->
+                                log += ParserMsg(
+                                    creditsBook.fileName, curCredits.spreadsheetName, source.recordNo, source.colHeader,
+                                    source.cellValue, WARN, l10n("ui.log.crushedVGaps")
+                                )
+                        }
 
                     // Limit each page's height to prevent the program from crashing due to misconfiguration.
                     if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 }) {
@@ -307,7 +327,7 @@ class ProjectController(
                             creditsBook.fileName, curCredits.spreadsheetName, null, null, null, ERROR,
                             l10n("ui.edit.excessivePageSizeError")
                         )
-                        return@submit doneProcessing(input, log + error, null)
+                        return@submit doneProcessing(input, log + error, null, emptyList())
                     }
 
                     val video = drawVideo(styling, drawnPages)
@@ -315,9 +335,21 @@ class ProjectController(
                 }
                 DrawnCreditsBook(creditsBook, drawnCredits.toPersistentList())
             }
+
+            // For each style that crushes a runtime group, show a warning in the styling UI.
+            val extraConstraintViolations = buildList {
+                for ((style, creditsIds) in crushingStyles) {
+                    val sett = if (style is Global) Global::runtimeFrames.st() else PageStyle::scrollRuntimeFrames.st()
+                    val sheets = l10nEnumQuoted(creditsIds.map { id -> "${id.fileName} \u2192 ${id.spreadsheetName}" })
+                    val msg = l10n("ui.styling.page.crushedVGaps", sheets)
+                    add(ConstraintViolation(style, style, sett, 0, WARN, msg))
+                }
+            }
+
             val project = Project(styling, creditsBooks.toPersistentList())
             val drawnProject = DrawnProject(project, drawnCreditsBooks.toPersistentList())
-            doneProcessing(input, log, drawnProject)
+
+            doneProcessing(input, log, drawnProject, extraConstraintViolations)
         }
     }
 
@@ -394,7 +426,12 @@ class ProjectController(
         return clearedStyles?.toPersistentList()
     }
 
-    private fun doneProcessing(input: Input, processingLog: List<ParserMsg>, drawnProject: DrawnProject?) {
+    private fun doneProcessing(
+        input: Input,
+        processingLog: List<ParserMsg>,
+        drawnProject: DrawnProject?,
+        extraConstraintViolations: List<ConstraintViolation>
+    ) {
         SwingUtilities.invokeLater {
             val logCmp = compareByDescending(ParserMsg::severity)
                 .thenComparingInt { msg -> input.creditsWorkbooks.indexOfFirst { it.fileName == msg.fileName } }
@@ -410,7 +447,7 @@ class ProjectController(
             if (drawnProject != null) {
                 toolbarCtrl.updateProject(drawnProject)
                 previewCtrl.updateProject(drawnProject)
-                stylingDockable.updateProject(drawnProject)
+                stylingDockable.updateProject(drawnProject, extraConstraintViolations)
                 playbackCtrl.updateProject(drawnProject)
                 deliveryCtrl.updateProject(drawnProject)
             }

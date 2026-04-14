@@ -26,6 +26,8 @@ Cinecred Changelog
 - Embedded videos can now loop.
 - The preview resolution of embedded videos is now configurable.
 - The credits runtime can now be copied to the clipboard by clicking on it.
+- If vertical gaps are fully crushed due to a runtime fine adjustment in the
+  styling or spreadsheet, a warning is now emitted.
 
 ### Fixes
 

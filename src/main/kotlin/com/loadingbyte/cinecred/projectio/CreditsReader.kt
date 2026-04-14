@@ -20,7 +20,7 @@ fun readCredits(
     styling: Styling,
     pictureLoaders: Map<String, Picture.Loader>,
     tapes: Map<String, Tape>
-): Pair<Credits, List<ParserMsg>> {
+): Triple<Credits, List<ParserMsg>, List<RuntimeGroupSource>> {
     // Try to find the table in the spreadsheet.
     val table = Table(
         fileName, spreadsheet, l10nPrefix = "projectIO.credits.table.", l10nColNames = listOf(
@@ -41,8 +41,14 @@ fun readCredits(
     )
 
     // Read the table.
-    val credits = CreditsReader(table, styling, pictureLoaders, tapes).read()
-    return Pair(credits, table.log)
+    val (credits, runtimeGroupSources) = CreditsReader(table, styling, pictureLoaders, tapes).read()
+    return Triple(credits, table.log, runtimeGroupSources)
+}
+
+
+sealed interface RuntimeGroupSource {
+    class Style(val style: PageStyle) : RuntimeGroupSource
+    class Sheet(val recordNo: Int, val colHeader: String, val cellValue: String) : RuntimeGroupSource
 }
 
 
@@ -144,8 +150,7 @@ private class CreditsReader(
 
     // Final result
     val pages = mutableListOf<Page>()
-    val unnamedRuntimeGroups = mutableListOf<RuntimeGroup>()
-    val namedRuntimeGroups = HashMap<String, RuntimeGroup>()
+    val runtimeGroupsWithSources = HashMap<Any, Pair<RuntimeGroup, RuntimeGroupSource>>()
 
     // Current page
     val pageStages = mutableListOf<Stage>()
@@ -186,6 +191,9 @@ private class CreditsReader(
     // Keep track where each stage has been declared, for use in an error message.
     var nextStageDeclaredRow = 0
     var stageDeclaredRow = 0
+    // Keep track where the runtime of stages has been declared, for use in the construction of RuntimeGroupSources.
+    var nextStageRuntimeFramesDeclaredRow = 0
+    var stageRuntimeFramesDeclaredRow = 0
     // Keep track where the melting of stages has been declared, for use in an error message.
     var stageMeltDeclaredRow = 0
     // Keep track where the current head and tail have been declared. This is used by an error message.
@@ -203,8 +211,9 @@ private class CreditsReader(
         } else {
             // When discarding a page, remove its stages from all runtime groups. Otherwise, these orphaned stages might
             // confuse the subsequent processing steps.
-            unnamedRuntimeGroups.replaceAll { g -> RuntimeGroup(g.stages.removeAll(pageStages), g.runtimeFrames) }
-            namedRuntimeGroups.replaceAll { _, g -> RuntimeGroup(g.stages.removeAll(pageStages), g.runtimeFrames) }
+            runtimeGroupsWithSources.replaceAll { _, (group, source) ->
+                Pair(RuntimeGroup(group.stages.removeAll(pageStages), group.runtimeFrames), source)
+            }
         }
         pageStages.clear()
         pageGapAfterFrames = null
@@ -224,18 +233,24 @@ private class CreditsReader(
                 PageBehavior.CARD -> {}
                 PageBehavior.SCROLL -> {
                     // If directed, add the new stage to a runtime group.
-                    val groupName = stageRuntimeGroupName
-                    if (groupName != null && groupName in namedRuntimeGroups) {
-                        val oldGroup = namedRuntimeGroups.getValue(groupName)
-                        namedRuntimeGroups[groupName] = RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames)
-                    } else {
-                        val groupFrames = stageRuntimeFrames
-                            ?: stageStyle.scrollRuntimeFrames.run { if (isActive) value else null }
-                        if (groupFrames != null)
-                            if (groupName != null)
-                                namedRuntimeGroups[groupName] = RuntimeGroup(persistentListOf(stage), groupFrames)
-                            else
-                                unnamedRuntimeGroups.add(RuntimeGroup(persistentListOf(stage), groupFrames))
+                    val sheetFrames = stageRuntimeFrames
+                    val sheetGroupName = stageRuntimeGroupName
+                    if (sheetGroupName != null && sheetGroupName in runtimeGroupsWithSources) {
+                        val (oldGroup, source) = runtimeGroupsWithSources.getValue(sheetGroupName)
+                        runtimeGroupsWithSources[sheetGroupName] =
+                            Pair(RuntimeGroup(oldGroup.stages.add(stage), oldGroup.runtimeFrames), source)
+                    } else if (sheetFrames != null) {
+                        val source = RuntimeGroupSource.Sheet(
+                            table.getRecordNo(stageRuntimeFramesDeclaredRow),
+                            table.getColHeader("pageRuntime")!!,
+                            table.getString(stageRuntimeFramesDeclaredRow, "pageRuntime")!!
+                        )
+                        runtimeGroupsWithSources[sheetGroupName ?: stage] =
+                            Pair(RuntimeGroup(persistentListOf(stage), sheetFrames), source)
+                    } else if (stageStyle.scrollRuntimeFrames.isActive) {
+                        val source = RuntimeGroupSource.Style(stageStyle)
+                        runtimeGroupsWithSources[stage] =
+                            Pair(RuntimeGroup(persistentListOf(stage), stageStyle.scrollRuntimeFrames.value), source)
                     }
                 }
             }
@@ -245,6 +260,7 @@ private class CreditsReader(
         stageRuntimeFrames = nextStageRuntimeFrames
         stageRuntimeGroupName = nextStageRuntimeGroupName
         stageDeclaredRow = nextStageDeclaredRow
+        stageRuntimeFramesDeclaredRow = nextStageRuntimeFramesDeclaredRow
         stageCompounds.clear()
         stageTransitionAfterFrames = 0
         stageTransitionAfterStyle = null
@@ -321,7 +337,7 @@ private class CreditsReader(
        ********** ACTUAL PARSING **********
        ************************************ */
 
-    fun read(): Credits {
+    fun read(): Pair<Credits, List<RuntimeGroupSource>> {
         legacyAddStylesForUnhintedAuxFiles()
 
         for (row in 0..<table.numRows) {
@@ -340,10 +356,10 @@ private class CreditsReader(
         if (pages.isEmpty())
             table.log(null, null, ERROR, l10n("projectIO.credits.noPages"))
 
-        // Collect the runtime groups.
-        val runtimeGroups = unnamedRuntimeGroups + namedRuntimeGroups.values
+        val (runtimeGroups, runtimeGroupSources) = runtimeGroupsWithSources.values.unzip()
+        val credits = Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())
 
-        return Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())
+        return Pair(credits, runtimeGroupSources)
     }
 
     fun legacyAddStylesForUnhintedAuxFiles() {
@@ -402,7 +418,7 @@ private class CreditsReader(
             var runtimeGroupName: String? = null
             if (nextStageDeclaredRow != row)
                 table.log(row, "pageRuntime", WARN, l10n("projectIO.credits.pageRuntimeInIntermediateRow"))
-            else if (str in namedRuntimeGroups || str == stageRuntimeGroupName)
+            else if (str in runtimeGroupsWithSources || str == stageRuntimeGroupName)
                 runtimeGroupName = str
             else {
                 val fps = styling.global.fps
@@ -412,13 +428,17 @@ private class CreditsReader(
                         val parts = str.split(' ')
                         val timecode = parts.last()
                         runtimeGroupName = parts.subList(0, parts.size - 1).joinToString(" ")
-                        if (runtimeGroupName in namedRuntimeGroups || runtimeGroupName == stageRuntimeGroupName) {
+                        if (runtimeGroupName in runtimeGroupsWithSources || runtimeGroupName == stageRuntimeGroupName) {
                             val msg = l10n("projectIO.credits.pageRuntimeGroupRedeclared", l10nQuoted(runtimeGroupName))
                             table.log(row, "pageRuntime", WARN, msg)
-                        } else
+                        } else {
                             nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, timecode)
-                    } else
+                            nextStageRuntimeFramesDeclaredRow = row
+                        }
+                    } else {
                         nextStageRuntimeFrames = parseTimecode(fps, timecodeFormat, str)
+                        nextStageRuntimeFramesDeclaredRow = row
+                    }
                 } catch (_: IllegalArgumentException) {
                     val examples = l10nEnumQuoted(sampleTimecode, "XYZ $sampleTimecode", "XYZ")
                     val msg = l10n("projectIO.credits.illFormattedPageRuntime", "<i>$timecodeFormatLabel</i>", examples)

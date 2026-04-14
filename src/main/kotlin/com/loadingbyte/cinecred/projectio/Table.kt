@@ -114,8 +114,8 @@ class Table(
         log(row, l10nColName, MIGRATE, l10n("projectIO.table.migration.put", l10nQuoted(value)), mds)
     }
 
-    private fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
-    private fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
+    fun getRecordNo(row: Int): Int = bodyRecords[row].recordNo
+    fun getColHeader(l10ColName: String): String? = colMap[l10ColName]?.let(headerRecord::get)
 
     fun isEmpty(row: Int, l10nColName: String): Boolean =
         colMap[l10nColName]?.let { col -> bodyRecords[row].cells.getOrNull(col).isNullOrBlank() } != false

@@ -444,7 +444,9 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         formAdjuster.updateTapes(tapes)
     }
 
-    fun updateProject(drawnProject: DrawnProject) {
+    fun updateProject(drawnProject: DrawnProject, externalConstraintViolations: List<ConstraintViolation>) {
+        formAdjuster.updateExtraConstraintViolations(externalConstraintViolations)
+
         // Only update the grayed-out status of styles if the DrawnProject we received stems from the current Styling.
         // If it doesn't, the Styling has changed again in the meantime, and we can't compare with the outdated usage
         // information because the identity of the styles has changed since then. If we didn't have this check, rapidly
@@ -453,8 +455,10 @@ class EditStylingPanel(private val ctrl: ProjectController) :
             val usedStyles = findUsedStyles(drawnProject.project)
             stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
         }
+
         drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()
             ?.let { mostRecentRuntime = it.video.numFrames }
+
         for (drawnCreditsBook in drawnProject.drawnCreditsBooks)
             for (drawnCredits in drawnCreditsBook.drawnCredits)
                 for (drawnPage in drawnCredits.drawnPages)

@@ -28,6 +28,8 @@ class StyleFormAdjuster(
     }
     // =========================================
 
+    // Save the externally provided constraint violations.
+    private var extraConstraintViolations: List<ConstraintViolation> = emptyList()
     // Cache the current Styling's constraint violations and all colors used in the current Styling.
     private var constraintViolations: List<ConstraintViolation> = emptyList()
     private var swatchColors: List<Color4f> = emptyList()
@@ -73,9 +75,17 @@ class StyleFormAdjuster(
                     form.setChoices(setting, choices)
     }
 
+    fun updateExtraConstraintViolations(violations: List<ConstraintViolation>) {
+        if (extraConstraintViolations == violations)
+            return
+        extraConstraintViolations = violations
+        notifyConstraintViolations(constraintViolations + extraConstraintViolations)
+        adjustActiveForm()
+    }
+
     private fun refreshConstraintViolations() {
         constraintViolations = verifyConstraints(getCurrentStyling() ?: return)
-        notifyConstraintViolations(constraintViolations)
+        notifyConstraintViolations(constraintViolations + extraConstraintViolations)
     }
 
     private fun refreshSwatchColors() {
@@ -117,7 +127,7 @@ class StyleFormAdjuster(
         curForm.ineffectiveSettings = findIneffectiveSettings(styling, curStyle)
 
         curForm.clearIssues()
-        for (violation in constraintViolations)
+        for (violation in sequenceOf(constraintViolations, extraConstraintViolations).flatten())
             if (violation.leafStyle == curStyle) {
                 val issue = Form.Notice(violation.severity, violation.msg)
                 curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)

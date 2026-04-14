@@ -21,7 +21,7 @@ import kotlin.math.*
 private class StageLayout(val y: Y, val info: DrawnStageInfo)
 
 
-fun drawPages(styling: Styling, credits: Credits): List<DrawnPage> {
+fun drawPages(styling: Styling, credits: Credits): Pair<List<DrawnPage>, List<RuntimeGroup?>> {
     val global = styling.global
 
     val pages = credits.pages
@@ -49,22 +49,26 @@ fun drawPages(styling: Styling, credits: Credits): List<DrawnPage> {
         }
 
     // If requested, adjust some vertical gaps to best match a specified runtime.
+    var crushedRuntimeGroups: List<RuntimeGroup?> = emptyList()
     if (runtimeGroups.isNotEmpty() || global.runtimeFrames.isActive) {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
         val prelimStageLayouts = HashMap<Stage, StageLayout>()
         for (page in pages)
             prelimStageLayouts.putAll(layoutStages(global.resolution, drawnStages, page, shrinkRamps = false).second)
         // Use that information to scale the vertical gaps.
-        drawnStages = matchRuntime(global, pages, drawnStages, prelimStageLayouts, runtimeGroups)
+        matchRuntime(global, pages, drawnStages, prelimStageLayouts, runtimeGroups)
+            .let { (ds, cg) -> drawnStages = ds; crushedRuntimeGroups = cg }
     }
 
     // Finally, do the real layout pass with potentially changed stage images and combine the stage images
     // to page images.
-    return pages.map { page ->
+    val drawnPages = pages.map { page ->
         val (pageImageHeight, stageLayouts) = layoutStages(global.resolution, drawnStages, page, shrinkRamps = true)
         val pageImage = drawPage(global, drawnStages, stageLayouts, page, pageImageHeight)
         DrawnPage(page, pageImage, stageLayouts.values.map(StageLayout::info).toPersistentList())
     }
+
+    return Pair(drawnPages, crushedRuntimeGroups)
 }
 
 
@@ -201,7 +205,7 @@ private fun matchRuntime(
     drawnStages: Map<Stage, DrawnStage>,
     stageLayouts: Map<Stage, StageLayout>,
     runtimeGroups: List<RuntimeGroup>
-): MutableMap<Stage, DrawnStage> {
+): Pair<MutableMap<Stage, DrawnStage>, List<RuntimeGroup?>> {
     // Prepare two maps which enable simple access to the two stages before and after any scroll stage.
     val prevStages = HashMap<Stage, Stage>()
     val nextStages = HashMap<Stage, Stage>()
@@ -242,8 +246,9 @@ private fun matchRuntime(
     }
 
     // Preprocess all user-defined runtime groups accordingly.
+    val userGroupLookup = HashMap<RuntimeGroup, RuntimeGroup?>()
     for (group in runtimeGroups)
-        addGroup(group.stages, group.runtimeFrames)
+        addGroup(group.stages, group.runtimeFrames)?.also { userGroupLookup[it] = group }
 
     // If the global desired runtime is activated, add a runtime group with all remaining stages not covered by
     // user-defined runtime groups.
@@ -258,16 +263,16 @@ private fun matchRuntime(
                 (if (global.blankLastFrame) 1 else 0) -
                 runtimeGroups.sumOf(RuntimeGroup::runtimeFrames) -
                 pages.subList(0, pages.size - 1).sumOf(Page::gapAfterFrames)
-        globalGroup = addGroup(remStages, globalGroupFrames)
+        globalGroup = addGroup(remStages, globalGroupFrames)?.also { userGroupLookup[it] = null }
     }
 
     // Run the runtime matching.
-    val (adjustedDrawnStages, shortfall) =
+    val (adjustedDrawnStages1, crushedGroups1, shortfall) =
         matchRuntime(pages, drawnStages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups)
     // If there is no global runtime adjustment happening (either because it is deactivated or because there are no
     // scroll stages remaining), or if all runtimes were matched perfectly, return the result
     if (globalGroup == null || shortfall == 0)
-        return adjustedDrawnStages
+        return Pair(adjustedDrawnStages1, crushedGroups1.apply { replaceAll(userGroupLookup::get) })
 
     // If we are here, shortfall is non-zero, which means that some stages did not exactly attain their desired runtime.
     // Apart from some very rare situations where an exact match is impossible, this means that some runtime groups have
@@ -277,7 +282,9 @@ private fun matchRuntime(
     shrinkGroups.remove(globalGroup)
     expandGroups.remove(globalGroup)
     addGroup(remStages, globalGroupFrames + shortfall)
-    return matchRuntime(pages, drawnStages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups).first
+    val (adjustedDrawnStages2, crushedGroups2) =
+        matchRuntime(pages, drawnStages, stageLayouts, prevStages, nextStages, shrinkGroups, expandGroups)
+    return Pair(adjustedDrawnStages2, crushedGroups2.apply { replaceAll(userGroupLookup::get) })
 }
 
 
@@ -289,7 +296,7 @@ private fun matchRuntime(
     nextStages: Map<Stage, Stage>,
     shrinkGroups: Set<RuntimeGroup>,
     expandGroups: Set<RuntimeGroup>
-): Pair<MutableMap<Stage, DrawnStage>, Int> {
+): Triple<MutableMap<Stage, DrawnStage>, MutableList<RuntimeGroup?>, Int> {
     // Naturally, we do not modify the vertical gaps of standalone cards. Further, we only adjust the gaps of a melted
     // card if it either borders exactly one scroll stage (in which case it is basically treated exactly the same as the
     // scroll stage) or if it borders two scroll stages which both need to shrink or both need to expand (in which case
@@ -320,10 +327,11 @@ private fun matchRuntime(
     // Now comes the real deal: for the groups which shrink and for those who expand separately, we collectively match
     // the desired runtime.
     val img = HashMap(drawnStages)
+    val cg = mutableListOf<RuntimeGroup?>()
     var shortfall = 0
-    shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(shrinkGroups), frozenCards)
-    shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(expandGroups), frozenCards)
-    return Pair(img, shortfall)
+    shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(shrinkGroups), frozenCards, cg)
+    shortfall += matchRuntimeInOneDir(stageLayouts, prevStages, nextStages, img, HashSet(expandGroups), frozenCards, cg)
+    return Triple(img, cg, shortfall)
 }
 
 // Note: "direction" refers to either shrinking or expanding.
@@ -334,7 +342,8 @@ private fun matchRuntimeInOneDir(
     // Manipulated collections:
     drawnStages: MutableMap<Stage, DrawnStage>,
     groups: MutableSet<RuntimeGroup>,
-    frozenCards: MutableSet<Stage>
+    frozenCards: MutableSet<Stage>,
+    crushedGroups: MutableList<RuntimeGroup?>
 ): Int {
     // If the given card has not been frozen yet, this function first scales its vertical gaps and then freezes it
     // similar to before, i.e., makes the height of the card's image rigid.
@@ -446,6 +455,11 @@ private fun matchRuntimeInOneDir(
             prevStages[scroll]?.let { prevCard -> tryFreezeCard(prevCard, modestElasticScaling) }
             nextStages[scroll]?.let { nextCard -> tryFreezeCard(nextCard, modestElasticScaling) }
         }
+
+        // If the group's desired runtime is so low that vertical gaps vanish completely, record the group to later
+        // inform the user.
+        if (modestElasticScaling == 0.0)
+            crushedGroups.add(modestGroup)
 
         // Record by how many frames the actually attained runtime diverges from the group's desired one. If there is a
         // divergence, it either stems from the very rare impossibilities outline above, or more likely from a group

@@ -95,7 +95,7 @@ abstract class VideoDemo(filename: String, format: Format) : Demo(filename, form
     final override fun doGenerate() {
         val project = buildProject(credits())
         val styling = project.styling
-        val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()))
+        val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()).first)
         renderDefVideo(video, styling.global.grounding).forEach(::write)
     }
 
@@ -119,7 +119,7 @@ abstract class StyleSettingsVideoDemo<S : Style>(
         styles.zip(settImgs.asIterable()) { style, settImg ->
             val project = buildProject(credits(style))
             val styling = project.styling
-            val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()))
+            val video = drawVideo(styling, drawPages(styling, project.creditsBooks.single().credits.single()).first)
             stackImages(buildList {
                 add(List(video.numFrames) { settImg })
                 if (timeline && style is TapeStyle) add(generateTimeline(style, video).asIterable())
@@ -206,7 +206,7 @@ private fun buildPageDefImgAndGrounding(
 ): Pair<DeferredImage, Color4f> {
     val project = buildProject(globalAndPages, augmentStyling)
     val pageDefImg = drawPages(project.styling, project.creditsBooks.single().credits.single())
-        .single().defImage.copy(universeScaling = scaling)
+        .first.single().defImage.copy(universeScaling = scaling)
     return Pair(pageDefImg, project.styling.global.grounding)
 }
 

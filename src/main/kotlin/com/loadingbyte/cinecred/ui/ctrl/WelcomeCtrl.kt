@@ -448,10 +448,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         tryCopyTemplate(projectDir, template)
                 }
                 SwingUtilities.invokeLater { tryOpenProject(projectDir) }
-            } catch (e: IOException) {
-                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.message ?: e.toString()) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
+            } catch (e: Exception) {
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.message ?: e.toString()) }
             }
             createProjectThread.set(null)
         }, "CreateProject").apply { isDaemon = true; start() })

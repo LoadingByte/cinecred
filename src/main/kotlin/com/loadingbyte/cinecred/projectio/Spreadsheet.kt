@@ -68,7 +68,7 @@ interface SpreadsheetFormat {
     /** @throws Exception */
     fun read(file: Path, defaultName: String): Pair<List<Spreadsheet>, List<ParserMsg>>
 
-    /** @throws IOException */
+    /** @throws Exception */
     fun write(file: Path, spreadsheet: Spreadsheet, look: SpreadsheetLook)
 
 }

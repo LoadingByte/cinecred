@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.WRITTEN_SERVICE_LINK_EXT
 import com.loadingbyte.cinecred.projectio.service.writeServiceLink
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -14,17 +13,17 @@ import kotlin.io.path.writeText
 import kotlin.math.max
 
 
-/** @throws IOException */
+/** @throws Exception */
 fun tryCopyTemplate(destDir: Path, template: Template) {
     tryCopyTemplate(destDir, template, null, null, null)
 }
 
-/** @throws IOException */
+/** @throws Exception */
 fun tryCopyTemplate(destDir: Path, template: Template, creditsFormat: SpreadsheetFormat) {
     tryCopyTemplate(destDir, template, creditsFormat, null, null)
 }
 
-/** @throws IOException */
+/** @throws Exception */
 fun tryCopyTemplate(destDir: Path, template: Template, creditsAccount: Account, creditsFilename: String) {
     tryCopyTemplate(destDir, template, null, creditsAccount, creditsFilename)
 }

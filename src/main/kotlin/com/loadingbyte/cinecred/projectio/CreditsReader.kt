@@ -403,8 +403,14 @@ private class CreditsReader(
 
         // If the page style cell is non-empty, mark the previous stage for conclusion (if there was any). Use the
         // specified page style for the stage that starts immediately afterwards. Also reset the spine positioning info.
-        table.getLookup(row, "pageStyle", pageStyleMap, "projectIO.credits.unavailablePageStyle")?.let { newPageStyle ->
-            nextStageStyle = newPageStyle
+        table.getString(row, "pageStyle")?.let { str ->
+            nextStageStyle = pageStyleMap[str]
+            if (nextStageStyle == null) {
+                val msg = if (pageStyleMap.isEmpty()) l10n("projectIO.credits.noPageStyles") else
+                    l10n("projectIO.credits.unavailablePageStyle", "<i>${l10nEnum(pageStyleMap.keys)}</i>")
+                table.log(row, "pageStyle", WARN, msg)
+                return@let
+            }
             nextStageDeclaredRow = row
             nextSpineHookTo = 0
             nextSpineHookVAnchor = VAnchor.MIDDLE
@@ -632,11 +638,14 @@ private class CreditsReader(
 
         // If the content style cell is non-empty, mark the previous block for conclusion (if there was any).
         // Use the new content style from now on until the next explicit content style declaration.
-        table.getLookup(
-            row, "contentStyle", contentStyleMap, "projectIO.credits.unavailableContentStyle",
-            fallback = PLACEHOLDER_CONTENT_STYLE
-        )?.let { newContentStyle ->
-            contentStyle = newContentStyle
+        table.getString(row, "contentStyle")?.let { str ->
+            contentStyle = contentStyleMap[str]
+            if (contentStyle == null) {
+                val msg = if (contentStyleMap.isEmpty()) l10n("projectIO.credits.noContentStyles") else
+                    l10n("projectIO.credits.unavailableContentStyle", "<i>${l10nEnum(contentStyleMap.keys)}</i>")
+                table.log(row, "contentStyle", WARN, msg)
+                contentStyle = PLACEHOLDER_CONTENT_STYLE
+            }
             isBlockConclusionMarked = true
         }
 
@@ -781,9 +790,10 @@ private class CreditsReader(
     }
 
     fun getBodyElement(l10nColName: String, initLetterStyleName: String?, onlyStr: Boolean): BodyElement? {
-        fun unavailableLetterStyleMsg(name: String) = l10n(
-            "projectIO.credits.unavailableLetterStyle", l10nQuoted(name), "<i>${l10nEnum(letterStyleMap.keys)}</i>"
-        )
+        fun unavailableLetterStyleMsg(name: String) =
+            if (letterStyleMap.isEmpty()) l10n("projectIO.credits.noLetterStyles") else l10n(
+                "projectIO.credits.unavailableLetterStyle", l10nQuoted(name), "<i>${l10nEnum(letterStyleMap.keys)}</i>"
+            )
 
         fun unknownTagMsg(tagKey: String) = l10n(
             "projectIO.credits.unknownTagKeyword", l10nQuoted("{{$tagKey …}}"), l10nQuoted("\\{{$tagKey …}}"),

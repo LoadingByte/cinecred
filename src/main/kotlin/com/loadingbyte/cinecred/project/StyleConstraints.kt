@@ -661,9 +661,11 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                                 (!cst.clustering || choice.name != (style as ListedStyle).name) && choice.name == ref
                             }
                             if (refUnavailable) {
-                                val msg =
-                                    if (st is ListStyleSetting) l10n("project.styling.constr.styles")
-                                    else l10n("project.styling.constr.style")
+                                val msg = when {
+                                    choices.isEmpty() -> l10n("project.styling.constr.noStyles")
+                                    st is ListStyleSetting -> l10n("project.styling.constr.styles")
+                                    else -> l10n("project.styling.constr.style")
+                                }
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
                         }

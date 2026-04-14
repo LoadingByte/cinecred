@@ -133,11 +133,4 @@ class Table(
         return null
     }
 
-    fun <T> getLookup(row: Int, l10nColName: String, map: Map<String, T>, l10Warning: String, fallback: T? = null): T? {
-        val str = getString(row, l10nColName) ?: return null
-        map[str]?.let { return it }
-        log(row, l10nColName, WARN, l10n(l10Warning, "<i>${l10nEnum(map.keys)}</i>"))
-        return fallback
-    }
-
 }

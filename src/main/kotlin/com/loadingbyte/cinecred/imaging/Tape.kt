@@ -148,11 +148,15 @@ class Tape private constructor(
             val (tapeW, tapeH) = reader.spec.resolution
             val tapeRep = reader.spec.representation
             val tapeHasAlpha = tapeRep.pixelFormat.hasAlpha
-            val maxDim = 128
-            val previewRes = if (tapeW > tapeH)
-                Resolution(maxDim, maxDim * tapeH / tapeW)
-            else
-                Resolution(maxDim * tapeW / tapeH, maxDim)
+            val maxDim = previewResolution.coerceAtLeast(16)
+            val previewRes = when {
+                tapeW <= maxDim && tapeH <= maxDim ->
+                    Resolution(tapeW, tapeH)
+                tapeW > tapeH ->
+                    Resolution(maxDim, roundingDiv(maxDim * tapeH, tapeW).coerceAtLeast(1))
+                else ->
+                    Resolution(roundingDiv(maxDim * tapeW, tapeH).coerceAtLeast(1), maxDim)
+            }
             val pictureRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
             pictureSpec = Bitmap.Spec(previewRes, pictureRep)
             val canvasSpec = Bitmap.Spec(previewRes, Canvas.compatibleRepresentation(pictureRep.colorSpace!!))
@@ -373,6 +377,8 @@ class Tape private constructor(
             val pattern = dir.resolve(prefix + (if (zeroPad) "%0${sameLen}d" else "%d") + suffix)
             return Tape(fileSeq = true, dir, pattern, numbers.first(), numbers.last())
         }
+
+        @Volatile var previewResolution: Int = 128
 
     }
 

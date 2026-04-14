@@ -29,6 +29,7 @@ val CHECK_FOR_UPDATES_PREFERENCE: Preference<Boolean> = BooleanPreference("check
 val WELCOME_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("welcomeHintTrackPending", true)
 val PROJECT_HINT_TRACK_PENDING_PREFERENCE: Preference<Boolean> = BooleanPreference("projectHintTrackPending", true)
 val APPLE_SCRIPT_FILE_CHOOSER: Preference<Boolean> = BooleanPreference("appleScriptFileChooser", false)
+val TAPE_PREVIEW_RESOLUTION: Preference<Int> = IntPreference("tapePreviewResolution", 128)
 val DECK_LINK_ID_PREFERENCE: Preference<String> = StringPreference("deckLinkId", "null")
 val DECK_LINK_MODE_PREFERENCE: Preference<String> = StringPreference("deckLinkMode", "null")
 val DECK_LINK_DEPTH_PREFERENCE: Preference<Int> = IntPreference("deckLinkDepth", 8)

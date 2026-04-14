@@ -24,6 +24,7 @@ Cinecred Changelog
   now be vertically justified in an arbitrary way, while previously it was just
   being baseline-aligned.
 - Embedded videos can now loop.
+- The preview resolution of embedded videos is now configurable.
 - The credits runtime can now be copied to the clipboard by clicking on it.
 
 ### Fixes

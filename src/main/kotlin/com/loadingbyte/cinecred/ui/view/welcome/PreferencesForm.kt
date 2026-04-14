@@ -4,10 +4,9 @@ import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
-import com.loadingbyte.cinecred.ui.helper.CheckBoxWidget
-import com.loadingbyte.cinecred.ui.helper.ComboBoxWidget
-import com.loadingbyte.cinecred.ui.helper.EasyForm
+import com.loadingbyte.cinecred.ui.helper.*
 import java.util.*
+import javax.swing.SpinnerNumberModel
 
 
 class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
@@ -53,6 +52,12 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
         CheckBoxWidget()
     )
 
+    private val tapePreviewResolutionWidget = addWidget(
+        l10n("ui.preferences.tapePreviewResolution"),
+        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(64, 64, 1024, 10), widthSpec = WidthSpec.LITTLE),
+        description = l10n("ui.preferences.tapePreviewResolution.desc")
+    )
+
     private var disableOnChange = false
 
     private fun <V : Any> load(widget: Widget<V>, value: V) {
@@ -82,6 +87,8 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
                 forward(PROJECT_HINT_TRACK_PENDING_PREFERENCE, projectHintTrckPendingWidget.value)
             appleScriptFileChooserWidget ->
                 forward(APPLE_SCRIPT_FILE_CHOOSER, appleScriptFileChooserWidget.value)
+            tapePreviewResolutionWidget ->
+                forward(TAPE_PREVIEW_RESOLUTION, tapePreviewResolutionWidget.value)
             else -> throw IllegalStateException("Unknown widget, should never happen.")
         }
         super.onChange(widget)
@@ -105,5 +112,7 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
     fun preferences_start_setAppleScriptFileChooser(use: Boolean) {
         appleScriptFileChooserWidget?.let { load(it, use) }
     }
+
+    fun preferences_start_setTapePreviewResolution(resolution: Int) = load(tapePreviewResolutionWidget, resolution)
 
 }

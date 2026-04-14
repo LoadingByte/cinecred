@@ -62,6 +62,10 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_start_setAppleScriptFileChooser(use)
         useAppleScriptFileChooser = use
     }
+    private val tapePreviewResolutionListener = { resolution: Int ->
+        welcomeView.preferences_start_setTapePreviewResolution(resolution)
+        Tape.previewResolution = resolution
+    }
     private val accountListListener = {
         SwingUtilities.invokeLater {
             val accounts = SERVICES.flatMap(Service::accounts)
@@ -121,6 +125,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         welcomeView.preferences_start_setWelcomeHintTrackPending(WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
         welcomeView.preferences_start_setProjectHintTrackPending(PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
         appleScriptFileChooserListener(APPLE_SCRIPT_FILE_CHOOSER.get())
+        tapePreviewResolutionListener(TAPE_PREVIEW_RESOLUTION.get())
         accountListListener()
         windowLayoutsListener(WINDOW_LAYOUTS_PREFERENCE.get())
         overlaysListener(OVERLAYS_PREFERENCE.get())
@@ -313,6 +318,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             WELCOME_HINT_TRACK_PENDING_PREFERENCE.addListener(welcomeHintTrackPendingListener)
             PROJECT_HINT_TRACK_PENDING_PREFERENCE.addListener(projectHintTrackPendingListener)
             APPLE_SCRIPT_FILE_CHOOSER.addListener(appleScriptFileChooserListener)
+            TAPE_PREVIEW_RESOLUTION.addListener(tapePreviewResolutionListener)
             // If enabled, check for updates and run the welcome hint track.
             tryCheckForUpdates()
             if (WELCOME_HINT_TRACK_PENDING_PREFERENCE.get())
@@ -349,6 +355,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
         WELCOME_HINT_TRACK_PENDING_PREFERENCE.removeListener(welcomeHintTrackPendingListener)
         PROJECT_HINT_TRACK_PENDING_PREFERENCE.removeListener(projectHintTrackPendingListener)
         APPLE_SCRIPT_FILE_CHOOSER.removeListener(appleScriptFileChooserListener)
+        TAPE_PREVIEW_RESOLUTION.removeListener(tapePreviewResolutionListener)
         removeAccountListListener(accountListListener)
         WINDOW_LAYOUTS_PREFERENCE.removeListener(windowLayoutsListener)
         OVERLAYS_PREFERENCE.removeListener(overlaysListener)

@@ -127,6 +127,7 @@ interface WelcomeViewComms {
     fun preferences_start_setWelcomeHintTrackPending(pending: Boolean)
     fun preferences_start_setProjectHintTrackPending(pending: Boolean)
     fun preferences_start_setAppleScriptFileChooser(use: Boolean)
+    fun preferences_start_setTapePreviewResolution(resolution: Int)
     fun preferences_start_setAccounts(accounts: List<Account>)
     fun preferences_start_setAccountRemovalLocked(account: Account, locked: Boolean)
     fun preferences_start_setWindowLayouts(layouts: List<WindowLayout>, defaultLayout: WindowLayout)

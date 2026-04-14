@@ -665,6 +665,7 @@ private class CreditsReader(
                 concludeSpine()
                 concludeCompound(0.0)
                 // Determine whether the stage that we'll conclude in a moment is the last one on its page.
+                val currStageDeclRow = stageDeclaredRow
                 val currStyle = stageStyle
                 val nextStyle = nextStageStyle!!
                 var isLastOnPage = when {
@@ -691,12 +692,18 @@ private class CreditsReader(
                 stageMeltWithNext = false
                 concludeStage(vGap)
                 // If the last stage was dropped (probably because it was an empty card stage) and we would now be left
-                // with two back-to-back scroll stages, also conclude the page.
+                // with two back-to-back scroll stages, also conclude the page; but do it silently, to not confuse the
+                // user with a back-to-back scroll page warning just now.
                 if (nextStyle.behavior == PageBehavior.SCROLL &&
                     pageStages.lastOrNull()?.style?.behavior == PageBehavior.SCROLL
                 ) isLastOnPage = true
-                if (isLastOnPage)
+                if (isLastOnPage) {
+                    // If, after all attempted melting, the page only consists of a single empty scroll stage, it will
+                    // be discarded. Warn the user about that.
+                    if (pageStages.size == 1 && pageStages[0].compounds.isEmpty() && currStyle?.behavior == PageBehavior.SCROLL)
+                        table.log(currStageDeclRow, "pageStyle", WARN, l10n("projectIO.credits.emptyScrollPage"))
                     concludePage()
+                }
             } else if (isCompoundConclusionMarked) {
                 concludeBlock(0.0)
                 concludeSpine()

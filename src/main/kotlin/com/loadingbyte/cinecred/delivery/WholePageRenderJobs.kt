@@ -251,6 +251,8 @@ class WholePagePDFRenderJob private constructor(
             info = id
         })
 
+        val tracker = DeferredImage.PDFTracker(pdfDoc, colorSpace, lossy, lossy, rasterizeSVGs)
+
         for ((idx, unscaledPageDefImage) in pageDefImages.withIndex()) {
             if (Thread.interrupted()) return
 
@@ -265,12 +267,13 @@ class WholePagePDFRenderJob private constructor(
                     if (ground)
                         drawRect(global.grounding, 0.0, 0.0.toY(), page.width, page.height, fill = true)
                     drawDeferredImage(page, 0.0, 0.0.toY())
-                }.materialize(pdfDoc, pdfPage, cs, colorSpace, lossy, lossy, rasterizeSVGs, listOf(STATIC, TAPES))
+                }.materialize(tracker, pdfPage, cs, listOf(STATIC, TAPES))
             }
 
             progressCallback(MAX_RENDER_PROGRESS * (idx + 1) / pageDefImages.size)
         }
 
+        tracker.close()
         pdfDoc.save(file.toFile())
         pdfDoc.close()
     }

@@ -143,19 +143,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     /** Draws the content of this deferred onto a PDF page. */
-    fun materialize(
-        doc: PDDocument,
-        page: PDPage,
-        cs: PDPageContentStream,
-        masterColorSpace: ColorSpace,
-        shrinkRasters: Boolean,
-        jpegRasters: Boolean,
-        rasterizeSVGs: Boolean,
-        layers: List<Layer>
-    ) {
-        val backend = PDFBackend(doc, page, cs, masterColorSpace, shrinkRasters, jpegRasters, rasterizeSVGs)
+    fun materialize(tracker: PDFTracker, page: PDPage, cs: PDPageContentStream, layers: List<Layer>) {
+        val backend = PDFBackend(tracker as PDFTrackerImpl, page, cs)
         materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
-        backend.end()
     }
 
     fun collectPlacedTapes(layers: List<Layer>): List<PlacedTape> {
@@ -885,23 +875,30 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
 
+    sealed interface PDFTracker : AutoCloseable {
+        companion object {
+            operator fun invoke(
+                doc: PDDocument,
+                masterColorSpace: ColorSpace,
+                shrinkRasters: Boolean,
+                jpegRasters: Boolean,
+                rasterizeSVGs: Boolean
+            ): PDFTracker = PDFTrackerImpl(doc, masterColorSpace, shrinkRasters, jpegRasters, rasterizeSVGs)
+        }
+    }
+
     private class PDFBackend(
-        private val doc: PDDocument,
+        private val tracker: PDFTrackerImpl,
         private val page: PDPage,
-        private val cs: PDPageContentStream,
-        private val masterColorSpace: ColorSpace,
-        private val shrinkRasters: Boolean,
-        private val jpegRasters: Boolean,
-        private val rasterizeSVGs: Boolean
+        private val cs: PDPageContentStream
     ) : TapeThumbnailBackend {
 
         private val csHeight = page.mediaBox.height
-        private val docRes = docResMap.computeIfAbsent(doc) { DocRes(doc) }
 
         init {
             page.cosObject.setItem(COSName.GROUP, PDTransparencyGroupAttributes().apply {
                 cosObject.setItem(COSName.TYPE, COSName.GROUP)
-                cosObject.setItem(COSName.CS, obtainICCBasedCS(masterColorSpace))
+                cosObject.setItem(COSName.CS, tracker.obtainICCBasedCS(tracker.masterColorSpace))
             })
         }
 
@@ -958,7 +955,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 // Draw the shape onto a bitmap in a blurred fashion.
                 val w = ceil(xFrac + bounds.width).toInt() + 2 * pad
                 val h = ceil(yFrac + bounds.height).toInt() + 2 * pad
-                val rep = Canvas.compatibleRepresentation(masterColorSpace)
+                val rep = Canvas.compatibleRepresentation(tracker.masterColorSpace)
                 Bitmap.allocate(Bitmap.Spec(Resolution(w, h), rep)).use { bitmap ->
                     Canvas.forBitmap(bitmap.zero()).use { canvas ->
                         canvas.fillShape(
@@ -980,7 +977,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
-            val pdFont = getPDFont(text.fundamentalFontInfo) ?: return
+            val pdFont = tracker.getPDFont(text.fundamentalFontInfo) ?: return
 
             cs.saveGraphicsState()
             cs.beginText()
@@ -1027,30 +1024,30 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val mat = Matrix()
             mat.translate(x, csHeight - y - embeddedPic.height)
             mat.scale(scaling)
-            if (rasterizeSVGs && pic is Picture.SVG) {
+            if (tracker.rasterizeSVGs && pic is Picture.SVG) {
                 if (embeddedPic.isCropped) {
                     val e = embeddedPic
                     mat.translate(e.scalingX * -pic.cropX, e.scalingY * (pic.cropY + pic.cropHeight - pic.height))
                     mat.scale(pic.width / pic.cropWidth, pic.height / pic.cropHeight)
                 }
                 mat.scale(embeddedPic.width, embeddedPic.height)
-                cs.drawImage(docRes.pdImages.computeIfAbsent(pic) { PDImageXObject(doc) }, mat)
+                cs.drawImage(tracker.pdImages.computeIfAbsent(pic) { PDImageXObject(tracker.doc) }, mat)
                 val w = ceil(embeddedPic.scalingX * pic.width * scaling).toInt()
                 val h = ceil(embeddedPic.scalingY * pic.height * scaling).toInt()
-                docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
+                tracker.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 return
             }
             when (pic) {
                 is Picture.Raster -> {
                     mat.scale(embeddedPic.width, embeddedPic.height)
-                    cs.drawImage(docRes.pdImages.computeIfAbsent(pic) {
+                    cs.drawImage(tracker.pdImages.computeIfAbsent(pic) {
                         // Note: The first occurrence decides whether a picture is in draft-mode or not, but that's fine
                         // since draft true only for tape thumbnails; hence a single picture never mixes both modes.
-                        PDImageXObject(doc).apply { interpolate = !draft }
+                        PDImageXObject(tracker.doc).apply { interpolate = !draft }
                     }, mat)
                     val w = ceil(embeddedPic.width * scaling).toInt()
                     val h = ceil(embeddedPic.height * scaling).toInt()
-                    docRes.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
+                    tracker.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
                 is Picture.Vector -> {
                     mat.scale(embeddedPic.scalingX, embeddedPic.scalingY)
@@ -1058,18 +1055,18 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
                     cs.saveGraphicsState()
                     cs.transform(mat)
-                    cs.drawForm(docRes.pdForms.computeIfAbsent(pic) {
+                    cs.drawForm(tracker.pdForms.computeIfAbsent(pic) {
                         when (pic) {
                             is Picture.SVG -> {
                                 val canvas = Canvas.forPDF(pic.width, pic.height, ColorSpace.SRGB)
                                 pic.drawTo(canvas)
-                                Picture.PDF.load(canvas.closeAndGetOutput()).import(docRes.layerUtil).apply {
+                                Picture.PDF.load(canvas.closeAndGetOutput()).import(tracker.layerUtil).apply {
                                     // Set the transparency group's blending color space to sRGB.
-                                    group.cosObject.setItem(COSName.CS, obtainICCBasedCS(ColorSpace.SRGB))
+                                    group.cosObject.setItem(COSName.CS, tracker.obtainICCBasedCS(ColorSpace.SRGB))
                                 }
                             }
                             is Picture.PDF ->
-                                pic.import(docRes.layerUtil)
+                                pic.import(tracker.layerUtil)
                         }
                     })
                     cs.restoreGraphicsState()
@@ -1081,8 +1078,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private fun setCoat(coat: Coat, fill: Boolean, bbox: Rectangle2D) {
             when (coat) {
                 is Coat.Plain -> {
-                    val color = coat.color.convert(masterColorSpace, clamp = true)
-                    val pdColor = PDColor(color.rgb(), obtainICCBasedCS(masterColorSpace))
+                    val color = coat.color.convert(tracker.masterColorSpace, clamp = true)
+                    val pdColor = PDColor(color.rgb(), tracker.obtainICCBasedCS(tracker.masterColorSpace))
                     if (fill) cs.setNonStrokingColor(pdColor) else cs.setStrokingColor(pdColor)
                     if (color.a != 1f) cs.setGraphicsStateParameters(makeExtGState(fill, color.a))
                 }
@@ -1103,7 +1100,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             cosObject.setItem(COSName.TYPE, COSName.GROUP)
                             cosObject.setItem(COSName.CS, COSName.DEVICEGRAY)
                         }
-                        val pdTrGroup = PDTransparencyGroup(doc).apply {
+                        val pdTrGroup = PDTransparencyGroup(tracker.doc).apply {
                             formType = 1
                             bBox = PDRectangle(bboxX, bboxY, bboxW, bboxH)
                             resources = pdTrGroupResources
@@ -1140,7 +1137,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         private fun makeExtGState(fill: Boolean, alpha: Float) =
-            docRes.extGStates.computeIfAbsent(ExtGStateKey(fill, alpha)) {
+            tracker.extGStates.computeIfAbsent(PDFTrackerImpl.ExtGStateKey(fill, alpha)) {
                 PDExtendedGraphicsState().apply {
                     if (fill) nonStrokingAlphaConstant = alpha else strokingAlphaConstant = alpha
                 }
@@ -1151,7 +1148,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 if (forAlpha)
                     add(COSFloat(color.a))
                 else {
-                    val c = color.convert(masterColorSpace, clamp = true)
+                    val c = color.convert(tracker.masterColorSpace, clamp = true)
                     add(COSFloat(c.r))
                     add(COSFloat(c.g))
                     add(COSFloat(c.b))
@@ -1174,7 +1171,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val pdShading = PDShadingType2(COSDictionary()).apply {
                 shadingType = PDShading.SHADING_TYPE2
                 extend = COSArray().apply { add(COSBoolean.TRUE); add(COSBoolean.TRUE) }
-                colorSpace = if (forAlpha) PDDeviceGray.INSTANCE else obtainICCBasedCS(masterColorSpace)
+                colorSpace = if (forAlpha) PDDeviceGray.INSTANCE else tracker.obtainICCBasedCS(tracker.masterColorSpace)
                 coords = cosCoords
                 function = pdFunc
             }
@@ -1192,10 +1189,34 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             appendRawCommands(this, " $opSCN\n")
         }
 
-        private fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont? {
+    }
+
+    private class PDFTrackerImpl(
+        val doc: PDDocument,
+        val masterColorSpace: ColorSpace,
+        private val shrinkRasters: Boolean,
+        private val jpegRasters: Boolean,
+        val rasterizeSVGs: Boolean
+    ) : PDFTracker {
+
+        data class ExtGStateKey(private val fill: Boolean, private val alpha: Float)
+
+        val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
+        val pdImages = HashMap<Picture, PDImageXObject>()
+        val pdImageResolutions = HashMap<Picture, MutableList<Resolution>>()
+        val pdForms = HashMap<Picture.Vector, PDFormXObject>()
+        val layerUtil by lazy { LayerUtility(doc) }
+        private val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
+        private val pdFonts = HashMap<String /* font name */, PDFont?>()
+
+        fun obtainICCBasedCS(colorSpace: ColorSpace) = pdColorSpaces.computeIfAbsent(colorSpace) {
+            makePDICCBased(doc, 3, ICCProfile.of(colorSpace).bytes)
+        }
+
+        fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont? {
             val psName = fundamentalFontInfo.fontName
 
-            if (psName !in docRes.pdFonts)
+            if (psName !in pdFonts)
                 try {
                     val fontFile = fundamentalFontInfo.fontFile.toFile()
                     val ttf = when (String(fontFile.inputStream().use { it.readNBytes(4) })) {
@@ -1242,19 +1263,19 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                             // subsetting mechanism only works on codepoints and not on glyphs, we cannot use it.
                             TTFParser().parse(RandomAccessReadBufferedFile(fontFile))
                     }
-                    docRes.pdFonts[psName] = PDType0Font.load(doc, ttf, false)
+                    pdFonts[psName] = PDType0Font.load(doc, ttf, false)
                 } catch (e: Exception) {
                     LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
                     // Memoize null to avoid trying to load the font file again.
-                    docRes.pdFonts[psName] = null
+                    pdFonts[psName] = null
                 }
 
-            return docRes.pdFonts.getValue(psName)
+            return pdFonts.getValue(psName)
         }
 
-        fun end() {
-            for ((pic, pdImage) in docRes.pdImages)
-                endImage(pic, pdImage, docRes.pdImageResolutions.getValue(pic))
+        override fun close() {
+            for ((pic, pdImage) in pdImages)
+                endImage(pic, pdImage, pdImageResolutions.getValue(pic))
         }
 
         private fun endImage(pic: Picture, pdImage: PDImageXObject, resolutions: List<Resolution>) {
@@ -1410,29 +1431,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             return v
         }
 
-        private fun obtainICCBasedCS(colorSpace: ColorSpace) = docRes.pdColorSpaces.computeIfAbsent(colorSpace) {
-            makePDICCBased(doc, 3, ICCProfile.of(colorSpace).bytes)
-        }
-
         companion object {
             private val SHORT = MethodHandles.byteArrayViewVarHandle(ShortArray::class.java, ByteOrder.BIG_ENDIAN)
                 .withInvokeExactBehavior()
             private val INT = MethodHandles.byteArrayViewVarHandle(IntArray::class.java, ByteOrder.BIG_ENDIAN)
                 .withInvokeExactBehavior()
-            private val docResMap = WeakHashMap<PDDocument, DocRes>()
         }
-
-        private class DocRes(doc: PDDocument) {
-            val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
-            val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
-            val pdFonts = HashMap<String /* font name */, PDFont?>()
-            val pdImages = HashMap<Picture, PDImageXObject>()
-            val pdImageResolutions = HashMap<Picture, MutableList<Resolution>>()
-            val pdForms = HashMap<Picture.Vector, PDFormXObject>()
-            val layerUtil by lazy { LayerUtility(doc) }
-        }
-
-        private data class ExtGStateKey(private val fill: Boolean, private val alpha: Float)
 
     }
 

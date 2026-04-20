@@ -10,10 +10,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Node
 import org.w3c.dom.traversal.DocumentTraversal
-import java.awt.Font
 import java.awt.Shape
-import java.awt.font.FontRenderContext
-import java.awt.font.LineMetrics
 import java.awt.geom.AffineTransform
 import java.awt.geom.Path2D
 import java.awt.geom.Rectangle2D
@@ -417,10 +414,6 @@ inline fun Node.forEachNodeInSubtree(whatToShow: Int, action: (Node) -> Unit) {
 }
 
 
-// This is a reference font render context used to measure the size of fonts.
-val REF_FRC = FontRenderContext(null, true, true)
-
-
 fun AffineTransform.scale(s: Double) = scale(s, s)
 fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
 fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
@@ -441,16 +434,3 @@ fun Shape.transformedBy(transform: AffineTransform?): Shape = when {
     this is Path2D.Float -> Path2D.Float(this, transform)
     else -> Path2D.Double(this, transform)
 }
-
-
-const val KERNING_FONT_FEAT = "kern"
-val LIGATURES_FONT_FEATS = setOf("liga", "clig")
-const val SMALL_CAPS_FONT_FEAT = "smcp"
-const val PETITE_CAPS_FONT_FEAT = "pcap"
-const val CAPITAL_SPACING_FONT_FEAT = "cpsp"
-val MANAGED_FONT_FEATS = LIGATURES_FONT_FEATS +
-        setOf(KERNING_FONT_FEAT, SMALL_CAPS_FONT_FEAT, PETITE_CAPS_FONT_FEAT, CAPITAL_SPACING_FONT_FEAT)
-
-
-val Font.lineMetrics: LineMetrics
-    get() = getLineMetrics("Beispiel!", REF_FRC)

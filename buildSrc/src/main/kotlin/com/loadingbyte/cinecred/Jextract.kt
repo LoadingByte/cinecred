@@ -15,6 +15,9 @@ abstract class Jextract : DefaultTask() {
     @get:Input
     abstract val targetPackage: Property<String>
     @get:Input
+    @get:Optional
+    abstract val headerClassName: Property<String>
+    @get:Input
     abstract val includeFunctions: ListProperty<String>
     @get:Input
     abstract val includeConstants: ListProperty<String>
@@ -41,6 +44,8 @@ abstract class Jextract : DefaultTask() {
         val targetPackage = targetPackage.get()
         val headerFile = headerFile.get().asFile
         val outputDir = outputDir.get().asFile
+        val headerClassName =
+            if (headerClassName.isPresent) headerClassName.get() else "${headerFile.nameWithoutExtension}_h"
 
         val cmd = mutableListOf(Tools.jextract())
         cmd += listOf("--target-package", targetPackage)
@@ -53,7 +58,8 @@ abstract class Jextract : DefaultTask() {
         // relative to the repository.
         if (includeDir.isPresent)
             cmd += listOf("-I", includeDir.get().asFile.relativeTo(temporaryDir).path)
-        cmd += listOf("--output", outputDir.absolutePath, headerFile.relativeTo(temporaryDir).path)
+        cmd += listOf("--output", outputDir.absolutePath, "--header-class-name", headerClassName)
+        cmd += headerFile.relativeTo(temporaryDir).path
 
         outputDir.resolve(targetPackage.replace('.', '/')).deleteRecursively()
         execOps.exec { commandLine(cmd).workingDir(temporaryDir) }.rethrowFailure().assertNormalExitValue()
@@ -63,7 +69,7 @@ abstract class Jextract : DefaultTask() {
         // we must make sure that there are no longs (only ints and long longs) in the C signatures we use!
         val javaSharedFile = outputDir
             .resolve(targetPackage.replace('.', '/'))
-            .resolve("${headerFile.nameWithoutExtension}_h\$shared.java")
+            .resolve("$headerClassName\$shared.java")
         val oldText = javaSharedFile.readText()
         val newText = oldText.replaceFirst(
             "public static final ValueLayout.OfLong C_LONG = " +
@@ -134,7 +140,12 @@ abstract class Jextract : DefaultTask() {
 
     fun addHarfBuzzIncludes() {
         includeFunctions.addAll(
+            "hb_set_add",
+            "hb_language_from_string",
+            "hb_language_to_string",
             "hb_blob_create",
+            "hb_blob_destroy",
+            "hb_blob_get_data",
             "hb_buffer_add_utf16",
             "hb_buffer_create",
             "hb_buffer_destroy",
@@ -145,17 +156,42 @@ abstract class Jextract : DefaultTask() {
             "hb_buffer_set_direction",
             "hb_buffer_set_language",
             "hb_buffer_set_script",
-            "hb_face_create_for_tables",
+            "hb_draw_funcs_create",
+            "hb_draw_funcs_destroy",
+            "hb_draw_funcs_set_move_to_func",
+            "hb_draw_funcs_set_line_to_func",
+            "hb_draw_funcs_set_quadratic_to_func",
+            "hb_draw_funcs_set_cubic_to_func",
+            "hb_draw_funcs_set_close_path_func",
+            "hb_face_count",
+            "hb_face_create_or_fail",
             "hb_face_destroy",
-            "hb_feature_from_string",
+            "hb_face_get_glyph_count",
+            "hb_face_reference_blob",
             "hb_font_create",
             "hb_font_destroy",
             "hb_font_set_scale",
-            "hb_language_from_string",
-            "hb_shape"
+            "hb_font_get_glyph_extents",
+            "hb_font_get_glyph_h_advance",
+            "hb_font_draw_glyph",
+            "hb_shape",
+            "hb_style_get_value",
+            "hb_ot_layout_table_get_feature_tags",
+            "hb_ot_metrics_get_position_with_fallback",
+            "hb_ot_name_list_names",
+            "hb_ot_name_get_utf8",
+            "hb_subset_input_create_or_fail",
+            "hb_subset_input_destroy",
+            "hb_subset_input_set_flags",
+            "hb_subset_input_unicode_set",
+            "hb_subset_input_glyph_set",
+            "hb_subset_input_set",
+            "hb_subset_input_pin_all_axes_to_default",
+            "hb_subset_or_fail"
         )
         includeConstants.addAll(
             "HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES",
+            "HB_LANGUAGE_INVALID",
             "HB_DIRECTION_LTR",
             "HB_DIRECTION_RTL",
             "HB_FEATURE_GLOBAL_END",
@@ -207,16 +243,54 @@ abstract class Jextract : DefaultTask() {
             "HB_SCRIPT_THAANA",
             "HB_SCRIPT_THAI",
             "HB_SCRIPT_TIBETAN",
-            "HB_SCRIPT_YI"
+            "HB_SCRIPT_YI",
+            "HB_STYLE_TAG_ITALIC",
+            "HB_STYLE_TAG_WIDTH",
+            "HB_STYLE_TAG_WEIGHT",
+            "HB_OT_TAG_GSUB",
+            "HB_OT_TAG_GPOS",
+            "HB_OT_TAG_GDEF",
+            "HB_OT_METRICS_TAG_HORIZONTAL_ASCENDER",
+            "HB_OT_METRICS_TAG_HORIZONTAL_DESCENDER",
+            "HB_OT_METRICS_TAG_HORIZONTAL_LINE_GAP",
+            "HB_OT_METRICS_TAG_X_HEIGHT",
+            "HB_OT_METRICS_TAG_CAP_HEIGHT",
+            "HB_OT_METRICS_TAG_SUBSCRIPT_EM_Y_SIZE",
+            "HB_OT_METRICS_TAG_SUBSCRIPT_EM_X_OFFSET",
+            "HB_OT_METRICS_TAG_SUBSCRIPT_EM_Y_OFFSET",
+            "HB_OT_METRICS_TAG_SUPERSCRIPT_EM_Y_SIZE",
+            "HB_OT_METRICS_TAG_SUPERSCRIPT_EM_X_OFFSET",
+            "HB_OT_METRICS_TAG_SUPERSCRIPT_EM_Y_OFFSET",
+            "HB_OT_METRICS_TAG_STRIKEOUT_SIZE",
+            "HB_OT_METRICS_TAG_STRIKEOUT_OFFSET",
+            "HB_OT_METRICS_TAG_UNDERLINE_SIZE",
+            "HB_OT_METRICS_TAG_UNDERLINE_OFFSET",
+            "HB_OT_NAME_ID_FONT_FAMILY",
+            "HB_OT_NAME_ID_FONT_SUBFAMILY",
+            "HB_OT_NAME_ID_FULL_NAME",
+            "HB_OT_NAME_ID_TYPOGRAPHIC_FAMILY",
+            "HB_OT_NAME_ID_TYPOGRAPHIC_SUBFAMILY",
+            "HB_OT_NAME_ID_SAMPLE_TEXT",
+            "HB_SUBSET_FLAGS_NO_HINTING",
+            "HB_SUBSET_FLAGS_RETAIN_GIDS",
+            "HB_SUBSET_FLAGS_NOTDEF_OUTLINE",
+            "HB_SUBSET_FLAGS_NO_LAYOUT_CLOSURE",
+            "HB_SUBSET_SETS_DROP_TABLE_TAG"
         )
         includeStructs.addAll(
             "hb_feature_t",
             "hb_glyph_info_t",
-            "hb_glyph_position_t"
+            "hb_glyph_position_t",
+            "hb_glyph_extents_t",
+            "hb_ot_name_entry_t"
         )
         includeTypedefs.addAll(
             "hb_destroy_func_t",
-            "hb_reference_table_func_t"
+            "hb_draw_move_to_func_t",
+            "hb_draw_line_to_func_t",
+            "hb_draw_quadratic_to_func_t",
+            "hb_draw_cubic_to_func_t",
+            "hb_draw_close_path_func_t"
         )
         includeUnions.addAll(
             "_hb_var_int_t"

@@ -1,17 +1,14 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.loadingbyte.cinecred.common.*
-import java.awt.Font
+import com.loadingbyte.cinecred.common.closestLocale
+import com.loadingbyte.cinecred.imaging.Font
 import java.util.*
 import kotlin.math.abs
-import com.loadingbyte.cinecred.common.getStrings as getStringsReflect
-import com.loadingbyte.cinecred.common.getWeight as getWeightReflect
-import com.loadingbyte.cinecred.common.getWidth as getWidthReflect
-import com.loadingbyte.cinecred.common.isItalic2D as isItalic2DReflect
+import kotlin.math.log2
 
 
-val BUNDLED_FAMILIES: FontFamilies = FontFamilies(BUNDLED_FONTS)
-val SYSTEM_FAMILIES: FontFamilies = FontFamilies(SYSTEM_FONTS)
+val BUNDLED_FAMILIES: FontFamilies = FontFamilies(Font.BUNDLED)
+val SYSTEM_FAMILIES: FontFamilies = FontFamilies(Font.SYSTEM)
 
 
 class FontFamily(
@@ -25,7 +22,7 @@ class FontFamily(
     private val familyCache = HashMap<Locale, String?>()
     private val subfamilyCaches = IdentityHashMap<Font, MutableMap<Locale, String?>>()
     private val sampleTextCaches = IdentityHashMap<Font, MutableMap<Locale, String?>>()
-    private val fontNameToFont = fonts.associateBy { it.getFontName(Locale.ROOT) }
+    private val fontNameToFont = fonts.associateBy(Font::name)
 
     fun getFamily(locale: Locale = Locale.ROOT): String = accessCache(family, familyCache, locale)!!
 
@@ -56,10 +53,17 @@ class FontFamilies(fonts: Iterable<Font>) {
 
     init {
         list = object : FontSorter<Font, FontFamily>() {
-            override fun Font.getWeight() = getWeightReflect()
-            override fun Font.getWidth() = getWidthReflect()
-            override fun Font.isItalic2D() = isItalic2DReflect()
-            override fun Font.getStrings() = getStringsReflect()
+            private val fontCaseCache = HashMap<Font, Font.Case>()
+            private val Font.fontCase get() = fontCaseCache.computeIfAbsent(this, Font::case)
+            override val Font.weight get() = fontCase.weight
+            override val Font.width get() = fontCase.width
+            override val Font.italic get() = fontCase.italic
+            override val Font.familyMap get() = familyMap
+            override val Font.subfamilyMap get() = subfamilyMap
+            override val Font.fullNameMap get() = fullNameMap
+            override val Font.typographicFamilyMap get() = typographicFamilyMap
+            override val Font.typographicSubfamilyMap get() = typographicSubfamilyMap
+            override val Font.sampleTextMap get() = sampleTextMap
             override fun makeFamily(
                 family: Map<Locale, String>,
                 subfamilies: Map<Font, Map<Locale, String>>,
@@ -73,7 +77,7 @@ class FontFamilies(fonts: Iterable<Font>) {
         for (family in list)
             for (font in family.fonts) {
                 fontToFamily[font] = family
-                fontNameToFamily[font.getFontName(Locale.ROOT)] = family
+                fontNameToFamily[font.name] = family
             }
     }
 
@@ -83,10 +87,15 @@ class FontFamilies(fonts: Iterable<Font>) {
 // Public for testing. This is a class for historical reasons, to not pollute the VCS diffs too much.
 abstract class FontSorter<Font, Family> {
 
-    abstract fun Font.getWeight(): Int
-    abstract fun Font.getWidth(): Int
-    abstract fun Font.isItalic2D(): Boolean
-    abstract fun Font.getStrings(): FontStrings
+    abstract val Font.weight: Double
+    abstract val Font.width: Double
+    abstract val Font.italic: Boolean
+    abstract val Font.familyMap: Map<Locale, String>
+    abstract val Font.subfamilyMap: Map<Locale, String>
+    abstract val Font.fullNameMap: Map<Locale, String>
+    abstract val Font.typographicFamilyMap: Map<Locale, String>
+    abstract val Font.typographicSubfamilyMap: Map<Locale, String>
+    abstract val Font.sampleTextMap: Map<Locale, String>
 
     abstract fun makeFamily(
         family: Map<Locale, String>,
@@ -102,8 +111,8 @@ abstract class FontSorter<Font, Family> {
         // a family will be sorted by weight, width, and slope (WWS).
         val rootFamilyToRichFonts = TreeMap<String, TreeSet<RichFont>>()
         val richFontComparator = Comparator
-            .comparingInt(FontSorter<Font, Family>.RichFont::width)
-            .thenComparingInt(FontSorter<Font, Family>.RichFont::weight)
+            .comparingDouble(FontSorter<Font, Family>.RichFont::width)
+            .thenComparingDouble(FontSorter<Font, Family>.RichFont::weight)
             .thenComparing(FontSorter<Font, Family>.RichFont::slope)
             .thenComparing(FontSorter<Font, Family>.RichFont::rootSubfamily)
 
@@ -127,23 +136,20 @@ abstract class FontSorter<Font, Family> {
                     // As the font doesn't provider any naming information whatsoever, we just skip it.
                     ?: continue
 
-            var weight: Int? = null
-            var width: Int? = null
+            var weight: Double? = null
+            var width: Double? = null
             var slope: Boolean? = null
             // Try determining the WWS values from the style information extracted from the font name, which is often
             // more accurate than the OS/2 table, seemingly because fonts have to consider legacy implementations.
             for (style in styles) {
-                weight = style.weight ?: weight
+                weight = style.weight?.toDouble() ?: weight
                 width = style.width ?: width
                 slope = style.slope ?: slope
             }
-            // Only if that fails, fall back to the OS/2 table, or even to default values defined in Font2D.
-            if (weight == null)
-                weight = font.getWeight()
-            if (width == null)
-                width = font.getWidth()
-            if (slope == null)
-                slope = font.isItalic2D()
+            // Only if that fails, fall back to the OS/2 table.
+            weight = weight ?: font.weight
+            width = width ?: font.width
+            slope = slope ?: font.italic
 
             rootFamilyToRichFonts
                 .computeIfAbsent(rootFamily) { TreeSet(richFontComparator) }
@@ -157,7 +163,7 @@ abstract class FontSorter<Font, Family> {
             val subfamilies = richFonts.associate { it.font to getLocalizedSubfamilies(it, family) }
 
             val sampleTexts = richFonts.associate { richFont ->
-                val sampleText = HashMap(richFont.font.getStrings().sampleText)
+                val sampleText = HashMap(richFont.font.sampleTextMap)
                 if (sampleText.isNotEmpty()) {
                     // Add a root locale we can fall back to.
                     val locs = sampleText.keys
@@ -169,8 +175,8 @@ abstract class FontSorter<Font, Family> {
             // Finally, find the canonical font, i.e., the font selected by default when choosing a family. Do this by
             // assigning penalty points to each font according to how much it differs from a regular font, and selecting
             // the one which received the smallest penalty.
-            val canonicalFont =
-                richFonts.minBy { abs(it.weight / 100.0 - 4) + abs(it.width - 5) + if (it.slope) 3 else 0 }.font
+            val canonicalFont = richFonts
+                .minBy { abs(it.weight / 100 - 4) + abs(4 * log2(it.width / 100)) + if (it.slope) 3 else 0 }.font
 
             makeFamily(family, subfamilies, sampleTexts, richFonts.map { it.font }, canonicalFont)
         }
@@ -178,7 +184,7 @@ abstract class FontSorter<Font, Family> {
 
     /** Tries to determine the family, subfamily, and style information from the full font name alone. */
     private fun getNamesAndStylesFromFullName(font: Font, rsub: Boolean, filter: (Locale) -> Boolean): NamesAndStyles? {
-        val (locale, fullName) = font.getStrings().fullName.entries.find { filter(it.key) } ?: return null
+        val (locale, fullName) = font.fullNameMap.entries.find { filter(it.key) } ?: return null
         val (family, styles) = removeStyleSuffixes(fullName)
         val subfamily = fullName.substring(family.length).trimStart(*SUFFIX_SEPARATORS)
         if (rsub && subfamily.isBlank())
@@ -188,9 +194,8 @@ abstract class FontSorter<Font, Family> {
 
     /** Tries to determine the family, subfamily, and style information from the (typographic) family and subfamily. */
     private fun getNamesAndStylesFromFamNames(font: Font, typo: Boolean, filter: (Locale) -> Boolean): NamesAndStyles? {
-        val strings = font.getStrings()
-        val familyMap = if (typo) strings.typographicFamily else strings.family
-        val subfamilyMap = if (typo) strings.typographicSubfamily else strings.subfamily
+        val familyMap = if (typo) font.typographicFamilyMap else font.familyMap
+        val subfamilyMap = if (typo) font.typographicSubfamilyMap else font.subfamilyMap
 
         val rawFamily = (familyMap.entries.find { filter(it.key) } ?: return null).value
         val rawSubfamilyEntry = subfamilyMap.entries.find { filter(it.key) } ?: return null
@@ -249,8 +254,8 @@ abstract class FontSorter<Font, Family> {
         // locales for which we can potentially find localized families. Quicken the process by dropping the root
         // locales as they have already been inserted.
         val locales = richFonts.flatMapTo(HashSet()) { richFont ->
-            val strings = richFont.font.getStrings()
-            strings.typographicFamily.keys + strings.family.keys + strings.fullName.keys
+            val font = richFont.font
+            font.typographicFamilyMap.keys + font.familyMap.keys + font.fullNameMap.keys
         }
         locales.removeAll(rootLocales)
 
@@ -262,10 +267,10 @@ abstract class FontSorter<Font, Family> {
         for (locale in locales) {
             var commonPrefix: String? = null
             for (richFont in richFonts) {
-                val strs = richFont.font.getStrings()
+                val f = richFont.font
                 // If the typographic family is unavailable in the given locale, fall back to the full name, which
                 // should start with the family as well, or even to the legacy family.
-                val locFam = strs.typographicFamily[locale] ?: strs.fullName[locale] ?: strs.family[locale] ?: continue
+                val locFam = f.typographicFamilyMap[locale] ?: f.fullNameMap[locale] ?: f.familyMap[locale] ?: continue
                 commonPrefix = if (commonPrefix == null) locFam else commonPrefix.commonPrefixWith(locFam)
             }
             commonPrefix = commonPrefix!!.trimEnd(*SUFFIX_SEPARATORS)
@@ -281,10 +286,15 @@ abstract class FontSorter<Font, Family> {
     private fun getLocalizedSubfamilies(richFont: RichFont, family: Map<Locale, String>): Map<Locale, String> {
         // Find all locales for which a (typographic) family or subfamily or full name is provided by some font, except
         // for the root locale. These are the locales for which we can potentially find localized subfamilies.
-        val strings = richFont.font.getStrings()
-        val locales = strings.typographicFamily.keys + strings.typographicSubfamily.keys +
-                strings.family.keys + strings.subfamily.keys + strings.fullName.keys -
-                richFont.rootLocale
+        val font = richFont.font
+        val locales = buildSet {
+            addAll(font.familyMap.keys)
+            addAll(font.subfamilyMap.keys)
+            addAll(font.fullNameMap.keys)
+            addAll(font.typographicFamilyMap.keys)
+            addAll(font.typographicSubfamilyMap.keys)
+            remove(richFont.rootLocale)
+        }
 
         // Set up the localized subfamily map and once again already insert the root family (often English).
         val subfamily = hashMapOf(Locale.ROOT to richFont.rootSubfamily, richFont.rootLocale to richFont.rootSubfamily)
@@ -314,8 +324,8 @@ abstract class FontSorter<Font, Family> {
                 familyFilter: (Locale) -> Boolean,
                 subfamilyFilter: (Locale) -> Boolean
             ): String? {
-                val familyMap = if (typo) strings.typographicFamily else strings.family
-                val subfamilyMap = if (typo) strings.typographicSubfamily else strings.subfamily
+                val familyMap = if (typo) font.typographicFamilyMap else font.familyMap
+                val subfamilyMap = if (typo) font.typographicSubfamilyMap else font.subfamilyMap
                 val locFamily = familyMap.entries.find { familyFilter(it.key) }?.value
                 val locSubfamily = subfamilyMap.entries.find { subfamilyFilter(it.key) }?.value
                 return if (locFamily != null && locSubfamily != null) "$locFamily $locSubfamily" else null
@@ -332,7 +342,7 @@ abstract class FontSorter<Font, Family> {
                     ?: concatLocFamilyAndSubfamily(typo = true, matchLocaleCntry, matchLocaleLangu)
                     ?: concatLocFamilyAndSubfamily(typo = true, matchEveryLocale, matchLocaleCntry)
                     ?: concatLocFamilyAndSubfamily(typo = true, matchLocaleCntry, matchEveryLocale)
-                    ?: strings.fullName[locale]?.let { if (subfamily(it).isBlank()) null else it }
+                    ?: font.fullNameMap[locale]?.let { if (subfamily(it).isBlank()) null else it }
                     ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchLocaleCntry)
                     ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleLangu, matchLocaleCntry)
                     ?: concatLocFamilyAndSubfamily(typo = false, matchLocaleCntry, matchLocaleLangu)
@@ -369,9 +379,9 @@ abstract class FontSorter<Font, Family> {
             "Bold" to FontStyle(weight = 700),
             "BoldItalic" to FontStyle(weight = 700, slope = true),
             "BoldOblique" to FontStyle(weight = 700, slope = true),
-            "Compressed" to FontStyle(width = 2),
-            "Cond" to FontStyle(width = 3),
-            "Condensed" to FontStyle(width = 3),
+            "Compressed" to FontStyle(width = 62.5),
+            "Cond" to FontStyle(width = 75.0),
+            "Condensed" to FontStyle(width = 75.0),
             "DemBd" to FontStyle(weight = 600),
             "Demi" to FontStyle(weight = 600),
             "DemiBold" to FontStyle(weight = 600),
@@ -379,11 +389,11 @@ abstract class FontSorter<Font, Family> {
             "DemiLight" to FontStyle(weight = 350),  // used by Noto Sans CJK
             "DemiOblique" to FontStyle(weight = 600, slope = true),
             "ExBold" to FontStyle(weight = 800),
-            "Expanded" to FontStyle(width = 7),
+            "Expanded" to FontStyle(width = 125.0),
             "ExtBd" to FontStyle(weight = 800),
             "Extra" to FontStyle(weight = 800),
-            "Extra Condensed" to FontStyle(width = 2),
-            "Extra Expanded" to FontStyle(width = 8),
+            "Extra Condensed" to FontStyle(width = 62.5),
+            "Extra Expanded" to FontStyle(width = 150.0),
             "ExtraBold" to FontStyle(weight = 800),
             "ExtraLight" to FontStyle(weight = 200),
             "Hairline" to FontStyle(weight = 100),
@@ -397,7 +407,7 @@ abstract class FontSorter<Font, Family> {
             "Med" to FontStyle(weight = 500),
             "Medium" to FontStyle(weight = 500),
             "MediumItalic" to FontStyle(weight = 500, slope = true),
-            "Narrow" to FontStyle(width = 4),
+            "Narrow" to FontStyle(width = 87.5),
             "Normal" to FontStyle(),
             "Oblique" to FontStyle(slope = true),
             "Plain" to FontStyle(),
@@ -405,15 +415,15 @@ abstract class FontSorter<Font, Family> {
             "RegularItalic" to FontStyle(slope = true),
             "SemBd" to FontStyle(weight = 600),
             "Semi" to FontStyle(weight = 600),
-            "Semi Condensed" to FontStyle(width = 4),
-            "Semi Expanded" to FontStyle(width = 6),
+            "Semi Condensed" to FontStyle(width = 87.5),
+            "Semi Expanded" to FontStyle(width = 112.5),
             "SemiBold" to FontStyle(weight = 600),
             "SemiBoldItalic" to FontStyle(weight = 600, slope = true),
             "Th" to FontStyle(weight = 100),
             "Thin" to FontStyle(weight = 100),
             "Ultra" to FontStyle(weight = 800),
-            "Ultra Condensed" to FontStyle(width = 1),
-            "Ultra Expanded" to FontStyle(width = 9),
+            "Ultra Condensed" to FontStyle(width = 50.0),
+            "Ultra Expanded" to FontStyle(width = 200.0),
             "UltraBold" to FontStyle(weight = 800),
             "UltraLight" to FontStyle(weight = 200),
             "Upright" to FontStyle(slope = false)
@@ -434,12 +444,12 @@ abstract class FontSorter<Font, Family> {
     }
 
 
-    private class FontStyle(val weight: Int? = null, val width: Int? = null, val slope: Boolean? = null)
+    private class FontStyle(val weight: Int? = null, val width: Double? = null, val slope: Boolean? = null)
 
     private inner class RichFont(
         val font: Font,
         val rootLocale: Locale, val rootSubfamily: String,
-        val weight: Int, val width: Int, val slope: Boolean
+        val weight: Double, val width: Double, val slope: Boolean
     )
 
     private data class NamesAndStyles(

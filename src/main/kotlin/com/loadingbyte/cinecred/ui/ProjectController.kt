@@ -2,11 +2,10 @@ package com.loadingbyte.cinecred.ui
 
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.getBundledFont
-import com.loadingbyte.cinecred.common.getSystemFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.l10nEnumQuoted
 import com.loadingbyte.cinecred.drawer.*
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
@@ -26,7 +25,10 @@ import com.loadingbyte.cinecred.ui.view.preview.PreviewDockable
 import com.loadingbyte.cinecred.ui.view.toolbar.ToolbarDockable
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.*
+import java.awt.Dialog
+import java.awt.Frame
+import java.awt.GraphicsConfiguration
+import java.awt.Window
 import java.awt.event.KeyEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -231,7 +233,7 @@ class ProjectController(
             updateAuxiliaryReferences(
                 styling.letterStyles, LetterStyle::font.st(),
                 FontRef::name, FontRef::font, ::FontRef, ::FontRef,
-                { name -> projectFonts[name] ?: getBundledFont(name) ?: getSystemFont(name) }
+                { name -> projectFonts[name] ?: Font.bundled(name) ?: Font.system(name) }
             )?.let { styling = styling.copy(letterStyles = it) }
             updateAuxiliaryReferences(
                 styling.pictureStyles, PictureStyle::picture.st(),

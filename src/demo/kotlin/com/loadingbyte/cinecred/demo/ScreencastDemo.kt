@@ -1,8 +1,7 @@
 package com.loadingbyte.cinecred.demo
 
-import com.loadingbyte.cinecred.common.BUNDLED_FONTS
 import com.loadingbyte.cinecred.common.FPS
-import com.loadingbyte.cinecred.common.REF_FRC
+import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
@@ -15,10 +14,8 @@ import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
 import sun.font.FontUtilities
-import java.awt.Color
-import java.awt.Point
-import java.awt.RenderingHints
-import java.awt.Window
+import java.awt.*
+import java.awt.font.FontRenderContext
 import java.awt.font.LineBreakMeasurer
 import java.awt.font.TextAttribute
 import java.awt.font.TextLayout
@@ -26,7 +23,6 @@ import java.awt.image.BufferedImage
 import java.lang.Thread.sleep
 import java.nio.file.Path
 import java.text.AttributedString
-import java.util.*
 import javax.swing.*
 import javax.swing.text.JTextComponent
 import kotlin.math.ceil
@@ -203,8 +199,7 @@ class Screencast(
 
     companion object {
         @Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
-        private val CAPTION_FONT = BUNDLED_FONTS
-            .first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }
+        private val CAPTION_FONT = useResourceStream("/fonts/Titillium-RegularUpright.otf", Font::createFonts)[0]
             .deriveFont(48f)
             .let(FontUtilities::getCompositeFontUIResource)
     }
@@ -307,7 +302,7 @@ class Screencast(
         )
         for (ratio in floatArrayOf(0.5f, 0.6f, 0.7f, 0.8f)) {
             caption.clear()
-            val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, REF_FRC)
+            val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, FontRenderContext(null, true, true))
             while (lbm.position != text.length)
                 caption.add(lbm.nextLayout(width * ratio))
             if (caption.size <= 2)

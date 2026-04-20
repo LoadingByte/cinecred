@@ -6,6 +6,8 @@ import com.formdev.flatlaf.ui.FlatButtonUI
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
+import com.loadingbyte.cinecred.imaging.GlyphString
 import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
 import net.miginfocom.swing.MigLayout
@@ -17,6 +19,7 @@ import java.awt.event.*
 import java.awt.geom.CubicCurve2D
 import java.awt.geom.Ellipse2D
 import java.awt.geom.Line2D
+import java.awt.geom.Path2D
 import java.nio.file.Path
 import java.text.NumberFormat
 import java.text.ParseException
@@ -1538,7 +1541,7 @@ class FontChooserWidget(
 
         data class ForFont(override val font: Font, private val family: FontFamily?) : FontWrapper {
             // Retrieve the subfamily name from the font's family object. The fallback should never be needed.
-            override fun toString(): String = family?.getSubfamilyOf(font, Locale.getDefault()) ?: font.fontName
+            override fun toString(): String = family?.getSubfamilyOf(font, Locale.getDefault()) ?: font.name
             override val item get() = font
         }
 
@@ -1553,12 +1556,12 @@ class FontChooserWidget(
 
     private inner class FontSampleListCellRenderer<E : FontProvider> : ListCellRenderer<E> {
 
-        private val label1 = JLabel()
-        private val label2 = JLabel()
+        private val label1 = JLabel().apply { isOpaque = false }
+        private val label2 = ShapeLabel().apply { isOpaque = false }
         // Note: filly ensures that label1 is vertically centered also in an enlarged combo box.
         private val panel = JPanel(MigLayout("insets 0, filly", "[]40:::push[]")).apply {
             add(label1)
-            add(label2, "width 100!, height ::22")
+            add(label2)
         }
 
         private val sampleTextCache = WeakHashMap<Font, Optional<String>>()
@@ -1572,10 +1575,8 @@ class FontChooserWidget(
 
             val bg = if (isSelected) list.selectionBackground else list.background
             val fg = if (isSelected) list.selectionForeground else list.foreground
-            label1.background = bg
             label1.foreground = fg
             label1.font = list.font
-            label2.background = bg
             label2.foreground = fg
             panel.background = bg
             panel.foreground = fg
@@ -1601,25 +1602,41 @@ class FontChooserWidget(
                     )
                 }.getOrNull()
             if (sampleText == null) {
-                label2.font = list.font
-                // We empty the text instead of turning the label invisible, as the latter triggers costly revalidation.
-                label2.text = ""
+                // Don't turn the label invisible, as that turns out to be costly.
+                label2.shape = null
+                label2.preferredSize = Dimension(100, 0)
             } else {
-                label2.font = sampleFont!!.deriveFont(list.font.size2D * 1.25f)
-                label2.text = sampleText
+                val h = 22
+                val fontCase = sampleFont!!.case(list.font.size2D * 1.25)
+                val dy = (h + fontCase.run { ascent - descent - lineGap }) / 2
+                label2.shape = GlyphString.of(sampleText, fontCase).appendOutlineTo(Path2D.Float(), 0.0, dy)
+                label2.preferredSize = Dimension(100, h)
             }
 
             return panel
         }
 
         private fun trySampleText(sampleFont: Font, sampleText: String?): String? {
-            val missingGlyph = sampleFont.missingGlyphCode
-            val gv = sampleFont.createGlyphVector(REF_FRC, sampleText ?: return null)
+            val glyphString = GlyphString.of(sampleText ?: return null, sampleFont.case())
             // Only display the sample when at least one glyph is not the missing glyph placeholder.
-            for (glyphIdx in 0..<gv.numGlyphs)
-                if (gv.getGlyphCode(glyphIdx) != missingGlyph)
-                    return sampleText
-            return null
+            return if (glyphString.segments.any { gs -> gs.hasNonMissingGlyph }) sampleText else null
+        }
+
+    }
+
+
+    private class ShapeLabel : JComponent() {
+
+        var shape: Shape? = null
+
+        override fun paintComponent(g: Graphics) {
+            val shape = this.shape
+            if (shape != null)
+                g.withNewG2 { g2 ->
+                    g2.setHighQuality()
+                    g2.color = foreground
+                    g2.fill(shape)
+                }
         }
 
     }

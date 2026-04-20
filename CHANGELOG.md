@@ -28,11 +28,16 @@ Cinecred Changelog
 - The credits runtime can now be copied to the clipboard by clicking on it.
 - If vertical gaps are fully crushed due to a runtime fine adjustment in the
   styling or spreadsheet, a warning is now emitted.
+- PDF exports now subset their embedded fonts, drastically reducing file size.
 
 ### Fixes
 
 - Credits files with ungodly many rows or columns no longer cause a crash.
 - Duplicate spreadsheet names in credits files are now suffixed with, e.g., (2).
+- Multi-line paragraphs whose letter styles have tracking now have line breaks
+  in the correct places.
+- Multi-line paragraphs with mixed left-to-right and right-to-left text now have
+  proper text order across all lines.
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - Exported PDFs no longer duplicate pictures, thereby reducing file size.
 - PDF export no longer inverts vertical shearing.
@@ -51,6 +56,8 @@ Cinecred Changelog
 
 ### Compatibility Notes
 
+- The text layout engine has been replaced. While this should not lead to
+  noticeable differences in rendering, it might do in some edge cases.
 - Dropped support for dot leaders when the head or tail is vertically justified
   with the "Overall Middle" of the body.
 

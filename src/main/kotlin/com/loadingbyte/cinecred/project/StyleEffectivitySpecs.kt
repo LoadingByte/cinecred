@@ -1,9 +1,8 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.CAPITAL_SPACING_FONT_FEAT
-import com.loadingbyte.cinecred.common.KERNING_FONT_FEAT
-import com.loadingbyte.cinecred.common.LIGATURES_FONT_FEATS
-import com.loadingbyte.cinecred.common.getSupportedFeatures
+import com.loadingbyte.cinecred.imaging.Font.Companion.CAPITAL_SPACING_FEATURE
+import com.loadingbyte.cinecred.imaging.Font.Companion.KERNING_FEATURE
+import com.loadingbyte.cinecred.imaging.Font.Companion.LIGATURES_FEATURES
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.*
@@ -283,15 +282,15 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
     ),
     StyleEffectivitySpec(
         LetterStyle::kerning.st(),
-        isAlmostEffective = { _, style -> supportsNot(style, KERNING_FONT_FEAT) }
+        isAlmostEffective = { _, style -> supportsNot(style, KERNING_FEATURE) }
     ),
     StyleEffectivitySpec(
         LetterStyle::ligatures.st(),
-        isAlmostEffective = { _, style -> LIGATURES_FONT_FEATS.all { supportsNot(style, it) } }
+        isAlmostEffective = { _, style -> LIGATURES_FEATURES.all { supportsNot(style, it) } }
     ),
     StyleEffectivitySpec(
         LetterStyle::useUppercaseSpacing.st(),
-        isAlmostEffective = { _, style -> supportsNot(style, CAPITAL_SPACING_FONT_FEAT) }
+        isAlmostEffective = { _, style -> supportsNot(style, CAPITAL_SPACING_FEATURE) }
     ),
     StyleEffectivitySpec(
         LetterStyle::useUppercaseExceptions.st(), LetterStyle::useUppercaseSpacing.st(),
@@ -306,7 +305,7 @@ private val LETTER_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<LetterStyl
 
 private fun supportsNot(style: LetterStyle, feat: String): Boolean {
     val font = style.font.font
-    return if (font == null) false else feat !in font.getSupportedFeatures()
+    return if (font == null) false else feat !in font.supportedFeatures
 }
 
 

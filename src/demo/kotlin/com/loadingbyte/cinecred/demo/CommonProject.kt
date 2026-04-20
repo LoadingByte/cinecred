@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.ui.helper.withG2
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.awt.Color
+import java.awt.Font
 import java.awt.image.BufferedImage
 import java.net.URI
 import java.nio.file.Path
@@ -78,13 +79,14 @@ val RAINBOW_TAPE: Tape by lazy {
     val tmpDir = Path(System.getProperty("java.io.tmpdir")).resolve("cinecred-rainbow")
     tmpDir.toFile().apply { deleteRecursively(); deleteOnExit() }
     val tapeDir = tmpDir.resolve("rainbow").also(Path::createDirectoriesSafely).apply { toFile().deleteOnExit() }
+    val font = useResourceStream("/fonts/Titillium-RegularUpright.otf", Font::createFonts)[0].deriveFont(40f)
     val img = BufferedImage(192, 108, BufferedImage.TYPE_3BYTE_BGR)
     for (frame in 0..<200)
         ImageIO.write(img.withG2 { g2 ->
             g2.color = Color(Color.HSBtoRGB(frame / 2 / 100f, 1f, 1f))
             g2.fillRect(0, 0, img.width, img.height)
             g2.color = Color(0, 0, 0, 100)
-            g2.font = BUNDLED_FONTS.first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }.deriveFont(40f)
+            g2.font = font
             val fm = g2.fontMetrics
             val str = "${frame + 1}"
             g2.drawString(str, 6, 7 + fm.ascent)

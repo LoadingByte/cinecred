@@ -1,19 +1,19 @@
 package com.loadingbyte.cinecred.ui.view.welcome
 
 import com.formdev.flatlaf.FlatClientProperties.*
-import com.loadingbyte.cinecred.common.BUNDLED_FONTS
 import com.loadingbyte.cinecred.common.VERSION
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.ui.comms.License
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.BorderLayout
+import java.awt.Font
 import java.awt.Insets
 import java.awt.event.ItemEvent
 import java.net.URI
-import java.util.*
 import javax.swing.*
 import javax.swing.SwingConstants.LEFT
 import javax.swing.SwingConstants.TOP
@@ -179,9 +179,9 @@ class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
         private const val CONTENT_BG_COLOR = "\$TabbedPane.hoverColor"
 
-        private val TITILLIUM_REGU = BUNDLED_FONTS.first { it.getFontName(Locale.ROOT) == "Titillium Regular Upright" }
-        private val TITILLIUM_SEMI = BUNDLED_FONTS.first { it.getFontName(Locale.ROOT) == "Titillium Semibold Upright" }
-        private val TITILLIUM_BOLD = BUNDLED_FONTS.first { it.getFontName(Locale.ROOT) == "Titillium Bold Upright" }
+        private val TITILLIUM_REGU = useResourceStream("/fonts/Titillium-RegularUpright.otf", Font::createFonts)[0]
+        private val TITILLIUM_SEMI = useResourceStream("/fonts/Titillium-SemiboldUpright.otf", Font::createFonts)[0]
+        private val TITILLIUM_BOLD = useResourceStream("/fonts/Titillium-BoldUpright.otf", Font::createFonts)[0]
 
         private val H0 = UIManager.getFont("h0.font").size2D
         private val H1 = UIManager.getFont("h1.font").size2D

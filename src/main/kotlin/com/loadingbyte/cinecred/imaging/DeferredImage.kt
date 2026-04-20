@@ -3,17 +3,14 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.apache.fontbox.ttf.OTFParser
-import org.apache.fontbox.ttf.TTFParser
 import org.apache.pdfbox.contentstream.operator.OperatorName
 import org.apache.pdfbox.cos.*
 import org.apache.pdfbox.io.RandomAccessReadBuffer
-import org.apache.pdfbox.io.RandomAccessReadBufferedFile
 import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.*
 import org.apache.pdfbox.pdmodel.common.PDRange
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2
-import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace
@@ -39,13 +36,9 @@ import java.awt.Shape
 import java.awt.geom.*
 import java.io.OutputStream
 import java.lang.Byte.toUnsignedInt
-import java.lang.Short.toUnsignedInt
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_BYTE
-import java.lang.invoke.MethodHandles
 import java.lang.ref.SoftReference
-import java.nio.ByteOrder
-import java.nio.file.Path
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
@@ -285,6 +278,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val TAPES = object : Layer {}
         val GUIDES = object : Layer {}
 
+        private val F = DecimalFormat("#.####", DecimalFormatSymbols(Locale.ROOT))
+
         private fun FloatArray.isFinite(end: Int): Boolean =
             allBetween(0, end, Float::isFinite)
 
@@ -351,23 +346,18 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val width: Double
         val heightAboveBaseline: Double
         val heightBelowBaseline: Double
-        /** The outline of the entire text, with the [transform] already applied. */
-        val transformedOutline: Shape
-        val fontSize: Double
-        val glyphCodes: IntArray
-        fun getGlyphOffsetX(glyphIdx: Int): Double
-        /** Applying this to the drawn [glyphCodes] positioned by [getGlyphOffsetX] yields [transformedOutline]. */
-        val transform: AffineTransform
-        val fundamentalFontInfo: FundamentalFontInfo
+        val outline: Shape
+        val glyphCount: Int
+        fun getGlyph(glyphIdx: Int): Int
+        val string: String
+        val fontCase: Font.Case
 
-        /** Provides access to fundamental properties of a font face, irrespective of any user configuration. */
-        interface FundamentalFontInfo {
-            val fontName: String
-            val fontFile: Path
-            val indexInCollection: Int
-            /** Retrieves the outline of a particular glyph, assuming a non-transformed font of the given size. */
-            fun getGlyphOutline(glyphCode: Int, fontSize: Double): Shape
-        }
+        // These accessors are for manually reproducing "outline" from the font's raw glyphs. You need to position each
+        // glyph at the position given by the getManualGlyphPosition?() methods. Afterward, you apply "manualTransform"
+        // to the entire structure.
+        fun getManualGlyphPositionX(glyphIdx: Int): Double
+        fun getManualGlyphPositionY(glyphIdx: Int): Double
+        val manualTransform: AffineTransform
 
     }
 
@@ -589,7 +579,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 translate(x, yBaseline)
                 scale(scaling)
             }
-            canvas.fillShape(text.transformedOutline, coat.toShader(), transform = transform)
+            canvas.fillShape(text.outline, coat.toShader(), transform = transform)
         }
 
         override fun materializeEmbeddedPicture(
@@ -628,7 +618,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val defs by lazy {
             doc.createElementNS(SVG_NS_URI, "defs").also { svg.insertBefore(it, svg.firstChild) }
         }
-        private val glyphPathIds = HashMap<Pair<String /* font name */, Int /* glyph code */>, String?>()
+        private val glyphPathIds = HashMap<Pair<Font, Int /* glyph */>, String?>()
         private val picElementIds = HashMap<Picture, String>()
         private var gradientCtr = 0
         private val gradientIds = HashMap<Pair<Color4f, Color4f>, String>()
@@ -658,11 +648,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
             val defFontSize = 12.0
-            val defToUseScaling = text.fontSize / defFontSize
+            val defToUseScaling = text.fontCase.size / defFontSize
 
             val textOnlyTx = AffineTransform().apply {
                 scale(defToUseScaling)
-                concatenate(text.transform)
+                concatenate(text.manualTransform)
             }
             val textTx = AffineTransform().apply {
                 translate(x, yBaseline)
@@ -681,19 +671,22 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val g = doc.createElementNS(SVG_NS_URI, "g")
             g.setAttribute("transform", transformAttr(textTx))
 
-            val fontName = text.fundamentalFontInfo.fontName
-            for ((glyphIdx, glyphCode) in text.glyphCodes.withIndex()) {
+            val font = text.fontCase.font
+            val defFontCase = text.fontCase.withSize(defFontSize)
+            for (glyphIdx in 0..<text.glyphCount) {
+                val glyph = text.getGlyph(glyphIdx)
                 val use = doc.createElementNS(SVG_NS_URI, "use")
-                val glyphPathId = glyphPathIds.computeIfAbsent(Pair(fontName, glyphCode)) {
+                val glyphPathId = glyphPathIds.computeIfAbsent(Pair(font, glyph)) {
                     val id = "glyph${glyphPathIds.size + 1}"
-                    val glyphOutline = text.fundamentalFontInfo.getGlyphOutline(glyphCode, defFontSize)
+                    val glyphOutline = defFontCase.getGlyphOutline(glyph)
                     defs.appendChild((makePath(glyphOutline) ?: return@computeIfAbsent null).apply {
                         setAttribute("id", id)
                     })
                     id
                 } ?: continue
                 use.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$glyphPathId")
-                use.setAttribute("x", F.format(text.getGlyphOffsetX(glyphIdx) / defToUseScaling))
+                use.setAttribute("x", F.format(text.getManualGlyphPositionX(glyphIdx) / defToUseScaling))
+                use.setAttribute("y", F.format(text.getManualGlyphPositionY(glyphIdx) / defToUseScaling))
                 g.appendChild(use)
             }
 
@@ -868,10 +861,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             return "matrix($m00 $m10 $m01 $m11 $m02 $m12)"
         }
 
-        companion object {
-            private val F = DecimalFormat("#.####", DecimalFormatSymbols(Locale.ROOT))
-        }
-
     }
 
 
@@ -894,6 +883,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     ) : TapeThumbnailBackend {
 
         private val csHeight = page.mediaBox.height
+        private var fontKeyCtr = 1
 
         init {
             page.cosObject.setItem(COSName.GROUP, PDTransparencyGroupAttributes().apply {
@@ -977,18 +967,28 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
-            val pdFont = tracker.getPDFont(text.fundamentalFontInfo) ?: return
+            val fontRecorder = tracker.obtainFontRecorder(text.fontCase.font)
+            val resourceKey = COSName.getPDFName("Font${fontKeyCtr++}")
+            fontRecorder.pagesAndResourceKeys.add(Pair(page, resourceKey))
+
+            // Add all Unicode codepoints from the text to the recorder.
+            val usedCodepoints = fontRecorder.usedCodepoints
+            val string = text.string
+            var i = 0
+            while (i < string.length) {
+                val codepoint = string.codePointAt(i)
+                usedCodepoints.add(codepoint)
+                i += Character.charCount(codepoint)
+            }
 
             cs.saveGraphicsState()
             cs.beginText()
 
-            val glyphs = text.glyphCodes
-            val xShifts = FloatArray(glyphs.size - 1) { glyphIdx ->
-                val actualWidth = pdFont.getWidth(glyphs[glyphIdx])
-                val wantedWidth = ((text.getGlyphOffsetX(glyphIdx + 1) - text.getGlyphOffsetX(glyphIdx)).toFloat()
-                        // Convert to the special PDF text coordinates.
-                        * 1000f / text.fontSize.toFloat())
-                actualWidth - wantedWidth
+            val xShifts = FloatArray(text.glyphCount - 1) { glyphIdx ->
+                val actualWidth = text.fontCase.getGlyphAdvance(text.getGlyph(glyphIdx))
+                val wantedWidth = text.getManualGlyphPositionX(glyphIdx + 1) - text.getManualGlyphPositionX(glyphIdx)
+                // Convert to the special PDF text coordinates.
+                ((actualWidth - wantedWidth) * 1000.0 / text.fontCase.size).toFloat()
             }
 
             val textBBox = Rectangle2D.Double(
@@ -1000,7 +1000,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val textTx = AffineTransform().apply {
                 translate(x, csHeight - yBaseline)
                 scale(scaling)
-                val t = text.transform
+                val t = text.manualTransform
                 concatenate(AffineTransform(t.scaleX, -t.shearY, -t.shearX, t.scaleY, t.translateX, -t.translateY))
             }
             val coatTx = AffineTransform().apply {
@@ -1008,7 +1008,12 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 scale(scaling)
             }
 
-            cs.setFont(pdFont, text.fontSize.toFloat())
+            // Build an array of glyphs that we want to show, and also continue populating the glyphSet.
+            val usedGlyphs = fontRecorder.usedGlyphs
+            val glyphs = IntArray(text.glyphCount) { glyphIdx -> text.getGlyph(glyphIdx).also(usedGlyphs::add) }
+
+            appendCOSName(cs, resourceKey)
+            appendRawCommands(cs, " ${F.format(text.fontCase.size)} ${OperatorName.SET_FONT_AND_SIZE}\n")
             setCoat(coat.transform(coatTx), fill = true, textBBox)
             cs.setTextMatrix(Matrix(textTx))
             cs.showGlyphsWithPositioning(glyphs, xShifts, bytesPerGlyph = 2 /* always true for TTF/OTF fonts */)
@@ -1201,81 +1206,48 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         data class ExtGStateKey(private val fill: Boolean, private val alpha: Float)
 
+        class FontRecorder {
+            val pagesAndResourceKeys = mutableListOf<Pair<PDPage, COSName>>()
+            val usedCodepoints = HashSet<Int>()
+            val usedGlyphs = hashSetOf(0)
+        }
+
         val extGStates = HashMap<ExtGStateKey, PDExtendedGraphicsState>()
         val pdImages = HashMap<Picture, PDImageXObject>()
         val pdImageResolutions = HashMap<Picture, MutableList<Resolution>>()
         val pdForms = HashMap<Picture.Vector, PDFormXObject>()
         val layerUtil by lazy { LayerUtility(doc) }
         private val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
-        private val pdFonts = HashMap<String /* font name */, PDFont?>()
+        private val fontRecorders = HashMap<Font, FontRecorder>()
 
         fun obtainICCBasedCS(colorSpace: ColorSpace) = pdColorSpaces.computeIfAbsent(colorSpace) {
             makePDICCBased(doc, 3, ICCProfile.of(colorSpace).bytes)
         }
 
-        fun getPDFont(fundamentalFontInfo: Text.FundamentalFontInfo): PDFont? {
-            val psName = fundamentalFontInfo.fontName
-
-            if (psName !in pdFonts)
-                try {
-                    val fontFile = fundamentalFontInfo.fontFile.toFile()
-                    val ttf = when (String(fontFile.inputStream().use { it.readNBytes(4) })) {
-                        // TrueType Collection
-                        "ttcf" -> {
-                            // Read the entire file into a byte array.
-                            val bI = fontFile.readBytes()
-                            val numFonts = INT.get(bI, 8) as Int
-                            require(numFonts in 1..1024) { "Illegal number of fonts: $numFonts" }
-                            val fontIdx = fundamentalFontInfo.indexInCollection
-                            require(fontIdx in 0..<numFonts) { "Font index $fontIdx exceeds font count $numFonts." }
-                            // Create a byte array bO that is an extracted version of the font. For that, we copy the
-                            // font's directory and all of its tables, and then adjust the table offsets in the
-                            // directory. We don't need to worry about offsets inside tables because those are relative
-                            // to the table's address.
-                            val fontOff = INT.get(bI, 12 + fontIdx * 4) as Int
-                            val numTabs = toUnsignedInt(SHORT.get(bI, fontOff + 4) as Short)
-                            val dirLen = 12 + numTabs * 16
-                            val tabLens = IntArray(numTabs) { t ->
-                                ceilDiv(INT.get(bI, fontOff + 12 + t * 16 + 12) as Int, 4) * 4
-                            }
-                            val bO = ByteArray(dirLen + tabLens.sum())
-                            System.arraycopy(bI, fontOff, bO, 0, dirLen)
-                            var tabPtr = dirLen
-                            for (t in 0..<numTabs) {
-                                val p = 12 + t * 16 + 8
-                                INT.set(bO, p, tabPtr)
-                                System.arraycopy(bI, INT.get(bI, fontOff + p) as Int, bO, tabPtr, tabLens[t])
-                                tabPtr += tabLens[t]
-                            }
-                            // Parse the newly created font.
-                            val parser = if (String(bO, 0, 4) == "OTTO") OTFParser() else TTFParser()
-                            parser.parse(RandomAccessReadBuffer(bO))
-                        }
-                        // OpenType Font
-                        "OTTO" ->
-                            OTFParser().parse(RandomAccessReadBufferedFile(fontFile))
-                        // TrueType Font
-                        else ->
-                            // Here, one could theoretically enable embedSubset. However, our string writing logic
-                            // directly writes font-specific glyphs (in contrast to unicode codepoints) since this is
-                            // the only way we can leverage the power of TextLayout and also the only way we can write
-                            // some special ligatures that have no unicode codepoint. Now, since PDFBox's font
-                            // subsetting mechanism only works on codepoints and not on glyphs, we cannot use it.
-                            TTFParser().parse(RandomAccessReadBufferedFile(fontFile))
-                    }
-                    pdFonts[psName] = PDType0Font.load(doc, ttf, false)
-                } catch (e: Exception) {
-                    LOGGER.error("Cannot load the font file of the font '{}' for PDF embedding.", psName, e)
-                    // Memoize null to avoid trying to load the font file again.
-                    pdFonts[psName] = null
-                }
-
-            return pdFonts.getValue(psName)
+        fun obtainFontRecorder(font: Font) = fontRecorders.computeIfAbsent(font) {
+            FontRecorder()
         }
 
         override fun close() {
+            for ((font, rec) in fontRecorders)
+                endFont(font, rec)
             for ((pic, pdImage) in pdImages)
                 endImage(pic, pdImage, pdImageResolutions.getValue(pic))
+        }
+
+        private fun endFont(font: Font, rec: FontRecorder) {
+            val subsettedFont =
+                font.staticNonShapeableSubset(rec.usedCodepoints, rec.usedGlyphs) ?: run {
+                    LOGGER.warn("Cannot subset the font '{}' for PDF embedding; will embed it wholly.", font.name)
+                    font
+                }
+            val ttf = OTFParser().parse(RandomAccessReadBuffer(subsettedFont.toByteArray()))
+            val pdFont = PDType0Font.load(doc, ttf, false)
+            for ((page, resourceKey) in rec.pagesAndResourceKeys) {
+                val res = page.resources.cosObject
+                (res.getCOSDictionary(COSName.FONT) ?: COSDictionary().also { res.setItem(COSName.FONT, it) })
+                    .setItem(resourceKey, pdFont)
+            }
         }
 
         private fun endImage(pic: Picture, pdImage: PDImageXObject, resolutions: List<Resolution>) {
@@ -1429,13 +1401,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             // @formatter:on
             if (k5 < k) v = v5
             return v
-        }
-
-        companion object {
-            private val SHORT = MethodHandles.byteArrayViewVarHandle(ShortArray::class.java, ByteOrder.BIG_ENDIAN)
-                .withInvokeExactBehavior()
-            private val INT = MethodHandles.byteArrayViewVarHandle(IntArray::class.java, ByteOrder.BIG_ENDIAN)
-                .withInvokeExactBehavior()
         }
 
     }

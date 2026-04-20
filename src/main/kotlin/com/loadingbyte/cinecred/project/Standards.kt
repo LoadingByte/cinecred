@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Transition
 import kotlinx.collections.immutable.persistentListOf
 import java.util.*
@@ -145,7 +146,7 @@ val PRESET_CONTENT_STYLE = ContentStyle(
 val PRESET_LETTER_STYLE
     get() = LetterStyle(
         name = "???",
-        font = FontRef(getBundledFont("Archivo Narrow Regular")!!),
+        font = FontRef(Font.bundled("Archivo Narrow Regular")!!),
         heightPx = 32.0,
         leadingTopRh = 0.0,
         leadingBottomRh = 0.0,

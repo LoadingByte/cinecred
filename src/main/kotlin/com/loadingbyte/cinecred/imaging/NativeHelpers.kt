@@ -79,9 +79,6 @@ private fun makeVarHandle(layout: ValueLayout, order: ByteOrder): VarHandle =
 fun SegmentAllocator.allocateFrom(elems: ByteArray): MemorySegment = allocate(JAVA_BYTE, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_BYTE, 0L, elems.size) }
 
-fun SegmentAllocator.allocateFrom(elems: CharArray): MemorySegment = allocate(JAVA_CHAR, elems.size.toLong())
-    .also { MemorySegment.copy(elems, 0, it, JAVA_CHAR, 0L, elems.size) }
-
 fun SegmentAllocator.allocateFrom(elems: FloatArray): MemorySegment = allocate(JAVA_FLOAT, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_FLOAT, 0L, elems.size) }
 

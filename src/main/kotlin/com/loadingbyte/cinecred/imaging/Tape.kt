@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
+import java.awt.font.FontRenderContext
 import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.io.IOException
@@ -161,7 +162,8 @@ class Tape private constructor(
             pictureSpec = Bitmap.Spec(previewRes, pictureRep)
             val canvasSpec = Bitmap.Spec(previewRes, Canvas.compatibleRepresentation(pictureRep.colorSpace!!))
 
-            val textShape = TextLayout(l10n("imaging.tapePreview"), UIManager.getFont("defaultFont"), REF_FRC)
+            val frc = FontRenderContext(null, true, true)
+            val textShape = TextLayout(l10n("imaging.tapePreview"), UIManager.getFont("defaultFont"), frc)
                 .getOutline(null)
             val textRect = textShape.bounds2D
             val pw = previewRes.widthPx.toDouble()

@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.demos
 
-import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.comms.DockableId.LOG
 import kotlinx.collections.immutable.persistentListOf
@@ -412,7 +412,7 @@ private fun buildCredits(
     val spreadsheet = "@Body\n{{Style Demo}}" + if (neque) "Neque porro quisquam" else "Lorem ipsum dolor"
     val letterStyle = PRESET_LETTER_STYLE.copy(
         name = "Demo",
-        font = FontRef(getBundledFont(if (bold) "Archivo Narrow Bold" else "Archivo Narrow Regular")!!),
+        font = FontRef(Font.bundled(if (bold) "Archivo Narrow Bold" else "Archivo Narrow Regular")!!),
         heightPx = height,
         trackingEm = tracking,
         layers = layers.asList().toPersistentList()

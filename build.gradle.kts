@@ -24,7 +24,7 @@ val flatlafVersion = "3.7.1"
 
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
-val harfBuzzVersion = "7.1.0"
+val harfBuzzVersion = "14.2.0"
 val zimgVersion = "0e56801"
 val nfdVersion = "17b6e8c"
 
@@ -480,9 +480,10 @@ tasks.register<Jextract>("jextractHarfBuzz") {
     group = "Native"
     description = "Extracts Java bindings for the HarfBuzz native library."
     targetPackage = "com.loadingbyte.cinecred.natives.harfbuzz"
+    headerClassName = "hb_h"
     addHarfBuzzIncludes()
     includeDir = checkoutHarfBuzz.flatMap { it.repositoryDir.dir("src") }
-    headerFile = includeDir.map { it.file("hb.h") }
+    headerFile = includeDir.map { it.file("hb-subset.h") }
     outputDir = srcMainJava
 }
 

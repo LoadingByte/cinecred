@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui.helper
 
-import com.loadingbyte.cinecred.common.FontStrings
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -23,10 +22,15 @@ internal class FontSorterTest {
     }
 
     private class TestFontSorter : FontSorter<Font, Family>() {
-        override fun Font.getWeight() = popWeight()
-        override fun Font.getWidth() = popWidth()
-        override fun Font.isItalic2D() = popItalic()
-        override fun Font.getStrings() = strings
+        override val Font.weight get() = popWeight().toDouble()
+        override val Font.width get() = popWidth()
+        override val Font.italic get() = popItalic()
+        override val Font.familyMap get() = fam
+        override val Font.subfamilyMap get() = sub
+        override val Font.fullNameMap get() = full
+        override val Font.typographicFamilyMap get() = tfam
+        override val Font.typographicSubfamilyMap get() = tsub
+        override val Font.sampleTextMap get() = sample
         override fun makeFamily(
             family: Map<Locale, String>,
             subfamilies: Map<Font, Map<Locale, String>>,
@@ -52,10 +56,10 @@ private fun makeExpectedFamilies() = listOf(
         fonts = listOf(
             Font(full = mapOf(US to "CineSans Narrow", DE to "CineSans Schmal"), b = 400, i = F),
             Font(full = mapOf(US to "CineSans Narrow Bold", DE to "CineSans Schmal Fett"), i = F),
-            Font(full = mapOf(US to "CineSans Normal"), w = 5, b = 400, i = F, canon = T),
-            Font(full = mapOf(US to "CineSans Italic", DE to "CineSans Kursiv"), w = 5, b = 400),
-            Font(full = mapOf(US to "CineSans Bold", DE to "CineSans Fett"), w = 5, i = F),
-            Font(full = mapOf(US to "CineSans Bold Italic", DE to "CineSans Fett Kursiv"), w = 5)
+            Font(full = mapOf(US to "CineSans Normal"), w = 100.0, b = 400, i = F, canon = T),
+            Font(full = mapOf(US to "CineSans Italic", DE to "CineSans Kursiv"), w = 100.0, b = 400),
+            Font(full = mapOf(US to "CineSans Bold", DE to "CineSans Fett"), w = 100.0, i = F),
+            Font(full = mapOf(US to "CineSans Bold Italic", DE to "CineSans Fett Kursiv"), w = 100.0)
         ),
         family = outStrs(US, US to "CineSans"),
         subfamilies = listOf(
@@ -86,10 +90,10 @@ private fun makeExpectedFamilies() = listOf(
             Font(fam = mapOf(US to "Epic Cond", DE to "Epic Kond"), sub = mapOf(US to "Normal"), b = 400, i = F),
             Font(fam = mapOf(US to "Epic Cond", DE to "Epic Kond"), sub = mapOf(US to "Oblique", DE to "Kur"), b = 400),
             Font(fam = mapOf(US to "Epic Cond"), sub = mapOf(US to "Bold", DE to "Fett"), i = F),
-            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Normal"), w = 5, b = 400, i = F, canon = T),
-            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Oblique", DE to "Schräg"), w = 5, b = 400),
-            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Bold", DE to "Fett"), w = 5, i = F),
-            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "BoldOblique", DE to "FettSchräg"), w = 5)
+            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Normal"), w = 100.0, b = 400, i = F, canon = T),
+            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Oblique", DE to "Schräg"), w = 100.0, b = 400),
+            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "Bold", DE to "Fett"), w = 100.0, i = F),
+            Font(fam = mapOf(US to "Epic"), sub = mapOf(US to "BoldOblique", DE to "FettSchräg"), w = 100.0)
         ),
         family = outStrs(US, US to "Epic"),
         subfamilies = listOf(
@@ -105,10 +109,10 @@ private fun makeExpectedFamilies() = listOf(
     // Legacy family & subfamily only w/ language confusion
     Family(
         fonts = listOf(
-            Font(fam = mapOf(DE to "Expo"), sub = mapOf(US to "Normal"), w = 5, b = 400, i = F, canon = T),
-            Font(fam = mapOf(US to "Expo"), sub = mapOf(DE to "Schräg"), w = 5, b = 400, i = T),
-            Font(fam = mapOf(DE to "Expo"), sub = mapOf(DE to "Fett"), w = 5, b = 700, i = F),
-            Font(fam = mapOf(US to "Expo"), sub = mapOf(US to "Black"), w = 5, i = F)
+            Font(fam = mapOf(DE to "Expo"), sub = mapOf(US to "Normal"), w = 100.0, b = 400, i = F, canon = T),
+            Font(fam = mapOf(US to "Expo"), sub = mapOf(DE to "Schräg"), w = 100.0, b = 400, i = T),
+            Font(fam = mapOf(DE to "Expo"), sub = mapOf(DE to "Fett"), w = 100.0, b = 700, i = F),
+            Font(fam = mapOf(US to "Expo"), sub = mapOf(US to "Black"), w = 100.0, i = F)
         ),
         family = outStrs(US, US to "Expo", DE to "Expo"),
         subfamilies = listOf(
@@ -121,12 +125,12 @@ private fun makeExpectedFamilies() = listOf(
     // Typographic family & subfamily only
     Family(
         fonts = listOf(
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Book", DE to "Normal"), w = 5, i = F, canon = T),
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Book Italic"), w = 5),
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Semi Bold", DE to "Halbfett"), w = 5, i = F),
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Bold", DE to "Fett"), w = 5, i = F),
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Bold Italic"), w = 5),
-            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Extra Bold", DE to "Extrafett"), w = 5, i = F),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Book", DE to "Normal"), w = 100.0, i = F, canon = T),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Book Italic"), w = 100.0),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Semi Bold", DE to "Halbfett"), w = 100.0, i = F),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Bold", DE to "Fett"), w = 100.0, i = F),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Bold Italic"), w = 100.0),
+            Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Extra Bold", DE to "Extrafett"), w = 100.0, i = F),
             Font(tfam = mapOf(US to "Foo"), tsub = mapOf(US to "Expanded", DE to "Gestreckt"), b = 400, i = F),
             Font(tfam = mapOf(US to "Foo Expanded", DE to "Foo Str"), tsub = mapOf(US to "Bold", DE to "Fett"), i = F)
         ),
@@ -145,9 +149,9 @@ private fun makeExpectedFamilies() = listOf(
     // Typographic family & subfamily only w/ no English name
     Family(
         fonts = listOf(
-            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Regulär"), w = 5, b = 400, i = F, canon = T),
-            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Regulär Kursiv"), w = 5, b = 400, i = T),
-            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Fett"), w = 5, b = 700, i = F),
+            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Regulär"), w = 100.0, b = 400, i = F, canon = T),
+            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Regulär Kursiv"), w = 100.0, b = 400, i = T),
+            Font(tfam = mapOf(DE to "Fun"), tsub = mapOf(DE to "Fett"), w = 100.0, b = 700, i = F),
         ),
         family = outStrs(DE, DE to "Fun"),
         subfamilies = listOf(
@@ -161,7 +165,7 @@ private fun makeExpectedFamilies() = listOf(
         fonts = listOf(
             Font(
                 full = mapOf(US to "Mitra Mono", Locale.of("bn", "IN") to "SomethingElseEntirely"),
-                fam = mapOf(US to "Mitra"), sub = mapOf(US to "Regular"), w = 5, b = 400, i = F, canon = T
+                fam = mapOf(US to "Mitra"), sub = mapOf(US to "Regular"), w = 100.0, b = 400, i = F, canon = T
             )
         ),
         family = outStrs(US, US to "Mitra", Locale.of("bn", "IN") to "SomethingElseEntirely"),
@@ -172,13 +176,13 @@ private fun makeExpectedFamilies() = listOf(
         fonts = listOf(
             Font(
                 full = mapOf(US to "New"), fam = mapOf(US to "New"), sub = mapOf(US to "Regular", DE to "Standard"),
-                w = 5, b = 400, i = F, canon = T
+                w = 100.0, b = 400, i = F, canon = T
             ), Font(
                 full = mapOf(US to "New Italic", DE to "New Kursiv"), fam = mapOf(US to "New"),
-                sub = mapOf(US to "Italic", DE to "Kursiv"), w = 5, b = 400
+                sub = mapOf(US to "Italic", DE to "Kursiv"), w = 100.0, b = 400
             ), Font(
                 full = mapOf(US to "New Bold Italic", DE to "New Fett Kursiv"), fam = mapOf(US to "New"),
-                sub = mapOf(US to "Bold Italic", DE to "Fett Kursiv"), w = 5
+                sub = mapOf(US to "Bold Italic", DE to "Fett Kursiv"), w = 100.0
             )
         ),
         family = outStrs(US, US to "New"),
@@ -193,18 +197,18 @@ private fun makeExpectedFamilies() = listOf(
         fonts = listOf(
             Font(
                 full = mapOf(US to "Osw Regular"), fam = mapOf(US to "Osw Regular"), sub = mapOf(US to "Regular"),
-                w = 5, b = 400, i = F, canon = T
+                w = 100.0, b = 400, i = F, canon = T
             ),
             Font(
                 full = mapOf(US to "Osw RegularItalic"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Regular"),
-                w = 5, b = 400
+                w = 100.0, b = 400
             ),
             Font(
                 full = mapOf(US to "Osw Demi-BoldItalic"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Demi-Bold"),
-                w = 5
+                w = 100.0
             ),
-            Font(full = mapOf(US to "Osw Bold"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Bold"), w = 5, i = F),
-            Font(full = mapOf(US to "Osw BoldItalic"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Bold"), w = 5)
+            Font(full = mapOf(US to "Osw Bold"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Bold"), w = 100.0, i = F),
+            Font(full = mapOf(US to "Osw BoldItalic"), fam = mapOf(US to "Osw"), sub = mapOf(US to "Bold"), w = 100.0)
         ),
         family = outStrs(US, US to "Osw"),
         subfamilies = listOf(
@@ -234,19 +238,17 @@ private fun pretty(l: List<*>) = if (l.isEmpty()) "[]" else
 
 
 private class Font(
-    full: Map<Locale, String> = emptyMap(),
-    fam: Map<Locale, String> = emptyMap(),
-    sub: Map<Locale, String> = emptyMap(),
-    tfam: Map<Locale, String> = emptyMap(),
-    tsub: Map<Locale, String> = emptyMap(),
-    sample: Map<Locale, String> = emptyMap(),
-    private var w: Int? = null,
+    val full: Map<Locale, String> = emptyMap(),
+    val fam: Map<Locale, String> = emptyMap(),
+    val sub: Map<Locale, String> = emptyMap(),
+    val tfam: Map<Locale, String> = emptyMap(),
+    val tsub: Map<Locale, String> = emptyMap(),
+    val sample: Map<Locale, String> = emptyMap(),
+    private var w: Double? = null,
     private var b: Int? = null,
     private var i: Boolean? = null,
     val canon: Boolean = false
 ) {
-
-    val strings = FontStrings(fam, sub, full, tfam, tsub, sample)
 
     fun popWidth() = w.also { w = null } ?: failPop("its width")
     fun popWeight() = b.also { b = null } ?: failPop("its weight")
@@ -260,13 +262,13 @@ private class Font(
     }
 
     override fun toString(): String {
-        val full = strings.fullName[US] ?: strings.fullName.values.firstOrNull()
+        val full = full[US] ?: full.values.firstOrNull()
         if (full != null) return full
-        val fam = strings.family[US] ?: strings.family.values.firstOrNull()
-        val sub = strings.subfamily[US] ?: strings.subfamily.values.firstOrNull()
+        val fam = fam[US] ?: fam.values.firstOrNull()
+        val sub = sub[US] ?: sub.values.firstOrNull()
         if (fam != null && sub != null) return "$fam $sub"
-        val tfam = strings.typographicFamily[US] ?: strings.typographicFamily.values.firstOrNull()
-        val tsub = strings.typographicSubfamily[US] ?: strings.typographicSubfamily.values.firstOrNull()
+        val tfam = tfam[US] ?: tfam.values.firstOrNull()
+        val tsub = tsub[US] ?: tsub.values.firstOrNull()
         return "$tfam $tsub"
     }
 
@@ -323,4 +325,3 @@ private data class Family(
     }
 
 }
-

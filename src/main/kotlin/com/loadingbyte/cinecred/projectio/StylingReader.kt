@@ -5,7 +5,6 @@ import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Font
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -69,8 +68,7 @@ class StylingReaderContext(
     val pictureLoaders: Map<String, Picture.Loader>,
     val tapes: Map<String, Tape>
 ) {
-    fun resolveFont(name: String): Font? =
-        projectFonts[name] ?: getBundledFont(name) ?: getSystemFont(name)
+    fun resolveFont(name: String): Font? = projectFonts[name] ?: Font.bundled(name) ?: Font.system(name)
 }
 
 

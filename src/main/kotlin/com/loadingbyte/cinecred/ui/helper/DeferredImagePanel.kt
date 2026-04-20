@@ -486,7 +486,7 @@ class DeferredImagePanel(
             if (image == null || materialized == null) {
                 // If the materialized image is not ready yet, draw a loading indicator instead.
                 FlatUIUtils.setRenderingHints(g)
-                g.font = UIManager.getFont("h0.font").deriveFont(Font.BOLD)
+                g.font = UIManager.getFont("h0.font").deriveFont(java.awt.Font.BOLD)
                 val m = g.fontMetrics
                 val t = l10n("ui.edit.loading")
                 FlatUIUtils.drawString(this, g, t, (width - m.stringWidth(t)) / 2, (height - m.height) / 2 + m.ascent)

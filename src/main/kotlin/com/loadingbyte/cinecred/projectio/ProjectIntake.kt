@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.projectio
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.delivery.RenderQueue
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.projectio.RecursiveFileWatcher.Event.DELETE
@@ -11,7 +12,6 @@ import com.loadingbyte.cinecred.projectio.service.SERVICES
 import com.loadingbyte.cinecred.projectio.service.SERVICE_LINK_EXTS
 import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
 import com.loadingbyte.cinecred.projectio.service.readServiceLink
-import java.awt.Font
 import java.io.IOException
 import java.net.URI
 import java.nio.file.NoSuchFileException
@@ -296,7 +296,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             callbacks.pushProjectFonts(buildDedupSortedMap { put ->
                 for (fonts in projectFonts.values)
                     for (font in fonts)
-                        put(font.getFontName(Locale.ROOT), font)
+                        put(font.name, font)
             })
 
         if (pictureLoadersChanged) {
@@ -349,7 +349,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         private fun tryReadFonts(file: Path): List<Font> {
             if (file.isRegularFile() && file.extension in FONT_EXTS)
                 try {
-                    return Font.createFonts(file.toFile()).asList()
+                    return Font.read(file)
                 } catch (e: Exception) {
                     LOGGER.error("Font '{}' cannot be read.", file.name, e)
                 }

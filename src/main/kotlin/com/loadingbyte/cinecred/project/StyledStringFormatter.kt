@@ -1,11 +1,16 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.indexOfAfter
+import com.loadingbyte.cinecred.common.mapToDoubleArray
+import com.loadingbyte.cinecred.common.mapToIntArray
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
+import com.loadingbyte.cinecred.imaging.Font
+import com.loadingbyte.cinecred.imaging.Font.Companion.CAPITAL_SPACING_FEATURE
+import com.loadingbyte.cinecred.imaging.Font.Companion.PETITE_CAPS_FEATURE
+import com.loadingbyte.cinecred.imaging.Font.Companion.SMALL_CAPS_FEATURE
 import com.loadingbyte.cinecred.imaging.FormattedString
 import java.awt.BasicStroke
-import java.awt.Font
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -130,7 +135,8 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 
 private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     // If the font is not linked properly, fall back to a generic font.
-    val baseAWTFont = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
+    val font = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
+    val baseFontCase = font.case()
 
     // Leading
     val leadingTopPx = style.leadingTopRh * style.heightPx
@@ -154,19 +160,16 @@ private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     } else if (style.superscript != Superscript.OFF) {
         ssOffsetUnit = FormattedString.Font.Unit.UNSCALED_EM
 
-        val ssMetrics = baseAWTFont.getSuperscriptMetrics()
-            ?: SuperscriptMetrics(2 / 3.0, 0.0, 0.375, 2 / 3.0, 0.0, -0.375)
-
         fun sup() {
-            ssHOffset += ssMetrics.supHOffsetEm * ssScaling
-            ssVOffset += ssMetrics.supVOffsetEm * ssScaling
-            ssScaling *= ssMetrics.supScaling
+            ssHOffset += baseFontCase.supHOffsetEm * ssScaling
+            ssVOffset += baseFontCase.supVOffsetEm * ssScaling
+            ssScaling *= baseFontCase.supScaling
         }
 
         fun sub() {
-            ssHOffset += ssMetrics.subHOffsetEm * ssScaling
-            ssVOffset += ssMetrics.subVOffsetEm * ssScaling
-            ssScaling *= ssMetrics.subScaling
+            ssHOffset += baseFontCase.subHOffsetEm * ssScaling
+            ssVOffset += baseFontCase.subVOffsetEm * ssScaling
+            ssScaling *= baseFontCase.subScaling
         }
 
         // @formatter:off
@@ -183,35 +186,35 @@ private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     }
 
     // User-defined OpenType features
-    val features = style.features.mapTo(mutableListOf()) { FormattedString.Font.Feature(it.tag, it.value) }
+    val features = style.features.mapTo(mutableListOf()) { Font.Feature(it.tag, it.value) }
 
     // Uppercase spacing
     if (style.uppercase && style.useUppercaseSpacing)
-        features.add(FormattedString.Font.Feature(CAPITAL_SPACING_FONT_FEAT, 1))
+        features.add(Font.Feature(CAPITAL_SPACING_FEATURE, 1))
 
     // Small caps
     var fakeSCScaling = Double.NaN
     when (style.smallCaps) {
         SmallCaps.OFF -> {}
         SmallCaps.SMALL_CAPS ->
-            if (SMALL_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
-                features.add(FormattedString.Font.Feature(SMALL_CAPS_FONT_FEAT, 1))
+            if (SMALL_CAPS_FEATURE in font.supportedFeatures)
+                features.add(Font.Feature(SMALL_CAPS_FEATURE, 1))
             else
-                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.1, 0.8)
+                fakeSCScaling = baseFontCase.xHeight / baseFontCase.capHeight * 1.1
         SmallCaps.PETITE_CAPS ->
-            if (PETITE_CAPS_FONT_FEAT in baseAWTFont.getSupportedFeatures())
-                features.add(FormattedString.Font.Feature(PETITE_CAPS_FONT_FEAT, 1))
+            if (PETITE_CAPS_FEATURE in font.supportedFeatures)
+                features.add(Font.Feature(PETITE_CAPS_FEATURE, 1))
             else
-                fakeSCScaling = getSmallCapsScaling(baseAWTFont, 1.0, 0.725)
+                fakeSCScaling = baseFontCase.xHeight / baseFontCase.capHeight
     }
 
     val stdFont = FormattedString.Font(
-        baseAWTFont, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling, style.hScaling,
+        baseFontCase, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling, style.hScaling,
         ssHOffset, ssOffsetUnit, ssVOffset, ssOffsetUnit,
         style.trackingEm, style.kerning, style.ligatures, features
     )
     val fakeSmallCapsFont = if (fakeSCScaling.isNaN()) null else FormattedString.Font(
-        baseAWTFont, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling * fakeSCScaling, style.hScaling,
+        baseFontCase, fontHeightPx, leadingTopPx, leadingBottomPx, ssScaling * fakeSCScaling, style.hScaling,
         ssHOffset, ssOffsetUnit, ssVOffset, ssOffsetUnit,
         style.trackingEm, style.kerning, style.ligatures, features
     )
@@ -219,15 +222,10 @@ private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     return TextContext.Fonts(stdFont, fakeSmallCapsFont)
 }
 
-private fun getSmallCapsScaling(font: Font, multiplier: Double, fallback: Double): Double {
-    val extraLM = font.getExtraLineMetrics()
-    return if (extraLM == null) fallback else extraLM.xHeightEm / extraLM.capHeightEm * multiplier
-}
-
 
 private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.Font): FormattedString.Design {
     val fh = stdFont.fontHeightPx
-    val lm = stdFont.unscaledAWTFont.lineMetrics
+    val ufc = stdFont.unscaledFontCase
 
     val fmtStrLayers = layers.map { layer ->
         val coloring = when (layer.coloring) {
@@ -262,12 +260,12 @@ private fun generateFmtStrDesign(layers: List<Layer>, stdFont: FormattedString.F
                         heightPx = abs(fh * (1.0 + layer.stripeWidenTopRfh + layer.stripeWidenBottomRfh))
                     }
                     StripePreset.UNDERLINE -> {
-                        offsetPx = lm.underlineOffset + lm.underlineThickness / 2.0
-                        heightPx = lm.underlineThickness.toDouble()
+                        offsetPx = ufc.underlineOffset + ufc.underlineThickness / 2.0
+                        heightPx = ufc.underlineThickness
                     }
                     StripePreset.STRIKETHROUGH -> {
-                        offsetPx = lm.strikethroughOffset + lm.strikethroughThickness / 2.0
-                        heightPx = lm.strikethroughThickness.toDouble()
+                        offsetPx = ufc.strikethroughOffset + ufc.strikethroughThickness / 2.0
+                        heightPx = ufc.strikethroughThickness
                     }
                     StripePreset.CUSTOM -> {
                         heightPx = layer.stripeHeightRfh * fh

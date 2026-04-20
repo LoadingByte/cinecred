@@ -563,18 +563,17 @@ private fun drawBodyImageWithParagraphsBodyLayout(
             val drawnBodyLines = mutableListOf<DrawnBodyLine>()
             for (str in bodyElem.lines) {
                 val fmtStr = str.formatted(styling)
-                val lineBreaks = fmtStr.breakLines(bodyImageWidth)
-                for ((lineStartPos, lineEndPos) in lineBreaks.zipWithNext()) {
-                    // Note: If the line contains only whitespace, this skips to the next line.
-                    var lineFmtStr = fmtStr.sub(lineStartPos, lineEndPos)?.trim() ?: continue
+                val lineFmtStrs = fmtStr.breakIntoLines(bodyImageWidth)
+                for ((lineIdx, lineFmtStr) in lineFmtStrs.withIndex()) {
+                    var lineFmtStr = lineFmtStr
 
-                    val isLastLine = lineEndPos == fmtStr.string.length
+                    val isLastLine = lineIdx == lineFmtStrs.lastIndex
                     val curLineHJustify = style.paragraphsLineHJustify.toHJustifyCrumbs(isLastLine)
 
                     var x = 0.0
                     // Case 1a: Full justification.
                     if (curLineHJustify == HJustifyCrumbs.FULL)
-                        lineFmtStr = lineFmtStr.justify(bodyImageWidth)
+                        lineFmtStr = lineFmtStr.justified(bodyImageWidth)
                     // Case 1b: Left, center, or right justification.
                     else
                         x = justify(curLineHJustify.toHJustify(), bodyImageWidth, lineFmtStr.width)

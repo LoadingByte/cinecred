@@ -1,12 +1,8 @@
 package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.imaging.Color4f
-import com.loadingbyte.cinecred.imaging.Picture
-import com.loadingbyte.cinecred.imaging.Tape
-import com.loadingbyte.cinecred.imaging.Transition
+import com.loadingbyte.cinecred.imaging.*
 import kotlinx.collections.immutable.PersistentList
-import java.awt.Font
 import java.util.*
 import kotlin.io.path.name
 
@@ -265,7 +261,7 @@ data class FontRef(val name: String) {
     var font: Font? = null
         private set
 
-    constructor(font: Font) : this(font.getFontName(Locale.ROOT)) {
+    constructor(font: Font) : this(font.name) {
         this.font = font
     }
 

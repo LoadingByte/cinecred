@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.formatTimecode
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.GUIDES
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.FormattedString
 import com.loadingbyte.cinecred.imaging.Y
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
@@ -11,7 +12,6 @@ import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.project.PageBehavior.CARD
 import com.loadingbyte.cinecred.project.PageBehavior.SCROLL
 import kotlinx.collections.immutable.toPersistentList
-import java.awt.Font
 import java.awt.geom.Path2D
 import java.util.*
 import javax.swing.UIManager
@@ -484,10 +484,9 @@ private fun drawPage(
     val framesMargin = resolution.widthPx / 100.0
     fun drawFrames(frames: Int, y: Y) {
         val str = formatTimecode(global.fps, global.timecodeFormat, frames)
-        // Note: Obtaining a Font object for the bold monospaced font is a bit convoluted because the final object must
-        // not contain a font weight attribute, or else the FormattedString would complain.
-        val fontName = UIManager.getFont("monospaced.font").deriveFont(Font.BOLD).getFontName(Locale.ROOT)
-        val font = FormattedString.Font(Font(fontName, Font.PLAIN, 1), resolution.widthPx / 80.0)
+        val fontName = UIManager.getFont("monospaced.font").deriveFont(java.awt.Font.BOLD).getFontName(Locale.ROOT)
+        val fontObj = Font.system(fontName) ?: Font.bundled("Source Sans Pro Bold")!!
+        val font = FormattedString.Font(fontObj.case(), resolution.widthPx / 80.0)
         val coloring = FormattedString.Layer.Coloring.Plain(STAGE_GUIDE_COLOR)
         val layer = FormattedString.Layer(coloring, FormattedString.Layer.Shape.Text)
         val fmtStr = FormattedString.Builder(Locale.ROOT).apply {

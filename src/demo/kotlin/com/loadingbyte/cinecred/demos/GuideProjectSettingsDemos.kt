@@ -3,11 +3,11 @@ package com.loadingbyte.cinecred.demos
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.TimecodeFormat
-import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.TEMPLATE_PROJECT
 import com.loadingbyte.cinecred.demo.TEMPLATE_SCROLL_PAGE_FROM_DOP
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
@@ -139,7 +139,7 @@ object GuideProjectSettingsUppercaseExceptionsDemo : StyleSettingsDemo<Global>(
 
 
 private fun buildPage(global: Global, texts: List<String>, vGap: Double = 0.0, uppercase: Boolean = false): Page {
-    val fontRef = FontRef(getBundledFont("Archivo Narrow Bold")!!)
+    val fontRef = FontRef(Font.bundled("Archivo Narrow Bold")!!)
     val letterStyle = PRESET_LETTER_STYLE.copy(font = fontRef, uppercase = uppercase)
     val blocks = texts.map { text ->
         val styledString = persistentListOf(BodyElement.Str(persistentListOf(listOf(Pair(text, letterStyle)))))

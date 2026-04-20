@@ -3,6 +3,9 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font.Companion.MANAGED_FEATURES
+import com.loadingbyte.cinecred.imaging.Font.Companion.PETITE_CAPS_FEATURE
+import com.loadingbyte.cinecred.imaging.Font.Companion.SMALL_CAPS_FEATURE
 import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
@@ -254,22 +257,21 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         val font = style.font.font ?: return@JudgeConstr true
         when (style.smallCaps) {
             SmallCaps.OFF -> true
-            SmallCaps.SMALL_CAPS -> SMALL_CAPS_FONT_FEAT in font.getSupportedFeatures()
-            SmallCaps.PETITE_CAPS -> PETITE_CAPS_FONT_FEAT in font.getSupportedFeatures()
+            SmallCaps.SMALL_CAPS -> SMALL_CAPS_FEATURE in font.supportedFeatures
+            SmallCaps.PETITE_CAPS -> PETITE_CAPS_FEATURE in font.supportedFeatures
         }
     },
     DoubleConstr(ERROR, LetterStyle::superscriptScaling.st(), min = 0.0, minInclusive = false),
     FontFeatureConstr(WARN, LetterStyle::features.st()) { _, style ->
         val font = style.font.font ?: return@FontFeatureConstr Collections.emptySortedSet()
-        TreeSet(font.getSupportedFeatures()).apply { removeAll(MANAGED_FONT_FEATS) }
+        TreeSet(font.supportedFeatures).apply { removeAll(MANAGED_FEATURES) }
     },
     StyleNameConstr(
         WARN, LetterStyle::inheritLayersFromStyle.st(),
         styleClass = LetterStyle::class.java,
         choices = { styling, _ -> styling.letterStyles.filter { o -> !o.inheritLayersFromStyle.isActive } }
     ),
-    // This constraint is imposed upon us by Java. Source: sun.font.AttributeValues.i_validate()
-    DoubleConstr(ERROR, LetterStyle::hScaling.st(), min = 0.5, max = 10.0, maxInclusive = false)
+    DoubleConstr(ERROR, LetterStyle::hScaling.st(), min = 0.0, minInclusive = false)
 )
 
 

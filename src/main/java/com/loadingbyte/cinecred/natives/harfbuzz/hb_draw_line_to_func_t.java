@@ -14,12 +14,12 @@ import static java.lang.foreign.MemoryLayout.PathElement.*;
 
 /**
  * {@snippet lang=c :
- * typedef hb_blob_t *(*hb_reference_table_func_t)(hb_face_t *, hb_tag_t, void *)
+ * typedef void (*hb_draw_line_to_func_t)(hb_draw_funcs_t *, void *, hb_draw_state_t *, float, float, void *)
  * }
  */
-public final class hb_reference_table_func_t {
+public final class hb_draw_line_to_func_t {
 
-    private hb_reference_table_func_t() {
+    private hb_draw_line_to_func_t() {
         // Should not be called directly
     }
 
@@ -27,13 +27,15 @@ public final class hb_reference_table_func_t {
      * The function pointer signature, expressed as a functional interface
      */
     public interface Function {
-        MemorySegment apply(MemorySegment face, int tag, MemorySegment user_data);
+        void apply(MemorySegment dfuncs, MemorySegment draw_data, MemorySegment st, float to_x, float to_y, MemorySegment user_data);
     }
 
-    private static final FunctionDescriptor $DESC = FunctionDescriptor.of(
+    private static final FunctionDescriptor $DESC = FunctionDescriptor.ofVoid(
         hb_h.C_POINTER,
         hb_h.C_POINTER,
-        hb_h.C_INT,
+        hb_h.C_POINTER,
+        hb_h.C_FLOAT,
+        hb_h.C_FLOAT,
         hb_h.C_POINTER
     );
 
@@ -44,13 +46,13 @@ public final class hb_reference_table_func_t {
         return $DESC;
     }
 
-    private static final MethodHandle UP$MH = hb_h.upcallHandle(hb_reference_table_func_t.Function.class, "apply", $DESC);
+    private static final MethodHandle UP$MH = hb_h.upcallHandle(hb_draw_line_to_func_t.Function.class, "apply", $DESC);
 
     /**
      * Allocates a new upcall stub, whose implementation is defined by {@code fi}.
      * The lifetime of the returned segment is managed by {@code arena}
      */
-    public static MemorySegment allocate(hb_reference_table_func_t.Function fi, Arena arena) {
+    public static MemorySegment allocate(hb_draw_line_to_func_t.Function fi, Arena arena) {
         return Linker.nativeLinker().upcallStub(UP$MH.bindTo(fi), $DESC, arena);
     }
 
@@ -59,9 +61,9 @@ public final class hb_reference_table_func_t {
     /**
      * Invoke the upcall stub {@code funcPtr}, with given parameters
      */
-    public static MemorySegment invoke(MemorySegment funcPtr, MemorySegment face, int tag, MemorySegment user_data) {
+    public static void invoke(MemorySegment funcPtr, MemorySegment dfuncs, MemorySegment draw_data, MemorySegment st, float to_x, float to_y, MemorySegment user_data) {
         try {
-            return (MemorySegment) DOWN$MH.invokeExact(funcPtr, face, tag, user_data);
+             DOWN$MH.invokeExact(funcPtr, dfuncs, draw_data, st, to_x, to_y, user_data);
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {

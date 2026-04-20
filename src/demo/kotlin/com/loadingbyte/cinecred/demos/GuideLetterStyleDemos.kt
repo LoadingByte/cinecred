@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.demos
 
-import com.loadingbyte.cinecred.common.getBundledFont
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.parseCreditsLS
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.persistentListOf
 
@@ -43,8 +43,8 @@ object GuideLetterStyleFontDemo : StyleSettingsDemo<LetterStyle>(
 ) {
     override fun styles() = buildList<LetterStyle> {
         this += PRESET_LETTER_STYLE.copy(name = "Demo")
-        this += last().copy(font = FontRef(getBundledFont("Archivo Narrow Bold")!!))
-        this += last().copy(font = FontRef(getBundledFont("Titillium Regular Upright")!!))
+        this += last().copy(font = FontRef(Font.bundled("Archivo Narrow Bold")!!))
+        this += last().copy(font = FontRef(Font.bundled("Titillium Regular Upright")!!))
     }
 
     override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
@@ -116,7 +116,7 @@ object GuideLetterStyleLigaturesDemo : StyleSettingsDemo<LetterStyle>(
     listOf(LetterStyle::ligatures.st())
 ) {
     override fun styles() = buildList<LetterStyle> {
-        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(getBundledFont("Raleway Regular")!!))
+        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(Font.bundled("Raleway Regular")!!))
         this += last().copy(ligatures = false)
     }
 
@@ -144,7 +144,7 @@ object GuideLetterStyleSmallCapsDemo : StyleSettingsDemo<LetterStyle>(
     listOf(LetterStyle::smallCaps.st())
 ) {
     override fun styles() = buildList<LetterStyle> {
-        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(getBundledFont("Noto Sans Condensed")!!))
+        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(Font.bundled("Noto Sans Condensed")!!))
         this += last().copy(smallCaps = SmallCaps.SMALL_CAPS)
         this += last().copy(smallCaps = SmallCaps.PETITE_CAPS)
     }
@@ -205,7 +205,7 @@ object GuideLetterStyleFeaturesDemo : StyleSettingsDemo<LetterStyle>(
     listOf(LetterStyle::features.st())
 ) {
     override fun styles() = buildList<LetterStyle> {
-        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(getBundledFont("Roboto")!!))
+        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(Font.bundled("Roboto")!!))
         this += last().copy(features = persistentListOf(FontFeature("onum", 1)))
         this += last().copy(features = last().features.add(FontFeature("ss01", 1)))
     }

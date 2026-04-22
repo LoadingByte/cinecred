@@ -47,15 +47,16 @@ class StyleForm<S : Style>(
 
     private fun addSingleSettingWidget(setting: StyleSetting<S, *>) {
         val valueWidget = makeSettingWidget(setting)
-        val wholeWidth = valueWidget is LayerListWidget<*, *>
-        val formRow = when {
-            wholeWidth -> FormRow("", valueWidget)
-            else -> makeFormRow(setting.name, getUnit(setting), valueWidget)
-        }
         valueWidgets[setting] = valueWidget
-        rootFormRows.add(Pair(formRow, listOf(setting)))
-        rootFormRowLookup[setting] = formRow
-        addFormRow(formRow, wholeWidth = wholeWidth)
+        when (valueWidget) {
+            is LayerListWidget<*, *> -> addWholeWidthWidget(valueWidget)
+            else -> {
+                val formRow = makeFormRow(setting.name, getUnit(setting), valueWidget)
+                rootFormRows.add(Pair(formRow, listOf(setting)))
+                rootFormRowLookup[setting] = formRow
+                addFormRow(formRow)
+            }
+        }
     }
 
     private fun getUnit(setting: StyleSetting<S, *>): String? {
@@ -372,8 +373,8 @@ class StyleForm<S : Style>(
     fun getWidgetFor(setting: StyleSetting<S, *>): Widget<*> =
         valueWidgets.getValue(setting)
 
-    fun getFormRowFor(setting: StyleSetting<S, *>): FormRow =
-        rootFormRowLookup.getValue(setting)
+    fun getFormRowFor(setting: StyleSetting<S, *>): FormRow? =
+        rootFormRowLookup[setting]
 
     override fun open(stored /* style */: S) {
         disableOnChange = true
@@ -465,16 +466,16 @@ class StyleForm<S : Style>(
             }
             formRow.setAffixVisible(rowStatus != 2)
             formRow.setAffixEnabled(rowStatus != 1)
-            // For each widget individually, find its status and apply it. Separating this from the row status is
-            // relevant for UnionWidgets.
-            for (setting in settings) {
-                val settingStatus =
-                    if (setting in hiddenSettings) 2
-                    else status(ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE))
-                val widget = valueWidgets.getValue(setting)
-                widget.isVisible = settingStatus != 2
-                widget.isEnabled = settingStatus != 1
-            }
+        }
+
+        // For each widget individually, find its status and apply it. Separating this from the row status is
+        // relevant for UnionWidgets, and cases like whole width widgets, which do not have a proper form row.
+        for ((setting, widget) in valueWidgets) {
+            val settingStatus =
+                if (setting in hiddenSettings) 2
+                else status(ineffectiveSettings.getOrDefault(setting, Effectivity.EFFECTIVE))
+            widget.isVisible = settingStatus != 2
+            widget.isEnabled = settingStatus != 1
         }
     }
 
@@ -487,7 +488,7 @@ class StyleForm<S : Style>(
 
     fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, subjectIndex: Int, issue: Notice) {
         // Only show the notice message if there isn't already a notice with the same or a higher severity.
-        val formRow = rootFormRowLookup[setting]!!
+        val formRow = rootFormRowLookup[setting] ?: return
         val prevNoticeOverride = formRow.noticeOverride
         if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
             formRow.noticeOverride = issue

@@ -167,27 +167,14 @@ open class Form(insets: String, noticeArea: Boolean, private val constLabelWidth
 
     protected val formRows = mutableListOf<FormRow>()
 
-    protected fun addFormRow(formRow: FormRow, wholeWidth: Boolean = false, invisibleSpace: Boolean = false) {
-        val widget = formRow.widget
-
-        require(widget.components.size == widget.constraints.size)
-        require(widget.constraints.all { "wrap" !in it }) // we only allow "newline"
-
-        widget.changeListeners.add(::onChange)
+    protected fun addFormRow(formRow: FormRow, invisibleSpace: Boolean = false) {
+        val widget = formRow.widget.also(::recordWidget)
 
         val labelId = "l_${formRows.size}"
-        if (!wholeWidth) {
-            val labelConstraints = mutableListOf("id $labelId")
-            if (constLabelWidth)
-                labelConstraints.add("wmax $LABEL_WIDTH_CONSTRAINT")
-            if (formRows.isNotEmpty() /* is not the first widget */)
-                labelConstraints.add("newline")
-            if (invisibleSpace)
-                labelConstraints.add("hidemode 0")
-            add(formRow.labelComp, labelConstraints.joinToString())
-        }
-
         val endlineGroupId = "g_${formRows.size}"
+
+        addLabelComp(formRow.labelComp, labelId, invisibleSpace)
+
         for ((fieldIdx, field) in widget.components.withIndex()) {
             val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
             // Add each field to the "endlineGroup", whose "x2" will as such become the rightmost x border of any field
@@ -198,30 +185,58 @@ open class Form(insets: String, noticeArea: Boolean, private val constLabelWidth
             // We add it to every single field (as opposed to just the first one of each row) so that even when the
             // first field is made invisible, the cell is still split.
             fieldConstraints.add("split")
-            // If this field starts the first line, and we don't have a row label, start the new form row here.
-            if (wholeWidth && fieldIdx == 0)
-                fieldConstraints.add("newline")
             // If this field starts a new line, add a skip constraint to skip the label column.
-            if (!wholeWidth && "newline" in fieldConstraints[0])
+            if ("newline" in fieldConstraints[0])
                 fieldConstraints.add("skip 1")
-            // If this field starts the first or a later line, and if the row doesn't have a label and doesn't reserve a
-            // notice area, make the cell which contains the fields span from the label to the final dummy column.
-            if ((fieldIdx == 0 || "newline" in fieldConstraints[0]) && wholeWidth)
-                fieldConstraints.add("span")
             if (invisibleSpace)
                 fieldConstraints.add("hidemode 0")
             add(field, fieldConstraints.joinToString())
         }
 
-        // Position the notice components using the rightmost x border coordinate of any field and the y coordinate of
-        // the widget's label.
-        if (!wholeWidth) {
-            val noticeIconId = "n_${formRows.size}"
-            add(formRow.noticeIconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
-            add(formRow.noticeMsgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
-        }
+        addNoticeComps(formRow.noticeIconComp, formRow.noticeMsgComp, labelId, endlineGroupId)
 
         formRows.add(formRow)
+    }
+
+    protected fun addWholeWidthWidget(widget: Widget<*>) {
+        recordWidget(widget)
+
+        for ((fieldIdx, field) in widget.components.withIndex()) {
+            val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
+            // We don't have a row label, so the widget's first field needs to start a new line.
+            if (componentCount != 0 /* is not the first widget */ && fieldIdx == 0)
+                fieldConstraints.add("newline")
+            // If this field starts the first or a later line, make the cell which contains the fields span from the
+            // label to the final dummy column (or in other words, over the whole width of the form).
+            if (fieldIdx == 0 || "newline" in fieldConstraints[0])
+                fieldConstraints.add("span")
+            add(field, fieldConstraints.joinToString())
+        }
+    }
+
+    private fun recordWidget(widget: Widget<*>) {
+        require(widget.components.size == widget.constraints.size)
+        require(widget.constraints.all { "wrap" !in it }) // we only allow "newline"
+        widget.changeListeners.add(::onChange)
+    }
+
+    private fun addLabelComp(labelComp: JLabel, labelId: String, invisibleSpace: Boolean) {
+        val labelConstraints = mutableListOf("id $labelId")
+        if (constLabelWidth)
+            labelConstraints.add("wmax $LABEL_WIDTH_CONSTRAINT")
+        if (componentCount != 0 /* is not the first widget */)
+            labelConstraints.add("newline")
+        if (invisibleSpace)
+            labelConstraints.add("hidemode 0")
+        add(labelComp, labelConstraints.joinToString())
+    }
+
+    private fun addNoticeComps(iconComp: JLabel, msgComp: JTextArea, labelId: String, endlineGroupId: String) {
+        // Position the notice components using the rightmost x border coordinate of any field and the y coordinate of
+        // the widget's label.
+        val noticeIconId = "n_$componentCount"
+        add(iconComp, "id $noticeIconId, pos ($endlineGroupId.x2 + 3*rel) ($labelId.y + 1)")
+        add(msgComp, "pos ($noticeIconId.x2 + 6) $labelId.y visual.x2 null")
     }
 
     protected fun addSeparator() {

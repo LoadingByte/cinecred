@@ -328,7 +328,7 @@ private fun <S : Style> renderStyleSettings(
         // multiple lines if its notice is removed (... for some reason).
         if (settings.size > 1)
             for (sett in settings)
-                form.getFormRowFor(sett).apply {
+                form.getFormRowFor(sett)?.apply {
                     notice = null
                     noticeOverride = null
                 }
@@ -337,7 +337,7 @@ private fun <S : Style> renderStyleSettings(
 
         val compBounds = Rectangle(0, 0, -1, -1)
         for (sett in settings) {
-            compBounds.add(form.getFormRowFor(sett).labelComp.bounds)
+            form.getFormRowFor(sett)?.let { row -> compBounds.add(row.labelComp.bounds) }
             for (comp in form.getWidgetFor(sett).components)
                 if (comp.isVisible)
                     compBounds.add(comp.bounds)

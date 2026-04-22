@@ -73,6 +73,7 @@ private fun convert(styling: Styling, value: Any): Any? = when (value) {
     is FontRef -> value.name
     is PictureRef -> value.name
     is TapeRef -> value.name
+    is FontVariations -> value.ifEmpty { null }?.mapNotNull { (tag, o) -> if (o.isActive) "$tag=${o.value}" else null }
     is FontFeature -> "${value.tag}=${value.value}"
     is Transition -> listOf(value.ctrl1X, value.ctrl1Y, value.ctrl2X, value.ctrl2Y)
     is TapeSlice -> listOf(value.inPoint, value.outPoint).joinToString("-") {

@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Font.Companion.MANAGED_FEATURES
 import com.loadingbyte.cinecred.imaging.Font.Companion.PETITE_CAPS_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.SMALL_CAPS_FEATURE
@@ -245,6 +246,9 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
         styling.letterStyles.all { o -> o === style || !ROOT_CASE_INSENSITIVE_COLLATOR.equals(o.name, style.name) }
     },
     FontConstr(WARN, LetterStyle::font.st()),
+    FontVariationsConstr(WARN, LetterStyle::variations.st()) { _, style ->
+        style.font.font?.axes ?: emptyList()
+    },
     DoubleConstr(ERROR, LetterStyle::heightPx.st(), min = 1.0),
     JudgeConstr(
         WARN, msg("project.styling.constr.excessiveLeading"),
@@ -535,6 +539,13 @@ class TapeConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, TapeRef>>(setting)
 
 
+class FontVariationsConstr<S : Style>(
+    val severity: Severity,
+    setting: StyleSetting<S, FontVariations>,
+    val getAvailableAxes: (Styling, S) -> List<Font.Axis>
+) : StyleConstraint<S, StyleSetting<S, FontVariations>>(setting)
+
+
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
@@ -741,6 +752,30 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.tapeCorrupt"))
                         }
                     }
+                is FontVariationsConstr -> {
+                    val availableAxes = cst.getAvailableAxes(styling, style)
+                    style.forEachRelevantSubject(cst, ignoreSettings) { st, _, variations ->
+                        for ((tag, opt) in variations)
+                            if (opt.isActive) {
+                                val idx = availableAxes.indexOfFirst { axis -> axis.tag == tag }
+                                if (idx != -1) {
+                                    val axis = availableAxes[idx]
+                                    val min = axis.minValue
+                                    val max = axis.maxValue
+                                    val value = opt.value
+                                    var msg: String? = null
+                                    if (!value.isFinite())
+                                        msg = l10n("project.styling.constr.numberFinite")
+                                    else if (value < min)
+                                        msg = l10n("project.styling.constr.numberGTE", min)
+                                    else if (value > max)
+                                        msg = l10n("project.styling.constr.numberLTE", max)
+                                    if (msg != null)
+                                        log(rootStyle, style, st, idx, cst.severity, msg)
+                                }
+                            }
+                    }
+                }
                 is FontFeatureConstr -> {
                     val availableTags = cst.getAvailableTags(styling, style)
                     forEachRelevantSetting(cst, ignoreSettings) { st ->

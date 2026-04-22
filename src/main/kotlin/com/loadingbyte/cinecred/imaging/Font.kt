@@ -36,6 +36,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
     val typographicSubfamilyMap: Map<Locale, String>
     val sampleTextMap: Map<Locale, String>
 
+    val axes: List<Axis>
     val supportedFeatures: SortedSet<String>
 
     init {
@@ -43,14 +44,14 @@ class Font private constructor(private val hbFace: MemorySegment) {
 
         require(name.isNotBlank()) { "Font has no standard name." }
 
-        // Fill the name maps.
+        // Prepare the standard name maps, and a lookup from name ID to name map.
         familyMap = HashMap()
         subfamilyMap = HashMap()
         fullNameMap = HashMap()
         typographicFamilyMap = HashMap()
         typographicSubfamilyMap = HashMap()
         sampleTextMap = HashMap()
-        val nameMaps = mapOf(
+        val nameMaps = hashMapOf(
             HB_OT_NAME_ID_FONT_FAMILY() to familyMap,
             HB_OT_NAME_ID_FONT_SUBFAMILY() to subfamilyMap,
             HB_OT_NAME_ID_FULL_NAME() to fullNameMap,
@@ -58,6 +59,35 @@ class Font private constructor(private val hbFace: MemorySegment) {
             HB_OT_NAME_ID_TYPOGRAPHIC_SUBFAMILY() to typographicSubfamilyMap,
             HB_OT_NAME_ID_SAMPLE_TEXT() to sampleTextMap
         )
+
+        // Fill the axes list.
+        axes = mutableListOf()
+        Arena.ofConfined().use { arena ->
+            val count = hb_ot_var_get_axis_count(hbFace)
+            if (count > 0) {
+                val cCount = arena.allocateFrom(JAVA_INT, count)
+                val cInfos = hb_ot_var_axis_info_t.allocateArray(count.toLong(), arena)
+                hb_ot_var_get_axis_infos(hbFace, 0, cCount, cInfos)
+                for (idx in 0L..<cCount.get(JAVA_INT, 0)) {
+                    val cInfo = hb_ot_var_axis_info_t.asSlice(cInfos, idx)
+                    val defaultValue = hb_ot_var_axis_info_t.default_value(cInfo).toDouble()
+                    val minValue = hb_ot_var_axis_info_t.min_value(cInfo).toDouble()
+                    val maxValue = hb_ot_var_axis_info_t.max_value(cInfo).toDouble()
+                    if (hb_ot_var_axis_info_t.flags(cInfo) and HB_OT_VAR_AXIS_FLAG_HIDDEN() == 0 &&
+                        minValue < maxValue && defaultValue in minValue..maxValue
+                    ) {
+                        // This map fill be populated by the name listing code down below.
+                        val axisNameMap = HashMap<Locale, String>()
+                        nameMaps[hb_ot_var_axis_info_t.name_id(cInfo)] = axisNameMap
+                        axes += Axis(
+                            code2tag(hb_ot_var_axis_info_t.tag(cInfo)), axisNameMap, defaultValue, minValue, maxValue
+                        )
+                    }
+                }
+            }
+        }
+
+        // Fill the name maps.
         val hbNameEntries: MemorySegment
         val numNameEntries = Arena.ofConfined().use { arena ->
             val cCount = arena.allocateFrom(JAVA_INT, 0)
@@ -82,11 +112,8 @@ class Font private constructor(private val hbFace: MemorySegment) {
                 val cCount = arena.allocateFrom(JAVA_INT, count)
                 var cTags = arena.allocate(JAVA_INT, count.toLong())
                 hb_ot_layout_table_get_feature_tags(hbFace, tableTag, 0, cCount, cTags)
-                for (idx in 0L..<cCount.get(JAVA_INT, 0)) {
-                    val t = cTags.getAtIndex(JAVA_INT, idx)
-                    supportedFeatures +=
-                        String(intArrayOf(t ushr 24, (t ushr 16) and 0xFF, (t ushr 8) and 0xFF, t and 0xFF), 0, 4)
-                }
+                for (idx in 0L..<cCount.get(JAVA_INT, 0))
+                    supportedFeatures += code2tag(cTags.getAtIndex(JAVA_INT, idx))
             }
         }
         this.supportedFeatures = Collections.unmodifiableSortedSet(supportedFeatures)
@@ -116,7 +143,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
         }
     }
 
-    fun staticNonShapeableSubset(codepoints: Set<Int>, glyphs: Set<Int>): Font? {
+    fun staticNonShapeableSubset(codepoints: Set<Int>, glyphs: Set<Int>, variations: Set<Variation>): Font? {
         val hbInput = hb_subset_input_create_or_fail()
         if (hbInput == NULL)
             return null
@@ -140,6 +167,8 @@ class Font private constructor(private val hbFace: MemorySegment) {
             hb_set_add(hbGlyphSet, glyph)
 
         hb_subset_input_pin_all_axes_to_default(hbInput, hbFace)
+        for (variation in variations)
+            hb_subset_input_pin_axis_location(hbInput, hbFace, tag2code(variation.tag), variation.value.toFloat())
 
         val hbDropTableSet = hb_subset_input_set(hbInput, HB_SUBSET_SETS_DROP_TABLE_TAG())
         hb_set_add(hbDropTableSet, HB_OT_TAG_GSUB())
@@ -151,7 +180,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
         return if (newHbFace == NULL) null else Font(newHbFace)
     }
 
-    fun case(size: Double = 12.0): Case {
+    fun case(size: Double = 12.0, variations: Set<Variation> = emptySet()): Case {
         // The idea is to cache cases for a short duration, to make it extremely cheap to create them, and also keep
         // their internal glyph cache alive for a reasonable time. We don't need to cache them for a long time, since
         // they are still relatively cheap to construct.
@@ -159,9 +188,9 @@ class Font private constructor(private val hbFace: MemorySegment) {
         // are so cheap to construct, we can just blindly clear the entire cache when it becomes too full.
         if (caseCache.size > 1000)
             caseCache.clear()
-        val key = CaseKey(this, size)
+        val key = CaseKey(this, size, variations)
         caseCache[key]?.get()?.let { return it }
-        val case = Case(this, size, 0)
+        val case = Case(this, size, variations, 0)
         caseCache[key] = WeakReference(case)
         return case
     }
@@ -278,13 +307,32 @@ class Font private constructor(private val hbFace: MemorySegment) {
 
         private val caseCache = ConcurrentHashMap<CaseKey, WeakReference<Case>>()
 
+        private fun isValidTag(tag: String): Boolean =
+            tag.length == 4 && tag.all { it.code in 0..255 }
+
+        private fun code2tag(code: Int): String =
+            String(intArrayOf(code ushr 24, (code ushr 16) and 0xFF, (code ushr 8) and 0xFF, code and 0xFF), 0, 4)
+
+        private fun tag2code(tag: String): Int =
+            (tag[0].code shl 24) or (tag[1].code shl 16) or (tag[2].code shl 8) or tag[3].code
+
     }
 
 
+    class Axis(
+        val tag: String,
+        val nameMap: Map<Locale, String>,
+        val defaultValue: Double,
+        val minValue: Double,
+        val maxValue: Double
+    )
+
+
+    data class Variation(val tag: String, val value: Double)
     data class Feature(val tag: String, val value: Int)
 
 
-    class Case(val font: Font, val size: Double, doNotCall: Int) {
+    class Case(val font: Font, val size: Double = 12.0, val variations: Set<Variation> = emptySet(), doNotCall: Int) {
 
         val ascent: Double
         val descent: Double
@@ -323,6 +371,18 @@ class Font private constructor(private val hbFace: MemorySegment) {
             hb_font_set_scale(hbFont, hbSize, hbSize)
 
             Arena.ofConfined().use { arena ->
+                if (variations.isNotEmpty()) {
+                    val cVariations = hb_variation_t.allocateArray(variations.size.toLong(), arena)
+                    var idx = 0
+                    for (variation in variations)
+                        if (isValidTag(variation.tag)) {
+                            val cVariation = hb_variation_t.asSlice(cVariations, (idx++).toLong())
+                            hb_variation_t.tag(cVariation, tag2code(variation.tag))
+                            hb_variation_t.value(cVariation, variation.value.toFloat())
+                        }
+                    hb_font_set_variations(hbFont, cVariations, idx)
+                }
+
                 val int = arena.allocate(JAVA_INT)
 
                 // Note: Here, "horizontal" means that these metrics are for horizontal lines of text, as opposed to vertical
@@ -363,7 +423,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
             return int.get(JAVA_INT, 0) * IU
         }
 
-        fun withSize(size: Double): Case = font.case(size)
+        fun withSize(size: Double): Case = font.case(size, variations)
 
         fun getGlyphAdvance(glyph: Int): Double =
             hb_font_get_glyph_h_advance(hbFont, glyph) * IU
@@ -452,17 +512,17 @@ class Font private constructor(private val hbFace: MemorySegment) {
                 hb_buffer_add_utf16(hbBuffer, charsSeg, charCount, 0, charCount)
 
                 // Create an HB feature array and fill it.
-                val numFeatures = 1 + LIGATURES_FEATURES.size + features.size
-                val hbFeatures = hb_feature_t.allocateArray(numFeatures.toLong(), arena)
-                var featureIdx = 0L
+                val hbFeatures = hb_feature_t.allocateArray(1L + LIGATURES_FEATURES.size + features.size, arena)
+                var featureIdx = 0
                 configureFeature(hbFeatures, featureIdx++, KERNING_FEATURE, if (kerning) 1 else 0)
                 for (tag in LIGATURES_FEATURES)
                     configureFeature(hbFeatures, featureIdx++, tag, if (ligatures) 1 else 0)
                 for (feat in features)
-                    configureFeature(hbFeatures, featureIdx++, feat.tag, feat.value)
+                    if (isValidTag(feat.tag))
+                        configureFeature(hbFeatures, featureIdx++, feat.tag, feat.value)
 
                 // Run the HB shaping algorithm.
-                hb_shape(hbFont, hbBuffer, hbFeatures, numFeatures)
+                hb_shape(hbFont, hbBuffer, hbFeatures, featureIdx)
 
                 // Extract the shaping result.
                 val glyphCount = hb_buffer_get_length(hbBuffer)
@@ -564,12 +624,9 @@ class Font private constructor(private val hbFace: MemorySegment) {
                 else -> HB_SCRIPT_INVALID()
             }
 
-            private fun configureFeature(seg: MemorySegment, idx: Long, tag: String, value: Int) {
-                val feature = hb_feature_t.asSlice(seg, idx)
-                if (tag.length == 4 && tag.all { it.code in 0..255 }) {
-                    val tagCode = (tag[0].code shl 24) or (tag[1].code shl 16) or (tag[2].code shl 8) or tag[3].code
-                    hb_feature_t.tag(feature, tagCode)
-                }
+            private fun configureFeature(seg: MemorySegment, idx: Int, tag: String, value: Int) {
+                val feature = hb_feature_t.asSlice(seg, idx.toLong())
+                hb_feature_t.tag(feature, tag2code(tag))
                 if (value > 0)
                     hb_feature_t.value(feature, value)
                 hb_feature_t.start(feature, HB_FEATURE_GLOBAL_START())
@@ -581,16 +638,17 @@ class Font private constructor(private val hbFace: MemorySegment) {
     }
 
 
-    private class CaseKey(font: Font, private val size: Double) {
+    private class CaseKey(font: Font, private val size: Double, private val variations: Set<Variation>) {
 
         private val font = WeakReference(font)
-        private val hashCode = 31 * size.hashCode() + font.hashCode()
+        private val hashCode = 31 * (31 * size.hashCode() + variations.hashCode()) + font.hashCode()
 
         // If the font is GCed, the key objects with that font just stop being equals to anything. That's not a problem,
         // because if a font is GCed, nobody will ever access its cached cases again, and they will eventually be
         // removed from the cache when it's cleared.
         override fun equals(other: Any?) = this === other ||
-                other is CaseKey && size == other.size && font.get().let { it != null && it == other.font.get() }
+                other is CaseKey && size == other.size && variations == other.variations &&
+                font.get().let { it != null && it == other.font.get() }
 
         override fun hashCode() = hashCode
 

@@ -136,7 +136,11 @@ private fun charToKey(char: Char, forOther: Int, forUnderscore: Int, forHash: In
 private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     // If the font is not linked properly, fall back to a generic font.
     val font = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
-    val baseFontCase = font.case()
+
+    val variations = style.variations.mapNotNullTo(HashSet()) { (tag, opt) ->
+        if (opt.isActive) Font.Variation(tag, opt.value) else null
+    }
+    val baseFontCase = font.case(variations = variations)
 
     // Leading
     val leadingTopPx = style.leadingTopRh * style.heightPx

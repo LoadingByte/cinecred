@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.demos
 
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.demo.StyleSettingsDemo
 import com.loadingbyte.cinecred.demo.parseCreditsLS
 import com.loadingbyte.cinecred.imaging.Font
@@ -14,6 +15,7 @@ val GUIDE_LETTER_STYLE_DEMOS
     get() = listOf(
         GuideLetterStyleNameDemo,
         GuideLetterStyleFontDemo,
+        GuideLetterStyleVariationsDemo,
         GuideLetterStyleHeightDemo,
         GuideLetterStyleLeadingDemo,
         GuideLetterStyleTrackingDemo,
@@ -45,6 +47,25 @@ object GuideLetterStyleFontDemo : StyleSettingsDemo<LetterStyle>(
         this += PRESET_LETTER_STYLE.copy(name = "Demo")
         this += last().copy(font = FontRef(Font.bundled("Archivo Narrow Bold")!!))
         this += last().copy(font = FontRef(Font.bundled("Titillium Regular Upright")!!))
+    }
+
+    override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)
+}
+
+
+object GuideLetterStyleVariationsDemo : StyleSettingsDemo<LetterStyle>(
+    LetterStyle::class.java, "$DIR/variations", Format.VIDEO_GIF,
+    listOf(LetterStyle::variations.st())
+) {
+    override fun styles() = buildList<LetterStyle> {
+        val font = useResourcePath("/demoFonts/RobotoFlex-ASCII.ttf", Font::read).single()
+        this += PRESET_LETTER_STYLE.copy(name = "Demo", font = FontRef(font))
+        for (step in 0..100)
+            this += last().copy(variations = FontVariations(last().variations.put("wght", 400.0 + step * 5)))
+        for (step in 0..50)
+            this += last().copy(variations = FontVariations(last().variations.put("wdth", 100.0 + step * 1)))
+        for (step in 0..100)
+            this += last().copy(variations = FontVariations(last().variations.put("slnt", 0.0 + step * -0.1)))
     }
 
     override fun credits(style: LetterStyle) = textBox("{{Style Demo}}$LOREM").parseCreditsLS(style)

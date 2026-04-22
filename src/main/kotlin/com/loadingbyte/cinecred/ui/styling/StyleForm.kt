@@ -2,12 +2,14 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import kotlinx.collections.immutable.toPersistentList
 import java.util.*
 import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.SpinnerNumberModel
 
 
@@ -22,6 +24,7 @@ class StyleForm<S : Style>(
     private val valueWidgets = LinkedHashMap<StyleSetting<S, *>, Widget<*>>() // must retain order
     private val rootFormRows = mutableListOf<Pair<FormRow, List<StyleSetting<S, *>>>>()
     private val rootFormRowLookup = HashMap<StyleSetting<S, *>, FormRow>()
+    private val externallyManagedLabelsLookup = HashMap<StyleSetting<S, *>, List<JLabel>>()
 
     private val latentValues = latent.associateWithTo(HashMap<StyleSetting<in S, *>, Any?>()) { null }
     private var disableOnChange = false
@@ -49,6 +52,7 @@ class StyleForm<S : Style>(
         val valueWidget = makeSettingWidget(setting)
         valueWidgets[setting] = valueWidget
         when (valueWidget) {
+            is RowManagingWidget<*> -> externallyManagedLabelsLookup[setting] = addRowManagingWidget(valueWidget)
             is LayerListWidget<*, *> -> addWholeWidthWidget(valueWidget)
             else -> {
                 val formRow = makeFormRow(setting.name, getUnit(setting), valueWidget)
@@ -277,6 +281,7 @@ class StyleForm<S : Style>(
             FontRef::class.java -> FontChooserWidget(widthSpec)
             PictureRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::PictureRef, widthSpec)
             TapeRef::class.java -> RefComboBoxWidget(setting.type, emptyList(), { it.name }, ::TapeRef, widthSpec)
+            FontVariations::class.java -> FontVariationsWidget()
             FontFeature::class.java -> FontFeatureWidget()
             Transition::class.java -> TransitionWidget()
             TapeSlice::class.java -> TapeSliceWidget()
@@ -375,6 +380,9 @@ class StyleForm<S : Style>(
 
     fun getFormRowFor(setting: StyleSetting<S, *>): FormRow? =
         rootFormRowLookup[setting]
+
+    fun getExternallyManagedLabelsFor(setting: StyleSetting<S, *>): List<JLabel> =
+        externallyManagedLabelsLookup[setting] ?: emptyList()
 
     override fun open(stored /* style */: S) {
         disableOnChange = true
@@ -482,18 +490,28 @@ class StyleForm<S : Style>(
     fun clearIssues() {
         for ((formRow, _) in rootFormRows)
             formRow.noticeOverride = null
-        for (widget in valueWidgets.values)
+        for (widget in valueWidgets.values) {
+            if (widget is RowManagingWidget<*>)
+                widget.clearNoticeOverrides()
             widget.setSeverity(-1, null)
+        }
     }
 
     fun showIssueIfMoreSevere(setting: StyleSetting<*, *>, subjectIndex: Int, issue: Notice) {
-        // Only show the notice message if there isn't already a notice with the same or a higher severity.
-        val formRow = rootFormRowLookup[setting] ?: return
-        val prevNoticeOverride = formRow.noticeOverride
-        if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
-            formRow.noticeOverride = issue
-        // Only increase and not decrease the severity on the widget.
         val widget = valueWidgets[setting]!!
+        // Only show the notice message if there isn't already a notice with the same or a higher severity.
+        if (widget is RowManagingWidget<*>) {
+            // Note: We make the assumption that every subject is on its own row.
+            val prevNoticeOverride = widget.getNoticeOverride(subjectIndex)
+            if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
+                widget.setNoticeOverride(subjectIndex, issue)
+        } else {
+            val formRow = rootFormRowLookup[setting] ?: return
+            val prevNoticeOverride = formRow.noticeOverride
+            if (prevNoticeOverride == null || issue.severity > prevNoticeOverride.severity)
+                formRow.noticeOverride = issue
+        }
+        // Only increase and not decrease the severity on the widget.
         val prevSeverity = widget.getSeverity(subjectIndex)
         if (prevSeverity == null || issue.severity > prevSeverity)
             widget.setSeverity(subjectIndex, issue.severity)
@@ -555,6 +573,13 @@ class StyleForm<S : Style>(
                 widget.fps = fps
                 widget.timecodeFormat = timecodeFormat
             }
+        }
+    }
+
+    fun setFontAxes(setting: StyleSetting<S, *>, axes: List<Font.Axis>) {
+        valueWidgets.getValue(setting).applyConfigurator { widget ->
+            if (widget is FontVariationsWidget)
+                widget.axes = axes
         }
     }
 

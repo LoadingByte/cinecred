@@ -36,6 +36,13 @@ open class Form(insets: String, noticeArea: Boolean, private val constLabelWidth
         fun applyConfigurator(configurator: (Widget<*>) -> Unit)
     }
 
+    interface RowManagingWidget<V : Any /* non-null */> : Widget<V> {
+        fun supplyRow(labelComp: JLabel, noticeIconComp: JLabel, noticeMsgComp: JTextArea)
+        fun getNoticeOverride(rowIndex: Int): Notice?
+        fun setNoticeOverride(rowIndex: Int, notice: Notice?)
+        fun clearNoticeOverrides()
+    }
+
     interface Choice<VE : Any> {
         var items: List<VE>
     }
@@ -196,6 +203,39 @@ open class Form(insets: String, noticeArea: Boolean, private val constLabelWidth
         addNoticeComps(formRow.noticeIconComp, formRow.noticeMsgComp, labelId, endlineGroupId)
 
         formRows.add(formRow)
+    }
+
+    protected fun addRowManagingWidget(widget: RowManagingWidget<*>): List<JLabel> {
+        recordWidget(widget)
+
+        val labels = mutableListOf<JLabel>()
+        var labelId = ""
+        var endlineGroupId = ""
+        var noticeIconComp: JLabel? = null
+        var noticeMsgComp: JTextArea? = null
+
+        for ((fieldIdx, field) in widget.components.withIndex()) {
+            val fieldConstraints = mutableListOf(widget.constraints[fieldIdx])
+            if (fieldIdx == 0 || "newline" in fieldConstraints[0]) {
+                fieldConstraints[0] = fieldConstraints[0].replace("newline, ", "").replace(", newline", "")
+                if (fieldIdx != 0)
+                    addNoticeComps(noticeIconComp!!, noticeMsgComp!!, labelId, endlineGroupId)
+                labelId = "l_${componentCount}_rmw"
+                endlineGroupId = "g_${componentCount}_rmw"
+                val labelComp = JLabel()
+                noticeIconComp = JLabel()
+                noticeMsgComp = newLabelTextArea()
+                widget.supplyRow(labelComp, noticeIconComp, noticeMsgComp)
+                addLabelComp(labelComp, labelId, invisibleSpace = false)
+                labels.add(labelComp)
+            }
+            fieldConstraints.add("id $endlineGroupId.f_$componentCount")
+            fieldConstraints.add("split")
+            add(field, fieldConstraints.joinToString())
+        }
+        addNoticeComps(noticeIconComp!!, noticeMsgComp!!, labelId, endlineGroupId)
+
+        return labels
     }
 
     protected fun addWholeWidthWidget(widget: Widget<*>) {

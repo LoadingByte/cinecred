@@ -618,7 +618,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         private val defs by lazy {
             doc.createElementNS(SVG_NS_URI, "defs").also { svg.insertBefore(it, svg.firstChild) }
         }
-        private val glyphPathIds = HashMap<Pair<Font, Int /* glyph */>, String?>()
+        private val glyphPathIds = HashMap<GlyphKey, String?>()
         private val picElementIds = HashMap<Picture, String>()
         private var gradientCtr = 0
         private val gradientIds = HashMap<Pair<Color4f, Color4f>, String>()
@@ -676,7 +676,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             for (glyphIdx in 0..<text.glyphCount) {
                 val glyph = text.getGlyph(glyphIdx)
                 val use = doc.createElementNS(SVG_NS_URI, "use")
-                val glyphPathId = glyphPathIds.computeIfAbsent(Pair(font, glyph)) {
+                val glyphKey = GlyphKey(font, defFontCase.variations, glyph)
+                val glyphPathId = glyphPathIds.computeIfAbsent(glyphKey) {
                     val id = "glyph${glyphPathIds.size + 1}"
                     val glyphOutline = defFontCase.getGlyphOutline(glyph)
                     defs.appendChild((makePath(glyphOutline) ?: return@computeIfAbsent null).apply {
@@ -861,6 +862,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             return "matrix($m00 $m10 $m01 $m11 $m02 $m12)"
         }
 
+        private data class GlyphKey(val font: Font, val variations: Set<Font.Variation>, val glyph: Int)
+
     }
 
 
@@ -967,7 +970,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
-            val fontRecorder = tracker.obtainFontRecorder(text.fontCase.font)
+            val fontRecorder = tracker.obtainFontRecorder(text.fontCase)
             val resourceKey = COSName.getPDFName("Font${fontKeyCtr++}")
             fontRecorder.pagesAndResourceKeys.add(Pair(page, resourceKey))
 
@@ -1218,29 +1221,36 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val pdForms = HashMap<Picture.Vector, PDFormXObject>()
         val layerUtil by lazy { LayerUtility(doc) }
         private val pdColorSpaces = HashMap<ColorSpace, PDICCBased>()
-        private val fontRecorders = HashMap<Font, FontRecorder>()
+        private val fontRecorders = HashMap<Pair<Font, Set<Font.Variation>>, FontRecorder>()
 
         fun obtainICCBasedCS(colorSpace: ColorSpace) = pdColorSpaces.computeIfAbsent(colorSpace) {
             makePDICCBased(doc, 3, ICCProfile.of(colorSpace).bytes)
         }
 
-        fun obtainFontRecorder(font: Font) = fontRecorders.computeIfAbsent(font) {
+        fun obtainFontRecorder(case: Font.Case) = fontRecorders.computeIfAbsent(Pair(case.font, case.variations)) {
             FontRecorder()
         }
 
         override fun close() {
-            for ((font, rec) in fontRecorders)
-                endFont(font, rec)
+            for ((key, rec) in fontRecorders) {
+                val (font, variations) = key
+                endFont(font, variations, rec)
+            }
             for ((pic, pdImage) in pdImages)
                 endImage(pic, pdImage, pdImageResolutions.getValue(pic))
         }
 
-        private fun endFont(font: Font, rec: FontRecorder) {
-            val subsettedFont =
-                font.staticNonShapeableSubset(rec.usedCodepoints, rec.usedGlyphs) ?: run {
+        private fun endFont(font: Font, variations: Set<Font.Variation>, rec: FontRecorder) {
+            val subsettedFont = font.staticNonShapeableSubset(rec.usedCodepoints, rec.usedGlyphs, variations)
+                ?: if (variations.all { variation ->
+                        val axis = font.axes.find { axis -> axis.tag == variation.tag }
+                        axis == null || abs(variation.value - axis.defaultValue) < 0.001
+                    }
+                ) {
                     LOGGER.warn("Cannot subset the font '{}' for PDF embedding; will embed it wholly.", font.name)
                     font
-                }
+                } else
+                    throw RuntimeException("Cannot instantiate the variable font '${font.name}' for PDF embedding.")
             val ttf = OTFParser().parse(RandomAccessReadBuffer(subsettedFont.toByteArray()))
             val pdFont = PDType0Font.load(doc, ttf, false)
             for ((page, resourceKey) in rec.pagesAndResourceKeys) {

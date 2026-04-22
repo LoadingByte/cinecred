@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Transition
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import java.util.*
 
 
@@ -147,6 +148,7 @@ val PRESET_LETTER_STYLE
     get() = LetterStyle(
         name = "???",
         font = FontRef(Font.bundled("Archivo Narrow Regular")!!),
+        variations = FontVariations(persistentMapOf()),
         heightPx = 32.0,
         leadingTopRh = 0.0,
         leadingBottomRh = 0.0,

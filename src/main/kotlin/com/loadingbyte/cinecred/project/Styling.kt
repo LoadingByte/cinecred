@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.*
 import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.PersistentMap
 import java.util.*
 import kotlin.io.path.name
 
@@ -231,6 +232,7 @@ enum class FlowDirection { L2R, R2L }
 data class LetterStyle(
     override val name: String,
     val font: FontRef,
+    val variations: FontVariations,
     val heightPx: Double,
     val leadingTopRh: Double,
     val leadingBottomRh: Double,
@@ -266,6 +268,10 @@ data class FontRef(val name: String) {
     }
 
 }
+
+
+data class FontVariations(private val map: PersistentMap<String, Opt<Double>>) :
+    PersistentMap<String, Opt<Double>> by map
 
 
 data class FontFeature(

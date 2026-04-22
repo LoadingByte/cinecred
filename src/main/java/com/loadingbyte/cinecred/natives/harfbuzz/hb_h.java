@@ -1940,6 +1940,67 @@ public class hb_h extends hb_h$shared {
         }
     }
 
+    private static class hb_font_set_variations {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.ofVoid(
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_font_set_variations");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_variations(hb_font_t *font, const hb_variation_t *variations, unsigned int variations_length)
+     * }
+     */
+    public static FunctionDescriptor hb_font_set_variations$descriptor() {
+        return hb_font_set_variations.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_variations(hb_font_t *font, const hb_variation_t *variations, unsigned int variations_length)
+     * }
+     */
+    public static MethodHandle hb_font_set_variations$handle() {
+        return hb_font_set_variations.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern void hb_font_set_variations(hb_font_t *font, const hb_variation_t *variations, unsigned int variations_length)
+     * }
+     */
+    public static MemorySegment hb_font_set_variations$address() {
+        return hb_font_set_variations.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern void hb_font_set_variations(hb_font_t *font, const hb_variation_t *variations, unsigned int variations_length)
+     * }
+     */
+    public static void hb_font_set_variations(MemorySegment font, MemorySegment variations, int variations_length) {
+        var mh$ = hb_font_set_variations.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_font_set_variations", font, variations, variations_length);
+            }
+            mh$.invokeExact(font, variations, variations_length);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
+        } catch (Throwable ex$) {
+           throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
     private static class hb_buffer_create {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
             hb_h.C_POINTER    );
@@ -3139,6 +3200,138 @@ public class hb_h extends hb_h$shared {
            throw new AssertionError("should not reach here", ex$);
         }
     }
+
+    private static class hb_ot_var_get_axis_count {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_INT,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_ot_var_get_axis_count");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_count(hb_face_t *face)
+     * }
+     */
+    public static FunctionDescriptor hb_ot_var_get_axis_count$descriptor() {
+        return hb_ot_var_get_axis_count.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_count(hb_face_t *face)
+     * }
+     */
+    public static MethodHandle hb_ot_var_get_axis_count$handle() {
+        return hb_ot_var_get_axis_count.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_count(hb_face_t *face)
+     * }
+     */
+    public static MemorySegment hb_ot_var_get_axis_count$address() {
+        return hb_ot_var_get_axis_count.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_count(hb_face_t *face)
+     * }
+     */
+    public static int hb_ot_var_get_axis_count(MemorySegment face) {
+        var mh$ = hb_ot_var_get_axis_count.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_ot_var_get_axis_count", face);
+            }
+            return (int)mh$.invokeExact(face);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
+        } catch (Throwable ex$) {
+           throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    private static final int HB_OT_VAR_AXIS_FLAG_HIDDEN = (int)1L;
+    /**
+     * {@snippet lang=c :
+     * enum <anonymous>.HB_OT_VAR_AXIS_FLAG_HIDDEN = 1
+     * }
+     */
+    public static int HB_OT_VAR_AXIS_FLAG_HIDDEN() {
+        return HB_OT_VAR_AXIS_FLAG_HIDDEN;
+    }
+
+    private static class hb_ot_var_get_axis_infos {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_INT,
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_ot_var_get_axis_infos");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_infos(hb_face_t *face, unsigned int start_offset, unsigned int *axes_count, hb_ot_var_axis_info_t *axes_array)
+     * }
+     */
+    public static FunctionDescriptor hb_ot_var_get_axis_infos$descriptor() {
+        return hb_ot_var_get_axis_infos.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_infos(hb_face_t *face, unsigned int start_offset, unsigned int *axes_count, hb_ot_var_axis_info_t *axes_array)
+     * }
+     */
+    public static MethodHandle hb_ot_var_get_axis_infos$handle() {
+        return hb_ot_var_get_axis_infos.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_infos(hb_face_t *face, unsigned int start_offset, unsigned int *axes_count, hb_ot_var_axis_info_t *axes_array)
+     * }
+     */
+    public static MemorySegment hb_ot_var_get_axis_infos$address() {
+        return hb_ot_var_get_axis_infos.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern unsigned int hb_ot_var_get_axis_infos(hb_face_t *face, unsigned int start_offset, unsigned int *axes_count, hb_ot_var_axis_info_t *axes_array)
+     * }
+     */
+    public static int hb_ot_var_get_axis_infos(MemorySegment face, int start_offset, MemorySegment axes_count, MemorySegment axes_array) {
+        var mh$ = hb_ot_var_get_axis_infos.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_ot_var_get_axis_infos", face, start_offset, axes_count, axes_array);
+            }
+            return (int)mh$.invokeExact(face, start_offset, axes_count, axes_array);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
+        } catch (Throwable ex$) {
+           throw new AssertionError("should not reach here", ex$);
+        }
+    }
     private static final int HB_SUBSET_FLAGS_NO_HINTING = (int)1L;
     /**
      * {@snippet lang=c :
@@ -3597,6 +3790,69 @@ public class hb_h extends hb_h$shared {
                 traceDowncall("hb_subset_input_pin_all_axes_to_default", input, face);
             }
             return (int)mh$.invokeExact(input, face);
+        } catch (Error | RuntimeException ex) {
+           throw ex;
+        } catch (Throwable ex$) {
+           throw new AssertionError("should not reach here", ex$);
+        }
+    }
+
+    private static class hb_subset_input_pin_axis_location {
+        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
+            hb_h.C_INT,
+            hb_h.C_POINTER,
+            hb_h.C_POINTER,
+            hb_h.C_INT,
+            hb_h.C_FLOAT
+        );
+
+        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("hb_subset_input_pin_axis_location");
+
+        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
+    }
+
+    /**
+     * Function descriptor for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_subset_input_pin_axis_location(hb_subset_input_t *input, hb_face_t *face, hb_tag_t axis_tag, float axis_value)
+     * }
+     */
+    public static FunctionDescriptor hb_subset_input_pin_axis_location$descriptor() {
+        return hb_subset_input_pin_axis_location.DESC;
+    }
+
+    /**
+     * Downcall method handle for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_subset_input_pin_axis_location(hb_subset_input_t *input, hb_face_t *face, hb_tag_t axis_tag, float axis_value)
+     * }
+     */
+    public static MethodHandle hb_subset_input_pin_axis_location$handle() {
+        return hb_subset_input_pin_axis_location.HANDLE;
+    }
+
+    /**
+     * Address for:
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_subset_input_pin_axis_location(hb_subset_input_t *input, hb_face_t *face, hb_tag_t axis_tag, float axis_value)
+     * }
+     */
+    public static MemorySegment hb_subset_input_pin_axis_location$address() {
+        return hb_subset_input_pin_axis_location.ADDR;
+    }
+
+    /**
+     * {@snippet lang=c :
+     * extern hb_bool_t hb_subset_input_pin_axis_location(hb_subset_input_t *input, hb_face_t *face, hb_tag_t axis_tag, float axis_value)
+     * }
+     */
+    public static int hb_subset_input_pin_axis_location(MemorySegment input, MemorySegment face, int axis_tag, float axis_value) {
+        var mh$ = hb_subset_input_pin_axis_location.HANDLE;
+        try {
+            if (TRACE_DOWNCALLS) {
+                traceDowncall("hb_subset_input_pin_axis_location", input, face, axis_tag, axis_value);
+            }
+            return (int)mh$.invokeExact(input, face, axis_tag, axis_value);
         } catch (Error | RuntimeException ex) {
            throw ex;
         } catch (Throwable ex$) {

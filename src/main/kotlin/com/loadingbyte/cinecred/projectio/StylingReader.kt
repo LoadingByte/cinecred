@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.project.*
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.collections.immutable.toPersistentMap
 import java.io.IOException
 import java.nio.file.Path
 import java.util.*
@@ -137,6 +138,7 @@ private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any):
     FontRef::class.java -> ctx.resolveFont(raw as String)?.let(::FontRef) ?: FontRef(raw)
     PictureRef::class.java -> ctx.pictureLoaders[raw as String]?.let(::PictureRef) ?: PictureRef(raw)
     TapeRef::class.java -> ctx.tapes[raw as String]?.let(::TapeRef) ?: TapeRef(raw)
+    FontVariations::class.java -> fontVariationsFromKVs((raw as List<*>).requireIsInstance<String>())
     FontFeature::class.java -> fontFeatureFromKV(raw as String)
     Transition::class.java -> transitionFromList((raw as List<*>).requireIsInstance<Number>())
     TapeSlice::class.java -> tapeSliceFromStr(raw as String)
@@ -147,6 +149,13 @@ private fun convertUntyped(ctx: StylingReaderContext, type: Class<*>, raw: Any):
         else -> throw UnsupportedOperationException("Reading objects of type ${type.name} is not supported.")
     }
 }
+
+private fun fontVariationsFromKVs(kvs: List<String>): FontVariations =
+    FontVariations(kvs.associate { kv ->
+        val parts = kv.split("=")
+        require(parts.size == 2)
+        parts[0] to Opt(true, parts[1].toDouble())
+    }.toPersistentMap())
 
 private fun fontFeatureFromKV(kv: String): FontFeature {
     val parts = kv.split("=")

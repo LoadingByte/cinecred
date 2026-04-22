@@ -125,13 +125,6 @@ class StyleFormAdjuster(
 
         curForm.ineffectiveSettings = findIneffectiveSettings(styling, curStyle)
 
-        curForm.clearIssues()
-        for (violation in sequenceOf(constraintViolations, extraConstraintViolations).flatten())
-            if (violation.leafStyle == curStyle) {
-                val issue = Form.Notice(violation.severity, violation.msg)
-                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
-            }
-
         curForm.setSwatchColors(swatchColors)
 
         for (constr in getStyleConstraints(curStyle.javaClass)) when (constr) {
@@ -147,6 +140,11 @@ class StyleFormAdjuster(
                 val choices = choiceSet.toList()
                 for (setting in constr.settings)
                     curForm.setChoices(setting, choices)
+            }
+            is FontVariationsConstr -> {
+                val availableAxes = constr.getAvailableAxes(styling, curStyle)
+                for (setting in constr.settings)
+                    curForm.setFontAxes(setting, availableAxes)
             }
             is FontFeatureConstr -> {
                 val availableTags = constr.getAvailableTags(styling, curStyle).toList()
@@ -202,6 +200,15 @@ class StyleFormAdjuster(
             }
             else -> {}
         }
+
+        // Push the issues AFTER the widgets have been adapted, because the leaf subject order in each widget needs to
+        // match what the constraint verifier saw. Think about the font variations widget and its order of axes.
+        curForm.clearIssues()
+        for (violation in sequenceOf(constraintViolations, extraConstraintViolations).flatten())
+            if (violation.leafStyle == curStyle) {
+                val issue = Form.Notice(violation.severity, violation.msg)
+                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
+            }
 
         val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
         for (idx in nestedForms.indices)

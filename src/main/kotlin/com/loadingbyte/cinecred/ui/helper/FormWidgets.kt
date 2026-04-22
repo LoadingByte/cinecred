@@ -10,6 +10,8 @@ import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.GlyphString
 import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.*
+import kotlinx.collections.immutable.mutate
+import kotlinx.collections.immutable.persistentMapOf
 import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
@@ -35,6 +37,7 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.pathString
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.max
 
 
@@ -285,7 +288,14 @@ open class SpinnerWidget<V : Number>(
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
-    protected val spinner = JSpinner(model)
+    protected val spinner = object : JSpinner(model) {
+        // We override this method s.t. the editor is correctly recreated when the model is changed.
+        override fun createEditor(model: SpinnerModel): JComponent =
+            when (decimalFormatPattern) {
+                null -> NumberEditor(this)
+                else -> NumberEditor(this, decimalFormatPattern)
+            }.apply { (textField.formatter as DefaultFormatter).makeSafe() }
+    }
 
     init {
         require(valueClass == Int::class.javaObjectType || valueClass == Double::class.javaObjectType)
@@ -300,15 +310,16 @@ open class SpinnerWidget<V : Number>(
                 notifyChangeListeners()
             }
         }
-
-        spinner.editor = when (decimalFormatPattern) {
-            null -> JSpinner.NumberEditor(spinner)
-            else -> JSpinner.NumberEditor(spinner, decimalFormatPattern)
-        }.apply { (textField.formatter as DefaultFormatter).makeSafe() }
     }
 
     override val components = listOf(spinner)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
+
+    open var model: SpinnerNumberModel
+        get() = spinner.model as SpinnerNumberModel
+        set(model) {
+            spinner.model = model
+        }
 
     override var value: V = valueClass.cast(spinner.value)
         set(value) {
@@ -336,10 +347,14 @@ class MultipliedSpinnerWidget(
             // calls. Hence, the value in the spinner model remains unmodified each time the multiplier is changed.
             // As such, no floating point drift occurs.
             (spinner.editor as JSpinner.DefaultEditor).textField.formatterFactory =
-                DefaultFormatterFactory(MultipliedFormatter(spinner.model as SpinnerNumberModel, multiplier))
+                DefaultFormatterFactory(MultipliedFormatter(model, multiplier))
             // Also adapt the step size to the multiplier. Notice that this triggers ChangeEvents, which we discard.
-            withoutChangeListeners { (spinner.model as SpinnerNumberModel).stepSize = step / multiplier }
+            withoutChangeListeners { model.stepSize = step / multiplier }
         }
+
+    override var model: SpinnerNumberModel
+        get() = super.model
+        set(_) = throw UnsupportedOperationException()
 
 
     private class MultipliedFormatter(
@@ -369,7 +384,7 @@ class MultipliedSpinnerWidget(
 
 
 class TimecodeWidget(
-    private val model: SpinnerNumberModel,
+    model: SpinnerNumberModel,
     fps: FPS,
     timecodeFormat: TimecodeFormat,
     widthSpec: WidthSpec? = null
@@ -390,6 +405,10 @@ class TimecodeWidget(
             field = timecodeFormat
             updateFormatter()
         }
+
+    override var model: SpinnerNumberModel
+        get() = super.model
+        set(_) = throw UnsupportedOperationException()
 
     private val signed = model.minimum.let { it == null || (it as Int) < 0 }
     private val editor = makeTimecodeEditor(spinner)
@@ -1639,6 +1658,153 @@ class FontChooserWidget(
                 }
         }
 
+    }
+
+}
+
+
+class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowManagingWidget<FontVariations> {
+
+    private val spinnerWidgets: List<SpinnerWidget<Double>>
+    private val optWidgets: List<OptWidget<Double>>
+
+    private var stashedVariations = emptyMap<String, Opt<Double>>()
+    private val severities = HashMap<String, Severity>()
+    private val notices = HashMap<String, Form.Notice>()
+
+    init {
+        spinnerWidgets = mutableListOf()
+        optWidgets = mutableListOf()
+        repeat(MAX_NUM_AXES) {
+            val spinnerWidget = SpinnerWidget(
+                Double::class.javaObjectType, SpinnerNumberModel(0.0, 0.0, 1.0, 1.0), widthSpec = WidthSpec.LITTLE
+            )
+            val optWidget = OptWidget(spinnerWidget)
+            optWidget.isVisible = false
+            // When an opt spinner widget changes, notify this widget's change listeners that that widget has changed.
+            optWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+            spinnerWidgets.add(spinnerWidget)
+            optWidgets.add(optWidget)
+        }
+    }
+
+    override val components = optWidgets.flatMap { widget -> widget.components }
+    override val constraints = optWidgets.flatMap { widget ->
+        listOf(widget.constraints[0] + ", newline") + widget.constraints.drop(1)
+    }
+
+    private val labelComps = mutableListOf<JLabel>()
+    private val noticeIconComps = mutableListOf<JLabel>()
+    private val noticeMsgComps = mutableListOf<JTextArea>()
+
+    override fun supplyRow(labelComp: JLabel, noticeIconComp: JLabel, noticeMsgComp: JTextArea) {
+        labelComps.add(labelComp)
+        noticeIconComps.add(noticeIconComp)
+        noticeMsgComps.add(noticeMsgComp)
+        labelComp.isVisible = false
+        noticeIconComp.isVisible = false
+        noticeMsgComp.isVisible = false
+    }
+
+    var axes: List<Font.Axis> = emptyList()
+        set(axes) {
+            if (field == axes)
+                return
+            val rem = HashMap(value)
+            field = if (axes.size <= MAX_NUM_AXES) axes else axes.subList(0, MAX_NUM_AXES)
+            for (idx in 0..<MAX_NUM_AXES) {
+                val isRowVisible = idx < axes.size
+                if (!isRowVisible && !optWidgets[idx].isVisible)
+                    break
+                optWidgets[idx].isVisible = isRowVisible
+                labelComps[idx].isVisible = isRowVisible
+                noticeIconComps[idx].isVisible = isRowVisible
+                noticeMsgComps[idx].isVisible = isRowVisible
+                if (isRowVisible) {
+                    val axis = axes[idx]
+                    val label = try {
+                        l10n("ui.form.fontAxis.${axis.tag}")
+                    } catch (_: MissingResourceException) {
+                        if (axis.nameMap.keys.isNotEmpty()) {
+                            val nameLocale = closestLocale(Locale.getDefault(), axis.nameMap.keys)
+                                ?: closestLocale(Locale.US, axis.nameMap.keys)
+                                ?: axis.nameMap.keys.first()
+                            axis.nameMap[nameLocale]
+                        } else
+                            axis.tag
+                    }
+                    labelComps[idx].apply { text = label; toolTipText = label }
+                    withoutChangeListeners {
+                        val stp = ceil((axis.maxValue - axis.minValue) / 100)
+                        spinnerWidgets[idx].model = SpinnerNumberModel(axis.minValue, axis.minValue, axis.maxValue, stp)
+                        optWidgets[idx].value = rem.remove(axis.tag) ?: Opt(false, axis.defaultValue)
+                    }
+                }
+            }
+            stashedVariations = rem
+            applySeverities()
+            applyNotices()
+        }
+
+    override var value: FontVariations
+        get() =
+            FontVariations(persistentMapOf<String, Opt<Double>>().mutate { map ->
+                for ((idx, axis) in axes.withIndex())
+                    map[axis.tag] = optWidgets[idx].value
+                map.putAll(stashedVariations)
+            })
+        set(value) {
+            val rem = HashMap(value)
+            for ((idx, axis) in axes.withIndex())
+                withoutChangeListeners { optWidgets[idx].value = rem.remove(axis.tag) ?: Opt(false, axis.defaultValue) }
+            stashedVariations = rem
+            notifyChangeListeners()
+        }
+
+    override fun getSeverity(index: Int) =
+        if (index == -1) throw UnsupportedOperationException() else axes.getOrNull(index)?.let { severities[it.tag] }
+
+    override fun setSeverity(index: Int, severity: Severity?) {
+        if (index == -1) {
+            if (severity != null)
+                throw UnsupportedOperationException()
+            severities.clear()
+        } else if (index in 0..<axes.size) {
+            val tag = axes[index].tag
+            if (severity == null) severities.remove(tag) else severities[tag] = severity
+        }
+        applySeverities()
+    }
+
+    private fun applySeverities() {
+        for ((idx, axis) in axes.withIndex())
+            spinnerWidgets[idx].setSeverity(-1, severities[axis.tag])
+    }
+
+    override fun getNoticeOverride(rowIndex: Int) = axes.getOrNull(rowIndex)?.let { notices[it.tag] }
+
+    override fun setNoticeOverride(rowIndex: Int, notice: Form.Notice?) {
+        val tag = axes[rowIndex].tag
+        if (notice == null) notices.remove(tag) else notices[tag] = notice
+        applyNotices()
+    }
+
+    override fun clearNoticeOverrides() {
+        notices.clear()
+        applyNotices()
+    }
+
+    private fun applyNotices() {
+        for ((idx, axis) in axes.withIndex()) {
+            val notice = notices[axis.tag]
+            noticeIconComps[idx].icon = notice?.severity?.icon
+            noticeMsgComps[idx].text = notice?.msg
+        }
+    }
+
+    companion object {
+        // Surely, no font will have more axes than this.
+        private const val MAX_NUM_AXES = 16
     }
 
 }

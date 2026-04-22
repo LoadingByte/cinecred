@@ -171,6 +171,7 @@ abstract class Jextract : DefaultTask() {
             "hb_font_create",
             "hb_font_destroy",
             "hb_font_set_scale",
+            "hb_font_set_variations",
             "hb_font_get_glyph_extents",
             "hb_font_get_glyph_h_advance",
             "hb_font_draw_glyph",
@@ -180,6 +181,8 @@ abstract class Jextract : DefaultTask() {
             "hb_ot_metrics_get_position_with_fallback",
             "hb_ot_name_list_names",
             "hb_ot_name_get_utf8",
+            "hb_ot_var_get_axis_count",
+            "hb_ot_var_get_axis_infos",
             "hb_subset_input_create_or_fail",
             "hb_subset_input_destroy",
             "hb_subset_input_set_flags",
@@ -187,6 +190,7 @@ abstract class Jextract : DefaultTask() {
             "hb_subset_input_glyph_set",
             "hb_subset_input_set",
             "hb_subset_input_pin_all_axes_to_default",
+            "hb_subset_input_pin_axis_location",
             "hb_subset_or_fail"
         )
         includeConstants.addAll(
@@ -271,6 +275,7 @@ abstract class Jextract : DefaultTask() {
             "HB_OT_NAME_ID_TYPOGRAPHIC_FAMILY",
             "HB_OT_NAME_ID_TYPOGRAPHIC_SUBFAMILY",
             "HB_OT_NAME_ID_SAMPLE_TEXT",
+            "HB_OT_VAR_AXIS_FLAG_HIDDEN",
             "HB_SUBSET_FLAGS_NO_HINTING",
             "HB_SUBSET_FLAGS_RETAIN_GIDS",
             "HB_SUBSET_FLAGS_NOTDEF_OUTLINE",
@@ -279,10 +284,12 @@ abstract class Jextract : DefaultTask() {
         )
         includeStructs.addAll(
             "hb_feature_t",
+            "hb_variation_t",
             "hb_glyph_info_t",
             "hb_glyph_position_t",
             "hb_glyph_extents_t",
-            "hb_ot_name_entry_t"
+            "hb_ot_name_entry_t",
+            "hb_ot_var_axis_info_t"
         )
         includeTypedefs.addAll(
             "hb_destroy_func_t",

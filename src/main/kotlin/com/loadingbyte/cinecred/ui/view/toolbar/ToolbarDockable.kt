@@ -105,6 +105,22 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
     private val windowLayoutsMenu: DropdownPopupMenu = DropdownPopupMenu(windowLayoutsButton)
         .apply { addMouseListenerTo(windowLayoutsButton) }
 
+    private val windowLayoutLockedToggleButton =
+        newToolbarToggleButton(LOCK_ICON, l10n("ui.toolbar.windowLayoutLockedTooltip")) { selected ->
+            windowLayoutLockedFlashCounter = 1000
+            toolbarCtrl.onToggleWindowLayoutLocked(selected)
+        }
+    private val windowLayoutLockedFlashTimer: Timer = Timer(100) {
+        val button = windowLayoutLockedToggleButton
+        val makeNormal = button.icon !== LOCK_ICON
+        button.icon = if (makeNormal) LOCK_ICON else LOCK_ICON.getRecoloredIcon(PALETTE_RED_COLOR)
+        button.paintImmediately(0, 0, button.width, button.height)
+        Toolkit.getDefaultToolkit().sync()
+        if (makeNormal && ++windowLayoutLockedFlashCounter >= 25)
+            windowLayoutLockedFlashTimer.stop()
+    }
+    private var windowLayoutLockedFlashCounter = 0
+
     private val dockableToggleButtons =
         listOf(
             Triple(DockableId.PREVIEW, "ui.preview.title", null),
@@ -168,7 +184,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
         val row2Cols = """
                 []6[]
                 12[]6
-                []${"0[]".repeat(dockableToggleButtons.size)}
+                []0[]${"0[]".repeat(dockableToggleButtons.size)}
                 8[]5
                 []
         """
@@ -177,6 +193,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
             add(runtimeLabel)
             add(JSeparator(JSeparator.VERTICAL), "growy, wmin pref")
             add(windowLayoutsButton)
+            add(windowLayoutLockedToggleButton)
             dockableToggleButtons.values.forEach(::add)
             add(JSeparator(JSeparator.VERTICAL), "growy, wmin pref")
             add(homeButton)
@@ -288,6 +305,15 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
     override fun setRuntime(timecode: String?, frames: Int) {
         runtimeLabel.text = timecode ?: "\u2014"
         runtimeLabel.toolTipText = timecode?.let { l10n("ui.edit.runtimeTooltip", frames) }
+    }
+
+    override fun setWindowLayoutLocked(locked: Boolean) {
+        windowLayoutLockedToggleButton.isSelected = locked
+    }
+
+    override fun flashWindowLayoutLockedButton() {
+        windowLayoutLockedFlashCounter = 0
+        windowLayoutLockedFlashTimer.start()
     }
 
     override fun setDockableCollapsed(dockableId: DockableId, collapsed: Boolean) {

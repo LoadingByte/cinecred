@@ -64,6 +64,8 @@ class ToolbarCtrl(private val projectCtrl: ProjectController) : ToolbarCtrlComms
         })
         // The guides should be enabled by default.
         toggleGuides()
+        // The window layout should be locked by default.
+        for (view in views) view.setWindowLayoutLocked(true)
     }
 
     override fun updateProject(drawnProject: DrawnProject) {
@@ -123,6 +125,7 @@ class ToolbarCtrl(private val projectCtrl: ProjectController) : ToolbarCtrlComms
     override fun zoom(zoomIn: Boolean) = setZoom(zoom + if (zoomIn) ZOOM_INCREMENT else -ZOOM_INCREMENT)
     override fun toggleGuides() = views.forEach { view -> view.toggleGuides() }
     override fun toggleOverlaysMenu() = views.forEach { view -> view.toggleOverlaysMenu() }
+    override fun flashWindowLayoutLockedButton() = views.forEach { view -> view.flashWindowLayoutLockedButton() }
     override fun setDockableCollapsed(dockableId: DockableId, collapsed: Boolean) =
         views.forEach { view -> view.setDockableCollapsed(dockableId, collapsed) }
 
@@ -174,6 +177,10 @@ class ToolbarCtrl(private val projectCtrl: ProjectController) : ToolbarCtrlComms
         layouts.removeIf { it.name == name }
         layouts.add(ConfigurableWindowLayout(name, projectCtrl.windowLayoutTrees))
         WINDOW_LAYOUTS_PREFERENCE.set(layouts)
+    }
+
+    override fun onToggleWindowLayoutLocked(locked: Boolean) {
+        projectCtrl.projectFrame.isLocked = locked
     }
 
     override fun onChangeDockableCollapsed(dockableId: DockableId, collapsed: Boolean) {

@@ -26,6 +26,7 @@ interface ToolbarCtrlComms {
     fun zoom(zoomIn: Boolean)
     fun toggleGuides()
     fun toggleOverlaysMenu()
+    fun flashWindowLayoutLockedButton()
     fun setDockableCollapsed(dockableId: DockableId, collapsed: Boolean)
 
     fun pollCredits()
@@ -40,6 +41,7 @@ interface ToolbarCtrlComms {
     fun onSelectOverlays(selectedOverlays: List<Overlay>)
     fun onSelectWindowLayout(selectedLayout: WindowLayout, onScreen: GraphicsConfiguration)
     fun saveWindowLayout(name: String)
+    fun onToggleWindowLayoutLocked(locked: Boolean)
     fun onChangeDockableCollapsed(dockableId: DockableId, collapsed: Boolean)
     fun showWelcomeFrame()
     fun showOverlayCreation()
@@ -61,6 +63,8 @@ interface ToolbarViewComms {
     fun toggleGuides()
     fun toggleOverlaysMenu()
     fun setRuntime(timecode: String?, frames: Int)
+    fun setWindowLayoutLocked(locked: Boolean)
+    fun flashWindowLayoutLockedButton()
     fun setDockableCollapsed(dockableId: DockableId, collapsed: Boolean)
 
     fun showResetUnsavedChangesQuestion(): Boolean

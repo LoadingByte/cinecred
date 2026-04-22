@@ -20,7 +20,8 @@ import kotlin.math.roundToInt
 class DockingFrame(
     val dockables: List<Dockable>,
     private val configureWindow: (Window) -> Unit,
-    private val onChangeCollapsed: (String, Boolean) -> Unit
+    private val onChangeCollapsed: (String, Boolean) -> Unit,
+    private val onBlockedDrag: () -> Unit
 ) : CcFrame() {
 
     // ========== ENCAPSULATION LEAKS ==========
@@ -67,6 +68,13 @@ class DockingFrame(
         for (window in windows)
             (window as RootPaneContainer).rootPane.putClientProperty("Window.documentModified", modified)
     }
+
+    var isLocked: Boolean = false
+        set(isLocked) {
+            field = isLocked
+            for (window in windows)
+                updateRetractableButtons(window, null)
+        }
 
     fun isCollapsed(dockableId: String): Boolean =
         collapsedCache.getValue(dockableId)
@@ -369,7 +377,7 @@ class DockingFrame(
         val orientation = ((if (cPane.componentCount == 0) null else cPane.getComponent(0)) as? SplitPane)?.orient
         val buttons = window.layeredPane.getComponentsInLayer(RETRACTABLE_BUTTONS_LAYER)
         for (button in buttons)
-            button.isVisible = orientation != null
+            button.isVisible = !isLocked && orientation != null
         if (orientation == null)
             return
         val fringe = SwingUtilities.convertRectangle(cPane, Rectangle(Point(), cPane.size), window.layeredPane)
@@ -587,7 +595,9 @@ class DockingFrame(
 
                 add(JLabel(dockable.title, dockable.icon, JLabel.LEADING).apply { iconTextGap = 6 })
 
-                addThresholdedStartDragListener { e -> dragTracker = DragTracker(this@Brick, e.locationOnScreen) }
+                addThresholdedStartDragListener { e ->
+                    if (isLocked) onBlockedDrag() else dragTracker = DragTracker(this@Brick, e.locationOnScreen)
+                }
 
                 val mouseListener = object : MouseAdapter() {
                     override fun mouseDragged(e: MouseEvent) {

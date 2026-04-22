@@ -98,8 +98,6 @@ class ProjectController(
         val playbackDockable = PlaybackDockable(playbackCtrl)
         val deliveryDockable = DeliveryDockable(deliveryCtrl)
 
-        toolbarCtrl.ready()
-
         projectFrame = DockingFrame(
             listOf(toolbarDockable, previewDockable, logDockable, stylingDockable, playbackDockable, deliveryDockable),
             configureWindow = { window ->
@@ -110,6 +108,8 @@ class ProjectController(
                 (window as RootPaneContainer).rootPane.putClientProperty("Window.documentFile", projectDir.toFile())
             }, onChangeCollapsed = { dockableId, collapsed ->
                 setDockableCollapsed(DockableId.valueOf(dockableId), collapsed)
+            }, onBlockedDrag = {
+                toolbarCtrl.flashWindowLayoutLockedButton()
             })
         projectFrame.addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
@@ -123,6 +123,8 @@ class ProjectController(
             (availableLayouts.find { it.name == defaultLayoutName } ?: availableLayouts[0]).trees(bounds)
         })
         onChangeWindowLayout()
+
+        toolbarCtrl.ready()
 
         if (PROJECT_HINT_TRACK_PENDING_PREFERENCE.get())
             makeProjectHintTrack(this).play(onPass = { PROJECT_HINT_TRACK_PENDING_PREFERENCE.set(false) })

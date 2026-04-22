@@ -106,15 +106,14 @@ class StyleFormAdjuster(
 
     private fun adjustActiveForm() {
         val activeForm = this.activeForm ?: return
+        val curStyling = getCurrentStyling() ?: return
         val curStyle = getCurrentStyleInActiveForm() ?: return
-        adjustForm(activeForm.castToStyle(curStyle.javaClass), curStyle)
+        adjustForm(curStyling, activeForm.castToStyle(curStyle.javaClass), curStyle)
     }
 
     private fun <S : Style> adjustForm(
-        curForm: StyleForm<S>, curStyle: S, curStyleIdx: Int = 0, siblingStyles: List<S> = emptyList()
+        styling: Styling, curForm: StyleForm<S>, curStyle: S, curStyleIdx: Int = 0, siblingStyles: List<S> = emptyList()
     ) {
-        val styling = getCurrentStyling() ?: return
-
         // Support for the leaking override.
         @Suppress("NAME_SHADOWING") var curStyleIdx = curStyleIdx
         @Suppress("NAME_SHADOWING") var siblingStyles = siblingStyles
@@ -206,7 +205,13 @@ class StyleFormAdjuster(
 
         val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
         for (idx in nestedForms.indices)
-            adjustForm(nestedForms[idx].castToStyle(nestedStyles[idx].javaClass), nestedStyles[idx], idx, nestedStyles)
+            adjustForm(
+                styling,
+                curForm = nestedForms[idx].castToStyle(nestedStyles[idx].javaClass),
+                curStyle = nestedStyles[idx],
+                curStyleIdx = idx,
+                siblingStyles = nestedStyles
+            )
     }
 
 

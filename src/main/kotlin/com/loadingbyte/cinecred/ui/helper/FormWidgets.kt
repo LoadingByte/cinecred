@@ -2444,6 +2444,7 @@ class LayerListWidget<E : Any, W : Form.Widget<E>>(
 
         init {
             preferredSize = Dimension(96 + 1, 12 + 1)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
 
         override fun paintComponent(g: Graphics) {

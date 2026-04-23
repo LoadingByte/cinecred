@@ -13,6 +13,9 @@ import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avformat.*
 import org.bytedeco.ffmpeg.global.avutil.*
+import org.bytedeco.ffmpeg.global.swscale.*
+import org.bytedeco.ffmpeg.swscale.SwsContext
+import org.bytedeco.javacpp.DoublePointer
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.isRegularFile
@@ -45,6 +48,7 @@ class VideoReader(
     private var st: AVStream? = null
     private var dec: AVCodecContext? = null
     private var pkt: AVPacket? = null
+    private var sws: SwsContext? = null
 
     private val queue: Queue<Frame> = ArrayDeque()
     private var frameNumber = -1
@@ -138,7 +142,8 @@ class VideoReader(
         }
 
         // Extract a bitmap spec from the decoder parameters. If some metadata is unspecified, assume Rec. 709.
-        val pixelFormat = Bitmap.PixelFormat.of(dec.pix_fmt())
+        val pixelFormat =
+            Bitmap.PixelFormat.of(if (dec.pix_fmt() == AV_PIX_FMT_PAL8) AV_PIX_FMT_RGBA else dec.pix_fmt())
         val pri = dec.color_primaries()
         val trc = dec.color_trc()
         val cs = dec.colorspace()
@@ -228,7 +233,24 @@ class VideoReader(
                 val tb = st!!.time_base()
                 Timecode.Clock(frame.pts() * tb.num(), tb.den().toLong())
             }
-            queue.offer(Frame(Bitmap.wrap(spec, frame), timecode))
+            val bitmap: Bitmap
+            if (frame.format() == AV_PIX_FMT_PAL8) {
+                bitmap = Bitmap.allocate(spec)
+                // We've seen PNG image sequences where only some of the PNGs used palettes. Hence, we need to
+                // dynamically react and allocate the sws context the first time we actually encounter a palette.
+                if (sws == null)
+                    sws = sws_getContext(
+                        dec.width(), dec.height(), AV_PIX_FMT_PAL8,
+                        dec.width(), dec.height(), spec.representation.pixelFormat.code,
+                        0, null, null, null as DoublePointer?
+                    ).ffmpegThrowIfNull("Could not initialize SWS context")
+                sws_scale(
+                    sws, frame.data(), frame.linesize(), 0, frame.height(), bitmap.frame.data(), bitmap.frame.linesize()
+                )
+                av_frame_free(frame)
+            } else
+                bitmap = Bitmap.wrap(spec, frame)
+            queue.offer(Frame(bitmap, timecode))
         }
     }
 
@@ -239,6 +261,8 @@ class VideoReader(
         dec = null
         ic.letIfNonNull(::avformat_close_input)
         ic = null
+        sws.letIfNonNull(::sws_freeContext)
+        sws = null
         while (true)
             (queue.poll() ?: break).bitmap.close()
     }

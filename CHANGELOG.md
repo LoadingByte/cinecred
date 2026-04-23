@@ -40,6 +40,7 @@ Cinecred Changelog
 - Multi-line paragraphs with mixed left-to-right and right-to-left text now have
   proper text order across all lines.
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
+- PNG image sequences with 8-bit palettes can now be ingested.
 - Exported PDFs no longer duplicate pictures, thereby reducing file size.
 - PDF export no longer inverts vertical shearing.
 - Timeline export no longer fails upon encountering an image sequence.

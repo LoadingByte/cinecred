@@ -1168,7 +1168,19 @@ class BitmapConverter(
         private fun conv3FToPF(src: Bitmap, dst: Bitmap) {
             val srcBO = src.spec.representation.pixelFormat.byteOrder
             val dstBO = dst.spec.representation.pixelFormat.byteOrder
-            iterate1PlaneAnd3FPlanes(src, dst, 12, -1, 0, { _, _, _, _, _, _ ->
+            iterate1PlaneAnd3FPlanes(src, dst, 12, QUART_VLEN, 0, { srcSeg, s, dstSeg1, dstSeg2, dstSeg3, d ->
+                var vecR = FloatVector.zero(F)
+                var vecG = FloatVector.zero(F)
+                var vecB = FloatVector.zero(F)
+                for (l in 0..<QUART_VLEN) {
+                    val sl = s + l * 12L
+                    vecR = vecR.withLane(l, srcSeg.getFloat(sl + 0L, srcBO))
+                    vecG = vecG.withLane(l, srcSeg.getFloat(sl + 4L, srcBO))
+                    vecB = vecB.withLane(l, srcSeg.getFloat(sl + 8L, srcBO))
+                }
+                vecR.intoMemorySegment(dstSeg1, d, dstBO)
+                vecG.intoMemorySegment(dstSeg2, d, dstBO)
+                vecB.intoMemorySegment(dstSeg3, d, dstBO)
             }, { srcSeg, s, dstSeg1, dstSeg2, dstSeg3, d ->
                 dstSeg1.putFloat(d, dstBO, srcSeg.getFloat(s + 0L, srcBO))
                 dstSeg2.putFloat(d, dstBO, srcSeg.getFloat(s + 4L, srcBO))
@@ -1232,7 +1244,22 @@ class BitmapConverter(
         private fun conv4FToPF(src: Bitmap, dst: Bitmap) {
             val srcBO = src.spec.representation.pixelFormat.byteOrder
             val dstBO = dst.spec.representation.pixelFormat.byteOrder
-            iterate1PlaneAnd4FPlanes(src, dst, 16, -1, { _, _, _, _, _, _, _ ->
+            iterate1PlaneAnd4FPlanes(src, dst, 16, QUART_VLEN, { srcSeg, s, dstSeg1, dstSeg2, dstSeg3, dstSeg4, d ->
+                var vecR = FloatVector.zero(F)
+                var vecG = FloatVector.zero(F)
+                var vecB = FloatVector.zero(F)
+                var vecA = FloatVector.zero(F)
+                for (l in 0..<QUART_VLEN) {
+                    val sl = s + l * 16L
+                    vecR = vecR.withLane(l, srcSeg.getFloat(sl + 0L, srcBO))
+                    vecG = vecG.withLane(l, srcSeg.getFloat(sl + 4L, srcBO))
+                    vecB = vecB.withLane(l, srcSeg.getFloat(sl + 8L, srcBO))
+                    vecA = vecA.withLane(l, srcSeg.getFloat(sl + 12L, srcBO))
+                }
+                vecR.intoMemorySegment(dstSeg1, d, dstBO)
+                vecG.intoMemorySegment(dstSeg2, d, dstBO)
+                vecB.intoMemorySegment(dstSeg3, d, dstBO)
+                vecA.intoMemorySegment(dstSeg4, d, dstBO)
             }, { srcSeg, s, dstSeg1, dstSeg2, dstSeg3, dstSeg4, d ->
                 dstSeg1.putFloat(d, dstBO, srcSeg.getFloat(s + 0L, srcBO))
                 dstSeg2.putFloat(d, dstBO, srcSeg.getFloat(s + 4L, srcBO))
@@ -1352,7 +1379,16 @@ class BitmapConverter(
         private fun convPFTo3F(src: Bitmap, dst: Bitmap) {
             val srcBO = src.spec.representation.pixelFormat.byteOrder
             val dstBO = dst.spec.representation.pixelFormat.byteOrder
-            iterate1PlaneAnd3FPlanes(dst, src, 12, -1, 0, { _, _, _, _, _, _ ->
+            iterate1PlaneAnd3FPlanes(dst, src, 12, QUART_VLEN, 0, { dstSeg, d, srcSeg1, srcSeg2, srcSeg3, s ->
+                val vecR = vec(F, srcSeg1, s, srcBO)
+                val vecG = vec(F, srcSeg2, s, srcBO)
+                val vecB = vec(F, srcSeg3, s, srcBO)
+                for (l in 0..<QUART_VLEN) {
+                    val dl = d + l * 12L
+                    dstSeg.putFloat(dl + 0L, dstBO, vecR.lane(l))
+                    dstSeg.putFloat(dl + 4L, dstBO, vecG.lane(l))
+                    dstSeg.putFloat(dl + 8L, dstBO, vecB.lane(l))
+                }
             }, { dstSeg, d, srcSeg1, srcSeg2, srcSeg3, s ->
                 dstSeg.putFloat(d + 0L, dstBO, srcSeg1.getFloat(s, srcBO))
                 dstSeg.putFloat(d + 4L, dstBO, srcSeg2.getFloat(s, srcBO))
@@ -1415,7 +1451,18 @@ class BitmapConverter(
         private fun convPFTo4F(src: Bitmap, dst: Bitmap) {
             val srcBO = src.spec.representation.pixelFormat.byteOrder
             val dstBO = dst.spec.representation.pixelFormat.byteOrder
-            iterate1PlaneAnd4FPlanes(dst, src, 16, -1, { _, _, _, _, _, _, _ ->
+            iterate1PlaneAnd4FPlanes(dst, src, 16, QUART_VLEN, { dstSeg, d, srcSeg1, srcSeg2, srcSeg3, srcSeg4, s ->
+                val vecR = vec(F, srcSeg1, s, srcBO)
+                val vecG = vec(F, srcSeg2, s, srcBO)
+                val vecB = vec(F, srcSeg3, s, srcBO)
+                val vecA = vec(F, srcSeg4, s, srcBO)
+                for (l in 0..<QUART_VLEN) {
+                    val dl = d + l * 16L
+                    dstSeg.putFloat(dl + 0L, dstBO, vecR.lane(l))
+                    dstSeg.putFloat(dl + 4L, dstBO, vecG.lane(l))
+                    dstSeg.putFloat(dl + 8L, dstBO, vecB.lane(l))
+                    dstSeg.putFloat(dl + 12L, dstBO, vecA.lane(l))
+                }
             }, { dstSeg, d, srcSeg1, srcSeg2, srcSeg3, srcSeg4, s ->
                 dstSeg.putFloat(d + 0L, dstBO, srcSeg1.getFloat(s, srcBO))
                 dstSeg.putFloat(d + 4L, dstBO, srcSeg2.getFloat(s, srcBO))

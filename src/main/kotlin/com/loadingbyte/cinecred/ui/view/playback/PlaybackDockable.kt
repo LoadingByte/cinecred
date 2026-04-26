@@ -123,8 +123,8 @@ class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
         fullScreenButton?.let { it.isSelected = !it.isSelected }
     }
 
-    override fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double, clear: Boolean) =
-        videoCanvas.setVideoFrame(videoFrame, scaling, clear)
+    override fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double) =
+        videoCanvas.setVideoFrame(videoFrame, scaling)
 
 
     /**
@@ -139,6 +139,7 @@ class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
 
         @Volatile private var videoFrame: BufferedImage? = null
         @Volatile private var scaling: Double = 1.0
+        @Volatile private var prevPaintedArea = Rectangle()
 
         init {
             // Without an explicitly set minimum size, a Canvas' default minimum size its current size, which means that
@@ -146,12 +147,10 @@ class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
             minimumSize = Dimension(0, 0)
         }
 
-        fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double, clear: Boolean) {
+        fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double) {
             this.videoFrame = videoFrame
             this.scaling = scaling
             val g = graphics ?: return
-            if (clear && videoFrame != null)
-                g.clearRect(0, 0, width, height)
             paint(g)
             g.dispose()
             Toolkit.getDefaultToolkit().sync()
@@ -159,13 +158,18 @@ class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
 
         override fun paint(g: Graphics) {
             val videoFrame = this.videoFrame
-            if (videoFrame == null)
+            if (videoFrame == null) {
                 g.clearRect(0, 0, width, height)
-            else {
+                prevPaintedArea = Rectangle()
+            } else {
                 val x = ((width - videoFrame.width * scaling) / 2.0).roundToInt()
                 val y = ((height - videoFrame.height * scaling) / 2.0).roundToInt()
                 val w = (videoFrame.width * scaling).roundToInt()
                 val h = (videoFrame.height * scaling).roundToInt()
+                val paintedArea = Rectangle(x, y, w, h)
+                if (!paintedArea.contains(prevPaintedArea))
+                    g.clearRect(0, 0, width, height)
+                prevPaintedArea = paintedArea
                 g.drawImage(videoFrame, x, y, w, h, null)
             }
         }

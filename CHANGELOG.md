@@ -49,6 +49,7 @@ Cinecred Changelog
 
 - The preview indicator for embedded videos is now high-res and less obnoxious.
 - The video preview now updates the duration when switching between sheets.
+- The video preview no longer retains an afterimage upon exiting full screen.
 - In the video preview, fades and transparent embedded videos now play smoothly.
 - On Windows, maximizing a dialog or opening the full screen video preview no
   longer leaves an area around it blank.

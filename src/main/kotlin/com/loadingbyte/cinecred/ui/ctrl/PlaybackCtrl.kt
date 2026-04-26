@@ -196,7 +196,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
                 awtFrameSource?.close()
                 awtFrameSource = newAWTFrameSource
                 awtFrameBuffer?.changeSource(newAWTFrameSource)
-                displayFrameNowAWT(true)
+                displayFrameNowAWT()
             }
         }
     }
@@ -266,7 +266,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
             // After the play task has terminated and already submitted its last invokeLater() job which will set the
             // final frameIdx, submit a second job that displays that frameIdx. This is necessary because the play task
             // might not have displayed the last frame if it took to long to render.
-            SwingUtilities.invokeLater { displayFrameNowAWT(false) }
+            SwingUtilities.invokeLater { displayFrameNowAWT() }
             activeDeckLink?.stopScheduledPlayback()
             // Also display the final frameIdx on DeckLink due to (a) the reason above and (b) the following reason:
             // It is a bit unpredictable where DeckLink playback actually stops, and even when telling it to stop at a
@@ -286,7 +286,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
             if (awtFrameBuffer == null) {
                 awtFrameBuffer = FrameBuffer(awtFrameSource, firstFrameIdx, frameStep.toDouble())
                 playTask = executor.scheduleAtFixedRate(throwableAwareTask {
-                    awtFrameBuffer?.nextOrSkip()?.let { for (view in views) view.setVideoFrame(it, viewScaling, false) }
+                    awtFrameBuffer?.nextOrSkip()?.let { for (view in views) view.setVideoFrame(it, viewScaling) }
                     SwingUtilities.invokeLater {
                         frameIdx += frameStep
                         if (frameIdx == 0 || frameIdx == numFrames - 1)
@@ -306,7 +306,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
         }
     }
 
-    private fun displayFrameNowAWT(clear: Boolean) {
+    private fun displayFrameNowAWT() {
         if (playRate != 0)
             return
         val frameIdx = this.frameIdx
@@ -314,7 +314,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
         val viewScaling = this.viewScaling
         displayNowAWTJobSlot.submit {
             awtFrameSource.materializeFrame(frameIdx)?.let {
-                for (view in views) view.setVideoFrame(it, viewScaling, clear)
+                for (view in views) view.setVideoFrame(it, viewScaling)
             }
         }
     }
@@ -381,7 +381,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
             for (view in views) {
                 view.setNumFrames(1, "\u2014")
                 view.setPlayheadPosition(0, "\u2014")
-                view.setVideoFrame(null, 1.0, true)
+                view.setVideoFrame(null, 1.0)
             }
         } else
             numFrames = globalAndVideo!!.second.numFrames
@@ -513,7 +513,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
             return
         this.frameIdx = frameIdx
         if (playRate == 0) {
-            displayFrameNowAWT(false)
+            displayFrameNowAWT()
             displayFrameNowDeckLink()
         } else
             refreshPlayback(playRateChanged = false, forceStop = true)

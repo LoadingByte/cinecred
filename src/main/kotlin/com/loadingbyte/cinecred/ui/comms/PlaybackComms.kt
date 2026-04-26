@@ -66,6 +66,6 @@ interface PlaybackViewComms {
     fun setActualSize(actualSize: Boolean) {}
     fun setFullScreen(fullScreen: Boolean): Boolean = false
     fun toggleFullScreen() {}
-    fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double, clear: Boolean) {}
+    fun setVideoFrame(videoFrame: BufferedImage?, scaling: Double) {}
 
 }

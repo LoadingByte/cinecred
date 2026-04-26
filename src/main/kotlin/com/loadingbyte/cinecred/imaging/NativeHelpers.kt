@@ -1,6 +1,9 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.formdev.flatlaf.util.SystemInfo
+import com.loadingbyte.cinecred.natives.clib.clib_h.cpuid
+import jdk.incubator.vector.Vector
+import jdk.incubator.vector.VectorOperators.*
 import org.apache.pdfbox.cos.COSName
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.graphics.color.PDICCBased
@@ -81,6 +84,25 @@ fun SegmentAllocator.allocateFrom(elems: ByteArray): MemorySegment = allocate(JA
 
 fun SegmentAllocator.allocateFrom(elems: FloatArray): MemorySegment = allocate(JAVA_FLOAT, elems.size.toLong())
     .also { MemorySegment.copy(elems, 0, it, JAVA_FLOAT, 0L, elems.size) }
+
+
+/**
+ * Performs vectorized fused multiply add, and if that's not supported, falls back to separate vectorized multiply and
+ * add operations instead of falling back to scalar FMA.
+ */
+fun <E> Vector<E>.fmaFast(b: Vector<E>, c: Vector<E>): Vector<E> =
+    if (VECTOR_FMA_SUPPORTED)
+        lanewise(FMA, b, c)
+    else
+        lanewise(MUL, b).lanewise(ADD, c)
+
+private val VECTOR_FMA_SUPPORTED: Boolean =
+    if (!SystemInfo.isX86_64) true else
+        Arena.ofConfined().use { arena ->
+            val registers = arena.allocate(JAVA_INT, 4)
+            cpuid(1, 0, registers)
+            registers.getInt(8) and (1 shl 12) != 0
+        }
 
 
 /**

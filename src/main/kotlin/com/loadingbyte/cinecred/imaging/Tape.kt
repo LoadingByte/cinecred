@@ -1,9 +1,9 @@
 package com.loadingbyte.cinecred.imaging
 
 import com.loadingbyte.cinecred.common.*
-import java.awt.font.FontRenderContext
-import java.awt.font.TextLayout
+import java.awt.Shape
 import java.awt.geom.AffineTransform
+import java.awt.geom.Path2D
 import java.io.IOException
 import java.lang.ref.SoftReference
 import java.nio.file.Path
@@ -14,9 +14,8 @@ import javax.swing.UIManager
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
 import kotlin.math.atan
+import kotlin.math.hypot
 import kotlin.math.min
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 
 /** An abstraction for a video that can be drawn onto a [DeferredImage] and is later recognized by [DeferredVideo]. */
@@ -140,10 +139,7 @@ class Tape private constructor(
     private abstract class AbstractPreviewCacheLoader<I>(val reader: VideoReader) : PreviewCache.Loader<I> {
 
         private val pictureSpec: Bitmap.Spec
-        private var tape2canvas: BitmapConverter? = null
-        private var canvas2picture: BitmapConverter? = null
-        private var canvasPreviewBitmap: Bitmap? = null
-        private var canvasOverlayBitmap: Bitmap? = null
+        private var tape2picture: BitmapConverter? = null
 
         init {
             val (tapeW, tapeH) = reader.spec.resolution
@@ -160,50 +156,21 @@ class Tape private constructor(
             }
             val pictureRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
             pictureSpec = Bitmap.Spec(previewRes, pictureRep)
-            val canvasSpec = Bitmap.Spec(previewRes, Canvas.compatibleRepresentation(pictureRep.colorSpace!!))
-
-            val frc = FontRenderContext(null, true, true)
-            val textShape = TextLayout(l10n("imaging.tapePreview"), UIManager.getFont("defaultFont"), frc)
-                .getOutline(null)
-            val textRect = textShape.bounds2D
-            val pw = previewRes.widthPx.toDouble()
-            val ph = previewRes.heightPx.toDouble()
-            val diag = sqrt(pw.pow(2) + ph.pow(2))
-            val maxTextH = sqrt(ph.pow(2) + ph.pow(4) / pw.pow(2))
-            val textH = (diag * maxTextH) / (diag + maxTextH * textRect.width / textRect.height)
-            val textTransform = AffineTransform().apply {
-                translate(pw / 2, ph / 2)
-                rotate(-atan(ph / pw))
-                scale(textH / textRect.height)
-                translate(-textRect.centerX, -textRect.centerY)
-            }
-
             setupSafely({
-                tape2canvas = BitmapConverter(reader.spec, canvasSpec, srcAligned = false, approxTransfer = true)
-                canvas2picture = BitmapConverter(canvasSpec, pictureSpec)
-                canvasPreviewBitmap = Bitmap.allocate(canvasSpec)
-                canvasOverlayBitmap = Bitmap.allocate(canvasSpec)
-                Canvas.forBitmap(canvasOverlayBitmap!!.zero()).use { canvas ->
-                    canvas.fillShape(textShape, Canvas.Shader.Solid(Color4f.WHITE), transform = textTransform)
-                }
+                tape2picture = BitmapConverter(reader.spec, pictureSpec, srcAligned = false, approxTransfer = true)
             }, ::close)
         }
 
         fun toPreviewPicture(frame: VideoReader.Frame): Picture.Raster {
-            tape2canvas!!.convert(frame.bitmap, canvasPreviewBitmap!!)
-            Canvas.forBitmap(canvasPreviewBitmap!!).use { it.drawImageFast(canvasOverlayBitmap!!) }
             Bitmap.allocate(pictureSpec).use { picturePreviewBitmap ->
-                canvas2picture!!.convert(canvasPreviewBitmap!!, picturePreviewBitmap)
+                tape2picture!!.convert(frame.bitmap, picturePreviewBitmap)
                 return Picture.Raster(picturePreviewBitmap)
             }
         }
 
         override fun close() {
             reader.close()
-            canvasPreviewBitmap?.close()
-            canvasOverlayBitmap?.close()
-            tape2canvas?.close()
-            canvas2picture?.close()
+            tape2picture?.close()
         }
 
     }
@@ -381,6 +348,27 @@ class Tape private constructor(
         }
 
         @Volatile var previewResolution: Int = 128
+
+        private val PREVIEW_OUTLINE = run {
+            val font = Font.system(UIManager.getFont("defaultFont").getFontName(Locale.ROOT))
+                ?: Font.bundled("Source Sans Pro Regular")!!
+            GlyphString.of(l10n("imaging.tapePreview"), font.case())
+                .appendOutlineTo(Path2D.Float(), 0.0, 0.0)
+        }
+        private val PREVIEW_BOUNDS = PREVIEW_OUTLINE.bounds2D
+
+        fun previewIndicator(x: Double, y: Double, width: Double, height: Double): Shape {
+            val diag = hypot(width, height)
+            val maxTextH = hypot(height, height * height / width)
+            val textH = (diag * maxTextH) / (diag + maxTextH * PREVIEW_BOUNDS.width / PREVIEW_BOUNDS.height)
+            val textTransform = AffineTransform().apply {
+                translate(x + width / 2, y + height / 2)
+                rotate(-atan(height / width))
+                scale(textH / PREVIEW_BOUNDS.height)
+                translate(-PREVIEW_BOUNDS.centerX, -PREVIEW_BOUNDS.centerY)
+            }
+            return PREVIEW_OUTLINE.transformedBy(textTransform)
+        }
 
     }
 

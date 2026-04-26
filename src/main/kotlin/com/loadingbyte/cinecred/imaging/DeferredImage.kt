@@ -511,6 +511,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
+
+                val previewIndicator = Tape.previewIndicator(x, y, w * scaling, h * scaling)
+                val coat = Coat.Plain(Color4f.TAPE_PREVIEW)
+                materializeShape(previewIndicator, coat, fill = true, dash = false, blurRadius = 0.0)
             } else {
                 val rect = Rectangle2D.Double(x, y, w * scaling, h * scaling)
                 val coat = Coat.Gradient(

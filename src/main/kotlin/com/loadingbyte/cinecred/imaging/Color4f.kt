@@ -76,6 +76,7 @@ data class Color4f(val r: Float, val g: Float, val b: Float, val a: Float, val c
 
         val MISSING_MEDIA_TOP = fromSRGBHexString("#E44244")
         val MISSING_MEDIA_BOT = fromSRGBHexString("#5B171F")
+        val TAPE_PREVIEW = Color4f(1f, 1f, 1f, 0.3f, ColorSpace.SRGB)
 
         fun fromHSB(h: Float, s: Float, b: Float, colorSpace: ColorSpace): Color4f =
             if (s == 0f)

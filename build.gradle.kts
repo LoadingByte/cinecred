@@ -408,6 +408,14 @@ val checkoutNFD by tasks.registering(CheckoutGitRef::class) {
 }
 
 for (platform in Platform.entries) {
+    tasks.register<BuildCLib>("buildCLibFor${platform.label.capitalized()}") {
+        group = "Native"
+        description = "Builds the CLib native library for ${platform.label.capitalized()}."
+        forPlatform = platform
+        clibDir = srcClibC
+        outputFile = srcMainNatives(platform).file(platform.os.codeLib("clib"))
+    }
+
     tasks.register<BuildSkia>("buildSkiaFor${platform.label.capitalized()}") {
         group = "Native"
         description = "Builds the Skia native library for ${platform.label.capitalized()}."
@@ -457,6 +465,14 @@ for (platform in Platform.entries) {
         capiDir = srcDecklinkcapiCpp
         outputFile = srcMainNatives(platform).file(platform.os.codeLib("decklinkcapi"))
     }
+}
+
+tasks.register<Jextract>("jextractCLib") {
+    group = "Native"
+    description = "Extracts Java bindings for the CLib native library."
+    targetPackage = "com.loadingbyte.cinecred.natives.clib"
+    headerFile = srcClibC.file("clib.h")
+    outputDir = srcMainJava
 }
 
 tasks.register<Jextract>("jextractSkiaCAPI") {
@@ -520,6 +536,7 @@ val srcMainResources get() = layout.projectDirectory.dir("src/main/resources")
 val srcMainNatives get() = layout.projectDirectory.dir("src/main/natives")
 fun srcMainNatives(platform: Platform) = srcMainNatives.dir(platform.slug)
 
+val srcClibC get() = layout.projectDirectory.dir("src/clib/c")
 val srcSkiacapiCpp get() = layout.projectDirectory.dir("src/skiacapi/cpp")
 val srcDecklinkcapiCpp get() = layout.projectDirectory.dir("src/decklinkcapi/cpp")
 

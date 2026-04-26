@@ -188,8 +188,8 @@ class PlaybackCtrl : PlaybackCtrlComms {
                 val bitmapJ2DBridge = BitmapJ2DBridge(nativeCM)
                 FrameSource(
                     materializationCacheAWT, scaledVideo, global.grounding, scaledVideo.resolution,
-                    bitmapJ2DBridge.nativeRepresentation, Bitmap.Scan.PROGRESSIVE, frameIdx,
-                    bitmapJ2DBridge::toNativeImage
+                    bitmapJ2DBridge.nativeRepresentation, Bitmap.Scan.PROGRESSIVE, blendInUserColorSpace = true,
+                    frameIdx, bitmapJ2DBridge::toNativeImage
                 )
             }
             SwingUtilities.invokeLater {
@@ -240,7 +240,8 @@ class PlaybackCtrl : PlaybackCtrlComms {
                 val scaledVideo = video.copy(resolutionScaling = min(mw / vw.toDouble(), mh / vh.toDouble()))
                 FrameSource(
                     materializationCacheDeckLink, scaledVideo, global.grounding, activeMode.resolution,
-                    DeckLink.compatibleRepresentation(depth!!, colorSpace), activeMode.scan, frameIdx
+                    DeckLink.compatibleRepresentation(depth!!, colorSpace), activeMode.scan,
+                    blendInUserColorSpace = false, frameIdx
                 ) { it }
             }
             SwingUtilities.invokeLater {
@@ -579,6 +580,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
         private val resolution: Resolution,
         representation: Bitmap.Representation,
         scan: Bitmap.Scan,
+        blendInUserColorSpace: Boolean,
         preloadFrameIdx: Int,
         private val frameConverter: (Bitmap) -> F
     ) {
@@ -592,7 +594,8 @@ class PlaybackCtrl : PlaybackCtrlComms {
             val spec = Bitmap.Spec(video.resolution, representation, scan, content)
             videoBackend = DeferredVideo.BitmapBackend(
                 video, listOf(STATIC), listOf(TAPES), grounding, spec,
-                cache = materializationCache, randomAccessDraftMode = true
+                cache = materializationCache, randomAccessDraftMode = true,
+                blendInUserColorSpace = blendInUserColorSpace
             )
             // Simulate materializing the currently selected frame while the FrameBuffer is being constructed in a
             // background thread. As expensive operations are cached, the subsequent materialization of that frame in

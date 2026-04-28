@@ -19,6 +19,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.Text
 import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import org.w3c.dom.traversal.NodeFilter.SHOW_TEXT
+import java.awt.Rectangle
+import java.awt.Shape
 import java.awt.geom.AffineTransform
 import java.awt.geom.Rectangle2D
 import java.io.ByteArrayInputStream
@@ -40,6 +42,7 @@ import kotlin.concurrent.withLock
 import kotlin.io.path.*
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 
 /** An abstraction over all the kinds of input images that a [DeferredImage] can work with: Raster, SVG, and PDF. */
@@ -48,10 +51,11 @@ sealed interface Picture : AutoCloseable {
     val width: Double
     val height: Double
 
-    fun drawTo(canvas: Canvas, transform: AffineTransform? = null)
+    fun drawTo(canvas: Canvas, transform: AffineTransform? = null, clip: List<Shape> = emptyList())
 
-    fun prepareAsBitmap(canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?):
-            Canvas.PreparedBitmap?
+    fun prepareAsBitmap(
+        canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+    ): Canvas.PreparedBitmap?
 
 
     class Raster private constructor(
@@ -70,13 +74,16 @@ sealed interface Picture : AutoCloseable {
 
         // If the project that opened the picture has been closed and with it the picture (which is possible because
         // materialization happens in a background thread), just silently skip the operation.
-        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
-            bitmap.ifNotClosed { canvas.drawImage(bitmap, transform = transform) }
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?, clip: List<Shape>) {
+            bitmap.ifNotClosed { canvas.drawImage(bitmap, transform = transform, clip = clip) }
         }
 
         override fun prepareAsBitmap(
-            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
-        ) = bitmap.ifNotClosed { canvas.prepareBitmap(bitmap, transform = transform, cached = cached) }
+            canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+        ) = bitmap.ifNotClosed {
+            val crop = crop?.run { Rectangle(x.roundToInt(), y.roundToInt(), width.roundToInt(), height.roundToInt()) }
+            canvas.prepareBitmap(bitmap, crop = crop, transform = transform, cached = cached)
+        }
 
         override fun close() {
             try {
@@ -194,14 +201,14 @@ sealed interface Picture : AutoCloseable {
 
         // If the project that opened the picture has been closed and with it the picture (which is possible because
         // materialization happens in a background thread), just silently skip the operation.
-        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
-            lock.withLock { if (src.handle.scope().isAlive) canvas.drawSVG(src, transform) }
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?, clip: List<Shape>) {
+            lock.withLock { if (src.handle.scope().isAlive) canvas.drawSVG(src, transform, clip) }
         }
 
         override fun prepareAsBitmap(
-            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+            canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
         ) = lock.withLock {
-            if (src.handle.scope().isAlive) canvas.prepareSVGAsBitmap(src, transform, cached) else null
+            if (src.handle.scope().isAlive) canvas.prepareSVGAsBitmap(src, crop, transform, cached) else null
         }
 
         fun import(importer: Document): Element =
@@ -354,13 +361,15 @@ sealed interface Picture : AutoCloseable {
 
         // If the project that opened the picture has been closed and with it the picture (which is possible because
         // materialization happens in a background thread), just silently skip the operation.
-        override fun drawTo(canvas: Canvas, transform: AffineTransform?) {
-            lock.withLock { if (!doc.document.isClosed) canvas.drawPDF(doc, transform) }
+        override fun drawTo(canvas: Canvas, transform: AffineTransform?, clip: List<Shape>) {
+            lock.withLock { if (!doc.document.isClosed) canvas.drawPDF(doc, transform, clip) }
         }
 
         override fun prepareAsBitmap(
-            canvas: Canvas, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
-        ) = lock.withLock { if (!doc.document.isClosed) canvas.preparePDFAsBitmap(doc, transform, cached) else null }
+            canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
+        ) = lock.withLock {
+            if (!doc.document.isClosed) canvas.preparePDFAsBitmap(doc, crop, transform, cached) else null
+        }
 
         fun import(importer: LayerUtility): PDFormXObject = lock.withLock {
             if (!doc.document.isClosed) {

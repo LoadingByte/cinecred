@@ -54,7 +54,7 @@ class PDFDrawer(
     private val textClippings = mutableListOf<Shape>()
     private var nestedHiddenOCGCount = 0
 
-    fun drawTo(canvas: Canvas, transform: AffineTransform?) {
+    fun drawTo(canvas: Canvas, transform: AffineTransform?, clip: List<Shape>) {
         // Find the transform from the page's coordinate system to the coordinate system of the canvas.
         val pageToCanvasTransform = compensateForCropBoxAndRotation(andFlip = true, page)
         transform?.let(pageToCanvasTransform::preConcatenate)
@@ -72,8 +72,10 @@ class PDFDrawer(
         // And now composite the PDF in that color space.
         val cropBox = page.cropBox
         canvas.compositeLayer(
-            bounds = Rectangle2D.Float(cropBox.lowerLeftX, cropBox.lowerLeftY, cropBox.width, cropBox.height),
-            transform = pageToCanvasTransform, colorSpace = requiredCS
+            colorSpace = requiredCS,
+            transform = pageToCanvasTransform,
+            clip = clip + Rectangle2D.Float(cropBox.lowerLeftX, cropBox.lowerLeftY, cropBox.width, cropBox.height)
+                .transformedBy(pageToCanvasTransform)
         ) { effCanvas, effPageToCanvasTr ->
             withGroup(Group(arrayOf(effCanvas), effPageToCanvasTr, devCS, numCompsOfSpecifiedCIEBasedBlendingCS)) {
                 processPage(page)

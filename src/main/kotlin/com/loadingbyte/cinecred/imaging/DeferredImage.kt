@@ -32,6 +32,7 @@ import org.w3c.dom.Attr
 import org.w3c.dom.Element
 import org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT
 import java.awt.BasicStroke
+import java.awt.Rectangle
 import java.awt.Shape
 import java.awt.geom.*
 import java.io.OutputStream
@@ -105,12 +106,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     fun drawEmbeddedPicture(embeddedPic: EmbeddedPicture, x: Double, y: Y, layer: Layer = STATIC) {
-        if (embeddedPic.run { width == 0.0 || height == 0.0 }) return
         addInstruction(layer, Instruction.DrawEmbeddedPicture(x, y, embeddedPic))
     }
 
     fun drawEmbeddedTape(embeddedTape: EmbeddedTape, x: Double, y: Y, layer: Layer = TAPES) {
-        if (embeddedTape.resolution.run { widthPx == 0 || heightPx == 0 }) return
         // When the deferred image is materialized later, we'll need the tape's thumbnail, so already start loading it.
         val asyncThumbnail = embeddedTape.tape.getPreviewFrame(embeddedTape.range.start)
         addInstruction(layer, Instruction.DrawEmbeddedTape(x, y, embeddedTape, asyncThumbnail))
@@ -313,22 +312,6 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         private fun gaussianStdDev(radius: Double) = radius / 2.0
 
-        private fun embeddedPictureTransform(
-            x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture
-        ): AffineTransform {
-            val transform = AffineTransform.getTranslateInstance(x, y)
-            transform.scale(scaling)
-            when (embeddedPic.picture) {
-                is Picture.Raster -> transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
-                is Picture.Vector -> {
-                    transform.scale(embeddedPic.scalingX, embeddedPic.scalingY)
-                    if (embeddedPic.isCropped)
-                        transform.translate(-embeddedPic.picture.cropX, -embeddedPic.picture.cropY)
-                }
-            }
-            return transform
-        }
-
     }
 
 
@@ -366,39 +349,80 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val picture: Picture,
         width: Double? = null,
         height: Double? = null,
-        val isCropped: Boolean = false
+        cropLeft: Double = 0.0,
+        cropRight: Double = 0.0,
+        cropTop: Double = 0.0,
+        cropBottom: Double = 0.0,
+        cropBlankSpace: Boolean = false
     ) {
 
         val width: Double
         val height: Double
+        val scalingX: Double
+        val scalingY: Double
+        val crop: Rectangle2D get() = field.clone() as Rectangle2D
+        val isCropped: Boolean
 
         init {
-            require((width == null || width >= 0.0) && (height == null || height >= 0.0))
-            require(!isCropped || picture is Picture.Vector) { "Raster pictures cannot be cropped." }
+            require(cropLeft >= 0.0 && cropRight >= 0.0 && cropTop >= 0.0 && cropBottom >= 0.0)
+            require(!cropBlankSpace || picture is Picture.Vector) { "Cannot crop the blank space of raster pictures." }
+
+            var crop = computeCrop(picture, cropLeft, cropRight, cropTop, cropBottom)
+            if (picture is Picture.Vector && cropBlankSpace)
+                crop = crop.createIntersection(
+                    Rectangle2D.Double(picture.cropX, picture.cropY, picture.cropWidth, picture.cropHeight)
+                )
+            require(crop.width > 0.0 && crop.height > 0.0)
+            this.crop = crop
+            isCropped = crop.width != picture.width || crop.height != picture.height
+
             // Note: Even though the Canvas would align raster pictures with the pixel grid anyway, it is a good idea to
             // already round the embedded size now so that the layout code sees the same size as is later drawn.
             // In addition, this aligns the vector backends with the canvas backend when it comes to embedded size.
-            val w = width?.let(::roundIfRaster)
-            val h = height?.let(::roundIfRaster)
-            this.width = w ?: roundIfRaster(oriWidth * if (h != null) h / oriHeight else 1.0)
-            this.height = h ?: roundIfRaster(oriHeight * if (w != null) w / oriWidth else 1.0)
+            val width = width?.let(::roundIfRaster)
+            val height = height?.let(::roundIfRaster)
+            this.width = width ?: roundIfRaster(crop.width * if (height != null) height / crop.height else 1.0)
+            this.height = height ?: roundIfRaster(crop.height * if (width != null) width / crop.width else 1.0)
+            require(this.width > 0.0 && this.height > 0.0)
+
+            scalingX = this.width / crop.width
+            scalingY = this.height / crop.height
         }
 
-        val scalingX: Double = this.width / oriWidth
-        val scalingY: Double = this.height / oriHeight
+        private fun roundIfRaster(size: Double) = roundIfRaster(picture, size)
 
-        private val oriWidth get() = if (picture is Picture.Vector && isCropped) picture.cropWidth else picture.width
-        private val oriHeight get() = if (picture is Picture.Vector && isCropped) picture.cropHeight else picture.height
-        private fun roundIfRaster(size: Double) = if (picture is Picture.Raster) round(size) else size
+        companion object {
+
+            fun computeCrop(
+                picture: Picture, cropLeft: Double, cropRight: Double, cropTop: Double, cropBottom: Double
+            ): Rectangle2D {
+                val cropLeft = roundIfRaster(picture, cropLeft)
+                val cropRight = roundIfRaster(picture, cropRight)
+                val cropTop = roundIfRaster(picture, cropTop)
+                val cropBottom = roundIfRaster(picture, cropBottom)
+                return Rectangle2D.Double(
+                    cropLeft, cropTop, picture.width - cropLeft - cropRight, picture.height - cropTop - cropBottom
+                )
+            }
+
+            private fun roundIfRaster(picture: Picture, size: Double) =
+                if (picture is Picture.Raster) round(size) else size
+
+        }
 
     }
 
 
     /** @throws IllegalStateException */
-    data class EmbeddedTape(
+    class EmbeddedTape(
         /** Note: Accessing the metadata of this tape is guaranteed to not throw exceptions. */
         val tape: Tape,
-        val resolution: Resolution = tape.spec.resolution,
+        width: Int? = null,
+        height: Int? = null,
+        val cropLeft: Int = 0,
+        val cropRight: Int = 0,
+        cropTop: Int = 0,
+        val cropBottom: Int = 0,
         val leftMarginFrames: Int = 0,
         val rightMarginFrames: Int = 0,
         val fadeInFrames: Int = 0,
@@ -412,15 +436,64 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         enum class Align { START, MIDDLE, END }
 
+        val resolution: Resolution
+        val crop: Rectangle get() = Rectangle(field)
+        val cropTop: Int
+
         init {
-            require(resolution.run { widthPx >= 0 && heightPx >= 0 })
+            tape.loadMetadata()
+
+            require(cropLeft >= 0 && cropRight >= 0 && cropTop >= 0 && cropBottom >= 0)
             require(leftMarginFrames >= 0 && rightMarginFrames >= 0)
             require(fadeInFrames >= 0 && fadeOutFrames >= 0)
             if (tape.fileSeq) require(range.start is Timecode.Frames && range.endExclusive is Timecode.Frames) else
                 require(range.start is Timecode.Clock && range.endExclusive is Timecode.Clock)
-            val avail = tape.availableRange  // This call is what guarantees that the metadata of "tape" is loaded.
+            val avail = tape.availableRange
             require(range.start.let { it >= avail.start && it < range.endExclusive })
             require(range.endExclusive.let { it > range.start && it <= avail.endExclusive })
+
+            val crop = computeCrop(tape, cropLeft, cropRight, cropTop, cropBottom)
+            require(crop.width > 0 && crop.height > 0)
+            this.crop = crop
+            this.cropTop = crop.y
+
+            val w = width ?: if (height == null) crop.width else roundingDiv(crop.width * height, crop.height)
+            // If the tape is interlaced, ensure that the embedded (= scaled) height is even. Once again, this avoids
+            // edge cases in the DeferredVideo backend.
+            val h = ec(tape, height ?: if (width == null) crop.height else roundingDiv(crop.height * width, crop.width))
+            require(w > 0 && h > 0)
+            resolution = Resolution(w, h)
+        }
+
+        fun withResolution(width: Int?, height: Int?) = EmbeddedTape(
+            tape, width, height, cropLeft, cropRight, cropTop, cropBottom, leftMarginFrames,
+            rightMarginFrames, fadeInFrames, fadeInTransition, fadeOutFrames, fadeOutTransition, range, loop, align
+        )
+
+        fun withAlign(align: Align) = EmbeddedTape(
+            tape, resolution.widthPx, resolution.heightPx, cropLeft, cropRight, cropTop, cropBottom, leftMarginFrames,
+            rightMarginFrames, fadeInFrames, fadeInTransition, fadeOutFrames, fadeOutTransition, range, loop, align
+        )
+
+        companion object {
+
+            /** @throws IllegalStateException */
+            fun computeCrop(tape: Tape, cropLeft: Int, cropRight: Int, cropTop: Int, cropBottom: Int): Rectangle {
+                val (tapeWidth, tapeHeight) = tape.spec.resolution
+                val cropWidth = tapeWidth - cropLeft - cropRight
+
+                // If the tape is interlaced, preserve the Bitmap.Scan and even tape height. This avoids a lot of edge
+                // cases that could otherwise arise in the DeferredVideo backend.
+                val cropTop = ec(tape, cropTop)
+                val cropHeight = ef(tape, tapeHeight - cropTop - cropBottom)
+
+                return Rectangle(cropLeft, cropTop, cropWidth, cropHeight)
+            }
+
+            // Floors/ceils n to the next even number of the tape is interlaced.
+            private fun ef(tape: Tape, n: Int) = if (tape.spec.scan == Bitmap.Scan.PROGRESSIVE) n else n / 2 * 2
+            private fun ec(tape: Tape, n: Int) = if (tape.spec.scan == Bitmap.Scan.PROGRESSIVE) n else (n + 1) / 2 * 2
+
         }
 
     }
@@ -507,7 +580,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
             val (w, h) = embeddedTape.resolution
             if (thumbnail != null) {
-                val embeddedThumbnail = EmbeddedPicture(thumbnail, w.toDouble(), h.toDouble())
+                val tapeRes = embeddedTape.tape.spec.resolution
+                val cropMulX = thumbnail.width / tapeRes.widthPx
+                val cropMulY = thumbnail.height / tapeRes.heightPx
+                val embeddedThumbnail = EmbeddedPicture(
+                    thumbnail, w.toDouble(), h.toDouble(),
+                    floor(cropMulX * embeddedTape.cropLeft), floor(cropMulX * embeddedTape.cropRight),
+                    floor(cropMulY * embeddedTape.cropTop), floor(cropMulY * embeddedTape.cropBottom)
+                )
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
                 materializeEmbeddedPicture(x, y, scaling, embeddedThumbnail, draft = true)
@@ -590,16 +670,19 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
             val pic = embeddedPic.picture
-            val transform = embeddedPictureTransform(x, y, scaling, embeddedPic)
-            // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
-            // them with the pixel grid, they will always be reusable unless the scaling changes.
-            if (cache != null && pic is Picture.Vector) {
-                val tx = transform.translateX.let { round(it) - it }
-                val ty = transform.translateY.let { round(it) - it }
-                transform.preConcatenate(AffineTransform.getTranslateInstance(tx, ty))
+            val transform = AffineTransform().apply {
+                // If we cache rendered vector graphics, we want to reuse them as often as possible. By aligning
+                // them with the pixel grid, they will always be reusable unless the scaling changes.
+                if (cache != null && pic is Picture.Vector)
+                    translate(round(x), round(y))
+                else
+                    translate(x, y)
+                scale(scaling)
+                scale(embeddedPic.scalingX, embeddedPic.scalingY)
             }
-            val prep = pic.prepareAsBitmap(canvas, if (draft) null else transform, cache?.popPreparedPicture(pic))
-                ?: return
+            val prep = pic.prepareAsBitmap(
+                canvas, embeddedPic.crop, if (draft) null else transform, cache?.popPreparedPicture(pic)
+            ) ?: return
             canvas.drawImage(
                 prep.bitmap ?: return, prep.promiseOpaque, promiseClamped = true, nearestNeighbor = draft,
                 transform = if (draft) transform else prep.transform
@@ -624,6 +707,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
         private val glyphPathIds = HashMap<GlyphKey, String?>()
         private val picElementIds = HashMap<Picture, String>()
+        private var clipPathCtr = 0
         private var gradientCtr = 0
         private val gradientIds = HashMap<Pair<Color4f, Color4f>, String>()
         private val blurFilterIds = HashMap<Double, String>()
@@ -737,7 +821,22 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 id
             }
             use.setAttributeNS(XLINK_NS_URI, "xlink:href", "#$picElementId")
-            use.setAttribute("transform", transformAttr(embeddedPictureTransform(x, y, scaling, embeddedPic)))
+
+            val tx = AffineTransform.getTranslateInstance(x, y).apply {
+                scale(scaling)
+                scale(embeddedPic.scalingX, embeddedPic.scalingY)
+                translate(-embeddedPic.crop.x, -embeddedPic.crop.y)
+            }
+            use.setAttribute("transform", transformAttr(tx))
+
+            if (embeddedPic.isCropped) {
+                val clipPathId = "clip${++clipPathCtr}"
+                use.setAttribute("clip-path", "url(#$clipPathId)")
+                defs.appendChild(doc.createElementNS(SVG_NS_URI, "clipPath").apply {
+                    setAttribute("id", clipPathId)
+                    appendChild(makePath(embeddedPic.crop))
+                })
+            }
 
             svg.appendChild(use)
         }
@@ -1033,39 +1132,39 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             x: Double, y: Double, scaling: Double, embeddedPic: EmbeddedPicture, draft: Boolean
         ) {
             val pic = embeddedPic.picture
-            val mat = Matrix()
-            mat.translate(x, csHeight - y - embeddedPic.height)
-            mat.scale(scaling)
-            if (tracker.rasterizeSVGs && pic is Picture.SVG) {
-                if (embeddedPic.isCropped) {
-                    val e = embeddedPic
-                    mat.translate(e.scalingX * -pic.cropX, e.scalingY * (pic.cropY + pic.cropHeight - pic.height))
-                    mat.scale(pic.width / pic.cropWidth, pic.height / pic.cropHeight)
-                }
-                mat.scale(embeddedPic.width, embeddedPic.height)
-                cs.drawImage(tracker.pdImages.computeIfAbsent(pic) { PDImageXObject(tracker.doc) }, mat)
-                val w = ceil(embeddedPic.scalingX * pic.width * scaling).toInt()
-                val h = ceil(embeddedPic.scalingY * pic.height * scaling).toInt()
-                tracker.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
-                return
+            val q = pic is Picture.Vector || embeddedPic.isCropped
+            if (q)
+                cs.saveGraphicsState()
+            if (embeddedPic.isCropped) {
+                val w = scaling * embeddedPic.scalingX * embeddedPic.crop.width
+                val h = scaling * embeddedPic.scalingY * embeddedPic.crop.height
+                cs.addRect(x.toFloat(), (csHeight - y - h).toFloat(), w.toFloat(), h.toFloat())
+                cs.clip()
             }
-            when (pic) {
-                is Picture.Raster -> {
+            val mat = Matrix()
+            mat.translate(x, csHeight - y - scaling * embeddedPic.height)
+            mat.scale(scaling)
+            if (embeddedPic.isCropped)
+                mat.translate(
+                    embeddedPic.scalingX * -embeddedPic.crop.x,
+                    embeddedPic.scalingY * (embeddedPic.crop.y + embeddedPic.crop.height - pic.height)
+                )
+            when {
+                pic is Picture.Raster || pic is Picture.SVG && tracker.rasterizeSVGs -> {
+                    if (embeddedPic.isCropped)
+                        mat.scale(pic.width / embeddedPic.crop.width, pic.height / embeddedPic.crop.height)
                     mat.scale(embeddedPic.width, embeddedPic.height)
                     cs.drawImage(tracker.pdImages.computeIfAbsent(pic) {
                         // Note: The first occurrence decides whether a picture is in draft-mode or not, but that's fine
                         // since draft true only for tape thumbnails; hence a single picture never mixes both modes.
-                        PDImageXObject(tracker.doc).apply { interpolate = !draft }
+                        PDImageXObject(tracker.doc).apply { if (pic is Picture.Raster) interpolate = !draft }
                     }, mat)
-                    val w = ceil(embeddedPic.width * scaling).toInt()
-                    val h = ceil(embeddedPic.height * scaling).toInt()
+                    val w = ceil(scaling * embeddedPic.scalingX * pic.width).toInt()
+                    val h = ceil(scaling * embeddedPic.scalingY * pic.height).toInt()
                     tracker.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
-                is Picture.Vector -> {
+                pic is Picture.Vector -> {
                     mat.scale(embeddedPic.scalingX, embeddedPic.scalingY)
-                    if (embeddedPic.isCropped)
-                        mat.translate(-pic.cropX, pic.cropY + pic.cropHeight - pic.height)
-                    cs.saveGraphicsState()
                     cs.transform(mat)
                     cs.drawForm(tracker.pdForms.computeIfAbsent(pic) {
                         when (pic) {
@@ -1081,9 +1180,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                                 pic.import(tracker.layerUtil)
                         }
                     })
-                    cs.restoreGraphicsState()
                 }
             }
+            if (q)
+                cs.restoreGraphicsState()
         }
 
         /** This function expects both the Coat and the bound box to be in global coordinates (but Y is not flipped). */
@@ -1429,10 +1529,11 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         override fun materializeEmbeddedTape(
             x: Double, y: Double, scaling: Double, embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
         ) {
-            var res = embeddedTape.resolution
-            res = Resolution((res.widthPx * scaling).roundToInt(), (res.heightPx * scaling).roundToInt())
-            if (res.widthPx != 0 && res.heightPx != 0)
-                collected.add(PlacedTape(embeddedTape.copy(resolution = res), x, y))
+            val res = embeddedTape.resolution
+            val width = (res.widthPx * scaling).roundToInt()
+            val height = (res.heightPx * scaling).roundToInt()
+            if (width != 0 && height != 0)
+                collected.add(PlacedTape(embeddedTape.withResolution(width, height), x, y))
         }
 
     }

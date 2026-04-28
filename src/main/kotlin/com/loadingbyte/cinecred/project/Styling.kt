@@ -344,6 +344,10 @@ data class PictureStyle(
     val picture: PictureRef,
     val widthPx: Opt<Double>,
     val heightPx: Opt<Double>,
+    val cropLeftPx: Double,
+    val cropRightPx: Double,
+    val cropTopPx: Double,
+    val cropBottomPx: Double,
     val cropBlankSpace: Boolean
 ) : PopupStyle
 
@@ -366,6 +370,10 @@ data class TapeStyle(
     val tape: TapeRef,
     val widthPx: Opt<Int>,
     val heightPx: Opt<Int>,
+    val cropLeftPx: Int,
+    val cropRightPx: Int,
+    val cropTopPx: Int,
+    val cropBottomPx: Int,
     val slice: TapeSlice,
     val loop: Boolean,
     val temporallyJustify: HJustify,

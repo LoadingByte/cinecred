@@ -43,6 +43,11 @@ class Tape private constructor(
     val availableRange: OpenEndRange<Timecode>
         get() = fileSeqAvailableRange ?: metadata.availableRange
 
+    /** @throws IllegalStateException */
+    fun loadMetadata() {
+        metadata
+    }
+
     fun loadMetadataInBackground() {
         if (!metadataLazy.isInitialized())
             GLOBAL_THREAD_POOL.submit { metadataLazy.value }

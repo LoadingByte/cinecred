@@ -26,6 +26,7 @@ val GUIDE_PICTURE_VIDEO_DEMOS
         GuidePictureVideoPictureFileDemo,
         GuidePictureVideoVideoFileDemo,
         GuidePictureVideoResolutionDemo,
+        GuidePictureVideoCropDemo,
         GuidePictureVideoPictureCropBlankSpaceDemo,
         GuidePictureVideoVideoMovingDemo,
         GuidePictureVideoVideoPreviewDemo,
@@ -168,6 +169,25 @@ object GuidePictureVideoResolutionDemo : StyleSettingsDemo<PictureStyle>(
         this += PIC_STYLE
         this += last().copy(widthPx = Opt(true, 150.0))
         this += last().copy(heightPx = Opt(true, 220.0))
+    }
+
+    override fun credits(style: PictureStyle) = PIC_SPREADSHEET.parseCreditsPiS(style)
+}
+
+
+object GuidePictureVideoCropDemo : StyleSettingsDemo<PictureStyle>(
+    PictureStyle::class.java, "$DIR/crop", Format.STEP_GIF,
+    listOf(
+        PictureStyle::cropLeftPx.st(), PictureStyle::cropRightPx.st(),
+        PictureStyle::cropTopPx.st(), PictureStyle::cropBottomPx.st()
+    ), pageGuides = true
+) {
+    override fun styles() = buildList<PictureStyle> {
+        this += PIC_STYLE.copy(widthPx = Override(256 / 2.0))
+        this += last().copy(cropLeftPx = 32.0, widthPx = Override((256 - 32) / 2.0))
+        this += last().copy(cropRightPx = 64.0, widthPx = Override((256 - 32 - 64) / 2.0))
+        this += last().copy(cropTopPx = 50.0)
+        this += last().copy(cropBottomPx = 90.0)
     }
 
     override fun credits(style: PictureStyle) = PIC_SPREADSHEET.parseCreditsPiS(style)

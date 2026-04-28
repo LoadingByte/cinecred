@@ -226,6 +226,10 @@ val PRESET_PICTURE_STYLE = PictureStyle(
     picture = PictureRef(""),
     widthPx = Opt(false, 0.0),
     heightPx = Opt(false, 0.0),
+    cropLeftPx = 0.0,
+    cropRightPx = 0.0,
+    cropTopPx = 0.0,
+    cropBottomPx = 0.0,
     cropBlankSpace = false
 )
 
@@ -236,6 +240,10 @@ val PRESET_TAPE_STYLE = TapeStyle(
     tape = TapeRef(""),
     widthPx = Opt(false, 0),
     heightPx = Opt(false, 0),
+    cropLeftPx = 0,
+    cropRightPx = 0,
+    cropTopPx = 0,
+    cropBottomPx = 0,
     slice = TapeSlice(Opt(false, Timecode.SMPTENonDropFrame(0, 0)), Opt(false, Timecode.SMPTENonDropFrame(0, 0))),
     loop = false,
     temporallyJustify = HJustify.LEFT,

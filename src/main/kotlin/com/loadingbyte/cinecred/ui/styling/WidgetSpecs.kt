@@ -386,18 +386,28 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
     ),
     ZeroInitWidgetSpec(PictureStyle::widthPx.st()) { style ->
         try {
-            style.picture.loader?.picture?.width
+            style.picture.loader?.run { picture.width - style.cropLeftPx - style.cropRightPx }
         } catch (_: IllegalStateException) {
             null
         }
     },
     ZeroInitWidgetSpec(PictureStyle::heightPx.st()) { style ->
         try {
-            style.picture.loader?.picture?.height
+            style.picture.loader?.run { picture.height - style.cropTopPx - style.cropBottomPx }
         } catch (_: IllegalStateException) {
             null
         }
-    }
+    },
+    WidthWidgetSpec(PictureStyle::cropLeftPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(PictureStyle::cropRightPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(PictureStyle::cropTopPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(PictureStyle::cropBottomPx.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        PictureStyle::cropLeftPx.st(), PictureStyle::cropRightPx.st(),
+        PictureStyle::cropTopPx.st(), PictureStyle::cropBottomPx.st(),
+        unionName = "crop", unionUnit = "px",
+        settingIcons = listOf(BEARING_RIGHT_ICON, BEARING_LEFT_ICON, BEARING_BOTTOM_ICON, BEARING_TOP_ICON)
+    )
 )
 
 
@@ -410,18 +420,28 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     ),
     ZeroInitWidgetSpec(TapeStyle::widthPx.st()) { style ->
         try {
-            style.tape.tape?.run { spec.resolution.widthPx }
+            style.tape.tape?.run { spec.resolution.widthPx - style.cropLeftPx - style.cropRightPx }
         } catch (_: IllegalStateException) {
             null
         }
     },
     ZeroInitWidgetSpec(TapeStyle::heightPx.st()) { style ->
         try {
-            style.tape.tape?.run { spec.resolution.heightPx }
+            style.tape.tape?.run { spec.resolution.heightPx - style.cropTopPx - style.cropBottomPx }
         } catch (_: IllegalStateException) {
             null
         }
     },
+    WidthWidgetSpec(TapeStyle::cropLeftPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(TapeStyle::cropRightPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(TapeStyle::cropTopPx.st(), WidthSpec.TINY),
+    WidthWidgetSpec(TapeStyle::cropBottomPx.st(), WidthSpec.TINY),
+    UnionWidgetSpec(
+        TapeStyle::cropLeftPx.st(), TapeStyle::cropRightPx.st(),
+        TapeStyle::cropTopPx.st(), TapeStyle::cropBottomPx.st(),
+        unionName = "crop", unionUnit = "px",
+        settingIcons = listOf(BEARING_RIGHT_ICON, BEARING_LEFT_ICON, BEARING_BOTTOM_ICON, BEARING_TOP_ICON)
+    ),
     ToggleButtonGroupWidgetSpec(TapeStyle::temporallyJustify.st(), ICON),
     TimecodeWidgetSpec(
         TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st(),

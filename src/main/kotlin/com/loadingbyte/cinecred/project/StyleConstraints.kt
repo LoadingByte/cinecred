@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
 import com.loadingbyte.cinecred.imaging.Color4f
+import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Font.Companion.MANAGED_FEATURES
 import com.loadingbyte.cinecred.imaging.Font.Companion.PETITE_CAPS_FEATURE
@@ -386,7 +387,26 @@ private val PICTURE_STYLE_CONSTRAINTS: List<StyleConstraint<PictureStyle, *>> = 
     PictureConstr(WARN, PictureStyle::picture.st()),
     // To avoid OOM crashes due to absurdly large pictures, limit their size to a reasonable range.
     DoubleConstr(ERROR, PictureStyle::widthPx.st(), min = 0.0, minInclusive = false, max = 10_000.0),
-    DoubleConstr(ERROR, PictureStyle::heightPx.st(), min = 0.0, minInclusive = false, max = 10_000.0)
+    DoubleConstr(ERROR, PictureStyle::heightPx.st(), min = 0.0, minInclusive = false, max = 10_000.0),
+    DoubleConstr(ERROR, PictureStyle::cropLeftPx.st(), min = 0.0),
+    DoubleConstr(ERROR, PictureStyle::cropRightPx.st(), min = 0.0),
+    DoubleConstr(ERROR, PictureStyle::cropTopPx.st(), min = 0.0),
+    DoubleConstr(ERROR, PictureStyle::cropBottomPx.st(), min = 0.0),
+    JudgeConstr(
+        WARN, msg("project.styling.constr.excessiveCrop"),
+        PictureStyle::cropLeftPx.st(), PictureStyle::cropRightPx.st(),
+        PictureStyle::cropTopPx.st(), PictureStyle::cropBottomPx.st()
+    ) { _, style ->
+        try {
+            val crop = DeferredImage.EmbeddedPicture.computeCrop(
+                (style.picture.loader ?: return@JudgeConstr true).picture,
+                style.cropLeftPx, style.cropRightPx, style.cropTopPx, style.cropBottomPx
+            )
+            crop.width > 0.0 && crop.height > 0.0
+        } catch (_: IllegalStateException) {
+            true
+        }
+    }
 )
 
 
@@ -399,6 +419,25 @@ private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf
     // To avoid OOM crashes due to absurdly large tapes, limit their size to a reasonable range.
     IntConstr(ERROR, TapeStyle::widthPx.st(), min = 1, max = 10_000),
     IntConstr(ERROR, TapeStyle::heightPx.st(), min = 1, max = 10_000),
+    IntConstr(ERROR, TapeStyle::cropLeftPx.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::cropRightPx.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::cropTopPx.st(), min = 0),
+    IntConstr(ERROR, TapeStyle::cropBottomPx.st(), min = 0),
+    JudgeConstr(
+        WARN, msg("project.styling.constr.excessiveCrop"),
+        TapeStyle::cropLeftPx.st(), TapeStyle::cropRightPx.st(),
+        TapeStyle::cropTopPx.st(), TapeStyle::cropBottomPx.st()
+    ) { _, style ->
+        try {
+            val crop = DeferredImage.EmbeddedTape.computeCrop(
+                (style.tape.tape ?: return@JudgeConstr true),
+                style.cropLeftPx, style.cropRightPx, style.cropTopPx, style.cropBottomPx
+            )
+            crop.width > 0 && crop.height > 0
+        } catch (_: IllegalStateException) {
+            true
+        }
+    },
     TapeSliceConstr(
         WARN, TapeStyle::slice.st(),
         getFPS = { styling, style ->

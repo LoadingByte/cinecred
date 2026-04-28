@@ -960,17 +960,22 @@ private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
     }
     val width = if (widthPx.isActive) widthPx.value else null
     val height = if (heightPx.isActive) heightPx.value else null
-    val crop = if (picture is Picture.Vector) cropBlankSpace else false
-    return DeferredImage.EmbeddedPicture(picture, width, height, crop)
+    val cropBlankSpace = if (picture is Picture.Vector) cropBlankSpace else false
+    return try {
+        DeferredImage.EmbeddedPicture(
+            picture, width, height, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace
+        )
+    } catch (_: IllegalArgumentException) {
+        null
+    }
 }
 
 
 private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? {
     val tap = tape.tape ?: return null
-    val res: Resolution
     val rng: OpenEndRange<Timecode>
     try {
-        res = tap.spec.resolution
+        tap.loadMetadata()  // Make sure that if the tape's metadata fails to load, the exception is thrown here.
         rng = tap.availableRange
     } catch (_: IllegalStateException) {
         return null
@@ -987,25 +992,26 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
         inPoint = rng.start
     if (outPoint > rng.endExclusive)
         outPoint = rng.endExclusive
-    return DeferredImage.EmbeddedTape(
-        tap,
-        resolution = when {
-            !widthPx.isActive && !heightPx.isActive -> res
-            !widthPx.isActive -> Resolution(roundingDiv(heightPx.value * res.widthPx, res.heightPx), heightPx.value)
-            !heightPx.isActive -> Resolution(widthPx.value, roundingDiv(widthPx.value * res.heightPx, res.widthPx))
-            else -> Resolution(widthPx.value, heightPx.value)
-        },
-        leftTemporalMarginFrames, rightTemporalMarginFrames,
-        fadeInFrames, fadeInTransition,
-        fadeOutFrames, fadeOutTransition,
-        inPoint..<outPoint,
-        loop,
-        when (temporallyJustify) {
-            HJustify.LEFT -> DeferredImage.EmbeddedTape.Align.START
-            HJustify.CENTER -> DeferredImage.EmbeddedTape.Align.MIDDLE
-            HJustify.RIGHT -> DeferredImage.EmbeddedTape.Align.END
-        }
-    )
+    return try {
+        DeferredImage.EmbeddedTape(
+            tap,
+            if (widthPx.isActive) widthPx.value else null,
+            if (heightPx.isActive) heightPx.value else null,
+            cropLeftPx, cropRightPx, cropTopPx, cropBottomPx,
+            leftTemporalMarginFrames, rightTemporalMarginFrames,
+            fadeInFrames, fadeInTransition,
+            fadeOutFrames, fadeOutTransition,
+            inPoint..<outPoint,
+            loop,
+            when (temporallyJustify) {
+                HJustify.LEFT -> DeferredImage.EmbeddedTape.Align.START
+                HJustify.CENTER -> DeferredImage.EmbeddedTape.Align.MIDDLE
+                HJustify.RIGHT -> DeferredImage.EmbeddedTape.Align.END
+            }
+        )
+    } catch (_: IllegalArgumentException) {
+        null
+    }
 }
 
 private fun coerceTimecode(optTc: Opt<Timecode>, tape: Tape, styling: Styling): Timecode? = when {

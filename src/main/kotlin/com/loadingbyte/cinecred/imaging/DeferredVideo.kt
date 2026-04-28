@@ -9,7 +9,6 @@ import java.lang.ref.SoftReference
 import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.io.path.name
 import kotlin.math.*
 
 
@@ -577,7 +576,9 @@ class DeferredVideo private constructor(
                     .apply { blit(static.bitmap, 0, static.shift, workWidth, workHeight, 0, 0, 1) }
             for (resp in tapeResponses) {
                 val userData = takeTapeUserData(resp)
-                userData.frameOverlayer!!.overlay(composite, userData.read(resp.timecode), resp.x, resp.y, resp.alpha)
+                userData.read(resp.timecode).use { overlay ->
+                    userData.frameOverlayer!!.overlay(composite, overlay, resp.x, resp.y, resp.alpha)
+                }
                 dropTapeUserData(resp, frameIdx)
             }
             val userComposite = if (!compInCanvasRep) composite else canvas2userAndClose(composite)
@@ -647,6 +648,7 @@ class DeferredVideo private constructor(
                 }
                 if (frame.spec.scan == Bitmap.Scan.PROGRESSIVE)
                     field.close()
+                frame.close()
                 dropTapeUserData(resp, frameIdx)
             }
         }
@@ -708,30 +710,43 @@ class DeferredVideo private constructor(
                 }
 
             private lateinit var source: Source
-            private lateinit var readSpec: Bitmap.Spec
             private lateinit var reader: Tape.SequentialReader
             private lateinit var previewTape: Tape
+
+            private lateinit var readCrop: Rectangle
+            private lateinit var readSpec: Bitmap.Spec
 
             init {
                 setupSafely({
                     val embeddedTape = resp.embeddedTape
                     if (usePreview)
                         try {
-                            previewTape = embeddedTape.tape
-                            readSpec = embeddedTape.tape.getPreviewFrame(resp.timecode /* random */).get()!!.bitmap.spec
                             source = Source.PREVIEW
+                            previewTape = embeddedTape.tape
+                            readSpec = previewTape.getPreviewFrame(resp.timecode /* random */).get()!!.bitmap.spec
+                            val tapeRes = previewTape.spec.resolution
+                            val tapeCrop = embeddedTape.crop
+                            val cropMulX = readSpec.resolution.widthPx / tapeRes.widthPx.toDouble()
+                            val cropMulY = readSpec.resolution.heightPx / tapeRes.heightPx.toDouble()
+                            readCrop = Rectangle(
+                                floor(cropMulX * tapeCrop.x).toInt(), floor(cropMulY * tapeCrop.y).toInt(),
+                                ceil(cropMulX * tapeCrop.width).toInt(), ceil(cropMulY * tapeCrop.height).toInt()
+                            )
                         } catch (_: Exception) {
+                            source = Source.UNAVAILABLE
                             val rep = Picture.Raster.compatibleRepresentation(
                                 userSpec.representation.colorSpace!!.primaries, hasAlpha = false
                             )
                             readSpec = Bitmap.Spec(embeddedTape.resolution, rep)
-                            source = Source.UNAVAILABLE
+                            readCrop = embeddedTape.resolution.run { Rectangle(widthPx, heightPx) }
                         }
                     else {
+                        source = Source.READER
                         reader = embeddedTape.tape.SequentialReader(resp.timecode /* the span's first timecode */)
                         readSpec = embeddedTape.tape.spec
-                        source = Source.READER
+                        readCrop = embeddedTape.crop
                     }
+                    readSpec = readSpec.copy(resolution = Resolution(readCrop.width, readCrop.height))
                 }, ::close)
             }
 
@@ -756,17 +771,10 @@ class DeferredVideo private constructor(
             val botFieldOverlayer: Overlayer?
 
             init {
-                val embeddedTapeFrameRes = resp.embeddedTape.resolution
-                val embeddedTapeFieldRes = Resolution(embeddedTapeFrameRes.widthPx, embeddedTapeFrameRes.heightPx / 2)
-
                 val userRep = userSpec.representation
-                val userSpecIsProgressive = userSpec.scan == Bitmap.Scan.PROGRESSIVE
-                val readFramesAreProgressive = readSpec.scan == Bitmap.Scan.PROGRESSIVE
 
-                if (userSpecIsProgressive) {
-                    val compositedOverlayRes = if (readFramesAreProgressive) embeddedTapeFrameRes else
-                    // If the tape is interlaced, make it have even height in the final output.
-                        Resolution(embeddedTapeFrameRes.widthPx, embeddedTapeFrameRes.heightPx / 2 * 2)
+                if (userSpec.scan == Bitmap.Scan.PROGRESSIVE) {
+                    val compositedOverlayRes = resp.embeddedTape.resolution
                     frameOverlayer = when (blendInUserColorSpace) {
                         true -> UserColorSpaceOverlayer(userRep.colorSpace!!, readSpec, compositedOverlayRes)
                         else -> QualityOverlayer(
@@ -776,11 +784,8 @@ class DeferredVideo private constructor(
                     topFieldOverlayer = null
                     botFieldOverlayer = null
                 } else {
-                    val (readW, readH) = readSpec.resolution
-                    require(readFramesAreProgressive || readH % 2 == 0) {
-                        "The interlaced tape '${resp.embeddedTape.tape.fileOrDir.name}' must have even height."
-                    }
                     require(!blendInUserColorSpace) { "Interlaced processing does not support user CS blending." }
+                    val compositedOverlayRes = resp.embeddedTape.resolution.run { Resolution(widthPx, heightPx / 2) }
                     // It is easier to rely on Bitmap's spec inference than to construct these specs ourselves.
                     val dummyBitmap = Bitmap.allocate(readSpec)
                     val topFieldOverlaySpec = dummyBitmap.topFieldView().use { it.spec }
@@ -788,22 +793,25 @@ class DeferredVideo private constructor(
                     dummyBitmap.close()
                     frameOverlayer = null
                     topFieldOverlayer = QualityOverlayer(
-                        canvasRep, canvasCeiling, userRep, topFieldOverlaySpec, embeddedTapeFieldRes, usePreview
+                        canvasRep, canvasCeiling, userRep, topFieldOverlaySpec, compositedOverlayRes, usePreview
                     )
                     botFieldOverlayer = QualityOverlayer(
-                        canvasRep, canvasCeiling, userRep, botFieldOverlaySpec, embeddedTapeFieldRes, usePreview
+                        canvasRep, canvasCeiling, userRep, botFieldOverlaySpec, compositedOverlayRes, usePreview
                     )
                 }
             }
 
-            fun read(timecode: Timecode): Bitmap = when (source) {
-                Source.READER -> reader.read(timecode).bitmap
-                Source.PREVIEW -> try {
-                    previewTape.getPreviewFrame(timecode).get()!!.bitmap
-                } catch (_: Exception) {
-                    missingMediaBitmap
+            fun read(timecode: Timecode): Bitmap {
+                val origBitmap = when (source) {
+                    Source.READER -> reader.read(timecode).bitmap
+                    Source.PREVIEW -> try {
+                        previewTape.getPreviewFrame(timecode).get()!!.bitmap
+                    } catch (_: Exception) {
+                        return missingMediaBitmap.value
+                    }
+                    Source.UNAVAILABLE -> return missingMediaBitmap.value
                 }
-                Source.UNAVAILABLE -> missingMediaBitmap
+                return readCrop.run { origBitmap.view(x, y, width, height, 1) }
             }
 
             fun didReadFirstField(): Boolean {
@@ -837,7 +845,8 @@ class DeferredVideo private constructor(
                     val dstSpec = overlaySpec.copy(resolution = dstRes, representation = dstRep)
                     val conv = BitmapConverter(
                         overlaySpec, dstSpec,
-                        srcAligned = usingPreview, approxTransfer = usingPreview, nearestNeighbor = usingPreview
+                        // srcAligned is false due to potential cropping of the overlay.
+                        srcAligned = false, approxTransfer = usingPreview, nearestNeighbor = usingPreview
                     )
                     val dstBitmap = Bitmap.allocate(dstSpec)
                     return Pair(conv, dstBitmap)
@@ -1367,8 +1376,8 @@ class DeferredVideo private constructor(
                     // If the video is looping, fill up the remaining potential time with copies of the tape.
                     if (placed.embeddedTape.loop && extraneousFrames > 0) {
                         val spanFrames = lastFrameIdx - firstFrameIdx + 1
-                        val pS = DeferredImage.PlacedTape(placed.embeddedTape.copy(align = START), placed.x, placed.y)
-                        val pE = DeferredImage.PlacedTape(placed.embeddedTape.copy(align = END), placed.x, placed.y)
+                        val pS = DeferredImage.PlacedTape(placed.embeddedTape.withAlign(START), placed.x, placed.y)
+                        val pE = DeferredImage.PlacedTape(placed.embeddedTape.withAlign(END), placed.x, placed.y)
                         while (firstFrameIdx > firstPotFrameIdx) {
                             firstFrameIdx -= spanFrames
                             add(Span(insn, pE, max(firstFrameIdx, firstPotFrameIdx), firstFrameIdx + (spanFrames - 1)))

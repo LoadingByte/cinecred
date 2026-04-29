@@ -1,10 +1,7 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
 import com.formdev.flatlaf.util.UIScale
-import com.loadingbyte.cinecred.common.GLOBAL_THREAD_POOL
-import com.loadingbyte.cinecred.common.Resolution
-import com.loadingbyte.cinecred.common.formatTimecode
-import com.loadingbyte.cinecred.common.throwableAwareTask
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
@@ -14,7 +11,6 @@ import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
-import com.loadingbyte.cinecred.ui.helper.JobSlot
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.Transparency

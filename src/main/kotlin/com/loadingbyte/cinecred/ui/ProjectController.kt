@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.common.JobSlot
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.common.l10n
@@ -15,7 +16,6 @@ import com.loadingbyte.cinecred.ui.comms.*
 import com.loadingbyte.cinecred.ui.ctrl.*
 import com.loadingbyte.cinecred.ui.helper.DockingFrame
 import com.loadingbyte.cinecred.ui.helper.FontFamilies
-import com.loadingbyte.cinecred.ui.helper.JobSlot
 import com.loadingbyte.cinecred.ui.helper.usableBounds
 import com.loadingbyte.cinecred.ui.styling.EditStylingPanel
 import com.loadingbyte.cinecred.ui.view.delivery.DeliveryDockable

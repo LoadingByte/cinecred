@@ -4,7 +4,6 @@ import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
-import com.loadingbyte.cinecred.ui.helper.JobSlot
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.io.IOException

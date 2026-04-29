@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.formdev.flatlaf.util.UIScale
+import com.loadingbyte.cinecred.common.JobSlot
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.scale
@@ -118,9 +119,8 @@ class DeferredImagePanel(
     private var materializedStopY = Double.NaN
     private var lowResMaterialized: BufferedImage? = null
     private var lowResMaterializedContentVersion = 0L
-    private val immediateMaterializingJobSlot = JobSlot()
-    private val delayedHighResMaterializingJobSlot = JobSlot(delay = 200L)
-    private val delayedLowResMaterializingJobSlot = JobSlot(delay = 200L)
+    private val highResMaterializingJobSlot = JobSlot(slots = 2)
+    private val lowResMaterializingJobSlot = JobSlot()
 
     private val canvas = CanvasPanel()
     private val xScrollbar = Scrollbar(JScrollBar.HORIZONTAL)
@@ -311,15 +311,10 @@ class DeferredImagePanel(
             if (isPresented) {
                 // The portion's top y in image coordinates.
                 val immediateStartY = if (imageHeight == viewportHeight) Double.NaN else viewportStartY
-                submitHighResMaterializingJob(immediateMaterializingJobSlot, immediateStartY, viewportHeight)
-                if (immediateStartY.isNaN()) {
-                    // In rare cases, it could happen that the delayed job (scheduled some time ago with another zoom)
-                    // is already running, but finishes after the just scheduled immediate job, in which case an image
-                    // with the wrong zoom would be displayed. However, this is so unlikely and at the same time the
-                    // outcome is so un-severe that we don't need to pollute the code with a countermeasure.
-                    delayedHighResMaterializingJobSlot.cancel()
+                highResMaterializingJobSlot.unsubmit(1)
+                submitHighResMaterializingJob(highResMaterializingJobSlot, 0, 0, immediateStartY, viewportHeight)
+                if (immediateStartY.isNaN())
                     return
-                }
             }
             // If the first step didn't start the materialization of the entire deferred image yet, schedule the
             // materialization of a larger area around the viewport (this allows the user to move around a bit) after
@@ -335,16 +330,16 @@ class DeferredImagePanel(
             )
             val delayedStartY = if (delayedHeight == imageHeight) Double.NaN else
                 (viewportCenterY - delayedHeight / 2.0).coerceIn(0.0, imageHeight - delayedHeight)
-            submitHighResMaterializingJob(delayedHighResMaterializingJobSlot, delayedStartY, delayedHeight)
+            submitHighResMaterializingJob(highResMaterializingJobSlot, 1, 200, delayedStartY, delayedHeight)
             // Materialize a low-res version if (a) the high-res version doesn't yet cover the entire deferred image and
             // (b) either the content changed or there is not a low-res version yet. We will momentarily paint this
             // low-res placeholder when the user scrolls out of the materialized portion too quickly.
             if (!delayedStartY.isNaN() && (contentChanged || lowResMaterialized == null))
-                submitLowResMaterializingJob(delayedLowResMaterializingJobSlot)
+                submitLowResMaterializingJob(lowResMaterializingJobSlot)
         }
     }
 
-    private fun submitHighResMaterializingJob(jobSlot: JobSlot, startY: Double, height: Double) {
+    private fun submitHighResMaterializingJob(jobSlot: JobSlot, slot: Int, delay: Int, startY: Double, height: Double) {
         // Abort if the canvas was disposed already.
         val bitmapJ2DBridge = BitmapJ2DBridge(canvas.graphicsConfiguration.colorModel ?: return)
         // Capture these variables.
@@ -353,7 +348,7 @@ class DeferredImagePanel(
         val layers = this.layers
         val contentVersion = this.contentVersion
         val physicalImageScaling = this.physicalImageScaling
-        jobSlot.submit {
+        jobSlot.submit(slot, delay) {
             // Align the drawn portion with the pixel grid. If we didn't do this, users would notice changes in the
             // antialiasing pattern when we swap the materialized image, for example when going from the narrow
             // immediate image to the taller delayed image.
@@ -418,7 +413,7 @@ class DeferredImagePanel(
         val grounding = this.grounding
         val layers = this.layers
         val contentVersion = this.contentVersion
-        jobSlot.submit {
+        jobSlot.submit(delay = 200) {
             val imageHeight = image.height.resolve()
             val theoreticalScaling = sqrt(MAX_MAT_PIXELS / (image.width * imageHeight))
             // Again use max(1, ...) to ensure that the raster image dimensions do not drop to 0.

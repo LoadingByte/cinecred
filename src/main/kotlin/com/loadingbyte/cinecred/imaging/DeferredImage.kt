@@ -353,13 +353,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         cropRight: Double = 0.0,
         cropTop: Double = 0.0,
         cropBottom: Double = 0.0,
-        cropBlankSpace: Boolean = false
+        cropBlankSpace: Boolean = false,
+        flipH: Boolean = false,
+        flipV: Boolean = false,
+        rotation: Double = 0.0
     ) {
 
         val width: Double
         val height: Double
-        val scalingX: Double
-        val scalingY: Double
+        val transform: AffineTransform get() = AffineTransform(field)
         val crop: Rectangle2D get() = field.clone() as Rectangle2D
         val isCropped: Boolean
 
@@ -381,12 +383,41 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             // In addition, this aligns the vector backends with the canvas backend when it comes to embedded size.
             val width = width?.let(::roundIfRaster)
             val height = height?.let(::roundIfRaster)
-            this.width = width ?: roundIfRaster(crop.width * if (height != null) height / crop.height else 1.0)
-            this.height = height ?: roundIfRaster(crop.height * if (width != null) width / crop.width else 1.0)
-            require(this.width > 0.0 && this.height > 0.0)
+            val w = width ?: roundIfRaster(crop.width * if (height != null) height / crop.height else 1.0)
+            val h = height ?: roundIfRaster(crop.height * if (width != null) width / crop.width else 1.0)
+            require(w > 0.0 && h > 0.0)
 
-            scalingX = this.width / crop.width
-            scalingY = this.height / crop.height
+            val rotTransform = when {
+                abs(rotation) % 360.0 !in 0.1..360.0 - 0.1 -> null
+                abs(rotation) % 90.0 !in 0.1..90.0 - 0.1 ->
+                    AffineTransform.getQuadrantRotateInstance(rotation.roundToInt() / 90, w / 2, h / 2)
+                else ->
+                    AffineTransform.getRotateInstance(Math.toRadians(rotation.mod(360.0)), w / 2, h / 2)
+            }
+            var aabb: Rectangle2D? = null
+            if (rotTransform == null) {
+                this.width = w
+                this.height = h
+            } else {
+                aabb = Rectangle2D.Double(0.0, 0.0, w, h).transformedBy(rotTransform).bounds2D
+                this.width = aabb.width
+                this.height = aabb.height
+            }
+            transform = AffineTransform().apply {
+                if (aabb != null) {
+                    translate(-aabb.x, -aabb.y)
+                    concatenate(rotTransform)
+                }
+                if (flipH) {
+                    translate(w, 0.0)
+                    scale(-1.0, 1.0)
+                }
+                if (flipV) {
+                    translate(0.0, h)
+                    scale(1.0, -1.0)
+                }
+                scale(w / crop.width, h / crop.height)
+            }
         }
 
         private fun roundIfRaster(size: Double) = roundIfRaster(picture, size)
@@ -423,6 +454,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         val cropRight: Int = 0,
         cropTop: Int = 0,
         val cropBottom: Int = 0,
+        val flipH: Boolean = false,
+        val flipV: Boolean = false,
+        rotation: Int = 0,
         val leftMarginFrames: Int = 0,
         val rightMarginFrames: Int = 0,
         val fadeInFrames: Int = 0,
@@ -437,8 +471,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         enum class Align { START, MIDDLE, END }
 
         val resolution: Resolution
+        val resolutionBeforeRotation: Resolution
         val crop: Rectangle get() = Rectangle(field)
         val cropTop: Int
+        val rotation = roundingDiv(rotation.mod(360), 90) * 90
 
         init {
             tape.loadMetadata()
@@ -462,17 +498,19 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             // edge cases in the DeferredVideo backend.
             val h = ec(tape, height ?: if (width == null) crop.height else roundingDiv(crop.height * width, crop.width))
             require(w > 0 && h > 0)
-            resolution = Resolution(w, h)
+            resolution = if (this.rotation % 180 == 0) Resolution(w, h) else Resolution(h, w)
+            resolutionBeforeRotation = Resolution(w, h)
         }
 
         fun withResolution(width: Int?, height: Int?) = EmbeddedTape(
-            tape, width, height, cropLeft, cropRight, cropTop, cropBottom, leftMarginFrames,
+            tape, width, height, cropLeft, cropRight, cropTop, cropBottom, flipH, flipV, rotation, leftMarginFrames,
             rightMarginFrames, fadeInFrames, fadeInTransition, fadeOutFrames, fadeOutTransition, range, loop, align
         )
 
         fun withAlign(align: Align) = EmbeddedTape(
-            tape, resolution.widthPx, resolution.heightPx, cropLeft, cropRight, cropTop, cropBottom, leftMarginFrames,
-            rightMarginFrames, fadeInFrames, fadeInTransition, fadeOutFrames, fadeOutTransition, range, loop, align
+            tape, resolutionBeforeRotation.widthPx, resolutionBeforeRotation.heightPx,
+            cropLeft, cropRight, cropTop, cropBottom, flipH, flipV, rotation, leftMarginFrames, rightMarginFrames,
+            fadeInFrames, fadeInTransition, fadeOutFrames, fadeOutTransition, range, loop, align
         )
 
         companion object {
@@ -580,13 +618,15 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
             val (w, h) = embeddedTape.resolution
             if (thumbnail != null) {
+                val (picW, picH) = embeddedTape.resolutionBeforeRotation
                 val tapeRes = embeddedTape.tape.spec.resolution
                 val cropMulX = thumbnail.width / tapeRes.widthPx
                 val cropMulY = thumbnail.height / tapeRes.heightPx
                 val embeddedThumbnail = EmbeddedPicture(
-                    thumbnail, w.toDouble(), h.toDouble(),
+                    thumbnail, picW.toDouble(), picH.toDouble(),
                     floor(cropMulX * embeddedTape.cropLeft), floor(cropMulX * embeddedTape.cropRight),
-                    floor(cropMulY * embeddedTape.cropTop), floor(cropMulY * embeddedTape.cropBottom)
+                    floor(cropMulY * embeddedTape.cropTop), floor(cropMulY * embeddedTape.cropBottom),
+                    false, embeddedTape.flipH, embeddedTape.flipV, embeddedTape.rotation.toDouble()
                 )
                 // Set the draft=true, which sets the interpolation mode to nearest neighbor to achieve a "pixelated
                 // preview" effect and thereby clearly communicate that the thumbnail is just a preview.
@@ -678,7 +718,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 else
                     translate(x, y)
                 scale(scaling)
-                scale(embeddedPic.scalingX, embeddedPic.scalingY)
+                concatenate(embeddedPic.transform)
             }
             val prep = pic.prepareAsBitmap(
                 canvas, embeddedPic.crop, if (draft) null else transform, cache?.popPreparedPicture(pic)
@@ -824,7 +864,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
             val tx = AffineTransform.getTranslateInstance(x, y).apply {
                 scale(scaling)
-                scale(embeddedPic.scalingX, embeddedPic.scalingY)
+                concatenate(embeddedPic.transform)
                 translate(-embeddedPic.crop.x, -embeddedPic.crop.y)
             }
             use.setAttribute("transform", transformAttr(tx))
@@ -998,10 +1038,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             })
         }
 
-        private fun materializeShapeWithoutTransforming(shape: Shape, fill: Boolean) {
+        private fun materializeShapeWithoutTransforming(shape: Shape, stroke: Boolean, fill: Boolean) {
             if (shape is Rectangle2D) {
                 cs.addRect(shape.x.toFloat(), shape.y.toFloat(), shape.width.toFloat(), shape.height.toFloat())
-                if (fill) cs.fill() else cs.stroke()
+                if (stroke) cs.stroke() else if (fill) cs.fill()
                 return
             }
 
@@ -1027,13 +1067,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 pi.next()
             }
 
-            if (fill)
-                if (pi.windingRule == PathIterator.WIND_EVEN_ODD)
-                    cs.fillEvenOdd()
-                else
-                    cs.fill()
-            else
-                cs.stroke()
+            if (stroke) cs.stroke() else if (fill)
+                if (pi.windingRule == PathIterator.WIND_EVEN_ODD) cs.fillEvenOdd() else cs.fill()
         }
 
         override fun materializeShape(shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double) {
@@ -1068,7 +1103,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             cs.saveGraphicsState()
             setCoat(coat, fill, shape.bounds2D)
             cs.transform(Matrix().apply { translate(0f, csHeight); scale(1f, -1f) })
-            materializeShapeWithoutTransforming(shape, fill)
+            materializeShapeWithoutTransforming(shape, !fill, fill)
             cs.restoreGraphicsState()
         }
 
@@ -1135,37 +1170,34 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val q = pic is Picture.Vector || embeddedPic.isCropped
             if (q)
                 cs.saveGraphicsState()
+            val crop = embeddedPic.crop.let { c -> Rectangle2D.Double(c.minX, pic.height - c.maxY, c.width, c.height) }
+            val transform = AffineTransform().apply {
+                translate(x, csHeight - y)
+                scale(scaling)
+                scale(1.0, -1.0)
+                concatenate(embeddedPic.transform)
+                scale(1.0, -1.0)
+                translate(-crop.x, -crop.y - crop.height)
+            }
             if (embeddedPic.isCropped) {
-                val w = scaling * embeddedPic.scalingX * embeddedPic.crop.width
-                val h = scaling * embeddedPic.scalingY * embeddedPic.crop.height
-                cs.addRect(x.toFloat(), (csHeight - y - h).toFloat(), w.toFloat(), h.toFloat())
+                materializeShapeWithoutTransforming(crop.transformedBy(transform), false, false)
                 cs.clip()
             }
-            val mat = Matrix()
-            mat.translate(x, csHeight - y - scaling * embeddedPic.height)
-            mat.scale(scaling)
-            if (embeddedPic.isCropped)
-                mat.translate(
-                    embeddedPic.scalingX * -embeddedPic.crop.x,
-                    embeddedPic.scalingY * (embeddedPic.crop.y + embeddedPic.crop.height - pic.height)
-                )
             when {
                 pic is Picture.Raster || pic is Picture.SVG && tracker.rasterizeSVGs -> {
-                    if (embeddedPic.isCropped)
-                        mat.scale(pic.width / embeddedPic.crop.width, pic.height / embeddedPic.crop.height)
-                    mat.scale(embeddedPic.width, embeddedPic.height)
+                    transform.scale(pic.width, pic.height)
                     cs.drawImage(tracker.pdImages.computeIfAbsent(pic) {
                         // Note: The first occurrence decides whether a picture is in draft-mode or not, but that's fine
                         // since draft true only for tape thumbnails; hence a single picture never mixes both modes.
                         PDImageXObject(tracker.doc).apply { if (pic is Picture.Raster) interpolate = !draft }
-                    }, mat)
-                    val w = ceil(scaling * embeddedPic.scalingX * pic.width).toInt()
-                    val h = ceil(scaling * embeddedPic.scalingY * pic.height).toInt()
+                    }, Matrix(transform))
+                    val tr = embeddedPic.transform
+                    val w = ceil(scaling * tr.scalingFactorX * pic.width).toInt()
+                    val h = ceil(scaling * tr.scalingFactorY * pic.height).toInt()
                     tracker.pdImageResolutions.computeIfAbsent(pic) { mutableListOf() }.add(Resolution(w, h))
                 }
                 pic is Picture.Vector -> {
-                    mat.scale(embeddedPic.scalingX, embeddedPic.scalingY)
-                    cs.transform(mat)
+                    cs.transform(Matrix(transform))
                     cs.drawForm(tracker.pdForms.computeIfAbsent(pic) {
                         when (pic) {
                             is Picture.SVG -> {
@@ -1529,7 +1561,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         override fun materializeEmbeddedTape(
             x: Double, y: Double, scaling: Double, embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
         ) {
-            val res = embeddedTape.resolution
+            val res = embeddedTape.resolutionBeforeRotation
             val width = (res.widthPx * scaling).roundToInt()
             val height = (res.heightPx * scaling).roundToInt()
             if (width != 0 && height != 0)

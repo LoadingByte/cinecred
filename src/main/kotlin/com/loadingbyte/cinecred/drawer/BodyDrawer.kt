@@ -963,7 +963,8 @@ private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
     val cropBlankSpace = if (picture is Picture.Vector) cropBlankSpace else false
     return try {
         DeferredImage.EmbeddedPicture(
-            picture, width, height, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace
+            picture, width, height, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace,
+            hFlip, vFlip, rotationDeg
         )
     } catch (_: IllegalArgumentException) {
         null
@@ -998,6 +999,7 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
             if (widthPx.isActive) widthPx.value else null,
             if (heightPx.isActive) heightPx.value else null,
             cropLeftPx, cropRightPx, cropTopPx, cropBottomPx,
+            hFlip, vFlip, rotationDeg,
             leftTemporalMarginFrames, rightTemporalMarginFrames,
             fadeInFrames, fadeInTransition,
             fadeOutFrames, fadeOutTransition,

@@ -407,7 +407,12 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
         PictureStyle::cropTopPx.st(), PictureStyle::cropBottomPx.st(),
         unionName = "crop", unionUnit = "px",
         settingIcons = listOf(BEARING_RIGHT_ICON, BEARING_LEFT_ICON, BEARING_BOTTOM_ICON, BEARING_TOP_ICON)
-    )
+    ),
+    UnionWidgetSpec(
+        PictureStyle::hFlip.st(), PictureStyle::vFlip.st(),
+        unionName = "flip", settingIcons = listOf(FLIP_ICON, FLIP_ICON.getRotatedIcon(90.0))
+    ),
+    UnitWidgetSpec(PictureStyle::rotationDeg.st(), unit = "°")
 )
 
 
@@ -442,6 +447,12 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
         unionName = "crop", unionUnit = "px",
         settingIcons = listOf(BEARING_RIGHT_ICON, BEARING_LEFT_ICON, BEARING_BOTTOM_ICON, BEARING_TOP_ICON)
     ),
+    UnionWidgetSpec(
+        TapeStyle::hFlip.st(), TapeStyle::vFlip.st(),
+        unionName = "flip", settingIcons = listOf(FLIP_ICON, FLIP_ICON.getRotatedIcon(90.0))
+    ),
+    UnitWidgetSpec(TapeStyle::rotationDeg.st(), unit = "°"),
+    NumberWidgetSpec(TapeStyle::rotationDeg.st(), step = 90),
     ToggleButtonGroupWidgetSpec(TapeStyle::temporallyJustify.st(), ICON),
     TimecodeWidgetSpec(
         TapeStyle::leftTemporalMarginFrames.st(), TapeStyle::rightTemporalMarginFrames.st(),

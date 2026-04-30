@@ -24,7 +24,7 @@ Cinecred Changelog
   now be vertically justified in an arbitrary way, while previously it was just
   being baseline-aligned.
 - Added support for variable fonts.
-- Embedded pictures and videos may now be manually cropped.
+- Embedded pictures and videos may now be cropped, flipped, and rotated.
 - Embedded videos can now loop.
 - The preview resolution of embedded videos is now configurable.
 - The credits runtime can now be copied to the clipboard by clicking on it.

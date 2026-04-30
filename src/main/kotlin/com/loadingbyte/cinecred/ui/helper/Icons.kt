@@ -52,6 +52,7 @@ val DUPLICATE_ICON = SVGIcon.load("/icons/duplicate.svg")
 val EDIT_ICON = SVGIcon.load("/icons/edit.svg")
 val ERROR_ICON = SVGIcon.load("/icons/error.svg")
 val FILMSTRIP_ICON = SVGIcon.load("/icons/filmstrip.svg")
+val FLIP_ICON = SVGIcon.load("/icons/flip.svg")
 val FOLDER_ICON = SVGIcon.load("/icons/folder.svg")
 val GEAR_ICON = SVGIcon.load("/icons/gear.svg")
 val GIFT_ICON = SVGIcon.load("/icons/gift.svg")
@@ -593,6 +594,7 @@ class SVGIcon private constructor(
     private val svg: SVGDocument,
     private val xScaling: Double,
     private val yScaling: Double,
+    private val rotation: Double,
     private val recolor: Color?,
     private val isDisabled: Boolean
 ) : FlatAbstractIcon(
@@ -603,7 +605,7 @@ class SVGIcon private constructor(
 
     override fun paintIcon(c: Component, g2: Graphics2D) {
         fun paintTo(g2: Graphics2D) {
-            if (xScaling == 1.0 && yScaling == 1.0)
+            if (xScaling == 1.0 && yScaling == 1.0 && rotation == 0.0)
                 svg.render(c as? JComponent, g2)
             else
                 g2.preserveTransform {
@@ -612,6 +614,8 @@ class SVGIcon private constructor(
                     if (yScaling < 0)
                         g2.translate(0.0, -svg.size().height * yScaling)
                     g2.scale(xScaling, yScaling)
+                    if (rotation != 0.0)
+                        g2.rotate(Math.toRadians(rotation), 0.5 * width, 0.5 * height)
                     svg.render(c as? JComponent, g2)
                 }
         }
@@ -626,16 +630,17 @@ class SVGIcon private constructor(
         paintTo(effG2)
     }
 
-    override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, recolor, isDisabled = true)
-    fun getRecoloredIcon(recolor: Color) = SVGIcon(svg, xScaling, yScaling, recolor, isDisabled)
+    override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, rotation, recolor, isDisabled = true)
+    fun getRecoloredIcon(recolor: Color) = SVGIcon(svg, xScaling, yScaling, rotation, recolor, isDisabled)
+    fun getRotatedIcon(rotation: Double) = SVGIcon(svg, xScaling, yScaling, rotation, recolor, isDisabled)
     fun getScaledIcon(scaling: Double) = getScaledIcon(scaling, scaling)
     fun getScaledIcon(xScaling: Double, yScaling: Double) =
-        SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, recolor, isDisabled)
+        SVGIcon(svg, this.xScaling * xScaling, this.yScaling * yScaling, rotation, recolor, isDisabled)
 
     companion object {
         fun load(name: String) = SVGIcon(
             requireNotNull(SVGLoader().load(SVGIcon::class.java.getResource(name)!!)) { "Can't load SVG icon: $name" },
-            1.0, 1.0, null, false
+            1.0, 1.0, 0.0, null, false
         )
     }
 

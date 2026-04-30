@@ -438,6 +438,9 @@ private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf
             true
         }
     },
+    JudgeConstr(WARN, msg("project.styling.constr.nonOrthogonalRotation"), TapeStyle::rotationDeg.st()) { _, style ->
+        style.rotationDeg % 90 == 0
+    },
     TapeSliceConstr(
         WARN, TapeStyle::slice.st(),
         getFPS = { styling, style ->

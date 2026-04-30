@@ -788,34 +788,55 @@ class Canvas private constructor(
                 if (compatiblePixelFormat.hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
             )
 
-            val scaleX = transform.scaleX
-            val scaleY = transform.scaleY
-            val shearX = transform.shearX
-            val shearY = transform.shearY
             val copiedTransform = AffineTransform(transform)
+            val generalMask = AffineTransform.TYPE_GENERAL_ROTATION or AffineTransform.TYPE_GENERAL_TRANSFORM
 
             val transformedBitmap: Bitmap?
             val transformedPromiseOpaque: Boolean
             val drawAtX: Int
             val drawAtY: Int
-            if (scaleX >= 0.0 && scaleY >= 0.0 && shearX == 0.0 && shearY == 0.0) {
+            if (transform.type and generalMask == 0) {
+                // This case handles all transformations that yield an axis-aligned rectangular image,
+                // namely scaling, 90° rotation, and flipping.
+                data class Reorder(val flipH: Boolean, val flipV: Boolean, val transpose: Boolean) {
+                    constructor(t: AffineTransform) :
+                            this(t.scaleX < 0.0 || t.shearX < 0.0, t.scaleY < 0.0 || t.shearY < 0.0, t.scaleX == 0.0)
+                }
+
                 transformedPromiseOpaque = promiseOpaque || inRep.alpha == Bitmap.Alpha.OPAQUE
-                drawAtX = transform.translateX.roundToInt()
-                drawAtY = transform.translateY.roundToInt()
-                val scaledRes = Resolution((res.widthPx * scaleX).roundToInt(), (res.heightPx * scaleY).roundToInt())
+                val reorder = Reorder(transform)
+                drawAtX = (transform.translateX + if (!reorder.flipH) 0.0 else if (!reorder.transpose)
+                    res.widthPx * transform.scaleX else res.heightPx * transform.shearX).roundToInt()
+                drawAtY = (transform.translateY + if (!reorder.flipV) 0.0 else if (!reorder.transpose)
+                    res.heightPx * transform.scaleY else res.widthPx * transform.shearY).roundToInt()
+                val scaledRes = Resolution(
+                    (res.widthPx * abs(if (reorder.transpose) transform.shearY else transform.scaleX)).roundToInt(),
+                    (res.heightPx * abs(if (reorder.transpose) transform.shearX else transform.scaleY)).roundToInt()
+                )
+                val transformedRes = if (!reorder.transpose) scaledRes else
+                    Resolution(scaledRes.heightPx, scaledRes.widthPx)
                 if (scaledRes.widthPx == 0 || scaledRes.heightPx == 0)
                     transformedBitmap = null
-                else if (scaledRes == res && isInRepCompatible)
-                    transformedBitmap = bitmap
                 else if (cached?.bitmap != null && cached.bitmap.spec.representation.colorSpace == canvasCS &&
-                    cached.crop == crop && cached.originalTransform.let {
-                        it.scaleX >= 0.0 && it.scaleY >= 0.0 && it.shearX == 0.0 && it.shearY == 0.0
-                    } && cached.bitmap.spec.resolution == scaledRes
+                    cached.crop == crop && cached.originalTransform.type and generalMask == 0 &&
+                    Reorder(cached.originalTransform) == reorder && cached.bitmap.spec.resolution == transformedRes
                 )
                     transformedBitmap = cached.bitmap.view()
                 else {
-                    transformedBitmap = Bitmap.allocate(Bitmap.Spec(scaledRes, outRep))
-                    BitmapConverter.convert(bitmap, transformedBitmap, promiseOpaque = promiseOpaque)
+                    val scaledBitmap: Bitmap?
+                    if (scaledRes == res && isInRepCompatible)
+                        scaledBitmap = bitmap
+                    else {
+                        scaledBitmap = Bitmap.allocate(Bitmap.Spec(scaledRes, outRep))
+                        BitmapConverter.convert(bitmap, scaledBitmap, promiseOpaque = promiseOpaque)
+                    }
+                    if (!reorder.flipH && !reorder.flipV && !reorder.transpose)
+                        transformedBitmap = scaledBitmap
+                    else {
+                        transformedBitmap = Bitmap.allocate(Bitmap.Spec(transformedRes, outRep))
+                        transformedBitmap.blitReordered(scaledBitmap, reorder.flipH, reorder.flipV, reorder.transpose)
+                        scaledBitmap.close()
+                    }
                 }
             } else {
                 // For the case of general transformations, we follow the strategy outlined here:

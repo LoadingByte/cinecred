@@ -230,7 +230,10 @@ val PRESET_PICTURE_STYLE = PictureStyle(
     cropRightPx = 0.0,
     cropTopPx = 0.0,
     cropBottomPx = 0.0,
-    cropBlankSpace = false
+    cropBlankSpace = false,
+    hFlip = false,
+    vFlip = false,
+    rotationDeg = 0.0
 )
 
 
@@ -244,6 +247,9 @@ val PRESET_TAPE_STYLE = TapeStyle(
     cropRightPx = 0,
     cropTopPx = 0,
     cropBottomPx = 0,
+    hFlip = false,
+    vFlip = false,
+    rotationDeg = 0,
     slice = TapeSlice(Opt(false, Timecode.SMPTENonDropFrame(0, 0)), Opt(false, Timecode.SMPTENonDropFrame(0, 0))),
     loop = false,
     temporallyJustify = HJustify.LEFT,

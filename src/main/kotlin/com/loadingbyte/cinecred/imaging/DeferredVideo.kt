@@ -714,20 +714,22 @@ class DeferredVideo private constructor(
             private lateinit var previewTape: Tape
 
             private lateinit var readCrop: Rectangle
+            private lateinit var readReorder: Reorder
             private lateinit var readSpec: Bitmap.Spec
 
             init {
                 setupSafely({
                     val embeddedTape = resp.embeddedTape
+                    var origSpec: Bitmap.Spec
                     if (usePreview)
                         try {
                             source = Source.PREVIEW
                             previewTape = embeddedTape.tape
-                            readSpec = previewTape.getPreviewFrame(resp.timecode /* random */).get()!!.bitmap.spec
+                            origSpec = previewTape.getPreviewFrame(resp.timecode /* random */).get()!!.bitmap.spec
                             val tapeRes = previewTape.spec.resolution
                             val tapeCrop = embeddedTape.crop
-                            val cropMulX = readSpec.resolution.widthPx / tapeRes.widthPx.toDouble()
-                            val cropMulY = readSpec.resolution.heightPx / tapeRes.heightPx.toDouble()
+                            val cropMulX = origSpec.resolution.widthPx / tapeRes.widthPx.toDouble()
+                            val cropMulY = origSpec.resolution.heightPx / tapeRes.heightPx.toDouble()
                             readCrop = Rectangle(
                                 floor(cropMulX * tapeCrop.x).toInt(), floor(cropMulY * tapeCrop.y).toInt(),
                                 ceil(cropMulX * tapeCrop.width).toInt(), ceil(cropMulY * tapeCrop.height).toInt()
@@ -737,16 +739,48 @@ class DeferredVideo private constructor(
                             val rep = Picture.Raster.compatibleRepresentation(
                                 userSpec.representation.colorSpace!!.primaries, hasAlpha = false
                             )
-                            readSpec = Bitmap.Spec(embeddedTape.resolution, rep)
+                            origSpec = Bitmap.Spec(embeddedTape.resolution, rep)
                             readCrop = embeddedTape.resolution.run { Rectangle(widthPx, heightPx) }
                         }
                     else {
                         source = Source.READER
                         reader = embeddedTape.tape.SequentialReader(resp.timecode /* the span's first timecode */)
-                        readSpec = embeddedTape.tape.spec
+                        origSpec = embeddedTape.tape.spec
                         readCrop = embeddedTape.crop
                     }
-                    readSpec = readSpec.copy(resolution = Resolution(readCrop.width, readCrop.height))
+
+                    readReorder = when (embeddedTape.rotation) {
+                        0 -> Reorder(flipH = embeddedTape.flipH, flipV = embeddedTape.flipV, transpose = false)
+                        90 -> Reorder(flipH = !embeddedTape.flipV, flipV = embeddedTape.flipH, transpose = true)
+                        180 -> Reorder(flipH = !embeddedTape.flipH, flipV = !embeddedTape.flipV, transpose = false)
+                        else -> Reorder(flipH = embeddedTape.flipV, flipV = !embeddedTape.flipH, transpose = true)
+                    }
+
+                    readSpec = origSpec.copy(
+                        resolution = when (embeddedTape.rotation % 180 == 0) {
+                            true -> Resolution(readCrop.width, readCrop.height)
+                            else -> Resolution(readCrop.height, readCrop.width)
+                        },
+                        scan = when {
+                            // When an interlaced tape is rotated onto its side, there's little synergy between
+                            // continuing to treat the now vertical fields as appearing at different times and
+                            // interlaced export, so for simplicity, we just treat the tape as progressive.
+                            readReorder.transpose -> Bitmap.Scan.PROGRESSIVE
+                            // When vertically flipping an interlaced tape, what previously was the top field becomes
+                            // the bottom field (and vice versa), so we when previously the top field came first, now
+                            // the bottom field comes first (and vice versa).
+                            readReorder.flipV -> when (origSpec.scan) {
+                                Bitmap.Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
+                                Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+                                Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                            }
+                            else -> origSpec.scan
+                        },
+                        content = when {
+                            readReorder.transpose -> Bitmap.Content.PROGRESSIVE_FRAME
+                            else -> origSpec.content
+                        }
+                    )
                 }, ::close)
             }
 
@@ -811,7 +845,16 @@ class DeferredVideo private constructor(
                     }
                     Source.UNAVAILABLE -> return missingMediaBitmap.value
                 }
-                return readCrop.run { origBitmap.view(x, y, width, height, 1) }
+                val croppedBitmap = readCrop.run { origBitmap.view(x, y, width, height, 1) }
+                val (flipH, flipV, transpose) = readReorder
+                if (!flipH && !flipV && !transpose)
+                    return croppedBitmap
+                else {
+                    val reorderedBitmap = Bitmap.allocate(readSpec)
+                    reorderedBitmap.blitReordered(croppedBitmap, flipH, flipV, transpose)
+                    croppedBitmap.close()
+                    return reorderedBitmap
+                }
             }
 
             fun didReadFirstField(): Boolean {
@@ -830,6 +873,7 @@ class DeferredVideo private constructor(
             }
 
             private enum class Source { READER, PREVIEW, UNAVAILABLE }
+            private data class Reorder(val flipH: Boolean, val flipV: Boolean, val transpose: Boolean)
 
         }
 

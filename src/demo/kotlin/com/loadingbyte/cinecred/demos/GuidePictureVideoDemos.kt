@@ -27,6 +27,7 @@ val GUIDE_PICTURE_VIDEO_DEMOS
         GuidePictureVideoVideoFileDemo,
         GuidePictureVideoResolutionDemo,
         GuidePictureVideoCropDemo,
+        GuidePictureVideoFlipAndRotateDemo,
         GuidePictureVideoPictureCropBlankSpaceDemo,
         GuidePictureVideoVideoMovingDemo,
         GuidePictureVideoVideoPreviewDemo,
@@ -188,6 +189,22 @@ object GuidePictureVideoCropDemo : StyleSettingsDemo<PictureStyle>(
         this += last().copy(cropRightPx = 64.0, widthPx = Override((256 - 32 - 64) / 2.0))
         this += last().copy(cropTopPx = 50.0)
         this += last().copy(cropBottomPx = 90.0)
+    }
+
+    override fun credits(style: PictureStyle) = PIC_SPREADSHEET.parseCreditsPiS(style)
+}
+
+
+object GuidePictureVideoFlipAndRotateDemo : StyleSettingsDemo<PictureStyle>(
+    PictureStyle::class.java, "$DIR/flip-and-rotate", Format.STEP_GIF,
+    listOf(PictureStyle::hFlip.st(), PictureStyle::vFlip.st(), PictureStyle::rotationDeg.st()), pageGuides = true
+) {
+    override fun styles() = buildList<PictureStyle> {
+        this += PIC_STYLE.copy(widthPx = Override(128.0))
+        this += last().copy(hFlip = true)
+        this += last().copy(vFlip = true)
+        for (angle in doubleArrayOf(22.5, 45.0, 67.5, 90.0, 112.5))
+            this += last().copy(rotationDeg = angle)
     }
 
     override fun credits(style: PictureStyle) = PIC_SPREADSHEET.parseCreditsPiS(style)

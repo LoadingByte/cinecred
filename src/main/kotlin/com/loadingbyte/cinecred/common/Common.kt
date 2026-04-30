@@ -5,7 +5,6 @@ import com.electronwill.toml.TomlException
 import com.electronwill.toml.TomlWriter
 import com.formdev.flatlaf.util.SystemInfo
 import com.google.common.math.IntMath
-import org.apache.pdfbox.util.Matrix
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Node
@@ -415,9 +414,6 @@ inline fun Node.forEachNodeInSubtree(whatToShow: Int, action: (Node) -> Unit) {
 
 
 fun AffineTransform.scale(s: Double) = scale(s, s)
-fun Matrix.translate(tx: Double, ty: Double) = translate(tx.toFloat(), ty.toFloat())
-fun Matrix.scale(sx: Double, sy: Double) = scale(sx.toFloat(), sy.toFloat())
-fun Matrix.scale(s: Double) = scale(s.toFloat(), s.toFloat())
 
 // See PDFBox's Matrix.getScalingFactorX/Y() for the derivation.
 val AffineTransform.scalingFactorX: Double get() = hypot(scaleX, shearY)

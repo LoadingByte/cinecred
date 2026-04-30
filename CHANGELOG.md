@@ -36,6 +36,7 @@ Cinecred Changelog
 
 - Credits files with ungodly many rows or columns no longer cause a crash.
 - Duplicate spreadsheet names in credits files are now suffixed with, e.g., (2).
+- Upon swapping tabs in an XLSX file, they now also show up swapped in the UI.
 - Multi-line paragraphs whose letter styles have tracking now have line breaks
   in the correct places.
 - Multi-line paragraphs with mixed left-to-right and right-to-left text now have

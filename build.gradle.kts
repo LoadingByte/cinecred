@@ -77,7 +77,7 @@ dependencies {
     implementation(dependencyFactory.create("org.slf4j", "jcl-over-slf4j", slf4jVersion))
 
     // Spreadsheet IO
-    implementation("ch.rabanti:nanoxlsx4j:2.5.3")
+    implementation("ch.rabanti:nanoxlsx4j:2.5.6")
     implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
     implementation("com.github.miachm.sods:SODS:1.6.8")
     implementation("de.siegmar:fastcsv:3.6.0")

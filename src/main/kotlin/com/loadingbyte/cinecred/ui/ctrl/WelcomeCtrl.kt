@@ -451,7 +451,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             } catch (e: Exception) {
-                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.message ?: e.toString()) }
+                val e = (e as? ch.rabanti.nanoxlsx4j.exceptions.IOException)?.innerException ?: e
+                LOGGER.error("Could not create a new project in '{}'.", projectDir, e)
+                SwingUtilities.invokeLater { welcomeView.projects_createWait_setError(e.userNotification) }
             }
             createProjectThread.set(null)
         }, "CreateProject").apply { isDaemon = true; start() })
@@ -477,8 +479,9 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
             try {
                 service.removeAccount(account)
             } catch (e: IOException) {
+                LOGGER.error("Could not remove a {} account.", account.service.product, e)
                 SwingUtilities.invokeLater {
-                    welcomeView.showCannotRemoveAccountMessage(account, e.message ?: e.toString())
+                    welcomeView.showCannotRemoveAccountMessage(account, e.userNotification)
                     welcomeView.preferences_start_setAccountRemovalLocked(account, false)
                 }
             }
@@ -515,8 +518,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                 service.addAccount(label, if (service.accountNeedsServer) URI(server) else null)
                 SwingUtilities.invokeLater { welcomeView.preferences_setCard(PreferencesCard.START) }
             } catch (e: IOException) {
-                val error = e.message ?: e.toString()
-                SwingUtilities.invokeLater { welcomeView.preferences_establishAccount_setError(error) }
+                LOGGER.error("Could not establish a {} account.", service.product, e)
+                SwingUtilities.invokeLater { welcomeView.preferences_establishAccount_setError(e.userNotification) }
             } catch (_: InterruptedException) {
                 // Let the thread come to a stop.
             }
@@ -627,7 +630,8 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                         }
                     ImageOverlay(uuid, name, raster, rasterPersisted = false, imageUnderlay)
                 } catch (e: Exception) {
-                    welcomeView.showCannotReadOverlayImageMessage(imageFile, e.message ?: e.toString())
+                    LOGGER.error("Could not read the overlay image file '{}'.", imageFile, e)
+                    welcomeView.showCannotReadOverlayImageMessage(imageFile, e.userNotification)
                     welcomeView.preferences_setCard(PreferencesCard.START)
                     return
                 }

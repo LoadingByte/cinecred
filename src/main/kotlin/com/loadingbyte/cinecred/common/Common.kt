@@ -397,6 +397,14 @@ inline fun <E> List<E>.sortedWithCollator(collator: Collator, ascending: Boolean
 }
 
 
+val Throwable.userNotification: String
+    get() {
+        val name = javaClass.simpleName
+        val msg = localizedMessage
+        return if (msg.isNullOrBlank()) name else "$name: $msg"
+    }
+
+
 const val XLINK_NS_URI = "http://www.w3.org/1999/xlink"
 const val SVG_NS_URI = "http://www.w3.org/2000/svg"
 

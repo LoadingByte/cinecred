@@ -711,7 +711,7 @@ private fun <T> openCascade(desktopAction: Desktop.Action, desktopFun: Desktop.(
         execProcess(listOf(cmd, uri.toString()), env)
         true
     } catch (e: IOException) {
-        LOGGER.error(e.message)
+        LOGGER.error(e.toString())
         false
     }
 

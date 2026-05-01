@@ -1,10 +1,8 @@
 package com.loadingbyte.cinecred.ui
 
-import com.loadingbyte.cinecred.common.JobSlot
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.l10nEnumQuoted
 import com.loadingbyte.cinecred.drawer.*
 import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Picture
@@ -173,8 +171,9 @@ class ProjectController(
             val input = currentInput.get()
             readStyling(stylingFile, input.projectFonts!!, input.pictureLoaders!!, input.tapes!!)
         } catch (e: IOException) {
+            LOGGER.error("Could not read the styling file '{}'.", stylingFile, e)
             JOptionPane.showMessageDialog(
-                projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.message ?: e.toString()),
+                projectFrame, arrayOf(l10n("ui.edit.cannotLoadStyling.msg"), e.userNotification),
                 l10n("ui.edit.cannotLoadStyling.title"), JOptionPane.ERROR_MESSAGE
             )
             tryCloseProject(force = true)
@@ -672,8 +671,9 @@ class ProjectController(
             try {
                 writeStyling(stylingFile, current)
             } catch (e: IOException) {
+                LOGGER.error("Could not write the styling file '{}'.", stylingFile, e)
                 JOptionPane.showMessageDialog(
-                    projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.message ?: e.toString()),
+                    projectFrame, arrayOf(l10n("ui.edit.cannotSaveStyling.msg"), e.userNotification),
                     l10n("ui.edit.cannotSaveStyling.title"), JOptionPane.ERROR_MESSAGE
                 )
             }

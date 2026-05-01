@@ -248,7 +248,7 @@ class Tape private constructor(
                 try {
                     fileOrDir.useDirectoryEntries { seq -> recognizeFileSeq(fileOrDir, seq) }
                 } catch (e: IOException) {
-                    LOGGER.warn("Could not look for an image sequence tape in '{}': {}", fileOrDir, e.message)
+                    LOGGER.warn("Could not look for an image sequence tape in '{}'.", fileOrDir, e)
                     null
                 }
             else ->

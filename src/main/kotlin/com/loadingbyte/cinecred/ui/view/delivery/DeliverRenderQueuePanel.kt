@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.view.delivery
 
 import com.formdev.flatlaf.FlatClientProperties.*
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.common.userNotification
 import com.loadingbyte.cinecred.delivery.MAX_RENDER_PROGRESS
 import com.loadingbyte.cinecred.ui.comms.DeliveryCtrlComms
 import com.loadingbyte.cinecred.ui.comms.DeliveryViewComms
@@ -196,8 +197,7 @@ class DeliverRenderQueuePanel(deliveryCtrl: DeliveryCtrlComms) : JScrollPane(), 
                     isStringPainted = false
             }
             is RenderJobStatus.Failed -> wordWrapCellRenderer.getTableCellRendererComponent(
-                table, "${status.exc.javaClass.simpleName}: ${status.exc.localizedMessage ?: ""}",
-                isSelected, hasFocus, rowIdx, colIdx
+                table, status.exc.userNotification, isSelected, hasFocus, rowIdx, colIdx
             ).apply { putClientProperty(STYLE, "foreground: $PALETTE_RED") }
         }
 

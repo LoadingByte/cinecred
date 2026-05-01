@@ -4,6 +4,7 @@ import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.helper.DockingFrame
 import java.awt.GraphicsConfiguration
 import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
 import java.nio.file.Path
 
 
@@ -11,6 +12,7 @@ interface MasterCtrlComms {
 
     fun preGlobalKeyEvent(event: KeyEvent): Boolean
     fun postGlobalKeyEvent(event: KeyEvent): Boolean
+    fun globalMouseEvent(event: MouseEvent)
     fun showWelcomeFrame(openProjectDir: Path? = null, tab: WelcomeTab? = null)
     fun showOverlayCreation()
     fun showDeliveryDestTemplateCreation()

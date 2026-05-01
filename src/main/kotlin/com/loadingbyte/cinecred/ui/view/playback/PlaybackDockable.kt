@@ -142,6 +142,7 @@ class PlaybackDockable(playbackCtrl: PlaybackCtrlComms) :
         @Volatile private var prevPaintedArea = Rectangle()
 
         init {
+            isFocusable = false
             // Without an explicitly set minimum size, a Canvas' default minimum size its current size, which means that
             // once it has grown, a Canvas could never shrink again.
             minimumSize = Dimension(0, 0)

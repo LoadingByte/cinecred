@@ -12,9 +12,10 @@ import java.awt.GraphicsConfiguration
 import java.awt.Window
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
+import java.awt.event.MouseEvent
 import java.nio.file.Path
-import javax.swing.JComboBox
-import javax.swing.JTree
+import javax.swing.*
+import javax.swing.plaf.basic.BasicArrowButton
 import javax.swing.text.JTextComponent
 
 
@@ -64,6 +65,19 @@ class MasterCtrl(private val uiFactory: UIFactoryComms) : MasterCtrlComms {
         }
         welcomeCtrl?.let { if (it.onGlobalKeyEvent(event)) return true }
         return projectCtrls.any { it.onGlobalKeyEvent(event) }
+    }
+
+    override fun globalMouseEvent(event: MouseEvent) {
+        // When the user clicks on a component that cannot attain focus, clear the focus in the clicked-on window. This
+        // ensures that all keyboard shortcuts can reliably be used (without a focused component interfering) simply by
+        // clicking "onto the void" beforehand.
+        val c = event.component
+        if (event.id == MouseEvent.MOUSE_PRESSED && c != null && c !is BasicArrowButton && !c.hasFocus())
+            if (!c.isEnabled || !c.isFocusable || c is JComponent && !c.isRequestFocusEnabled ||
+                c is JPanel || c is JRootPane || c is JSplitPane || c is JScrollPane || c is JScrollBar ||
+                c is JLabel || c is JSeparator || c is JProgressBar
+            )
+                SwingUtilities.getWindowAncestor(c)?.requestFocusInWindow()
     }
 
     override fun showWelcomeFrame(openProjectDir: Path?, tab: WelcomeTab?) {

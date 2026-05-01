@@ -29,6 +29,7 @@ import org.bytedeco.javacpp.Loader
 import org.slf4j.LoggerFactory
 import sun.misc.Signal
 import java.awt.*
+import java.awt.event.MouseEvent
 import java.net.URI
 import java.net.URLEncoder
 import java.util.*
@@ -180,9 +181,11 @@ private fun mainSwing(args: Array<String>) {
 
     masterCtrl = UIFactory().master()
 
-    // Globally listen to all key events.
+    // Globally listen to all key and mouse events.
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(masterCtrl::preGlobalKeyEvent)
     KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(masterCtrl::postGlobalKeyEvent)
+    Toolkit.getDefaultToolkit()
+        .addAWTEventListener({ e -> masterCtrl.globalMouseEvent(e as MouseEvent) }, AWTEvent.MOUSE_EVENT_MASK)
 
     // On macOS, allow the user to open the about and preferences tabs via the OS.
     if (Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT))
